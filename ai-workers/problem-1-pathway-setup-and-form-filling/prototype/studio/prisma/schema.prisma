@@ -269,6 +269,10 @@ model GovFormDef {
   /// S4 (M5) adds "guide" and "checklist": stored once in the library, read by AI, never filled ("document" stays for rows
   /// made before S4).
   formKind    String  @default("data_form") @map("form_kind")
+  /// P-319 (founder, 4 Nov: "no combination is hard-coded"): what the form is to IRCC's rules, set per form by an author in
+  /// the library (contracts/form-library.ts FORM_ROLES): "family_information" (IMM 5707, IMM 5645 on the demo; [IRCC-F09]
+  /// reads it). Null: no role. Released with each combination's snapshot (engine/snapshot.ts form_role).
+  formRole    String? @map("form_role")
   /// S4: the form's own canada.ca page (where the edition and its PDF link are read; never a guide's link).
   formPageUrl String? @map("form_page_url")
   /// S4 (m2, P-116): retired by a release that carries an approved retire; hidden from pickers and AI, kept by releases.

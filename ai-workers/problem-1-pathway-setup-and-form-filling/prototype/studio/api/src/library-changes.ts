@@ -3,7 +3,7 @@
 // call inside their transaction (publishLibraryChanges). A combination whose draft uses an item whose ADD is still
 // waiting (or was returned) is not released: the item review cannot be skipped by releasing a combination.
 import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
-import { acceptsWords } from "../../contracts/form-library.ts";
+import { acceptsWords, roleWords } from "../../contracts/form-library.ts";
 import { HttpException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { LibraryChange, Prisma } from "@prisma/client";
@@ -19,16 +19,16 @@ import { dropFieldList, releaseFieldList } from "./answer-values.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", placement_fills: "a question", placement_condition: "when a question is asked", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", form_role: "form", placement_fills: "a question", placement_condition: "when a question is asked", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", RENAME: "Rename" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_ROLE: "Change the role of", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", RENAME: "Rename" };
 export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
 /** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
 export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
 /** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
-const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "placement_fills" ? "change of who fills a question" : kind === "placement_condition" ? "change of when a question is asked" : KIND_NOUN[kind] ?? "change");
+const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "form_role" ? "change of a form's role" : kind === "placement_fills" ? "change of who fills a question" : kind === "placement_condition" ? "change of when a question is asked" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 
@@ -100,6 +100,11 @@ export function renameView(c: Pick<LibraryChange, "label" | "matches">) {
 }
 
 /** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
+/** P-319 (review of #833, M1): a form's role change in words, built from what approval applies (never from its label). */
+export function roleView(c: Pick<LibraryChange, "key" | "matches" | "reason">) {
+  const m = (c.matches ?? {}) as { from?: string | null; to?: string | null };
+  return { form: c.key, before: roleWords(m.from), after: roleWords(m.to), reason: c.reason ?? "" };
+}
 export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
   const m = (c.matches ?? {}) as { account?: string; channels?: string[]; before?: string[] | null; quote?: string | null; reason?: string | null; form_page?: string | null; edition?: string; readings?: unknown; check?: string | null };
   // P-143: the account it is for; P-140 (C-5): the finder's two readings and, when they or the keyword rule disagree, why to check.
@@ -173,6 +178,9 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
   if (c.status !== "RETURNED") throw problem(409, "Not returned", `Only a returned change is corrected and sent again; this one is ${c.status.toLowerCase()}.`);
+  // P-319 (review of #833, M1 and M2): a role change has nothing to correct but the role, so it is never sent again with
+  // other words: its proposer withdraws it and proposes the role again (POST /library/forms/:code/role).
+  if (c.kind === "form_role") throw problem(409, "Propose it again", "A returned role change is not sent again: withdraw it, then propose the form's role again on its form.");
   // G-CORE B2: a rename is sent again through its door (the check runs again), never corrected here.
   if (c.action === "RENAME") throw problem(409, "Rename it again", "A returned rename is not sent again from here: rename it again on its page, where the check runs again.");
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can correct it and send it again. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to correct or withdraw it.`);
@@ -200,8 +208,9 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   // DV-bb-9: only the person who proposed a change withdraws it, whatever its kind (as only they undo their own delete).
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   if (isLifecycleKind(c.kind) || isItemLifecycle(c)) return withdrawLifecycle(db, actor, c, note); // W1-03: remove, retire or restore (P-116); C11.9 fields and document types
-  const renaming = c.action === "RENAME" && ["WAITING", "RETURNED"].includes(c.status);
-  if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field or a rename that is waiting or returned is withdrawn.");
+  // P-319 (review of #833, M2): a waiting or returned role change is withdrawn like a rename: nothing was applied.
+  const renaming = (c.action === "RENAME" || c.kind === "form_role") && ["WAITING", "RETURNED"].includes(c.status);
+  if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field, a rename or a form's role change that is waiting or returned is withdrawn.");
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
   // G-CORE B2: a withdrawn rename changes nothing (the name was never changed).
