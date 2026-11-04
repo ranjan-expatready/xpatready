@@ -314,11 +314,12 @@ export class Demo {
       const b = await this.ai.launch(actor, { scope: { kind: "catalogue", ids: made.map((m) => m.id) }, mode: "REPLAY", idempotencyKey: `sample-six-drafts-${workspaceId}`, planSha256: plan.plan_sha256 });
       drafts = await timed("field-map replay (review queue)", () => this.settled(b.id!));
     }
+    const proposals = await this.db.proposalItem.count({ where: { workspaceId, status: "waiting" } });
     // C11.7 part B: the lines a person adds by hand where the finder's replay set none up (after the drafts, as a person
-    // would: the field-map replay above reads the library's forms, not these lines).
+    // would: the field-map replay above reads the library's forms, not these lines). Counted after the AI proposals, so
+    // "proposals waiting" stays the replayed AI answers; a document type named here is the person's own proposal.
     const byHand: { combination: string; forms_added: string[]; online: string[]; documents: { name: string; status: string }[] }[] = [];
     for (const c of made) if (c.lines) byHand.push(await timed("form and document lines (as a person adds them)", () => this.linesByHand(actor, c as { id: string; label: string; lines: SixLines }, log)));
-    const proposals = await this.db.proposalItem.count({ where: { workspaceId, status: "waiting" } });
     log.push(`library drafts: ${replay.length} saved AI field-map answers replayed through the review queue (US$0): ${proposals} proposals waiting for review; ${[...new Set(waiting)].length} forms wait for "Draft with AI"${waiting.length ? ` (${[...new Set(waiting)].join(", ")})` : ""}`);
     const missing = made.flatMap((c) => [...c.absent.map((f) => ({ combination: c.label, code: f, why: "No saved copy." })), ...c.missing.map((m) => ({ combination: c.label, code: m.code, why: m.why }))]);
     await this.audit.log(workspaceId, actor.id, "loaded", "sample inputs", null, `${actor.name} loaded the sample starting point in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${made.length} combinations (5 Retail, 1 Corporate Sample), ${nodes} names in the Structure, official files through the form intake, the form finder replayed (US$0), ${proposals} AI proposals waiting for review; nothing released`, { log });
