@@ -1,0 +1,858 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-imm-5406-05-2026-4381c312-live-20261103t074133649z-177c9d",
+  "idempotency_key": "ca717f438d17112a111309f449f818e8f68a8daf2e6f6ef549040d57baf6e835",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "20bf6164345d4cda6ce97d6f555ce011c5127f35e37e7f9dcdaaea9eb2444675",
+  "inputs": {
+   "combination": "edition:IMM 5406:05-2026",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5406e.inventory.json",
+     "sha256": "934aac6e791a6ce6458c499e7768be2d0505e375d206a7be477780a69848c4da"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 3.07,
+   "max_output_tokens": 64000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 18852,
+    "output_tokens": 13248,
+    "duration_ms": 95437
+   }
+  ],
+  "usage": {
+   "input_tokens": 18852,
+   "output_tokens": 13248,
+   "cost_usd": 0.340368,
+   "duration_ms": 95437
+  },
+  "started_at": "2026-11-03T07:41:33.651Z",
+  "ended_at": "2026-11-03T07:43:09.317Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "APPLICANT"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Given Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Country or territory of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5406.marital_status_with_conjugal (Annulled marriage=4, Common-law=1, Conjugal=10, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8)",
+    "condition": "Value drives presence script showing or hiding the Spouse block and the MarriageInPerson question",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Marital Status"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "E-mail address"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Shown only when the applicant's marital status script makes MarriageInPerson visible (marriage statuses)",
+    "unresolved_reason": "Asks whether the subject was physically present at the marriage ceremony; an ordinary case record does not hold this fact. Options are YES=1 / NO=2.",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "I was physically present at the marriage ceremony"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5406.marital_status_with_conjugal (Annulled marriage=4, Common-law=1, Conjugal=10, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8)",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible; value drives the spouse MarriageInPerson question",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "condition": "Spouse block shown only when the applicant's marital status script makes Spouse visible",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Shown only when the spouse marital status script makes MarriageInPerson visible",
+    "unresolved_reason": "Asks whether the spouse was physically present at the marriage ceremony; an ordinary case record does not hold this fact. Options are YES=1 / NO=2.",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "My spouse was physically present at the marriage ceremony"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].hideChildren[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "condition": "Checking it (1) hides the child rows via presence script",
+    "unresolved_reason": "Check box has no caption; only the box name and script suggest it means the subject has no children to list (would be derived 1 when no child exists, else 0). Meaning must be confirmed by a person before deriving it.",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SECTION B -"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "code_list:imm5406.child_relationship (Son=1, Daughter=2, Step-Daughter=3, Step-Son=4, Adopted Son=5, Adopted Daughter=6)",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Family Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Given Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Country or territory of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Marital Status"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "E-mail address"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].hideSiblings[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "condition": "Checking it (1) hides the sibling rows via presence script",
+    "unresolved_reason": "Check box has no caption; only the box name and script suggest it means the subject has no siblings to list (would be derived 1 when no sibling exists, else 0). Meaning must be confirmed by a person before deriving it.",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "SECTION C -"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "relationship.relationship_to_subject",
+    "transform": "code_list:imm5406.sibling_relationship (Brother=1, Sister=2, Half Brother=5, Half Sister=6, Step-brother=3, Step-sister=4)",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Family Name"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Given Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Country or territory of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Marital Status"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_sibling",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "E-mail address"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionD[0].Signature[0].Signature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Signature is signed by hand by the applicant certifying the information; the system must never fill it.",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Signature:"
+    }
+   },
+   {
+    "form_edition": "IMM 5406 (05-2026)",
+    "form_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+    "data_path": "IMM_5406[0].page1[0].SectionD[0].Signature[0].SignedDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of signing belongs with the hand signature and is entered when the applicant signs; prefilling it could misstate when the certification was made.",
+    "evidence": {
+     "file_sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "5a299cbcf97765b2397331846b5771e2e5d94ba16b2b925639c7acebaeafb7c8",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5406 (05-2026)"
+  },
+  "screened": true,
+  "output_sha256": "20bf6164345d4cda6ce97d6f555ce011c5127f35e37e7f9dcdaaea9eb2444675",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "887e25e4181844c6301ba4b39b858fc9dfbe060fb518baf6faf76c4bd70d7a0f",
+  "request_bytes": 39640,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 52.939147999999996
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5406e.inventory.json",
+    "sha256": "934aac6e791a6ce6458c499e7768be2d0505e375d206a7be477780a69848c4da",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "92e671d1825e12558984fdad22d00c98f14f9e393e3cf7c746285e6b52c98ce2",
+   "digest_made_at": "2026-11-03T07:41:33.650Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "8070f3366285ce0c6008f2abc018e447",
+   "ticket_expires_at": "2026-11-03T07:43:33.650Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5406 (05-2026)\",\"canonical_fields\":[{\"id\":\"person.family_name\",\"meaning\":\"The person's family name (surname).\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"The person's given name or names.\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The person's date of birth.\",\"value_type\":\"date\"},{\"id\":\"person.country_of_birth\",\"meaning\":\"The country or territory where the person was born.\",\"value_type\":\"country\"},{\"id\":\"person.present_address\",\"meaning\":\"The person's current residential address.\",\"value_type\":\"address\"},{\"id\":\"person.marital_status\",\"meaning\":\"The person's current marital status.\",\"value_type\":\"code\"},{\"id\":\"person.email_address\",\"meaning\":\"The person's e-mail address.\",\"value_type\":\"text\"},{\"id\":\"relationship.relationship_to_subject\",\"meaning\":\"How a relative is related to the form subject (for example son, adopted daughter, half brother, step-sister).\",\"value_type\":\"code\"}],\"entries\":[{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"APPLICANT\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given Name(s)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory of birth\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5406.marital_status_with_conjugal (Annulled marriage=4, Common-law=1, Conjugal=10, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8)\",\"condition\":\"Value drives presence script showing or hiding the Spouse block and the MarriageInPerson question\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital Status\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"E-mail address\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Shown only when the applicant's marital status script makes MarriageInPerson visible (marriage statuses)\",\"confidence\":\"medium\",\"unresolved_reason\":\"Asks whether the subject was physically present at the marriage ceremony; an ordinary case record does not hold this fact. Options are YES=1 / NO=2.\",\"evidence_quote\":\"I was physically present at the marriage ceremony\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5406.marital_status_with_conjugal (Annulled marriage=4, Common-law=1, Conjugal=10, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8)\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible; value drives the spouse MarriageInPerson question\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":\"Spouse block shown only when the applicant's marital status script makes Spouse visible\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Shown only when the spouse marital status script makes MarriageInPerson visible\",\"confidence\":\"medium\",\"unresolved_reason\":\"Asks whether the spouse was physically present at the marriage ceremony; an ordinary case record does not hold this fact. Options are YES=1 / NO=2.\",\"evidence_quote\":\"My spouse was physically present at the marriage ceremony\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].hideChildren[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Checking it (1) hides the child rows via presence script\",\"confidence\":\"low\",\"unresolved_reason\":\"Check box has no caption; only the box name and script suggest it means the subject has no children to list (would be derived 1 when no child exists, else 0). Meaning must be confirmed by a person before deriving it.\",\"evidence_quote\":\"SECTION B -\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"code_list:imm5406.child_relationship (Son=1, Daughter=2, Step-Daughter=3, Step-Son=4, Adopted Son=5, Adopted Daughter=6)\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family Name\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given Name(s)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory of birth\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital Status\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":\"Child row group repeats (initial 3, no maximum); each further child adds a row; hidden when hideChildren is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"E-mail address\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].hideSiblings[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Checking it (1) hides the sibling rows via presence script\",\"confidence\":\"low\",\"unresolved_reason\":\"Check box has no caption; only the box name and script suggest it means the subject has no siblings to list (would be derived 1 when no sibling exists, else 0). Meaning must be confirmed by a person before deriving it.\",\"evidence_quote\":\"SECTION C -\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"relationship.relationship_to_subject\",\"transform\":\"code_list:imm5406.sibling_relationship (Brother=1, Sister=2, Half Brother=5, Half Sister=6, Step-brother=3, Step-sister=4)\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family Name\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given Name(s)\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory of birth\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5406.marital_status_no_conjugal (Annulled marriage=4, Common-law=1, Divorced=3, Legally separated=7, Married=5, Single=2, Unknown=9, Widowed=8); no Conjugal option in this list, a conjugal status needs review\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital Status\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"subject_sibling\",\"row\":0,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":\"Sibling row group repeats (initial 3, no maximum); each further sibling adds a row; hidden when hideSiblings is checked\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"E-mail address\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionD[0].Signature[0].Signature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Signature is signed by hand by the applicant certifying the information; the system must never fill it.\",\"evidence_quote\":\"Signature:\"},{\"data_path\":\"IMM_5406[0].page1[0].SectionD[0].Signature[0].SignedDate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of signing belongs with the hand signature and is entered when the applicant signs; prefilling it could misstate when the certification was made.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}
