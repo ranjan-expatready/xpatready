@@ -229,3 +229,28 @@ Reviewer agent, Opus. I did not build this and did not review rounds 1 or 2. 5 N
 **Verdict: Approve.** No open Blocker or Major in this diff. The Minors r3-m1 to r3-m5 are at the builder's judgment.
 
 Round 3b (4ea39ba0b): Approve. The diff is the `.cjs` only (17 lines): when no combination id is given, the check runs `setup_c45_walk.ts` itself on the same port and database. Run the way CI runs it (`node … 4453 xr_studio_c45r3`, fresh copy): 29/29, exit 0. Given the wrong database, the setup's guard stops it with exit 2 and says why. A combination id is still accepted as a fourth argument; the usage line in `setup_c45_walk.ts` is unchanged and still right.
+
+## Merge check (85820306c)
+
+This was a diff-only check (P-318 (1)) of the merge of origin/main (8b4b1b881, with #998 B72) into the branch at 571910330. The first parent is 4ea39ba0b plus the round-3b review line and nothing else. I ran `git show --cc 85820306c` and the parent diffs for `pack2.ts` and `review-items.tsx`. I ran no isolated copy.
+
+* **`acceptance/lib/pack2.ts` (the only conflict):** `git show --cc` shows that this is the only file the merge did not take whole from one side.
+  * The result keeps `documentsBySteps` and `suppliesBySteps` from the branch and `ruleBySteps` from main, each byte for byte as on its own side. Each name appears twice: once as the definition and once in `return`.
+  * The `return { … }` line holds the union of both sides with nothing dropped: `questionsBySteps, ruleBySteps, documentsBySteps, suppliesBySteps`.
+  * Against the main parent, the only lines removed are main's old `return` line. Against the branch parent, only the old `return` line and the `questionsBySteps` `out` line are removed. The `out` line is main's own change (`byHand: 0`, from #998), taken cleanly.
+  * The imports are unchanged: one each of `readFileSync` and `join`, which all three functions use. There is no duplicate import or name.
+* **`web/src/pages/review-items.tsx` (merged automatically):** Against the branch parent, the merge adds only main's one-line change (`hover:underline` to `underline` on the Components tab link). All of this PR's parts are still present in the merged file:
+  * the `data-change-supplies` block;
+  * the returned-path branch, with the "Propose it again" notice and `<Withdraw … label="Withdraw it" />`;
+  * the `Withdraw` `label` property;
+  * the toast that tolerates a missing count;
+  * the Details key note that applies only to fields.
+* **Callers:** `C4.5.test.ts` and `setup_c45_walk.ts` use the C4.5 functions, and `C3.6.test.ts` and the B72 walks use `ruleBySteps`. All of them resolve against the one return.
+* **The builder's runs at 85820306c (I read the logs):**
+  * `C4.5.test.ts`: 26/26, exit 0
+  * `check_c45_supplies_release.ts`: 10/10, exit 0
+  * `C3.6.test.ts`: 18/18, exit 0
+  * `check_c45_supplies_browser.cjs`: 29/29, exit 0
+* **Not checked:** GitHub CI on 85820306c. There is no journey re-score, because the merge changes nothing a person sees on this screen. The journey score stays at round 3's 9/10.
+
+**Verdict: Approve.** Nothing to fix.
