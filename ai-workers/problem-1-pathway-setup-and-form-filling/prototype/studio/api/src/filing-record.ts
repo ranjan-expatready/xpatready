@@ -65,7 +65,7 @@ export class FilingRecord {
         const n = await tx.filing.updateMany({ where: { id: f!.id, applicationNumber: f!.applicationNumber }, data: { applicationNumber: value } });
         if (n.count !== 1) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
         // Government identifiers stay out of the summary line (AG-7-95 safety); the audit detail keeps before and after.
-        // "case <first 8 of its id>" lets the activity feed show the line to this firm only (studio.ts CASE_ENTITIES). It
+        // "case <first 8 of its id>" lets the activity feed show the line to this firm only (case-feed.ts). It
         // comes first, before any name a person typed, so a name that reads "case 1234abcd" cannot be taken for it (Devin).
         await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, did, "application number", f!.id,
           `On case ${c.id.slice(0, 8)} (${c.reference}): ${actor.name} ${did} the application number on ${person}'s filing`, { before: f!.applicationNumber, after: value });
