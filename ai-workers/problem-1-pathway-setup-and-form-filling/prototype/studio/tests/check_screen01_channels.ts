@@ -37,7 +37,9 @@ const rowOf = async (key: string) => ((await call("GET", "/catalogue?pathway=IND
   ok("C1.6: a row with no form lines has no filing method (not \"PDF only\")", (await rowOf("individual.visitors.extend_stay")).filing === null);
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "PAPER" });
   s = await sum();
-  ok("C1.6 pass: the author sets one line's channel; the line, its signature and the filing method follow", r.status === 200 && s.forms.find((f: any) => f.code === "IMM 1295").channelWords === "Paper" && /in pen/.test(s.forms.find((f: any) => f.code === "IMM 1295").signature) && s.filing === "Mixed: PDF and paper" && s.filingDetail === "PDF uploads + paper forms", [s.filing, s.filingDetail]);
+  // C11.11: the sample's checklists (IMM 5488, IMM 5905) are no longer always-filed PDF lines, so with IMM 1295 on paper
+  // the always-filed lines are paper and the PDF uploads are the "when needed" ones (before: "PDF uploads + paper forms").
+  ok("C1.6 pass: the author sets one line's channel; the line, its signature and the filing method follow", r.status === 200 && s.forms.find((f: any) => f.code === "IMM 1295").channelWords === "Paper" && /in pen/.test(s.forms.find((f: any) => f.code === "IMM 1295").signature) && s.filing === "Mixed: PDF and paper" && /^Paper only; plus PDF upload when needed/.test(s.filingDetail), [s.filing, s.filingDetail]);
   ok("C1.6: the change is a draft change of the combination (released content unchanged until release)", (await call("GET", "/draft")).body.rows.some((x: any) => x.combinationId === wp) && sql(`select count(*) from combination_form where combination_id='${wp}' and lineage_key='IMM 1295' and status='PUBLISHED' and channel='PDF_UPLOAD'`) === "1");
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "FAX" });
   ok("C1.6 fail: a channel that is not one of the four is refused on its field", r.status === 400 && r.body.errors?.[0]?.field === "channel", r.body.errors);
@@ -45,7 +47,11 @@ const rowOf = async (key: string) => ((await call("GET", "/catalogue?pathway=IND
   ok("C1.6 fail: only an author sets a channel (the approver is refused by the server)", r.status === 403);
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "ONLINE", from: "PDF_UPLOAD" });
   ok("round 2 M2 fail: a save from a screen that still showed PDF upload (now Paper) is refused, not a silent overwrite", r.status === 409 && /was changed to Paper/.test(r.body.message) && (await sum()).forms.find((f: any) => f.code === "IMM 1295").channel === "PAPER", r.body.message);
+  // C11.11: no route makes a checklist a form line any more; a line kept from before (test input, planted by SQL) still has
+  // no channel.
+  sql(`insert into combination_form select (jsonb_populate_record(null::combination_form, to_jsonb(cf) || jsonb_build_object('id', gen_random_uuid(), 'lineage_key', 'IMM 5488', 'gov_form_def_id', (select id from gov_form_def where form_key='IMM 5488'), 'version', 1, 'status', 'DRAFT', 'supersedes_id', null))).* from combination_form cf where cf.combination_id='${wp}' and cf.lineage_key='IMM 5707' order by cf.version desc limit 1`);
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5488")}/channel`, { channel: "ONLINE" });
+  sql(`delete from combination_form where combination_id='${wp}' and lineage_key='IMM 5488'`);
   ok("review 2 should 4 fail: a checklist is not filed, so it has no channel", r.status === 400 && /checklist/.test(r.body.message), r.body.message);
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "PDF_UPLOAD", from: "PAPER" });
   ok("round 2 M2 pass: a save from an up-to-date screen goes through", r.status === 200 && (await sum()).forms.find((f: any) => f.code === "IMM 1295").channel === "PDF_UPLOAD");

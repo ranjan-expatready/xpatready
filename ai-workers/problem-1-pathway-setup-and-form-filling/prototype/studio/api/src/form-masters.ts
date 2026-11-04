@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { formMastersFromRounds, formShapeOk, guideMastersFromRounds, guideShapeOk, MASTERS_FORM_STEP, MASTERS_GUIDE_STEP, type FormAnswer, type GuideAnswer, type MRound } from "../../engine/masters-ai.ts";
-import { editionContextKey, replayPattern } from "../../engine/rounds.ts";
+import { editionContextKey, PRINTED_EDITION, replayPattern } from "../../engine/rounds.ts";
 import { actorOf, Audit, Db, fail, need, SOLUTION, type Actor } from "./core.ts";
 import { LIVE_WAITING, PqrDrafts } from "./pqr-drafts.ts";
 import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
@@ -22,7 +22,7 @@ import { pairOf, roundBudgetUsd, RUNS, runTime, StepRunner, type AiStep, type Ro
 import { aiLive, Sources } from "./sources.ts";
 
 export const MASTERS_STEP = "masters_edition";
-type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
+type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; options?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
 /** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part named by a
  *  number word (IMM 5475's "Five", "Seven") is a real part a person fills: it stays, for a person to rename (re-review M2). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
@@ -53,6 +53,25 @@ function choices(f: InvField): { label: string; code: string }[] {
     seen.add(code); out.push({ label: label.slice(0, 200), code });
   }
   return out;
+}
+
+/** P-296 (3): a box's choices as the AI reads them, [words, code] each, by the shape its box kind is stored in (every
+ *  committed inventory, review round 2 M1): `options_resolved` is always [words, code] rows; a Yes/No group's `options`
+ *  too (IMM 5257's 21 carry only these, spelled "* Yes", "*Yes" or "Yes"); a drop-down's `options` is two columns, the
+ *  words then the codes. A check box's `options` are its on/off states, never words: "check_box". Rows without words
+ *  are left out; any other shape gives no choices (the box is not guarded). */
+export function printedChoices(f: InvField): [string, string][] | "check_box" {
+  const parse = (raw: unknown): unknown => { if (typeof raw !== "string") return raw; try { return JSON.parse(raw.replace(/'/g, '"')); } catch { return null; } };
+  const strs = (r: unknown): r is string[] => Array.isArray(r) && r.every((x) => typeof x === "string");
+  const rows = (raw: unknown) => (Array.isArray(raw) && raw.length && raw.every((r) => strs(r) && r.length === 2) ? (raw as [string, string][]).filter(([w]) => w.trim() !== "") : null);
+  const resolved = rows(parse(f.options_resolved));
+  if (resolved?.length) return resolved;
+  if (f.ui === "checkButton") return "check_box";
+  const o = parse(f.options);
+  if (f.ui === "exclGroup") return rows(o) ?? [];
+  if (f.ui === "choiceList" && Array.isArray(o) && o.length === 2 && strs(o[0]) && strs(o[1]) && o[0].length === o[1].length)
+    return o[0].map((w, i) => [w, o[1][i]] as [string, string]).filter(([w]) => w.trim() !== "");
+  return [];
 }
 
 /** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set). */
@@ -90,7 +109,9 @@ export function draftFromInventory(fields: InvField[]) {
  *  editionContextKey): every combination that uses the edition reuses its one Saved result. */
 export const MASTERS_FORM_AI: AiStep = {
   kind: MASTERS_FORM_STEP, jobBase: "studio-masters-form", configurationVersion: "c34-masters-form",
-  template: "masters-form.v1.md", check: "masters-form-check.v1.md", schema: "masters-form-output.v1.schema.json", effort: "low", max_output_tokens: 8000,
+  // P-296 (3): v2 prompts give the exact tree shape with a worked example (the v1 checker wrote its own shapes), and the
+  // output limit is 16,000: IMM 5257's v1 draft stopped at 8,000 after 15 of its checks (#669). v1 runs are never replayed.
+  template: "masters-form.v2.md", check: "masters-form-check.v2.md", schema: "masters-form-output.v1.schema.json", effort: "low", max_output_tokens: 16000,
   shapeOk: formShapeOk,
   words: {
     noSaved: "No saved AI answer drafts this form edition's checks and document types yet: it is recorded once in an approved Live run. The rules pass (US$0) drafts its sections and answer lists now.",
@@ -101,7 +122,9 @@ export const MASTERS_FORM_AI: AiStep = {
 /** C3.4 AI step over a combination's guide: the checks it states (a draft and a blind checker round over its text). */
 export const MASTERS_GUIDE_AI: AiStep = {
   kind: MASTERS_GUIDE_STEP, jobBase: "studio-masters-guide", configurationVersion: "c34-masters-guide",
-  template: "masters-guide.v1.md", check: "masters-guide-check.v1.md", schema: "masters-guide-output.v1.schema.json", effort: "low", max_output_tokens: 6000,
+  // P-296 (3): v2 prompts with the worked tree example (v1's trees were not in the 11-operator shape, #669). Its v1
+  // rounds used 1,918 and 1,291 output tokens, so 6,000 stays.
+  template: "masters-guide.v2.md", check: "masters-guide-check.v2.md", schema: "masters-guide-output.v1.schema.json", effort: "low", max_output_tokens: 6000,
   shapeOk: guideShapeOk,
   words: {
     noSaved: "No saved AI answer drafts this guide's checks for this combination yet: it is recorded once in an approved Live run.",
@@ -109,7 +132,7 @@ export const MASTERS_GUIDE_AI: AiStep = {
     nothingUsed: "Nothing of it is proposed.",
   },
 };
-const PRINTED = /^(IMM [0-9A-Z ]+?) \(([0-9]{2}-[0-9]{4})\)$/;
+const PRINTED = PRINTED_EDITION;
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -308,7 +331,7 @@ export class FormMasters {
       }
       const rounds = { draft: this.mround(d), check: this.mround(k) };
       const res = t.kind === "form"
-        ? formMastersFromRounds(rounds as { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, { file: t.a.fileName, sha256: t.a.sha256, edition: t.edition, printed: t.edition, boxes: t.fields.filter((f) => f.data_path && !hidden(f)).map((f) => ({ path: f.data_path!, words: [f.caption, f.heading].filter(Boolean).join(" \n ") })) }, { runId: job.id })
+        ? formMastersFromRounds(rounds as { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, { file: t.a.fileName, sha256: t.a.sha256, edition: t.edition, printed: t.edition, boxes: t.fields.filter((f) => f.data_path && !hidden(f)).map((f) => ({ path: f.data_path!, words: [f.caption, f.heading].filter(Boolean).join(" \n "), choices: printedChoices(f) })) }, { runId: job.id })
         : guideMastersFromRounds(rounds as { draft: MRound<GuideAnswer>; check: MRound<GuideAnswer> }, { file: t.input.file, sha256: t.input.sha256, text: t.text, code: t.code }, await this.libraryFacts(ws), { runId: job.id, combinationId: t.combination.id });
       const from = d.from === "live" || k.from === "live" ? "live" : "replay";
       const out = await this.db.$transaction(async (tx) => {

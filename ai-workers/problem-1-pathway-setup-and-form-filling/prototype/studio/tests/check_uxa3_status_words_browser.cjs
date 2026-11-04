@@ -54,7 +54,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const head = await p.locator("[data-header-next]").innerText();
   const strip = await p.locator("[data-strip-head]").innerText();
   step("pass: LMIA is Live and its header next step says it is for the next release", lsum.row.status === "READY" && /Next step for the next release/.test(head), head);
-  step("pass: its setup strip starts with Live and says the open steps are for the next release", /^Live · setup steps for the next release: \d of 5 done$/.test(strip.trim()), strip);
+  // QA-184: Live first, then the next release's one count in the card's words (or that nothing is open for it).
+  step("pass: its setup strip starts with Live and says what the next release needs", /^Live · Release \d+ · (Next release: \d of 5 steps? to do|nothing open for the next release)$/.test(strip.trim()), strip);
   step("fail case: a combination that is not Live never says \"for the next release\"", await (async () => { await p.goto(`${BASE}/c/${vv}/overview`); await p.locator("[data-strip-head]").waitFor(); return !/for the next release/.test(await p.locator("main").innerText()); })());
   await p.goto(`${BASE}/c/${lm}/overview`); await p.locator("[data-strip-head]").waitFor();
   await p.screenshot({ path: path.join(SHOTS, "uxa3-02-live-next-step-1440.png"), fullPage: false });
@@ -86,7 +87,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ------------------------------------------------------------------ break B1: released but not startable is one state everywhere
   const sv = sql("select id from combination where combination_key='sv.super_visa'");
   if (sv) {
-    const anyForm = sql(`select cf.lineage_key from combination_form cf join combination c on c.id=cf.combination_id where c.combination_key='wp.family' and cf.status not in ('RETIRED','SUPERSEDED') and cf.lineage_key like 'IMM 5%' order by cf.lineage_key limit 1`);
+    const anyForm = sql(`select cf.lineage_key from combination_form cf join combination c on c.id=cf.combination_id where c.combination_key='wp.family' and cf.status not in ('RETIRED','SUPERSEDED') and cf.lineage_key like 'IMM 5%' order by (cf.lineage_key = 'IMM 5707') desc, cf.lineage_key limit 1`); // IMM 5707 first: the super visa's package lists it (C3.8, IRCC-F09)
     await api(`/combinations/${sv}/forms`, { method: "POST", data: { formKey: anyForm } });
     const call = (pth, data, actor) => p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": actor, "content-type": "application/json" }, data }).then(async (r) => ({ status: r.status(), body: await r.json().catch(() => null) }));
     const sub = await call(`/combinations/${sv}/submit`, { note: "UX-A3 check" }, "user-A");

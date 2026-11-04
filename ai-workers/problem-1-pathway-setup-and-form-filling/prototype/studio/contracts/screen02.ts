@@ -7,6 +7,8 @@ export type LibraryChangeView = {
   ai_verdict: string | null; matches: { key: string; score: number }[]; status: "WAITING" | "APPROVED" | "RETURNED" | "RELEASED" | "WITHDRAWN";
   proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null;
   released_in: number | null; combination_id: string | null;
+  /** QA-193 (P-121): the decision (To review's batch) the change came from; null when it was not decided there. */
+  batch_id?: string | null;
   /** G-CORE B2: a rename waiting for a second person (action RENAME): the name now and the name proposed. */
   rename?: { before: string | null; after: string | null; undo: boolean };
 };
@@ -34,12 +36,24 @@ export type ImpactReview = {
   id: string; form: string; title: string; edition: string | null; library_edition: string | null; uploaded_by: string; at: string;
   counts: { form_fields: number } & Record<ImpactChange, number>; rows: ImpactRow[];
   library: { key: string; label: string; meaning: string; form_fields: number }[]; combinations: { id: string; label: string }[]; open_cases: number;
-  ai: { used: boolean; cost_usd: number; note: string };
+  /** C9.1 P-32: what the removed and reworded boxes touch beyond fields, each with why in words and its combination. */
+  components: Record<ImpactComponentKind, ImpactComponent[]>;
+  /** C9.1 P-151: IRCC's accepted-until date for the previous edition, quoted from the form's IRCC page; null when none. */
+  previous_accepted_until: string | null; previous_accepted_words: string | null; previous_accepted_source: { quote: string; url: string | null; saved: string | null } | null;
+  ai: { used: boolean; cost_usd: number; note: string; offer: ImpactAiOffer; saved: boolean; saved_words?: string; live: { open: boolean; why: string | null };
+    drafted?: { job_id: string; at: string; message: string | null; proposals: number; waiting: number; boxes: Record<string, string[]> } | null };
 };
+export type ImpactComponentKind = "sections" | "document_types" | "rules" | "checks";
+export type ImpactComponent = { key: string; label: string; field: string; combination: string; combination_id: string; boxes: string[]; why: string };
+/** C9.1 P-138: Draft with AI for the new and reworded boxes only, with its cost said first. */
+export type ImpactAiOffer = { boxes: number; words: string; about_usd: number; at_most_usd: number; key?: string };
+export type ImpactDrafted = { job_id: string; again: boolean; proposals: number; cost_usd?: number; message: string };
 export type ImpactAccepted = { edition: string; carried: number; for_a_person: number; combinations: { id: string; label: string }[] };
 
 /** K1: a PDF edition's form fields with their decision. */
-export type FormFieldRow = { dataPath: string; caption: string | null; heading: string | null; outcome: string; outcome_word: string; field: string | null; reason: string | null; status: string; carried: boolean };
+export type FormFieldRow = { dataPath: string; caption: string | null; heading: string | null; outcome: string; outcome_word: string; field: string | null; reason: string | null; status: string; carried: boolean;
+  /** C3.8 [IRCC-F08]: a Background information question, which is never "not a fact". */
+  background?: boolean };
 export type FormFieldsView = { edition: { id: string; label: string; form: string } | null; fields: FormFieldRow[] };
 
 /** A4: one part of a step drafted in parts (read-only). */

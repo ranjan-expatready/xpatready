@@ -5,7 +5,7 @@
 // through the runtime's own caseView (engine/runtime/preview.ts).
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query } from "@nestjs/common";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
-import { newestEdition } from "../../engine/programs.ts";
+import { newestEdition, pdfMapInUse } from "../../engine/programs.ts";
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { aliasOf, appliesOf, filingWarnings, filingWords, isLineMode, previewFilings } from "../../engine/filing-modes.ts";
@@ -68,7 +68,8 @@ export class WorkspaceViews {
     const defs = await this.db.govFormDef.findMany({ where: { workspaceId, formKey: { in: (snapshot.forms as SnapForm[]).map((f) => f.form_number) } }, select: { formKey: true, editions: { select: { editionLabel: true, channel: true, sha256: true } } } });
     const libraryEdition = new Map(defs.map((d) => [d.formKey, newestEdition(d.editions.filter((e) => e.channel !== "ONLINE" && e.sha256))?.editionLabel ?? null]));
     const lines = (snapshot.forms as SnapForm[]).map((f): WorkspaceFormLine => {
-      const map = maps.filter((m) => m.form_number === f.form_number).at(-1);
+      // P-32: a PDF line shows the edition in use, the one a case fills (pdfMapInUse); an Online line its newest online map, as before.
+      const map = (lineOf(f).channel === "ONLINE" ? undefined : pdfMapInUse(maps, f.form_number)) ?? maps.filter((m) => m.form_number === f.form_number).at(-1);
       const { channel, signature } = lineOf(f), account = snapshot.combination.portal ?? null;
       const { channels: accepted, record } = allowedChannels(accepts.get(f.form_number), account);
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };
@@ -123,7 +124,11 @@ export class WorkspaceViews {
     const snaps = await buildSnapshots(this.db, workspaceId, comps.map((x) => x.id), "draft");
     const whereUsed = new Map<string, number>();
     for (const x of snaps.values()) for (const f of x.snapshot.canonical_fields as { id: string }[]) whereUsed.set(f.id, (whereUsed.get(f.id) ?? 0) + 1);
-    return { questionnaire: questionnairesView(snapshot, role, whereUsed), available };
+    // QA-172: the library's titles (newest version of each section), for a question placed in a section not chosen here.
+    // Every version, retired too (review m1, Devin on #722): a retired section's placed questions stay asked, so it keeps
+    // its newest title, as library-sources.ts nameOf reads it.
+    const libraryTitles = new Map<string, string>(); for (const x of await this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { sectionKey: true, title: true } })) if (!libraryTitles.has(x.sectionKey)) libraryTitles.set(x.sectionKey, x.title);
+    return { questionnaire: questionnairesView(snapshot, role, whereUsed, new Date(), libraryTitles), available };
   }
 
   /** "Who can be in this application" with the roles to pick from and whether Undo is offered. */

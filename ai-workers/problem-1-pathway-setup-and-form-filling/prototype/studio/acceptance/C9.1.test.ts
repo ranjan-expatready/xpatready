@@ -46,13 +46,17 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   const imp = id ? (await call("GET", `/intake/held/${id}/impact`)).body : null;
   ok("C9.1 BR-12 (on main): compared box by box without AI; unchanged + reworded + new = the new edition's boxes; removed listed", imp?.ai?.used === false && imp.counts.form_fields > 0 && imp.counts.unchanged + imp.counts.reworded + imp.counts.new === imp.counts.form_fields && Number.isInteger(imp.counts.removed), imp?.counts);
   ok("C9.1 P-32: the impact lists what the removed and reworded boxes touch beyond fields: sections, document types, rules and checks (each a list)", imp && ["sections", "document_types", "rules", "checks"].every((k) => Array.isArray(imp.components?.[k])), imp ? Object.keys(imp) : null);
-  // P-138 and the tech lead on #295: no saved AI answer for IMM 5476 11-2025 is recorded under p2/runs (checked 1 Nov), so
-  // this pack tests the offer path only: "Draft with AI (about US$x · at most US$y)", run only on a click, refused at US$0
-  // while live AI is off. The replay case waits for a founder-approved run that records an answer.
-  const offer = imp?.ai?.offer ?? imp?.ai?.draft;
-  ok("C9.1 P-138: opening the review starts no AI; AI for the new and reworded boxes only is offered with its cost in words", imp && n(`select count(*) from drafting_job`) === 0 && imp.ai?.saved !== true && typeof offer?.boxes === "number" && offer.boxes === imp.counts.reworded + imp.counts.new && /US\$/.test(String(offer?.words ?? offer?.label ?? "")), imp?.ai ?? null);
+  // P-138 and the tech lead on #295: the one saved AI run of this comparison (draft and blind checker rounds on the part of
+  // its 23 new and reworded boxes; the Mac paid runner, 3 Nov, US$0.32) is committed under p2/runs, so this pack tests the
+  // saved result: opening the review starts no AI and offers Saved at US$0; Saved puts its proposals on To review at US$0.
+  // The offer and live paths, and "a saved run closes the paid path" with live on, are tests/check_c91_impact_api.ts (own runs).
+  ok("C9.1 P-138: opening the review starts no AI; the saved AI run of this comparison is offered at US$0 (Saved), and the paid path is closed", imp && n(`select count(*) from drafting_job`) === 0 && imp.ai?.saved === true && /A saved AI run of this comparison is here/.test(String(imp.ai?.saved_words ?? "")) && imp.ai?.live?.open === false, imp?.ai ?? null);
   const run = id ? await call("POST", `/intake/held/${id}/impact/draft`, {}) : { status: 0, body: null };
   ok("C9.1 P-175 fail: without the live switch the paid AI run is refused in plain words, US$0, nothing proposed", run.status >= 400 && run.status !== 404 && /live|founder|switch|approved/i.test(words(run)) && spent() === 0 && ledger() === ledgerBefore && n(`select count(*) from proposal_item`) === 0, { status: run.status, words: words(run) });
+  const used = id ? await call("POST", `/intake/held/${id}/impact/draft`, { mode: "replay" }) : { status: 0, body: null };
+  const drafted = id ? (await call("GET", `/intake/held/${id}/impact`)).body?.ai?.drafted : null;
+  const onBoxes = new Set(Object.values((drafted?.boxes ?? {}) as Record<string, string[]>).flat());
+  ok("C9.1 pass (saved result): Saved puts the saved run's proposals on To review for a person, each next to a new or reworded box; US$0, no live call", used.status === 201 && used.body?.cost_usd === 0 && used.body?.proposals > 0 && drafted?.proposals === used.body.proposals && onBoxes.size === drafted.proposals && spent() === 0 && ledger() === ledgerBefore, { status: used.status, body: used.body, on_boxes: onBoxes.size });
   // P-151 (1) and IRCC-P3-01: IRCC accepts the previous IMM 5476 until 12 March 2026, which has passed (read 1 Nov 2026).
   ok("C9.1 P-151: the review gives IRCC's accepted-until date for the previous edition (2026-03-12, from the IMM 5476 page) and says it has passed, so cases on it cannot be ready to file", imp?.previous_accepted_until === "2026-03-12" && /passed|no longer accepted/i.test(String(imp?.previous_accepted_words ?? "")), { until: imp?.previous_accepted_until, words: imp?.previous_accepted_words });
 
@@ -66,7 +70,7 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   ok("C9.1 P-32: the impact names every combination that uses IMM 5476 (Visitor visa and With an LMIA)", combos.includes("Visitor visa") && combos.some((c: string) => /With an LMIA/.test(c)), combos);
   const items = imp2 ? ["sections", "document_types", "rules", "checks"].flatMap((k) => (imp2.components?.[k] ?? []).map((x: { why?: string; combination?: string }) => ({ k, ...x }))) : [];
   ok("C9.1 P-32: each component touched says why in words (which box changed) and in which combination", items.length > 0 && items.every((x: { why?: string; combination?: string }) => (x.why ?? "").length > 10 && !!x.combination), items.slice(0, 3));
-  ok("C9.1 row 17 (offer path, #295): in the checkpoint the edition's new and reworded boxes wait for Draft with AI (offered, not run), US$0", (imp2?.ai?.offer ?? imp2?.ai?.draft) !== undefined && imp2?.ai?.saved !== true && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && spent() === 0, imp2?.ai ?? null);
+  ok("C9.1 row 17 (saved result, #295): in the checkpoint the edition's new and reworded boxes offer the saved AI run at US$0 (not run), US$0", imp2?.ai?.saved === true && imp2?.ai?.live?.open === false && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && spent() === 0, imp2?.ai ?? null);
   const q = await call("GET", "/review-queue");
   const items2 = (Array.isArray(q.body) ? q.body : (q.body?.items ?? q.body?.rows ?? [])) as { kind: string; forms?: string[]; combinations?: unknown[] }[];
   const ne = items2.find((x) => x.kind === "new_edition" && (x.forms ?? []).includes("IMM 5476"));

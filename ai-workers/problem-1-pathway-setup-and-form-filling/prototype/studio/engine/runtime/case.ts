@@ -6,6 +6,8 @@ import { evalCondition, kkey, render, type Known, type Person, type Role } from 
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
 import { z } from "zod";
+import { recordedDerivation } from "../../../p5/transforms.ts";
+import { gateOf, type GatePlacement } from "./gates.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
@@ -270,6 +272,12 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
     const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
+    // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
+    // question fills the box too (P-62: every question asked fills a box or decides something).
+    const d = recordedDerivation(b.transform);
+    for (const g of new Set(d ? [b.fact, ...d.facts].map((f) => gateOf(s.placements as GatePlacement[], f)).filter((x): x is string => !!x) : [])) {
+      const gk = `${b.about}|${g}`, gm = fills.get(gk) ?? new Map(); const ge = gm.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; ge.boxes++; gm.set(`${c.form}|${c.person}`, ge); fills.set(gk, gm);
+    }
   }
   // Within one section for one person, questions follow the release's placement order (purpose before its "other"
   // details, "from" before "to"); the common renderer lists them by label.

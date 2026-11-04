@@ -6,6 +6,8 @@ import { CALCULATIONS, evaluate, type PredicateNode, type Truth } from "../../co
 import type { Snapshot } from "./snapshot.ts";
 import { documentFacts, SIGNED_SCAN } from "./sources.ts";
 import { lineOf } from "./channels.ts";
+import { pdfMapInUse } from "./programs.ts";
+import { factName } from "./fact-name.ts";
 
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
@@ -63,12 +65,14 @@ const both = (a: Cond, b: Cond): Cond => a.applies === false || b.applies === fa
 export const NO_RULE = "(no rule yet)";
 /** QA-82: a field's name in words from its key ("person.official_language" → "Official language"), as Shared library
  *  names fields. A question with no written wording shows this, never the field's meaning (its definition). */
-const ABBREVIATIONS = new Set(["dli", "eta", "id", "ircc", "lmia", "noc", "pgwp", "pr", "sin", "tb", "trv", "uci", "us", "uscis"]);
-const PROPER: Record<string, string> = { canada: "Canada", canadian: "Canadian" };
-export const factName = (key: string) => { const w = (key.split(".").pop() ?? key).split("_").map((x) => ABBREVIATIONS.has(x) ? x.toUpperCase() : PROPER[x] ?? x).join(" "); return w.charAt(0).toUpperCase() + w.slice(1); };
+// QA-172: moved to its own pure module so the web can use it; kept exported here for every existing caller.
+export { factName };
 export const wordsOnly = (line: { status?: string; condition?: unknown; condition_plain?: string | null }) => line.status === "conditional" && !line.condition;
 
-export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]>; today?: Date } = {}) {
+/** `editions` (break B1 on the edition-in-use fix): the PDF edition to read per form, when a caller tests one edition on
+ *  purpose (an answer key runs its own edition, engine/answer-keys.ts runFieldMap); every other reader takes the
+ *  edition in use (P-32, pdfMapInUse). An edition the snapshot lacks falls back to the edition in use. */
+export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]>; today?: Date; editions?: ReadonlyMap<string, string> } = {}) {
   const today = opts.today ?? new Date();
   const field = new Map(s.canonical_fields.map((f) => [f.id, f]));
   const place = new Map<string, any>();
@@ -110,7 +114,9 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // ------------------------------------------------------------ coverage of each box, per applicable form
   const needs = new Map<string, { fact: string; about: string; rows: Set<number>; forms: Set<string>; boxes: number; maybe: boolean }>();
   const coverage = forms.filter((f) => f.applies !== false).map((f) => {
-    const map = s.field_maps.find((m) => m.form_number === f.form);
+    // P-32: the PDF edition in use (the newest mapped), as the fill writes it; else the line's online map, as before.
+    const asked = opts.editions?.get(f.form);
+    const map = (asked ? s.field_maps.find((m) => m.form_number === f.form && m.channel !== "ONLINE" && m.form_edition === asked) : undefined) ?? pdfMapInUse(s.field_maps, f.form) ?? s.field_maps.find((m) => m.form_number === f.form);
     if (!map) return { form: f.form, person: f.person, person_label: f.person_label, applies: f.applies, edition: null, boxes: [] as BoxRow[], counts: {} as Record<string, number>, mapped: 0, unresolved_boxes: 0 };
     const boxes: BoxRow[] = [];
     let unresolvedBoxes = 0;

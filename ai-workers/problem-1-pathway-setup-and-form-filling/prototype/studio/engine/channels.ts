@@ -7,7 +7,7 @@ import { CHANNEL_WORDS, accountSubject, throughAccount, SIGNATURE_FITS, SIGNATUR
 import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { compareEditions } from "./programs.ts";
+import { compareEditions, pdfMapInUse } from "./programs.ts";
 import type { PrismaClient } from "@prisma/client";
 
 type Line = { form_number: string; channel?: string; signature?: string; signed_by?: string; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
@@ -158,8 +158,7 @@ export function listRowsWords(form: string, n: number, example: string): string 
 export function channelsView(s: Snapshot) {
   const lines = (s.forms as Line[]).map((f) => {
     const { channel, signature } = lineOf(f);
-    const versions = mapsOf(s).filter((m) => m.form_number === f.form_number && m.channel !== "ONLINE");
-    return { form: f.form_number, title: f.title, who: f.who, status: f.status, channel, channel_words: CHANNEL_WORDS[channel], signature_kind: signature, signature: signatureOf(signature), version: versions.at(-1)?.form_edition ?? null };
+    return { form: f.form_number, title: f.title, who: f.who, status: f.status, channel, channel_words: CHANNEL_WORDS[channel], signature_kind: signature, signature: signatureOf(signature), version: pdfMapInUse(mapsOf(s), f.form_number)?.form_edition ?? null }; // P-32: the edition in use
   });
   return { filing_method: filingMethod(s.forms as Line[]), account: s.combination.portal ?? null, lines };
 }

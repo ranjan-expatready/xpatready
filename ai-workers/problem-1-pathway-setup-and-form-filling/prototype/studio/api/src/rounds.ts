@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { costBesideLimit, isProviderLimit } from "../../engine/ai-run.ts";
-import { editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, promptOfRun, replayPattern, type SavedRun } from "../../engine/rounds.ts";
+import { editionOfContextKey, isFinishedRun, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, promptOfRun, replayPattern, type SavedRun } from "../../engine/rounds.ts";
 import { PROTOTYPE, SOLUTION } from "./core.ts";
 import type { Sources } from "./sources.ts";
 
@@ -190,23 +190,23 @@ export class StepRunner {
     const charged = cost > 0 ? `; an earlier attempt stays counted at US$${cost.toFixed(2)}` : "";
     // Outside review 29 Oct: the usage limit is a 400 too, so it is found before "our setup error"; only the refused
     // attempt is free, an earlier one counted at its worst case stays counted.
-    if (rec.drafting_run?.status !== "completed" && isProviderLimit(rec)) {
+    if (!isFinishedRun(rec.drafting_run?.status) && isProviderLimit(rec)) {
       const kept = costBesideLimit(rec);
       return { ok: false, blocked: true, costUsd: kept, reason: `The AI provider's usage limit refused the call before any processing${kept > 0 ? `; an earlier attempt stays counted at US$${kept.toFixed(2)}` : ": nothing was charged"}. Use saved AI answers or rules only, or try later`, ...withDetails };
     }
-    if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "refused_by_provider")) {
+    if (!isFinishedRun(rec.drafting_run?.status) && attempts.some((a) => a.outcome === "refused_by_provider")) {
       console.warn(`${step.kind} ${jobId}: the AI service refused the request:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
       return { ok: false, costUsd: cost, reason: `The AI service refused the request (our setup error)${charged || "; nothing was charged"}`, ...withDetails };
     }
     // QA-87, QA-88: busy, or no answer in time, said plainly; the service's own words to the server log only.
-    if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "busy")) {
+    if (!isFinishedRun(rec.drafting_run?.status) && attempts.some((a) => a.outcome === "busy")) {
       console.warn(`${step.kind} ${jobId}: the AI service was busy:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
       return { ok: false, costUsd: cost, reason: charged ? `The AI service was busy${charged}. Try again in a few minutes` : "The AI service was busy, so nothing was charged. Try again in a few minutes", ...withDetails };
     }
     if (rec.drafting_run?.status === "timed_out") {
       return { ok: false, costUsd: cost, reason: "The AI service did not answer in time; nothing was used", ...withDetails };
     }
-    if (rec.drafting_run?.status !== "completed" || rec.contract_valid !== true || typeof rec.raw_output !== "string") {
+    if (!isFinishedRun(rec.drafting_run?.status) || rec.contract_valid !== true || typeof rec.raw_output !== "string") {
       const limit = /usage limit/i.test(JSON.stringify(rec.drafting_run?.attempts ?? []));
       const kept = limit ? costBesideLimit(rec) : cost;
       return { ok: false, blocked: limit, costUsd: kept, reason: limit ? `The AI provider's usage limit refused the call before any processing${kept > 0 ? `; an earlier attempt stays counted at US$${kept.toFixed(2)}.` : ": nothing was charged."}` : `The AI answer could not be used (${rec.drafting_run?.status ?? "no status"}${rec.output_errors ? ": it did not match the expected shape" : ""}). ${nothing}` };

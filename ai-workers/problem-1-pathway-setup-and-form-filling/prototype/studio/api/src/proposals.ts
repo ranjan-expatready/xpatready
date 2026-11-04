@@ -19,8 +19,9 @@ import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
-import { nearMatches } from "../../engine/near.ts";
+import { isRuleWhy, nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
+import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -117,9 +118,9 @@ async function usableInLibrary(db: Client, workspaceId: string, kind: string, ke
 const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) => e.issues.slice(0, 3).map((i) => `${i.path.join(".") || "item"}: ${i.message}`).join("; ");
 
 /** The new fields other proposals are waiting to add to the library (QA-159: a near duplicate of one is caught too). */
-export async function pendingNewFields(db: Client, workspaceId: string, except?: string[]): Promise<{ key: string | null; name: string; meaning: string | null }[]> {
-  const rows = await db.proposalItem.findMany({ where: { workspaceId, kind: "field", landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, ...(except?.length ? { id: { notIn: except } } : {}) }, select: { payload: true, work: true } });
-  return rows.map((r) => ({ key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: String((r.payload as { label?: unknown }).label ?? ""), meaning: ((r.payload as { meaning?: string }).meaning) ?? null })).filter((x) => x.name);
+export async function pendingNewFields(db: Client, workspaceId: string, except?: string[]): Promise<{ id: string; key: string | null; name: string; meaning: string | null }[]> {
+  const rows = await db.proposalItem.findMany({ where: { workspaceId, kind: "field", landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, ...(except?.length ? { id: { notIn: except } } : {}) }, select: { id: true, payload: true, work: true } });
+  return rows.map((r) => ({ id: r.id, key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: String((r.payload as { label?: unknown }).label ?? ""), meaning: ((r.payload as { meaning?: string }).meaning) ?? null })).filter((x) => x.name);
 }
 
 /** The one door: parses each item against contract v2, checks its identity, and writes them together (all or none).
@@ -170,7 +171,8 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     }
     // QA-159 (G-CORE B1 R3): a new field near a library field, or near another new field waiting (in this batch or an
     // earlier run), is found here on the server with the one rule (engine/near.ts), not only when the producer says so.
-    if (x.kind === "field" && x.landsOn === "library" && x.reuse.match === "new") {
+    // QA-192 review M1: a twin (reuse of its first copy, no item yet) may add the item itself, so it is checked too.
+    if (x.kind === "field" && x.landsOn === "library" && (x.reuse.match === "new" || (x.reuse.match === "reuse" && !x.reuse.existingKey))) {
       const p = x.payload as { label: string; meaning?: string };
       const me = { key: ((work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null };
       nearPool ??= [
@@ -204,8 +206,10 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
 
 /** The field-map review's choice on one item (sources.ts decide): the contract status follows the choice. */
 const STATUS_OF: Record<string, string> = { PENDING: "waiting", ACCEPTED: "accepted", CHANGED: "edited", NEW: "edited", RETURNED: "rejected" };
-export async function recordChoice(db: Client, id: string, c: { choice: string; decidedKey: string | null; by: string | null; reason: string | null; payload?: ProposalPayload; work?: unknown }) {
-  return db.proposalItem.update({ where: { id }, data: { choice: c.choice === "PENDING" ? null : c.choice, status: STATUS_OF[c.choice] ?? fail("Unknown choice."), decidedKey: c.decidedKey, decidedBy: c.by,
+/** A decision on the form-field page (or kept by a re-compare). QA-193 (Devin on #740): it is its own decision, so a
+ *  To review batch it supersedes no longer names it; a re-compare passes the batch of the decision it keeps. */
+export async function recordChoice(db: Client, id: string, c: { choice: string; decidedKey: string | null; by: string | null; reason: string | null; payload?: ProposalPayload; work?: unknown; batchId?: string | null }) {
+  return db.proposalItem.update({ where: { id }, data: { choice: c.choice === "PENDING" ? null : c.choice, status: STATUS_OF[c.choice] ?? fail("Unknown choice."), decidedKey: c.decidedKey, decidedBy: c.by, batchId: c.batchId ?? null,
     decidedAt: c.by ? new Date() : null, decisionReason: c.reason, ...(c.payload ? { payload: c.payload as Prisma.InputJsonValue, identityKey: identityKeyOf(c.payload, "") } : {}), ...(c.work !== undefined ? { work: c.work as Prisma.InputJsonValue } : {}) } });
 }
 
@@ -281,6 +285,64 @@ export function withNearReason(reason: string | null, identity: unknown): string
   const id = identity as { near?: string[]; nearReason?: string | null } | null;
   if (!id?.near?.length || !id.nearReason || reason?.includes(id.nearReason)) return reason;
   return `${reason ? `${reason} ` : ""}Close to ${id.near.slice(0, 3).join(", ")}: ${id.nearReason}`.slice(0, 1000);
+}
+
+/** QA-192 (P-120, P-149 (2)): a person's one-line reason why an item close to a library item is not the same: the one its
+ *  proposer gave (a person's words, never the rule's own or the AI's), or the decider's at accept. null when none. */
+export function personNearReason(r: Pick<Row, "identity" | "origin">): string | null {
+  const id = (r.identity ?? {}) as { near?: string[]; nearReason?: string | null; nearReasonBy?: string };
+  if (!id.near?.length || !id.nearReason?.trim()) return null;
+  if (id.nearReasonBy === "person") return id.nearReason;
+  return r.origin === "ai" || isRuleWhy(id.nearReason) ? null : id.nearReason;
+}
+
+/** QA-192: whether accepting this item needs the decider's one-line reason (it adds to the library, is close to a library
+ *  item, and no person has said why it is not the same). Field-map items are decided on their own page (BR-7). */
+export function needsNearReason(r: Pick<Row, "id" | "identity" | "origin" | "landsOn" | "step" | "reuse" | "work" | "kind" | "payload">, libraryPool?: NearPool, twinReuses?: Set<string>): boolean {
+  // Review M3: the same check decide() makes on a plain accept: the near list stored at proposal, and the library now.
+  const near = [...(((r.identity ?? {}) as { near?: string[] }).near ?? []), ...(libraryPool && r.kind === "field" ? nearIn(libraryPool, r, r.payload) : [])];
+  const reuse = (r.reuse ?? {}) as { match?: string; existingKey?: string | null };
+  // A twin not yet resolved (reuse with no item) may add the item itself at accept (Devin on #726): counted as new.
+  // Devin r3 on #726: a twin whose first copy is in the library now reuses it (decide() resolves it so), and needs none.
+  const adds = reuse.match === "new" || (reuse.match === "reuse" && !reuse.existingKey && !!(r.work as { twinOf?: string } | null)?.twinOf && !twinReuses?.has(r.id));
+  return r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && adds && !!near?.length && !personNearReason(r);
+}
+
+/** QA-192 (Devin r2 on #726, m-check): whether accepting `payload` as an edit of this item (the checker's reading on the
+ *  queue) needs a person's reason: the same check decide() makes on an edit (the new name against the library and the
+ *  other new fields waiting, never resting on the proposer's reason for the old name). */
+export function needsNearReasonForEdit(r: Pick<Row, "id" | "landsOn" | "step" | "kind">, payload: unknown, libraryPool: NearPool, pending: (NearPool[number] & { id: string })[]): boolean {
+  // Devin r3 on #726: an edit always lands its reading as a new item (a twin or a reuse match included), as decide() checks it.
+  if (r.kind !== "field" || r.landsOn !== "library" || ON_ITS_PAGE.has(r.step)) return false;
+  return nearIn([...libraryPool, ...pending.filter((x) => x.id !== r.id)], { work: null }, payload).length > 0;
+}
+
+/** Devin r3 on #726: the waiting twins that decide() would resolve to a reuse now (their first copy accepted and in the
+ *  library, or the library already has the item), read once per request for the queue's "reason needed". */
+export async function twinsThatReuse(db: Client, workspaceId: string, rows: Row[]): Promise<Set<string>> {
+  const twins = rows.filter((r) => r.landsOn === "library" && (r.reuse as { match?: string; existingKey?: string | null } | null)?.match === "reuse" && !(r.reuse as { existingKey?: string | null }).existingKey && r.relatesTo && (r.work as { twinOf?: string } | null)?.twinOf);
+  if (!twins.length) return new Set();
+  const firsts = new Map((await db.proposalItem.findMany({ where: { id: { in: twins.map((t) => t.relatesTo!) } }, select: { id: true, status: true, decidedKey: true } })).map((f) => [f.id, f]));
+  const out = new Set<string>();
+  for (const t of twins) {
+    const f = firsts.get(t.relatesTo!);
+    if ((f?.decidedKey && ["accepted", "edited"].includes(f.status) && (await usableInLibrary(db, workspaceId, t.kind, f.decidedKey))) || (await sameInLibrary(db, workspaceId, t.payload as ProposalPayload))) out.add(t.id);
+  }
+  return out;
+}
+
+/** QA-192 (review M1–M3): what the one rule compares an item with at the decision, read once per request: the library's
+ *  live fields, and (for an edit, whose new name no one has compared yet) the new fields waiting too. */
+export type NearPool = { key: string | null; name: string; meaning: string | null }[];
+export async function libraryNearPool(db: Client, workspaceId: string): Promise<NearPool> {
+  return (await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, meaning: true } }))
+    .map((f) => ({ key: f.canonicalFieldKey, name: f.label || f.canonicalFieldKey, meaning: f.meaning }));
+}
+/** The names of the pool's items close to the item as it will land (its label and meaning), with the one rule. */
+export function nearIn(pool: NearPool, r: Pick<Row, "work">, payload: unknown): string[] {
+  const p = payload as { label?: string; meaning?: string };
+  if (!p?.label) return [];
+  return nearMatches({ key: ((r.work as { proposedKey?: string } | null)?.proposedKey) ?? null, name: p.label, meaning: p.meaning ?? null }, pool).map((n) => n.name);
 }
 
 /** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
@@ -420,10 +482,14 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
   },
   async document_type(tx, r, p, l) {
     const d = p as Extract<ProposalPayload, { kind: "document_type" }>;
+    // QA-195 (break B1; P-134, P-153 (1)): the one door holds the identity rule whoever made or edited the proposal: an
+    // identity document by its flag, category or name is never given an AI reader, and is recorded as one.
+    if (aiReadsIdentity(d)) fail(`"${d.name}" is an identity document: AI never reads it (P-134). Choose its coded lines, its printed layout or a person's reading.`, HttpStatus.CONFLICT);
+    const identityDocument = identityOf(d);
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
+      readerProfile: { readerKind: d.readerKind, identityDocument, proves: d.proves }, version: 1, status: "DRAFT",
       // C3.6: a type a person named while adding a requirement is the person's (made by: person), as before it went through
       // the queue; its author is the namer (decide passes them as proposedBy), so their own-draft Delete stays (C11.9).
       ...(r.step === "requirement_type" ? { origin: "HUMAN" as const, updatedBy: l.proposedBy ?? l.actor.id } : { origin: "AI_PROPOSAL" as const, updatedBy: l.actor.id }) } });
@@ -489,7 +555,21 @@ export const ON_ITS_PAGE = new Set(["field_map"]);
 export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too" };
 /** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
  *  library. null when it can. */
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null }): string | null {
+/** P-296 (1) (tech lead, on #661): an AI-proposed new field definition is never accepted with others, on either door
+ *  (the form-field page, To review): it adds to the shared library, so each is decided on its own. */
+export const NEW_FIELD_ALONE = "A new shared field is decided on its own (only High reuse matches are accepted together): open it on its form-field page.";
+/** P-299 (tech lead, on #699): the same rule for every other step (edition field drafts included): a field that would
+ *  add to the library is accepted on its own. */
+export const NEW_FIELD_ALONE_QUEUE = "A new shared field is decided on its own (only High reuse matches are accepted together): open it and accept it alone.";
+/** P-305 (tech lead, P-299 extended): nothing new to the shared library is accepted in bulk, answer lists included;
+ *  bulk is only for clean reuse. */
+export const NEW_ITEM_ALONE_QUEUE = "It adds a new item to the shared library, so it is decided on its own (only High reuse matches are accepted together): open it and accept it alone.";
+/** P-305 review M1: an AI condition changes when a shared question is asked, for every combination that asks it (a
+ *  library change for a second person), so it is never accepted with others either. */
+export const CONDITION_ALONE = "It changes when a shared question is asked, for every combination that asks it, so it is decided on its own: open it and accept it alone.";
+/** P-305 review m1: a checklist line that would land its new document type with it adds to the library too. */
+export const LINE_WITH_NEW_TYPE_ALONE = "It adds its new document type to the shared library with it, so it is decided on its own: open it and accept it alone.";
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; relatesTo?: string | null; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown }): string | null {
   // G-CORE B5 (P-288 (2)): a field-map item is ticked with others on To review like any item when it is Ready (High:
   // both rounds agree and the rules pass, re-rated here from what is stored); otherwise the box says why, in P-121's
   // words. It still opens on its form-field page.
@@ -499,14 +579,23 @@ export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step
       if (again.confidence !== "ready") return again.reason;
     }
     if (r.confidence !== "ready") return r.agreement === "one_round" ? P121_WHY.oneRound : r.agreement === "differ" ? "The two AI readings differ: open it on its form-field page and choose." : "It needs a check first: open it on its form-field page and decide it on its own.";
+    // P-296 (1): only an exact reuse match goes with others; a new definition (or an unclear match) never does.
+    if ((r.work as { outcome?: string } | null | undefined)?.outcome !== "REUSE") return NEW_FIELD_ALONE;
   }
   // QA-176 (P-121): an AI item never goes with others without both rounds agreeing, even one stored Ready before the fix.
   if (r.confidence === "ready" && r.origin === "ai" && r.agreement && r.agreement !== "agreed") return r.agreement === "one_round" ? P121_WHY.oneRound : P121_WHY.differ;
   // C2.6 (QA-157): a one-round Decide item is one its source leaves to a person (e.g. the visa office), not two readings.
   if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : r.agreement === "one_round" ? "Its source leaves it to a person: open it and decide it on its own." : "Its two readings differ: open it and choose.";
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
+  // P-299, P-305: nothing that would add to the library (not a reuse) is accepted with others, whatever its kind or step.
+  if (r.landsOn === "library" && (r.reuse as { match?: string } | null | undefined)?.match === "new") return r.kind === "field" ? NEW_FIELD_ALONE_QUEUE : NEW_ITEM_ALONE_QUEUE;
+  // P-305 review M1 and m1: an item that lands on the combination but writes a library change with it is alone too.
+  if (r.kind === "condition") return CONDITION_ALONE;
+  if (r.kind === "requirement_line" && r.relatesTo && (r.reuse as { match?: string } | null | undefined)?.match === "new") return LINE_WITH_NEW_TYPE_ALONE;
   return null;
 }
+/** QA-192 review r3 M4 (P-121): why an item that needs a person's near reason cannot be ticked with others. */
+export const NEAR_BULK_WHY = "It is close to a library item: open it and say why it is not the same.";
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is
@@ -534,8 +623,12 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     const elsewhere = d.action !== "accept" ? rows.find((r) => ON_ITS_PAGE.has(r.step)) : undefined;
     if (elsewhere) fail(`"${String((elsewhere.payload as { label?: unknown }).label ?? identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey))}" is decided on its ${PAGE_WORDS[elsewhere.step] ?? "own page"}.`, HttpStatus.CONFLICT);
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
+    let libPool: NearPool | null = null; // QA-192 review M3: read once per decision
     if (d.action === "accept" && rows.length > 1) {
-      const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
+      // QA-192 review r3 M4: an item that needs a person's near reason is accepted on its own, as the queue says.
+      libPool = await libraryNearPool(tx, workspaceId);
+      const reuses = await twinsThatReuse(tx, workspaceId, rows);
+      const no = rows.map((r) => [r, bulkWhy(r) ?? (needsNearReason(r, libPool!, reuses) ? NEAR_BULK_WHY : null)] as const).filter(([, why]) => why);
       if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
     const out: { id: string; landedAs: string | null }[] = [];
@@ -549,6 +642,11 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;
+      // QA-192 (P-120: a near duplicate needs a one-line reason, shown to the second person at release): an item that adds
+      // to the library while close to a library item is accepted only with a person's reason why it is not the same, its
+      // proposer's or, when none, the decider's (8 characters or more); it is kept as the item's near reason.
+      const nearIds = (r.identity ?? {}) as { near?: string[]; nearReason?: string | null; nearReasonBy?: string };
+      let identity = r.identity as Prisma.InputJsonValue | null, nearGiven = false;
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
@@ -563,6 +661,34 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           const key = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
           resolved = key ? { match: "reuse", existingKey: key } : { match: "new", existingKey: null };
           reuse.match = resolved.match; reuse.existingKey = resolved.existingKey;
+          // P-305: a twin whose first copy is not in the library adds the item itself, so it is no longer a clean reuse.
+          if (resolved.match === "new" && d.action === "accept" && rows.length > 1) fail(`"${nameOf(payload, r.identityKey)}" cannot be accepted with others: its first copy (drafted for another form) is not accepted or not in the library yet, so accepting it would add the item to the shared library. Accept it on its own. Nothing was accepted.`, HttpStatus.CONFLICT);
+        }
+        // Devin on #726 and review M1–M2: checked after a twin's reuse choice is resolved, on the item as it will land: the
+        // near list is found again with the one rule (an edit's new name, a twin the door did not check) and joined to
+        // what the producer said.
+        // Review M3: a plain accept compares with the library only (a waiting item proposed later carries the pair itself);
+        // an edit's new name is compared with the waiting new fields too. Review r2 m2: an edit never rests on the
+        // proposer's reason for the old name.
+        // Devin r3 on #726: an edit always lands its reading as a new item (only an accept reuses), so every edit that lands
+        // on the library is checked, a resolved twin or a reuse match included.
+        if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && (d.action === "edit" || (reuse.match === "new" && !personNearReason(r)))) {
+          let found: string[] = [];
+          if (r.kind === "field") {
+            libPool ??= await libraryNearPool(tx, workspaceId);
+            // Devin r2 on #726: an edit's new name lands under a key built from it, so the proposer's key never hides a match.
+            found = d.action === "edit" ? nearIn([...libPool, ...(await pendingNewFields(tx, workspaceId, [r.id]))], { work: null }, payload) : nearIn(libPool, r, payload);
+          }
+          const near = [...new Set([...(d.action === "edit" ? [] : (nearIds.near ?? [])), ...found])].filter(Boolean).slice(0, 10);
+          if (near.length) {
+            if (!reason || reason.length < 8) fail(`"${nameOf(payload, r.identityKey)}" is close to ${near.slice(0, 3).join(", ")}: say in one line why it is not the same (8 characters or more). The second person sees it at release.`);
+            if (isRuleWhy(reason!)) fail(`Say in your own words why "${nameOf(payload, r.identityKey)}" is not the same as ${near[0]}; the rule's own words are not a reason.`); // review m2
+            identity = { ...nearIds, near, nearReason: reason, nearReasonBy: "person" } as Prisma.InputJsonValue; nearGiven = true;
+          } else if (d.action === "edit" && nearIds.near?.length) {
+            // Devin r2 on #726: an edit no longer close to anything drops the old name's near list, so the approver is not
+            // told it is close to a field it is not (Undo puts the old list back).
+            identity = { ...nearIds, near: [], nearReason: null, nearReasonBy: null } as Prisma.InputJsonValue; nearGiven = true;
+          }
         }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
@@ -578,15 +704,15 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           // C3.6 (#523 Question 1): a type a person named while adding a requirement keeps that person as its proposer (as
           // before it went through the queue), read from the server's own run, so their "Delete your own unapproved type" stays.
           const namer = r.step === "requirement_type" && r.runId ? (await tx.draftingJob.findFirst({ where: { id: r.runId, workspaceId, kind: "requirement_type" }, select: { startedBy: true } }))?.startedBy : null;
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, r.identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: withNearReason(reason ?? r.reason, identity), proposedBy: namer ?? actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
       const landedStamp = landedAs && !reused ? await stampOf(tx, workspaceId, r.kind, landedAs, r.combinationId) : null;
-      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
+      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}), ...(nearGiven ? { nearBefore: r.identity } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(), ...(ON_ITS_PAGE.has(r.step) ? { choice: "ACCEPTED" } : {}),
         decisionReason: reason, batchId, decidedKey: landedAs, ...(resolved && d.action !== "reject" ? { reuse: resolved } : {}),
-        ...(d.action === "edit" || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(d.action === "edit" || landedStamp || pqr || nearGiven ? { work: work as Prisma.InputJsonValue } : {}), ...(nearGiven ? { identity: identity as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
       out.push({ id: r.id, landedAs });
@@ -595,13 +721,14 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
   // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
   // transaction; Prisma's 5 s default ended batches above about 45 picks with nothing accepted.
   }, { ...QUEUE_TX, timeout: 120_000 });
-  await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`);
+  await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`, { n: landed.length }); // QA-193 review M1: how many it made, so Undo knows when one left the batch since
   return { batchId, items: landed };
 }
 
 /** Undo a decision batch within 10 s: its landed draft rows and waiting ADDs are removed and its items wait again on
  *  the queue as they were proposed (1b: "undone" left them nowhere; the activity log keeps the undo). Only the person
  *  who decided, only while every ADD is still waiting. */
+const PAGE_DECIDED_SINCE = "One of these items was decided again on its form-field page since, so Undo would erase that decision. Nothing was undone: change it on that page.";
 export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: string, batchId: string) {
   need(actor, "review");
   const res = await db.$transaction(async (tx) => {
@@ -609,6 +736,14 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     // C3.2 AT-9: an Undo clears the items' batch id, so the same Undo again finds none; the activity log still has the
     // undo, so it is refused as done (409), not as unknown.
     if (!rows.length && await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } })) fail("Already undone: these proposals wait on the queue again. Nothing was changed.", HttpStatus.CONFLICT);
+    // QA-193 review M1 and Devin on #740: a decision on the form-field page takes the item out of the batch (recordChoice),
+    // and a re-compare re-writes the items under new ids (keeping the batch of a kept decision, reopening the others). So
+    // the decision's log says how many items it made: when fewer carry the batch now, one was decided again since and the
+    // decision is never undone from here. (A decision logged before this has no count and is checked as before.)
+    if (!(await tx.auditEvent.count({ where: { workspaceId, action: "undone", entity: "proposals", entityKey: batchId } }))) {
+      const made = (await tx.auditEvent.findFirst({ where: { workspaceId, action: "decided", entity: "proposals", entityKey: batchId }, select: { detail: true } }))?.detail as { n?: number } | null;
+      if (typeof made?.n === "number" && rows.length < made.n) fail(PAGE_DECIDED_SINCE, HttpStatus.CONFLICT);
+    }
     if (!rows.length) fail("No decision with this id.", HttpStatus.NOT_FOUND);
     if (rows.some((r) => r.decidedBy !== actor.id)) fail("Only the person who decided can undo it.", HttpStatus.FORBIDDEN);
     if (rows.some((r) => r.status === "undone")) fail("Already undone.", HttpStatus.CONFLICT);
@@ -619,7 +754,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     // G-CORE B5: a field-map item accepted here goes back only while its draft is not applied and nobody decided it again
     // on its form-field page.
     const onPage = rows.filter((r) => ON_ITS_PAGE.has(r.step));
-    if (onPage.some((r) => r.choice !== "ACCEPTED")) fail("One of these items was decided again on its form-field page since, so Undo would erase that decision. Nothing was undone: change it on that page.", HttpStatus.CONFLICT);
+    if (onPage.some((r) => r.choice !== "ACCEPTED")) fail(PAGE_DECIDED_SINCE, HttpStatus.CONFLICT);
     if (onPage.length && await tx.draftingJob.count({ where: { id: { in: [...new Set(onPage.map((r) => r.runId).filter((x): x is string => !!x))] }, status: "APPLIED" } })) fail("The form's draft was applied to the configuration since, so Undo would leave its form fields mapped. Nothing was undone: change the mapping in the library instead.", HttpStatus.CONFLICT);
     // C11.13 (review M3): an item this batch added that another accepted item now reuses is not taken away under it.
     const added = rows.filter((r) => r.decidedKey && (r.reuse as { match?: string } | null)?.match !== "reuse");
@@ -665,10 +800,10 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
-      const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };
+      const { beforeEdit, landedStamp, pqr, nearBefore, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown; nearBefore?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null, ...(ON_ITS_PAGE.has(r.step) ? { choice: null } : {}),
         ...((r.work as { twinOf?: string } | null)?.twinOf ? { reuse: { match: "reuse", existingKey: null } } : {}),
-        ...(beforeEdit || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(beforeEdit || landedStamp || pqr || nearBefore ? { work: work as Prisma.InputJsonValue } : {}), ...(nearBefore ? { identity: nearBefore as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
     return rows.length;

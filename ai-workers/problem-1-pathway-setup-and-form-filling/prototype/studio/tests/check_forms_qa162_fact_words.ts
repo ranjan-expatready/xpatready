@@ -6,7 +6,8 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findFact, stem, wordsOf } from "../engine/fact-words.ts";
+import { findFact, listed, stem, wordsOf } from "../engine/fact-words.ts";
+import { pickDecider } from "../engine/qd-conditions.ts";
 import type { FactSourceView } from "../engine/sources.ts";
 import { admitInput, PolicyRefusal } from "../../p2/guard.ts";
 import { buildRequest } from "../../p2/prompt.ts";
@@ -25,8 +26,13 @@ const FACTS = [
   f("principal", "person.other_family_name", "Family name of any other name ever used"), f("principal", "person.other_given_names", "Given name(s) of any other name ever used"),
   f("spouse_or_partner", "relationship.accompanies_subject_to_canada", "Whether this family member will accompany the subject to Canada"),
   f("spouse_or_partner", "person.citizenship", "Country of citizenship"),
+  // QA-194: the library's own labels of the twins (evidence/slice-1-imm5257-live/composition.json).
+  f("principal", "person.previous_residence_from", "Start date of the status in a previous country of residence"), f("principal", "person.previous_residence_to", "End date of the status in a previous country of residence"),
+  f("principal", "person.previous_residence_country", "A country or territory where the person previously resided"),
 ];
 const at = (r: ReturnType<typeof findFact>) => r.fact ? `${r.fact.role}|${r.fact.fact}|${r.how}` : `none:${r.why}`;
+/** QA-194: two or more questions that hold every word of the pick → none, every one named (the shorter key never wins). */
+const twins = (asks: string, keys: string[]) => { const r = findFact(FACTS, "principal", asks); return !r.fact && r.why === "several" && keys.every((k) => r.several.some((x) => x.fact === k)); };
 
 // ---- W1 exact
 ok("W1 pass: the question's own label names it exactly", at(findFact(FACTS, "principal", "Country of citizenship")) === "principal|person.citizenship|exact");
@@ -34,8 +40,20 @@ ok("W1 pass: the library key names it exactly (what a v2 round writes)", at(find
 ok("W1 pass: a question text or alias names it exactly", at(findFact(FACTS, "principal", "Have you ever been convicted of a crime?", new Map([["person.criminal_history", ["Have you ever been convicted of a crime?"]]]))) === "principal|person.criminal_history|exact");
 ok("W1 fail: another person's question is never named (the spouse's citizenship is not the principal's)", at(findFact(FACTS.filter((x) => x.role !== "principal"), "principal", "Country of citizenship")) === "none:none");
 // ---- W2 words
-ok("W2 pass: \"Purpose of visit\" is the purpose of the visit (the case's question, asked of the principal), not its 'other' details", at(findFact(FACTS, "principal", "Purpose of visit")) === "case|case.visit_purpose|words");
-ok("W2 pass: synonym list: \"Criminal record\" is criminal history, not its details", at(findFact(FACTS, "principal", "Criminal record")) === "principal|person.criminal_history|words");
+ok("W1 pass: the purpose's own label names it, for the principal (the case's question, asked of the principal)", at(findFact(FACTS, "principal", "Purpose of the visit to Canada")) === "case|case.visit_purpose|exact");
+ok("W2 fail (QA-194): \"Purpose of visit\" is the purpose or its 'other' details: none, both named", twins("Purpose of visit", ["case.visit_purpose", "case.visit_purpose_other"]));
+ok("W2 fail (QA-194): \"Intended stay dates\" is the first or the last day: none, both named", twins("Intended stay dates", ["case.intended_stay_from", "case.intended_stay_to"]));
+ok("W2 fail (QA-194): \"Intended stay\" is the first or the last day: none, both named", twins("Intended stay", ["case.intended_stay_from", "case.intended_stay_to"]));
+ok("W2 fail (QA-194): \"Previous residence\" is never the end date: none, the start and end dates named", twins("Previous residence", ["person.previous_residence_from", "person.previous_residence_to"]));
+ok("W2 fail (QA-194): \"to\" never picks a twin: \"Intended stay to date\" and \"Intended stay to Canada\" name both days", twins("Intended stay to date", ["case.intended_stay_from", "case.intended_stay_to"]) && twins("Intended stay to Canada", ["case.intended_stay_from", "case.intended_stay_to"]));
+ok("W2 fail (QA-194): a lone question for the other end is refused: \"Intended stay to\" when only the first day is asked names none", at(findFact(FACTS.filter((x) => x.fact !== "case.intended_stay_to"), "principal", "Intended stay to")) === "none:none");
+ok("W2 pass (QA-194): \"from\" is a word: \"Intended stay from date\" is the first day only", at(findFact(FACTS, "principal", "Intended stay from date")) === "case|case.intended_stay_from|words");
+ok("W2 fail (QA-194 review M1): a filler \"to\" never decides: \"Relationship to applicant\" is answered as \"Relationship applicant\" (the label \"…to be visited to the traveller\" gains nothing from it)", (() => { const pool = [...FACTS, f("principal", "visit.host_relationship", "Relationship of the person or institution to be visited to the traveller"), f("case", "relationship.start_date", "Date of marriage or date the common-law relationship began")]; const a = findFact(pool, "principal", "Relationship to applicant"), b = findFact(pool, "principal", "Relationship applicant"); return !a.fact && !b.fact && a.why === "several" && at(a) === at(b) && a.several.length === b.several.length; })());
+ok("listed (QA-194 review M2): every candidate is named, never \"and n more\" (5 holders)", (() => { const pool = [...FACTS, f("principal", "person.previous_residence_status", "Immigration status in a previous country of residence"), f("principal", "person.previous_residence_status_other", "Description of the status in a previous country of residence when it was 'other'")]; const r = findFact(pool, "principal", "Previous residence"); if (r.fact) return false; const l = listed(r.several); return r.several.length === 5 && r.several.every((x) => l.includes(`"${x.label}"`)) && !/more/.test(l); })());
+ok("W2 fail (QA-194 review n2): the end veto covers \"_to_date\" keys: \"Employment period to\" when only the start date is asked names none (\"Employment period\" alone still names it)", at(findFact([f("principal", "person.employment_from_date", "Start date of the employment period")], "principal", "Employment period to")) === "none:none" && at(findFact([f("principal", "person.employment_from_date", "Start date of the employment period")], "principal", "Employment period")) === "principal|person.employment_from_date|words");
+ok("W2 pass (QA-194): a unique full match still matches: \"Previous residence end date\" is the end date", at(findFact(FACTS, "principal", "Previous residence end date")) === "principal|person.previous_residence_to|words");
+ok("W2 pass: synonym list: \"Criminal record question\" is criminal history (record = history; only its question text says \"question\")", at(findFact(FACTS, "principal", "Criminal record question", new Map([["person.criminal_history", ["Criminal history question"]]]))) === "principal|person.criminal_history|words");
+ok("W2 fail (QA-194): \"Criminal record\" is criminal history or its details (both hold every word): none, both named", twins("Criminal record", ["person.criminal_history", "person.criminal_history_details"]));
 ok("W2 pass: the person's own role words are dropped: \"Accompanying spouse or partner\" for the spouse", at(findFact(FACTS, "spouse_or_partner", "Accompanying spouse or partner")) === "spouse_or_partner|relationship.accompanies_subject_to_canada|words");
 ok("W2 pass: \"Other purpose details\" is the description of the 'other' purpose (description = details)", at(findFact(FACTS, "principal", "Other purpose details")) === "case|case.visit_purpose_other|words");
 ok("W2 fail: words two questions hold equally (\"Planned dates of stay\": first and last day) name none, and both are given", (() => { const r = findFact(FACTS, "principal", "Planned dates of stay"); return !r.fact && r.why === "several" && r.several.length === 2; })());
@@ -99,6 +117,28 @@ try {
   ok("R fail: a v2 answer for another question list is not used (the v1 answer is)", r.ok && r.output.picks[0].asks === "pqr-picks.v1.md");
 } finally {
   for (const p of written) rmSync(p, { force: true });
+}
+// ---- QA-162 after QA-194: a condition's deciding question (engine/qd-conditions.ts pickDecider)
+{
+  const gate = f("principal", "person.used_other_name", "Whether the person has ever used any other name, such as a nickname, maiden name or alias");
+  const names3 = [gate, f("principal", "person.other_family_name", "Family name of any other name ever used"), f("principal", "person.other_given_names", "Given name(s) of any other name ever used")];
+  const yesNo = (x: FactSourceView) => x.fact === "person.used_other_name";
+  const pick = (pool: FactSourceView[], can: (x: FactSourceView) => boolean, asks: string) => pickDecider(pool, can, "principal", asks, new Map(), (x) => x, "yes");
+  const got = pick(names3, yesNo, "Ever used other name");
+  ok("D pass: words that fit three questions, of which only the Yes/No can take \"yes\", decide by that Yes/No question", !("why" in got) && got.f.fact === "person.used_other_name");
+  const both = pick(names3, () => true, "Ever used other name");
+  ok("D fail: when every one of them could take the answer it is none, every one named, never guessed", "why" in both && /could be 3 questions/.test(both.why) && names3.every((x) => both.why.includes(x.label)));
+  const marital = [f("principal", "person.marital_status", "Marital status"), f("principal", "person.marital_status_note", "Note on the marital status")];
+  const exact = pick(marital, (x) => x.fact === "person.marital_status_note", "Marital status");
+  ok("D fail (fresh review m1 on #744): an exact name is never overruled by the answer filter (\"Marital status\" stays the marital status)", !("why" in exact) && exact.f.fact === "person.marital_status");
+  ok("D pass (Opus review m1 on #744): a choice made by the answer is never Ready: it carries the words for a person to check", !("why" in got) && !!got.loose && /can be answered "yes"/.test(got.loose));
+  const twinsExact = [f("principal", "person.purpose_a", "Purpose"), f("principal", "person.purpose_b", "Purpose")];
+  const ex = pick(twinsExact, (x) => x.fact === "person.purpose_b", "Purpose");
+  ok("D pass (Opus review m1): an exact tie, one of which can take the answer, takes it only for a person to check (loose, never null)", !("why" in ex) && ex.f.fact === "person.purpose_b" && !!ex.loose);
+  const outside = pick([...twinsExact, f("case", "case.purpose", "Purpose")], (x) => x.fact === "case.purpose", "Purpose");
+  ok("D fail (Opus review m1): a question outside the tie is never chosen, even when it alone can take the answer", "why" in outside && /could be 2 questions/.test(outside.why));
+  const none = pick(names3, () => false, "Ever used other name");
+  ok("D fail: when none of them can take the answer, the usual reason stands (several, named)", "why" in none && /could be 3 questions/.test(none.why));
 }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

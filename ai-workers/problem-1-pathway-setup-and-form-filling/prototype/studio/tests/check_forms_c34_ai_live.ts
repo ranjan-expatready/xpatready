@@ -8,7 +8,7 @@
 //   F  a Live round that fails costs what it recorded and offers Saved only when a Saved result exists (none here).
 //   zsh studio/tools/isolated.sh forms_c34live 4452 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c34_ai_live.ts 4452 xr_studio_forms_c34live
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { FORM_ANSWER, GUIDE_ANSWER } from "./fixtures/c34-answers.ts";
 
@@ -27,6 +27,19 @@ const record = (answer: unknown, usd: number) => ({ caller: "live", contract_val
 const scenario = (jobs: Record<string, unknown>) => { writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs })); rmSync(join(VAR, "fake-launch.count"), { force: true }); };
 const live = (answer: unknown, usd: number) => ({ stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: record(answer, usd) } });
 const TRIGGER = "c34_live_check_refuse";
+// The C3.4 v2 rerun (3 Nov) committed the Mac paid runner's real C3.4 runs, and with them F's "no Saved exists" no longer
+// holds. This check proves the Live path with the stand-in launcher (the saved result itself is acceptance/C3.4.test.ts),
+// so the real runs are set aside in the copy's var folder while it runs and put back when it exits, also on Ctrl-C or a
+// stop; a folder a killed check left is put back first. As tests/check_forms_c34_ai.ts.
+const RUNS = join(STUDIO, "..", "p2", "runs"), MASTERS_LIVE = /^studio-masters-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
+const aside = join(STUDIO, "var", `c34-real-runs-${process.pid}`);
+const putBack = (dir = aside) => { if (!existsSync(dir)) return; for (const f of readdirSync(dir)) renameSync(join(dir, f), join(RUNS, f)); rmSync(dir, { recursive: true, force: true }); };
+const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+for (const d of existsSync(join(STUDIO, "var")) ? readdirSync(join(STUDIO, "var")).filter((x) => /^c34-real-runs-\d+$/.test(x)) : []) if (!alive(Number(d.slice(14)))) putBack(join(STUDIO, "var", d));
+mkdirSync(aside, { recursive: true });
+for (const f of readdirSync(RUNS).filter((x) => MASTERS_LIVE.test(x) && !x.includes("pacheck"))) renameSync(join(RUNS, f), join(aside, f));
+process.on("exit", () => putBack());
+for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
 
 (async () => {
   const health = await call("GET", "/session");
@@ -43,9 +56,10 @@ const TRIGGER = "c34_live_check_refuse";
   let r = await call("POST", `/attachments/${form}/draft-masters`, { mode: "live" });
   ok("C3.4 V fail: Live without looking at the plan is refused (cost first), nothing sent", r.status === 409 && /plan/i.test(r.body?.detail ?? "") && !sql(`select count(*) from drafting_job where kind='masters_edition' and mode='LIVE'`).startsWith("1"), r.body?.detail);
   const plan = await call("POST", `/attachments/${form}/draft-masters/plan`, { mode: "live" });
-  // The plan bounds a round by the raw inventory (roundBudgetUsd, as C4.7 and C4.11 do): US$6.60 for IMM 5257's two
-  // rounds, above the US$4.35 the runner reserves for the slimmed request (tools/track-a-jobs.ts); never below it.
-  ok("C3.4 V pass: the Live plan states the worst case of both rounds before anything runs, never below the runner's reservation", plan.status === 200 && plan.body?.totals?.worst_usd >= 4.35 && plan.body?.totals?.worst_usd <= 6.6 && plan.body?.live?.approved === true, plan.body?.totals);
+  // The plan bounds a round by the raw inventory (roundBudgetUsd, as C4.7 and C4.11 do): US$7.27 for IMM 5257's two
+  // rounds at the 16,000 output limit (P-296 (3)), above the US$5.03 the runner reserves for the slimmed request
+  // (tools/track-a-jobs.ts); never below it.
+  ok("C3.4 V pass: the Live plan states the worst case of both rounds before anything runs, never below the runner's reservation", plan.status === 200 && plan.body?.totals?.worst_usd >= 5.03 && plan.body?.totals?.worst_usd <= 7.3 && plan.body?.live?.approved === true, plan.body?.totals);
   r = await call("POST", `/attachments/${form}/draft-masters`, { mode: "live", planSha256: "0".repeat(64) });
   ok("C3.4 V fail: Live with another plan's checksum is refused", r.status === 409 && /plan/i.test(r.body?.detail ?? ""), r.body?.detail);
   r = await call("POST", `/attachments/${form}/draft-masters`, { mode: "live", planSha256: plan.body?.plan_sha256 });

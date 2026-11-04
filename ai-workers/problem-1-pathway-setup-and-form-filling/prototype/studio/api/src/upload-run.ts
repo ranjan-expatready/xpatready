@@ -19,7 +19,8 @@ import { normaliseCode } from "../../contracts/form-library.ts";
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { INDEX_URL } from "./finder.ts";
-import { Intake, MAX_BYTES } from "./intake.ts";
+import { editionFromManifest, Intake, MAX_BYTES, type EditionFrom } from "./intake.ts";
+import { manifest } from "../../engine/import.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -32,7 +33,7 @@ export const UPLOAD_STEPS = [
   { kind: "upload_add", label: "Add it to the library" },
 ] as const;
 type Kind = (typeof UPLOAD_STEPS)[number]["kind"];
-type Identity = { ok: boolean; kind?: string; code?: string; edition_label?: string; title?: string; language?: string; error?: string };
+type Identity = { ok: boolean; kind?: string; code?: string; edition_label?: string; edition_from?: EditionFrom; title?: string; language?: string; error?: string };
 
 /** C2.4 (review of 6c940174, Major 2): an approved file held as a newer or older edition is not a source to verify:
  *  its card says what it waits for and links to its own step (Review impact; the older edition's item), never to
@@ -107,6 +108,7 @@ export class UploadRuns implements OnModuleInit {
     await this.db.aiBatch.update({ where: { id: batchId }, data: { status: "RUNNING" } });
     const bytes = readFileSync(stored);
     let id: Identity = { ok: false };
+    let mismatch: string | null = null; // C11.7: the source-list entry this file pretends to be, when it is not that file
     const s1 = await this.step(batchId, "upload_check", async () => {
       if (bytes.length > MAX_BYTES) return { status: "FAILED", message: "The file is larger than 25 MB. Nothing was read." };
       if (!bytes.length) return { status: "FAILED", message: "The file is empty (0 bytes). Nothing was read." };
@@ -114,19 +116,24 @@ export class UploadRuns implements OnModuleInit {
       // Not damaged: the PDF opens (pages and structure readable); the same read gives step 2 its answer.
       const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
       id = JSON.parse(stdout.trim().split("\n").pop()!) as Identity;
+      // C11.7 (review m1): the same source-list rule as the intake, so the card never says otherwise than the result.
+      const listed = editionFromManifest(id, sha(bytes), manifest() as { file: string; edition?: string; sha256: string }[]);
+      if (listed && "use" in listed) id = listed.use as Identity;
+      else if (listed) mismatch = `${listed.mismatch.file} (${listed.mismatch.edition})`;
       if (!id.ok && /could not be (read|opened)|PdfReadError|EmptyFile|damaged/i.test(id.error ?? "")) return { status: "FAILED", message: "This PDF is damaged or incomplete: it could not be opened. Download it again from canada.ca and upload that file. Nothing was read." };
       const size = bytes.length < 1024 ? `${bytes.length} bytes` : bytes.length < 1024 * 1024 ? `${Math.round(bytes.length / 1024)} KB` : `${(bytes.length / 1024 / 1024).toFixed(1)} MB`;
       return { status: "COMPLETED", message: `A PDF of ${size} that opens; its fingerprint is recorded. US$0.`, detail: { sha256: sha(bytes) } };
     });
     if (s1 !== "COMPLETED") return this.finish(batchId, s1 === null ? "CANCELLED" : "FAILED", "The file could not be used.");
     const s2 = await this.step(batchId, "upload_identity", async () => {
-      if (id.ok && id.code && id.edition_label) return { status: "COMPLETED", message: `Rules read it: ${id.edition_label}${id.title ? ` · ${id.title}` : ""}. No AI call was made.` };
+      if (id.ok && id.code && id.edition_label) return { status: "COMPLETED", message: `Rules read it: ${id.edition_label}${id.title ? ` · ${id.title}` : ""}.${id.edition_from === "manifest" ? " The file does not print its edition; it is the official source list's, because this file's checksum is that entry's." : id.edition_from === "form_template" ? " The edition is the one the form's own template records (none is printed next to the form number)." : ""} No AI call was made.` };
+      if (mismatch) return { status: "FAILED", message: `Rules found ${id.code} but no edition in the file, and this is not the official ${mismatch} on the source list: its checksum is different. It will be refused; no AI call was made.` };
       return { status: "NEEDS_PERSON", message: "Rules could not read its form number and edition. AI may read only a file from canada.ca or one a second person approved, so this file waits for a person to check it; no AI call was made." };
     });
     if (s2 === null) return this.finish(batchId, "CANCELLED", "Stopped.");
     let matched: { formPage: string; pdfUrl: string; lastUpdated: string | null } | null = null; // round 6 should 1 (D18)
     const s3 = await this.step(batchId, "upload_compare", async () => {
-      if (!id.ok || !id.code) return { status: "SKIPPED", message: "Not compared: the form number is not known." };
+      if (!id.code) return { status: "SKIPPED", message: "Not compared: the form number is not known." };
       const code = normaliseCode(id.code);
       const guides = await this.guidesNaming(code);
       const named = guides.length ? ` Named by ${guides.join(", ")}.` : " No guide in the library names it yet.";
@@ -166,7 +173,7 @@ export class UploadRuns implements OnModuleInit {
         await this.db.govFormDef.updateMany({ where: { id: ed.govFormDefId, formPageUrl: null }, data: { formPageUrl: m.formPage } });
       }
     }
-    const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", attached: "Added to the library." };
+    const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", older_in_library: "In the library only as an older edition: it is not used.", attached: "Added to the library." };
     await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? done[outcome] ?? "In the library." : s4 === "NEEDS_PERSON" ? (unread ? "Held: the rules could not read its form number, so it cannot be approved. Upload the official PDF from canada.ca instead." : HELD_WORDS[outcome] ?? "Held: record the IRCC page it came from on To review; then a second person compares and approves it.") : "Not added.");
   }
 

@@ -12,14 +12,14 @@ import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { questionCounts } from "../../engine/runtime/questionnaires.ts";
-import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, formsWithoutFieldMap, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
-import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
-import { forViewer, setupChecklistOf, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
+import { filedOf } from "../../engine/structure.ts";
+import { forViewer, progressOf, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
 import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
 import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
-import { diff, validate } from "../../engine/validate.ts";
+import { diff, sampleContentProblems, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ACTORS, Audit, Db, isDemoWorkspace, need, ROOT, Workspace, type Actor } from "./core.ts";
@@ -33,6 +33,7 @@ import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
 import { gatesOf, realBaseline, type Gate } from "./answer-key-gate.ts";
+import { libraryType } from "../../engine/form-type.ts";
 
 /** Parses a request body or query with its contract; a mismatch is a 400 Problem Details with field errors. */
 export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -47,7 +48,7 @@ const derivedOf = (s: Snapshot) => (s.derived_fields as { id: string; calculatio
 type SnapForm = { form_number: string; form_kind?: string | null; channel?: Channel; status?: string; condition_plain?: string | null };
 
 type Row = {
-  leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; hasContent: boolean;
+  leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; /** Opus review M1 (V3 B1): every draft error, the tagged "no field map" ones included: what holds a row back on the Release page, and its reason. */ holds: number; firstHold: string | null; hasContent: boolean;
   /** UX-A part 2: the draft's release-blocking errors as its Review and release tab counts them (with "Nothing to release
    *  yet" when it has no forms and no documents), and the first of them in words. */
   blockers?: { n: number; first: string | null; empty: boolean };
@@ -183,9 +184,10 @@ export class Programs {
       const noteOf = (aiProposals: number, next: string | undefined, held: { edition: string }[] = []) => [n.linkLabel, aiProposals && next !== "review_proposals" ? `${aiProposals} AI proposal${aiProposals === 1 ? "" : "s"} to review` : null,
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
-        rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
-          setup: setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`) });
+        const nsSetup = setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`);
+        rows.push({ pathway, changes: 0, errors: 0, firstError: null, holds: 0, firstHold: null, hasContent: false, searchText: path.join(" "), docNames: [],
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: progressOf(nsSetup), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
+          setup: nsSetup });
         continue;
       }
       const { snapshot, sha256 } = snaps.get(c.id)! as { snapshot: Snapshot; sha256: string };
@@ -201,7 +203,7 @@ export class Programs {
       // G1 BR-7 (challenge M1): numbers without a source hold the draft back, never relProblems (a release keeps its
       // status); and only a draft that will be submitted (changes, or no release yet), so a Live row with no draft
       // changes never reads "Fix n problems" (tech lead on #568, G2 challenge; engine/setup-checklist.ts).
-      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? draftSourceProblems(snapshot, demo) : [])];
+      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? [...draftSourceProblems(snapshot, demo), ...(demo ? [] : sampleContentProblems(snapshot))] : [])]; // C5.5: Sample content holds a real release (studio.problems)
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
       // G2 (challenge M1): only a draft with something to release is judged, so a Live, unchanged row keeps step 5 done.
       // Added to the draft's problems (the Release page holds the row on them), never to the released snapshot's.
@@ -225,14 +227,14 @@ export class Programs {
       const status: Status = statusOf(!!rel, missing);
       const checked = checkedOf(c.attachments.map((x) => { const d = new Date(official.get(x.sha256) || x.createdAt); return Number.isNaN(d.getTime()) ? x.createdAt : d; }), now);
       const docNames = (snapshot.document_requirements as { document_type: string }[]).map((d) => d.document_type);
-      const errors = draftProblems.filter((x) => x.level === "error");
+      // V3 B1: a form with no field map is counted once, as "Map N forms" (forms.unmapped), not again as an error here.
+      const errors = draftProblems.filter((x) => x.level === "error" && !waitsForMap(x));
       const aiProposals = proposals.reduce((s, x) => s + x.n, 0);
       // New editions held for impact review (P-32) of a form this row files or has as a source, or uploaded on this row.
       const codes = new Set(forms.map((f) => f.code));
       const held = heldItems.filter((x) => x.combinationId === c.id || (x.code && codes.has(x.code))).map((x) => ({ code: x.code ?? "", edition: x.editionLabel ?? x.code ?? "" }))
         .filter((x, i, all) => all.findIndex((y) => y.edition === x.edition) === i);
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
-      const progress = progressFollows(setupProgress({ forms: snapForms.length, allDrafted: forms.every((f) => f.drafted), reviewed: changes === 0 ? !!rel : !!gates.get(c.id)?.ok, aiProposals, live: isLive({ status }), changes }), nextAction, missing);
       // W1 setup checklist (slice A): the same data, read once into one input (concept §8).
       const proposalsOf: Partial<Record<ProposalKind, number>> = {};
       for (const g of byKind) if (g.combinationId === c.id || (!g.combinationId && g.formEdition && (codes.has(g.formEdition) || codes.has(g.formEdition.split(" (")[0])))) proposalsOf[g.kind as ProposalKind] = (proposalsOf[g.kind as ProposalKind] ?? 0) + g._count;
@@ -243,7 +245,7 @@ export class Programs {
       const applicantRoles = roles.filter((p) => p.role !== "representative" && p.applies !== false);
       const docLines = snapshot.document_requirements as { who?: unknown }[];
       const covers = (d: { who?: unknown }, role: string) => !Array.isArray(d.who) || !d.who.length || d.who.includes(role);
-      const unmapped = snapForms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(snapshot.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).length;
+      const unmapped = formsWithoutFieldMap(snapshot).length; // QA-180: the rule release and Open a case read
       const by = c.participantsBy;
       const input: SetupInput = {
         combinationId: c.id, retired,
@@ -262,18 +264,24 @@ export class Programs {
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
       };
+      const checklist = setupChecklistOf(input, `${c.id}|${key}`);
       // G1 §4: a row held back only by numbers without a source says so with its count (the Release page's held reason);
       // otherwise its first own problem (G2: a test line names its key's label).
       const unsourced = errors.filter((x) => (x as { gate?: string }).gate === "no-source").length;
       const first = errors.find((x) => !(x as { gate?: string }).gate) ?? errors[0];
       const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
+      // Opus review M1 (V3 B1): the Release page holds a row on every draft error and names it. When only forms with no
+      // field map hold it, the reason names them all (they are left out of `errors`, which counts work for the checklist).
+      const holding = draftProblems.filter((x) => x.level === "error");
+      const unmappedHolds = holding.filter((x) => waitsForMap(x)).map((x) => x.item);
+      const firstHold = errors.length ? firstError : unmappedHolds.length ? `No form fields mapped yet for ${unmappedHolds.join(", ")}: map ${unmappedHolds.length === 1 ? "its" : "their"} form fields (Draft setup), or remove ${unmappedHolds.length === 1 ? "it" : "them"} from this combination.` : null;
       // UX-A part 2: what blocks the release, with "nothing to release yet" when the draft is empty (To review reads it).
       const blocking = [...errors, ...emptyProblem(snapshot)];
       const said = (p: { item: string; message: string }) => `${p.item ? `${p.item}: ` : ""}${p.message.split(":")[0]}`;
-      rows.push({ pathway, changes, errors: errors.length, firstError, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
-        setup: setupChecklistOf(input, `${c.id}|${key}`),
+      rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
+        setup: checklist,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: !retired && needsWork({ status, nextAction }), needsYou: !retired && waitsForPerson({ status, nextAction, aiProposals, held: held.length }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }
@@ -418,7 +426,7 @@ export class Programs {
       const gates = await this.studio.releaseGates(changed.map((r) => ({ combinationId: r.leaf.combinationId!, sha256: (snaps.get(r.leaf.combinationId!) as { sha256: string }).sha256 })));
       for (const r of changed) {
         const id = r.leaf.combinationId!;
-        if (r.errors) { why.set(id, { why: r.firstError }); continue; }
+        if (r.holds) { why.set(id, { why: r.firstHold }); continue; }
         const gate = gates.get(id)!;
         if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
         const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(id) as { snapshot: Snapshot }).snapshot));
@@ -430,7 +438,7 @@ export class Programs {
         }
         why.set(id, { why: null });
       }
-    } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
+    } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.holds ? r.firstHold : null });
     // Approved library changes travel with the shared draft and are released with it (Screen 02 slice 2, B1).
     // C11.13 (P-120): the Release page also lists the changes still waiting for a second person (never released, never
     // counted), and each near duplicate says what it is close to and why it is not the same. The draft bar (summary)
@@ -441,8 +449,9 @@ export class Programs {
     const releasing = library.filter((l) => l.will_release);
     // C5.6 (P-240, G3): Sample content releases as a "Demo release".
     const changedIds = changed.map((r) => r.leaf.combinationId!).filter(Boolean);
-    // Not released yet, so no snapshot: a Sample combination, or any current check marked Sample (illustrative).
-    const demoIds = new Set([...(await this.db.combination.findMany({ where: { id: { in: changedIds }, sourceBasis: "ILLUSTRATIVE" }, select: { id: true } })).map((c) => c.id),
+    // Not released yet, so no snapshot: a Sample combination, or any current check marked Sample (illustrative). C5.5
+    // BR-3: only in the demo workspace; anywhere else every release is real (and Sample content holds it).
+    const demoIds = new Set(!isDemoWorkspace() ? [] : [...(await this.db.combination.findMany({ where: { id: { in: changedIds }, sourceBasis: "ILLUSTRATIVE" }, select: { id: true } })).map((c) => c.id),
       ...(await this.db.check.findMany({ where: { combinationId: { in: changedIds }, illustrative: true, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { combinationId: true } })).map((c) => c.combinationId),
       // G1 (tech lead on #558): a number answered by a Sample source entry makes its release a Demo release.
       ...await this.sampleSourced(workspaceId, changedIds)]);
@@ -489,7 +498,7 @@ export class Programs {
       for (const r of d.rows) {
         const { snapshot } = await buildSnapshot(this.db, workspaceId, r.combinationId!, "draft");
         const own = (await this.studio.problems(workspaceId, snapshot, r.combinationId!)).filter((p) => p.level === "error");
-        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p) });
+        for (const p of own) errors.push({ combination: r.label, where: p.where, item: p.item, label: (p as { label?: string }).label ?? null, forms: (p as { forms?: string[] }).forms ?? [], message: problemWords(p), ...((p as { gate?: string }).gate ? { gate: (p as { gate?: string }).gate } : {}) }); // C5.5 (breaker F6): the gate stays named
         if (!own.length || !r.why || !own.some((p) => r.why!.includes(p.message))) errors.push({ combination: r.label, where: "Review", item: r.label, label: r.label, forms: [], message: `${r.label}: ${r.why}` });
       }
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`, { errors });
@@ -555,7 +564,8 @@ export class Programs {
     if (form.retiredAt) throw problem(409, "Retired", `${form.formKey} is retired in the library: restore it there first.`, { errors: [{ field: "formKey", message: "Retired." }] });
     const closing = await closingChange(this.db, c.workspaceId, form.formKey);
     if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${form.formKey} is open on To review: nothing new may use it until it is decided.`, { errors: [{ field: "formKey", message: "Being retired." }] });
-    const current = newestEdition(form.editions.filter((e) => e._count.maps > 0 && e.channel !== "ONLINE"));
+    // C11.11 (QA-101): only a filed form becomes a form line; a guide or checklist is attached as a source below.
+    const current = libraryType(form.formKind, form.displayName) === "form" ? newestEdition(form.editions.filter((e) => e._count.maps > 0 && e.channel !== "ONLINE")) : undefined;
     if (current) {
       const before = await snapshotLines(this.db, combinationId, [form.formKey]);
       const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${current.editionLabel}: added from the library` });

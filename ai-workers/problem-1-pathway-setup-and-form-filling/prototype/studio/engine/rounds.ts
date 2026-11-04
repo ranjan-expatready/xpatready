@@ -17,6 +17,15 @@ export type SavedRun = { file: string; caller?: string; drafting_run?: { status?
 /** A round's context key (`contextKey`): what a saved answer belongs to. A combination's key (the finder, W1-10), or a
  *  form edition, `edition:<code>:<edition>` (S6 drafts once per edition and every combination reuses it; screens N1). */
 export const editionContextKey = (code: string, edition: string) => `edition:${code}:${edition}`;
+/** A printed form edition, "IMM 5257 (09-2023)": IRCC numbers its forms IMM and, for some (IRM 0002, which Guide 5256
+ *  asks for), IRM; the code and the month-year in brackets. The same rule as the contracts' form_edition pattern
+ *  (contracts/field-map-entry.v0.schema.json, released-configuration.v0) and the launcher's known fact (p2/launch.ts). */
+export const PRINTED_EDITION = /^((?:IMM|IRM) [0-9A-Z ]+?) \(([0-9]{2}-[0-9]{4})\)$/;
+/** The form code and edition of a printed edition; null when it is not one. */
+export function printedEditionParts(printed: string): { code: string; edition: string } | null {
+  const m = PRINTED_EDITION.exec(printed);
+  return m ? { code: m[1], edition: m[2] } : null;
+}
 /** The form and edition of an edition context key; null for a combination's key or anything malformed. */
 export function editionOfContextKey(key: string): { code: string; edition: string } | null {
   const m = /^edition:([A-Za-z][A-Za-z0-9 ]{1,30}):([0-9]{2}-[0-9]{4})$/.exec(key);
@@ -33,10 +42,13 @@ export function savedRunKey(r: SavedRun, legacy: Record<string, string>): string
 /** A finished run's statuses: a field-map run (its checker rounds too) is recorded "completed_with_unresolved" when any form
  *  field is left to a person (p2/convert.ts), which is still a finished answer to replay (C11.14, tech lead 3 Nov). */
 export const FINISHED_RUN = new Set(["completed", "completed_with_unresolved"]);
+/** Whether a recorded status is a finished run's: a plain string in FINISHED_RUN only (break m1 on #693: String(["completed"])
+ *  would read an array as "completed"). */
+export const isFinishedRun = (status: unknown): boolean => typeof status === "string" && FINISHED_RUN.has(status);
 /** A saved run may stand in for this round: a finished (FINISHED_RUN), valid live answer of the same prompt, the same
  *  input files (in order) and the same context (combination or form edition). */
 export function isSameSavedRun(r: SavedRun, want: { templateSha256: string; inputs: { file: string; sha256: string }[]; contextKey: string; legacy: Record<string, string> }): boolean {
-  return r?.caller === "live" && FINISHED_RUN.has(String(r?.drafting_run?.status)) && r.contract_valid === true && r.launch_evidence?.template_sha256 === want.templateSha256
+  return r?.caller === "live" && isFinishedRun(r?.drafting_run?.status) && r.contract_valid === true && r.launch_evidence?.template_sha256 === want.templateSha256
     && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(want.inputs) && savedRunKey(r, want.legacy) === want.contextKey && typeof r.raw_output === "string";
 }
 

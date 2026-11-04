@@ -5,6 +5,9 @@
 // out of the group warns that the family maximum is lost and needs a reason.
 // Breadth, after Visitor visa: the sponsorship + PR pair, the "will this child study 6 months or more?" question, no
 // cap on extensions, study or work permits.
+// The parts C6.12 is Partial for are checked in acceptance/C6.12-breadth.test.ts (red until built, P-290); this pack is the
+// Visitor visa part, which tests/check_vv_prepare_api.ts runs as a regression check and needs green.
+//   (first, on a fresh copy: tests/runtime/setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts, as for C6.9)
 //   tsx studio/acceptance/C6.12.test.ts 4440 xr_studio_accept
 import { CLIENT, FAMILY, OFFICER, call, filingOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, type Person, type Prepare } from "./lib/m3.ts";
 

@@ -89,6 +89,9 @@ const leak = (t) => (t.match(KEY) ?? t.match(INTERNAL) ?? t.match(HASH))?.[0];
     await p.getByLabel("Condition on the question").selectOption("SHOW");
     const box = p.getByLabel("Field", { exact: true }).first();
     step("fail case (break M3): the field box's example is a name, not a key", !KEY.test((await box.getAttribute("placeholder")) ?? ""), await box.getAttribute("placeholder"));
+    // The list joins the library's fields and the calculated values, two requests: read it once the library's fields are
+    // in (CI 41610894380 shard 2 read it with only the 22 calculated values loaded). A wait that times out fails the check.
+    await p.waitForFunction(() => [...document.querySelectorAll("main datalist option")].some((o) => !/\(calculated\)$/.test(o.value)), null, { timeout: 15000 });
     const offered = await p.locator("main datalist option").evaluateAll((os) => os.map((o) => o.value));
     step("pass: the fields offered are names, never keys", offered.length > 10 && !offered.some((o) => KEY.test(o)), offered.slice(0, 4));
     await box.fill(offered[0]);

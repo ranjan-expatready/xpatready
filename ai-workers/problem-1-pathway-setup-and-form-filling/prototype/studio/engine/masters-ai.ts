@@ -1,10 +1,11 @@
 // C3.4 AI step (P-149 (5), P-158, P-134, P-227; forms lane): the rules that hold over the two AI rounds that draft a form
-// edition's checks and document types (p2/prompts/masters-form.v1.md) and a combination guide's checks
-// (masters-guide.v1.md), whoever proposed them (P-153: code is the guard, the prompt is not). Pure: no database, no AI.
+// edition's checks and document types (p2/prompts/masters-form.v2.md) and a combination guide's checks
+// (masters-guide.v2.md), whoever proposed them (P-153: code is the guard, the prompt is not). Pure: no database, no AI.
 // The step runner (api/src/rounds.ts) gives the rounds' answers (a draft and a blind checker, live or a saved real run).
 //   M1 the quote is the source's own words: found in the form's printed captions and headings, or a sentence of the guide;
 //   M2 a check is a condition tree in the 11 operators (contracts/rules.ts) that reads only its own boxes or answers; a
-//      form check's boxes are visible boxes of this edition;
+//      form check's boxes are visible boxes of this edition, and a value it compares a choice box with is one of that
+//      box's printed choices, written in its printed words (P-296 (3));
 //   M3 every check carries two or three worked examples that parse; each is run through the condition (evaluate) and one
 //      that gives another outcome than the AI said makes the check "Check", with the example named;
 //   M4 Ready only when both rounds give the same item (same boxes or answers and the same tree; a document type by name);
@@ -19,6 +20,7 @@ import { canonical, evaluate, validatePredicate, type PredicateNode } from "../.
 import type { ProposalItem, ProposalPayload } from "../contracts/proposal-item.ts";
 import { isSentence, sameText } from "./pqr-picks.ts";
 import { isNode } from "./validate.ts";
+import { identityOf, NOT_AI_READERS } from "./identity-documents.ts";
 
 export const MASTERS_FORM_STEP = "masters_form", MASTERS_GUIDE_STEP = "masters_guide";
 type Example = { facts_json: string; expected: boolean };
@@ -135,15 +137,50 @@ function merge<P extends ProposalPayload>(d: Map<string, Kept<P>>, k: Map<string
 
 const READERS = ["coded_lines", "printed_layout", "letter_or_record", "person_only"] as const;
 type Reader = (typeof READERS)[number];
-const NOT_AI: string[] = ["coded_lines", "printed_layout", "person_only"];
+const NOT_AI = NOT_AI_READERS; // engine/identity-documents.ts, shared with the one door (QA-195)
 
 export type FormSource = { file: string; sha256: string; edition: string; printed: string;
-  /** Visible boxes of this edition (hidden, barcode and machine boxes left out by the caller) with their printed words. */
-  boxes: { path: string; words: string }[] };
+  /** Visible boxes of this edition (hidden, barcode and machine boxes left out by the caller) with their printed words and,
+   *  for a box with choices, each choice as printed: [words, export code]. */
+  boxes: { path: string; words: string; choices?: [string, string][] | "check_box" }[] };
+
+/** P-296 (3), review M1 and break M1 on the v2 prompts: the value a check compares a choice box with is one of that box's
+ *  printed choices (P-153: code is the guard, not the prompt). A reading may write the printed words, a spacing variant of
+ *  them ("*Yes" for "* Yes") or the box's export code ("Y"): each names the same choice and is written as its printed
+ *  words, so two readings of one check agree. Any other value can never equal an answer, so the check could never fail:
+ *  it is not proposed. Boxes without choices are left as they are. */
+const looseChoice = (v: string) => v.replace(/\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+export function choiceOf(choices: [string, string][], v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  return (choices.find(([w]) => w === v) ?? choices.find(([w]) => looseChoice(w) === looseChoice(v) && looseChoice(v) !== "") ?? choices.find(([, c]) => c !== "" && c === v))?.[0] ?? null;
+}
+export function withPrintedChoices(n: unknown, choicesOf: (field: string) => [string, string][] | "check_box" | undefined): { node: unknown } | { why: string } {
+  const o = looseOf(n);
+  if (!o) return { node: n };
+  if (Array.isArray(o.args)) {
+    const args: unknown[] = [];
+    for (const a of o.args) { const r = withPrintedChoices(a, choicesOf); if ("why" in r) return r; args.push(r.node); }
+    return { node: { ...o, args } };
+  }
+  if (o.arg) { const r = withPrintedChoices(o.arg, choicesOf); return "why" in r ? r : { node: { ...o, arg: r.node } }; }
+  const kind = typeof o.field === "string" ? choicesOf(o.field) : undefined;
+  // Review round 2 M1: a check box's stored on/off states are not printed choices, and an unticked box may still hold
+  // "0" (so `exists` says nothing either); what "ticked" is in an answer is not settled, so a check that reads one is not
+  // proposed (the prompts send it to unresolved) rather than guessed.
+  if (kind === "check_box") return { why: `its condition reads the check box ${o.field}; whether a check box is ticked is not read by these rules yet` };
+  const choices = ["eq", "neq", "in"].includes(String(o.op)) ? kind : undefined;
+  if (!choices?.length) return { node: n };
+  const values = Array.isArray(o.value) ? o.value : [o.value];
+  const printed = values.map((v) => choiceOf(choices, v));
+  const bad = values.find((_, i) => printed[i] === null);
+  if (bad !== undefined || !values.length) return { why: `its condition compares ${o.field} with ${JSON.stringify(bad)}, which is not one of that box's printed choices (${choices.map(([w]) => `"${w}"`).slice(0, 6).join(", ")})` };
+  return { node: { ...o, value: Array.isArray(o.value) ? printed : printed[0] } };
+}
 
 /** C3.4 form step: a form edition's checks and document types from its two rounds (M1–M5). */
 export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check: MRound<FormAnswer> }, f: FormSource, at: { runId: string }) {
   const boxes = new Set(f.boxes.map((b) => b.path));
+  const choicesOf = new Map(f.boxes.filter((b) => b.choices === "check_box" || b.choices?.length).map((b) => [b.path, b.choices!]));
   // M1 (break minor): the quote is whole words of ONE box's printed caption or heading, at least two words and ten letters
   // ("Passport number"), never a fragment found across captions ("ort numb", "of the").
   const printed = f.boxes.map((b) => ` ${plain(b.words)} `);
@@ -158,9 +195,15 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
       if (!quoteFound(c.quote)) { drop(`Its words are not printed on ${f.printed}, so it is not proposed`); continue; }
       const sentence = c.sentence.trim();
       if (sentence.length < 3 || sentence.length > 300) { drop("It has no sentence of 3 to 300 characters"); continue; }
-      const t = treeOf(c.tree_json, c.subject_kind, new Set(reads));
-      if ("why" in t) { drop(`Not proposed: ${t.why}`); continue; }
-      const ex = runExamples(t, c.examples);
+      const t0 = treeOf(c.tree_json, c.subject_kind, new Set(reads));
+      if ("why" in t0) { drop(`Not proposed: ${t0.why}`); continue; }
+      const pc = withPrintedChoices(t0.node, (p) => choicesOf.get(p));
+      if ("why" in pc) { drop(`Not proposed: ${pc.why}`); continue; }
+      const t = { root: { subjectKind: t0.root.subjectKind, ...(pc.node as object) }, node: pc.node as PredicateNode };
+      // An example's answer to a choice box is the same choice in its printed words (an unknown one is left as written).
+      const examples = c.examples.map((e) => { try { const f = JSON.parse(e.facts_json); if (!f || typeof f !== "object" || Array.isArray(f)) return e;
+        return { ...e, facts_json: JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => { const ch = choicesOf.get(k); return [k, Array.isArray(ch) ? (choiceOf(ch, v) ?? v) : v]; }))) }; } catch { return e; } });
+      const ex = runExamples(t, examples);
       if ("why" in ex) { drop(`Not proposed: ${ex.why}`); continue; }
       const sorted = [...reads].sort();
       const key = keyOf(`${f.edition}|${sorted.join(",")}`);
@@ -188,13 +231,14 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
     }
     return out;
   };
-  /** M5 (P-134; review M2): a document type is an identity document when either reading says so or its category is
-   *  identity, never on one model flag; then its reader is never AI (coded lines, printed layout or a person). A reader
+  /** M5 (P-134; review M2): a document type is an identity document when either reading says so, its category is
+   *  identity, or its name names one (QA-195: the code list in engine/identity-documents.ts, so "Passport" in category
+   *  "travel" with no flag is one), never on one model flag; then its reader is never AI (coded lines, printed layout or a person). A reader
    *  the contract does not know is a person's. Applied to both readings, so the payload a person accepts holds it. */
   const identityGuard = (a: ReturnType<typeof docs>, b: ReturnType<typeof docs>) => {
     for (const key of new Set([...a.keys(), ...b.keys()])) {
       const xs = [a.get(key), b.get(key)].filter((x): x is NonNullable<typeof x> => !!x);
-      const identity = xs.some((x) => x.payload.identityDocument || /identity/i.test(x.payload.category));
+      const identity = xs.some((x) => identityOf(x.payload));
       for (const x of xs) {
         const known = (READERS as readonly string[]).includes(x.payload.readerKind);
         const aiRead = identity && !NOT_AI.includes(x.payload.readerKind);

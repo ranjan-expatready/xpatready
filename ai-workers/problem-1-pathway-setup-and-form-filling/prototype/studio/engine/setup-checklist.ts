@@ -4,6 +4,7 @@
 import { itemHref, STEP_KEYS, STEP_LABEL, STEP_TAB, type ChipStatus, type Counts, type ItemKind, type OpenItem, type SetupChecklist, type Step, type StepKey, type Tier, type ViewerOverlay } from "../contracts/setup-checklist.ts";
 import { PROPOSAL_KINDS, type ProposalKind } from "../contracts/proposal-item.ts";
 import { formsWords, questionsWords } from "../contracts/counts.ts";
+import { nextReleaseWords } from "../contracts/status-words.ts";
 
 /** Validator `where` → the step whose open item it is (concept §6). Every `where` literal in engine/ has a row; any other
  *  value falls back to step 5 (a check fails when a new literal has no row). */
@@ -71,7 +72,12 @@ export function needsYouItems(c: SetupChecklist, actor: { id: string; duties: re
 
 /** The official-pages record (forms lane, queue item 2). Until it lands every combination reads "no_record". */
 export type OfficialPages = { state: "no_record" } | { state: "proposed"; matches: number } | { state: "confirmed"; by: string | null; as: Tier };
-export type ProblemIn = { level: "error" | "warning"; where: string; item: string; message: string };
+export type ProblemIn = { level: "error" | "warning"; where: string; item: string; message: string; code?: string };
+/** V3 B1 (P-297 (3)): a form with no field map blocks release (engine/validate.ts), but it is already one step of its own
+ *  ("Map N forms", the missing line "No form fields mapped yet"), so the lists that count problems leave it out: one
+ *  cause, one line, one count. */
+export const NO_FIELD_MAP = "no_field_map";
+export const waitsForMap = (p: object) => (p as { code?: string }).code === NO_FIELD_MAP;
 
 /** Everything the checklist reads for one combination, already loaded by the API (rows()) or a check. */
 export type SetupInput = {
@@ -126,11 +132,11 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     const n = s.proposals[kind] ?? 0; if (!n) continue;
     const t = KIND_STEP[kind]; proposalsBy[t.step] += n; if (t.part) partProposals[t.part] += n;
   }
-  const errors = s.problems.filter((p) => p.level === "error");
+  const errors = s.problems.filter((p) => p.level === "error" && !waitsForMap(p));
   const problemsBy = Object.fromEntries(STEP_KEYS.map((k) => [k, 0])) as Record<StepKey, number>;
   const partProblems = { documents: 0, questions: 0 };
   for (const p of errors) { const t = stepOfWhere(p.where); problemsBy[t.step]++; if (t.part) partProblems[t.part]++; }
-  const relErrors = (s.release?.problems ?? []).filter((p) => p.level === "error");
+  const relErrors = (s.release?.problems ?? []).filter((p) => p.level === "error" && !waitsForMap(p));
   const relBy = Object.fromEntries(STEP_KEYS.map((k) => [k, 0])) as Record<StepKey, number>;
   // X1 (review M1): step 4's release problems are split by part, so a Not ready item lands on the tab that holds it.
   const relPart = { documents: 0, questions: 0 };
@@ -220,10 +226,19 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     steps,
     current: firstOpen,
     next: !s.combinationId ? null : first && nextStep ? { item: first, step: nextStep, href: hrefOf(nextStep, first), line: `${STEP_LABEL[nextStep]}: ${first.text}` } : null,
-    bar: { done, of: 5, text: chipStatus === "RETIRED" ? `Retired at Release ${s.release?.number ?? 1}` : chipStatus === "LIVE" ? "✓ Live" : `${done} of 5 steps` },
+    bar: { done, of: 5, text: chipStatus === "RETIRED" ? `Retired at Release ${s.release?.number ?? 1}` : chipStatus === "LIVE" ? "✓ Live" : `${done} of 5 steps`, next: chipStatus === "LIVE" ? nextReleaseWords(5 - done) : null },
     counts,
     key,
   };
+}
+
+/** QA-184: GET /catalogue's progress, from the same checklist as the card and the Overview (before, an older four-step
+ *  count, "Step 2 of 4: Draft", beside the Overview's five). The step is the one its next item is on (the first open step
+ *  when nothing is open there); the words are the card's: "✓ Live" then the next release's line, or "n of 5 steps". */
+export function progressOf(c: SetupChecklist): { step: number; of: 5; label: string; done: boolean[]; live: boolean } {
+  const at = c.next?.step ?? c.current;
+  const live = c.chip.status === "LIVE";
+  return { step: at ? STEP_KEYS.indexOf(at) + 1 : 5, of: 5, done: c.steps.map((s) => s.state === "done"), live, label: live && c.bar.next ? `${c.bar.text} · ${c.bar.next}` : c.bar.text };
 }
 
 function summaryOf(k: StepKey, s: SetupInput, c: Counts, done: boolean): string {
@@ -232,7 +247,11 @@ function summaryOf(k: StepKey, s: SetupInput, c: Counts, done: boolean): string 
   if (k === "people") return `${plural(c.people, "person role")}, ${plural(c.applicants, "applicant role")}`;
   if (k === "forms") return `${formsWords({ total: c.forms, setUp: c.formsSetUp })}${c.held ? ` · ${plural(c.held, "new edition")} held` : ""}`;
   if (k === "questions_documents") return `${plural(c.documents, "document")} · ${questionsWords(c.questions)}`;
-  return done ? `Released as Release ${s.release!.number}` : s.release ? `${plural(s.changes, "change")} since Release ${s.release.number}` : "Not released yet";
+  // QA-184: what blocks release, the same number as the Review and release tab's "to fix" and To review's row (each
+  // problem's own step still lists it to fix there).
+  const blocking = s.problems.filter((p) => p.level === "error" && !waitsForMap(p)).length;
+  const base = done ? `Released as Release ${s.release!.number}` : s.release ? `${plural(s.changes, "change")} since Release ${s.release.number}` : "Not released yet";
+  return blocking ? `${base} · ${plural(blocking, "problem")} block${blocking === 1 ? "s" : ""} release` : base;
 }
 
 const WAITING_FOR: Record<"author" | "sme" | "approve" | "review", string> = { author: "the configuration author", sme: "the immigration expert", approve: "a second person", review: "a content publisher" };

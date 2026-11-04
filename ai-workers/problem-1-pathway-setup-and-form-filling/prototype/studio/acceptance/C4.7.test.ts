@@ -35,7 +35,11 @@ run(async () => {
     ok(S1, true);
     r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "replay", planSha256: sp.body?.plan_sha256 }, AUTHOR);
     ok("setup: the Saved draft ran at US$0", r.status === 201 && r.body?.usd === 0, r.status >= 300 ? words(r) : r.body?.note);
-    ok("C4.7 pass (QA-162): every saved pick left out is listed with its reason, none dropped silently", r.status === 201 && (r.body?.dropped ?? []).every((d: any) => String(d.why ?? "").length > 20) && r.body.proposed >= 7 && (r.body.dropped ?? []).length > 0 && (r.body.dropped ?? []).length <= 10, { proposed: r.body?.proposed, dropped: (r.body?.dropped ?? []).length });
+    // QA-194: with #530's v1 pair (guide only) 7 → 6 proposed, 10 → 13 left out: "Purpose of visit" (both readings) and
+    // "Criminal record" each fit two questions, so they are left out naming both, never guessed. With the v2 pair (#764: the
+    // rounds name the question list's keys) all 9 are proposed and none is left out, so "none dropped silently" is that every
+    // pick left out has its reason, not that one is left out.
+    ok("C4.7 pass (QA-162): every saved pick left out is listed with its reason, none dropped silently", r.status === 201 && (r.body?.dropped ?? []).every((d: any) => String(d.why ?? "").length > 20) && r.body.proposed >= 6 && (r.body.dropped ?? []).length <= 13, { proposed: r.body?.proposed, dropped: (r.body?.dropped ?? []).length });
   } else {
     if (sp.status === 200) { const on = `Track A's Saved PQR-picks result (${sp.body?.saved?.why ?? "none yet"})`; T.wait(S1, on); T.wait(S2, on); }
     else ok(S1, false, words(sp));
@@ -57,10 +61,10 @@ run(async () => {
   ok("C4.7 pass: a pick waiting changes nothing (no tick yet)", picks.length > 0 && ticks() === t0, { t0, now: ticks() });
 
   // A third pick whose fact the case officer may give (review M1, QA-162: a client-only fact, e.g. criminal history, is
-  // refused that choice, so the pick is chosen by the fact's own offer, never by queue order).
+  // refused that choice): offered facts first, then the queue order, skipping any the hand change refuses.
   const facts0 = (await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? [];
   const offered = (x: any) => facts0.some((f: any) => f.role === key(x).role && f.fact === key(x).factKey && f.agentOffered);
-  const [a, b] = picks, c = picks.slice(2).find(offered) ?? picks[2];
+  const [a, b] = picks;
   r = await call("POST", "/review/proposals/decide", { ids: [a?.id ?? randomUUID()], action: "accept" }, AUTHOR);
   ok("C4.7 pass: accepting a pick ticks it on the combination's draft (lander exists)", r.status < 300 && ticks() === t0 + 1, r.status >= 300 ? words(r) : undefined);
   const tick = sql(`select origin||'|'||coalesce(reason,'') from fact_source where combination_id='${wp}' and prequalification and canonical_field_key='${key(a).factKey}' and role='${key(a).role}' order by version desc limit 1`);
@@ -74,9 +78,16 @@ run(async () => {
   ok("C4.7 data: the pick producer never proposes a fact the case officer gives", picks.length > 0 && !picks.some((x: any) => `${key(x).role}|${key(x).factKey}` === officer), officer);
   // Accepting goes through the same refusals as a hand tick: once the fact is set by hand to come from the case officer,
   // its waiting pick cannot be accepted (422 in words) and ticks nothing.
-  const cp = key(c);
-  const fv = ((await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? []).find((f: any) => f.role === cp?.role && f.fact === cp?.factKey);
-  r = fv ? await call("PUT", `/combinations/${wp}/fact-sources/${fv.role}/${encodeURIComponent(fv.fact)}`, { version: fv.version, source: "AGENT", sourceReason: "The firm records it (acceptance C4.7)" }, AUTHOR) : { status: 0, body: null };
+  // The third pick is the first later one (offered first) whose fact may be set to come from the case officer; a
+  // declaration (client only) is refused that and skipped. (With #530's v1 pair QA-194 left the purpose of the visit out;
+  // with the v2 pair, #764, it is a Ready pick, and the loop below takes whichever later pick qualifies.)
+  let c: (typeof picks)[number] | null = null;
+  r = { status: 0, body: null };
+  for (const x of [...picks.slice(2).filter(offered), ...picks.slice(2).filter((y) => !offered(y))]) {
+    const fv = ((await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? []).find((f: any) => f.role === key(x).role && f.fact === key(x).factKey);
+    r = fv ? await call("PUT", `/combinations/${wp}/fact-sources/${fv.role}/${encodeURIComponent(fv.fact)}`, { version: fv.version, source: "AGENT", sourceReason: "The firm records it (acceptance C4.7)" }, AUTHOR) : { status: 0, body: null };
+    if (r.status === 200) { c = x; break; }
+  }
   ok("setup: a third pick's fact is set by hand to come from the case officer", r.status === 200, words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [c?.id ?? randomUUID()], action: "accept" }, AUTHOR);
   ok("C4.7 fail: that pick is refused at acceptance with the hand tick's words (422, 'comes from the case officer')", !!c && r.status === 422 && /case officer/i.test(words(r)) && ticks() === t0 + 1, words(r));
