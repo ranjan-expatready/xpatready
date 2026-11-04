@@ -65,7 +65,7 @@ export function pack2(id: string) {
    *  form's own parts (rules) and accepts them one at a time on To review (a section the library holds already is
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
-  async function questionsBySteps(comboId: string) {
+  async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
     const out = { accepted: 0, applied: 0, sections: 0, reused: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
@@ -73,7 +73,7 @@ export function pack2(id: string) {
     for (const j of ids(`select id from drafting_job where combination_id='${comboId}' and kind='field_map' and status='COMPLETED' order by started_at`)) {
       await call("POST", `/jobs/${j}/recompare`, {}, AUTHOR); // a draft compared with an older library is compared again first (refused when it is current)
       for (const it of ids(`select id from proposal_item where run_id='${j}' and status='waiting' order by identity_key`)) if (say("accept", await call("POST", `/jobs/${j}/items/${it}`, { decision: "ACCEPTED", note: "Accepted by a test as the saved AI answer proposed it (QA-144 part 1 setup)." }, AUTHOR))) out.accepted++;
-      // A busy machine can stop the apply's own transaction at its 5 s limit (a 500 with nothing written): pressed again once.
+      // A busy machine can still run past the apply's room (503, nothing written): pressed again once.
       let applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR);
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
@@ -88,6 +88,7 @@ export function pack2(id: string) {
       else say("accept a section", r);
     }
     await approveAll();
+    if (o.place === false) return out; // the walk presses the Smart questionnaire tab's step itself
     const placed = await call("POST", `/combinations/${comboId}/place-from-form-parts`, {}, AUTHOR);
     if (say("place", placed)) out.placed = placed.body?.placed?.length ?? 0;
     await approveAll();

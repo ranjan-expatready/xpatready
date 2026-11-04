@@ -918,7 +918,10 @@ export class Sources {
       if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);
       await tx.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `Field map applied to the draft (${out.entries.length} form fields; ${created} new field definitions). Review and release it.` } });
       return { formKey, edition: item.edition, boxes: out.entries.length, new_fields: created, returned: job.items.filter((i) => i.decision === "RETURNED").length };
-    });
+    }, QUEUE_TX)
+      // QA-144 part 1: IMM 5257's 84 form fields took longer than Prisma's default 5 s on a busy computer and the person
+      // read a 500; the apply gets the queue's room, and past it plain words (nothing applied, the draft stays as it was).
+      .catch((e) => { if (/Transaction API error/.test(String((e as Error).message))) fail(`Applying ${item.edition}'s ${job.items.length} reviewed form fields took longer than ${QUEUE_TX.timeout / 1000} s, so nothing was applied. Apply it again when the computer is less busy.`, HttpStatus.SERVICE_UNAVAILABLE); throw e; });
     await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} form fields, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId ?? undefined);
     return res;
   }

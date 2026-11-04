@@ -12,18 +12,18 @@ type Placed = { placed: { fact: string; section: string; repeats: string }[]; no
 
 const TIP = "Rules only (no AI, US$0): each answer a form of this combination needs and nobody is asked is put in the library section that groups its form field, drafted from the form's own parts. Who answers it: the client's questionnaire. You can move or remove any question afterwards.";
 
-export function PlaceFromFormParts({ id }: { id: string }) {
+export function PlaceFromFormParts({ id, offer = true }: { id: string; offer?: boolean }) {
   const { canAuthor } = useSessionView();
   const [result, setResult] = React.useState<Placed | null>(null);
   const run = useAction(() => api<Placed>(`/combinations/${id}/place-from-form-parts`, { method: "POST", json: {} }), {
     success: (r) => r.placed.length ? `${r.placed.length} answer${r.placed.length === 1 ? "" : "s"} now asked in ${r.sections} section${r.sections === 1 ? "" : "s"}` : "Nothing was placed",
     onDone: (r) => setResult(r),
   });
-  if (!canAuthor) return null;
+  if (!canAuthor || (!offer && !result)) return null;
   const few = (xs: string[]) => `${xs.slice(0, 5).join(", ")}${xs.length > 5 ? ` and ${xs.length - 5} more` : ""}`;
   return (
     <div className="mt-2 space-y-2" data-place-from-parts>
-      <Tip tip={TIP}><Button size="sm" variant="secondary" busy={run.isPending} onClick={() => run.mutate(undefined)} data-place-from-parts-run><ListPlus /> Ask them in their form's sections</Button></Tip>
+      {offer ? <Tip tip={TIP}><Button size="sm" variant="secondary" busy={run.isPending} onClick={() => run.mutate(undefined)} data-place-from-parts-run><ListPlus /> Ask them in their form's sections</Button></Tip> : null}
       {result ? (
         <Notice tone={result.refused.length || result.noSection.length ? "warn" : result.placed.length ? "ok" : "info"} title={result.placed.length ? `${result.placed.length} answer${result.placed.length === 1 ? "" : "s"} now asked in ${result.sections} section${result.sections === 1 ? "" : "s"}` : "Nothing was placed"} className="text-sm">
           <div data-place-from-parts-result>
