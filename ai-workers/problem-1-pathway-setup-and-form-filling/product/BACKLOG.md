@@ -107,6 +107,23 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | T1 | runtime | **Full test run on GitHub machines** (P-228 (6)): `nightly.yml` runs on GitHub Linux machines in shards, keeps the speed budgets, and is started by schedule and by the Lead | a run on GitHub finishes green on main; the Mac runner is no longer needed for it | P-228 |
 | D4 | runtime | **#357 m3** (P-229 (3)): a derived Yes that overrides a client's No shows as a check to the officer | pass and fail tests; shown on the case page | P-229 |
 
+## Added 4 Nov (Leads 3–7; P-318–P-334): M2 first; M3 rows wait for M2 60 (P-332)
+| Row | What, and done when | From |
+|---|---|---|
+| B52 Yes/No facts (S1, next) | "Ever used other name", "Has a national identity document", "US permanent resident" enter the six's library through the product's own path with IMM 5257's words, and IMM 5257's Yes/No boxes map to them; done when C4.11's step 5 lands its saved conditions on the six (pack exit code in the PR) and no fixture SQL writes them | P-334 (5), #865 |
+| B53 QA-225 follow-ups | the five fail-closed follow-ups listed on #948 (activity feed firm filter) | P-334 (7) |
+| B54 Recorded UCI (M3) | the filing record prefers the UCI recorded at submission, never silently overwriting the person's answer (that would mark filed forms out of date) | P-334 (7), #924 |
+| B55 Review page banner | a released Visitor visa's Review page still shows the "Forms AI picked" banner and to-do counts (review.tsx:65, #891 m5) | P-330 (9) |
+| B56 Placement Minors | a test for the 60 s room itself; refused section names shown in words (#936 review) | P-334, #936 |
+| B57 Undo stamp | "Confirm section" writes its row without the Undo restored stamp, so a later Undo can offer the undone value again (api/src/runtime.ts ~445, #926 Minor) | P-334, #926 |
+| B58 Schedule Background questions | IMM 5257 Schedule 1 and 5, IMM 5669 Schedule A and 11: ruled in only after each schedule's own instruction is cited | P-318 (2), #790 |
+| B59 FEE-R01 to FEE-R04 | into the compliance trace | P-318, #791 |
+| B60 No hard-coding (P-319) | guard #945 → family forms into configuration (migration form_role) → IRCC checklist coverage (Visitor visa first) → Study permit filings and checklist (M3) → fees and roles library tables plus S7a screens (M3, design first) → the ~2-day cleanup of 44 form-number mentions | P-319 |
+| B61 C6.1 acceptance pack | a pack that proves C6.1 on the six and the checkpoint | P-328, Lead 3 |
+| B62 Work-permit test family | answer keys for the LMIA maps (IMM 1295, 5710, 5707, 5409, 5476, 5475), expert-led | P-328, Lead 3 |
+| B63 CI (c) and (d) | owners and dates for the quarantined checks; a golden-journey nightly (setup → release, red until QA-144 lands) | P-320 |
+| B64 Cloud-lane flag | lead-watch.sh flags a cloud lane started over 25 min ago with no draft PR (needs a lane-to-branch map) | P-326 |
+
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
