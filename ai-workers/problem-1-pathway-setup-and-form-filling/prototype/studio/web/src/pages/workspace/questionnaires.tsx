@@ -25,6 +25,7 @@ import { RuleFacts } from "@/components/rule-facts";
 import { peopleWords } from "@/lib/people";
 import { DraftPqrPicks } from "@/components/pqr-draft";
 import { DraftQuestionsDocuments } from "@/components/qd-draft";
+import { PlaceFromFormParts } from "@/components/place-from-form-parts";
 import { appliesOf, FILING_TIP, filingWarnings, filingWords, previewFilings } from "../../../../engine/filing-modes";
 import type { LineMode } from "../../../../contracts/workspace";
 import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
@@ -411,7 +412,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
     <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-questions-empty data-focus="questionnaires:gaps">
       <DoneSinceNotice shown={doneSince} />
       <h2 className="font-semibold">No questions yet</h2>
-      <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.</p>
+      <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, ask them in their form's sections, or add a library section here.</p>
+      <PlaceFromFormParts id={id} />
       <div className="mt-3">{addSection}</div>
     </section>
   );
@@ -497,8 +499,15 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       {q.coverage.gaps.length ? (
         <div className={FOCUS_RING} data-focus="questionnaires:gaps"><Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
-          <p className="mt-1">Fix: add the library section that asks it, or have the case officer fill it (set once in the shared library).</p>
+          <p className="mt-1">Fix: ask them in the sections of their form fields, add the library section that asks it, or have the case officer fill it (set once in the shared library).</p>
+          <PlaceFromFormParts id={id} />
         </Notice></div>
+      ) : !q.sections.length ? (
+        // QA-144 part 1: no section asks anything yet (on the six, before anyone placed them): the same step.
+        <Notice tone="info" title="No section asks anything yet">
+          <p>Once the forms' field maps are applied and their sections drafted (Forms tab), ask each answer the forms need in the section of its form field.</p>
+          <PlaceFromFormParts id={id} />
+        </Notice>
       ) : null}
       {q.sections.map((s) => {
         const isOpen = opened.has(s.id) || filter !== "all";

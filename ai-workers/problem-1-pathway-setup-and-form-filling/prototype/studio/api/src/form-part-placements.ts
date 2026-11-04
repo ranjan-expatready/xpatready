@@ -4,15 +4,17 @@
 // proposal names the boxes of one form edition it groups. A box no section names takes the section of the nearest named
 // box on the same form (the longest shared data path). Who fills it: the client's questionnaire; how often: once per case
 // for a case fact, per row for a list row about the form's own subject, per person otherwise. A section is chosen on the
-// combination only when every applying person answers all of it anyway (see the end). The words are the library field's own. A
-// screen button calls the same step later (its own row); the configured checkpoint calls it now (api/src/demo.ts).
+// combination only when every applying person answers all of it anyway (see the end). The words are the library field's own.
+// QA-144 part 1 (P-318 (6), P-322): the Smart questionnaire tab's step runs it for a person (POST
+// /api/combinations/:id/place-from-form-parts, below); the configured checkpoint calls the same function (api/src/demo.ts).
+import { Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from "@nestjs/common";
 import { coverageGaps, previewRender } from "../../engine/coverage.ts";
 import { roleOf } from "../../engine/resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
-import type { Actor, Db } from "./core.ts";
+import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { MASTERS_STEP } from "./form-masters.ts";
-import type { Studio } from "./studio.ts";
+import { Studio } from "./studio.ts";
 
 export type PlacedFromParts = { placed: { fact: string; section: string; repeats: string }[]; noSection: string[]; refused: string[]; selected: string[] };
 
@@ -102,4 +104,33 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
     try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
   }
   return out;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** One run at a time per combination: a second press while one runs is refused, never placed twice. */
+const running = new Set<string>();
+
+@Controller("api")
+export class FormPartPlacementsController {
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Studio) private readonly studio: Studio, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+
+  /** The Smart questionnaire tab's "Ask them in their form's sections" (rules, no AI, US$0): the author only, on a live
+   *  combination of this workspace. What it placed, what no section groups and what a rule refused come back in words. */
+  @Post("combinations/:id/place-from-form-parts") @HttpCode(200)
+  async place(@Headers("x-actor") a: string | undefined, @Param("id") id: string) {
+    const author = actorOf(a);
+    need(author, "author");
+    const workspaceId = await this.ws.id();
+    const c = UUID.test(id) ? await this.db.combination.findUnique({ where: { id }, select: { workspaceId: true, label: true, combinationKey: true, retiredAt: true } }) : null;
+    if (!c || c.workspaceId !== workspaceId) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    if (c!.retiredAt) fail(`"${c!.label}" is retired: nothing is placed on it.`, HttpStatus.CONFLICT);
+    if (running.has(id)) fail("This step is already running on this combination: wait for it to finish.", HttpStatus.CONFLICT);
+    running.add(id);
+    try {
+      const out = await placeFromFormParts(this.db, this.studio, author, id);
+      const sections = new Set(out.placed.map((x) => x.section)).size;
+      await this.audit.log(workspaceId, author.id, "ran", "placement step", c!.combinationKey, `${author.name} asked ${out.placed.length} answer${out.placed.length === 1 ? "" : "s"} of "${c!.label}" in the sections of their form fields (${sections} section${sections === 1 ? "" : "s"}; rules, US$0)${out.noSection.length ? `; ${out.noSection.length} with no section that groups their form field` : ""}${out.refused.length ? `; ${out.refused.length} refused by a rule` : ""}`, { placed: out.placed.length, noSection: out.noSection, refused: out.refused, selected: out.selected }, id);
+      return { ...out, sections };
+    } finally { running.delete(id); }
+  }
 }

@@ -49,10 +49,49 @@ export function pack2(id: string) {
   /** Exit 2 ("setup missing", not a failure) when the combination has no questions yet: on the six that needs J3 / C4.11
    *  first (its field maps accepted). Says how to run it meanwhile on the suites' fixture. */
   async function needQuestions(comboId: string, fallback = "wp.family") {
-    const roles = (await call("GET", `/combinations/${comboId}/workspace?tab=questionnaires`)).body?.questionnaire?.roles ?? [];
-    if (roles.some((r: any) => r.questions > 0)) return;
-    console.error(`STOP  setup missing: this combination has no questions yet (on the six it needs J3 / C4.11 first). Meanwhile: tsx <test> ${PORT} ${DB} ${fallback} on a fresh copy.`);
+    const asked = async () => ((await call("GET", `/combinations/${comboId}/workspace?tab=questionnaires`)).body?.questionnaire?.roles ?? []).some((r: any) => r.questions > 0);
+    if (await asked()) return;
+    // QA-144 part 1 (P-322): on the six the questions come from people's own steps, done here through the API as the
+    // screens do them, never written directly.
+    const steps = await questionsBySteps(comboId);
+    console.log(`SETUP questions through the people's steps: ${JSON.stringify(steps).slice(0, 400)}`);
+    if (await asked()) return;
+    console.error(`STOP  setup missing: this combination has no questions yet, even after its forms' steps (${JSON.stringify(steps).slice(0, 300)}). Meanwhile: tsx <test> ${PORT} ${DB} ${fallback} on a fresh copy.`);
     process.exit(2);
+  }
+  /** QA-144 part 1 (P-318 (6), P-322): a combination of the six gets its questions the way people give them, each step
+   *  through the screen's own API, US$0: on the Forms tab the author accepts each saved field-map proposal and applies
+   *  the draft; the approver (a second person) approves the new library items; the author drafts sections from each
+   *  form's own parts (rules) and accepts them one at a time on To review (a section the library holds already is
+   *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
+   *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
+  async function questionsBySteps(comboId: string) {
+    const out = { accepted: 0, applied: 0, sections: 0, reused: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
+    const ids = (q: string) => sql(q).split("\n").filter(Boolean);
+    const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
+    const approveAll = async () => { for (const c of ids("select id from library_change where status='WAITING' order by proposed_at")) if (say("approve", await call("POST", `/library/changes/${c}/approve`, { note: "Approved by a test as the second person (QA-144 part 1 setup)." }, APPROVER))) out.approved++; };
+    for (const j of ids(`select id from drafting_job where combination_id='${comboId}' and kind='field_map' and status='COMPLETED' order by started_at`)) {
+      await call("POST", `/jobs/${j}/recompare`, {}, AUTHOR); // a draft compared with an older library is compared again first (refused when it is current)
+      for (const it of ids(`select id from proposal_item where run_id='${j}' and status='waiting' order by identity_key`)) if (say("accept", await call("POST", `/jobs/${j}/items/${it}`, { decision: "ACCEPTED", note: "Accepted by a test as the saved AI answer proposed it (QA-144 part 1 setup)." }, AUTHOR))) out.accepted++;
+      // A busy machine can stop the apply's own transaction at its 5 s limit (a 500 with nothing written): pressed again once.
+      let applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR);
+      if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
+      if (say("apply", applied)) out.applied++;
+    }
+    await approveAll();
+    for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Form' order by created_at`)) say("sections from the form's parts", await call("POST", `/attachments/${a}/draft-masters`, { mode: "rules" }, AUTHOR));
+    for (const p of ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='masters_edition' and p.kind='section' and p.status='waiting' order by p.created_at, p.identity_key`)) {
+      const r = await call("POST", "/review/proposals/decide", { ids: [p], action: "accept", reason: "Accepted by a test: drafted from the form's own parts (rules, US$0; QA-144 part 1 setup)." }, AUTHOR);
+      if (r.status < 300) { out.sections++; continue; }
+      const same = /already in the library as (\S+?)[ )]/.exec(words(r))?.[1];
+      if (same && say("reject a section held already", await call("POST", "/review/proposals/decide", { ids: [p], action: "reject", reason: `The library already holds this section (${same}): reused, not added again.` }, AUTHOR))) out.reused++;
+      else say("accept a section", r);
+    }
+    await approveAll();
+    const placed = await call("POST", `/combinations/${comboId}/place-from-form-parts`, {}, AUTHOR);
+    if (say("place", placed)) out.placed = placed.body?.placed?.length ?? 0;
+    await approveAll();
+    return out;
   }
   const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
   const attachment = (comboId: string, file: string) => sql(`select id from source_attachment where combination_id='${comboId}' and lower(file_name) like lower('%${file}') order by created_at limit 1`);
@@ -97,7 +136,7 @@ export function pack2(id: string) {
     if (waits.length) console.log(`${waits.length} waiting (not passed): ${waits.map((w) => w.on).filter((x, i, a) => a.indexOf(x) === i).join("; ")}`);
     process.exit(fail ? 1 : waits.length ? 2 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, key, combo, attachment, queued, people, spent, sourceGate, done };
+  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */
