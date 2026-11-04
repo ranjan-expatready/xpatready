@@ -354,6 +354,7 @@ model FormEdition {
   maps FormFieldMap[]
   recaptureTasks RecaptureTask[]
   accepts        FormEditionAccept[]
+  acceptedUntil  FormEditionAcceptedUntil[] // C7.6, P-151 (1)
 
   @@unique([workspaceId, editionLabel])
   @@map("form_edition")
@@ -1746,6 +1747,8 @@ model Filing {
   applicants FilingApplicant[]
   items      FilingItem[]
   findings   ReviewFinding[] // C7.5
+  reviews    FilingReview[]  // C7.6
+  passes     ReadinessPass[] // C7.6
 
   @@unique([caseId, subjectId])
   @@map("filing")
@@ -2152,4 +2155,60 @@ model ReviewFinding {
   @@unique([caseId, idempotencyKey])
   @@index([caseId])
   @@map("review_finding")
+}
+
+/// C7.6 (P-155): the representative of record's review of one filing: "reviewed", or "self_reviewed" by a solo firm's
+/// one person, with the licence number. Append-only (trigger); the newest row counts.
+model FilingReview {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  filingId      String   @map("filing_id") @db.Uuid
+  reviewedBy    String   @map("reviewed_by")
+  /// reviewed · self_reviewed
+  kind          String
+  licenceNumber String?  @map("licence_number")
+  note          String?
+  reviewedAt    DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("filing_review")
+}
+
+/// C7.6 (AG-07 BR-26; P-237, P-238): a warning of one filing passed with a written reason; `keys` are the warning lines
+/// it covered when written (engine/runtime/readiness.ts passKeys). Never the barcode block (a check). Append-only.
+model ReadinessPass {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  code        String
+  keys        String[]
+  /// critical (a former block, P-315) · warning
+  severity    String
+  reason      String
+  passedBy    String   @map("passed_by")
+  passedAt    DateTime @default(now()) @map("passed_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("readiness_pass")
+}
+
+/// C7.6 (P-151 (1)): IRCC's accepted-until date for a form edition, set with a reason; the newest row counts, null
+/// clears it. Append-only (the rows are the history).
+model FormEditionAcceptedUntil {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  formEditionId String    @map("form_edition_id") @db.Uuid
+  acceptedUntil DateTime? @map("accepted_until") @db.Date
+  reason        String
+  setBy         String    @map("set_by")
+  setAt         DateTime  @default(now()) @map("set_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@index([formEditionId])
+  @@map("form_edition_accepted_until")
 }

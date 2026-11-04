@@ -158,7 +158,9 @@ export type Prepare = {
     /** C7.7 part 2: a Paper line's barcode page, its validated copy read back and its steps in order. */
     barcode_page?: boolean; validated?: { copy: string; at: string; current: boolean } | null; steps?: { key: string; words: string; done: boolean | null; neededBefore?: string }[] }[];
   fees: { filing: string; subject?: string; payer?: string; line: string; amount: number; exempt?: boolean; reason?: string; source?: string }[];
-  readiness: { filing: string; ready: boolean; blocks: { code: string; item?: string; words: string }[]; warns: { code: string; item?: string; words: string }[]; owes?: Record<string, unknown> }[];
+  /** C7.6 (P-315): `severity` block (never passed) · critical (a former block, passed with a reason) · warning. */
+  readiness: { filing: string; ready: boolean; blocks: { code: string; item?: string; words: string; severity?: string; key?: string }[]; warns: { code: string; item?: string; words: string; severity?: string; key?: string }[];
+    passed?: { code: string; key?: string; words: string; severity?: string; reason: string; by: string; at: string }[]; owes?: Record<string, unknown> }[];
 };
 export async function prepare(caseId: string, actor = officerOf(caseId)): Promise<{ res: Res; p: Prepare | null }> {
   const res = await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, actor);
