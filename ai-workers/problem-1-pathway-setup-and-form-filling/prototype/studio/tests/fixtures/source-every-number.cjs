@@ -41,4 +41,23 @@ async function sourceEveryNumber(api, combinationId, mode = {}) {
   return { written, numbers: after.body.numbers.length, held_back: after.body.counts.held_back };
 }
 
-module.exports = { sourceEveryNumber };
+// P-322 (4 Nov): a release a later suite builds on comes through the product's own steps, never a row written directly:
+// every number answered as above, the author submits, the content reviewer (SME duty) signs every change and the
+// approver, a different person, approves. Throws with the server's words at the step that refuses. Returns the release.
+//   const { releaseThroughSteps } = require("./fixtures/source-every-number.cjs");
+//   await releaseThroughSteps(4446, combinationId);                // → { version, pack, sha256, published, library }
+async function releaseThroughSteps(api, combinationId, who = { author: "user-A", sme: "user-C", approver: "user-B" }) {
+  const call = caller(api);
+  await sourceEveryNumber(call, combinationId, { actor: who.author });
+  const step = async (what, method, path, body, actor) => {
+    const r = await call(method, path, body, actor);
+    if (r.status >= 300) throw new Error(`releaseThroughSteps: ${what} answered ${r.status}: ${JSON.stringify(r.body).slice(0, 400)}`);
+    return r.body;
+  };
+  const sub = await step("submit", "POST", `/combinations/${combinationId}/submit`, { note: "Test data: submitted by a suite through the product's steps." }, who.author);
+  const items = (sub.changeSummary ?? []).map((x) => `${x.kind}|${x.key}`);
+  if (items.length) await step("sign-off", "POST", `/combinations/${combinationId}/signoff`, { items, action: "signed", note: "Test data: signed by a suite as the SME." }, who.sme);
+  return step("approve", "POST", `/combinations/${combinationId}/approve`, {}, who.approver);
+}
+
+module.exports = { sourceEveryNumber, releaseThroughSteps };

@@ -1,14 +1,16 @@
 // QA-184 (C11.10, C5.4; P-273, EXPERIENCE "one clear state"): a Live combination reads as one state everywhere, Live
 // first, then what its next release still needs in one count of the same five steps. On Demo › Reset to the six ›
-// Start With an LMIA, then one form removed in the draft (so the next release has problems on several steps, as in qa's
-// evidence qa/reports/2026-11-03-explore/x-live-*), the header, the Overview strip, the Programs card and list, the tab
-// counts and GET /catalogue's progress must agree. Before: Overview "Live · setup steps for the next release: 0 of 5
+// Start With an LMIA (a draft, released through sources, submit, sign-off and approve; P-322), then one form removed
+// in the draft (so the next release has problems on several steps, as in qa's evidence
+// qa/reports/2026-11-03-explore/x-live-*), the header, the Overview strip, the Programs card and list, the tab counts
+// and GET /catalogue's progress must agree. Before: Overview "Live · setup steps for the next release: 0 of 5
 // done" beside a card that read "✓ Live" with nothing more, /catalogue "Step 2 of 4: Draft" (four steps beside five),
 // and the Review and release tab "17 to fix" while its own step on Overview said nothing of them (now the row says
 // "17 problems block release", the number To review's row and the tab say, UX-A part 2). A browser at 1440 px plus
 // the API underneath; no model call (US$0).
 //   zsh studio/tools/isolated.sh screens_qa184 4621 start && node studio/tests/check_qa184_live_state_browser.cjs 4621 xr_studio_screens_qa184
 const { chromium } = require("../node_modules/playwright");
+const { releaseThroughSteps } = require("./fixtures/source-every-number.cjs");
 const PORT = Number(process.argv[2] ?? 4621);
 const BASE = `http://localhost:${PORT}`;
 const results = [];
@@ -24,6 +26,9 @@ const KEYS = ["pages", "people", "forms", "questions_documents", "release"];
     const started = await api("/demo/release-with-sources", { method: "POST", data: {} });
     const lm = started.body?.combinationId;
     if (!lm) throw new Error(`Start With an LMIA did not answer: ${started.status}`);
+    // P-322: the control loads a draft only; Release 1 through the product's steps (sources, submit, sign-off, approve).
+    const rel = await releaseThroughSteps((m, pth, data, actor) => api(pth, { method: m, data, actor }), lm);
+    if (rel.version !== 1) throw new Error(`With an LMIA did not reach Release 1: ${JSON.stringify(rel).slice(0, 200)}`);
     // A change for the next release: IMM 1295 removed in the draft (17 problems on Documents and questions, as qa saw).
     const del = await api(`/combinations/${lm}/forms/${encodeURIComponent("IMM 1295")}`, { method: "DELETE", data: {} });
     const sum = (await api(`/combinations/${lm}/summary`)).body;

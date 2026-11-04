@@ -202,10 +202,11 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
   const [confOpen, setConfOpen] = React.useState(false);
   const [configured, setConfigured] = React.useState<ConfiguredLoad | null>(null);
   const loadConf = useAction(() => api<ConfiguredLoad>("/demo/load", { method: "POST", json: { sample: "configured" } }), { success: (r) => `Configured checkpoint loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setConfOpen(false); setConfigured(r); navTo("/"); } });
-  // C5.4 on the six (F6): With an LMIA – inside Canada from the reviewed work-permit release, so its Review and release
-  // tab shows the published numbers that need a source (G1, P-279). Opens that tab when done.
+  // C5.4 on the six (F6): With an LMIA – inside Canada gets the reviewed work-permit release's setup as its draft, so its
+  // Review and release tab shows the published numbers that need a source (G1, P-279). Opens that tab when done. Nothing
+  // is released (P-322): Release 1 comes from answering the sources, then submit, sign-off and approve.
   const [relOpen, setRelOpen] = React.useState(false);
-  const relSources = useAction(() => api<{ combinationId: string; label: string }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" started from its reviewed release`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
+  const relSources = useAction(() => api<{ combinationId: string; label: string; held: number }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" has the reviewed setup as its draft: answer its ${r.held} source${r.held === 1 ? "" : "s"} to release it`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
@@ -235,14 +236,14 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         </ul>
         <p className="mt-3 text-sm text-text-muted">A file that is still missing shows as "Not found · Upload PDF" on that combination, never hidden. Nothing is released: a second person approves every library item.</p>
       </Dialog>
-      <Dialog open={relOpen} onOpenChange={(o) => { if (!relSources.isPending) setRelOpen(o); }} title="Start With an LMIA from its reviewed release?" description="A release with its sources to check. US$0: no live AI call."
-        footer={<><Button variant="ghost" disabled={relSources.isPending} onClick={() => setRelOpen(false)}>Cancel</Button><Button busy={relSources.isPending} onClick={() => relSources.mutate(undefined)}><Upload /> Start from the reviewed release</Button></>}>
+      <Dialog open={relOpen} onOpenChange={(o) => { if (!relSources.isPending) setRelOpen(o); }} title="Start With an LMIA from its reviewed release?" description="Loads the reviewed setup as a draft; answer its sources to release it. US$0: no live AI call."
+        footer={<><Button variant="ghost" disabled={relSources.isPending} onClick={() => setRelOpen(false)}>Cancel</Button><Button busy={relSources.isPending} onClick={() => relSources.mutate(undefined)}><Upload /> Load as a draft</Button></>}>
         <ul className="list-disc space-y-1 pl-5 text-sm" data-release-sources-brings>
-          <li>"With an LMIA – inside Canada" starts from the reviewed work-permit release as its Release 1: its forms, documents, rules and checks</li>
+          <li>"With an LMIA – inside Canada" gets the reviewed work-permit release's forms, documents, rules and checks as its draft, not as a release</li>
           <li>Its Review and release tab lists every published number (fees, ages, dates) and whether it has a source; each one without a source has Add source</li>
-          <li>Submit waits until every number has its official source or "None published – set by ExpatReady"</li>
+          <li>Submit waits until every number has its official source or "None published – set by ExpatReady"; then the SME signs and a different person approves Release 1</li>
         </ul>
-        <p className="mt-3 text-sm text-text-muted">Once only after Reset to the six. Nothing is approved or released past the rules.</p>
+        <p className="mt-3 text-sm text-text-muted">Once only after Reset to the six. Nothing is approved or released here: Release 1 comes only through those steps.</p>
       </Dialog>
       <Dialog open={confOpen} onOpenChange={(o) => { if (!loadConf.isPending) setConfOpen(o); }} title="Load the configured checkpoint?" description="The sample starting point, then each demo row done through the same screens' rules by the people who hold each duty. US$0: no live AI call."
         footer={<><Button variant="ghost" disabled={loadConf.isPending} onClick={() => setConfOpen(false)}>Cancel</Button><Button busy={loadConf.isPending} onClick={() => loadConf.mutate(undefined)}><Upload /> Load the configured checkpoint</Button></>}>
