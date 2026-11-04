@@ -1,0 +1,5 @@
+Gate B: the PR names C11.14; claims Works for none (no bug check).
+  packs: C11.14.test.ts
+    C11.14.test.ts on the six: exit 0, 14 passed, 0 failed (46 s: copy 4, Reset to the six 18, run 25)
+  packs took 47 s in all
+Gate B: passed.
