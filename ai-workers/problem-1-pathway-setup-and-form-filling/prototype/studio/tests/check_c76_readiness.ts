@@ -1,10 +1,10 @@
-// C7.6 part 1 checks (runtime lane, M3-A3; r5c BR-9, BR-21; P-71, P-136, P-144, P-151, P-155, P-168): the pure
+// C7.6 part 1 checks (runtime lane, M3-A3; r5c BR-9, BR-21; L-SA3 under P-315, P-237, P-238; P-144, P-151, P-155): the pure
 // "Ready to file" rules of engine/runtime/readiness.ts on Visitor visa shaped inputs (IMM 5257 on PDF upload, IMM 5476
 // signed by hand and scanned, IMM 5707). Each rule has a passing and a failing case; a property checks that no input
-// is ready while anything blocks, and that no words carry a percentage. No database, no server, no model call (US$0).
+// is ready while anything blocks or warns unpassed, that only a barcode form without its Validate blocks (P-237), and that no words carry a percentage. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_c76_readiness.ts
 import fc from "fast-check";
-import { BLOCK_CODES, cannotPass, dayOf, filingReadiness, passKeys, passProblem, signatureNeeded, WARN_CODES, type Channel, type FilingInput, type FormItem, type Signature, type WarnCode } from "../engine/runtime/readiness.ts";
+import { BLOCK_CODES, cannotPass, isCritical, dayOf, filingReadiness, passKeys, passProblem, signatureNeeded, WARN_CODES, type Channel, type FilingInput, type FormItem, type Signature, type WarnCode } from "../engine/runtime/readiness.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -15,6 +15,8 @@ const i5257 = (o: Partial<FormItem> = {}): FormItem => ({ item: "i-5257", form: 
 const i5476 = (o: Partial<FormItem> = {}): FormItem => ({ item: "i-5476", form: "IMM 5476", subject: "s-P", person: "Sample Client A", channel: "PDF_UPLOAD", readiness: clean, needsValidate: false, validatedCurrent: false, signature: "HAND_SCANNED", signed: true, signers: ["Sample Client A"], ...o });
 const done = (o: Partial<FilingInput> = {}): FilingInput => ({ filing: "f-1", forms: [i5257(), i5476()], documents: [{ item: "d-pass", label: "Passport", subject: "s-P", person: "Sample Client A", required: true, received: true }], reviewed: true, today: TODAY, ...o });
 const codes = (x: { code: string }[]) => x.map((l) => l.code);
+/** P-315 (P-237, P-238): the former blocks, now CRITICAL warnings passed with a reason. */
+const crit = (x: { warns: { severity: string; code: string; owes: string; words: string; key: string; item?: string }[] }) => x.warns.filter((w) => w.severity === "critical");
 const missingDoc = { documents: [{ item: "d-pass", label: "Passport", subject: "s-P", person: "Sample Client A", required: true, received: false }] };
 /** A pass as the route will store it: the keys of the open lines of its code when it is written (passKeys). */
 const pass = (x: FilingInput, code: WarnCode, reason = "Uploaded in the portal directly (Sample)", key?: string) => ({ code, keys: passKeys(filingReadiness(x), code, key), reason, by: "user-O", at: "2026-11-01T10:00:00Z" });
@@ -25,38 +27,38 @@ ok("C7.6 baseline pass: a filing with every fact confirmed, the validated copy r
 
 // P-71 missing facts, by who owes them.
 r = filingReadiness(done({ forms: [i5257({ readiness: { ready: false, missing: [{ fact: "person.passport_number", label: "Passport number", about: "Sample Client A", reason: "not answered" }, { fact: "case.purpose", label: "Purpose of visit", about: "Case", reason: "not confirmed" }] }, owesFact: { "person.passport_number": "client" } }), i5476()] }));
-ok("C7.6 P-71 fail: an unanswered and an unconfirmed fact on IMM 5257 block with \"missing facts\", one line per owner (client, staff)", !r.ready && r.blocks.filter((b) => b.code === "missing_facts").map((b) => b.owes).sort().join() === "client,staff" && r.blocks.some((b) => b.code === "missing_facts" && /IMM 5257 for Sample Client A/.test(b.words) && /Passport number/.test(b.words)), r.blocks);
+ok("C7.6 P-71 fail: an unanswered and an unconfirmed fact on IMM 5257 are a CRITICAL warning \"missing facts\" (P-238), one line per owner (client, staff)", !r.ready && crit(r).filter((b) => b.code === "missing_facts").map((b) => b.owes).sort().join() === "client,staff" && crit(r).some((b) => b.code === "missing_facts" && /IMM 5257 for Sample Client A/.test(b.words) && /Passport number/.test(b.words)), crit(r));
 ok("C7.6 P-71 pass: owes counts add up to the open lines", Object.values(r.owes).reduce((a, b) => a + (b ?? 0), 0) === r.blocks.length + r.warns.length, r.owes);
 r = filingReadiness(done({ forms: [i5257({ readiness: { ready: false, missing: [{ fact: "person.date_of_birth", label: "Date of birth", about: "Sample Client A", reason: "needs a fix" }] } }), i5476()] }));
-ok("C7.6 QA-122 fail: a fact with a problem blocks as \"fact_problem\" naming the form and the question, not as missing", codes(r.blocks).join() === "fact_problem" && /IMM 5257/.test(r.blocks[0].words) && /Date of birth/.test(r.blocks[0].words), r.blocks);
+ok("C7.6 QA-122 fail: a fact with a problem is a CRITICAL warning \"fact_problem\" naming the form and the question, not as missing", codes(crit(r)).join() === "fact_problem" && /IMM 5257/.test(crit(r)[0].words) && /Date of birth/.test(crit(r)[0].words), crit(r));
 r = filingReadiness(done({ openChecks: [{ fact: "person.passport_number", label: "Passport number", subject: "s-P", person: "Sample Client A" }] }));
-ok("C7.6 BR-7 fail: an open check (answer and document differ) blocks", codes(r.blocks).join() === "open_check" && !r.ready, r.blocks);
+ok("C7.6 BR-7 fail: an open check (answer and document differ) is a CRITICAL warning (P-238)", codes(crit(r)).join() === "open_check" && !r.ready, crit(r));
 
 // BR-9 1: out of date; a required signature.
 r = filingReadiness(done({ forms: [i5257(), i5476({ outOfDate: { fact: "Representative of record", since: "2026-11-01T09:00:00Z" } })] }));
-ok("C7.6 BR-9 1 fail: a signed item whose facts changed after it is out of date and blocks, naming the fact and date", codes(r.blocks).join() === "out_of_date" && /Representative of record/.test(r.blocks[0].words) && /2026-11-01/.test(r.blocks[0].words), r.blocks);
+ok("C7.6 BR-9 1 fail: a signed item whose facts changed after it is out of date, a CRITICAL warning (P-237), naming the fact and date", codes(crit(r)).join() === "out_of_date" && /Representative of record/.test(crit(r)[0].words) && /2026-11-01/.test(crit(r)[0].words), crit(r));
 r = filingReadiness(done({ forms: [i5257(), i5476({ signed: false })] }));
-ok("C7.6 BR-9 1 fail (P-136): IMM 5476 signed by hand and scanned, no scan: \"missing signature\", owed by the client, naming the signer", codes(r.blocks).join() === "missing_signature" && r.blocks[0].owes === "client" && /IMM 5476/.test(r.blocks[0].words) && /scan/.test(r.blocks[0].words), r.blocks);
+ok("C7.6 BR-9 1 fail (P-136): IMM 5476 signed by hand and scanned, no scan: a CRITICAL \"missing signature\" (P-237), owed by the client, naming the signer", codes(crit(r)).join() === "missing_signature" && crit(r)[0].owes === "client" && /IMM 5476/.test(crit(r)[0].words) && /scan/.test(crit(r)[0].words), crit(r));
 r = filingReadiness(done({ forms: [i5257({ signature: "TYPED_NAME", signed: false }), i5476()] }));
-ok("C7.6 BR-9 1 pass: a typed name is no signature to wait for (IMM 5257 typed)", r.ready, r.blocks);
+ok("C7.6 BR-9 1 pass: a typed name is no signature to wait for (IMM 5257 typed)", r.ready, crit(r));
 r = filingReadiness(done({ forms: [i5257(), i5476({ signature: "PEN", signed: false, channel: "PAPER" })] }));
-ok("C7.6 BR-9 1 fail: a line signed in pen with no signature blocks too", codes(r.blocks).join() === "missing_signature" && /in pen/.test(r.blocks[0].words), r.blocks);
+ok("C7.6 BR-9 1 fail: a line signed in pen with no signature warns CRITICAL too", codes(crit(r)).join() === "missing_signature" && /in pen/.test(crit(r)[0].words), crit(r));
 
 // S1 (SA-1B-102 rule 3, AG16-60): a line whose signature is not set needs one; only "No signature" (signedBy none) means none.
 // A new line has the schema's defaults: signature NONE (prisma combination_form @default(NONE)) and no signedBy.
 const fresh = (o: Partial<FormItem> = {}) => i5476({ form: "IMM 5707", item: "i-5707", signature: "NONE", signed: false, signers: undefined, ...o });
 r = filingReadiness(done({ forms: [i5257(), fresh()] }));
-ok("S1 fail: a new PDF upload line (method not set, no signedBy) is never filed unsigned: \"missing signature\", saying how it is signed is not set", !r.ready && codes(r.blocks).join() === "missing_signature" && /IMM 5707/.test(r.blocks[0].words) && /not set/.test(r.blocks[0].words) && signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE" }), r.blocks);
+ok("S1 fail: a new PDF upload line (method not set, no signedBy) is never filed unsigned: \"missing signature\", saying how it is signed is not set", !r.ready && codes(crit(r)).join() === "missing_signature" && /IMM 5707/.test(crit(r)[0].words) && /not set/.test(crit(r)[0].words) && signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE" }), crit(r));
 r = filingReadiness(done({ forms: [i5257(), fresh({ channel: "PAPER" })] }));
-ok("S1 fail: the same on Paper", !r.ready && codes(r.blocks).join() === "missing_signature");
+ok("S1 fail: the same on Paper", !r.ready && codes(crit(r)).join() === "missing_signature");
 r = filingReadiness(done({ forms: [i5257(), fresh()] }));
-ok("S1 review m3 pass: a signature whose method is not set is owed by staff (they set how it is signed); a named hand signature stays the client's", r.blocks[0]?.owes === "staff" && filingReadiness(done({ forms: [i5257(), i5476({ signed: false })] })).blocks[0]?.owes === "client", r.blocks.map((b) => b.owes));
+ok("S1 review m3 pass: a signature whose method is not set is owed by staff (they set how it is signed); a named hand signature stays the client's", crit(r)[0]?.owes === "staff" && crit(filingReadiness(done({ forms: [i5257(), i5476({ signed: false })] })))[0]?.owes === "client", crit(r).map((b) => b.owes));
 r = filingReadiness(done({ forms: [i5257(), fresh({ signedBy: "none" })] }));
-ok("S1 pass: \"No signature\" chosen on the line (signedBy none) needs none", r.ready && !signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE", signedBy: "none" }), r.blocks);
+ok("S1 pass: \"No signature\" chosen on the line (signedBy none) needs none", r.ready && !signatureNeeded({ channel: "PDF_UPLOAD", signature: "NONE", signedBy: "none" }), crit(r));
 r = filingReadiness(done({ forms: [i5257(), fresh({ signed: true })] }));
-ok("S1 pass: once signed, the unset line is ready", r.ready, r.blocks);
+ok("S1 pass: once signed, the unset line is ready", r.ready, crit(r));
 r = filingReadiness(done({ forms: [i5257(), fresh({ channel: "ONLINE" })] }));
-ok("S1 pass: an Online line with no method is signed in the portal at submission: not waited for", r.ready && !signatureNeeded({ channel: "ONLINE", signature: "NONE" }), r.blocks);
+ok("S1 pass: an Online line with no method is signed in the portal at submission: not waited for", r.ready && !signatureNeeded({ channel: "ONLINE", signature: "NONE" }), crit(r));
 ok("S1 pass: a hand or pen signature the line names is waited for even with signedBy none (duplicate beats a miss)", signatureNeeded({ channel: "PDF_UPLOAD", signature: "HAND_SCANNED", signedBy: "none" }) && signatureNeeded({ channel: "PAPER", signature: "PEN", signedBy: "none" }) && !signatureNeeded({ channel: "PDF_UPLOAD", signature: "TYPED_NAME" }));
 try {
   fc.assert(fc.property(fc.constantFrom<Channel>("PDF_UPLOAD", "PAPER"), fc.constantFrom<string | null | undefined>(undefined, null, "person", "parent_for_minor", "principal_for_family", "person_and_representative"),
@@ -72,47 +74,47 @@ ok("C7.6 BR-9 2 fail: the same on Paper", codes(r.blocks).join() === "barcode_no
 r = filingReadiness(done({ forms: [i5257({ validatedCurrent: false, channel: "ONLINE" }), i5476()] }));
 ok("C7.6 BR-9 2 pass: Online has no Validate (typed into the portal): no barcode block", !codes(r.blocks).includes("barcode_not_validated"), r.blocks);
 r = filingReadiness(done({ forms: [i5257(), i5476({ validatedCurrent: false })] }));
-ok("C7.6 BR-9 2 pass: a form without a barcode (IMM 5476) needs no validated copy", r.ready, r.blocks);
+ok("C7.6 BR-9 2 pass: a form without a barcode (IMM 5476) needs no validated copy", r.ready, crit(r));
 r = filingReadiness(done({ forms: [i5257({ channel: "NOT_NEEDED", validatedCurrent: false, readiness: { ready: false, missing: [{ fact: "x", label: "X", about: "A", reason: "not answered" }] } }), i5476()] }));
-ok("C7.6 BR-8 pass: a Not needed line (the portal asks it itself) blocks nothing", r.ready, r.blocks);
+ok("C7.6 BR-8 pass: a Not needed line (the portal asks it itself) blocks nothing", r.ready, crit(r));
 
 // BR-9 3 (P-151): editions and fees.
 r = filingReadiness(done({ forms: [i5257({ edition: { label: "IMM 5257 (06-2023)", superseded: true, acceptedUntil: "2026-11-11" } }), i5476()] }));
-ok("C7.6 BR-9 3 pass (P-151): before the accepted-until date a superseded edition only warns, with \"Adopt update\"", !r.blocks.length && codes(r.warns).join() === "edition_superseded" && /Adopt update/.test(r.warns[0].words) && !r.ready, r);
+ok("C7.6 BR-9 3 pass (P-151): before the accepted-until date a superseded edition only warns, with \"Adopt update\"", !crit(r).length && codes(r.warns).join() === "edition_superseded" && /Adopt update/.test(r.warns[0].words) && !r.ready, r);
 r = filingReadiness(done({ forms: [i5257({ edition: { label: "IMM 5257 (06-2023)", superseded: true, acceptedUntil: "2026-10-31" } }), i5476()] }));
-ok("C7.6 BR-9 3 fail (P-151): after the accepted-until date it blocks, and is not also a warning", codes(r.blocks).join() === "edition_expired" && !r.warns.length, r);
+ok("C7.6 BR-9 3 fail (P-151, P-237): after the accepted-until date it is a CRITICAL warning, not also \"Adopt update\", and no block", codes(r.warns).join() === "edition_expired" && r.warns[0].severity === "critical" && !r.blocks.length && !r.ready, r);
 r = filingReadiness(done({ forms: [i5257({ edition: { label: "IMM 5257 (06-2023)", superseded: true, acceptedUntil: TODAY } }), i5476()] }));
-ok("C7.6 BR-9 3 pass: on the accepted-until date itself it is still accepted (warns)", !r.blocks.length && codes(r.warns).join() === "edition_superseded");
+ok("C7.6 BR-9 3 pass: on the accepted-until date itself it is still accepted (warns)", !crit(r).length && codes(r.warns).join() === "edition_superseded");
 r = filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", acceptedUntil: "2026-10-01" }] }));
-ok("C7.6 BR-9 3 fail: a fee past its valid-until date blocks", codes(r.blocks).join() === "edition_expired" && /Fee/.test(r.blocks[0].words));
+ok("C7.6 BR-9 3 fail: a fee past its valid-until date is a CRITICAL warning (P-237)", codes(crit(r)).join() === "edition_expired" && /Fee/.test(crit(r)[0].words));
 r = filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", acceptedUntil: null }] }));
 ok("C7.6 BR-9 3 pass: a fee with no end date blocks nothing", r.ready);
 
 // Review M1: timestamps are read as their day; a value that is not a date is refused, never ignored.
 r = filingReadiness(done({ forms: [i5257({ edition: { label: "IMM 5257 (06-2023)", superseded: true, acceptedUntil: "2026-10-01T00:00:00.000Z" } }), i5476()] }));
-ok("C7.6 M1 fail: an accepted-until timestamp in the past blocks (not a silent warning)", codes(r.blocks).join() === "edition_expired", r);
+ok("C7.6 M1 fail: an accepted-until timestamp in the past is a CRITICAL warning (not \"Adopt update\")", codes(crit(r)).join() === "edition_expired", r);
 r = filingReadiness(done({ forms: [i5257({ edition: { label: "IMM 5257 (06-2023)", superseded: true, acceptedUntil: `${TODAY}T00:00:00.000Z` } }), i5476()] }));
-ok("C7.6 M1 pass: a timestamp on the accepted-until day itself still only warns", !r.blocks.length && codes(r.warns).join() === "edition_superseded", r);
+ok("C7.6 M1 pass: a timestamp on the accepted-until day itself still only warns", !crit(r).length && codes(r.warns).join() === "edition_superseded", r);
 r = filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", acceptedUntil: "2026-10-01T12:00:00Z" }] }));
-ok("C7.6 M1 fail: an expired fee given as a timestamp blocks (it never disappears)", codes(r.blocks).join() === "edition_expired");
+ok("C7.6 M1 fail: an expired fee given as a timestamp warns CRITICAL (it never disappears)", codes(crit(r)).join() === "edition_expired");
 let threw = ""; try { filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", acceptedUntil: "1 Oct 2026" }] })); } catch (e) { threw = (e as Error).message; }
 ok("C7.6 M1 fail: a date that is not YYYY-MM-DD is refused with its name, never ignored", /not a date/.test(threw) && /Visitor visa fee/.test(threw), threw);
 let threw2 = ""; try { dayOf("2026-02-30", "a date"); } catch (e) { threw2 = (e as Error).message; }
 ok("C7.6 r2 m4 fail: an impossible day (30 February) is refused", /not a date/.test(threw2), threw2);
 r = filingReadiness(done({ forms: [i5257(), i5476({ outOfDate: { fact: "Passport number", since: "2026-10-31T22:00:00Z" } })] }));
-ok("C7.6 r2 m5 pass: the out-of-date mark's time is shown as its day", /changed on 2026-10-31 /.test(r.blocks[0]?.words ?? ""), r.blocks);
+ok("C7.6 r2 m5 pass: the out-of-date mark's time is shown as its day", /changed on 2026-10-31 /.test(crit(r)[0]?.words ?? ""), crit(r));
 ok("C7.6 M1 pass: dayOf reads a date, a timestamp and null", dayOf("2026-11-01", "d") === "2026-11-01" && dayOf("2026-11-01T23:59:00+05:30", "d") === "2026-11-01" && dayOf(null, "d") === null);
 // Review M4 (P-151 (1)): a fee no longer current warns before its date.
 r = filingReadiness(done({ fees: [{ line: "Visitor visa fee (Sample)", superseded: true, acceptedUntil: "2026-12-01" }] }));
-ok("C7.6 M4 pass: a superseded fee before its valid-until date warns with \"Adopt update\"", !r.blocks.length && codes(r.warns).join() === "edition_superseded" && /Fee/.test(r.warns[0].words) && /Adopt update/.test(r.warns[0].words), r.warns);
+ok("C7.6 M4 pass: a superseded fee before its valid-until date warns with \"Adopt update\"", !crit(r).length && codes(r.warns).join() === "edition_superseded" && /Fee/.test(r.warns[0].words) && /Adopt update/.test(r.warns[0].words), r.warns);
 r = filingReadiness(done({ forms: [i5257(), i5476({ signed: false, signerOwes: "representative" })] }));
-ok("C7.6 signature pass: a missing signature is owed by whoever signs it (the representative's part of IMM 5476)", r.blocks[0]?.owes === "representative", r.blocks);
+ok("C7.6 signature pass: a missing signature is owed by whoever signs it (the representative's part of IMM 5476)", crit(r)[0]?.owes === "representative", crit(r));
 r = filingReadiness(done({ reviewed: false, documents: missingDoc.documents }));
 ok("C7.6 words pass: every block says it unblocks \"Ready to file and Record\"; every warning says it is passed with a reason or fixed", r.blocks.every((b) => b.unblocks === "Ready to file and Record") && r.warns.every((w) => /passed with a reason/.test(w.unblocks)));
 
 // BR-9 4 (P-155, BR-21): the representative's review.
 r = filingReadiness(done({ reviewed: false }));
-ok("C7.6 BR-9 4 fail (P-155): the representative's review not done blocks, owed by the representative", codes(r.blocks).join() === "representative_review" && r.blocks[0].owes === "representative" && r.owes.representative === 1, r);
+ok("C7.6 BR-9 4 fail (P-155): the representative's review not done is a CRITICAL warning (P-237), owed by the representative", codes(crit(r)).join() === "representative_review" && crit(r)[0].owes === "representative" && r.owes.representative === 1, r);
 
 // Warnings and passes (AG-07 BR-26).
 r = filingReadiness(done({ documents: [{ item: "d-pass", label: "Passport", subject: "s-P", person: "Sample Client A", required: true, received: false }] }));
@@ -131,7 +133,9 @@ const twoFindings = { findings: [{ id: "g1", severity: "CRITICAL" as const, form
 r = filingReadiness(done({ ...twoFindings, passes: [pass(done(twoFindings), "finding", "Phone format is IRCC's own (Sample)", "finding|g2")] }));
 ok("C7.6 M3 pass and fail: a pass of one finding (by its key) covers that finding only; the CRITICAL one stays open", !r.ready && r.warns.length === 1 && r.warns[0].key === "finding|g1" && r.passed.map((x) => x.key).join() === "finding|g2", r);
 r = filingReadiness(done({ reviewed: false, ...missingDoc, passes: [pass(done(missingDoc), "missing_document")] }));
-ok("C7.6 warn pass, block kept: passing every warning never clears a block", !r.ready && codes(r.blocks).join() === "representative_review");
+ok("C7.6 P-315 pass kept: passing the missing document leaves the review's CRITICAL warning open (each line needs its own pass)", !r.ready && codes(crit(r)).join() === "representative_review");
+r = filingReadiness(done({ forms: [i5257({ validatedCurrent: false }), i5476()], ...missingDoc, passes: [pass(done(missingDoc), "missing_document")] }));
+ok("C7.6 P-237 block kept: passing every warning never clears the barcode block", !r.ready && codes(r.blocks).join() === "barcode_not_validated" && !r.warns.length);
 r = filingReadiness(done({ findings: [{ id: "g1", severity: "CRITICAL", form: "IMM 5257", words: "Name differs from the passport (Sample)" }] }));
 ok("C7.6 C7.5-8 fail: an AI or rules finding, even CRITICAL, only warns", !r.blocks.length && codes(r.warns).join() === "finding" && /CRITICAL/.test(r.warns[0].words));
 r = filingReadiness(done({ forms: [i5257({ channel: "ONLINE", copyStale: true, enteredOutOfDate: ["Personal details"] }), i5476()] }));
@@ -143,16 +147,16 @@ const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ labe
 r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
 ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);
 r = filingReadiness(done({ forms: [i5257({ readiness: { ready: false, missing: [{ fact: "a", label: "A", about: "x", reason: "not answered" }, { fact: "b", label: "B", about: "x", reason: "needs a fix" }, { fact: "c", label: "C", about: "x", reason: "needs a fix" }] } }), i5476()] }));
-ok("C7.6 r2 m3 pass: every line keeps the form item's own id in item (the prepare view links by it); keys tell lines apart", r.blocks.every((b) => b.item === "i-5257") && new Set(r.blocks.map((b) => b.key)).size === r.blocks.length && r.blocks.length === 3, r.blocks.map((b) => [b.item, b.key]));
+ok("C7.6 r2 m3 pass: every line keeps the form item's own id in item (the prepare view links by it); keys tell lines apart", crit(r).every((b) => b.item === "i-5257") && new Set(crit(r).map((b) => b.key)).size === crit(r).length && crit(r).length === 3, crit(r).map((b) => [b.item, b.key]));
 r = filingReadiness(done({ forms: [i5257({ copyStale: true }), i5476()] }));
 ok("C7.6 warn pass: a PDF upload line has no \"PDF copy\" warning (its own copy is checked by Validate)", r.ready);
 
-ok("C7.6 pass rules: a block code cannot be passed, in people's words (no internal key); a warning code can; an unknown code is refused", /representative's review/.test(cannotPass("representative_review") ?? "") && !/representative_review|nope/.test(`${cannotPass("representative_review")}${cannotPass("nope")}`) && cannotPass("missing_document") === null && !!cannotPass("nope"));
+ok("C7.6 pass rules (P-237): the barcode block cannot be passed, in people's words (no internal key); a warning code can, CRITICAL ones too; an unknown code is refused", /validated copy/.test(cannotPass("barcode_not_validated") ?? "") && !/barcode_not_validated|nope/.test(`${cannotPass("barcode_not_validated")}${cannotPass("nope")}`) && cannotPass("missing_document") === null && cannotPass("representative_review") === null && cannotPass("missing_facts") === null && !!cannotPass("nope"));
 ok("C7.6 pass rules: a reason of fewer than 5 characters, or none, is refused; a written one is accepted", !!passProblem("") && !!passProblem(undefined) && !!passProblem("abc") && !!passProblem("   ab   ") && passProblem("Passport uploaded in the portal (Sample)") === null && passProblem(`  ${"x".repeat(299)}  `) === null && !!passProblem("x".repeat(301)));
 
 // Order: blocks and warnings are listed by who owes them (You · Representative · Client …).
 r = filingReadiness(done({ reviewed: false, forms: [i5257({ validatedCurrent: false }), i5476({ signed: false })] }));
-ok("C7.6 order pass: blocks are grouped by who owes them, staff first, then the representative, then the client", r.blocks.map((b) => b.owes).join() === "staff,representative,client", r.blocks.map((b) => b.code));
+ok("C7.6 order pass: the block (staff), then the CRITICAL warnings by who owes them: the representative, then the client", [...r.blocks, ...r.warns].map((b) => b.owes).join() === "staff,representative,client", [...r.blocks, ...r.warns].map((b) => b.code));
 
 // Properties: never ready with a block; no percentage anywhere; every line has words and a known code.
 // Review r4 A: a missing today is refused, never read as "not expired" (P-151, never fail open).
@@ -171,7 +175,19 @@ ok("C7.6 order pass: blocks are grouped by who owes them, staff first, then the 
 // Review r4 m2/m3: the reason follows the contract's rule; two open checks on one person have their own keys.
 ok("C7.6 r4 m2 fail: a reason of only marks, or over 300 characters, is refused", !!passProblem(".....") && !!passProblem("a".repeat(301)) && passProblem("Client files this week") === null);
 { const r2 = filingReadiness(done({ openChecks: [{ fact: "dob", label: "Date of birth", subject: "s-P", person: "A" }, { fact: "name", label: "Name", subject: "s-P", person: "A" }] }));
-  const k = r2.blocks.filter((b) => b.code === "open_check").map((b) => b.key); ok("C7.6 r4 m3: two open checks on one person have distinct keys", k.length === 2 && k[0] !== k[1], k); }
+  const k = crit(r2).filter((b) => b.code === "open_check").map((b) => b.key); ok("C7.6 r4 m3: two open checks on one person have distinct keys", k.length === 2 && k[0] !== k[1], k); }
+
+// P-315 (L-SA3; P-237, P-238): a CRITICAL warning is passed like any warning, with a reason, and the filing can then be
+// marked ready; a pass written for two missing facts never covers a third that goes missing later.
+{ const gaps = (facts: string[]) => done({ reviewed: false, forms: [i5257({ readiness: { ready: false, missing: facts.map((f) => ({ fact: f, label: f, about: "Sample Client A", reason: "not answered" as const })) } }), i5476()] });
+  const x = gaps(["person.a", "person.b"]), rr = filingReadiness(x);
+  const passes = [pass(x, "missing_facts", "Client confirms by phone today (Sample)"), pass(x, "representative_review", "Representative away; senior officer read it (Sample)")];
+  const after = filingReadiness({ ...x, passes });
+  ok("C7.6 P-315 pass: missing facts and no review are CRITICAL warnings, never blocks; passed with reasons, the filing is ready", !rr.blocks.length && codes(crit(rr)).sort().join() === "missing_facts,representative_review" && after.ready && after.passed.length === 2 && after.passed.every((p) => p.severity === "critical"), after);
+  const later = filingReadiness({ ...gaps(["person.a", "person.b", "person.c"]), passes });
+  ok("C7.6 P-315 fail: a pass for two missing facts does not cover a third that went missing later", !later.ready && codes(later.warns).join() === "missing_facts" && /3 facts/.test(later.warns[0].words), later.warns); }
+r = filingReadiness(done({ reviewed: false, forms: [i5257({ readiness: { ready: false, missing: [{ fact: "x", label: "X", about: "A", reason: "not answered" }] } }), i5476({ signed: false, outOfDate: { fact: "Passport number", since: "2026-10-30" } })], openChecks: [{ fact: "dob", label: "Date of birth", subject: "s-P", person: "A" }], fees: [{ line: "Fee (Sample)", acceptedUntil: "2026-10-01" }] }));
+ok("C7.6 P-315 pass: every former block is a CRITICAL warning whose words say CRITICAL; nothing blocks (the barcode copy is in)", !r.blocks.length && codes(crit(r)).sort().join() === "edition_expired,missing_facts,missing_signature,open_check,out_of_date,representative_review" && crit(r).every((w) => /^CRITICAL: /.test(w.words)) && r.warns.filter((w) => w.severity !== "critical").length === 0, r);
 
 const form = fc.record({ needsValidate: fc.boolean(), validatedCurrent: fc.boolean(), signed: fc.boolean(), channel: fc.constantFrom<Channel>("ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"), signature: fc.constantFrom<Signature>("TYPED_NAME", "HAND_SCANNED", "PEN", "NONE"), reason: fc.constantFrom<null | "not answered" | "not confirmed" | "needs a fix">(null, "not answered", "not confirmed", "needs a fix"), until: fc.constantFrom(null, "2026-10-31", "2026-11-01", "2026-12-01"), superseded: fc.boolean(), stale: fc.boolean() });
 const input = (fs: { needsValidate: boolean; validatedCurrent: boolean; signed: boolean; channel: Channel; signature: Signature; reason: null | "not answered" | "not confirmed" | "needs a fix"; until: string | null; superseded: boolean; stale: boolean }[], reviewed: boolean, docMissing: boolean): FilingInput => ({ filing: "f", reviewed, today: TODAY, documents: [{ label: "Passport", subject: "s", person: "Sample Client A", required: true, received: !docMissing }],
@@ -188,6 +204,7 @@ const prop = (name: string, p: (r: ReturnType<typeof filingReadiness>) => boolea
 };
 prop("C7.6 property: a filing is never ready while it has a block or an unpassed warning", (x) => x.ready === (x.blocks.length === 0 && x.warns.length === 0));
 prop("C7.6 property: never a percentage; every line has words, a known code and an owner", (x) => !/%/.test(JSON.stringify(x)) && [...x.blocks, ...x.warns].every((l) => l.words.length > 10 && !!l.owes && ([...BLOCK_CODES, ...WARN_CODES] as string[]).includes(l.code)));
+prop("C7.6 property (P-237): the only block is a barcode form without its validated copy; every former block is CRITICAL", (x) => x.blocks.every((b) => b.code === "barcode_not_validated" && b.severity === "block") && x.warns.every((w) => w.severity === (isCritical(w.code) ? "critical" : "warning")));
 prop("C7.6 property: owes counts add up to the open lines", (x) => Object.values(x.owes).reduce((a, b) => a + (b ?? 0), 0) === x.blocks.length + x.warns.length);
 
 process.exitCode = summary() ? 1 : 0;
