@@ -4,7 +4,8 @@
 // (QA-134). Walked in a real browser on the demo data (Reset to the six), 1440 px and 400 px, axe (WCAG 2.2 AA). The
 // channel values set here are Sample (test input, the author's own choices through the API), never IRCC's word.
 // No model call (US$0).
-//   zsh studio/tools/isolated.sh forms_c16p 4452 start && node studio/tests/check_c16_portal_browser.cjs 4452 [screenshot folder]
+//   zsh studio/tools/isolated.sh forms_c16p 4452 start && node studio/tests/check_c16_portal_browser.cjs 4452
+// A screenshot folder may follow the port (the 1440 px walk in product/screens/C1.6-channel-slice/screenshots).
 const fs = require("node:fs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
