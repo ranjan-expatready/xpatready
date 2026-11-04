@@ -17,7 +17,7 @@ import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 import { CaseForms } from "./fill-case.ts";
-import { releaseTwoWords } from "./checkpoint-words.ts";
+import { releaseTwoWords, type Listed, type ReleaseTwoStep } from "./checkpoint-words.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -742,6 +742,7 @@ export class Demo {
     // signed by hand and scanned. Then the same review as release 1: submit, the SME's sign-off, a different person approves.
     let r2Why: string | null = visitor ? null : "Waits for the Visitor visa's release 1: its channels change for release 2.";
     if (visitor && vvId) await timed("release 2 (mixed channels)", async () => {
+      let step: ReleaseTwoStep = "forms"; // review R2 m1: the words name the step that refused it
       try {
         await this.forms.setChannel(author, vvId, "IMM 5257", { channel: "ONLINE" });
         const fam = (await this.familyForm(vvId, "vv.single"))!;
@@ -766,14 +767,19 @@ export class Demo {
           await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
         await this.forms.setChannel(author, vvId, "IMM 5476", { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" });
         await seedSampleSources(this.db, vvId);
+        step = "submit";
         const sub = await this.studio.submit(author, vvId, "Release 2 with mixed channels, submitted by the sample loader (C10.1 checkpoint, row 9).");
+        step = "signoff";
         const items = (sub.changeSummary as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`);
         if (items.length) await this.studio.signoff(sme, vvId, { items, action: "signed", note: "Signed by the sample loader as the SME (C10.1 checkpoint, release 2)." });
+        step = "approve";
         await this.studio.approve(approver, vvId);
       } catch (e) {
         // Lead 10's ruling on #1009 (c'): Submit's own refusal, counted and said in plain words (api/src/checkpoint-words.ts),
         // with where the draft stands; a list value a form box does not print waits for row B81.
-        r2Why = releaseTwoWords(said(e));
+        // Review R2-1: Submit's text names only its first three problems; its errors[] lists every one.
+        const listed = e instanceof HttpException ? (e.getResponse() as { errors?: Listed[] }).errors : undefined;
+        r2Why = releaseTwoWords(step, { detail: said(e), errors: Array.isArray(listed) ? listed : undefined });
       }
     });
     const vvReleases = vvId ? await this.db.configRelease.count({ where: { combinationId: vvId } }) : 0;

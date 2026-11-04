@@ -1,28 +1,40 @@
-// C10.1 row 9 (Lead 10's ruling (c') on #1009): what the configured checkpoint says when Submit refuses Visitor visa's
-// release 2, built from the refusal itself (never fixed text): how many problems, of which kind, in plain words for a
-// person (no form field codes), and where the draft stands. Pure: no database, no Nest (a check reads it directly).
+// C10.1 row 9 (Lead 10's ruling (c') on #1009): what the configured checkpoint says when Visitor visa's release 2 is not
+// made, built from the refusal itself (never fixed text): the step that refused it; for Submit, every problem it listed
+// (its `errors`, not its text, which names only the first three), counted by kind, in plain words for a person (no form
+// field codes), and where the draft stands. Pure: no database, no Nest (a check reads it directly).
 
 /** The draft's release-2 changes the loader made before Submit (they stay on the draft, not submitted). */
 export const RELEASE_TWO_CHANGES = "IMM 5257 filed Online, IMM 5645 as the family information form in place of IMM 5707, IMM 5476 a PDF upload signed by hand and scanned";
 
-/** "Fix 13 problems before submitting: a · b · c" → the problems, one each (the refusal's own split). */
-export function refusalProblems(refusal: string): string[] {
-  const body = refusal.replace(/^[^:]*?problems? before submitting:\s*/i, "");
-  return body === refusal && !/ · /.test(refusal) ? [refusal] : body.split(" · ").map((x) => x.trim()).filter(Boolean);
-}
+/** The loader's steps for release 2, in order, and their words. */
+export const RELEASE_TWO_STEPS = { forms: "setting release 2's channels and forms on the Forms tab", submit: "Submit", signoff: "the SME's sign-off", approve: "the approval by a different person" } as const;
+export type ReleaseTwoStep = keyof typeof RELEASE_TWO_STEPS;
 
-/** Row 9's reason when Submit refuses release 2. */
-export function releaseTwoWords(refusal: string): string {
-  const all = refusalProblems(refusal);
-  const noCode = all.filter((p) => /no code for/.test(p)).length, noMap = all.filter((p) => /no option map yet/.test(p)).length;
-  const other = all.length - noCode - noMap;
-  const form = /IMM_?(\d{4})/.exec(all.find((p) => /no code for|no option map yet/.test(p)) ?? "")?.[1];
+/** One problem as Submit lists it (studio.ts refuse(): `errors[]`, each with its item and its words). */
+export type Listed = { item?: string | null; message: string };
+/** A refusal as the loader catches it: its text, and every problem it listed when it lists them. */
+export type Refusal = { detail: string; errors?: Listed[] };
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** Row 9's reason when release 2 is not made. */
+export function releaseTwoWords(step: ReleaseTwoStep, refusal: Refusal): string {
+  if (step !== "submit" || !refusal.errors?.length) {
+    const where = step === "forms" ? " Visitor visa's draft may keep part of the release-2 changes; its Forms tab shows them." : step === "submit" ? "" : " Release 2 was submitted and waits on To review.";
+    return `Release 2 was not made: ${RELEASE_TWO_STEPS[step]} refused it: ${refusal.detail}${where}`;
+  }
+  const all = refusal.errors;
+  const noCode = all.filter((p) => /no code for/.test(p.message)), noMap = all.filter((p) => /no option map yet/.test(p.message));
+  const other = all.filter((p) => !noCode.includes(p) && !noMap.includes(p));
+  const forms = [...new Set([...noCode, ...noMap].map((p) => /IMM[_ ]?(\d{4})/.exec(`${p.item ?? ""} ${p.message}`)?.[1]).filter(Boolean))];
   const parts = [
-    noCode ? `${noCode} form field${noCode === 1 ? " has" : "s have"} no code for some values of the answer list ${noCode === 1 ? "it reads" : "they read"} (filling would refuse them)` : null,
-    noMap ? `${noMap} ${noMap === 1 ? "has" : "have"} no option map yet` : null,
-    other ? `${other} other problem${other === 1 ? "" : "s"}` : null,
+    noCode.length ? `${plural(noCode.length, "form field has", "form fields have")} no code for some values of the answer list ${noCode.length === 1 ? "it reads" : "they read"} (filling would refuse them)` : null,
+    noMap.length ? `${noMap.length} ${noMap.length === 1 ? "has" : "have"} no option map yet` : null,
+    // Review R2 m2: any other problem keeps its own words (at most three, then how many more).
+    other.length ? `${plural(other.length, "other problem", "other problems")}: ${other.slice(0, 3).map((p) => p.message).join(" · ")}${other.length > 3 ? ` · and ${other.length - 3} more` : ""}` : null,
   ].filter(Boolean);
+  const on = forms.length && !other.length ? ` on ${forms.map((f) => `IMM ${f}`).join(" and ")}'s choice boxes` : "";
   const where = `Visitor visa's draft keeps the release-2 changes (${RELEASE_TWO_CHANGES}), not submitted; its Review and release tab lists each problem.`;
-  const waits = noCode ? " Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words." : "";
-  return `Release 2 was not made: Submit refused it with ${all.length} problem${all.length === 1 ? "" : "s"}${form ? ` on IMM ${form}'s choice boxes` : ""}: ${parts.join("; ")}. ${where}${waits}`;
+  const waits = noCode.length ? " Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words." : "";
+  return `Release 2 was not made: Submit refused it with ${plural(all.length, "problem", "problems")}${on}: ${parts.join("; ")}. ${where}${waits}`;
 }
