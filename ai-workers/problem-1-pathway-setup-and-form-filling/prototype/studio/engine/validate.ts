@@ -266,7 +266,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   out.push(...eligibilityChanges(prev?.eligibility, next.eligibility)); // C6.9 BR-4
   out.push(...sourceChanges(prev, next)); // G1 BR-9: a source added, changed or removed, for the expert
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
-  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions"]);
+  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions", "section_titles"]);
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }

@@ -1,7 +1,8 @@
 // C4.2 acceptance (P-220 pack 2; P-76, P-132): the author marks the combination's PQR questions on its PQR tab; only a
 // Client or Document fact that a question asks can be marked; one PQR record per combination; the country PQR is a view
 // of released combinations. The API is built (tests/check_pqr.ts); this pack adds the seams qa found: QA-125 (two saves
-// at once: the loser must get 409, not 404) and a stale second tab. Fails today on QA-125. Rules only (US$0).
+// at once: the loser must get 409, not 404) and a stale second tab. QA-125 fixed in #688; the unasked fact follows the
+// tech lead's ruling P-294 (B) (forms pull their questions). Rules only (US$0).
 // Runs on Visitor visa of the six; needs first: Visitor visa has questions (J3 / C4.11) — until then exit 2, and meanwhile
 // on the suites' fixture with `wp.family` as 4th argument.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.2.test.ts 4440 xr_studio_accept [wp.family]
@@ -19,20 +20,27 @@ run(async () => {
   const client = facts.find((f: any) => f.source === "CLIENT" && f.role === "principal");
   const officer = facts.find((f: any) => f.source === "AGENT");
   ok("setup: the combination has a client fact and a case-officer fact", !!client && !!officer);
-  // P-76: only a question the SQR asks can be marked. Taking a section out of the questionnaire leaves its client facts
-  // asked by no question; ticking one of them is refused in words. The section is put back after.
-  const qv = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires&role=principal`)).body?.questionnaire;
-  const sec = (qv?.sections ?? []).find((x: any) => (x.questions ?? []).some((y: any) => facts.some((f: any) => f.fact === y.fact && f.role === "principal" && f.source === "CLIENT")));
-  const unaskedFact = sec?.questions?.find((y: any) => facts.some((f: any) => f.fact === y.fact && f.role === "principal" && f.source === "CLIENT"))?.fact;
-  const order0 = Number(sql(`select section_order from sqr_section_selection where combination_id='${wp}' and section_key='${sec?.id}'`) || 0);
-  const out = sec ? await call("DELETE", `/combinations/${wp}/sections/${encodeURIComponent(sec.id)}`, undefined, AUTHOR) : { status: 0, body: null };
-  ok("setup: one questionnaire section is taken out, so its client facts are asked by no question", out.status < 300 && !!unaskedFact, out.status >= 300 ? words(out) : unaskedFact);
-  const unasked = ((await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? []).find((f: any) => f.fact === unaskedFact && f.role === "principal");
+  // P-76: only a question the SQR asks can be marked. Forms pull their questions (tech lead ruling P-294 (B) on #688:
+  // engine/snapshot.ts and render.ts ask what a form needs from any placement), so taking a section out asks nobody less.
+  // A truly unasked fact is a form field reading a fact the library has no question for. A person cannot make one at
+  // US$0 (no free field add, P-158; a new field arrives only through an AI field-map draft), so the test makes it, as
+  // the suites do: one more library fact (test words, Sample), and every form field that read another of the
+  // principal's client facts reads it instead.
+  const from = facts.find((f: any) => f.source === "CLIENT" && f.role === "principal" && f.placed && f.fact !== client?.fact && f.fact.startsWith("person."));
+  const probe = "person.c42_no_question_probe", probeMeaning = "Test fact for C4.2: a form field reads it, but no library question asks it (Sample)";
+  if (from) {
+    sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label, label_checked) select gen_random_uuid(), workspace_id, '${probe}', 1, 'PUBLISHED', '${probeMeaning}', value_type, data_type, scope, subject_kind, 'HUMAN', 'user-A', 'C4.2 probe', true from canonical_field where canonical_field_key='${from.fact}' order by version desc limit 1`);
+    sql(`update form_field_map set canonical_field_key='${probe}' where canonical_field_key='${from.fact}' and outcome='mapped'`);
+  }
+  const unasked = ((await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? []).find((f: any) => f.fact === probe && f.role === "principal");
+  ok("setup: a form field reads a fact no library question asks (the principal's, from the client)", !!unasked && !unasked.placed && unasked.source === "CLIENT", unasked ? { fact: unasked.fact, placed: unasked.placed, source: unasked.source, forms: unasked.forms } : from?.fact ?? "no client fact to copy");
   const put = (f: any, body: Record<string, unknown>, actor = AUTHOR) => call("PUT", `/combinations/${wp}/fact-sources/${f.role}/${encodeURIComponent(f.fact)}`, { version: f.version, ...body }, actor);
 
+  // Refused twice: the release check names it ("nobody is asked for it"), and its PQR tick is a 422 in words.
+  const problems = ((await call("GET", `/combinations/${wp}`, undefined, AUTHOR)).body?.draft?.problems ?? []) as { level: string; item: string; message: string }[];
+  const gap = problems.find((x) => x.item === probe && x.level === "error" && /nobody is asked for it/.test(x.message) && x.message.includes(probeMeaning));
   let r = await put(unasked ?? officer, { prequalification: true });
-  ok("C4.2 fail: a fact no question asks cannot be marked (422, 'No question asks …')", !!unasked && r.status === 422 && /No question asks/.test(words(r)), words(r));
-  if (sec) await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(sec.id)}`, { sectionOrder: order0 }, AUTHOR);
+  ok("C4.2 fail: a fact no question asks is a release error and cannot be marked (422, 'No question asks …')", !!unasked && !!gap && r.status === 422 && /No question asks/.test(words(r)), { release: gap?.message ?? problems.filter((x) => x.item === probe), tick: words(r) });
   r = await put(officer, { prequalification: true });
   ok("C4.2 fail: a case-officer fact cannot be a PQR question (422, in words)", r.status === 422 && /case officer/i.test(words(r)), words(r));
   r = await put(client, { prequalification: true }, "user-C");

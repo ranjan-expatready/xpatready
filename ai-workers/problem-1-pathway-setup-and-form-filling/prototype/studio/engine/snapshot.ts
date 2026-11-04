@@ -65,6 +65,10 @@ export type Snapshot = {
   /** G1 (C5.4) BR-9: the source entries of the numbers it publishes, frozen with the release; present only when there are
    *  any (the fact_sources pattern), so other configurations keep their fingerprint. */
   sources?: FrozenSource[];
+  /** C4.2 (P-91, P-294 (B)): the plain title of each section a pulled question sits in that the combination did not
+   *  choose (forms pull their questions, so "taken out" still asks them). Words only, so outside the fingerprint like
+   *  row_versions; present only when there are any. Without it a pulled question showed its section's raw key. */
+  section_titles?: { id: string; title: string }[];
   row_versions: Record<string, string>;
 };
 
@@ -78,7 +82,7 @@ export const sourceEntryOf = (r: { itemKind: string; itemKey: string; valuePath:
 /** The release fingerprint of a snapshot as stored: the same expression assemble() uses (C6.12 break B2: a route that
  *  stores what a release says re-checks the snapshot against its release's sha256, since a row can be edited underneath). */
 export function snapshotHash(snapshot: Snapshot): string {
-  const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
+  const { row_versions: _rv, mode: _m, section_titles: _st, ...hashed } = snapshot;
   return sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as Parameters<typeof canonical>[0]));
 }
 
@@ -212,7 +216,11 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   };
   // G1 BR-9: only entries that answer a number this snapshot publishes, and only when there are any.
   if (rows.entries?.length) { const frozen = frozenSources(publishedNumbers(snapshot), rows.entries); if (frozen.length) snapshot.sources = frozen; }
-  const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
+  // C4.2 (P-91): the titles of the sections pulled questions sit in that this combination did not choose (words only).
+  const pulled = [...new Set(placements.map((q) => q.sectionKey).filter((k) => !selected.has(k)))].sort();
+  const titled = pulled.map((k) => effSections.find((x) => x.sectionKey === k)).filter(Boolean).map((x) => ({ id: x!.sectionKey as string, title: x!.title as string }));
+  if (titled.length) snapshot.section_titles = titled;
+  const { row_versions: _rv, mode: _m, section_titles: _st, ...hashed } = snapshot;
   // C-8 (W1-10 slice 1): a PDF upload signed by hand and scanned is fingerprinted in its old spelling, so a combination
   // released before the slice does not show "changed since release".
   return { snapshot, sha256: sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as any)) };
