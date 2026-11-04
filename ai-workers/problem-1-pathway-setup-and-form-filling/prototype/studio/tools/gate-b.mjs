@@ -79,14 +79,17 @@ export function claims(title = "", body = "") {
   const add = (id, steps) => caps.set(id, steps ? [...new Set([...(caps.get(id) ?? []), ...steps])] : caps.has(id) ? caps.get(id) : null);
   for (const id of ids(title)) add(id, null);
   const raw = body.split(/\r?\n/), lines = raw.map(plain);
+  // The list under line i: its list items, after any blank lines (markdown renders both the same; #850 review M2).
+  const listUnder = (i) => { const out = []; let j = i + 1; while (j < lines.length && !raw[j].trim()) j++; for (; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) out.push(lines[j]); return out; };
   for (let i = 0; i < lines.length; i++) {
     // A key alone on its line ("## Claims Works", "**Claims Works**", "Capabilities") takes the list under it (R2-M3).
     const line = /^(capabilit(?:y|ies)|claims?\s+works?)\s*:?$/i.test(lines[i]) ? `${lines[i].replace(/:$/, "")}:` : lines[i], keys = [...line.matchAll(KEY)];
     for (const [k, m] of keys.entries()) {
-      let value = line.slice(m.index + m[0].length, keys[k + 1]?.index ?? line.length).split(/\s·\s/)[0];
+      let value = line.slice(m.index + m[0].length, keys[k + 1]?.index ?? line.length);
       const isWorks = /works?/i.test(m[1]);
+      if (!isWorks) value = value.split(/\s·\s/)[0];
       // A list under the key: the next lines that are list items (the raw line starts with a bullet or a number).
-      if (!ids(value).length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) value += " " + lines[j];
+      if (!ids(value).length) for (const t of listUnder(i)) value += " " + t;
       const named = ids(value);
       if (isWorks && !named.length && !/^\s*(none|nothing|no capability)\b/i.test(value)) unread.push(line.slice(0, 120));
       for (const id of named) if (isWorks) works.add(id);
@@ -96,15 +99,17 @@ export function claims(title = "", body = "") {
       }
     }
     // "Claims Works" said without a colon the gate can read ("## Claims Works (as built)", "This PR claims Works on",
-    // "Claims Works —"): the ids after the phrase (up to the line's next key) and in the list under it ARE a Works claim
-    // (the bug check runs), the list read even when the line names an id itself (r4-m1: "## Claims Works for C11.10"
-    // over "- C11.13"); a heading or a short label with none refuses as unread; a prose sentence that names nothing
-    // claims nothing (R3-M1).
-    const phrase = line.match(/\bclaims?\s+works?\b/i);
-    if (phrase && !keys.some((m) => /works?/i.test(m[1]))) {
-      const from = phrase.index, to = keys.find((m) => m.index > from)?.index ?? line.length;
-      let named = ids(line.slice(from, to));
-      for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) named = [...named, ...ids(lines[j])];
+    // "Claims Works —"), each time it is said outside a key: the ids after each phrase (up to the line's next key), else
+    // every id on the line ("C11.13 … claims Works on it"), and always the list under it, a blank line between allowed
+    // (r4-m1, #850 review M1, M2), ARE a Works claim, so the bug check runs; a heading or a short label with none
+    // refuses as unread; a prose sentence that names nothing claims nothing (R3-M1).
+    const inKey = (x) => keys.some((m) => x >= m.index && x < m.index + m[0].length);
+    const phrases = [...line.matchAll(/\bclaims?\s+works?\b/gi)].filter((p) => !inKey(p.index));
+    if (phrases.length) {
+      let named = [];
+      for (const phrase of phrases) { const from = phrase.index, to = keys.find((m) => m.index > from)?.index ?? line.length; named.push(...ids(line.slice(from, to))); }
+      if (!named.length) named = ids(line);
+      for (const t of listUnder(i)) named.push(...ids(t));
       for (const id of named) { works.add(id); add(id, null); }
       if (!named.length && (/^\s*#/.test(raw[i]) || line.split(/\s+/).length <= 6)) unread.push(line.slice(0, 120));
     }

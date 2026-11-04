@@ -72,6 +72,21 @@ ok("fail then pass (tech lead, 4 Nov): \"## Claims Works (as built)\" over C11.1
 // "Claims Works for X" heading that names an id itself (r4-m1). Each refused nothing before; each refuses on QA-192 now.
 for (const body of ["Claims Works on C11.13 · Capabilities: C11.10", "Capabilities: C11.10 · Claims Works on C11.13", "## Claims Works for C11.10\n- C11.13", "Claims Works for C11.10:\n- C11.13"])
   ok(`every Works id is checked: "${body.replace(/\n/g, " / ")}"`, gate("forms: x", body).includes("QA-192"), gate("forms: x", body));
+// #850's review (Opus, 4 Nov): 24 shapes around the two fixes. Each names C11.13 (QA-192) or C11.14 (QA-176) as Works;
+// each must refuse. M1: the id before the phrase; M2: a blank line before the list; M3: two Works phrases or a Works key
+// beside a phrase on one line, and a Works key's ids after a middle dot.
+for (const [label, body] of [["two phrases on one line", "Claims Works on C11.13 and claims Works on C11.14"], ["two phrases, a key between", "Claims Works on C11.13 · Capabilities: C11.10 · claims Works on C11.14"],
+  ["a Works key then a Works phrase", "Claims Works: C11.10 · Claims Works on C11.13"], ["a Works key then a phrase after a comma", "Claims Works: C11.10, and this PR claims Works on C11.13"],
+  ["a Works key, ids after a middle dot", "Claims Works: C11.10 · C11.13"], ["a lower-case id in a note", "Claims Works (for c11.13): yes"], ["a lower-case note, then a capabilities key", "claims works on c11.13 · capabilities: C11.10"],
+  ["an id in the note, nothing after", "Claims Works (for C11.13):"], ["an id in the note, a list", "Claims Works (for C11.10):\n- C11.13"], ["a heading, a blank line, a list", "## Claims Works for C11.10\n\n- C11.13"],
+  ["a Works key, a blank line, a list", "Claims Works:\n\n- C11.13"], ["a heading with no id, a blank line, a list", "## Claims Works (as built)\n\n- C11.13"], ["a capabilities key then a phrase", "Capabilities: C11.10 · Claims Works on C11.13"],
+  ["a capabilities key then a phrase after a comma", "Capabilities: C11.10, and this PR claims Works on C11.13"], ["a capabilities key, a phrase, a key", "Capabilities: C11.10 · claims Works on C11.13 · Capabilities: C3.4"],
+  ["the id before the phrase, a long line", "C11.13 near-duplicate reason: this PR now claims Works on it once qa agrees"], ["a table row, the id then the status", "| Capability | Status |\n|---|---|\n| C11.13 | Claims Works (as built, all 14 steps pass) |"],
+  ["a capabilities key, the id, then the phrase", "Capabilities: C11.13 — after this PR it claims Works"], ["short, the id before", "C11.13: this PR claims Works"], ["a heading, the id before", "## C11.13 claims Works"],
+  ["a bullet, the id before the phrase", "- C11.13 (reason field): claims Works after this PR, steps 1-14 green"], ["a note with C1 that is no id", "Claims Works (C1 pass): C11.13"], ["a note with a time", "Claims Works (as of 10:30 IST): C11.13"],
+  ["a phrase, then a list", "This PR claims Works on C11.10.\n- C11.13 is untouched (next section)"]])
+  ok(`#850 review: refuses as a Works claim: ${label}`, part1(claims("forms: x", body), bugs).length > 0, [...claims("forms: x", body).works]);
+ok("#850 review m2: \"Claims Works for C11.10:\" over \"- C11.13\" claims both", ["C11.10", "C11.13"].every((id) => claims("forms: x", "Claims Works for C11.10:\n- C11.13").works.has(id)), [...claims("forms: x", "Claims Works for C11.10:\n- C11.13").works]);
 ok("…and the capabilities key beside it stays a plain capability", !claims("forms: x", "Claims Works on C11.13 · Capabilities: C11.10").works.has("C11.10") && claims("forms: x", "Claims Works on C11.13 · Capabilities: C11.10").caps.has("C11.10"));
 ok("\"This PR claims Works on C11.13\" is a Works claim", gate("forms: x", "This PR claims Works on C11.13 once qa agrees.").join() === "QA-192");
 ok("a heading \"## Claims Works (as built)\" with nothing under it refuses as unread", part1(claims("forms: x", "## Claims Works (as built)\n\nText."), bugs).length === 1);
