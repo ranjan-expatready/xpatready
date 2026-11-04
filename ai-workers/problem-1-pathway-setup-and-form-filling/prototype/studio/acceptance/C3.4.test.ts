@@ -9,7 +9,10 @@
 // Visitor visa (P-131) and committed with the build; until then the replay is refused and this stays red.
 // Rules from P-158: an answer list comes only from a PDF box's choices or an IRCC code list; sections from the form's
 // parts. P-134: an identity document is never read by AI vision. Every value Sample until the immigration expert confirms.
+// QA-196 (P-149 (1)): an accepted form check and guide check land as DRAFT checks of Visitor visa (Library › Checks).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C3.4.test.ts 4440 xr_studio_accept
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { AUTHOR, pack2, run } from "./lib/pack2.ts";
 
 const T = pack2("C3.4");
@@ -71,6 +74,34 @@ run(async () => {
   r = await call("POST", ROUTE(guide), { mode: "replay" }, AUTHOR);
   const fromGuide = ((await call("GET", "/review/proposals")).body?.groups ?? []).length ? (await T.queued(vv)).filter((x: any) => ["condition", "form_check", "cross_check"].includes(x.kind) && /5256/.test(x.source?.file ?? "")) : [];
   ok("C3.4 pass: drafting from Visitor visa's guide 5256 proposes rules (conditions or checks) resting on the guide's words", !!guide && r.status < 300 && fromGuide.length > 0 && fromGuide.every((x: any) => x.source?.quote_found === true), r.status >= 300 ? words(r) : fromGuide.length);
+  // QA-196 (P-149 (1) one door, P-120): a check is accepted on To review like every other kind and lands where checks
+  // live, on a combination (Library › Checks lists it, used in each). A form check reads IMM 5257's own fields, so it
+  // needs them mapped to shared fields first; a guide check lands on its own combination.
+  const NONE = "00000000-0000-4000-8000-000000000000";
+  const fc = of("form_check").find((x) => (x.readings?.draft?.payload?.reads ?? []).some((p: string) => /BackgroundInfo3\[0\]\.Choice/.test(p))) ?? of("form_check")[0];
+  const checkRows = () => Number(sql("select count(*) from check_def"));
+  const c0 = checkRows();
+  r = await call("POST", "/review/proposals/decide", { ids: [fc?.id ?? NONE], action: "accept" }, AUTHOR);
+  ok("QA-196 fail: IMM 5257's form check is refused in plain words while the form fields it reads are not mapped to shared fields yet; nothing is written", !!fc && r.status === 409 && /not mapped to a shared field yet/.test(words(r)) && checkRows() === c0, words(r));
+  // Setup: IMM 5257's field map maps those form fields to the facts (and the yes/no transform) its saved field-map answer
+  // gives them, as applying that draft on the form-field page leaves them; deciding its 84 items is C3.2's journey, not
+  // this one. A row already there is kept (review m5).
+  const fieldMap = JSON.parse(JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "p2", "runs", "studio-fieldmap-imm5257e-live-20261021t060247723z.json"), "utf8")).raw_output) as { entries: { data_path: string; outcome: string; fact: string | null; transform: string | null }[] };
+  const reads: string[] = fc?.readings?.draft?.payload?.reads ?? [];
+  const mapped = reads.map((p) => fieldMap.entries.find((e) => e.data_path === p && e.outcome === "mapped") ?? null);
+  const facts = mapped.map((e) => e?.fact ?? null);
+  for (const [i, p] of reads.entries()) if (facts[i]) sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, outcome, canonical_field_key, transform, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, '${p}', 'mapped', '${facts[i]}', ${mapped[i]!.transform ? `'${mapped[i]!.transform}'` : "null"}, 1, 'DRAFT', 'HUMAN', '${AUTHOR}' from form_edition where edition_label='IMM 5257 (09-2023)' on conflict do nothing`);
+  r = await call("POST", "/review/proposals/decide", { ids: [fc?.id ?? NONE], action: "accept" }, AUTHOR);
+  const fcKey = r.body?.items?.[0]?.landedAs as string | undefined;
+  const fcTree = fcKey ? sql(`select predicate_json::text from check_def where check_key='${fcKey}' and combination_id='${vv}'`) : "";
+  ok("QA-196 pass: once mapped, accepting IMM 5257's form check lands it as a DRAFT check of Visitor visa (which files IMM 5257), reading the shared fields and their answers", r.status < 300 && facts.every(Boolean) && !!fcTree && facts.every((f) => fcTree.includes(f!)) && !fcTree.includes("form1[0]") && !/"\* ?Yes"/.test(fcTree), r.status >= 300 ? words(r) : { facts, tree: fcTree.slice(0, 160) });
+  const gc = fromGuide.find((x: any) => x.kind === "cross_check") ?? fromGuide.find((x: any) => x.kind === "form_check");
+  r = await call("POST", "/review/proposals/decide", { ids: [gc?.id ?? NONE], action: "accept" }, AUTHOR);
+  const gcKey = r.body?.items?.[0]?.landedAs as string | undefined;
+  const gcRow = gcKey ? sql(`select check_group || '|' || severity || '|' || status || '|' || origin from check_def where check_key='${gcKey}' and combination_id='${vv}'`) : "";
+  ok("QA-196 pass: accepting a guide 5256 check lands it as a DRAFT check of Visitor visa, made by AI (one over two answers only warns)", r.status < 300 && /\|DRAFT\|AI_PROPOSAL$/.test(gcRow) && (gc?.kind !== "cross_check" || gcRow.startsWith("cross_record|warn")), r.status >= 300 ? words(r) : gcRow);
+  const listed = ((await call("GET", "/library/checks")).body ?? []) as { key: string; used_in: { id: string }[] }[];
+  ok("QA-196 pass: after a reload, Library › Checks lists both, each used in Visitor visa", [fcKey, gcKey].every((k) => !!k && listed.some((c) => c.key === k && c.used_in.some((u) => u.id === vv))), listed.filter((c) => c.key === fcKey || c.key === gcKey).map((c) => c.key));
   ok("C3.4 pass: the whole test spent US$0", items.length > 0 && T.spent() === before);
   T.done();
 });
