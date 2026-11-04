@@ -101,7 +101,8 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
   ok("QA-144 slice 2 option map: IMM 5710 prints \"Separated\" (05) for the list's \"Legally Separated\", matched without AI", om === "05", om);
 
   // The rest keep their words: only the two slices are set up from their forms.
-  ok("QA-144 slice 2 scope: only the Visitor visa and With an LMIA have a rules pass", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside')`) === 0);
+  // Slice 3 adds the Study permit (check_qa144_sp_release.ts).
+  ok("QA-144 slice 2 scope: only the Visitor visa, With an LMIA and the Study permit have a rules pass", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();
