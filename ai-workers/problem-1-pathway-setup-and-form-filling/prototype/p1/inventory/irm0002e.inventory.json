@@ -1,0 +1,400 @@
+{
+ "summary": {
+  "file": "official-sources/ircc/forms/irm0002e.pdf",
+  "sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+  "reason_read": "added through Product Studio",
+  "pdf": {
+   "pages": 1,
+   "needs_rendering": false,
+   "perms": [
+    "/UR3"
+   ],
+   "acroform_fields": 29,
+   "encryption": {
+    "V": 4,
+    "R": 4,
+    "P": -20
+   }
+  },
+  "template_ns": "http://www.xfa.org/schema/xfa-template/3.6/",
+  "fields_total": 16,
+  "entry_fields_bound": 16,
+  "entry_fields_in_shipped_data": 16,
+  "ui_counts": {
+   "textEdit": 9,
+   "dateTimeEdit": 3,
+   "checkButton": 1,
+   "choiceList": 2,
+   "exclGroup": 1
+  },
+  "required_fields": 0,
+  "choice_fields_with_options": 4,
+  "repeat_groups_dynamic": 0,
+  "row_groups_fixed": 1,
+  "barcode_fields": [],
+  "buttons": [],
+  "scripts_by_activity": {
+   "click": 1,
+   "script-object": 1
+  },
+  "presence_changing_scripts": 0,
+  "sections": {
+   "Page1.statement.name": 1,
+   "Page1.statement.DOB": 1,
+   "Page1.statement.birthLocation": 1,
+   "Page1.existingDocument.existing": 1,
+   "Page1.existingDocument.fromGender": 1,
+   "Page1.existingDocument.toGender": 1,
+   "Page1.existingDocument.document": 1,
+   "Page1.requestorSignature.name": 1,
+   "Page1.requestorSignature.signature": 1,
+   "Page1.requestorSignature.date": 1,
+   "Page1.guardian.name": 1,
+   "Page1.guardian.signature": 1,
+   "Page1.guardian.date": 1,
+   "Page1.signedAT.city": 1,
+   "Page1.signedAT.province": 1,
+   "Page1.signedAT.country": 1
+  }
+ },
+ "groups": [
+  {
+   "som": "IRM_0002[0].Page1[0]",
+   "data_path": "IRM_0002[0].Page1[0]",
+   "occur": null,
+   "fixed_row": true
+  }
+ ],
+ "presence_scripts": [],
+ "fields": [
+  {
+   "som": "IRM_0002[0].Page1[0].statement[0].name[0]",
+   "section": "Page1.statement.name",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "(current legal name of applicant in full)",
+   "data_path": "IRM_0002[0].Page1[0].statement[0].name[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Note: Historical records, such as immigration record of landing, IMM 1000 or Confirmation of Permanent Residence documen",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].statement[0].DOB[0]",
+   "section": "Page1.statement.DOB",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "(YYYY-MM-DD)",
+   "data_path": "IRM_0002[0].Page1[0].statement[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Note: Historical records, such as immigration record of landing, IMM 1000 or Confirmation of Permanent Residence documen",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].statement[0].birthLocation[0]",
+   "section": "Page1.statement.birthLocation",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "(city, state/province, country)",
+   "data_path": "IRM_0002[0].Page1[0].statement[0].birthLocation[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Note: Historical records, such as immigration record of landing, IMM 1000 or Confirmation of Permanent Residence documen",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].existingDocument[0].existing[0]",
+   "section": "Page1.existingDocument.existing",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "request a change in sex or gender identifier",
+   "data_path": "IRM_0002[0].Page1[0].existingDocument[0].existing[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].existingDocument[0].fromGender[0]",
+   "section": "Page1.existingDocument.fromGender",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "from",
+   "data_path": "IRM_0002[0].Page1[0].existingDocument[0].fromGender[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "F Female",
+     "M Male",
+     "X Another gender"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].existingDocument[0].toGender[0]",
+   "section": "Page1.existingDocument.toGender",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "to",
+   "data_path": "IRM_0002[0].Page1[0].existingDocument[0].toGender[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "F Female",
+     "M Male",
+     "X Another gender"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].existingDocument[0].document[0].documentSelection[0]",
+   "section": "Page1.existingDocument.document",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "",
+   "data_path": "IRM_0002[0].Page1[0].existingDocument[0].document[0].documentSelection[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "my Certificate of Canadian Citizenship",
+     "1"
+    ],
+    [
+     "my Permanent Resident Card",
+     "2"
+    ],
+    [
+     "my Temporary Resident Document (Visitor Visa, Temporary Resident Permit, Study Permit or Work Permit)",
+     "5"
+    ],
+    [
+     "my document issued to a Protected Person",
+     "3"
+    ],
+    [
+     "my Refugee Protection Claimant Document",
+     "4"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].requestorSignature[0].name[0]",
+   "section": "Page1.requestorSignature.name",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Name of applicant (current legal name in full)",
+   "data_path": "IRM_0002[0].Page1[0].requestorSignature[0].name[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].requestorSignature[0].signature[0]",
+   "section": "Page1.requestorSignature.signature",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Signature of applicant",
+   "data_path": "IRM_0002[0].Page1[0].requestorSignature[0].signature[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].requestorSignature[0].date[0]",
+   "section": "Page1.requestorSignature.date",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date (YYYY-MM-DD)",
+   "data_path": "IRM_0002[0].Page1[0].requestorSignature[0].date[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].guardian[0].name[0]",
+   "section": "Page1.guardian.name",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Name of parent/legal guardian (current legal name in full)",
+   "data_path": "IRM_0002[0].Page1[0].guardian[0].name[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].guardian[0].signature[0]",
+   "section": "Page1.guardian.signature",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Signature of parent/legal guardian",
+   "data_path": "IRM_0002[0].Page1[0].guardian[0].signature[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].guardian[0].date[0]",
+   "section": "Page1.guardian.date",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date (YYYY-MM-DD)",
+   "data_path": "IRM_0002[0].Page1[0].guardian[0].date[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "By signing below, I acknowledge that my Immigration, Refugees and Citizenship Canada (IRCC) document may not be universa",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].signedAT[0].city[0]",
+   "section": "Page1.signedAT.city",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "city/town/village",
+   "data_path": "IRM_0002[0].Page1[0].signedAT[0].city[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Signed at:",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].signedAT[0].province[0]",
+   "section": "Page1.signedAT.province",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "state/province",
+   "data_path": "IRM_0002[0].Page1[0].signedAT[0].province[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Signed at:",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IRM_0002[0].Page1[0].signedAT[0].country[0]",
+   "section": "Page1.signedAT.country",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "country",
+   "data_path": "IRM_0002[0].Page1[0].signedAT[0].country[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Signed at:",
+   "in_row": "IRM_0002[0].Page1[0]",
+   "scripts": null
+  }
+ ]
+}

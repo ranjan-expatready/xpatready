@@ -1,0 +1,19 @@
+PASS  C3.1 AT-1 only an author starts a draft: no person 401, a client 403, a reviewer without the author duty 403, each in plain words; no draft is created
+PASS  C3.1 AT-2 a draft with an unknown way of drafting is a plain 400 naming live, replay and stub; nothing is created
+PASS  C3.1 AT-3 a live draft on a copy without the live switch is refused in plain words (or ends without a live call); the launcher is never asked; the ledger is unchanged (US$0)
+PASS  C3.1 AT-4 the saved IMM 5257 answer replays as one draft (the same launch key twice gives the same draft), labelled no model call, US$0, ledger unchanged
+PASS  C3.1 AT-5 every proposal is reuse, new, ambiguous or conflict: a reuse names a library field that exists, a new one names none, an ambiguous one says why in words and lists any candidates with why and a score
+PASS  C3.1 AT-6 beside the source: every proposal shows its form fields (a form field of this PDF, its caption) and a quote that is found in the form
+PASS  C3.1 AT-7 every form field of the PDF is accounted for once: mapped, not a fact, never filled or open (the counts add up to the PDF's form fields)
+PASS  C3.1 AT-8 [IRCC-F07] a proposal's form field shows the maximum length printed in the PDF (family name: 100 characters), every text form field with one
+PASS  C3.1 AT-9 [IRCC-F07] a choice form field's proposal shows the PDF's own choices (codes and words), not a list the AI made up
+PASS  C3.1 AT-9b [IRCC-F07] a date form field's proposal shows the date pattern read from the PDF box (P-162: "date pattern"), every date form field with one
+PASS  C3.1 AT-11 [IRCC-F07] a shared field fed only by choice form fields is never proposed as free text (its type follows the PDF box)
+PASS  C3.1 AT-12 [IRCC-F07] a proposal whose key is in the library with another type is a conflict, says both types in words, and is never a reuse (compared again at US$0)
+PASS  C3.1 AT-13 a conflict is never accepted with the clean reuse matches; it waits for its own decision
+PASS  C3.1 AT-14 a draft with undecided proposals is not applied: a plain refusal naming one, no form field map written
+PASS  C3.1 AT-15 apply sent twice at once: exactly one applies (242 form fields), the other is refused 409; ledger unchanged
+PASS  C3.1 AT-10 [IRCC-F07] after apply, the answer check for family name uses the PDF's own limit (100 characters), not a general 500
+PASS  C3.1 AT-16 the whole check spent nothing: the ledger is as it was, and the launcher was never asked for a live call
+
+17 passed, 0 failed
