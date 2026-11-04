@@ -1,0 +1,15 @@
+PASS  setup: the sample loads
+PASS  C1.8 pass: a line with one copy says nothing about copies on its row
+PASS  C1.8 pass: the line drawer offers Copies, 1 by default, with its meaning under it
+PASS  C1.8 fail: 0 copies is refused on the field with the fix in words, the drawer stays open
+PASS  axe: copies-refused-on-field has no WCAG A/AA violation — 
+PASS  C1.8: editing the field clears its error
+PASS  C1.8 break m1/m2 fail: "３" is kept as typed and refused on the field, nothing saved
+PASS  C1.8 break m1/m2 fail: "10" is kept as typed and refused on the field, nothing saved
+PASS  C1.8 pass: the row says '2 copies each' after the save
+PASS  C1.8 pass: the database holds 2 copies on the draft line
+PASS  axe: row-shows-two-copies has no WCAG A/AA violation — 
+PASS  C1.8 pass: Undo puts the line back to one copy and the row is quiet again
+PASS  no page errors — 
+
+13/13 passed
