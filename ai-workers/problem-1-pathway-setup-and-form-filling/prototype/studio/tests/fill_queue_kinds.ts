@@ -54,6 +54,9 @@ export async function fillAllKinds(port: number, db: string) {
   const ff = (await call("GET", `/jobs/${jobId}/form-fields`)).body;
   const open = ff.fields.filter((f: any) => f.outcome === "unresolved");
   for (const [n, f] of open.entries()) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: n === 0 || f.background ? "by_hand" : "not_a_fact", reason: n === 0 || f.background ? "Signed and dated by the applicant on paper." : "Office use or a document upload: no case fact fills it." });
+  // G5 (C5.1, P-248, #868): a release needs a document line beside its forms; one with a type the library has released.
+  const docKey = sql("select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1");
+  if (docKey) log("document line", (await call("POST", `/combinations/${sv}/requirements`, { documentTypeKey: docKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" })).status);
   r = await call("POST", `/combinations/${sv}/submit`, {}); log("submit", r.status, r.body?.detail);
   // A second form line on the submitted combination (its release then belongs to two forms; plan §7's two-form case).
   const second = ((await call("GET", "/library/forms/list?for=picker")).body.rows as any[]).map((x) => x.code).find((c: string) => /^IMM /.test(c) && !lineCodes(sv).includes(c));

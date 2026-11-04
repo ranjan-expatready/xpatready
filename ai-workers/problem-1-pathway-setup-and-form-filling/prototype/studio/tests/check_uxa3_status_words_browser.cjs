@@ -89,6 +89,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   if (sv) {
     const anyForm = sql(`select cf.lineage_key from combination_form cf join combination c on c.id=cf.combination_id where c.combination_key='wp.family' and cf.status not in ('RETIRED','SUPERSEDED') and cf.lineage_key like 'IMM 5%' order by (cf.lineage_key = 'IMM 5707') desc, cf.lineage_key limit 1`); // IMM 5707 first: the super visa's package lists it (C3.8, IRCC-F09)
     await api(`/combinations/${sv}/forms`, { method: "POST", data: { formKey: anyForm } });
+    // G5 (C5.1, P-248, #868): a release needs a document line beside its form; one with a type the library has released.
+    await api(`/combinations/${sv}/requirements`, { method: "POST", data: { documentTypeKey: sql("select document_type_key from document_type where status = 'PUBLISHED' order by document_type_key limit 1"), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" } });
     const call = (pth, data, actor) => p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": actor, "content-type": "application/json" }, data }).then(async (r) => ({ status: r.status(), body: await r.json().catch(() => null) }));
     const sub = await call(`/combinations/${sv}/submit`, { note: "UX-A3 check" }, "user-A");
     const rv = (await p.request.fetch(`${BASE}/api/combinations/${sv}/review`, { headers: { "x-actor": "user-C" } }).then((r) => r.json()));
