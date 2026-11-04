@@ -33,7 +33,8 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   // The edition a rules pass read, by its file's checksum: the attachment may label one file differently from the
   // library edition the map is filed under (IMM 5475: "12-2022" from its canada.ca folder, "05-2021" in the library).
   const shaOf = new Map((await db.sourceAttachment.findMany({ where: { id: { in: jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, sha256: true } })).map((a) => [a.id, a.sha256]));
-  const labelOf = new Map((await db.formEdition.findMany({ where: { workspaceId: c.workspaceId, sha256: { in: [...shaOf.values()].filter((x): x is string => !!x) } }, select: { sha256: true, editionLabel: true } })).map((e) => [e.sha256, e.editionLabel]));
+  // A PDF edition only, in a fixed order, so a checksum two editions might share gives the same label every time (review R2-m3).
+  const labelOf = new Map((await db.formEdition.findMany({ where: { workspaceId: c.workspaceId, channel: "PDF", sha256: { in: [...shaOf.values()].filter((x): x is string => !!x) } }, orderBy: { editionLabel: "desc" }, select: { sha256: true, editionLabel: true } })).map((e) => [e.sha256, e.editionLabel]));
   const editionOfRun = new Map(jobs.map((j) => [j.id, labelOf.get(shaOf.get(j.attachmentId ?? "") ?? "") ?? null]));
   const groups = new Map<string, { section: string; boxes: string[] }[]>();
   // A proposal rejected (or still waiting) because the library already holds a section of that name reuses that
@@ -73,9 +74,11 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   const rank = (x: { e: Entry; order: number }) => (x.e.person === SUBJECT ? 0 : 2) + (x.e.row == null ? 0 : 1) + x.order / 1e6;
   const out: PlacedFromParts = { placed: [], noSection: [], refused: [], selected: [] };
   for (const [fact, list] of boxes) {
-    const pick = [...list].sort((a, b) => rank(a) - rank(b)).map((x) => sectionOf(x.edition, x.e.data_path)).find(Boolean);
-    if (!pick) { out.noSection.push(fact); continue; }
     const repeats = fact.startsWith("case.") ? "once_per_case" : list.some((x) => x.e.row != null && x.e.person === SUBJECT) ? "per_row" : "per_person";
+    // A fact asked per row sits with its row's other facts (review R2-m2): its section comes from a list-row box.
+    const from = repeats === "per_row" ? list.filter((x) => x.e.row != null && x.e.person === SUBJECT) : list;
+    const pick = [...from].sort((a, b) => rank(a) - rank(b)).map((x) => sectionOf(x.edition, x.e.data_path)).find(Boolean);
+    if (!pick) { out.noSection.push(fact); continue; }
     try { await studio.placeField(author, fact, { sectionKey: pick, collectedFrom: "client_questionnaire", repeats, tier: "case" }); out.placed.push({ fact, section: pick, repeats }); }
     catch (err) { out.refused.push(`${fact}: ${String((err as Error).message).slice(0, 200)}`); }
   }
@@ -87,8 +90,11 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   const { people, r } = previewRender(after);
   const applying = new Set(people.filter((x) => x.role && x.role !== "representative" && x.applies !== false).map((x) => x.role!));
   const readFor = new Map<string, Set<string>>();
-  for (const f of r.coverage) for (const bx of f.boxes) if (bx.fact && bx.about) (readFor.get(bx.fact) ?? readFor.set(bx.fact, new Set()).get(bx.fact)!).add(bx.about === FILING ? FILING : roleOf(people, bx.about));
-  const everyone = (fact: string) => fact.startsWith("case.") || [...applying].every((role) => readFor.get(fact)?.has(role));
+  // Only a form that surely applies with no answer given counts (review R2-M1): IMM 5409, IMM 5476, IMM 5475, IRM 0002
+  // or a form from an age on may not, so their facts never make a section "everyone answers". A case fact counts when a
+  // form that surely applies reads it for the application.
+  for (const f of r.coverage) if (f.applies === true) for (const bx of f.boxes) if (bx.fact && bx.about) (readFor.get(bx.fact) ?? readFor.set(bx.fact, new Set()).get(bx.fact)!).add(bx.about === FILING ? FILING : roleOf(people, bx.about));
+  const everyone = (fact: string) => fact.startsWith("case.") ? !!readFor.get(fact)?.has(FILING) : [...applying].every((role) => readFor.get(fact)?.has(role));
   const chosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId }, select: { sectionKey: true } })).map((x) => x.sectionKey));
   const live = (await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } }));
   for (const sec of [...new Set(out.placed.map((x) => x.section))]) {
