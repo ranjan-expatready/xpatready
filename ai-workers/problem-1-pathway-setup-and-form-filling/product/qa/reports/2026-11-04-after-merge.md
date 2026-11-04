@@ -369,3 +369,8 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 **Built markers removed** (re-scored today): C1.6, C11.17, C3.5, C4.2, C6.1.
 
 **M2: 45/60 confirmed** (was 42; +C4.8, +C3.5, +C11.8). Thin slice 6/8. M3: 2/17.
+
+## Records update ~19:35 IST: the cloud M3 qa after #861 and #891 (#952)
+* Every M3 row stays Partial. C6.12's Visitor visa part counts on the checkpoint (24/24). C7.6's API reaches Ready to file there, but no screen shows it.
+* New: **QA-226** (Gap · Major, C6.4 and C7.7): the configured Visitor visa release has no document lines. **QA-227** (Bug · Major, C7.7, C6.11 and C7.6): IMM 5476 never applies to a represented case. **QA-228** (Gap · Minor): no signer rule on the checkpoint's lines. **QA-229** (UX · Major, C7.6 and C7.7): the screen says "Ready to file" while the server holds a CRITICAL warning.
+* **C6.11 goes to Partial** (was Works), held by QA-227. **M3: 1/17 Works.**
