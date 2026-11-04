@@ -132,3 +132,16 @@ From `qa/BUGS.md`:
 
 | QA-195 | Gap · Major | C3.4 · P-134 (AI never reads identity documents), P-153 (code is the guard) | 762dbae6 (Opus re-review of #585, probe on main's code) | In the masters step a document type is treated as an identity document only when a reading flags it or its category contains "identity" (`engine/masters-ai.ts:197`); the name is never checked. If both rounds return "Passport" with category "travel", reader "letter_or_record" and identity_document false, the result is a Ready, agreed document type with an AI reader. The rule `identity_not_read_by_ai` passes, so it can be bulk accepted. C2.6 decides by the name (`api/src/checklist.ts:138-139`, passport or travel document). Expected: the same name rule in the masters guard | forms (C3.4) | Open |
 
+
+## QA-183 — closed 4 Nov 2026 (after-merge, #867)
+
+Closed by the qa lane on main **03ea24052** (fixed by #867). `acceptance/C11.17.test.ts` on the six on GitHub: exit 0, 24/24 on the PR head (run 41818523697) and on main (run 41825099237). Walk at 1440 px on the six: in Program structure › Add, a 130-character Category is `aria-invalid` with "Keep the name under 120 characters." under its own field.
+
+From `qa/BUGS.md`:
+
+| QA-183 | UX · Minor | C11.17 · P-128, skill qa §2 (message on its field) | 762dbae6 (after-merge) | Program structure › Add: a category name over 120 characters is refused (400, nothing saved), but "Keep the name under 120 characters" shows only in the dialog's general alert; the Category field shows no message (`acceptance/C11.17.test.ts` 23/24 twice; `web/src/components/add-to-structure.tsx` unchanged since 2 Nov). Expected: the words under the Category field | screens | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-183 | UX · Minor | C11.17 · P-128, skill qa §2 (message on its field) | 762dbae6 (after-merge) | Program structure › Add: a category name over 120 characters is refused (400, nothing saved), but "Keep the name under 120 characters" shows only in the dialog's general alert; the Category field shows no message (`acceptance/C11.17.test.ts` 23/24 twice; `web/src/components/add-to-structure.tsx` unchanged since 2 Nov). Expected: the words under the Category field | Steps, expected and actual: this row and `qa/reports/2026-11-03-after-merge-explore.md`. Pack output is quoted there; the run logs are not committed (AGENTS.md rule 1) | screens | Open |
+
