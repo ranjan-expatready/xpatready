@@ -411,7 +411,9 @@ export class Demo {
     // Row 1: every official file through the intake (the six load), then one off-list file with a readable edition, held
     // and approved by a second person through the intake's own steps (X9a; the forms lane's demo story does the same).
     const files = six.combinations.reduce((t, c) => t + c.files, 0);
-    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { fileName: true } });
+    // Only a file held because its edition could not be read (outcome "held"); a new edition held for row 17 is another
+    // kind of held file, said on row 17 (QA-207 review m5).
+    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "held" }, select: { fileName: true } });
     const offList = await timed("held file approved by a second person", () => this.heldFileApproved(author, approver, workspaceId).catch((e) => ({ ok: false as const, why: said(e) })));
     const unreadWords = unread.length ? ` ${unread.length} official file${unread.length === 1 ? " stays" : "s stay"} held because the form's edition could not be read from the file (${unread.map((h) => h.fileName).join(", ")}): such a file cannot become a source.` : "";
     row({ row: "1", title: "Ingest PDF forms; a held file approved by a second person", status: offList.ok ? "done" : "partial",

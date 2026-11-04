@@ -71,3 +71,44 @@ To raise it, most valuable first: on the map's PR, walk To review › New editio
 * CI results (pending).
 * Graph (P-86): not run, because it writes `qa/GRAPH.md` and this check may write only this file.
 * The separate journey-test report: not written, for the same reason. Its content is in the section above.
+
+## Round 2: diff-only re-check of e2ab26056 (`git diff 561d59528 e2ab26056`, 4 files), 4 Nov 2026
+Reviewer: the same fresh context. US$0. As the tech lead asked, I started no copy, ran no server suite and used no port.
+
+### Verdict: **Approve e2ab26056**
+Open: 0 Blockers, 0 Majors, 1 new Minor (m5, latent: it is reached only once the 2021 map exists, and the suite already catches it). CI: `kind` was pending when I checked, and the other checks had not started. The PR merges only on green.
+
+### m1–m4: each fix holds
+* **m1 holds.**
+  * demo.ts:399–400 now passes `sha256(readFileSync(SOLUTION/prototype/p1/inventory/imm5476e-2021.inventory.json))` to `savedRuns`. That is the same value the replay compares. `ensureJobFile` sets `inputs[0].sha256 = sha(invBytes)` of the same file, which `inventoryOf` resolves for an official file (sources.ts:280, :293), and ai.ts:148 passes `prepared.inputSha`.
+  * `existsSync` and `createHash` are already imported (demo.ts:10–11).
+  * The gate accepts `valid` only. The replay also accepts `recheckable`, so the gate is the stricter of the two. When they differ, the row waits, which is the safe direction.
+* **m2 holds.**
+  * The test's rule matches sources.ts:225–231 term by term: `contract_valid === true`, `raw_output`, no `output_errors`, `/^completed/`, `official_files[0].sha256` equal to the inventory checksum, and the `.reconverted` copy preferred.
+  * Nit, not raised: the test reads only the `studio-fieldmap-…` prefix, while `savedRuns` also reads `c1-fieldmap-imm5476e-2021-live-`. No such file exists, and the studio runner writes the `studio-` prefix, so the two cannot differ today. The test also ignores `STUDIO_HIDE_SAVED_RUNS`, which only check_forms_saved_parts uses.
+* **m3 holds.**
+  * The held branch now also asserts that `form_edition '…(11-2025)' = 0` and that the 2021 edition has more than 0 `form_field_map` rows with `outcome = 'mapped'`. The column names match the schema (`form_edition_id`, `outcome`), and check_s6_library_sources uses the same `'mapped'` value.
+  * This replaces my "one released combination" suggestion with "the 2021 edition is mapped". That is acceptable, because QA-180's release refusal is already covered by acceptance/C10.1:54.
+  * The browser check now pairs `waiting` with the "Waits…" words and `done` with the "held…" words.
+* **m4 holds.**
+  * The query is `intakeItem.findFirst({ workspaceId, outcome: "new_edition_held", status: "HELD", code: "IMM 5476" })`.
+  * *Could it pick another form's item?* No. `code` must equal "IMM 5476" exactly, within this workspace only.
+  * *Could it pick an older held item?* No.
+    * Reset clears `intakeItem` for the workspace (demo.ts:693).
+    * With the swap, the 2021 file is the library's edition, so it is never `new_edition_held`.
+    * The finder's hold (finder.ts:707) and row 17's intake add the same checksum, and both deduplicate: the finder with `skipDuplicates`, the intake with "already waiting".
+    * So at most one such item exists, and check_c10_1_configured.ts:82 asserts exactly 1. `findFirst` with no `orderBy` is safe for that reason.
+  * When the item is missing, `why17` still carries the intake's own message.
+  * The row now reads "(tech lead, 4 Nov)".
+
+### New issue
+**m5 (Minor, Should). In the held branch, row 1 would count the finder-held 11-2025 file as unreadable. `api/src/demo.ts:414`**
+* `unread` takes every intake item with `status: "HELD"` in any outcome.
+* Failing scenario: the 2021 map exists, so the swap runs, and the Visitor visa's form finder holds `imm5476e.pdf` as `new_edition_held` inside loadSix (the path m4 now documents, finder.ts:704–707). Row 1 then says "1 official file stays held because the form's edition could not be read from the file (imm5476e.pdf)". That is false: its edition was read as 11-2025.
+* check_c10_1_configured.ts:56 compares `outcome = 'held'` with that number, so the map's PR would go red. This is not new in this diff, but m4 makes the path explicit.
+* Fix (one line): add `outcome: "held"` to the `unread` query at demo.ts:414.
+
+### Journey score (reviewer role, the one score for this check): **7.5/10, not a pass, from code only**
+* Row 17's words now meet the bar: "(tech lead, 4 Nov)", with no ticket code. That raises "plain words" to 1.
+* m5 is a wrong statement in row 1's words, but only in the branch that cannot run yet, so it costs nothing today.
+* The score is not higher because nothing was walked, timed or seen. That is still the most valuable next step, on the map's PR: To review › New edition at 1440 and 1024 px, and keyboard-only.
