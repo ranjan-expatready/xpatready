@@ -2,7 +2,8 @@
 // Two rules found on the first live run (20 Oct 2026):
 //  * The form edition is a fact of the official file, taken from the official manifest, never from the
 //    model. The inventories carry no edition, and every live draft said so rather than invent one; the
-//    model's own reading is kept beside the record (edition_note) when it differs.
+//    model's own reading is kept beside the record (edition_note) when it differs. A previous edition's label describes
+//    the file, so its manifest row records the printed edition read from it (`printed`, QA-207), which is used then.
 //  * A mapped entry whose only evidence is shorter than two characters (for example the caption "*")
 //    does not identify its box: it becomes `unresolved`, keeping the proposal in the reason, so a person
 //    reviews it. Nothing is dropped and nothing is invented.
@@ -38,9 +39,11 @@ export function checkFieldMapOutput(parsed: any): { output: any; needs_person: N
   return { output: { ...parsed, canonical_fields: (parsed.canonical_fields ?? []).filter((c: any) => !bad.has(String(c.id))), entries }, needs_person: needs, set_aside_fields: setAside };
 }
 
-const editionOf = (officialFile: string): string | undefined =>
-  (JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as { path: string; edition?: string }[])
-    .find((i) => `official-sources/ircc/${i.path}` === officialFile)?.edition;
+const editionOf = (officialFile: string): string | undefined => {
+  const i = (JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as { path: string; edition?: string; printed?: string }[])
+    .find((x) => `official-sources/ircc/${x.path}` === officialFile);
+  return i?.printed ?? i?.edition;
+};
 
 /** approvedEdition (P-80): for a form approved in the product, the edition its checked approval names (launch.ts). */
 export function convertFieldMap(parsed: any, inventoryFile: string, approvedEdition?: string) {
