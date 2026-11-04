@@ -3,16 +3,18 @@
 // same placeField a person uses. The sections are the C3.4 rules pass's (api/src/form-masters.ts): each accepted section
 // proposal names the boxes of one form edition it groups. A box no section names takes the section of the nearest named
 // box on the same form (the longest shared data path). Who fills it: the client's questionnaire; how often: once per case
-// for a case fact, per row for a list row about the form's own subject, per person otherwise. No section is selected: a
-// question whose fact a form or a rule reads already goes out with the release, and only to whom it applies. The words are the library field's own. A
+// for a case fact, per row for a list row about the form's own subject, per person otherwise. A section is chosen on the
+// combination only when every applying person answers all of it anyway (see the end). The words are the library field's own. A
 // screen button calls the same step later (its own row); the configured checkpoint calls it now (api/src/demo.ts).
-import { coverageGaps } from "../../engine/coverage.ts";
+import { coverageGaps, previewRender } from "../../engine/coverage.ts";
+import { roleOf } from "../../engine/resolver.ts";
+import { FILING } from "../../contracts/resolver.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import type { Actor, Db } from "./core.ts";
 import { MASTERS_STEP } from "./form-masters.ts";
 import type { Studio } from "./studio.ts";
 
-export type PlacedFromParts = { placed: { fact: string; section: string; repeats: string }[]; noSection: string[]; refused: string[] };
+export type PlacedFromParts = { placed: { fact: string; section: string; repeats: string }[]; noSection: string[]; refused: string[]; selected: string[] };
 
 const shared = (a: string, b: string) => { let n = 0; while (n < a.length && n < b.length && a[n] === b[n]) n++; return n; };
 
@@ -62,7 +64,7 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   }
   const SUBJECT = "form_subject";
   const rank = (x: { e: Entry; order: number }) => (x.e.person === SUBJECT ? 0 : 2) + (x.e.row == null ? 0 : 1) + x.order / 1e6;
-  const out: PlacedFromParts = { placed: [], noSection: [], refused: [] };
+  const out: PlacedFromParts = { placed: [], noSection: [], refused: [], selected: [] };
   for (const [fact, list] of boxes) {
     const pick = [...list].sort((a, b) => rank(a) - rank(b)).map((x) => sectionOf(x.edition, x.e.data_path)).find(Boolean);
     if (!pick) { out.noSection.push(fact); continue; }
@@ -70,8 +72,21 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
     try { await studio.placeField(author, fact, { sectionKey: pick, collectedFrom: "client_questionnaire", repeats, tier: "case" }); out.placed.push({ fact, section: pick, repeats }); }
     catch (err) { out.refused.push(`${fact}: ${String((err as Error).message).slice(0, 200)}`); }
   }
-  // No section is selected (review M2): a placement whose fact a form or a condition reads already travels with the
-  // release (engine/snapshot.ts placements: "used"), and a selected section would ask every one of its questions of
-  // everyone, a toddler included.
+  // A section is chosen on the combination (so the author can order it: C4.1 Move up / Move down) only when choosing it
+  // asks nobody anything a form does not already ask (review M2): every question in it, from the shared library, is a
+  // case fact or a fact some form reads for every applying person role. Any other section stays unchosen: its questions
+  // still go out where a form or a rule reads their fact (engine/snapshot.ts "used"), and only to whom it applies.
+  const after = (await buildSnapshot(db, c.workspaceId, combinationId, "draft")).snapshot;
+  const { people, r } = previewRender(after);
+  const applying = new Set(people.filter((x) => x.role && x.role !== "representative" && x.applies !== false).map((x) => x.role!));
+  const readFor = new Map<string, Set<string>>();
+  for (const f of r.coverage) for (const bx of f.boxes) if (bx.fact && bx.about) (readFor.get(bx.fact) ?? readFor.set(bx.fact, new Set()).get(bx.fact)!).add(bx.about === FILING ? FILING : roleOf(people, bx.about));
+  const everyone = (fact: string) => fact.startsWith("case.") || [...applying].every((role) => readFor.get(fact)?.has(role));
+  const chosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId }, select: { sectionKey: true } })).map((x) => x.sectionKey));
+  const live = (await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } }));
+  for (const sec of [...new Set(out.placed.map((x) => x.section))]) {
+    if (chosen.has(sec) || !live.filter((q) => q.sectionKey === sec).every((q) => everyone(q.canonicalFieldKey))) continue;
+    try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
+  }
   return out;
 }

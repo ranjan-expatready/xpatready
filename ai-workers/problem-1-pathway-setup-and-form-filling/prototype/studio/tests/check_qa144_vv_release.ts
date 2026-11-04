@@ -6,6 +6,7 @@
 //   zsh studio/tools/isolated.sh b8_qa144 4470 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_qa144_vv_release.ts 4470 xr_studio_b8_qa144
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
 
@@ -14,10 +15,14 @@ let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const n = (q: string) => Number(sql(q));
-const call = async (method: string, path: string, body?: unknown) => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": "user-A", "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  return { status: r.status, body: await r.json().catch(() => null) };
-};
+// node:http, not fetch: the load can take more than fetch's 300 s header wait on a busy Mac (4 Nov, load 22–27).
+const call = (method: string, path: string, body?: unknown) => new Promise<{ status: number; body: any }>((done, fail) => {
+  const data = body === undefined ? undefined : JSON.stringify(body);
+  const rq = request({ host: "localhost", port: PORT, path: `/api${path}`, method, headers: { "x-actor": "user-A", "content-type": "application/json", ...(data ? { "content-length": Buffer.byteLength(data) } : {}) } }, (r) => {
+    let t = ""; r.setEncoding("utf8"); r.on("data", (c) => (t += c)); r.on("end", () => { let b: any = null; try { b = JSON.parse(t); } catch { /* not JSON */ } done({ status: r.statusCode ?? 0, body: b }); });
+  });
+  rq.on("error", fail); if (data) rq.write(data); rq.end();
+});
 const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
 type Row = { row: string; status: string; shows: string; why: string | null };
 
@@ -55,9 +60,11 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // The shared placement step: each placement is the author's, asked of the client, in a section the combination uses.
   const placed = n(`select count(*) from section_question where origin = 'HUMAN' and updated_by = 'user-A' and collected_from = 'client_questionnaire'`);
   ok("QA-144 placement pass: the facts the forms need are asked in the sections of their form boxes, by the author", placed > 100 && n(`select count(*) from section_question where section_key not in (select section_key from logical_section)`) === 0, { placed });
-  // Review M2: no section is selected; a placement goes out because a form or a rule reads its fact, and only to whom it
-  // applies. A child aged 1 is asked nothing because of a selected section, and no representative's licence facts.
-  ok("QA-144 placement M2: the loader selects no section on the Visitor visa (a selected section asks its questions of everyone)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) === 0);
+  // Review M2: a section is chosen only when every applying person answers all of it anyway (C4.1 orders the chosen
+  // ones); every other placement goes out because a form or a rule reads its fact, and only to whom it applies. A child
+  // aged 1 is asked nothing only because a section is chosen, and no representative's licence facts.
+  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least three, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3
+    && n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) < n(`select count(distinct section_key) from section_question where updated_by = 'user-A'`), sql(`select string_agg(section_key, ',') from sqr_section_selection where combination_id = '${vv}'`));
   const pv = (await call("GET", `/combinations/${vv}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify({ "child-1|person.date_of_birth": "2025-03-01" }))}`)).body;
   const toddler = ((pv?.questions ?? []) as { fact: string; about: string; why?: string; required?: boolean }[]).filter((q) => q.about === "child-1");
   ok("QA-144 placement M2 pass: a child aged 1 is asked no question only because a section is selected", toddler.length > 0 && !toddler.some((q) => /a section this row selects/.test(q.why ?? "")), toddler.filter((q) => /selects/.test(q.why ?? "")).map((q) => q.fact).slice(0, 5));
