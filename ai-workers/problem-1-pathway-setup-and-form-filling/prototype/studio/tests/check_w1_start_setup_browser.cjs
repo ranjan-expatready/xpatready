@@ -41,6 +41,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const as = async (id) => { await p.evaluate((x) => { try { localStorage.setItem("xr-actor", x); } catch { /* ignore */ } }, id); };
   const ready = () => p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !!document.querySelector("main h1"), null, { timeout: 30000 });
+  // P-214 (#785, run 41777750324, both attempts on GitHub): the Forms panel first says "Counting the forms on this
+  // combination…" and only then shows its slot and buttons; read it after that text is gone (at most 30 s).
+  const formsCounted = () => p.waitForFunction(() => !(document.querySelector("main")?.innerText ?? "").includes("Counting the forms on this combination"), null, { timeout: 30000 }).catch(() => undefined);
   let n = 0;
   const state = async (name, full = true) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
@@ -87,7 +90,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const place = p.getByRole("navigation", { name: "Path" });
   const colours = await place.locator("[data-place]").evaluateAll((xs) => xs.map((x) => getComputedStyle(x).color));
   step("m6: the place is shown in its level colours, as links back to the lists, with nothing to change it here", (await place.innerText()).includes("Visitors") && new Set(colours).size >= 2 && await p.locator("main").getByRole("textbox", { name: /Program|Category|Pathway/ }).count() === 0, colours.join(" | "));
-  step("item 5: Start setup lands on S5's Forms tab; the Start setup block is the finder's 'No form find yet' slot, one block with one find button", (await p.getByRole("tab", { selected: true }).innerText()).replace(/\s*\d+ to (do|fix)( \d+ to fix)?$/, "").replace(/\d+$/, "").trim() === "Forms" /* X1: the tab may carry its setup count; UX-A part 1: "4 to do" */ && /No form find yet/.test(await panel.innerText()) && await p.locator("main [data-find-forms]").count() === 1 && await p.locator("main [data-finder-start]").count() === 1 && await p.locator("main [data-finder]").count() === 1, (await panel.innerText()).slice(0, 200));
+  await formsCounted();
+  step("item 5: Start setup lands on S5's Forms tab; the Start setup block is the finder's 'No form find yet' slot, one block with one find button", (await p.getByRole("tab", { selected: true }).innerText()).replace(/\s*\d+ to (do|fix)( \d+ to fix)?$/, "").replace(/\d+$/, "").trim() === "Forms" /* X1: the tab may carry its setup count; UX-A part 1: "4 to do" */ && /No form find yet/.test(await panel.innerText()) && await p.locator("main [data-find-forms]").count() === 1 && await p.locator("main [data-finder-start]").count() === 1 && await p.locator("main [data-finder]").count() === 1, { tab: await p.getByRole("tab", { selected: true }).innerText().catch(() => ""), panel: (await panel.innerText()).slice(0, 200) });
   // QA-119: the header's Next step is the setup checklist's next item (step 2 here: the people list, the immigration
   // expert's), not "Find forms"; the one find button stays the finder slot's.
   const head = p.locator("[data-header-next]");
@@ -124,6 +128,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const cardCost = costWait ? "" : (await costEl.innerText({ timeout: 5000 }).catch(() => "")).trim();
   step("S3 fix 4: the run card's cost says the button's words (about US$x · at most US$y), then what it spent", cardCost.startsWith(`${words} · US$`), { cardCost, words });
   await panel.locator('[data-find-forms="page"]').waitFor({ timeout: 30000 }).catch(() => undefined);
+  await formsCounted();
   const panelText = await panel.innerText();
   step("S3 fix 1: the stand-in launcher answered with raw text (an error code, a server path, a stack line)", fs.readFileSync(path.join(VAR, "fake-launch.log"), "utf8").includes('"mode":"stub"') && TECH.test(RAW));
   step("S3 fix 1: the page shows none of it", !TECH.test(await p.locator("main").innerText()), panelText.slice(0, 200));
@@ -135,6 +140,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const PAGE = "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html";
   await dlg.locator("[data-page-other]").fill(PAGE);
   await dlg.locator("[data-find-plan]").waitFor({ timeout: 15000 }).catch(() => undefined);
+  await formsCounted();
   const planCost = (await dlg.locator("[data-find-cost]").innerText().catch(() => "")).trim();
   step("item 5: 'Choose the page and find again' opens the page choice; a canada.ca page is taken and the plan reads only it (no AI round to pick the page)", await dlg.locator("[data-page-choice]").count() === 1 && !/AI picks the application package/.test(await dlg.innerText()) && !!planCost, planCost);
   step("S3 fix 4: the Find dialog says the cost in the same words", planCost.toLowerCase().startsWith(words.toLowerCase().replace(/ · at most.*/, "")), { planCost, words });

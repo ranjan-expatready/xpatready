@@ -196,6 +196,13 @@ export type CaseOnlineForm = { form: string; title: string; people: string[]; pd
 /** QA-40 (P-114, W1-02): how a case names a form filed Online, in the same words as the configuration's channel. */
 export const ONLINE_LATER_WAVE = "Online (later wave)";
 
+/** V3 B1 (runtime side, P-297 (3)): each not retired combination's newest release as the "Open a case" dialog offers it,
+ *  read with the same startable check that opening a case runs (api/src/runtime.ts), so the dialog never offers a release
+ *  the server then refuses. `why` is the case officer's plain sentence (no field keys, no author's steps); the items
+ *  themselves are the authors' to fix in Immigration programs. */
+export type OpenableRelease = { combination_id: string; combination: string; version: number; startable: boolean; items: number; why: string | null };
+/** The one sentence a case officer reads when a release is not ready for cases (the dialog and the 409 say the same). */
+export const notReadyForCases = (label: string, items: number) => `"${label}" is not ready for new cases: ${items === 1 ? "1 item" : `${items} items`} to fix in Immigration programs, by the people who set it up. Cases already open are not affected.`;
 /** QA-38 (P-67): a new case opens on its combination's newest release (api/src/runtime.ts takes the highest version),
  *  so the New case list names that one per combination, whatever order the release list comes in. */
 export function newestReleases<T extends { combination_id: string; version: number }>(rows: T[]): T[] {
