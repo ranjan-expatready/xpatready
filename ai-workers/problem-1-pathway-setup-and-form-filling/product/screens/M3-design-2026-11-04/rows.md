@@ -1,6 +1,6 @@
 # M3 design: the open rows, ready to build (4 Nov 2026)
 
-**Status:** draft, in progress. Design only: no product code, live AI off, US$0.
+**Status:** all 11 rows written (five parts each), plus dependencies for 4; concept challenges running. Design only: no product code, live AI off, US$0.
 **Base:** `main` 9caa043b (4 Nov). #798 (QA-144 slice 1) was read at its head ba0bd37f. It has not merged.
 
 **Read for every row:**
@@ -767,4 +767,81 @@ Test: `C10.2.test.ts` -1 to -11, changed as follows:
 | **C8.2** | C7.6 (`readyToFile` in -2), then C8.1 | -2 to -12 (0/12 today; -1, "409 while not ready", may already pass) | C9.2's "submitted" part, C10.2 if the story goes to submitted | Yes: the Record-the-submission route, its field checks (-3, -4, -5, -10), the read-only lock and the correction history, tested against a fixture filing in `ready_to_file` |
 | **C9.2** | Only -5 needs C7.6; "submitted" items need C8.2's record. The pack's "blocks" wording becomes a CRITICAL warning (P-237), as L-SA3's done-when says | -1 to -11 | Nothing directly; counts toward the M3 gate | Yes: everything except -5 uses built routes (validated copy, signed scan, entered sections, change of representative) |
 
-<!-- ORDER -->
+---
+
+## Screens: what is designed, what this PR adds
+
+| Screen | Rows | Design | Here |
+|---|---|---|---|
+| Prepare application tab (list, row detail, channel select, fees, answer sheet panel) | C7.7, C11.6 (a), C6.12-25, C7.3 | r5c + v3 board, both challenged ("Build after these changes"); never consolidated since P-122 to P-272 | addendum `prepare-tab/concept-draft.md` + board + fresh `challenge.md` |
+| Documents panel and "Fill this from documents" drawer | C6.4 (a), C6.5 2b | r5c BR-3 to BR-7, frames 3 and 5; predates P-242 and P-243 | addendum `documents/concept-draft.md` + board + fresh `challenge.md` |
+| Studio fee table (read-only in M3) | C6.12 (S7a) | none | new `fee-table/concept-draft.md` + board + fresh `challenge.md` |
+| Library "Asked about" scope and the household fact on a case | C3.16 | none | new `field-scope/concept-draft.md` + board + fresh `challenge.md` |
+| Review page | C7.5 part 2 | r5c BR-19, frame 13; `screens/C7.5/challenge.md` defers it to part 2 | none needed |
+| Employer link drawer | C1.3 + C11.5 | r5c BR-13, frame 10 | none needed (BR-13's wording, Q3) |
+| Demo › Load the finished story | C10.2 | the configured checkpoint's own pattern | none needed (not a new screen) |
+
+Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading its `challenge.md`. The founder's early look comes later, through the tech lead. The drafter's response to each challenge is at the foot of each concept.
+
+---
+
+## Order (M3-only first, smallest and most unblocking first)
+
+**0. Fixes and records that gate the rows** (not M3 rows; each is small):
+* **qa:**
+  * retest QA-149 (CAPABILITIES says fixed; BUGS says Open), which gates C6.4;
+  * re-score C7.7 after #709;
+  * merge C1.3 into C11.5 (P-316 (2)).
+* **QA-152** (runtime, M3-only files): one runtime PR that names it. It gates C7.7.
+* **QA-153** (M2 forms: the parent questions on the Visitor visa release, P-300 (2)). It gates C7.3, C7.7 at Works and C10.2. Its M3 half (relative answers resolved to `parent_N`) goes in C7.3.
+
+**Then:**
+
+| # | Row (slice) | Lane | Size | Files | Waits for | Unblocks |
+|---|---|---|---|---|---|---|
+| 1 | **C6.4 (a)** Documents panel | screens | S | M3-only (UI only; API built) | QA-149 closed; the `documents/` concept approved | C6.5 2b, DEMO row 15, C7.7's document items |
+| 2 | **C7.7** Prepare application tab | screens | L | M3-only (`cases.tsx`, `forms.tsx`, `App.tsx` one line: merge main first) | QA-152; #709 re-score; the `prepare-tab/` concept approved | C11.6 (a), C6.12-25, C7.3 screen, the C7.6/C8.1/C8.2 screens, C10.2 |
+| 3 | **C6.12 S7a** fee route + table stamp per filing + read-only page | runtime | M | M3-only (new `fee-table.ts`, migration) | the `fee-table/` concept approved; Q1 to Q3 | `setup_vv_m3` S7a green, C6.12-22 |
+| 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b |
+| 5 | **C7.5 part 2, PR 1** review runs, prompt, job, stub pass, Review page (US$0) | runtime | M | M3-only (new `review-runs.ts`; never edit `studio/contracts/findings.ts`) | — | PR 2 |
+| 6 | **C11.6 (a)** channel select on the row | screens | S | M3-only (`prepare.tsx`) | 2 | C10.2 |
+| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on IMM 5707 |
+| 8 | **C6.12-25** fees in the tab | screens | S | M3-only | 2, 3 | C10.2 |
+| 9 | **C6.5 2b** the drawer | screens | S–M | M3-only | 1, 4 | C4.5 (P-256), J7 3.3 to 3.8 |
+| 10 | **C11.5 (+C1.3)** employer pre-fill on a Sample employer record | runtime | M | M3-only (new `case-employer.ts`, migration) | Q1 (M3 or M4) | C9.2's employer step, SI-10 |
+| 11 | **C3.16a** scope resolution at runtime | runtime | M | M3-only (additive enum migration) | — | the employer link moving to the stored scope |
+| 12 | **C6.12-22, -23** sponsorship and the child's study filing (Sample releases through setup files) | runtime | M–L, M | M3-only | 3; C6.12 Q1 | C11.6 (b), C8.2 numbers |
+| 13 | **C7.5 part 2, PR 2** the recorded result (one paid run, about US$1.11 measured, tech lead's approval, P-309) | paid runner | S | — | 5 | C7.5 Works (with C7.6 for -9) |
+| 14 | **C10.2** the finished story | runtime | L | M3-only if the status stays out of `demo.ts` (Q3) | C7.6, C10.1 part B (M2), #798, QA-153; rows 2, 6, 7, 8, 1 | the M3 gate (DEMO checkpoint 3) |
+
+**Wait for M2 at 55** (they need M2-hot files):
+* C3.16b (library choice and refusal);
+* the fee freeze into the release (C6.12 Q2);
+* fee editing through the guarded change (C6.12 Q3).
+
+**Breadth, after the Visitor visa gate** (named, outside the Visitor visa Works):
+* C6.4 (b) (waivers, the P-172 block on a Sample Express Entry release, after C7.6);
+* C11.6 (b) (portal-only permanent-residence sheets on `fs.spouse`);
+* C7.7's waits and online-only copies;
+* C6.5 part 3 (the letter read by AI vision, one paid run);
+* C10.2 (c) (row 18 on With an LMIA).
+
+**Parallel lanes:**
+* screens: 1 → 2 → 6 → 7 → 8 → 9;
+* runtime: 3 → 4 → 5 → 10 → 11 → 12 → 14;
+* forms (M2): QA-153.
+
+Rows 1, 3, 4 and 5 can start the same day. None touches an M2-hot file.
+
+---
+
+## Questions for the founder (one at a time, through the tech lead; each recommended answer first)
+1. **C11.5 Q1. Employer pre-fill: M3 or M4?** P-239 puts the link in M4 (L-SA5). *Recommend:* M3 links to a Sample employer record; M4 adds the Corporate case.
+2. **C10.2 Q1. Release 2's channels** (pack and FQ-2, against DEMO row 9 and #798). *Recommend:* the pack's: IMM 5257 PDF upload validated, IMM 5707 Online, IMM 5476 signed scan.
+3. **C6.12 Q2 and Q3. Fees** are stamped on each filing now, frozen into the release after M2 at 55, and edited only through the guarded change after M2. *Recommend:* yes to all three.
+4. **C6.4 Q1 and C7.7 Q1.** Permanent-residence parts are scored as named breadth, outside the Visitor visa Works. *Recommend:* yes.
+5. **C7.3 Q3. Works with PDF-twin order** until W6 (M4, P-245). *Recommend:* yes, with the label shown.
+6. **C7.5 Q3. One recorded AI review run, IMM 5257 only, now.** *Recommend:* yes.
+
+All the other questions in the rows are the tech lead's own rulings.
+
