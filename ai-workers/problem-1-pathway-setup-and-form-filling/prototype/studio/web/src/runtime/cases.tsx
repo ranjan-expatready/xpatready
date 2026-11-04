@@ -14,7 +14,7 @@ import { FindingsPanel } from "./findings";
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
-import { newestReleases } from "../../../contracts/runtime";
+import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
 const PEOPLE = [
@@ -74,7 +74,6 @@ export function RuntimeApp() {
 // ------------------------------------------------------------------ officer: cases
 
 type CaseRow = { id: string; reference: string; combination: string; status: string; created_at: string };
-type ReleaseRow = { combination: string; combination_id: string; version: number; released_at: string };
 
 function CaseList() {
   const actor = useActorId();
@@ -107,31 +106,46 @@ function CaseList() {
 }
 
 function NewCaseDialog({ close }: { close: () => void }) {
-  const releases = useApi<ReleaseRow[]>(["releases"], "/releases");
+  // QA-38: a case opens on the combination's newest release, so the list names that one (the server's rule).
+  // V3 B1 (P-297 (3)): the server says which of them a case can open on (the same startable check as opening one);
+  // the others are named apart, with the reason, and never offered.
+  const releases = useApi<OpenableRelease[]>(["runtime", "openable"], "/runtime/openable");
   const nav = useNavigate();
   const key = React.useMemo(() => crypto.randomUUID(), []);
-  // QA-38: a case opens on the combination's newest release, so the list names that one (the server's rule).
-  const combos = newestReleases(releases.data ?? []);
+  // Break m2: a body that is not a list (a proxy's HTML page) reads as "could not load", never a blank app.
+  const rows = Array.isArray(releases.data) ? releases.data : [];
+  const loadFailed = releases.isError || (releases.isSuccess && !Array.isArray(releases.data));
+  const combos = rows.filter((r) => r.startable);
+  const notReady = rows.filter((r) => !r.startable);
   const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
   const firm = useFirm();
   const [team, setTeam] = React.useState<{ representative: string; officer: string }>({ representative: "", officer: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
-  const submit = () => create.mutate(undefined, { onError: (e) => { const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
+  // Review M1 (d7b9b80f): the choice is read against the list now offered, so what the select shows is what is sent
+  // (after a reload drops the chosen release, the first offered one is both shown and sent).
+  const chosen = combos.some((c) => c.combination_id === f.combinationId) ? f.combinationId : combos[0]?.combination_id;
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
+  // Break m1: a 409 (the release stopped being ready while the dialog was open) reloads the list, so it is not offered again.
+  const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
-      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} onClick={submit}>Open case</Button></>}>
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        {releases.isLoading ? <Skeleton className="h-9 w-full" /> : !combos.length ? <Notice tone="warn" title="Nothing is released yet">A case opens only on a released combination.</Notice> : (
+      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} title={!combos.length && !releases.isLoading && !loadFailed ? (notReady.length ? "No released combination is ready for new cases yet" : "Nothing is released yet") : undefined} onClick={submit}>Open case</Button></>}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (combos.length) submit(); }}>
+        {releases.isLoading ? <Skeleton className="h-9 w-full" /> : loadFailed ? <Notice tone="warn" title="Could not load the released combinations">{releases.error instanceof Error ? releases.error.message : "Close this and try again."}</Notice> : !combos.length ? (notReady.length ? null : <Notice tone="warn" title="Nothing is released yet">A case opens only on a released combination.</Notice>) : (
           <Field label="Combination (released)" error={errors.combinationId}>
-            <Select value={f.combinationId || combos[0].combination_id} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
+            <Select value={chosen} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
           </Field>
         )}
+        {notReady.length ? (
+          <Notice tone="warn" title={combos.length ? "Released, not ready for new cases" : "No released combination is ready for new cases yet"}>
+            <ul className="space-y-1 [overflow-wrap:anywhere]" data-testid="not-ready-for-cases">{notReady.map((r) => <li key={r.combination_id}><span className="font-medium">{r.combination} · release {r.version}</span>: {r.why}</li>)}</ul>
+          </Notice>
+        ) : null}
         <Field label="Case reference" hint="Your firm's reference, at least 3 characters" error={errors.reference}><Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} /></Field>
         <Field label="Principal applicant's name" hint="Shown to the client as written; Sample names only in the prototype" error={errors.principal}><Input value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></Field>
         <Field label="Client login that answers" error={errors.clientActor}><Select value={f.clientActor} onChange={(e) => setF({ ...f, clientActor: e.target.value })}><option value="user-P">Client A (simulated)</option><option value="user-Q">Client B (simulated)</option></Select></Field>
         <OpeningTeam firm={firm} value={team} onChange={setTeam} errors={errors} />
-        {combos.length ? <EmployerLinkFor combinationId={f.combinationId || combos[0].combination_id} /> : null}
+        {combos.length ? <EmployerLinkFor combinationId={chosen} /> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>

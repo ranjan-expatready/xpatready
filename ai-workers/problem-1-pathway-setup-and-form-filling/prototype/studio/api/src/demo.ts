@@ -10,7 +10,7 @@ import type { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
+import { applySampleFormRoles, importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
@@ -127,7 +127,9 @@ export class Demo {
     const log: string[] = [];
     try {
       if (await this.db.programDef.count({ where: { workspaceId } })) fail("The Structure already has names in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
-      return configured ? await this.loadConfigured(actor, workspaceId, t0, log) : six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
+      const out = configured ? await this.loadConfigured(actor, workspaceId, t0, log) : six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
+      await applySampleFormRoles(this.db, workspaceId); // P-319: the demo's form roles on the forms the load added (the form intake adds them)
+      return out;
     }
     catch (e) {
       if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT && !log.length) throw e;
@@ -536,6 +538,7 @@ export class Demo {
       why: [...sectionsRefused, ...setUpRefused].slice(0, 6).join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
+    await applySampleFormRoles(this.db, workspaceId); // breaker M2: the demo's form roles before any release is made
     // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
     // different person's approval. A combination the validator refuses stays a draft, with the validator's words.
     const released: string[] = [], blocked: string[] = [];
