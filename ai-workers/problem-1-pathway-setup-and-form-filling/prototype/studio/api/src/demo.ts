@@ -28,6 +28,7 @@ import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
 import { placeFromFormParts } from "./form-part-placements.ts";
 import { decide } from "./proposals.ts";
+import { RuleFacts } from "./rule-facts.ts";
 /** QA-144 slice 1 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
 const SET_UP_FROM_FORMS = new Set(["vv.single"]);
@@ -41,11 +42,21 @@ export const VV_FORM_RULES: { form: string; condition?: object; minAge?: number;
     cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"" },
   { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
     cite: "IMM 5484 p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
-  { form: "IMM 5707", minAge: 18,
-    cite: "IMM 5484 p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"" },
-  { form: "IMM 5645", retire: true,
-    cite: "IMM 5484 p. 1 names IMM 5707 only (\"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"); Guide 5256 allows \"IMM 5707 or IMM 5645\" as listed for the country, so the Sample keeps IMM 5707." },
+  // Guide 5256, Question 3 note: the form for a person whose gender identifier differs from their documents.
+  { form: "IRM 0002", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.gender_identifier_differs_from_documents", value: true },
+    cite: "Guide 5256, Question 3: \"If you choose a gender identifier that is different than what you currently have or have had on your Canadian temporary resident document (visa, electronic travel authorization, work permit, study permit or visitor record), you need to complete the Request for a Change of Sex or Gender Identifier (IRM 0002) form and send it with your application.\" and \"You also need to complete this form and send it with your application if you’ve never had a Canadian temporary resident document but you intend to apply for one and you identify with a gender that is different than what appears on your foreign travel document or passport.\"" },
 ];
+/** QA-144 slice 1 (tech lead, 4 Nov; the RCIC walk #782, IRCC-P2-04a): the family information form follows how the
+ *  combination files (Sample, Unconfirmed: expert). Filed on paper or as a PDF upload: IMM 5707; filed online: IMM 5645.
+ *  The other one is taken off this combination's draft, with the reason. Each person 18 or older fills it (both lines). */
+export const FAMILY_FORM_BY_CHANNEL = {
+  paper: { form: "IMM 5707", other: "IMM 5645", cite: "IMM 5484 (05-2026) p. 1, the paper checklist: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"" },
+  online: { form: "IMM 5645", other: "IMM 5707", cite: "canada.ca \"Apply for a visitor visa\" (official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html, modified 2026-08-28, saved 27 Oct 2026): \"Your document checklist may include supporting documents such as the following: Family Information (IMM 5645) form\"; Guide 5256: \"This form must be completed by each person, 18 years of age or older\"" },
+} as const;
+/** QA-144 slice 1 (tech lead, 4 Nov): IRM 0002's rule reads a fact no form asks, added through C3.6's door for its rule
+ *  (a second person approves it) and asked of each person beside their gender. Sample, Unconfirmed: expert. */
+export const GENDER_FACT = { fact: "person.gender_identifier_differs_from_documents", rule: "IRM 0002", label: "Gender identifier differs from earlier documents", valueType: "yes_no",
+  meaning: "Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002)." };
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
 /** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5476's 2021 edition, the file row 17
@@ -82,7 +93,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts) {}
 
   async status() {
     const workspaceId = await this.ws.id();
@@ -480,9 +491,29 @@ export class Demo {
             try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
           }
           if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
+          // The family information form by how IMM 5257 is filed (paper or PDF upload: IMM 5707; online: IMM 5645).
+          const filed = (await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: "IMM 5257" }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
+          const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
+          for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], [family.other, { retire: true }]] as const) {
+            try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
+          }
+          // IRM 0002's fact, added for its rule (C3.6), accepted by the author; the Approver approves it below.
+          try {
+            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: GENDER_FACT.fact, rule: GENDER_FACT.rule, label: GENDER_FACT.label, meaning: GENDER_FACT.meaning, valueType: GENDER_FACT.valueType });
+            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: "Accepted by the sample loader: the fact IRM 0002's rule reads (Guide 5256, Question 3; Sample)." });
+          } catch (e) { setUpRefused.push(`${GENDER_FACT.label}: ${said(e)}`); }
+          for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
+            try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
+          }
         }
         const p = await placeFromFormParts(this.db, this.studio, author, c.id);
         placedFacts.push(...p.placed.map((x) => x.fact));
+        // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's gender).
+        if (keyOf.get(c.id) === "vv.single") {
+          const beside = await this.db.sectionQuestion.findFirst({ where: { workspaceId, canonicalFieldKey: "person.gender" }, orderBy: { version: "desc" }, select: { sectionKey: true } });
+          if (beside) { try { await this.studio.placeField(author, GENDER_FACT.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(GENDER_FACT.fact); } catch (e) { setUpRefused.push(`${GENDER_FACT.fact}: ${said(e)}`); } }
+          else setUpRefused.push(`${GENDER_FACT.fact}: the person's gender is asked in no section`);
+        }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a box that reads it`));
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
