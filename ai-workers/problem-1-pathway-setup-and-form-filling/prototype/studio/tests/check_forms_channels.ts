@@ -121,6 +121,13 @@ const intake = async (file: string, combinationId: string) => {
   const sexList = [{ key: "female", label: "Female" }, { key: "male", label: "Male" }, { key: "another_gender", label: "Another gender" }, { key: "unknown", label: "Unknown" }];
   const pdf = draftOptionMap(sexList, [{ code: "Female", label: "F Female" }, { code: "Male", label: "M Male" }, { code: "Unknown", label: "U Unknown" }, { code: "Unspecified", label: "X Another gender" }]);
   ok("C3.8: option map (PDF): the values take the PDF's codes; one the matcher cannot place is left for a person", pdf.optionMap.map.female === "Female" && pdf.optionMap.map.unknown === "Unknown", { map: pdf.optionMap.map, unmatched: pdf.unmatched });
+  // QA-144 slice 2: IMM 5710 prints "Separated" (05) where the shared marital status list says "Legally Separated".
+  const maritalList = [{ key: "married", label: "Married" }, { key: "legally_separated", label: "Legally Separated" }, { key: "single", label: "Single" }];
+  const m5710 = draftOptionMap(maritalList, [{ code: "01", label: "Married" }, { code: "05", label: "Separated" }, { code: "02", label: "Single" }]);
+  ok("C3.8: option map pass: a form label the value's own label ends with is matched (\"Separated\" for \"Legally Separated\")", m5710.optionMap.map.legally_separated === "05" && m5710.unmatched.length === 0 && m5710.optionMap.unused.length === 0, m5710.optionMap);
+  const both = draftOptionMap([{ key: "legally_separated", label: "Legally Separated" }, { key: "separated", label: "Separated" }], [{ code: "05", label: "Separated" }]);
+  const twoTails = draftOptionMap([{ key: "x", label: "Not legally separated" }], [{ code: "a", label: "Separated" }, { code: "b", label: "Legally separated" }]);
+  ok("C3.8: option map fail: an exact match keeps its code, and an ending two options share is left for a person", both.optionMap.map.separated === "05" && !("legally_separated" in both.optionMap.map) && twoTails.unmatched[0] === "x", { both: both.optionMap.map, twoTails: twoTails.optionMap.map });
   ok("C3.8: option map fail: a value without a code is a problem (filling would refuse it)", optionMapProblems(sexList.map((v) => v.key), { map: { female: "Female" }, unused: [], codes: ["Female", "Male"] }).length === 2);
   ok("C3.8: fill: a shared value gives the PDF its own code; a value with no code is refused", codeForValue("Female", pdf.optionMap, sexList) === "Female" && codeForValue("Another gender", { map: {}, unused: [], codes: [] }, sexList) === null);
   ok("C3.8: fill fail: 'toString' or 'constructor' is not a code in an option map", codeForValue("toString", { map: { female: "F" }, unused: [], codes: ["F"] }, []) === null && codeForValue("constructor", { map: {}, unused: [], codes: [] }, []) === null);

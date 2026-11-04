@@ -27,8 +27,10 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   const docFacts = new Set(((snapshot.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
   const gaps = new Set(coverageGaps(snapshot).map((g) => g.fact));
   for (const m of snapshot.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]) for (const e of m.entries) if (e.outcome === "mapped" && e.fact && !placedNow.has(e.fact) && !docFacts.has(e.fact)) gaps.add(e.fact);
-  // The accepted section proposals of this combination's rules passes: edition → [section key, the boxes it groups].
-  const jobs = await db.draftingJob.findMany({ where: { combinationId, kind: MASTERS_STEP }, select: { id: true, attachmentId: true } });
+  // The accepted section proposals of the rules passes: edition → [section key, the boxes it groups]. A rules pass is one
+  // per edition in the workspace (P-138), so an edition another combination's pass read counts here too (QA-144 slice 2:
+  // With an LMIA files the Visitor visa's IMM 5707, 5409, 5476 and 5475); only this combination's editions are looked up.
+  const jobs = await db.draftingJob.findMany({ where: { workspaceId: c.workspaceId, kind: MASTERS_STEP }, select: { id: true, attachmentId: true } });
   const runs = jobs.map((j) => j.id);
   // The edition a rules pass read, by its file's checksum: the attachment may label one file differently from the
   // library edition the map is filed under (IMM 5475: "12-2022" from its canada.ca folder, "05-2021" in the library).

@@ -3,7 +3,7 @@
 //   optionMap = { map: { value key: form code }, unused: [form codes no value fills], codes: [every form code] }
 // `map` is the team's ENUM transform map (onMissing REFUSE). Drafting is by code, without AI: the code or label equals
 // the value's key or label, the label's first word, or the executor's alias tables (P5 codeFor: sex letters, ICAO
-// country codes, province letters). What stays unmatched goes to a person.
+// country codes, province letters), then a label the value's own ends with. What stays unmatched goes to a person.
 import { codeFor } from "../../p5/transforms.ts";
 
 export type ListValue = { key: string; label: string };
@@ -21,6 +21,13 @@ export function draftOptionMap(values: ListValue[], options: FormOption[]): { op
       ?? opts.find((o) => !taken.has(o.code) && n(o.label).split(" ")[0] === n(v.label).split(" ")[0] && n(v.label).split(" ")[0].length > 2);
     const code = hit?.code ?? codeFor(v.label, { options_resolved: opts.map((o) => [o.label, o.code]) as [string, string][] });
     if (code !== null && code !== undefined && !taken.has(code)) { map[v.key] = code; taken.add(code); }
+  }
+  // QA-144 slice 2: a form that prints a shorter label ends the value's own (IMM 5710 "Separated" for the list's "Legally
+  // Separated"). Only after every exact match is taken, and only when exactly one free option is that ending.
+  for (const v of values) {
+    if (v.key in map) continue;
+    const tail = opts.filter((o) => !taken.has(o.code) && n(o.label).length > 3 && n(v.label).endsWith(` ${n(o.label)}`));
+    if (tail.length === 1) { map[v.key] = tail[0].code; taken.add(tail[0].code); }
   }
   const codes = opts.map((o) => o.code);
   return { optionMap: { map, unused: codes.filter((c) => !taken.has(c)), codes }, unmatched: values.filter((v) => !(v.key in map)).map((v) => v.key) };
