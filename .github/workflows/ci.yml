@@ -24,8 +24,13 @@
 name: ci
 on:
   pull_request:
+    # P-214, 4 Nov (tech lead; measured 12:24–12:58 IST: 9 runs in progress, 7–28 jobs waiting up to 57 min, 12 draft
+    # PRs re-running every part on each push): a builder's DRAFT PR runs nothing; its checks start when it is marked
+    # ready for review. Mergify's batch PRs (mergify/*, opened as drafts) always run.
+    types: [opened, synchronize, reopened, ready_for_review]
 jobs:
   kind:
+    if: ${{ !github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: { contents: read }
@@ -162,7 +167,7 @@ jobs:
     # The one check Mergify reads. Notes: the two notes checks here, on a GitHub machine. Records and code on GitHub's
     # machines: only reports the parts' result. On the Mac (BATCH_RUNNER / PR_RUNNER = mac): the checks run here.
     needs: [kind, shard, types]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}
     runs-on: ${{ fromJSON((needs.kind.outputs.kind == 'notes' || (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
     permissions: { contents: read }
