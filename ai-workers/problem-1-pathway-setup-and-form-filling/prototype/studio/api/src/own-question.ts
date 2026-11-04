@@ -42,9 +42,16 @@ function readingOf(file: string | null): Map<string, Box> | null {
   }
   return readings.get(file)!;
 }
-/** The form's printed question for a Yes/No box: its heading as the reading has it (the caption of IMM 5257's US card
- *  box repeats the national identity question, so the heading comes first), else its caption. */
-const printedQuestion = (b: Box | undefined) => (b?.heading?.trim() || b?.caption?.trim() || "").replace(/\s+/g, " ");
+/** The form's printed question for a Yes/No box (P-170: never words that are not its question): the reading's heading
+ *  when it is a question (the caption of IMM 5257's US card box repeats the national identity question, so the heading
+ *  comes first), else the caption's question without its number ("Question 8 A. During the past 5 years …?"; the
+ *  heading there is a neighbour's, "* Date of birth"). Null when neither is a question: the box is then refused. */
+export function printedQuestion(b: Box | undefined): string | null {
+  const tidy = (t: string | null | undefined) => (t ?? "").replace(/\s+/g, " ").trim();
+  const asks = (t: string) => /\?$/.test(t);
+  const heading = tidy(b?.heading), caption = tidy(b?.caption).replace(/^(?:.*?\bSection\s+)?Question\s+\d+\s*[A-Za-z]?\.?\s+/i, "");
+  return asks(heading) ? heading : asks(caption) ? caption : null;
+}
 /** The page a form field is on, from its XFA data path (form1[0].Page2[0]…): null when the path does not say. */
 const pageOf = (dataPath: string) => /(?:^|\.)Page(\d+)\[/.exec(dataPath)?.[1] ?? null;
 
@@ -66,7 +73,7 @@ export class OwnQuestions {
     const reading = readingOf(ed.inventoryFile);
     const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED" && m.outcome === "mapped" && isWorkedOutYesNo(m.transform));
     const types = new Map((await this.db.canonicalField.findMany({ where: { workspaceId: ed.workspaceId, canonicalFieldKey: { in: rows.map((r) => r.canonicalFieldKey!).filter(Boolean) }, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true, valueType: true } })).map((f) => [f.canonicalFieldKey, f.valueType]));
-    return { edition: { id: ed.id, label: ed.editionLabel }, fields: rows.map((r) => ({ dataPath: r.dataPath, question: printedQuestion(reading?.get(r.dataPath)) || null, page: pageOf(r.dataPath), field: r.canonicalFieldKey, worked_out_from: recordedDerivation(r.transform)!.facts, asked: !!r.canonicalFieldKey && YES_NO.has(types.get(r.canonicalFieldKey) ?? "") })) };
+    return { edition: { id: ed.id, label: ed.editionLabel }, fields: rows.map((r) => ({ dataPath: r.dataPath, question: printedQuestion(reading?.get(r.dataPath)), page: pageOf(r.dataPath), field: r.canonicalFieldKey, worked_out_from: recordedDerivation(r.transform)!.facts, asked: !!r.canonicalFieldKey && YES_NO.has(types.get(r.canonicalFieldKey) ?? "") })) };
   }
 
   /** Points one worked-out Yes/No form field at a Yes/No library field (`field`), or at a new one (`label`, `meaning`). */
@@ -86,7 +93,7 @@ export class OwnQuestions {
     const reading = readingOf(ed.inventoryFile);
     if (!reading) fail(`${ed.editionLabel}'s reading cannot be opened, so the form's own question cannot be quoted: read the form again first.`, HttpStatus.CONFLICT);
     const question = printedQuestion(reading!.get(b.dataPath));
-    if (!question) fail(`${ed.editionLabel}'s reading has no printed question for ${b.dataPath}, so it cannot be asked in the form's words.`, HttpStatus.CONFLICT);
+    if (!question) fail(`${ed.editionLabel}'s reading has no printed question for ${b.dataPath} (neither its heading nor its caption is a question), so it cannot be asked in the form's words: map it on its field map instead.`, HttpStatus.CONFLICT);
     const from = recordedDerivation(cur!.transform)!.facts;
     const group = (from[0] ?? cur!.canonicalFieldKey ?? "person").split(".")[0];
     const now = await this.db.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: cur!.canonicalFieldKey ?? "", status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, canonicalFieldKey: true } });
@@ -97,6 +104,11 @@ export class OwnQuestions {
     const res = await this.db.$transaction(async (tx) => {
       // One new name at a time per workspace, as on the field-map draft's new field (break M1 there).
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`new-field:${ws}`}))`;
+      // Review m2: two people at once on one form field: read it again under the lock, so the second is refused in words.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`own-question:${ed.id}:${b.dataPath}`}))`;
+      const fresh = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.dataPath } });
+      const now2 = effective(fresh, (m) => m.dataPath, "draft")[0];
+      if (!now2 || now2.id !== cur!.id || now2.version !== cur!.version || now2.canonicalFieldKey !== cur!.canonicalFieldKey) fail(`${cur!.caption ?? b.dataPath} was changed by someone else just now: look at it again.`, HttpStatus.CONFLICT);
       let key: string, created = false;
       if (b.field) {
         const f = await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: b.field, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" } });
@@ -117,11 +129,12 @@ export class OwnQuestions {
       }
       await lockItem(tx, ws, "field", [key]); await refuseRetired(tx, ws, "field", [key]);
       // The form field keeps its "worked out" transformation: it now reads its own question, and the facts it names
-      // stay the cross-check (QA-165).
-      await revise(tx.formFieldMap, rows, { canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: source.slice(0, 500), reason: `${b.reason} (${actor.name})`.slice(0, 500) }, actor.id, strip);
+      // stay the cross-check (QA-165). Its evidence is the printed question only (review m1: it is the box's label on the
+      // list before the file); the full citation is the new field's source and the history line.
+      await revise(tx.formFieldMap, fresh, { canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, strip);
       return { key, created };
     }, { timeout: 30_000, maxWait: 10_000 });
-    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} asked ${ed.editionLabel}'s "${question}" as its own question (${res.key}${res.created ? ", a new shared field waiting for a second person" : ""}): ${b.reason}`);
+    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} asked ${source} as its own question (${res.key}${res.created ? ", a new shared field waiting for a second person" : ""}): ${b.reason}`);
     return { dataPath: b.dataPath, field: res.key, created: res.created, question, source };
   }
 }

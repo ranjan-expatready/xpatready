@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { printedQuestion } from "../api/src/own-question.ts";
 
 const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_s9_yesno";
 const AUTHOR = "user-A", APPROVER = "user-B", OFFICER = "user-O", CLIENT = "user-P";
@@ -32,6 +33,10 @@ const ALIAS = "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndica
 const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]";
 
 (async () => {
+  // ------------------------------------------------------------ B52 review M2: the form's own question, never a neighbour's words
+  ok("B52 pass: the heading is the question when it is one (IMM 5257's US card box, whose caption repeats the national identity question)", printedQuestion({ heading: "Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?", caption: "National Identity Document Section Question 1. Do you have a national identity document?" }) === "Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?");
+  ok("B52 pass: a heading that is not a question (Question 8 A's \"* Date of birth\") gives way to the caption's question, without its number", printedQuestion({ heading: "* Date of birth", caption: "Question 8 A. During the past 5 years have you lived in any country other than your country of citizenship?" }) === "During the past 5 years have you lived in any country other than your country of citizenship?");
+  ok("B52 fail: neither a question (\"YYYY-MM-DD\", \"Family name\") → no question, so the box is refused", printedQuestion({ heading: "YYYY-MM-DD", caption: "Family name" }) === null && printedQuestion(undefined) === null);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const before = ledger();
   const l = await call("POST", "/demo/load", { sample: "configured" });
@@ -40,13 +45,14 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("B52/QA-227: the checkpoint's sections and questions step is done, nothing refused", row7?.status === "done", row7);
   const vv = sql("select id from combination where combination_key = 'vv.single'");
   const ed = sql("select e.id from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = 'IMM 5257' and e.channel = 'PDF' order by e.edition_label desc limit 1");
-  const box = (p: string) => sql(`select canonical_field_key || '|' || origin || '|' || coalesce(evidence_quote, '') || '|' || transform from form_field_map where form_edition_id = '${ed}' and data_path = '${p}' order by version desc limit 1`).split("|");
+  const box = (p: string) => sql(`select canonical_field_key || '|' || origin || '|' || coalesce(reason, '') || '|' || transform || '|' || coalesce(evidence_quote, '') from form_field_map where form_edition_id = '${ed}' and data_path = '${p}' order by version desc limit 1`).split("|");
 
   // ------------------------------------------------------------ B52: the three Yes/No form fields
   const want: [string, string, RegExp][] = [[ALIAS, "person.has_used_other_name", /p\. 1: "Have you ever used any other name/], [NATID, "person.has_national_id", /p\. 2: "Do you have a national identity document\?"/], [USCARD, "person.us_permanent_resident", /p\. 2: "Are you a lawful Permanent Resident of the United States/]];
   for (const [p, key, quote] of want) {
-    const [fact, origin, cite, transform] = box(p);
+    const [fact, origin, cite, transform, evidence] = box(p);
     ok(`B52 pass: IMM 5257's ${key} form field reads its own question, decided by a person, the form's words cited (page, quote, saved date)`, fact === key && origin === "HUMAN" && quote.test(cite) && /IMM 5257 \(09-2023\)/.test(cite) && /saved 2026-\d\d-\d\d/.test(cite), { fact, origin, cite });
+    ok(`B52 pass (review m1): ${key}'s form field keeps only the printed question as its words (the list before the file shows them), never a file path`, quote.test(`p. 1: "${evidence}"`) || quote.test(`p. 2: "${evidence}"`) ? !/official-sources|IMM 5257 \(/.test(evidence) : false, evidence);
     ok(`B52 pass: ${key}'s form field keeps its "worked out" step as the cross-check (QA-165)`, /^derived:.*recorded/.test(transform ?? ""), transform);
   }
   ok("B52 pass: the library's field of the same name is used (IMM 0008's, IMM 1294's), never a second one", sql("select count(*) from canonical_field where canonical_field_key in ('person.used_other_name', 'person.national_id', 'person.us_permanent_resident_2', 'person.has_used_other_name_2', 'person.has_national_id_2')") === "0");
@@ -54,12 +60,13 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   const q = new Map((prev.questions as { fact: string; why: string; about: string }[]).map((x) => [x.fact, x]));
   ok("B52 pass: the shared placement step asks all three on the Visitor visa, each because IMM 5257 reads it", want.every(([, k]) => /read by IMM 5257/.test(q.get(k)?.why ?? "")), want.map(([, k]) => q.get(k)));
   const list = (await call("GET", `/editions/${ed}/form-fields/own-questions`)).body;
-  ok("B52 pass: To review › Form fields lists the worked-out Yes/No form fields with the form's question; the three are asked", [ALIAS, NATID, USCARD].every((p) => list.fields.find((f: { dataPath: string; asked: boolean }) => f.dataPath === p)?.asked === true) && list.fields.every((f: { question: string | null }) => f.question !== undefined), list.fields?.slice(0, 4));
+  ok("B52 pass: To review › Form fields lists the worked-out Yes/No form fields with the form's question; the three are asked", [ALIAS, NATID, USCARD].every((p) => list.fields.find((f: { dataPath: string; asked: boolean }) => f.dataPath === p)?.asked === true) && list.fields.every((f: { question: string | null }) => f.question === null || (/\?$/.test(f.question) && !/Date of birth/.test(f.question))), list.fields?.slice(0, 4));
 
   // ------------------------------------------------------------ B52: the route's refusals, each in words
   const ask = (b: unknown, actor: string | null = AUTHOR, edition = ed) => call("POST", `/editions/${edition}/form-fields/own-question`, b, actor);
   const why = "The form asks this Yes/No itself (B52 check)";
-  const open = list.fields.find((f: { asked: boolean; question: string | null }) => !f.asked && f.question) as { dataPath: string; question: string } | undefined;
+  const open = list.fields.find((f: { dataPath: string; asked: boolean }) => !f.asked && /PCRIndicator/.test(f.dataPath)) as { dataPath: string; question: string } | undefined;
+  ok("B52 pass (review M2): Question 8 A is offered with its own words, never its neighbour's heading (\"* Date of birth\")", /^During the past 5 years have you lived in any country other than your country of citizenship/.test(open?.question ?? ""), open);
   let r = await ask({ dataPath: open?.dataPath, label: "B52 check lived elsewhere", meaning: "Whether the person lived elsewhere (B52 check, Sample).", reason: why }, null);
   ok("B52 fail: with no person it is refused (401)", r.status === 401, r);
   r = await ask({ dataPath: open?.dataPath, label: "B52 check lived elsewhere", meaning: "Whether the person lived elsewhere (B52 check, Sample).", reason: why }, APPROVER);
@@ -83,6 +90,14 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("B52 fail: a field not answered Yes or No is refused (400), in words", r.status === 400 && /not Yes or No/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, label: "Has national ID", meaning: "Whether the person has a national identity document (B52 check).", reason: why });
   ok("B52 fail: a new name the library already has is refused (409): choose that field", r.status === 409 && /already a shared field/.test(words(r)), r);
+  r = await ask({ dataPath: open?.dataPath, field: "case.uses_representative", reason: why });
+  ok("B52 fail: a field about the application on a person's form field is refused (400), in words", r.status === 400 && /is about case, but this form field is about person/.test(words(r)), r);
+  r = await ask({ dataPath: open?.dataPath, label: "B52 check lived elsewhere", meaning: "Too short", reason: why });
+  ok("B52 fail: a meaning under 10 characters is refused (400)", r.status === 400 && /10 characters or more/.test(words(r)), r);
+  r = await ask({ dataPath: open?.dataPath, label: "!!!", meaning: "Whether the person lived elsewhere (B52 check, Sample).", reason: why });
+  ok("B52 fail: a name with no letters or digits is refused (400)", r.status === 400 && /letters or digits/.test(words(r)), r);
+  const online = sql("select id from form_edition where channel = 'ONLINE' limit 1");
+  if (online) { r = await ask({ dataPath: ALIAS, field: "person.has_used_other_name", reason: why }, AUTHOR, online); ok("B52 fail: an online edition has no PDF form fields to ask (400)", r.status === 400 && /PDF edition/.test(words(r)), r); }
   ok("B52 fail: none of the refusals changed a form field or added a field", sql(`select count(*) from form_field_map where form_edition_id = '${ed}' and origin = 'HUMAN' and reason like '%B52 check%'`) === "0" && sql("select count(*) from canonical_field where label like 'B52 check%'") === "0");
 
   // ------------------------------------------------------------ B52: a new field, a second person, then asked
@@ -115,8 +130,8 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("QA-227 pass: With an LMIA's IMM 5476 and IMM 5475 wait for the same two questions", !!formsOf(lp, "IMM 5476")?.missing.includes("case.uses_representative") && !!formsOf(lp, "IMM 5475")?.missing.includes("case.authorizes_release_to_designated_individual"), [formsOf(lp, "IMM 5476"), formsOf(lp, "IMM 5475")]);
   ok("QA-227 pass: both facts came through C3.6's door for their rule (a rules proposal, approved), never SQL", sql("select count(*) from canonical_field where canonical_field_key in ('case.uses_representative', 'case.authorizes_release_to_designated_individual') and status = 'PUBLISHED' and source_ref like 'Needed by Form condition IMM 547%'") === "2");
 
-  const caseFor = async (ref: string, answer: boolean | null) => {
-    const id = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER)).body?.id as string;
+  const caseFor = async (ref: string, answer: boolean | null, combinationId = vv) => {
+    const id = (await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER)).body?.id as string;
     const people = (await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[];
     const subject = people.find((p) => p.role === "case")!.subject_id;
     if (answer !== null) for (const fact of ["case.uses_representative", "case.authorizes_release_to_designated_individual"]) {
@@ -129,6 +144,12 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("QA-227 pass: a represented case (uses a representative, authorizes a release: Yes) lists IMM 5476 and IMM 5475", represented.has("IMM 5476") && represented.has("IMM 5475"), [...represented]);
   ok("QA-227 fail: a case answering No lists neither", !unrepresented.has("IMM 5476") && !unrepresented.has("IMM 5475"), [...unrepresented]);
   ok("QA-227 pass: a case nobody answered yet lists both as not decided yet (asked, never silently missing)", unanswered.has("IMM 5476") && unanswered.has("IMM 5475"), [...unanswered]);
+  // Review m4: the same on With an LMIA – inside Canada and Study permit – outside Canada (their releases).
+  for (const key of ["wp.lmia_inside", "sp.outside"]) {
+    const c = sql(`select id from combination where combination_key = '${key}'`);
+    const [y, n] = [await caseFor(`${key}-yes`, true, c), await caseFor(`${key}-no`, false, c)];
+    ok(`QA-227 pass: on ${key} a represented case lists IMM 5476 and IMM 5475, a No lists neither`, y.has("IMM 5476") && y.has("IMM 5475") && !n.has("IMM 5476") && !n.has("IMM 5475"), { yes: [...y], no: [...n] });
+  }
 
   // ------------------------------------------------------------ B52: the box reading its own question, on a case (QA-165 kept)
   {
