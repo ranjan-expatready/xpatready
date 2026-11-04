@@ -37,7 +37,7 @@ async function main() {
   const out = await call("DELETE", `/combinations/${vv}/sections/${encodeURIComponent(sec?.id ?? "none")}`, undefined, AUTHOR);
   const v1 = await view();
   const warn = (v1?.draft?.problems ?? []).filter((p: any) => p.item === sec?.id && /not chosen for this combination/.test(p.message));
-  ok("C4.2 pass (M1): the release check says once, by the section's title, that its questions are still asked", out.status < 300 && warn.length === 1 && warn[0].message.includes(`"${title0}"`), warn.map((p: any) => p.message));
+  ok("C4.2 pass (M1): the release check says once, by the section's title, that its questions are still asked", out.status < 300 && warn.length === 1 && warn[0].message.startsWith(`${title0}: not chosen`) && warn[0].label === title0, warn.map((p: any) => ({ label: p.label, message: p.message })));
   ok("C4.2 fail case (M1): no release line names a section by its key", !(v1?.draft?.problems ?? []).some((p: any) => /Placed in section|does not use/.test(p.message) || p.message.includes(` ${sec?.id} `)), (v1?.draft?.problems ?? []).filter((p: any) => p.message.includes(sec?.id)).map((p: any) => p.message).slice(0, 2));
   const names1 = (v1?.draft?.changes ?? []).filter((c: any) => c.kind === "Section name");
   ok("C4.2 pass: taking a section out is listed once, its title kept (no section-name line)", names1.length === 0 && (v1?.draft?.changes ?? []).length >= 1, (v1?.draft?.changes ?? []).map((c: any) => `${c.kind}: ${c.label}`).slice(0, 4));

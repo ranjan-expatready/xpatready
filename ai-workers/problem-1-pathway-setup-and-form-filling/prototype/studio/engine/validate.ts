@@ -101,7 +101,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const pulled = new Map<string, number>();
   for (const p of s.placements) if (!sectionIds.has(p.section_id)) pulled.set(p.section_id, (pulled.get(p.section_id) ?? 0) + 1);
   const pulledTitle = new Map((s.section_titles ?? []).map((x) => [x.id, x.title]));
-  for (const [id, n] of pulled) out.push({ level: "warning", where: "Questions", item: id, message: `"${pulledTitle.get(id) ?? "A library section"}" is not chosen for this combination, but forms or rules still need ${n} of its question${n === 1 ? "" : "s"}, so ${n === 1 ? "it is" : "they are"} asked after the chosen sections. Add the section on the Smart questionnaire (SQR) tab to give ${n === 1 ? "it" : "them"} a place.` });
+  // Round 2 (review): the label is the title, and the message starts with it, so Review prints it once, never the key.
+  for (const [id, n] of pulled) { const t = pulledTitle.get(id) ?? "A library section"; out.push({ level: "warning", where: "Questions", item: id, label: t, message: `${t}: not chosen for this combination, but forms or rules still need ${n} of its question${n === 1 ? "" : "s"}, so ${n === 1 ? "it is" : "they are"} asked after the chosen sections. Add the section on the Smart questionnaire (SQR) tab to give ${n === 1 ? "it" : "them"} a place.` }); }
   for (const p of s.placements) {
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
     if (p.condition && !p.condition_effect) out.push({ level: "error", where: "Questions", item: p.fact, message: "A condition needs an effect (show, hide, require or optional)." });

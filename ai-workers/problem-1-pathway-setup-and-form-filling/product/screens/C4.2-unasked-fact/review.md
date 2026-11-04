@@ -97,3 +97,33 @@ A real screen reader. An unaided walk by an intended user (D17 and D20 stay with
 **Verdict: Block.** Fix B1 (CI red: Gate B, C4.2 exits 2 on the six), M1 (raw section keys and "does not use" on Review,
 `validate.ts:100`) and M2 (`section_titles` outside the fingerprint, so a new title is never releasable). Minors m1–m4
 can be fixed or listed in the PR.
+
+## Round 2: diff-only check, 5e9c3fc6..64c5d01a
+I re-ran everything on fresh copies (ports 4464–4466):
+* `tests/check_c42_section_titles.ts`: **12/12**.
+* The pack by its new run line (setup Visitor visa, then the pack): **10/10**.
+* `tools/gate-b.mjs` locally: "fixture only … exit 0, 10/10 · Gate B: passed".
+
+* **B1 closed.** The run line names `setup_visitor_visa.ts`, so Gate B runs the pack on its fixture and it passes.
+* **M2 closed.** `section_titles` is hashed (`snapshot.ts:86`, `:224`). `diff()` lists "Section name" added or changed
+  (`validate.ts:238-243`; `needs_sme: false`, the same as a chosen section's rename). `publishRow` publishes those
+  sections (`studio.ts:1184`). The new check proves the full cycle: rename → one change line → released with the new
+  title, the row PUBLISHED and nothing left to release; Preview shows the new title. The other hash readers are
+  unchanged and consistent. The knock-on is acceptable: an older release with pulled sections shows one "Section name
+  … added" until it is released again. That is truthful, because its cases show the key. The six on the demo had no
+  pulled sections in my round-1 survey.
+* **M1 narrowed, still open (Must).** The warning's words are now right: one per section, by title, in line with (B).
+  But its `item` is the section key, and the Review and release tab prints the item. My screenshot of Visitor visa
+  › Review and release reads: **"Questions · application_details: "About you (C4.2 test)" is not chosen …"**. Drift
+  check 2 (`validate.ts:132-138`) gives a label only to field codes. So a raw ID is still on the main path (P-91,
+  EXPERIENCE [M] line 46). The new test's "no release line names a section by its key" checks `message` only, which is
+  why it passes. Fix (one line): give this warning `label: pulledTitle.get(id)` (or the section's title), and assert in
+  the check that the rendered row (or the item and label) never carries the key. Screenshot:
+  `/tmp/claude-0/-home-user-xpatready/c725ca3f-011d-569c-9440-2f68026325ee/scratchpad/keep/r2-review-key.png` (not committed).
+* m1 closed (the one-form, several-form and no-form wordings are tested). m3 closed (the new words say where to add the
+  section). m4 closed (SQL limited to the workspace). m2 is left as listed in the build notes, which is acceptable for
+  a Minor.
+
+**Round 2 verdict: Block.** One Must is left: M1's raw section key in the Review and release row prefix
+(`validate.ts` new warning, `item` = section id with no `label`). Once that one-line fix and its test assertion are in,
+nothing else is open from my side.

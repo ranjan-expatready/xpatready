@@ -71,6 +71,16 @@ const SEC = "personal_details";
   step("P-91 pass: Preview shows \"Personal details\", never personal_details", !(await p.locator("main").innerText()).includes(SEC));
   await shot("4-preview-title-1440.png");
 
+  // Review and release (review round 2): the section's warning reads its title, once, and no row shows its key.
+  await p.goto(`${BASE}/c/${wp}/review`);
+  await p.locator("[data-problem]").first().waitFor({ timeout: 30000 });
+  const all = p.getByRole("button", { name: /^Show all/ });
+  if (await all.count()) await all.first().click();
+  const rows = await p.locator("[data-problem]").allInnerTexts();
+  const mine = rows.filter((t) => t.includes(`${title}: not chosen for this combination`));
+  step("P-91 fail case (review round 2): Review and release names the section taken out by its title, once, and no row shows its key", mine.length === 1 && !rows.some((t) => t.includes(SEC)), JSON.stringify({ mine, withKey: rows.filter((t) => t.includes(SEC)).slice(0, 2) }));
+  if (mine.length) { const row = p.locator("[data-problem]", { hasText: `${title}: not chosen` }).first(); await row.scrollIntoViewIfNeeded(); await shot("5-review-warning-1440.png"); }
+
   // Put back: the line goes.
   await api(`/combinations/${wp}/sections/${SEC}`, { method: "POST", data: { sectionOrder: 1 } });
   const back = (await api(`/combinations/${wp}/workspace?tab=questionnaires&role=principal`)).body?.questionnaire;
