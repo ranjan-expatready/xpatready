@@ -769,7 +769,7 @@ export class Demo {
         // marking a value "not on this form" (filling then refuses it in words) is row B81, not this loader's.
         const words = said(e), choices = (words.match(/no code for|no option map yet/g) ?? []).length;
         // Plain words for a person (no form field codes): how many IMM 5645 boxes, and why, when that is the cause.
-        r2Why = choices ? `Release 2 was not made: ${choices} marital-status boxes of IMM 5645 (01-2021, page 1) cannot take every value of the marital status list. The form prints 7 choices on its parents' and children's boxes (Annulled marriage, Common-law, Divorced, Legally separated, Married, Single, Widowed) and no "unknown", and the list's two married values cannot share its one "Married". Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words.`
+        r2Why = choices ? `Release 2 was not made: ${choices} marital-status boxes of IMM 5645 (01-2021, page 1) cannot take every value of the marital status list. The form prints 7 choices on its parents' and children's boxes, one of them a single "Married" that the list's two married values cannot share, and none for "unknown". Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words.`
           : `Release 2 was not made: ${words}`;
       }
     });
