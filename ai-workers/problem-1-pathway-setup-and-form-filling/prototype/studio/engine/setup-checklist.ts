@@ -23,6 +23,8 @@ export const WHERE_STEP: Record<string, { step: StepKey; part?: "documents" | "q
   People: { step: "people" },
   // G2 (C5.5): answer-key tests gate the release; their lines open Tests from step 5.
   Tests: { step: "release" },
+  // G5 (C5.1, P-248): "No form line yet" (engine/programs.ts formLineProblem) holds the release itself (step 5).
+  Release: { step: "release" },
 };
 export const stepOfWhere = (where: string) => WHERE_STEP[where] ?? { step: "release" as StepKey };
 
