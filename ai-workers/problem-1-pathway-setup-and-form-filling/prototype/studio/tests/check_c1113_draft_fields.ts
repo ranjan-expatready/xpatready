@@ -90,9 +90,9 @@ const ED = { printed: "IMM 0000 (01-2026)", file: "imm0000e.pdf", sha256: "a".re
   p = await call("POST", `/library/forms/${enc("IMM 5409")}/draft-fields`, { mode: "guess" });
   ok("C11.13 fail: an unknown mode is refused with the two choices", p.status === 400 && /"replay"/.test(p.body.message), p.body);
   g = await call("GET", `/library/forms/${enc("IMM 5488")}/draft-fields`);
-  ok("C11.13 fail: a checklist is not drafted into fields (it has no boxes): said in words, an ordinary state (200)", g.status === 200 && g.body.state === "cannot" && /not a form with boxes/.test(g.body.words), g.body);
+  ok("C11.13 fail: a checklist is not drafted into fields (it has no boxes): said in words, an ordinary state (200)", g.status === 200 && g.body.state === "cannot" && /has no form fields: only forms are drafted/.test(g.body.words), g.body);
   p = await call("POST", `/library/forms/${enc("IMM 5488")}/draft-fields`, {});
-  ok("C11.13 fail: drafting a checklist is refused (409)", p.status === 409 && /not a form with boxes/.test(p.body.message), p.body);
+  ok("C11.13 fail: drafting a checklist is refused (409)", p.status === 409 && /has no form fields: only forms are drafted/.test(p.body.message), p.body);
   g = await call("GET", `/library/forms/${enc("IMM 9999")}/draft-fields`);
   ok("C11.13 fail: a form not in the library is 404", g.status === 404, g.status);
   g = await call("GET", `/library/forms/${enc("IMM 5409")}/draft-fields`, undefined, "nobody");
@@ -157,7 +157,7 @@ const ED = { printed: "IMM 0000 (01-2026)", file: "imm0000e.pdf", sha256: "a".re
     const many: F[] = Array.from({ length: 2 * e1295.fields + 1 }, (_, n) => ({ id: `person.f${n}`, meaning: `Field ${n}`, value_type: "text" }));
     save(e1295, false, fieldMap(e1295.printed, many, {}), 7);
     p = await call("POST", `/library/forms/${enc("IMM 1295")}/draft-fields`, {});
-    ok("C11.13 fail (break m4): a draft naming far more fields than the form has boxes is refused before the queue", p.status === 409 && /far fewer boxes/.test(p.body.message), p.body);
+    ok("C11.13 fail (break m4): a draft naming far more fields than the form has boxes is refused before the queue", p.status === 409 && /far more than the form has/.test(p.body.message), p.body);
   } finally { saved.clear(); }
 
   console.log(`\n${pass} passed, ${fail} failed`);

@@ -211,7 +211,7 @@ export function gateProblems(e: SnapshotEligibility | undefined, placed: Set<str
       // Only a plain asked fact can settle a gate: a derived (worked-out) value is never asked of anyone, so it is refused
       // too (review Major on 5120b6f2; allowing derived gates whose inputs are asked would be a later, separate choice).
       if (derived.has(f) && !fieldTypes.has(f)) out.push({ level: "error", where: "Eligibility", item: g.key, message: `This gate reads ${words(f)}, a value worked out from other answers, not one a case is asked ("${g.label}"). A gate reads only answers to this application's questions: use the question it is worked out from, or change the gate.` });
-      else if (fieldTypes.has(f) && !(placed.has(f) && read.has(f))) out.push({ level: "error", where: "Eligibility", item: g.key, message: `This gate reads ${words(f)}, which no case of this application is asked ("${g.label}"). Ask it in this application's questionnaire for a form box or rule that reads it, or change the gate.` });
+      else if (fieldTypes.has(f) && !(placed.has(f) && read.has(f))) out.push({ level: "error", where: "Eligibility", item: g.key, message: `This gate reads ${words(f)}, which no case of this application is asked ("${g.label}"). Ask it in this application's questionnaire for a form field or rule that reads it, or change the gate.` });
       // Break report M1 (a): a gate fact is asked of every traveller and must be answered. A question shown only under a
       // condition (or hidden by one), or optional, leaves the gate waiting for ever for some people.
       else if (fieldTypes.has(f)) {
