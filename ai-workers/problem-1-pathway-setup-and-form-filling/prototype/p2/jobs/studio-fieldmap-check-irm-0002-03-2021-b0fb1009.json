@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-fieldmap-check-irm-0002-03-2021-b0fb1009",
+ "kind": "field_map",
+ "combination": "edition:IRM 0002:03-2021",
+ "configuration_version": "studio-add-form",
+ "template": "field-map-check.v1.md",
+ "output_schema": "field-map-output.v2.schema.json",
+ "inputs": [
+  {
+   "file": "prototype/p1/inventory/irm0002e.inventory.json",
+   "sha256": "41d54324d89716a0042e58365fa015987fea65b68399991be1433d838a604399"
+  }
+ ],
+ "settings": {
+  "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "timeout_ms": 900000,
+  "max_attempts": 2,
+  "budget_usd": 2.79,
+  "max_output_tokens": 64000
+ },
+ "known": {
+  "form_edition": "IRM 0002 (03-2021)"
+ }
+}
