@@ -22,7 +22,8 @@ export function reconvertFile(file: string): Reconverted {
   const env = JSON.parse(bytes.toString("utf8"));
   if (env.caller !== "live" || env.drafting_run?.kind !== "field_map" || !env.raw_output) return { file, valid: false, skipped: "not a live field-map run with an answer" };
   if (sha(Buffer.from(env.raw_output, "utf8")) !== env.launch_evidence.output_sha256) return { file, valid: false, skipped: "output differs from its recorded hash; refused" };
-  const c = convertFieldMap(JSON.parse(env.raw_output), env.drafting_run.inputs.official_files[0].file);
+  // QA-207: the edition the first conversion stamped (a previous edition's printed edition is not in the manifest).
+  const c = convertFieldMap(JSON.parse(env.raw_output), env.drafting_run.inputs.official_files[0].file, env.drafting_run.entries?.[0]?.form_edition);
   const run = { ...env.drafting_run, entries: c.entries, status: c.status };
   const valid = contract(run) as boolean;
   const out = {

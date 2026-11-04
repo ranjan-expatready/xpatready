@@ -128,7 +128,7 @@ export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir
       if (outputErrors) status = "invalid_output";
       else if (job.kind !== "field_map") status = "completed";
       else {
-        const c = convertFieldMap(parsed, job.inputs[0].file, approved?.edition);
+        const c = convertFieldMap(parsed, job.inputs[0].file, approved?.edition ?? job.known?.form_edition); // QA-207: a previous edition's printed edition
         entries = c.entries; status = c.status; conversion = { weak_evidence: c.weak_evidence, edition_note: c.edition_note, needs_person: c.needs_person, set_aside_fields: c.set_aside_fields };
       }
     }

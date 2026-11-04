@@ -45,7 +45,10 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
 /** Induced slow step (isolated test server only, like STUDIO_FAULT_SOURCE): STUDIO_SLOW_TX="<file name>:<ms>" waits that
  *  long inside the field-map draft's transaction for that file, so the queue's transaction room is tested both ways. */
 const slowForTest = async (file: string) => { const [f, ms] = (process.env.STUDIO_SLOW_TX ?? "").split(":"); if (f && f === file && Number(ms) > 0) await new Promise((r) => setTimeout(r, Number(ms))); };
-const KIND: Record<string, string> = { forms: "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
+// QA-207: a previous edition of a fillable IRCC form (previous-editions/) is a Form too, so it is read and drafted.
+const KIND: Record<string, string> = { forms: "Form", "previous-editions": "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
+/** The kind an official file attaches as, by its folder in official-sources/ircc. */
+export const officialKind = (path: string) => KIND[path.split("/")[0]] ?? "Official file";
 const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs");
 /** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER naming the test fixture
  *  tests/fixtures/fake-launch.mjs, which stands in for the guarded launcher so the paid-call refusal and provider-limit
@@ -149,7 +152,10 @@ export class Sources {
     let status = "HELD", detail = "Not an approved official source (its content matches no file in the official library). It is kept as an attachment; it is not read or sent to the AI.";
     let edition: string | null = null, kind = "Unrecognised file";
     if (item) {
-      kind = KIND[item.path.split("/")[0]] ?? "Official file"; edition = item.edition;
+      kind = officialKind(item.path); edition = item.edition;
+      // QA-207: a previous edition's manifest label describes the file; the library edition read from it (the intake's
+      // printed reading, by checksum) names it, as everywhere else.
+      if (!/^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(edition ?? "")) edition = (await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: hash }, select: { editionLabel: true } }))?.editionLabel ?? edition;
       const known = await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: hash, maps: { some: {} } } });
       if (known) { status = "IN_LIBRARY"; detail = `Recognised: ${item.edition}. Its form fields are already mapped in the library, so no AI drafting is needed.`; }
       else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${item.edition}, an approved official form. Next: AI drafts its field map.`; }
