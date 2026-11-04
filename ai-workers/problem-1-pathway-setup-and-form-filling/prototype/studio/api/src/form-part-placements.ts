@@ -14,7 +14,7 @@ import type { Actor, Db } from "./core.ts";
 import { MASTERS_STEP } from "./form-masters.ts";
 import type { Studio } from "./studio.ts";
 
-export type PlacedFromParts = { placed: { fact: string; section: string; repeats: string }[]; noSection: string[]; refused: string[]; selected: string[] };
+export type PlacedFromParts = { placed: { fact: string; section: string; repeats: string }[]; noSection: string[]; refused: string[]; selected: string[]; unselected: string[] };
 
 const shared = (a: string, b: string) => { let n = 0; while (n < a.length && n < b.length && a[n] === b[n]) n++; return n; };
 
@@ -72,7 +72,7 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   }
   const SUBJECT = "form_subject";
   const rank = (x: { e: Entry; order: number }) => (x.e.person === SUBJECT ? 0 : 2) + (x.e.row == null ? 0 : 1) + x.order / 1e6;
-  const out: PlacedFromParts = { placed: [], noSection: [], refused: [], selected: [] };
+  const out: PlacedFromParts = { placed: [], noSection: [], refused: [], selected: [], unselected: [] };
   for (const [fact, list] of boxes) {
     const repeats = fact.startsWith("case.") ? "once_per_case" : list.some((x) => x.e.row != null && x.e.person === SUBJECT) ? "per_row" : "per_person";
     // A fact asked per row sits with its row's other facts (review R2-m2): its section comes from a list-row box.
@@ -86,20 +86,40 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   // asks nobody anything a form does not already ask (review M2): every question in it, from the shared library, is a
   // case fact or a fact some form reads for every applying person role. Any other section stays unchosen: its questions
   // still go out where a form or a rule reads their fact (engine/snapshot.ts "used"), and only to whom it applies.
-  const after = (await buildSnapshot(db, c.workspaceId, combinationId, "draft")).snapshot;
+  // R2-m1 (QA-144 slice 2): the library's sections are shared, so a placement here can put a question into a section
+  // another combination (or this one, earlier) has chosen. Every section chosen on this combination, and on any other
+  // combination that chose a section placed into now, is checked again, and one that no longer qualifies is unchosen.
+  const live = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } });
+  const touched = new Set(out.placed.map((x) => x.section));
+  const others = await db.sqrSectionSelection.findMany({ where: { sectionKey: { in: [...touched] }, workspaceId: c.workspaceId, combinationId: { not: combinationId }, combination: { retiredAt: null } }, select: { combinationId: true, combination: { select: { label: true } } } });
+  const nameOf = new Map(others.map((x) => [x.combinationId, x.combination.label]));
+  for (const id of [combinationId, ...new Set(others.map((x) => x.combinationId))]) {
+    const qualifies = await everyoneAnswers(db, c.workspaceId, id, live);
+    const chosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId: id }, select: { sectionKey: true } })).map((x) => x.sectionKey));
+    for (const sec of id === combinationId ? chosen : [...chosen].filter((s) => touched.has(s))) {
+      if (qualifies(sec)) continue;
+      try { await studio.selectSection(author, id, sec, false); out.unselected.push(id === combinationId ? sec : `${sec} (on ${nameOf.get(id)})`); } catch (err) { out.refused.push(`unchoose section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
+    }
+    if (id !== combinationId) continue;
+    for (const sec of touched) {
+      if (chosen.has(sec) || !qualifies(sec)) continue;
+      try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
+    }
+  }
+  return out;
+}
+
+/** Whether every applying person of a combination answers all of a section anyway (review M2, R2-M1): every question in
+ *  it is a case fact a form that surely applies reads for the application, or a fact such a form reads for every
+ *  applying person role. Read from the combination's draft as it is now. */
+async function everyoneAnswers(db: Db, workspaceId: string, combinationId: string, live: { sectionKey: string; canonicalFieldKey: string }[]) {
+  const after = (await buildSnapshot(db, workspaceId, combinationId, "draft")).snapshot;
   const { people, r } = previewRender(after);
   const applying = new Set(people.filter((x) => x.role && x.role !== "representative" && x.applies !== false).map((x) => x.role!));
   const readFor = new Map<string, Set<string>>();
-  // Only a form that surely applies with no answer given counts (review R2-M1): IMM 5409, IMM 5476, IMM 5475, IRM 0002
-  // or a form from an age on may not, so their facts never make a section "everyone answers". A case fact counts when a
-  // form that surely applies reads it for the application.
+  // Only a form that surely applies with no answer given counts (review R2-M1): a conditional form, or a form from an age
+  // on, may not, so its facts never make a section "everyone answers".
   for (const f of r.coverage) if (f.applies === true) for (const bx of f.boxes) if (bx.fact && bx.about) (readFor.get(bx.fact) ?? readFor.set(bx.fact, new Set()).get(bx.fact)!).add(bx.about === FILING ? FILING : roleOf(people, bx.about));
   const everyone = (fact: string) => fact.startsWith("case.") ? !!readFor.get(fact)?.has(FILING) : [...applying].every((role) => readFor.get(fact)?.has(role));
-  const chosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId }, select: { sectionKey: true } })).map((x) => x.sectionKey));
-  const live = (await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } }));
-  for (const sec of [...new Set(out.placed.map((x) => x.section))]) {
-    if (chosen.has(sec) || !live.filter((q) => q.sectionKey === sec).every((q) => everyone(q.canonicalFieldKey))) continue;
-    try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
-  }
-  return out;
+  return (sectionKey: string) => live.filter((q) => q.sectionKey === sectionKey).every((q) => everyone(q.canonicalFieldKey));
 }
