@@ -39,7 +39,9 @@ export const ProposalPayload = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("section"), label: z.string().min(1).max(120), aliases: Aliases, fieldKeys: z.array(z.string().max(120)).max(400) }),
   /** Identity (P-149 (2)): the name and what it proves. */
   z.object({ kind: z.literal("document_type"), name: z.string().min(1).max(120), proves: z.string().min(3).max(200), category: z.string().max(60), suppliesFacts: z.array(z.string().max(120)).max(100), readerKind: ReaderKind, identityDocument: z.boolean() }),
-  z.object({ kind: z.literal("form_check"), sentence: z.string().min(3).max(300), tree: z.unknown(), reads: z.array(z.string().max(120)).min(1).max(20), examples: Examples }),
+  /** QA-196 (tech lead, 4 Nov): severity is what a person chose before Accept (an edit): "block" is a serious warning
+   *  (Library › Checks; checks warn, P-136); none means it warns. A cross-answer check below only warns. */
+  z.object({ kind: z.literal("form_check"), sentence: z.string().min(3).max(300), tree: z.unknown(), reads: z.array(z.string().max(120)).min(1).max(20), examples: Examples, severity: z.enum(["block", "warn"]).optional() }),
   z.object({ kind: z.literal("person_role"), label: z.string().min(1).max(80), meaning: z.string().min(3).max(300), mayBeApplicant: z.boolean(), takesPartInCase: z.boolean() }),
   z.object({ kind: z.literal("condition"), target: z.object({ kind: z.enum(["question", "section", "form_line"]), key: z.string().max(120) }), roles: Roles, condition: Condition }),
   z.object({ kind: z.literal("requirement_line"), documentType: z.string().max(120), roles: Roles, always: z.boolean(), condition: Condition.nullable(), alternativeGroup: z.string().max(60).nullable() }),
