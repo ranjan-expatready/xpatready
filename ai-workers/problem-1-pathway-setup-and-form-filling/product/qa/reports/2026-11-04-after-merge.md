@@ -198,3 +198,12 @@ QA-180 and QA-200 (Critical), and QA-192 (with C11.13) are in `history/qa-bugs-c
 * **C5.5 stays Works.** Its 3 Nov built marker is re-scored from CI on main's tree: `check_g2_answer_key_gate_firm.ts` 27/27, `check_g2_answer_key_gate.ts` 74/74 and the browser check 15/15. The built markers for C5.5, C3.8 and QA-180 are removed (all re-scored today).
 * **#840 (IRM 0002 saved field map, paid US$0.24): PASS, then labelled** (comment on #840). On its own copy, Load the configured checkpoint, add IRM 0002 from the official library, read it, then use Saved: the replay runs at US$0 and gives the 7 proposals the PR names, the ledger is unchanged, and the 1440 px To review shows no sideways scroll (`2026-11-04-after-merge/pr840-irm0002-proposals-1440.png`).
 * M2: 45/60 (unchanged). Thin slice 6/8.
+
+## Batch 5 — #829 (C3.10, QA-182) · main 9caa043be · ~12:15–12:25 IST
+| Row | Verdict | Exit codes |
+|---|---|---|
+| C3.10 Never "box" (M2) | **Works** (was Partial) | `acceptance/C3.10.test.ts` on the six on GitHub (run 41787750850, gate B, `data=six`): exit 0, 8/8 in 49 s |
+
+This is the first re-test run on GitHub's machines (#804 merged). The Mac copy was used only for the walk: on the six at 1440 px, 14 setup pages and IMM 5409's AI proposals page show no "box" or "boxes" ("form field" 23 times on that page), with no sideways scroll. QA-182 closed. #838 (an infra guard) changes no capability.
+
+**M2: 46/60 confirmed** (+C3.10). Thin slice 6/8.
