@@ -37,7 +37,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const S = resolve(HERE, ".."), PROTO = resolve(S, ".."), P = resolve(PROTO, "../product");
 const ID = /\b[Cc](\d{1,2})\.(\d{1,2})(?![\d.]*\d)\b/g, BUG = /\bQA-\d+\b/gi, GATING = new Set(["Blocker", "Critical", "Major"]);
 const ids = (s) => [...s.matchAll(ID)].map((m) => `C${m[1]}.${m[2]}`);
-const KEY = /\b(capabilit(?:y|ies)|claims?\s+works?)\b[^:|\n]{0,40}:/gi;
+// A key, an optional short note ("(after this PR)"), then its colon. The note never holds another key or a capability,
+// so "Claims Works on C11.13 · Capabilities: C11.10" is two claims, not one key over both (scoped check, 4 Nov).
+const KEY = /\b(capabilit(?:y|ies)|claims?\s+works?)\b(?:(?!capabilit|claims?\s+works?|[Cc]\d)[^:|\n]){0,40}:/gi;
 
 /** The text a person writes as prose: a fenced block (``` or ~~~) and an inline `code span` that holds a capability or
  *  a placeholder ("C7.5 (steps 1-4)", "C<n.n>") are examples, not claims (#804's own description quoted the syntax and
@@ -94,11 +96,15 @@ export function claims(title = "", body = "") {
       }
     }
     // "Claims Works" said without a colon the gate can read ("## Claims Works (as built)", "This PR claims Works on",
-    // "Claims Works —"): the ids on the line and in the list under it ARE a Works claim (the bug check runs); a heading
-    // or a short label with none refuses as unread; a prose sentence that names nothing claims nothing (R3-M1).
-    if (!keys.some((m) => /works?/i.test(m[1])) && /\bclaims?\s+works?\b/i.test(line)) {
-      let named = ids(line);
-      if (!named.length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) named = [...named, ...ids(lines[j])];
+    // "Claims Works —"): the ids after the phrase (up to the line's next key) and in the list under it ARE a Works claim
+    // (the bug check runs), the list read even when the line names an id itself (r4-m1: "## Claims Works for C11.10"
+    // over "- C11.13"); a heading or a short label with none refuses as unread; a prose sentence that names nothing
+    // claims nothing (R3-M1).
+    const phrase = line.match(/\bclaims?\s+works?\b/i);
+    if (phrase && !keys.some((m) => /works?/i.test(m[1]))) {
+      const from = phrase.index, to = keys.find((m) => m.index > from)?.index ?? line.length;
+      let named = ids(line.slice(from, to));
+      for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) named = [...named, ...ids(lines[j])];
       for (const id of named) { works.add(id); add(id, null); }
       if (!named.length && (/^\s*#/.test(raw[i]) || line.split(/\s+/).length <= 6)) unread.push(line.slice(0, 120));
     }

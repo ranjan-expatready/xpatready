@@ -68,6 +68,11 @@ for (const head of ["## Claims Works (as built)", "## Claims Works (after this P
   ok(`"${head}" with a list under it is a Works claim (the bug check runs)`, gate("forms: x", `${head}\n- C11.13`).join() === "QA-192", gate("forms: x", `${head}\n- C11.13`));
 ok("fail then pass (tech lead, 4 Nov): \"## Claims Works (as built)\" over C11.13 refuses on QA-192, and passes with \"Fixes: QA-192\"",
   gate("forms: x", "## Claims Works (as built)\n- C11.13").join() === "QA-192" && gate("forms: x", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192").length === 0);
+// The scoped check's false passes at a7335f0f9 (4 Nov): a key whose note spans a second key, and a list under a
+// "Claims Works for X" heading that names an id itself (r4-m1). Each refused nothing before; each refuses on QA-192 now.
+for (const body of ["Claims Works on C11.13 · Capabilities: C11.10", "Capabilities: C11.10 · Claims Works on C11.13", "## Claims Works for C11.10\n- C11.13", "Claims Works for C11.10:\n- C11.13"])
+  ok(`every Works id is checked: "${body.replace(/\n/g, " / ")}"`, gate("forms: x", body).includes("QA-192"), gate("forms: x", body));
+ok("…and the capabilities key beside it stays a plain capability", !claims("forms: x", "Claims Works on C11.13 · Capabilities: C11.10").works.has("C11.10") && claims("forms: x", "Claims Works on C11.13 · Capabilities: C11.10").caps.has("C11.10"));
 ok("\"This PR claims Works on C11.13\" is a Works claim", gate("forms: x", "This PR claims Works on C11.13 once qa agrees.").join() === "QA-192");
 ok("a heading \"## Claims Works (as built)\" with nothing under it refuses as unread", part1(claims("forms: x", "## Claims Works (as built)\n\nText."), bugs).length === 1);
 ok("a prose sentence about the line that names nothing claims nothing", part1(claims("forms: x", "A line that says it claims Works but names nothing readable refuses."), bugs).length === 0);
