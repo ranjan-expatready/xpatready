@@ -630,7 +630,7 @@ export class Sources {
     const inv = JSON.parse(readFileSync(join(SOLUTION, a.inventoryFile!), "utf8"));
     const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
     const entries = out.entries.map((e: any) => ({ ...e, caption: box.get(e.data_path)?.caption ?? null }));
-    const rows = await this.db.canonicalField.findMany({ where: { workspaceId: a.workspaceId }, orderBy: { version: "desc" } });
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId: a.workspaceId }, orderBy: [{ version: "desc" }, { canonicalFieldKey: "asc" }] });
     const seen = new Set<string>(); const library: LibraryField[] = []; const redirects = new Map<string, string>();
     for (const r of rows) if (!seen.has(r.canonicalFieldKey)) { seen.add(r.canonicalFieldKey); if (r.mergedIntoKey) redirects.set(r.canonicalFieldKey, r.mergedIntoKey); else if (r.status !== "RETIRED") library.push({ key: r.canonicalFieldKey, meaning: r.meaning, valueType: r.valueType, status: r.status, aliases: r.aliases }); }
     const items = normalize(out.canonical_fields, entries, library, redirects);

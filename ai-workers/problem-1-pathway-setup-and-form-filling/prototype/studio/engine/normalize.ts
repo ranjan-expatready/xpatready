@@ -85,7 +85,9 @@ export function normalize(proposed: ProposedField[], entries: Entry[], library: 
       out.push({ ...base, outcome: "AMBIGUOUS", matchedKey: l.key, candidates: [{ key: l.key, meaning: l.meaning, valueType: l.valueType, score: 1, why: "the form field's label is an alias of this field" }], reason: `Not an existing key, but the form field's label is an alias of ${l.key} (a label seen on another form). Probably the same meaning under another name.`, recommendation: { action: "reuse", key: l.key, text: `Use the existing ${l.key}` } });
       continue;
     }
-    const ranked = library.filter((l) => l.key !== key).map((l) => ({ l, s: similarity(p, l) })).filter((x) => x.s.score >= 0.3).sort((a, b) => b.s.score - a.s.score).slice(0, 3);
+    // Equal scores rank by key (QA-193 order row): the top three never depend on the order the library's rows came in,
+    // so comparing a draft again gives the same candidates and keeps its decisions (sources.ts recompare).
+    const ranked = library.filter((l) => l.key !== key).map((l) => ({ l, s: similarity(p, l) })).filter((x) => x.s.score >= 0.3).sort((a, b) => b.s.score - a.s.score || a.l.key.localeCompare(b.l.key)).slice(0, 3);
     const candidates = ranked.map(({ l, s }) => ({ key: l.key, meaning: l.meaning, valueType: l.valueType, score: s.score,
       why: [`key words ${s.key}`, `meaning words ${s.meaning}`, s.contextDiffers ? `period/context differs (${s.qualifiersProposed.join("/") || "none"} vs ${s.qualifiersLibrary.join("/") || "none"})` : "", s.roleDiffers ? "names a different relation" : "", s.typeCompatible ? "" : `type ${p.value_type} vs ${l.valueType}`].filter(Boolean).join("; ") }));
     if (exact) {
