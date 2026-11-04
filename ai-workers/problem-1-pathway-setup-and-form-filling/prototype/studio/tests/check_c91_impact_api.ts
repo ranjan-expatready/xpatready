@@ -12,7 +12,7 @@ import { client, recorder } from "./runtime/api.ts";
 import { RUNS } from "../api/src/rounds.ts";
 import { impactPart } from "../api/src/impact-ai.ts";
 import { C91, c91Jobs } from "../tools/c91-impact-job.ts";
-import { answer, ctx, removeSaved, runRecord, SAVED, step, writeSaved } from "./fixtures/c91-saved-run.ts";
+import { answer, ctx, putBackReal, removeSaved, runRecord, SAVED, setAsideReal, step, writeSaved } from "./fixtures/c91-saved-run.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_c91";
 const { call, sql, until } = client(PORT, DB);
@@ -38,6 +38,9 @@ const setup = async () => {
 const { changed, rows } = c91Jobs();
 const written: string[] = [];
 const saveRun = (name: string, rec: unknown) => { writeFileSync(join(RUNS, name), JSON.stringify(rec)); written.push(name); };
+// The committed real saved run of this comparison is set aside while the rules are proved with this check's own runs.
+setAsideReal(); process.on("exit", putBackReal);
+for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
 
 (async () => {
   const ledgerBefore = ledger();
