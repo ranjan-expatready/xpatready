@@ -12,7 +12,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "no
 import { join } from "node:path";
 import { admitInput } from "../../p2/guard.ts";
 import { PARTS_DIR } from "../../p2/policy.ts";
-import { fieldComponents, type ComponentRows } from "../engine/where-used.ts";
+import { fieldComponents, formRuleKey, type ComponentRows } from "../engine/where-used.ts";
 import { answersInside, changedBoxes, compareBoxes, componentsView, impactContext, impactCost, impactPart, impactStep, IMPACT_AI_WORDS, inventoryFields, previousAcceptedUntil, staleRun, writePart } from "../api/src/impact-ai.ts";
 import { RUNS, StepRunner } from "../api/src/rounds.ts";
 import { C91, c91Jobs } from "../tools/c91-impact-job.ts";
@@ -50,9 +50,23 @@ for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.
   ok("C9.1 P-32 pass: a section that asks the field, a section whose question condition reads it, a document line's type, a fact's document type, a rule and a check are each found", has("section", "rep", "asks") && has("section", "other", "condition") && has("document_type", "passport", "condition") && has("document_type", "rep_letter", "fact") && has("rule", "has_rep") && has("check", "rep_uci"), uses);
   ok("C9.1 P-32 fail: a rule that reads another field, and a combination that does not file the form (SP), are not listed", !has("rule", "unrelated") && !uses.some((u) => u.combinationId === "SP"));
   ok("C9.1 P-32 fail: a field no changed box fills touches nothing", fieldComponents(r, ["not.used"], new Set(["VV"])).length === 0);
+  // QA-231: a form's own rule (filed when) reads the field; a section not chosen whose question a form or rule still needs
+  // is asked there (engine/snapshot.ts placements), so it is touched; a section neither chosen nor needed is not.
+  const r2 = rowsOf({
+    boxes: [{ canonicalFieldKey: "rep.name", edition: { id: "e1", govFormDefId: "F", channel: "PDF", editionLabel: "IMM 5476 (11-2021)" } }],
+    lines: [v({ combinationId: "VV", lineageKey: "IMM 5476", govFormDefId: "F", predicateJson: { op: "exists", field: "case.rep_action", subjectKind: "CASE" } })] as never,
+    questions: [v({ lineageKey: "q1", sectionKey: "personal", canonicalFieldKey: "rep.name", predicateJson: null }), v({ lineageKey: "q2", sectionKey: "appoint", canonicalFieldKey: "case.rep_action", predicateJson: null }), v({ lineageKey: "q3", sectionKey: "idle", canonicalFieldKey: "z.idle", predicateJson: cond("rep.name") })] as never,
+  });
+  const u2 = fieldComponents(r2, ["rep.name", "case.rep_action"], new Set(["VV"]));
+  const has2 = (kind: string, key: string, field: string) => u2.some((u) => u.kind === kind && u.key === key && u.field === field && u.combinationId === "VV");
+  ok("C9.1 P-32 pass (QA-231): a form's own rule that reads the field is a rule; a section not chosen but asked because a form or a form rule needs its fact is touched", has2("rule", formRuleKey("IMM 5476"), "case.rep_action") && has2("section", "personal", "rep.name") && has2("section", "appoint", "case.rep_action"), u2);
+  ok("C9.1 P-32 fail (QA-231): a section neither chosen nor needed by a form (its question only reads the field in a condition) is not touched, and nothing on a combination that does not file the form", !u2.some((u) => u.key === "idle") && fieldComponents(r2, ["rep.name"], new Set(["SP"])).length === 0, u2.map((u) => u.key));
   const rew = rows.find((x) => x.change === "reworded")!;
   const view = componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "Has a representative" }], [{ ...rew, field: "rep.name" }], new Map([["rep.name", "Representative's name"]]), new Map([["VV", "Visitor visa"]]), "11-2025");
   ok("C9.1 P-32 pass: each component says why in words (which box changed, its old and new caption, the field) and in which combination", view.rules.length === 1 && view.rules[0].combination === "Visitor visa" && view.rules[0].why.includes("reworded in 11-2025") && view.rules[0].why.includes("Representative's name") && view.rules[0].why.length > 10, view.rules[0]);
+  const bare = { ...rew, field: "rep.name", caption: rew.dataPath };
+  const w = componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "Has a representative" }], [bare], new Map([["rep.name", "Representative's name"]]), new Map([["VV", "Visitor visa"]]), "11-2025").rules[0]?.why ?? "";
+  ok("C9.1 P-32 (QA-231): a reworded form field with no caption of its own is said so in words, never by its PDF path", w.includes("with no caption of its own") && !w.includes(rew.dataPath), w);
   ok("C9.1 P-32 fail: a use whose field no removed or reworded box fills is left out (nothing to explain)", componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "x" }], [{ ...rew, field: "other.field" }], new Map(), new Map(), "11-2025").rules.length === 0);
 
   // ── P-121: the part holds the changed boxes only and the guard admits it; a tampered part is refused ──

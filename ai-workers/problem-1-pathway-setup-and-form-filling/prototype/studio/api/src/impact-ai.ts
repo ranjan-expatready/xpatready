@@ -55,7 +55,8 @@ export function componentsView(uses: Use[], rows: BoxRow[], fieldLabel: Map<stri
   const changedBy = (field: string) => rows.filter((r) => r.field === field && (r.change === "removed" || r.change === "reworded"));
   const of = (kind: string) => uses.filter((u) => u.kind === kind).map((u) => {
     const boxes = changedBy(u.field);
-    const box = boxes.map((b) => b.change === "removed" ? `"${b.caption.slice(0, 80)}" (removed in ${edition})` : `"${(b.was ?? "").slice(0, 80)}" (reworded in ${edition} as "${b.caption.slice(0, 80)}")`).join(", ");
+    // QA-231: a form field with no caption of its own carries its PDF path as its caption (compareBoxes); the words say so instead.
+    const box = boxes.map((b) => b.change === "removed" ? `"${b.caption.slice(0, 80)}" (removed in ${edition})` : `"${(b.was ?? "").slice(0, 80)}" (reworded in ${edition} ${b.caption === b.dataPath ? "with no caption of its own" : `as "${b.caption.slice(0, 80)}"`})`).join(", ");
     return { key: u.key, label: u.label, field: u.field, combination: comboLabel.get(u.combinationId) ?? "A combination", combination_id: u.combinationId, boxes: boxes.map((b) => b.dataPath),
       why: `The form field ${box || "(none)"} fills ${fieldLabel.get(u.field) ?? u.field}, and ${HOW[u.how]}.`.slice(0, 600) };
   }).filter((x) => x.boxes.length).sort((a, b) => `${a.combination}|${a.label}`.localeCompare(`${b.combination}|${b.label}`));

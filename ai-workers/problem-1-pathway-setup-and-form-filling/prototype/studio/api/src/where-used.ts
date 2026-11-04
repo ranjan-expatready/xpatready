@@ -4,7 +4,7 @@
 // impact preview. Other screens still read some uses themselves (lists of rules and checks, the reuse marks); they move
 // here when they change. New features call it and never copy it (P-258).
 import type { Prisma } from "@prisma/client";
-import { byItem, current, fieldComponents, fieldUses, filingCombinations, formLineByCombination, releaseUses } from "../../engine/where-used.ts";
+import { byItem, current, fieldComponents, fieldUses, filingCombinations, formLineByCombination, formRuleKey, releaseUses } from "../../engine/where-used.ts";
 import type { Db } from "./core.ts";
 import { fullTrail, trailWords } from "../../engine/structure.ts";
 
@@ -123,6 +123,7 @@ export async function fieldComponentsOf(db: Client, workspaceId: string, fields:
     ...types.map((t) => [`document_type|${t.documentTypeKey}`, t.name] as [string, string]),
     ...current(rows.rules, (x) => `${x.combinationId}|${x.predicateKey}`).map((x) => [`rule|${x.predicateKey}|${x.combinationId}`, x.thenPlain] as [string, string]),
     ...current(rows.checks, (k) => `${k.combinationId}|${k.checkKey}`).map((k) => [`check|${k.checkKey}|${k.combinationId}`, k.message ?? k.checkKey] as [string, string]),
+    ...current(rows.lines, (l) => `${l.combinationId}|${l.lineageKey}`).map((l) => [`rule|${formRuleKey(l.lineageKey)}|${l.combinationId}`, `${l.lineageKey} is filed only when ${l.conditionPlain?.trim() || "its condition holds"}`] as [string, string]),
   ]);
   return uses.map((u) => ({ ...u, label: names.get(`${u.kind}|${u.key}`) ?? names.get(`${u.kind}|${u.key}|${u.combinationId}`) ?? u.key }));
 }

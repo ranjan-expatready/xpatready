@@ -87,9 +87,12 @@ export function fieldReaders(r: FieldUseRows, field: string): Reader[] {
 }
 
 /** C9.1 (P-32): what a changed form field's shared field touches beyond the form, on the given combinations: the sections
- *  whose questions ask it or whose question conditions read it (where a combination selects the section), the document
- *  types a checklist line lists under a condition that reads it or that a fact of it is read from, and the rules and
- *  checks whose conditions read it. One entry per (kind, key, field, combination), with how it is used. */
+ *  whose questions ask it or whose question conditions read it (where the combination asks that question), the document
+ *  types a checklist line lists under a condition that reads it or that a fact of it is read from, the rules and checks
+ *  whose conditions read it, and a form's own rule (when it is filed) that reads it. One entry per (kind, key, field,
+ *  combination), with how it is used. */
+/** The key a form's own rule takes among a combination's rules (C9.1 components): never a rule key (those are words). */
+export const formRuleKey = (form: string) => `form:${form}`;
 export type ComponentUse = { kind: "section" | "document_type" | "rule" | "check"; key: string; field: string; combinationId: string; how: "asks" | "condition" | "fact" };
 export type ComponentRows = Omit<FieldUseRows, "docs"> & {
   docs: (Versioned & { combinationId: string; lineageKey: string; documentTypeKey: string; predicateJson: unknown })[];
@@ -100,10 +103,17 @@ export function fieldComponents(r: ComponentRows, fields: string[], combinations
   const add = (u: ComponentUse) => { if (combinations.has(u.combinationId)) out.set(`${u.kind}|${u.key}|${u.field}|${u.combinationId}`, out.get(`${u.kind}|${u.key}|${u.field}|${u.combinationId}`) ?? u); };
   const want = new Set(fields);
   const picksOf = new Map<string, string[]>(); for (const p of r.picks) picksOf.set(p.sectionKey, [...(picksOf.get(p.sectionKey) ?? []), p.combinationId]);
+  // QA-231: a combination asks a question when it chooses the question's section, or when its forms, form rules, rules,
+  // checklist lines or checks read the question's fact: the snapshot then asks it after the chosen sections
+  // (engine/snapshot.ts placements). Both count: the section is touched where the question is asked.
+  const read = new Set(fieldUses({ ...r, questions: [], picks: [] }).map(([f, c]) => `${f}|${c}`));
   for (const q of current(r.questions, (q) => q.lineageKey)) {
-    const read = new Set([...(want.has(q.canonicalFieldKey) ? [q.canonicalFieldKey] : []), ...fieldsOf(q.predicateJson).filter((f) => want.has(f))]);
-    for (const f of read) for (const c of picksOf.get(q.sectionKey) ?? []) add({ kind: "section", key: q.sectionKey, field: f, combinationId: c, how: f === q.canonicalFieldKey ? "asks" : "condition" });
+    const reads = new Set([...(want.has(q.canonicalFieldKey) ? [q.canonicalFieldKey] : []), ...fieldsOf(q.predicateJson).filter((f) => want.has(f))]);
+    const asking = new Set([...(picksOf.get(q.sectionKey) ?? []), ...[...combinations].filter((c) => read.has(`${q.canonicalFieldKey}|${c}`))]);
+    for (const f of reads) for (const c of asking) add({ kind: "section", key: q.sectionKey, field: f, combinationId: c, how: f === q.canonicalFieldKey ? "asks" : "condition" });
   }
+  // QA-231: a form's own rule (it is filed only when its condition holds) is a rule of the combination too.
+  for (const l of current(r.lines, (l) => `${l.combinationId}|${l.lineageKey}`)) for (const f of fieldsOf(l.predicateJson)) if (want.has(f)) add({ kind: "rule", key: formRuleKey(l.lineageKey), field: f, combinationId: l.combinationId, how: "condition" });
   for (const d of current(r.docs, (d) => `${d.combinationId}|${d.lineageKey}`)) for (const f of fieldsOf(d.predicateJson)) if (want.has(f)) add({ kind: "document_type", key: d.documentTypeKey, field: f, combinationId: d.combinationId, how: "condition" });
   for (const x of current(r.facts, (x) => `${x.combinationId}|${x.lineageKey}`)) if (x.documentTypeKey && want.has(x.canonicalFieldKey)) add({ kind: "document_type", key: x.documentTypeKey, field: x.canonicalFieldKey, combinationId: x.combinationId, how: "fact" });
   for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) for (const f of fieldsOf(x.predicateJson)) if (want.has(f)) add({ kind: "rule", key: x.predicateKey, field: f, combinationId: x.combinationId, how: "condition" });

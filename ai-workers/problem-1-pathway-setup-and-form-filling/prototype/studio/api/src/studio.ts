@@ -248,8 +248,10 @@ export class Studio {
     const later = status === "PUBLISHED" && found.length ? new Set((await this.db.formFieldMap.findMany({ where: { supersedesId: { in: found.map((r) => r.id) } }, select: { supersedesId: true } })).map((r) => r.supersedesId)) : new Set<string | null>();
     const rows = found.filter((r) => !later.has(r.id));
     const by = new Map<string, { form: string; n: number; example: string }>();
-    // The example is the form's own words (a field's caption), never its PDF path (IMM_5476[0].Page1[0]…, #118 review).
-    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && r.caption?.trim()) cur.example = r.caption.trim(); by.set(k, cur); }
+    // The example is the form's own words (a field's caption), never its PDF path (IMM_5476[0].Page1[0]…, #118 review): a
+    // form field with no caption of its own carries its path as its caption (a new edition's comparison, QA-231).
+    const words = (r: { dataPath: string; caption: string | null }) => { const c = r.caption?.trim() ?? ""; return c && c !== r.dataPath ? c : ""; };
+    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && words(r)) cur.example = words(r); by.set(k, cur); }
     return [...by.values()];
   }
 
