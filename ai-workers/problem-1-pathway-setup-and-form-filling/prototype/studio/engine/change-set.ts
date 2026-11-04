@@ -221,7 +221,7 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
     if (it.action === "set_condition" && it.target !== "question") add("R1", i, "Only a question's condition goes through this check now; a form line, document line, rule or check condition is changed on its own page.");
     // R2 source and reason, for anything new.
     if (it.action === "accept_proposal" || it.action === "create") {
-      if (!it.source) add("R2", i, `"${it.name}" needs a source: a form box, an official page with its quote, or "set by ExpatReady".`);
+      if (!it.source) add("R2", i, `"${it.name}" needs a source: a form field, an official page with its quote, or "set by ExpatReady".`);
       const r = (it.reason ?? "").trim();
       if (UNSEEN.test(r.replace(/[\n\t]/g, " "))) add("R2", i, "Remove the control or invisible characters from the reason.");
       else if (r.length > 300 || letters(r) < 3) add("R2", i, `"${it.name}" needs a reason in words (3 to 300 characters): why nothing in the library fits.`);
