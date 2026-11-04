@@ -42,7 +42,9 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   const l = await call("POST", "/demo/load", { sample: "configured" });
   if (l.status >= 300) { console.error("STOP  the configured checkpoint did not load", l.body); process.exit(2); }
   const row7 = (l.body.checkpoint as { row: string; status: string; why: string | null }[]).find((x) => x.row === "7");
-  ok("B52/QA-227: the checkpoint's sections and questions step is done, nothing refused", row7?.status === "done", row7);
+  // Row 7 may be "partial" for other reasons (QA-206: sections held for a person to name); none may be B52's or QA-227's.
+  const ours = ["Has used other name", "Has national ID", "US permanent resident", "Uses a representative", "Authorizes release of information", "case.uses_representative", "case.authorizes_release_to_designated_individual", "own question"];
+  ok("B52/QA-227: the checkpoint's sections and questions step refuses nothing of B52's or QA-227's", !!row7 && ["done", "partial"].includes(row7.status) && !ours.some((w) => (row7.why ?? "").includes(w)), row7);
   const vv = sql("select id from combination where combination_key = 'vv.single'");
   const ed = sql("select e.id from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = 'IMM 5257' and e.channel = 'PDF' order by e.edition_label desc limit 1");
   const box = (p: string) => sql(`select canonical_field_key || '|' || origin || '|' || coalesce(reason, '') || '|' || transform || '|' || coalesce(evidence_quote, '') from form_field_map where form_edition_id = '${ed}' and data_path = '${p}' order by version desc limit 1`).split("|");
