@@ -156,3 +156,24 @@ Round 3 journey score: 8.5 / 10 (accessibility back to ½: focus race in the dia
 **Verdict: Block** (one open Major). To fix:
 1. Issue 9: focus the row's Open Proposals after React has rendered it (or keep the busy button focusable), so the check passes
    every time; show five consecutive green runs of the QA-218 check on fresh copies.
+
+## Round 4 (773a06266)
+Diff-only: `git diff 4f3610c49..773a06266` (`ai-launch.tsx` focus and heading, notes.md; this file unchanged). Own copy `rev218`
+:4486; web/dist carries this head (the new heading is in the bundle). Live off; no priced button. The local database cluster was
+down: I started it for my copy only and stopped it after (no other connections). Copy stopped.
+
+* **Issue 9 (Major), fixed.** `say()` now sets `focusOn` (with a counter, so a repeat click refocuses) and a `useEffect` after
+  the commit focuses `[data-masters-open=<id>]`; the hooks sit before the early `return null`, so hook order is stable; `setDone`,
+  `setFocusOn` and `setBusy(null)` land in one batch, so the effect runs once the link exists.
+  **Runs: the QA-218 check 10 of 10 green in a row** on fresh resets (22/22, exit 0 each; the m3 focus step PASS every time;
+  load 1.7–3.3), against 4 of 6 failing on 4f3610c49. If the old failure rate held, ten passes in a row would happen about
+  1 time in 60 000. Also 3 of 3 trials by keyboard (Enter on Saved) in the Library dialog with the CPU throttled 6×: focus on
+  "Open Proposals" when the result line appears and 500 ms later. `check_forms_c34_masters_browser.cjs` 9/9.
+* **Issue 10 (Minor), in part.** The Library dialog's panel heading reads "This form: sections, answer lists, checks and document
+  types". The menu item's words and a direct link to the form stay with m6 (recorded in notes.md).
+* No new finding in this diff.
+
+Open Minors, not blocking: 5 and 6 (round 1), 7 and 8 (round 2), the rest of 10. All are recorded in notes.md for the builder or the
+tech lead.
+
+**Verdict: Approve** (no open Blocker or Major).
