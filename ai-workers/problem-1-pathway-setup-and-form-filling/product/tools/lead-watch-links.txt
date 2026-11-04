@@ -1,0 +1,9 @@
+# Links between M2 and M3 (founder 4 Nov ~11:12 IST, standing report rule: the interdependencies in every report).
+# The tech lead keeps this map; lead-watch.sh reads each PR's state live and names the critical path: the open links
+# that hold the most open capabilities come first. One link per line: id | PR (or -) | what it blocks (capability ids
+# or words) | why. Remove a line when the link is gone (merged and its effect checked).
+QA-144     | 798 | C6.1 C5.4 M3-rescore-on-checkpoint | setup to case at US$0 (Visitor visa first); C6.1 and C5.4 are held by it (P-322) and every M3 re-score starts from its checkpoint
+gate B     | 804 | re-test-on-main C3.4 | GitHub re-test of named capabilities: nightly re-test mode needs gate-b.mjs on main
+M3 guard   | 838 | M3-in-parallel | refuses an M3-only PR that changes an M2-hot file (tools/m2-hot-files.txt); contract changes go through the Lead
+two queues | 841 | M3-in-parallel | M2 first; M2 and M3 never in one batch, so a broken M3 PR cannot throw out M2 work
+M2 55 gate | -   | new-M3-rows | no new M3 rows until M2 reaches 55 confirmed (P-317 (3)); M3-only files run in parallel (A98)
