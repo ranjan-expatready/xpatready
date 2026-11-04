@@ -1,0 +1,18 @@
+{
+ "about": "B72 (P-340, P-318 (6), C3.6): Sample rules a person adds on a combination of the six through the author's own route (POST /api/combinations/:id/rules), so that a fact only a rule reads can be added with C3.6's \"Add the fact this rule needs\". Data, never code (P-319). Each rule cites IRCC's page, quote and dates (P-170). Status: Sample, Unconfirmed: expert (AGENTS rule 4). Read by acceptance/lib/pack2.ts ruleBySteps (test setup, the sample loader's words).",
+ "rules": [
+  {
+   "combination": "vv.single",
+   "condition": {
+    "subjectKind": "EACH_APPLICANT",
+    "op": "eq",
+    "field": "person.minor_travelling_without_parents",
+    "value": true
+   },
+   "whenPlain": "the person is under 18 and travels alone or with a person other than their parents or legal guardians",
+   "thenPlain": "custody documents, or a letter of authorization from the parent who does not travel, or one signed by both parents or legal guardians (preferably in English or French, naming the adult responsible for the child in Canada), must go with the application (Sample, Unconfirmed: expert)",
+   "forWhom": "each_applicant",
+   "sourceQuote": "IMM 5484 (05-2026) p. 1 (official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026): \"Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians.\" Guide 5256 (official-sources/ircc/instructions/guide-5256.html; page modified 2026-03-31, saved 19 Oct 2026), Step 1. Gather documents › Minors travelling alone: \"Minors (under 18 years of age) travelling alone or with a person other than their parents or legal guardians should have a letter of authorization, preferably in English or French, signed by both parents or legal guardians. It should also include the name of the adult who will be responsible for the children in Canada.\""
+  }
+ ]
+}
