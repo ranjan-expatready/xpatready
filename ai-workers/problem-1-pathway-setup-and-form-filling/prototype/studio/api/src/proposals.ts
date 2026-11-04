@@ -764,6 +764,13 @@ export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step
 /** QA-192 review r3 M4 (P-121): why an item that needs a person's near reason cannot be ticked with others. */
 export const NEAR_BULK_WHY = "It is close to a library item: open it and say why it is not the same.";
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
+/** QA-206 (P-158, PRODUCT §4): the words a section with no printed heading carries (form-masters.ts rules pass) until a
+ *  person names it; it is never accepted under its placeholder, so a client never sees one as a questionnaire section. */
+export const UNNAMED_WHY = "Give the section a name before it is accepted.";
+/** A placeholder name, however it is spaced or cased ("Unnamed  section 2 of IMM 5475"). */
+const isPlaceholder = (label: string) => normalizeLabel(label).startsWith("unnamedsection");
+/** The C3.4 rules pass's step (form-masters.ts MASTERS_STEP; named here so this module does not import that one). */
+const MASTERS_SECTIONS_STEP = "masters_edition";
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is
  *  written; an accepted or edited library item runs its lander and is checked against the library again (identity at
@@ -806,6 +813,29 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         if (!p.success) fail(`The edited proposal does not follow the contract: ${plainIssues(p.error)}.`);
         if (p.data!.kind !== r.kind) fail("An edit keeps the proposal's kind.");
         payload = p.data!;
+      }
+      // QA-206: a section the rules pass found no printed heading for is accepted only under a name a person gives it.
+      // A rules-pass section drafted before printed headings were read (no "printed_heading" rule result; Devin review on
+      // #883) may carry the PDF's internal part name ("Page wrapper"), and its edition's one draft (P-138) is never redone:
+      // it too is accepted only as an edit with a name a person typed (keeping its name is then the person's choice).
+      // A reuse of a named library item adds no name to the library (it lands on that item), so it is left as it was
+      // (review r5 M6: an edit always lands a new item, so refusing its plain accept would make a duplicate). A twin waiting
+      // on another edition's copy (reuse with no key yet) may still resolve to a new item below, so it stays guarded
+      // (Devin review on c0f65af62).
+      const reuseOf = r.reuse as { match?: string; existingKey?: string | null } | null;
+      let lands = reuseOf?.match === "reuse" ? reuseOf.existingKey ?? null : null;
+      const oldShape = r.kind === "section" && r.step === MASTERS_SECTIONS_STEP && r.origin === "rules" && !((r.rules ?? []) as { rule?: unknown }[]).some((x) => x?.rule === "printed_heading");
+      if (oldShape && reuseOf?.match === "reuse" && !lands && r.relatesTo) {
+        // A twin: it lands on its first copy's item when that one is in the library, as the resolution below finds it.
+        const first = await tx.proposalItem.findUnique({ where: { id: r.relatesTo }, select: { status: true, decidedKey: true } });
+        lands = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
+      }
+      const legacy = oldShape && !lands;
+      if (d.action !== "reject" && r.kind === "section" && ((r.work as { unnamed?: unknown } | null)?.unnamed === true || legacy)) {
+        const was = String((r.payload as { label?: unknown }).label ?? ""), now = String((payload as { label?: unknown }).label ?? "");
+        if (d.action === "accept" || isPlaceholder(now) || (!legacy && normalizeLabel(now) === normalizeLabel(was)))
+          fail(legacy ? `"${was}" was drafted before the form's printed headings were read, so its name may be the PDF's own part name. ${UNNAMED_WHY} Keeping this name is fine once you have checked it.${rows.length > 1 ? " Nothing was accepted." : ""}`
+            : `"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;
