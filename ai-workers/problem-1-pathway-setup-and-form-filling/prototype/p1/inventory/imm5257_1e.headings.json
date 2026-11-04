@@ -8,6 +8,26 @@
    "printed": "SCHEDULE 1APPLICATION FOR TEMPORARY RESIDENCE",
    "how": "banner"
   },
+  "page1.MilitaryServiceheader": {
+   "heading": "Military service",
+   "printed": "Military Service",
+   "how": "titled"
+  },
+  "page1.organizationSection": {
+   "heading": "Membership or Association with Organizations",
+   "printed": "Membership or Association with Organizations",
+   "how": "titled"
+  },
+  "page1.positionsSection": {
+   "heading": "Government positions",
+   "printed": "Government Positions",
+   "how": "titled"
+  },
+  "page1.previousTravelSection": {
+   "heading": "Previous travel",
+   "printed": "Previous Travel",
+   "how": "titled"
+  },
   "page1.disclaimer": {
    "heading": "Privacy notice",
    "printed": "PRIVACY NOTICE",

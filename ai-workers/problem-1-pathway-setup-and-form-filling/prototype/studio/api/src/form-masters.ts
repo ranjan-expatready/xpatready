@@ -88,7 +88,9 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
     const own = headings?.[key], h = own ?? (keyOf(key) ? headings![keyOf(key)!] : undefined);
     if (!h?.heading?.trim()) return { anchor: `p:${key.split(".")[1]}`, h: undefined }; // none, or only its child parts named
     const at = own ? key : keyOf(key)!;
-    let anchor = (h.how === "carried" && h.from ? h.from : at).split(".")[1]; // a part's name: the same part on every page
+    // A part's name, the same part on every page; parts carried from one banner, or under the form's own printed title
+    // (a form with no heading over any part: IRM 0002), are one section.
+    let anchor = ((h.how === "carried" || h.how === "form_title") && h.from ? h.from : at).split(".")[1];
     const label = h.heading.trim().toLowerCase();
     if (h.continues && anchors.has(label)) anchor = anchors.get(label)!;
     if (!anchors.has(label)) anchors.set(label, anchor);

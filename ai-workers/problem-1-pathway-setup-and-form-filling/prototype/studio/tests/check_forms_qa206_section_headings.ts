@@ -57,6 +57,13 @@ run(async () => {
   const edu = wp.find((s) => s.label === "Education"), emp = wp.find((s) => s.label === "Employment");
   ok("QA-206 fail (review r2 M4): IMM 1295's \"Education\" holds no page 4 background question and no employment box", !!edu && edu.fieldKeys.every((k) => !/Page4\[0\]/.test(k) && !/Occupation/.test(k)), edu?.fieldKeys.filter((k) => /Page4\[0\]|Occupation/.test(k)).slice(0, 5));
   ok("QA-206 pass (review r2 M4): IMM 1295's employment boxes are under its printed \"EMPLOYMENT\"", !!emp && emp.quote === "EMPLOYMENT" && emp.fieldKeys.length > 10 && emp.fieldKeys.every((k) => /Occupation/.test(k)), emp?.fieldKeys.slice(0, 3));
+  // Tech lead on #883 (option C): IMM 5257 SCH1 prints each question under its own bold title paragraph ("Military
+  // Service", then "Did you serve …"): those titles name its parts; a part with only its question stays held.
+  const sch1 = drafted("imm5257_1e");
+  ok("QA-206 fail→pass (option C): IMM 5257 SCH1's parts are named by their printed titles (Military service, Government positions, Previous travel)", ["Military service", "Government positions", "Previous travel"].every((t) => sch1.some((x) => x.label === t)) && sch1.some((x) => x.part === "IllTreatSection" && x.unnamed), sch1.map((x) => [x.part, x.label]));
+  // A form that prints no heading over any part: its fields sit under the form's own printed title, as one section.
+  const irm = drafted("irm0002e");
+  ok("QA-206 pass (form title): IRM 0002, a statement form with no part headings, is one section under its printed title", irm.length === 1 && irm[0].label === "Request for a change of sex or gender identifier" && irm[0].quote === "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER", irm.map((x) => [x.part, x.label, x.fieldKeys.length]));
   const fam6 = drafted("imm5406e");
   ok("QA-206 fail (review r3 M5): no IMM 5406 section named \"Applicant\" holds the spouse's or a parent's boxes", fam6.every((s) => s.label !== "Applicant" || s.fieldKeys.every((k) => !/Spouse|Parent/.test(k))) && fam6.some((s) => s.fieldKeys.some((k) => /Spouse/.test(k))), fam6.map((s) => [s.label, s.fieldKeys.length]));
   ok("QA-206 fail (review r2 M4): IMM 1295's page 4 wrapper with background questions 3 to 6 is held unnamed, not put under page 3's heading", wp.some((s) => s.part === "PageWrapper" && s.unnamed && s.fieldKeys.some((k) => /Page4\[0\]/.test(k))), wp.map((s) => [s.part, s.label]));

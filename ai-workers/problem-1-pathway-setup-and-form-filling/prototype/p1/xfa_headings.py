@@ -13,7 +13,13 @@ out by position top to bottom, a flowing part in its own order):
 2. numbered: else, when that first text is bold and numbered, at most 60 characters, and no other numbered text is
    in the part ("7. Your declaration"), those words without the number: a part that holds questions 5 and 6 is not
    named after question 5;
-3. carried: else, the banner of a heading-only part printed just before it on the same page (a part with a banner and
+3. titled: else, when that first text is bold rich text whose first paragraph is a short phrase (at most 60
+   characters, 8 words) and whose later paragraphs are the normal-weight question it heads, that phrase: IMM 5257
+   SCH1's "Military Service", "Government Positions", "Previous Travel" (tech lead on #883, option C);
+5. form title: when no part of the form has any heading above, every part that holds fields takes the form's own
+   printed title (its largest bold all-capital text, 10 pt or more, not a note in brackets), as one section: IRM
+   0002's "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER";
+4. carried: else, the banner of a heading-only part printed just before it on the same page (a part with a banner and
    no box a person fills, like "SectionHeader_DetailsOfVisit"), passed on while the parts after it go on printing
    questions (a question number, or a lettered item "a) ..."). A part with no question of its own (a consent, a
    declaration, a signature) is not given it, and ends the carry. Never across a page; never the form's first banner,
@@ -62,6 +68,27 @@ def y_of(el):
     return float(m.group(1)) * UNIT[m.group(2) or "in"] if m else 0.0
 
 
+# A text's printed title (QA-206, tech lead on #883, option C): a rich text whose first paragraph is a bold short phrase
+# and whose later paragraphs are the normal-weight question it heads (IMM 5257 SCH1: "Military Service", then "Did you
+# serve …"). Filled by texts(), keyed by the whole text.
+TITLES = {}
+XHTML = "{http://www.w3.org/1999/xhtml}"
+
+
+def title_of(v):
+    """The bold first paragraph of a rich-text value, when the paragraphs after it are of normal weight; else None."""
+    body = next((b for b in v.iter() if b.tag == XHTML + "body"), None)
+    paras = [p for p in (body if body is not None else []) if p.tag == XHTML + "p"]
+    words = lambda p: " ".join("".join(p.itertext()).split())
+    filled = [p for p in paras if words(p)]
+    if len(filled) < 2 or "font-weight:normal" in (filled[0].get("style") or "").replace(" ", ""):
+        return None
+    if not all("font-weight:normal" in (p.get("style") or "").replace(" ", "") for p in filled[1:]):
+        return None
+    t = words(filled[0]).rstrip(":").strip()
+    return t if 4 <= len(t) <= 60 and len(t.split()) <= 8 and sum(c.isalpha() for c in t) >= 4 else None
+
+
 def texts(el, ns):
     """The printed texts inside el in reading order, each with whether it is bold and its size. A part laid out by
     position (no flowing layout) is read top to bottom by each child's y; a flowing part in its own order. A picture
@@ -82,7 +109,26 @@ def texts(el, ns):
             f = d.find(ns + "font")
             rich = ET.tostring(d, encoding="unicode").replace(" ", "")
             size = re.match(r"[\d.]+", (f.get("size") if f is not None else None) or "")
-            out.append((t, (f is not None and f.get("weight") == "bold") or "font-weight:bold" in rich, float(size.group(0)) if size else None))
+            bold = (f is not None and f.get("weight") == "bold") or "font-weight:bold" in rich
+            out.append((t, bold, float(size.group(0)) if size else None))
+            tt = title_of(v) if bold else None
+            if tt:
+                TITLES[t] = tt
+    return out
+
+
+def texts_all(tpl, ns):
+    """Every printed text of the form, wherever it is (master pages too), with whether it is bold and its size."""
+    out = []
+    for d in tpl.iter(ns + "draw"):
+        v = d.find(ns + "value")
+        if v is None or v.find(ns + "image") is not None:
+            continue
+        t = inv.text_of(v, ns)
+        if t:
+            f = d.find(ns + "font")
+            size = re.match(r"[\d.]+", (f.get("size") if f is not None else None) or "")
+            out.append((t, f is not None and f.get("weight") == "bold", float(size.group(0)) if size else None))
     return out
 
 
@@ -196,6 +242,11 @@ def read(fname):
             elif n:
                 entry = {"heading": n.group(1)[0].upper() + n.group(1)[1:], "printed": words[0][0], "how": "numbered"}
                 carry = None
+            elif words and words[0][1] and TITLES.get(words[0][0]):
+                # titled (option C): the part's first text is a question under its own bold printed title.
+                tt = TITLES[words[0][0]]
+                entry = {"heading": sentence_case(tt, seen), "printed": tt, "how": "titled"}
+                carry = None
             elif carry and asks:
                 # The questions printed under a heading-only part's banner go on in the parts after it; a part with no
                 # question of its own (a consent, a declaration, a signature) is not given it, and ends the carry.
@@ -223,6 +274,26 @@ def read(fname):
                 entry = {**(entry or {"heading": None, "how": "none"}), "sub": sub}
             if entry and key not in out:
                 out[key] = entry
+    # A form that prints no heading over any of its parts (IRM 0002, a one-page statement): every field sits under the
+    # form's own printed title, its largest bold all-capital text (tech lead on #883: names only from print). The parts
+    # are one section under it. Never when any part has a heading of its own.
+    if not out:
+        # The title: bold, all capitals, at most 12 words, printed at 10 pt or more, not a note in brackets
+        # ("(DISPONIBLE EN FRANÇAIS - IRM 0002 F)"); the largest such text.
+        def as_title(t):
+            t = " ".join(t.split()).rstrip(":").strip()
+            letters = [c for c in t if c.isalpha()]
+            return t if not t.startswith("(") and len(letters) >= 4 and not any(c.islower() for c in letters) and len(t) <= 90 and len(t.split()) <= 12 else None
+        tops = [(z, as_title(t)) for t, bold, z in texts_all(tpl, ns) if bold and z and z >= 10 and as_title(t)]
+        if tops:
+            ft = max(tops, key=lambda x: x[0])[1]
+            for page in tpl.find(ns + "subform"):
+                if page.tag.replace(ns, "") not in PARTS:
+                    continue
+                pname = page.get("name") or f"#{page.tag.replace(ns, '')}"
+                for part in page:
+                    if part.tag.replace(ns, "") in PARTS and fills(part, ns):
+                        out.setdefault(f"{pname}.{part.get('name') or '#' + part.tag.replace(ns, '')}", {"heading": sentence_case(ft, seen), "printed": ft, "how": "form_title", "from": "#form.title"})
     full = json.loads((inv.OUT / (fname.replace(".pdf", "") + ".inventory.json")).read_text())
     return {
         "file": full["summary"]["file"], "sha256": full["summary"]["sha256"],

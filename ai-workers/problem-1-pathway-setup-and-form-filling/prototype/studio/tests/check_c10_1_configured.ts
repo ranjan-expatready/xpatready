@@ -87,9 +87,11 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the Visitor visa is released (review m2), unless
   // sections wait for a name (QA-206; tech lead on #883): then its release check names the blocks (check_qa144_vv_release.ts
   // checks each is a fact of a form whose sections all wait for a name).
-  ok(heldNow ? "C10.1 row 10 (QA-206): while sections wait for a name, the Visitor visa stays a draft and its row names the blocks" : "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)",
-    heldNow ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 0 && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? "")
-      : n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows), heldNow ? r("10").why?.slice(0, 200) : r("10").shows);
+  // Only a form with no accepted section at all leaves its facts asked of nobody (form-part-placements.ts places the rest).
+  const unplacedForm = n(`select count(distinct p.form_edition) from proposal_item p where p.kind = 'section' and p.status = 'waiting' and p.work->>'unnamed' = 'true' and not exists (select 1 from proposal_item q where q.kind = 'section' and q.form_edition = p.form_edition and q.status in ('accepted', 'edited', 'rejected'))`);
+  ok(unplacedForm ? "C10.1 row 10 (QA-206): while a form's sections all wait for a name, the Visitor visa stays a draft and its row names the blocks" : "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)",
+    unplacedForm ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 0 && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? "")
+      : n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows), unplacedForm ? r("10").why?.slice(0, 200) : r("10").shows);
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // Slice 2 moves this example to Express Entry, a combination no slice sets up yet.
