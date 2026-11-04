@@ -7,8 +7,10 @@
 // setup as a draft (P-322: it releases nothing), lands on With an LMIA – inside Canada's Review and release tab:
 // "Numbers without a source (n)", grouped by item, each with Add source, and Submit is held. Underneath: Submit is
 // refused naming every item; a Sample answer is refused on this source-backed combination; once every number has its
-// official source or "None published" (test words, through the API as the Source panel saves them), Submit, sign-off
-// and Approve give Release 1 with its sources frozen in it, submitted, signed and approved by three different people.
+// official source or "None published" (test words, through the API as the Source panel saves them), its "no source"
+// problems are gone and Submit is no longer refused for them, while C5.5's answer-key gate still refuses it, one line
+// per new field map (a first source-backed release needs tests the immigration expert signs; A3, P-322: no Release 1
+// here, release-step evidence is on the configured checkpoint).
 // A screenshot of the tab goes to studio/var/acceptance/C5.4-six-review-1440.png (the one committed for the PR is
 // product/screens/G1-source-register/screenshots/c54-six-review-1440.png).
 // No model call (US$0). Exit 0 = all pass, 1 = a failure, 2 = setup missing.
@@ -16,7 +18,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { sourceEveryNumber } from "../tests/fixtures/source-every-number.cjs";
-import { APPROVER, AUTHOR, REVIEWER, pack2, run } from "./lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, run } from "./lib/pack2.ts";
 import { walker } from "./lib/browser.ts";
 
 const T = pack2("C5.4");
@@ -57,7 +59,7 @@ run(async () => {
   await start.waitFor({ timeout: 10_000 });
   const started = p.waitForResponse((r) => r.url().endsWith("/api/demo/release-with-sources"), { timeout: 120_000 });
   const says = await start.innerText();
-  ok("C5.4 pass (P-322): the dialog says plainly it loads a draft and the sources must be answered to release it", /as a draft/i.test(says) && /answer its sources to release it/i.test(says) && /Nothing is approved or released here/.test(says), says.slice(0, 200));
+  ok("C5.4 pass (P-322): the dialog says plainly it loads a draft and its sources and answer-key tests must be answered to release it", /as a draft/i.test(says) && /answer its sources and its answer-key tests to release it/i.test(says) && /Nothing is approved or released here/.test(says), says.slice(0, 200));
   await start.getByRole("button", { name: /Load as a draft/ }).click();
   const sr = await started;
   ok("C5.4 pass: the Demo menu starts With an LMIA – inside Canada from its reviewed release (2xx)", sr.status() < 300, sr.status());
@@ -94,24 +96,26 @@ run(async () => {
   r = await call("POST", "/demo/release-with-sources", {}, APPROVER);
   ok("C5.4 fail: only the author runs the demo control (403)", r.status === 403, r.status);
 
-  // ---------------------------------------------------------------- every number answered: it goes through
+  // ---------------------------------------------------------------- every number answered: C5.4's own problem is gone
+  // A3 (tech lead, 4 Nov, P-322): C5.4's evidence stands on its own. The release is still held, by C5.5's answer-key
+  // gate (a first, source-backed release: each new field map needs a test the immigration expert signs), so no Release 1
+  // here; release-step evidence is on the configured checkpoint.
   const all = await sourceEveryNumber(T.PORT, lmia, { actor: AUTHOR });
   ok("setup: every number gets its answer through the API, as the Source panel saves it (\"None published\", test words)", all.held_back === 0 && all.written >= heldN, all);
   await p.reload(); await p.locator("[data-sources-all-set]").waitFor({ timeout: 30_000 });
   ok("C5.4 pass: the tab then says every published number has its answer", /Every published number has its answer/.test(await p.locator("[data-sources-all-set]").innerText()));
+  const draft = (await call("GET", `/combinations/${lmia}`)).body?.draft;
+  const problems = (draft?.problems ?? []) as any[];
+  const noSource = problems.filter((x) => x.gate === "no-source" || /no source entry/i.test(String(x.message ?? "")));
+  const tests = problems.filter((x) => x.where === "Tests" && x.level === "error");
+  ok("C5.4 pass: once all are answered, no \"Numbers without a source\" problem is left, while C5.5's answer-key problems remain", noSource.length === 0 && tests.length > 0, { noSource: noSource.length, tests: tests.map((x) => x.item) });
   r = await call("POST", `/combinations/${lmia}/submit`, { note: "C5.4 acceptance: every number answered" }, AUTHOR);
-  ok("C5.4 pass: Submit goes through once every number is answered", r.status < 300, words(r).slice(0, 200));
-  const changes = ((await call("GET", `/combinations/${lmia}/review`, undefined, REVIEWER)).body?.submission?.changeSummary ?? []) as any[];
-  const signed: number[] = [];
-  for (const c of changes) signed.push((await call("POST", `/combinations/${lmia}/signoff`, { items: [`${c.kind}|${c.key}`], action: "signed" }, REVIEWER)).status);
-  ok("setup: the content reviewer signs every line", signed.length > 0 && signed.every((s) => s < 300), signed);
+  const lines = ((r.body?.errors ?? []) as any[]);
+  const keyLines = lines.filter((e) => e.where === "Tests");
+  ok("C5.4 pass: Submit is no longer refused for sources (no error line says \"no source entry\")", r.status === 400 && !lines.some((e) => /no source entry/i.test(String(e.message ?? ""))), words(r).slice(0, 200));
+  ok("C5.5 (the next gate, real): Submit is refused by the answer-key gate, one line per field map, each naming its form", keyLines.length === tests.length && keyLines.every((e) => /field map/.test(String(e.message ?? "")) && (e.forms ?? []).length === 1), keyLines.map((e) => `${e.item}: ${String(e.message).slice(0, 80)}`));
   r = await call("POST", `/combinations/${lmia}/approve`, {}, APPROVER);
-  ok("C5.4 pass: the approver releases it: Release 1", r.status < 300 && r.body?.version === 1, words(r).slice(0, 200) || r.body?.version);
-  const frozen = Number(sql(`select jsonb_array_length(coalesce(snapshot->'sources','[]'::jsonb)) from config_release where combination_id='${lmia}' and version=1`) || 0);
-  ok("C5.4 data: Release 1 carries its numbers' sources frozen in it", frozen >= heldN, { frozen, held: heldN });
-  const who = sql(`select submitter_id||' '||approver_id from config_release where combination_id='${lmia}' and version=1`);
-  const signers = sql(`select string_agg(distinct s.actor_id, ',') from review_signoff s join review_submission u on u.id=s.submission_id where u.combination_id='${lmia}' and s.action='signed'`);
-  ok("C5.4 data (P-322): Release 1 came through the product's steps: submitted by the author, signed by the SME, approved by a different person", who === "user-A user-B" && signers === "user-C", { who, signers });
+  ok("C5.4 data (P-322): the approver cannot release it either (409), and nothing is released", r.status === 409 && sql(`select count(*) from config_release where combination_id='${lmia}'`) === "0", words(r).slice(0, 160));
   ok("C5.4 data: no page error", W.errors.length === 0, W.errors.slice(0, 3));
   await W.close();
   T.done();

@@ -1,7 +1,7 @@
 // QA-184 (C11.10, C5.4; P-273, EXPERIENCE "one clear state"): a Live combination reads as one state everywhere, Live
 // first, then what its next release still needs in one count of the same five steps. On Demo › Reset to the six ›
-// Start With an LMIA (a draft, released through sources, submit, sign-off and approve; P-322), then one form removed
-// in the draft (so the next release has problems on several steps, as in qa's evidence
+// Start With an LMIA (since P-322 a draft only, so this check uses the suites' fixture, whose With an LMIA is at Release
+// 1: screen words only, never Works evidence), then one form removed in the draft (so the next release has problems on several steps, as in qa's evidence
 // qa/reports/2026-11-03-explore/x-live-*), the header, the Overview strip, the Programs card and list, the tab counts
 // and GET /catalogue's progress must agree. Before: Overview "Live · setup steps for the next release: 0 of 5
 // done" beside a card that read "✓ Live" with nothing more, /catalogue "Step 2 of 4: Draft" (four steps beside five),
@@ -10,7 +10,6 @@
 // the API underneath; no model call (US$0).
 //   zsh studio/tools/isolated.sh screens_qa184 4621 start && node studio/tests/check_qa184_live_state_browser.cjs 4621 xr_studio_screens_qa184
 const { chromium } = require("../node_modules/playwright");
-const { releaseThroughSteps } = require("./fixtures/source-every-number.cjs");
 const PORT = Number(process.argv[2] ?? 4621);
 const BASE = `http://localhost:${PORT}`;
 const results = [];
@@ -22,13 +21,14 @@ const KEYS = ["pages", "people", "forms", "questions_documents", "release"];
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data, timeout: 120000 }); let body = null; try { body = await r.json(); } catch { /* not JSON */ } return { status: r.status(), body }; };
   try {
-    if ((await api("/demo/reset-to-six", { method: "POST", data: { confirm: "RESET" } })).status >= 300) throw new Error("Reset to the six did not load");
-    const started = await api("/demo/release-with-sources", { method: "POST", data: {} });
-    const lm = started.body?.combinationId;
-    if (!lm) throw new Error(`Start With an LMIA did not answer: ${started.status}`);
-    // P-322: the control loads a draft only; Release 1 through the product's steps (sources, submit, sign-off, approve).
-    const rel = await releaseThroughSteps((m, pth, data, actor) => api(pth, { method: m, data, actor }), lm);
-    if (rel.version !== 1) throw new Error(`With an LMIA did not reach Release 1: ${JSON.stringify(rel).slice(0, 200)}`);
+    // Screen words only, never Works evidence (P-322): the suites' fixture (POST /demo/load with no body) has With an
+    // LMIA at Release 1 from the reviewed release; Demo › Start With an LMIA now loads a draft and releases nothing.
+    if ((await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } })).status >= 300) throw new Error("Reset did not run");
+    if ((await api("/demo/load", { method: "POST", data: {} })).status >= 300) throw new Error("The suites' fixture did not load");
+    const live = ((await api("/catalogue")).body?.rows ?? []).filter((r) => r.progress?.live);
+    const lm = live.length === 1 ? live[0].combinationId : null;
+    const key = lm ? (await api(`/combinations/${lm}`)).body?.combination?.key : null;
+    if (key !== "wp.family") throw new Error(`The fixture's With an LMIA is not its one Live combination: ${JSON.stringify(live.map((r) => r.combinationId))} ${key}`);
     // A change for the next release: IMM 1295 removed in the draft (17 problems on Documents and questions, as qa saw).
     const del = await api(`/combinations/${lm}/forms/${encodeURIComponent("IMM 1295")}`, { method: "DELETE", data: {} });
     const sum = (await api(`/combinations/${lm}/summary`)).body;

@@ -36,7 +36,7 @@ Every online line in A and B is filed through the **APR Portal** (P-98: the one 
 2. **Configured (the M2 gate, C10.1):** A and B released (A release 1 all PDF; A release 2 mixed), with the library they built, and the thin family case on release 1 with IMM 5257 filled (rows 1–12, 17).
 3. **Finished story (the M3 gate, C10.2):** the family case on both releases, online fill, the filing with portal sheet, filled PDFs and signed copies, documents listed (rows 13–16, 18).
 AI in every checkpoint is the saved answers (US$0, labelled "replay"); a live run happens only with the founder's go (a session on the Mac).
-**Start With an LMIA from its reviewed release** (after Reset to the six; C5.4): loads B's reviewed setup as a draft, not a release. Review and release lists its numbers without a source (17) and Submit waits; Release 1 comes only when a person answers them, the author submits, the SME signs and a different person approves (P-322: later steps count only on data the product's own steps built).
+**Start With an LMIA from its reviewed release** (after Reset to the six; C5.4): loads B's reviewed setup as a draft, not a release. Review and release lists its numbers without a source (17) and Submit waits. Release 1 needs its sources and its answer-key tests, as a real release does: a person answers the 17, the immigration expert signs a test for each new field map (C5.5), the author submits, the SME signs and a different person approves (P-322: later steps count only on data the product's own steps built; their evidence is on the configured checkpoint).
 
 ## Rules for every lane
 * A feature is not DONE until its row above shows in the demo story (seeded or replayable), with a check in the demo suite.
