@@ -182,3 +182,20 @@ Scope: the merge's conflict resolution (`git show --remerge-diff 51141bed`) and 
 **Journey score (round 8, diff-only): 8.5/10, pass.** See `journey-test-reviewer-2026-11-04.md`, round 8.
 
 **Verdict (round 8): Block** for 8e223e87. To fix: finding 1. Minors 2–4 can be follow-ups.
+
+## Round 9 (diff-only, b31da33f), 4 Nov 2026
+Scope: `git show b31da33f` only. Fresh copy `rv5` on :4449 (stopped and removed afterwards), US$0.
+
+**Run:** `check_qa144_sp_release` 24/24. The database was read afterwards.
+
+- **M1 (round 8) is closed.**
+  - The `sp.outside` lines are `fee_payment_receipt`, `passport_information_page_copy` and `letter_of_acceptance`. All 3 are PUBLISHED, saved by user-A.
+  - Only one `document_type` proposal comes from `sp.outside`: Letter of acceptance. user-C accepted it. Its `library_change` is RELEASED, proposed by user-A and approved by user-B (BR-9 holds).
+  - The `reuse` path looks the type up by exact name (DRAFT or PUBLISHED, newest version) and saves the line by key through `saveRequirement`. A missing type goes into `setUpRefused` in words ("the library has no type of that name to reuse").
+  - The notes now say what runs.
+- **m3 is closed:** the p. 2 quote names "documents list item 4", which matches the PDF.
+- **m2 and m4** are recorded in `notes.md` as follow-ups. That is acceptable for Minors.
+- No new form number is outside `SP_DOCUMENT_LINES`/`FORM_SETUP`. Rows 7 and 17 are untouched. The quotes are unchanged, apart from the item number.
+- No Blocker or Major.
+
+**Verdict (round 9): Approve** for b31da33f (no open Blocker or Major). The round 8 journey score stands; with finding 1 closed, Correct data goes from ½ to 1, so 9/10.
