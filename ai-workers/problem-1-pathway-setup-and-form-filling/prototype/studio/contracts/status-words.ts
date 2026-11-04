@@ -17,3 +17,7 @@ export function draftBarWords(total: number, combinations: number, library: numb
 }
 /** A Live combination's open setup items are for its next release: firms keep using the released one meanwhile. */
 export const LIVE_NEXT = "for the next release";
+/** QA-184 (P-273, EXPERIENCE "one clear state"): a Live combination says Live first, then what its next release still
+ *  needs, in one count of the same five steps, with these words on the header strip, the Programs card and list, and
+ *  GET /catalogue's progress. Null when nothing is open for the next release. */
+export const nextReleaseWords = (open: number) => (open > 0 ? `Next release: ${open} of 5 step${open === 1 ? "" : "s"} to do` : null);
