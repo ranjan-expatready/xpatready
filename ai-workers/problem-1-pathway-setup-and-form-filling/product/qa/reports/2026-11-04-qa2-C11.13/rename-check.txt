@@ -1,0 +1,6 @@
+PASS  setup: the sample inputs load
+PASS  setup: a released combination carries the field
+PASS  the guarded check rates this rename 'second person' (P-266)
+PASS  P-266: one author's rename of a field a released combination uses does not take effect alone (waits for a second person or is refused in words)
+
+4/4 passed

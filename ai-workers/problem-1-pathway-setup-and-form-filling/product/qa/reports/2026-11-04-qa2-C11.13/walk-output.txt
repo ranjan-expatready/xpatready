@@ -1,0 +1,10 @@
+qa2 walk 4 Nov ~10:05 IST, main 66fc6ec48, the six, 1440 px, /review/proposals?group=edition:IMM 5257 (09-2023)
+row visible: 1 (person.other_family_name, close to person.family_name)
+Close to shown: false
+reason needed words: false
+Accept buttons: 0
+open-on-page links: 83 (each field-map item opens on its form-field page)
+console errors: 0
+exit=0
+
+API probe on the same copy: POST /api/review/proposals/decide {ids:[a8764147… person.military_service_details, near person.military_service], action:"accept"} with no reason -> 201, landedAs person.military_service_details; identity.nearReason = "one name holds the other" (the drafter's words). Nothing lands in the library until the form's draft is applied (acceptOnItsPage).

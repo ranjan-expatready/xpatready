@@ -1268,6 +1268,7 @@ model Case {
   enteredSections EnteredSection[]
   signSteps   SignStep[]   // C8.1
   signedScans SignedScan[] // C8.1
+  findings    ReviewFinding[] // C7.5
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1744,6 +1745,7 @@ model Filing {
   group      SubmissionGroup   @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
   applicants FilingApplicant[]
   items      FilingItem[]
+  findings   ReviewFinding[] // C7.5
 
   @@unique([caseId, subjectId])
   @@map("filing")
@@ -2109,4 +2111,45 @@ model SignedScan {
 
   @@index([itemId])
   @@map("signed_scan")
+}
+
+/// C7.5 part 1 (BR-19; AG-11-69, -70, -71): one finding of a case's independent review, in the team's words. Severity
+/// CRITICAL · MAJOR · MINOR · INFO; source rules · ai · manual; state open · acknowledged · resolved · waived (CRITICAL
+/// only) · dismissed. A rules finding names its rule and a fingerprint of the facts it compared; the database keeps one
+/// not-resolved row per case and fingerprint (partial unique index "review_finding_one_live_rule", in the migration).
+model ReviewFinding {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  filingId    String?   @map("filing_id") @db.Uuid
+  subjectId   String    @map("subject_id") @db.Uuid
+  form        String?
+  field       String?
+  severity    String
+  source      String
+  ruleKey     String?   @map("rule_key")
+  fingerprint String?
+  state       String    @default("open")
+  quote       String
+  agreement   String?
+  reasons     Json?
+  replayed    Boolean   @default(false)
+  runId       String?   @map("run_id") @db.Uuid
+  stateReason String?   @map("state_reason")
+  stateBy     String?   @map("state_by")
+  stateAt     DateTime? @map("state_at") @db.Timestamptz
+  resolvedBy  String?   @map("resolved_by")
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
+  /// A finding added by hand is stored once per key (one key per "Add finding" dialog), with the request's sha256.
+  idempotencyKey         String? @map("idempotency_key")
+  idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  case   Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing? @relation(fields: [filingId], references: [id], onDelete: SetNull)
+
+  @@unique([caseId, idempotencyKey])
+  @@index([caseId])
+  @@map("review_finding")
 }

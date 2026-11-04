@@ -64,9 +64,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ovText = await panel().innerText();
   step("BR-2 pass: Overview has no add or edit control (links only)", ovButtons === 0, `${ovButtons} buttons`);
   // X1 C3: the setup strip names the people step (its card left the Overview for Forms, P-161 (2)).
-  // UX-A part 3 (finding 7, QA-129): a released (Live) combination's strip reads "Live · setup steps for the next
-  // release: n of 5 done"; a never-released one "Setup steps · n of 5 done".
-  step("BR-2: Overview shows the setup steps (people among them, read only), the counts and released versions in one line", /(Setup steps · |Live · setup steps for the next release: )\d of 5 done/.test(ovText) && /Who can be in this application/.test(ovText) && /Released versions: Release 1/.test(ovText) && !/Held for a person|Recent steps|Add form/.test(ovText), ovText.slice(0, 300));
+  // QA-184 (P-273, QA-129 answered): a released (Live) combination's strip reads Live first, then the next release's
+  // one count, "Live · Release n · Next release: n of 5 steps to do" (or "nothing open"); a never-released one
+  // "Setup steps · n of 5 done".
+  step("BR-2: Overview shows the setup steps (people among them, read only), the counts and released versions in one line", /Setup steps · \d of 5 done|Live · Release \d+ · (Next release: \d of 5 steps? to do|nothing open)/.test(ovText) && !/of 5 done/.test(ovText.match(/Live · Release[^\n]*/)?.[0] ?? "") && /Who can be in this application/.test(ovText) && /Released versions: Release 1/.test(ovText) && !/Held for a person|Recent steps|Add form/.test(ovText), ovText.slice(0, 300));
   await state("overview");
 
   // ======================================================== Forms: the line drawer (C11.6, M1)
