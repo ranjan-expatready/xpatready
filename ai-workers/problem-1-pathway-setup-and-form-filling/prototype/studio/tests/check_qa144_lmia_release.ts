@@ -49,7 +49,9 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
   ok("QA-144 slice 2 release (C10.1 row 10): the SME signed off and a different person released it", n(`select count(*) from review_submission s where s.combination_id = '${lm}' and s.status = 'APPROVED' and s.submitted_by = 'user-A'`) === 1 && n(`select count(*) from review_signoff where actor_id = 'user-C' and action = 'signed'`) > 0);
 
   // Row 7: its forms' sections by rules (no AI), approved by a second person.
-  ok("QA-144 slice 2 row 7: done, and names With an LMIA among the combinations set up from their forms", r("7").status === "done" && /sections drafted from .*With an LMIA – inside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
+  // QA-206 (tech lead on #883): partial exactly while sections the forms print no heading over wait on To review for a name.
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  ok("QA-144 slice 2 row 7: done (partial exactly while sections wait for a name, QA-206), and names With an LMIA among the combinations set up from their forms", r("7").status === (heldNow ? "partial" : "done") && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")) && /sections drafted from .*With an LMIA – inside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
   // One rules pass per edition in the workspace (P-138): IMM 5710's is With an LMIA's own; the forms it shares with the
   // Visitor visa reuse that pass, and the placement step reads it for both.
   const editions = sql(`select string_agg(distinct edition, ',') from source_attachment where combination_id = '${lm}' and kind = 'Form'`).split(",");
@@ -87,7 +89,9 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
   const rfSec = sql(`select section_key from section_question where canonical_field_key = 'person.gender_identifier_differs_from_documents' order by version desc limit 1`);
   const at = (q: string) => sql(`select coalesce(min(at)::text, '') from audit_event where entity = 'section selection' and ${q}`);
   const vvAdded = at(`combination_id = '${vv}' and entity_key = '${rfSec}' and summary like '%added the section%'`), vvRemoved = at(`combination_id = '${vv}' and entity_key = '${rfSec}' and summary like '%removed the section%'`), lmFirst = at(`combination_id = '${lm}' and summary like '%added the section%'`);
-  ok("QA-144 R1-m4 pass: the IRM 0002 fact's section, once chosen on the Visitor visa, is unchosen by the Visitor visa's own step, before With an LMIA's first selection", rfSec !== "" && vvAdded !== "" && vvRemoved !== "" && lmFirst !== "" && vvRemoved < lmFirst
+  // QA-206: with IMM 5257 SCH1's sections waiting for a name, the Visitor visa may never choose this section at all; then
+  // there is nothing to unchoose, and it is not chosen at the end either (the invariant R1-m4 guards).
+  ok("QA-144 R1-m4 pass: the IRM 0002 fact's section, once chosen on the Visitor visa, is unchosen by the Visitor visa's own step, before With an LMIA's first selection (or was never chosen there)", rfSec !== "" && lmFirst !== "" && (vvAdded === "" ? vvRemoved === "" : vvRemoved !== "" && vvRemoved < lmFirst)
     && n(`select count(*) from sqr_section_selection where combination_id = '${vv}' and section_key = '${rfSec}'`) === 0, { rfSec, vvAdded, vvRemoved, lmFirst });
   ok("QA-144 R2-m1 fail-guard: the Visitor visa keeps chosen sections (C4.1 can still order them)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3);
 

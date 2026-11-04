@@ -65,7 +65,10 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 5 fail: no library item is approved by the person who proposed it", n(`select count(*) from library_change where decided_by = proposed_by`) === 0);
   ok("C10.1 rows 6 and 8: Reset and the Smart questionnaire (SQR) and Preview tabs are named as built", r("6").status === "done" && r("8").status === "done");
   // QA-144 slice 1: row 7 is the C3.4 rules pass and the shared placement step on the Visitor visa (tests/check_qa144_vv_release.ts).
-  ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7").shows);
+  // QA-206 (tech lead on #883): sections the forms print no heading over wait on To review for a person to name, so the
+  // row is partial exactly while any waits, and names them.
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver; partial exactly while sections wait for a name (QA-206)", r("7").status === (heldNow ? "partial" : "done") && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows) && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")), r("7").shows);
   ok("C10.1 row 17: not built yet, said in plain words (its lane's function is not on main)", r("17").status === "not built yet" && /^Not built yet: /.test(r("17").shows), r("17").shows);
   // Row 10: release through submit, SME sign-off and a different person; the validator's refusals said, empty never released.
   const released = sql(`select c.label || '§' || r.version || '§' || p.approver_id from config_release r join combination c on c.id = r.combination_id join pack_version p on p.id = r.pack_version_id`).split("\n").filter(Boolean);
@@ -84,7 +87,9 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   const irm0002Map = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0;
   ok(irm0002Map ? "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)" : "C10.1 row 10: the Visitor visa's one block is IRM 0002's missing field map, named (QA-144 slice 1; its saved map is the paid runner's)",
     irm0002Map ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows)
-      : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
+      // QA-206: while sections wait for a name, the facts only their form reads are asked of nobody and block too
+      // (check_qa144_vv_release.ts names each); IRM 0002's missing map is still the first block named.
+      : (heldNow ? /Visitor visa: Fix \d+ problems before submitting: IRM 0002: No form fields mapped yet/ : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/).test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // Slice 2 moves this example to Express Entry, a combination no slice sets up yet.
