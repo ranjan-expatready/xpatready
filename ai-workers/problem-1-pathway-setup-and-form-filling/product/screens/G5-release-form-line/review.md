@@ -199,3 +199,12 @@ Scope: `git show b31da33f` only. Fresh copy `rv5` on :4449 (stopped and removed 
 - No Blocker or Major.
 
 **Verdict (round 9): Approve** for b31da33f (no open Blocker or Major). The round 8 journey score stands; with finding 1 closed, Correct data goes from ½ to 1, so 9/10.
+
+## Round 10 (diff-only, e708c818), 4 Nov 2026
+Scope: `git show e708c818`, three lines in `tests/fill_queue_kinds.ts`. This is test input only; no product code changed. I did not re-run it, and the builder's 45/45 and CI shard 5 are the evidence.
+- **The cause is right.** P-248 refuses to submit the Super visa, which has forms but no document line. So To review got no release item, and C2.12 D2 failed.
+- **The fix goes through the product's own route.** It is `POST /combinations/:id/requirements` as user-A, the author (the filler's default actor), with a PUBLISHED library type. That is the same pattern as `check_screen02_fix`.
+- **No check is weakened.** If no PUBLISHED type exists, the line is skipped, the submit is refused and D2 still fails visibly.
+- No Blocker or Major.
+
+**Verdict (round 10): Approve** for e708c818.
