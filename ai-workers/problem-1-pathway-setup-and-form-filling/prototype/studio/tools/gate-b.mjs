@@ -288,8 +288,13 @@ function sh(bin, args, opts, ms) {
 const summary = (out) => out.trim().split("\n").reverse().find((l) => /\d+\/\d+ passed|passed|failed/i.test(l))?.trim() ?? "no summary line";
 /** The last lines a run printed (non-blank, each cut to 200 characters): the reason a pack or setup that stopped with
  *  exit 2, a crash or no summary gives ("STOP  setup missing: …"), which the report names instead of "no summary line"
- *  (#933's re-test: C11.12-runtime "exit 2, no summary line"; P-214). */
-export const tail = (out, n = 3) => out.split("\n").map((l) => l.trimEnd()).filter((l) => l.trim()).slice(-n).map((l) => l.trim().slice(0, 200));
+ *  (#933's re-test: C11.12-runtime "exit 2, no summary line"; P-214). A crash ends in stack frames, so its last
+ *  "…Error: …" or "STOP …" line comes first when the last lines do not hold one (review m1). */
+export const tail = (out, n = 3) => {
+  const lines = out.split("\n").map((l) => l.trim()).filter(Boolean), last = lines.slice(-n);
+  const why = [...lines].reverse().find((l) => /^(\w*Error\b|STOP\s)/.test(l));
+  return (why && !last.includes(why) ? [why, ...last.slice(1)] : last).map((l) => l.slice(0, 200));
+};
 const lastLines = (out) => { const t = tail(out); return t.length ? `; last lines: ${t.join(" | ")}` : "; it printed nothing"; };
 const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(l)).slice(0, 5); return f.length ? `; first FAIL lines: ${f.map((l) => l.slice(0, 160)).join(" | ")}` : ""; };
 /** Part 2: one pack on a fresh copy in slot `slot` (its own name and port). A pack whose run has no setup lines runs on
