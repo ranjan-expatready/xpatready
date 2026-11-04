@@ -58,6 +58,9 @@ export function tweakAnswers(tweaks: Record<string, boolean>, today: Date): Answ
 
 /** The preview for one family and one person: what the client sees (caseView's output unchanged), the documents and the
  *  forms, each saying why. The family defaults to the largest one the people allow. */
+/** C4.5: the Preview key prefix that tries a person's document as missing or unreadable ("missing:principal|passport…"). */
+export const MISSING = "missing:";
+
 export function previewFamily(s: Snapshot, family: FamilyKey | "", person: string, tweaks: Record<string, boolean>, today = new Date(), label = "Draft (not released)"): PreviewView {
   const participants = (s.combination.participants ?? []) as Line[];
   const families = familiesFor(participants);
@@ -65,7 +68,10 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const people = familyPeople(participants, fam);
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
   const ids = new Set(people.map((p) => p.subjectId));
-  const kept = Object.fromEntries(Object.entries(tweaks).filter(([k, v]) => ids.has(k.split("|")[0]) && typeof v === "boolean"));
+  const kept = Object.fromEntries(Object.entries(tweaks).filter(([k, v]) => !k.startsWith(MISSING) && ids.has(k.split("|")[0]) && typeof v === "boolean"));
+  // C4.5 (P-130): "missing:<person>|<document type>" tries the case where that person's document is missing or cannot be
+  // read: its facts are asked instead (never an answer, so it is kept apart from the yes/no tweaks).
+  const missing = new Set(Object.entries(tweaks).filter(([k, v]) => k.startsWith(MISSING) && v === true && ids.has(k.slice(MISSING.length).split("|")[0])).map(([k]) => k.slice(MISSING.length)));
   const sample = sampleBirthDates(s, people, today), answers = [...sample, ...tweakAnswers(kept, today)];
   // C4.6 (re-test 3 Nov): the Sample family's ages (child 8, child 16) decide its forms and who signs even before the
   // combination asks a date of birth, so "from age 18" shows working; the questions stay as a case would get them, and
@@ -89,7 +95,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     const t = (s.document_types as Parameters<typeof suppliesOf>[0][]).find((x) => x.key === key);
     const abouts = new Set((t ? suppliesOf(t) : []).filter((x) => x.fact === fact).map((x) => x.about));
     const holders = new Set([abouts.has("holder") ? subjectId : null, abouts.has("holder.spouse") ? partnerOf(subjectId) : null].filter((x): x is string => !!x));
-    return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name)) ? name : null;
+    return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name) && !missing.has(`${d.person}|${key}`)) ? name : null;
   };
   const questionnaire = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });
   const agentView = caseView(s, people, answers, [], "agent", today);
@@ -161,10 +167,18 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     }
     return [...by].map(([document, facts]) => ({ document, facts }));
   };
+  // C4.5: the person's needed documents that supply a fact, each one the author can try as missing (and back).
+  const missingChoices = (id: string) => {
+    const supplying = new Set((s.document_types as Parameters<typeof suppliesOf>[0][]).filter((t) => suppliesOf(t).length).map((t) => t.key));
+    const seen = new Map<string, { key: string; document: string; marked: boolean }>();
+    for (const d of r.checklist) if (d.person === id && d.status === "Needed" && d.document_type_key && supplying.has(d.document_type_key) && !seen.has(d.document_type_key))
+      seen.set(d.document_type_key, { key: `${MISSING}${id}|${d.document_type_key}`, document: d.requirement, marked: missing.has(`${id}|${d.document_type_key}`) });
+    return [...seen.values()];
+  };
   const chosenRole = roleOf(chosen);
   const sets: PreviewSets = {
     pqr: prequalification(s).filter((t) => t.role === chosenRole || (chosenRole === "principal" && t.role === "case")).map((t) => ({ fact: t.fact, label: t.label, from: t.source === "DOCUMENT" ? `${SOURCE_WORDS.DOCUMENT} · ${t.document ?? "a document"}` : SOURCE_WORDS.CLIENT })),
-    sqr: { asked: count(questionnaire, chosen, true), fromDocuments: filledByDocuments(chosen) },
+    sqr: { asked: count(questionnaire, chosen, true), fromDocuments: filledByDocuments(chosen), missing: missingChoices(chosen) },
     agent: {
       questions: count(agentView, chosen, false),
       sections: agentView.sections.filter((x) => mine(chosen)(x.subjectId)).map((x) => ({ section: x.section, title: x.title, about: x.about_label,
