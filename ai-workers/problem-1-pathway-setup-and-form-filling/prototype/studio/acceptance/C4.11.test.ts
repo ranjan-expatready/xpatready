@@ -33,6 +33,14 @@ run(async () => {
   // ---------------------------------------------------------------- the plan
   const saved = STEPS.map((step) => ({ step, mode: AI_STEPS.has(step) ? "replay" : "rules" }));
   let r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: saved }, AUTHOR);
+  // QA-144 (placement, #798): on the six from the Demo menu no combination asks any question yet, and Visitor visa's
+  // IMM 5257 map may not be applied, so nothing can be drafted or land. Each line that this blocks names QA-144.
+  const roles = (await call("GET", `/combinations/${vv}/workspace?tab=questionnaires`)).body?.questionnaire?.roles ?? [];
+  const blocked = !roles.some((x: any) => x.questions > 0) ? " — blocked by QA-144 (no question of this combination is placed yet)" : "";
+  if (r.status >= 300 && blocked) {
+    ok(`C4.11 blocked by QA-144: the plan is refused because Visitor visa has no questions placed and no form fields mapped from the Demo menu, so the 7 steps cannot run here (run it on Visitor visa set up by tests/runtime/setup_visitor_visa.ts)`, false, words(r));
+    T.done();
+  }
   ok("C4.11 pass: the plan lists the 7 steps in order", r.status < 300 && JSON.stringify((r.body?.steps ?? []).map((s: any) => s.step)) === JSON.stringify(STEPS), r.status >= 300 ? words(r) : (r.body?.steps ?? []).map((s: any) => s.step));
   const plan = r.body;
   ok("C4.11 pass: each step says its mode and its cost (usual and worst); Saved and Rules cost US$0", (plan?.steps ?? []).length === 7 && plan.steps.every((s: any) => ["replay", "rules"].includes(s.mode) && s.cost?.worst === 0 && s.cost?.usual === 0));
@@ -61,7 +69,7 @@ run(async () => {
   // ---------------------------------------------------------------- what waits in the queue
   const items = await T.queued(vv);
   const kinds = new Set(items.map((x: any) => x.kind));
-  ok("C4.11 pass: the queue gets documents per person, conditions and PQR picks", ["requirement_line", "condition", "pqr_pick"].every((k) => kinds.has(k)), [...kinds]);
+  ok(`C4.11 pass: the queue gets documents per person, conditions and PQR picks${blocked}`, ["requirement_line", "condition", "pqr_pick"].every((k) => kinds.has(k)), [...kinds]);
   // Step 4 is rules only: where each answer comes from applies at once and a person changes it on the Questions tab
   // (its run step says so); nothing of it waits on To review. Every fact a form needs has its source.
   const fs = (await call("GET", `/combinations/${vv}/fact-sources`, undefined, AUTHOR)).body;
@@ -76,7 +84,7 @@ run(async () => {
   // from a document has that document on the person's checklist.
   const asked = new Set((fs?.facts ?? []).filter((f: any) => f.placed && f.source !== "AGENT").map((f: any) => `${f.role}|${f.fact}`));
   const pick = (x: any) => x.readings?.draft?.payload ?? x.readings?.check?.payload;
-  ok("C4.11 pass (checker): every PQR pick is a fact a client or document question asks (PQR ⊂ SQR)", items.some((x: any) => x.kind === "pqr_pick") && items.filter((x: any) => x.kind === "pqr_pick").every((x: any) => asked.has(`${pick(x)?.role}|${pick(x)?.factKey}`)), items.filter((x: any) => x.kind === "pqr_pick").map((x: any) => `${pick(x)?.role}|${pick(x)?.factKey}`));
+  ok(`C4.11 pass (checker): every PQR pick is a fact a client or document question asks (PQR ⊂ SQR)${blocked}`, items.some((x: any) => x.kind === "pqr_pick") && items.filter((x: any) => x.kind === "pqr_pick").every((x: any) => asked.has(`${pick(x)?.role}|${pick(x)?.factKey}`)), items.filter((x: any) => x.kind === "pqr_pick").map((x: any) => `${pick(x)?.role}|${pick(x)?.factKey}`));
   const docs = new Set(items.filter((x: any) => x.kind === "requirement_line").map((x: any) => x.readings?.draft?.payload?.documentType));
   ok("C4.11 pass (checker): every fact from a document names a document on the checklist", items.length > 0 && items.filter((x: any) => x.kind === "comes_from" && x.readings?.draft?.payload?.from === "document").every((x: any) => docs.has(x.readings.draft.payload.documentType) || x.band !== "ready"));
   ok("C4.11 data: every item is Sample; nothing is in the combination's draft until accepted", items.length > 0 && items.every((x: any) => x.basis === "SAMPLE") && sql(`select count(*) from document_requirement where combination_id='${vv}'`) === "0");
@@ -92,7 +100,7 @@ run(async () => {
   for (let i = 0; i < together.length; i += 200) await call("POST", "/review/proposals/decide", { ids: together.slice(i, i + 200), action: "accept" }, AUTHOR);
   for (const id of alone) await call("POST", "/review/proposals/decide", { ids: [id], action: "accept" }, AUTHOR);
   const nobody = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).filter((p: any) => /nobody is asked for it/.test(p.message));
-  ok("C4.11 pass (G5): with the run's Ready items accepted, no fact a form needs is asked of nobody (any role)", ready.length > 0 && nobody.length === 0, { ready: ready.length, nobody: nobody.length });
+  ok(`C4.11 pass (G5): with the run's Ready items accepted, no fact a form needs is asked of nobody (any role)${blocked}`, ready.length > 0 && nobody.length === 0, { ready: ready.length, nobody: nobody.length });
   // BR-12: a live plan whose worst case is over what is left of the cap is refused before it starts (409, in words).
   r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: STEPS.map((step) => ({ step, mode: AI_STEPS.has(step) ? "live" : "rules" })) }, AUTHOR);
   const livePlan = r.body;
