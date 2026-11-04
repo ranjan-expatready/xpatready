@@ -6,16 +6,18 @@
 import type { FormFact } from "./forms.ts";
 
 /** One fact that reads differently now from when the item was made: whose, which, the value then and now, and when. */
-export type FactChange = { fact: string; about: string; label: string; person: string; was: unknown; now: unknown; at: string | null };
-/** What the API knows to word a change: the question's words, a person's label, and when the current answer was saved. */
-export type ChangeWords = { label: (fact: string) => string; person: (about: string) => string; at: (about: string, fact: string) => string | null };
+/** `confirmed`: false when the new value is saved but not confirmed yet (so the form does not read it). */
+export type FactChange = { fact: string; about: string; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null };
+/** What the API knows to word a change: the question's words, a person's label, when the current answer was saved, and
+ *  (optional) the newest value saved for a fact the form no longer reads because it is not confirmed. */
+export type ChangeWords = { label: (fact: string) => string; person: (about: string) => string; at: (about: string, fact: string) => string | null; saved?: (about: string, fact: string) => unknown };
 
 const subjectOf = (about: string) => about.split("/")[0];
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 /** The facts whose value differs between what an item read (`then`) and today (`now`), one line per person and fact
- *  (a fact written in several form fields is one change). A fact no longer confirmed or no longer read is a change to
- *  "no answer". Representative facts (from the firm record) are about "representative". */
+ *  (a fact written in several form fields is one change). A fact no longer read is a change to "no answer", or to its
+ *  newest saved value marked not confirmed yet. Representative facts (from the firm record) are about "representative". */
 export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "value">[], now: Pick<FormFact, "fact" | "about" | "row" | "value">[], words: ChangeWords): FactChange[] {
   const key = (f: { fact: string; about: string; row: number | null }) => `${subjectOf(f.about)}|${f.fact}|${f.row ?? ""}`;
   const a = new Map(then.map((f) => [key(f), f])), b = new Map(now.map((f) => [key(f), f]));
@@ -25,7 +27,8 @@ export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "val
     if (x && y && same(x.value, y.value)) continue;
     const about = subjectOf(f.about), id = `${about}|${f.fact}`;
     if (out.has(id)) continue;
-    out.set(id, { fact: f.fact, about, label: words.label(f.fact), person: words.person(about), was: x?.value ?? null, now: y?.value ?? null, at: words.at(about, f.fact) });
+    const pending = !y ? words.saved?.(about, f.fact) ?? null : null;
+    out.set(id, { fact: f.fact, about, label: words.label(f.fact), person: words.person(about), was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));
 }
@@ -55,7 +58,7 @@ export function valueWords(v: unknown): string {
 /** One change in words: "family name of Sample Client A changed from "SAMPLE" to "SAMPLEDZ" on 4 Nov 2026". */
 export function changeWords(c: FactChange): string {
   const when = dayWords(c.at);
-  return `${c.label.charAt(0).toLowerCase()}${c.label.slice(1)} of ${c.person} changed from ${valueWords(c.was)} to ${valueWords(c.now)}${when ? ` on ${when}` : ""}`;
+  return `${c.label.charAt(0).toLowerCase()}${c.label.slice(1)} of ${c.person} changed from ${valueWords(c.was)} to ${valueWords(c.now)}${c.confirmed ? "" : " (not confirmed yet)"}${when ? ` on ${when}` : ""}`;
 }
 
 /** What went out of date, and what the person does next (BR-12: never changed; prepare again or undo). */
@@ -72,12 +75,13 @@ const NEXT: Record<FinishedKind, (form: string) => string> = {
 };
 
 /** The item's reason (the contract's `reason`): what is out of date, each change with its old and new value and date,
- *  and the next step. At most three changes are spelt out; the rest are counted. */
-export function outOfDateReason(kind: FinishedKind, form: string, finishedAt: string | Date | null, changes: FactChange[], extra: string[] = []): string {
+ *  and the next step (`next` replaces it, as a Paper line's own steps do). At most three changes are spelt out; the rest
+ *  are counted. */
+export function outOfDateReason(kind: FinishedKind, form: string, finishedAt: string | Date | null, changes: FactChange[], extra: string[] = [], next?: string): string {
   const lines = [...extra, ...changes.slice(0, 3).map(changeWords)];
   const more = changes.length > 3 ? `, and ${changes.length - 3} more change${changes.length - 3 === 1 ? "" : "s"}` : "";
   const what = lines.length ? `: ${lines.join("; ")}${more}.` : ": a fact it reads changed since.";
-  return `${WHAT[kind](form, dayWords(finishedAt))}${what} ${NEXT[kind](form)}`;
+  return `${WHAT[kind](form, dayWords(finishedAt))}${what} ${next ?? NEXT[kind](form)}`;
 }
 
 /** BR-20: the representative of record changed since a signed IMM 5476 was printed (it names the earlier one). */

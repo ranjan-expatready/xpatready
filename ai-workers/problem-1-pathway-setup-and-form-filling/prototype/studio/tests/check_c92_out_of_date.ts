@@ -24,6 +24,12 @@ ok("C9.2 changes: a relation's fact (a parent on the person's form) is named for
 const c4 = factChanges([F("person.family_name", "representative", "REP ONE")], [F("person.family_name", "representative", "REP TWO")], W);
 ok("C9.2 changes (BR-20): a representative's fact from the firm record is about the representative", c4.length === 1 && c4[0].person === "the representative", c4);
 
+const W2: ChangeWords = { ...W, saved: (a, f) => (a === "A" && f === "person.family_name" ? "SAMPLEQ" : null) };
+const c5 = factChanges([F("person.family_name", "A", "SAMPLE")], [], W2);
+ok("C9.2 changes: a new value saved but not confirmed yet is named, marked not confirmed (never \"no answer\")", c5[0]?.now === "SAMPLEQ" && c5[0]?.confirmed === false && / to "SAMPLEQ" \(not confirmed yet\) on /.test(changeWords(c5[0])), changeWords(c5[0]));
+const c6 = factChanges([F("person.date_of_birth", "S", "1988-01-01")], [], W2);
+ok("C9.2 changes (fail): an answer taken away entirely is a change to no answer, confirmed (nothing pending)", c6[0]?.now === null && c6[0]?.confirmed === true && / to no answer on /.test(changeWords(c6[0])), changeWords(c6[0]));
+
 // Words.
 ok("C9.2 words: a date reads \"4 Nov 2026\"", dayWords("2026-11-04T15:00:00Z") === "4 Nov 2026", dayWords("2026-11-04T15:00:00Z"));
 ok("C9.2 words (fail): no date or a date that is not one gives no date words", dayWords(null) === null && dayWords("not a date") === null);
@@ -38,6 +44,7 @@ ok("C9.2 reason (BR-20): a signed form names the change of representative of rec
 const r3 = outOfDateReason("entered", "IMM 5707 (Section A)", null, []);
 ok("C9.2 reason (fail): with no change it can name, it still says a fact changed (never a silent Out of date)", /a fact it reads changed since/.test(r3) && /tick the section again/.test(r3), r3);
 const many = ["a", "b", "c", "d", "e"].map((x) => ({ ...c1[0], fact: x, label: x.toUpperCase() }));
+ok("C9.2 reason: a caller's own next step replaces the default (a Paper line's new barcode page)", / Press Validate again\.$/.test(outOfDateReason("validated_copy", "F", null, c1, [], "Press Validate again.")));
 ok("C9.2 reason: more than three changes are counted, not spelt out", /and 2 more changes\./.test(outOfDateReason("entered", "F", null, many)));
 
 // Undo's earlier value.

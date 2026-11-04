@@ -212,6 +212,7 @@ export class CasePrepare {
       label: (fact) => questionWords.get(fact) || placementWords.get(fact) || meaning.get(fact) || fact,
       person: (about) => (about === REPRESENTATIVE ? "the representative" : label.get(about) || "the application"),
       at: (about, fact) => answers.find((a) => a.subjectId === about && a.field === fact && !a.rowKey)?.at ?? null,
+      saved: (about, fact) => answers.find((a) => a.subjectId === about && a.field === fact && !a.rowKey)?.value ?? null,
     };
     const nowFacts = (form: string, subject: string) => formCoverage(s, people, answers, rows, form, subject)?.facts ?? [];
     const changesSince = (copy: string | null | undefined, form: string, subject: string) => {
@@ -220,7 +221,7 @@ export class CasePrepare {
       return { changes: factChanges(then.facts ?? [], nowFacts(form, subject), words), groups: changedGroups(then.groups, groupFacts(view, form, subject)) };
     };
     // The structured list the screen reads for "Undo this change" (one per person and fact; never the firm record's).
-    const changeList = (cs: FactChange[]) => cs.map((x) => ({ subject: x.about, fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, at: x.at, undo: x.about !== REPRESENTATIVE }));
+    const changeList = (cs: FactChange[]) => cs.map((x) => ({ subject: x.about, fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: x.about !== REPRESENTATIVE }));
     const items = stored.items.flatMap((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -266,12 +267,13 @@ export class CasePrepare {
         // C9.2: a validated copy read back that no longer matches the case is Out of date, naming what changed.
         const validated = !waits && ch.channel !== "ONLINE" ? paperValidated(i.itemKey, i.subjectId) : null;
         const staleCopy = validated && !validated.current ? changesSince(validated.copy, i.itemKey, i.subjectId) : null;
-        const staleWords = staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`)), changes: changeList(staleCopy.changes) } : {};
+        const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
         if (ch.channel === "PAPER" && !waits) {
           const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers, lineOnline: ch.line_channel === "ONLINE" });
-          return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords : {}) };
+          // C7.7 (P-144): a Paper line keeps its own next step (a new barcode page), after the words of what changed.
+          return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords("Make a new copy, press Validate again (a new barcode page) and read it back before you print, or undo the change.") : {}) };
         }
-        if (staleCopy) return { ...fb, signers, validated, state: "out_of_date", ...staleWords };
+        if (staleCopy) return { ...fb, signers, validated, state: "out_of_date", ...staleWords() };
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
           state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
