@@ -138,3 +138,49 @@ QA-184, QA-199 and QA-129 (with QA-184, by the tech lead's ruling on #793) are m
 ### Disclosures
 1. To keep the run valid under the Mac's load (average 20–34), the C5.4 pack ran once from a throwaway copy of its file, with only the reset wait raised from 180 s to 900 s. The run took 139 s in all. The copy was deleted.
 2. Four local runs of the QA-184 check timed out on Reset to the six. The verdict uses its CI run on main's exact tree. By the tech lead's rule (09:45 IST), a timeout under load is a re-run, not a capability failure.
+
+## Batch 4 — #794 (QA-180; C6.1, C5.1), #726 (C11.13, by qa tester 2), #788 (C7.5, qa tester 3), and the QA-200 re-test · main eb834a660 · tested 10:25–11:00 IST
+
+| Row | Verdict | Why |
+|---|---|---|
+| C6.1 Officer opens a case (thin slice) | **Works** (was Partial) | QA-180 and QA-200 (both Critical) closed. On the demo data the case opens on release 1 at the first try |
+| C5.1 Release (M2) | **Partial** (unchanged) | QA-180 is closed, but P-248's form-line rule (G5) is not built |
+| C11.13 One guarded change pattern (M2) | **Works** (was Partial) | qa tester 2, `qa/verdicts/2026-11-04-C11.13.md` (#822). QA-192 closed; the tech lead ruled on its question (QA-211) |
+| C7.5 Independent review of a filled form (M3) | **Partial** (was Not built) | qa tester 3, `qa/verdicts/2026-11-04-C7.5.md` (#823). Part 1 (rules findings) works; the AI review is part 2 |
+
+**M2: 46/60 confirmed** (+C11.13). Thin runtime slice: 7/8. M3: 2/17 Works, 11 Partial. **No open Critical.**
+
+### Runs (exit code · tests passed)
+| Check | Round 1 | Round 2 |
+|---|---|---|
+| `tests/check_qa180_one_rule.ts` (no server) | 0 · 26/26 | 0 · 26/26 |
+| `tests/qa/check_qa180_two_gates.ts` (no server) | 0 · 8/8 | 0 · 8/8 |
+| `tests/check_edition_in_use.ts` (no server; QA-200) | 0 · 20/20 | 0 · 20/20 |
+| `tests/runtime/setup_visitor_visa.ts` | 0 · 13/13 | 0 · 13/13 |
+| `tests/runtime/check_runtime_r1a.ts` | 0 · 98/98 | 0 · 98/98 |
+| `tests/runtime/check_runtime_r1c.cjs` (after r1a on the same copy) | 1 · stopped at 18/19 | 1 · stopped at 18/19 |
+| CI on main's tree (merge-queue run 41771465056) | r1a 99/99 · r1c 132/132 · r1d 96/96 · `check_s4_startable` 10/10 · `check_b1_release_unmapped` 14/14 · `check_qa180_one_rule` 26/26 | |
+| V3 golden journey (`reports/verify-2026-11-03/V3/v3_golden_replay.cjs`) | 2: step 1 PASS (Reset to the six, 96.6 s), then step 2 timed out on a busy Approve at load average 30 | — |
+| GitHub re-test `gh workflow run nightly.yml -f capabilities="C6.1 C5.1"` (run 41777761993) | both parts exit 2: "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)" | — |
+
+Locally, r1c waits 30 s for the client question "What is the main purpose of the visit?" and stops. That wording is what `setup_visitor_visa.ts` creates, and CI passes r1c 132/132 on main's tree with its own order. So the local stop comes from the tester's run order (r1c straight after r1a on one copy), not from the app.
+
+### Walk at 1440 px on the demo data (qa_walk4, main 10868af42)
+Reset to the six (65 s), then Demo › Start With an LMIA from its reviewed release. As the case officer: Cases › Open a case. The dialog offers only "With an LMIA – inside Canada · release 1". The reference "ab" is refused on its field with "Give the case a reference of at least 3 characters." With "QA-LMIA-0411" the case opens on Release 1 at the first try: Open, Release 1, the case team, "Relies on an employer case", 153 questions, and Prepare application lists IMM 1295 and IMM 5257 SCH1 with what blocks filing. No sideways scroll (`c61-lmia-case-1440.png`). The one console error is that refused 400.
+
+### QA-200 re-test
+The fix was on main since 9afca2282 (3 Nov), but QA-200 had not been re-tested. All five paths it named now read `pdfMapInUse`: `fill.ts:44`, `fill-case.ts:96` and `:111`, `render.ts:119`, `workspace.ts:72`. `check_edition_in_use.ts` passes 20/20 twice, with the real filler on IRCC's two IMM 5476 files.
+
+### Closed
+QA-180 and QA-200 (Critical), and QA-192 (with C11.13) are in `history/qa-bugs-closed-2026-11-04.md`.
+
+### New and changed
+* **QA-211** (UX · Minor, a suggestion by the tech lead's ruling on #822): the person applying a form's draft confirms each near reason. It is filed on C3.2 and C11.14, because no C4 row covers field maps.
+* QA-210: qa tester 3's setup 500 under load is added (probably the same 5 s apply transaction).
+
+### Disclosures
+1. The V3 replay accepts only ports 4470–4479. qa ran it from a throwaway copy with only that guard changed to 4490–4499, then deleted the copy.
+2. Disk: 46 leftover `xr_studio_qa_*` databases and their `var/isolated-qa_*` folders from qa's own runs, made before #745, were dropped. Free space went from 3.8 GB to 8.0 GB. No other lane's copies were touched.
+
+### Questions for the tech lead
+* The GitHub re-test needs `studio/tools/gate-b.mjs` (#804) on main. Until it merges, packs run on one Mac copy at a time. There is also no `acceptance/C6.1.test.ts` or `C5.1.test.ts`: which packs should gate B run for these two?
