@@ -32,6 +32,8 @@ const lines = setup.lines as Lines;
 
   // Rule 1 (P-109): the five paper twins, from the library, as the sample file names them; nothing else is put on.
   ok("C11.7 part B pass (P-109): the Provincial nominee has exactly the sample file's library forms as lines (IMM 0008, 5669, 5406, 0008 DEP, 5476)", codes.length === lines.forms.length && lines.forms.every((f) => codes.includes(f.code)), on);
+  // P-109 names its paper twins itself: the data file cannot drop one unnoticed (review m1).
+  ok("C11.7 part B (P-109): the five paper twins P-109 names are all among them", ["IMM 0008", "IMM 5669", "IMM 5406", "IMM 0008 DEP", "IMM 5476"].every((c) => codes.includes(c)), codes);
   ok("C11.7 part B fail (P-109): no Ontario nomination form and no form outside the sample's lines (IMM 5562, 5409, 5475 stay in the library, not on the combination)", !codes.some((c) => !lines.forms.some((f) => f.code === c)) && n(`select count(*) from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${pnp}' and (g.form_key !~ '^IMM' or g.display_name ~* 'ontario|OINP')`) === 0, codes);
   ok("C11.7 part B (P-108, P-33): each line is a person's draft (added by hand by the author, user-A), never released by the load", on.every((l) => /\|HUMAN\|DRAFT\|user-A$/.test(l)) && n(`select count(*) from config_release`) === 0, on);
   ok("C11.7 part B (Sample): whose form each line is follows the sample file", lines.forms.every((f) => on.some((l) => l.startsWith(`${f.code}|${f.who}|`))), on);
@@ -57,7 +59,7 @@ const lines = setup.lines as Lines;
   const add = await call("POST", `/combinations/${pnp}/requirements`, { documentTypeKey: key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: doc.who, providedBy: "client" });
   ok("C11.7 part B pass (P-109): the author then adds it, and the provincial nomination certificate is a required document on the Provincial nominee", add.status < 300 && n(`select count(*) from document_requirement d left join document_type t on t.document_type_key = d.document_type_key and t.workspace_id = d.workspace_id where d.combination_id = '${pnp}' and d.is_required and (coalesce(t.name, d.document_type_key) ilike '%nominat%')`) >= 1, { status: add.status, message: words(add) });
   const twice = await call("POST", `/combinations/${pnp}/requirements`, { documentTypeName: doc.name, attachMode: "COMBINATION_MANDATORY", appliesToRoles: doc.who, providedBy: "client" });
-  ok("C11.7 part B fail (C3.6): naming it again reuses the library's type, never a second proposal", n(`select count(*) from proposal_item where kind = 'document_type' and payload->>'name' = '${doc.name.replace(/'/g, "''")}'`) === 1, { status: twice.status, message: words(twice) });
+  ok("C11.7 part B fail (C3.6): naming it again reuses the library's type (an added line), never a second proposal", n(`select count(*) from proposal_item where kind = 'document_type' and payload->>'name' = '${doc.name.replace(/'/g, "''")}'`) === 1, { status: twice.status, message: words(twice) });
 
   // The steps the load used refuse what a person would be refused.
   const notHeld = await call("POST", `/combinations/${pnp}/forms`, { formKey: "IMM 9999" });

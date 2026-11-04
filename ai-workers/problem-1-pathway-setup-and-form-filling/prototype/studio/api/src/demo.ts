@@ -20,6 +20,7 @@ import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
 import { FormLibrary } from "./form-library.ts";
 import { Forms } from "./forms.ts";
+import { ReviewProposals } from "./review-proposals.ts";
 import { SAMPLE_CREATOR } from "./lifecycle.ts";
 import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
@@ -59,12 +60,22 @@ type SixSetup = SampleSetup & { page: string | null; missing: { code: string; ti
  *  answer sets them up. Library forms by their code and whose form each is (the channel when not a PDF upload); each
  *  document line by its type's name (a new name waits as a library proposal, C3.6). Data in the sample file (P-319). */
 type SixLines = { basis: string; forms: { code: string; who?: string; channel?: "ONLINE" | "PAPER" }[]; documents?: { name: string; who: string; always: true; proves: string; quote: string }[] };
+/** C11.7 part B: the sample file's document lines by combination path, as loadSix labels each combination. */
+const sixLines = () => {
+  const out = new Map<string, NonNullable<SixLines["documents"]>>();
+  const f = JSON.parse(readFileSync(SAMPLES_SIX, "utf8")) as SampleFile;
+  for (const p of f.programs) for (const cat of p.categories) {
+    for (const sub of cat.subcategories ?? []) { const l = (sub.setup as SixSetup | undefined)?.lines; if (l?.documents) out.set(`${p.label} › ${cat.label} › ${sub.label}`, l.documents); }
+    const l = (cat.setup as SixSetup | undefined)?.lines; if (l?.documents) out.set(`${p.label} › ${cat.label}`, l.documents);
+  }
+  return out;
+};
 const officialFiles = (): string[] => JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.map((i: { file: string }) => i.file);
 type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(Forms) private readonly forms: Forms) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(Forms) private readonly forms: Forms, @Inject(ReviewProposals) private readonly proposals: ReviewProposals) {}
 
   async status() {
     const workspaceId = await this.ws.id();
@@ -440,6 +451,25 @@ export class Demo {
       why: waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : null });
     row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations`,
       why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
+
+    // C11.7 part B: a document type the sample named on a combination's Documents tab (the nomination certificate) is
+    // decided on To review › Proposals by the author, as the author decides every replayed proposal (row 4); the author
+    // then adds its line, as the Documents tab says ("Once it is accepted, choose it here and save the line"); the new
+    // type then waits for the approver, a second person, in row 5 (BR-7, P-80).
+    const SIX_LINES = sixLines();
+    for (const c of six.lines_by_hand) for (const d of c.documents.filter((x) => x.status !== "line added")) {
+      const combo = six.combinations.find((x) => x.label === c.combination);
+      const p = combo && await this.db.proposalItem.findFirst({ where: { workspaceId, combinationId: combo.id, kind: "document_type", status: "waiting", payload: { path: ["name"], equals: d.name } }, select: { id: true } });
+      const line = (SIX_LINES.get(c.combination) ?? []).find((x) => x.name === d.name);
+      if (!combo || !p || !line) { log.push(`  ${c.combination}: "${d.name}" is not waiting on To review, so its line was not added`); continue; }
+      try {
+        const r = (await this.proposals.decide(author, { ids: [p.id], action: "accept" })) as { items?: { landedAs?: string }[] };
+        const key = r.items?.[0]?.landedAs;
+        if (!key) throw new Error(`accepting "${d.name}" gave no library key`);
+        await this.studio.saveRequirement(author, combo.id, null, { documentTypeKey: key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: line.who, providedBy: "client", sourceQuote: line.quote });
+        log.push(`  ${c.combination}: ${author.name} accepted "${d.name}" on To review and added it as a required line; the new type waits for ${approver.name}`);
+      } catch (e) { log.push(`  ${c.combination}: "${d.name}" stays waiting: ${said(e)}`); }
+    }
 
     // Row 5: every new library item waits for a second person (BR-7); the approver approves them on To review.
     const adds = await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } });
