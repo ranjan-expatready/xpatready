@@ -14,9 +14,10 @@ import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { CorrectNumber, RecordSubmission } from "../../contracts/submission-record.ts";
 import { checkApplicationNumber, duplicateWarning, type NumberRule } from "../../engine/runtime/filing-record.ts";
-import { beforeCaseProblem, coverageProblem, duplicateInGroup, submittedOnProblem } from "../../engine/runtime/submission-record.ts";
+import { coverageProblem, duplicateInGroup, submittedOnProblem } from "../../engine/runtime/submission-record.ts";
 import { checkValue } from "../../engine/runtime/case.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
+import { currentValues } from "../../engine/runtime/submission-record.ts";
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare, storedVersion } from "./case-prepare.ts";
@@ -24,6 +25,8 @@ import type { FiledForm } from "./submission-record.ts";
 
 type H = string | undefined;
 type Reached = Awaited<ReturnType<Runtime["reach"]>>;
+/** The case's people as one key: who, in which role, travelling or not (break R2-M1). */
+const peopleKey = (ps: { subjectId: string; role: string; applies: boolean }[]) => ps.map((p) => `${p.subjectId}:${p.role}:${p.applies}`).sort().join("|");
 const RULES = JSON.parse(readFileSync(join(STUDIO, "samples", "filing-numbers.json"), "utf8")) as { applicationNumber: NumberRule };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const short = (id: string) => id.slice(0, 8);
@@ -72,7 +75,7 @@ export class Submission {
     // Every field's problem at once (break m on #924: one at a time made a person resubmit for each), each on its field.
     const problems: { field: string; message: string }[] = [];
     const lines = b.filings.map((f, i) => {
-      const date = submittedOnProblem(f.submitted_on) ?? beforeCaseProblem(f.submitted_on, c.createdAt);
+      const date = submittedOnProblem(f.submitted_on); // break R2-m3: an earlier submission (a case taken over) is allowed
       if (date) problems.push({ field: `filings.${i}.submitted_on`, message: date });
       const n = numberCheck(f.application_number);
       if ("error" in n) problems.push({ field: `filings.${i}.application_number`, message: n.error });
@@ -102,11 +105,16 @@ export class Submission {
     const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
     const { answers, rows } = await this.r.state(c);
     const formsOf = (filing: string): FiledForm[] => (view.items as { id: string; kind: string; filing: string; subject: string; form?: string }[])
-      .filter((i) => i.kind === "form" && i.filing === filing && i.form).map((i) => ({ item: i.id, form: i.form!, subject: i.subject, facts: formCoverage(s, people, answers, rows, i.form!, i.subject)?.facts ?? [] }));
+      .filter((i) => i.kind === "form" && i.filing === filing && i.form).map((i) => ({ item: i.id, form: i.form!, subject: i.subject, facts: currentValues(formCoverage(s, people, answers, rows, i.form!, i.subject)?.boxes ?? []) }));
+    // Break R2-M2: what each form is filed with is read the way "now" is read later (currentValues: the answers as given,
+    // confirmed or not), so an answer left unconfirmed at filing never reads as added after it.
+    // Break R2-M1: who is on the case and who is travelling, as the view above read them: checked again under the lock.
+    const peopleRead = peopleKey(c.participants);
     const portal = (view as { portal?: string | null }).portal ?? null;
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) stale();
+      if (peopleKey(await tx.caseParticipant.findMany({ where: { caseId: c.id }, select: { subjectId: true, role: true, applies: true } })) !== peopleRead) stale();
       if (await tx.filingRecord.count({ where: { filingId: { in: want } } })) refuse("filings", "This submission is already recorded: it is read-only.", HttpStatus.CONFLICT);
       // Only while still Ready to file: a filing changed meanwhile leaves nothing recorded.
       const n = await tx.filing.updateMany({ where: { id: { in: want }, status: "READY_TO_FILE", active: true }, data: { status: "SUBMITTED" } });
@@ -167,7 +175,7 @@ export class Submission {
     if (bad) refuse("uci.uci", bad);
     const value = u.uci.trim();
     const was = await this.db.filingPersonRecord.findUnique({ where: { filingId_subjectId: { filingId: f.id, subjectId: u.subject } } });
-    if (was?.uci === value) refuse("uci.uci", "That is the UCI already recorded: nothing to correct.");
+    if (was && was.uci.replace(/[\s-]+/g, "") === value.replace(/[\s-]+/g, "")) refuse("uci.uci", "That is the UCI already recorded (only spaces or hyphens differ): nothing to correct.");
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       // The UCI read is the lock: a correction made meanwhile leaves this one unsaved (409).
@@ -175,8 +183,10 @@ export class Submission {
       else await tx.filingPersonRecord.create({ data: { workspaceId: c.workspaceId, filingId: f.id, subjectId: u.subject, uci: value, recordedBy: actor.id } }); // unique (filing, person): a second add at once fails
       await tx.filingRecordCorrection.create({ data: { workspaceId: c.workspaceId, filingId: f.id, field: "uci", subjectId: u.subject, before: was?.uci ?? null, after: value, reason, correctedBy: actor.id } });
       const person = this.r.peopleOf(c).find((p) => p.subjectId === u.subject)?.label ?? "a person";
-      await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, was ? "corrected" : "added", "uci", f.id,
-        `On case ${short(c.id)} (${c.reference}): ${actor.name} ${was ? "corrected" : "added"} ${person}'s UCI on a recorded filing (reason given)`, { before: was?.uci ?? null, after: value });
+      // Break R2-B1: a case entity ("person"), so the activity feed shows it only to this case's firm (studio.ts
+      // CASE_ENTITIES), and no UCI in the line or its detail: the values are kept in filing_record_correction only.
+      await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, was ? "corrected" : "added", "person", f.id,
+        `On case ${short(c.id)} (${c.reference}): ${actor.name} ${was ? "corrected" : "added"} ${person}'s UCI on a recorded filing (reason given)`, { field: "uci", subject: u.subject });
     });
     const after = await this.prepare.view(actor, c.id);
     return { filing: after.filings.find((x) => x.id === f.id), warning: null, version: after.version };

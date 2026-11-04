@@ -71,3 +71,39 @@ Journeys walked as the case officer, scripted in Playwright plus probes: (1) rec
 **Could not check:** the merged #861 + #924 tree running (it would rebuild the shared Prisma client); a real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); commit 2fef037b.
 
 **Verdict: Block.** To fix on this PR, each with a fail test: **M1** (keep a recorded group's filings and membership fixed when the case is derived again or people change) and **M2** (refuse a duplicate number inside the group on Correct a number, and warn across cases). Fix m1–m7 or list them in the PR.
+
+## Re-review (round 2) of 75c0a1a2
+**Verdict: Approve** for 75c0a1a2. This was a diff-only review of `git diff 7100f9de..75c0a1a2` (2fef037b + 75c0a1a2). No Blocker or Major is open. The later head 60095003 changes only the 8 C7.5 screenshots, back to main's bytes (the branch diff against base now has no C7.5 file). I checked that and nothing else in it.
+
+**Runs** (fresh `rev_c82` on :4439, the edited migration applied; US$0):
+* `check_c82_record_api` 51/51.
+* `check_c82_record_browser` 33/33, twice. I ran it from the tree, then put the C8.2 screenshots back to the committed bytes.
+* `acceptance/C8.2.test.ts` on this branch alone: -1 passes. -2 needs C7.6, and the steps after it fail with it. I did not run the merged tree. The builder's 12/12 on a local merge with #861 is their evidence, not mine.
+* `git merge-tree 75c0a1a2 origin/claude/loving-ride-hhtdgi` merges with no conflicts. `m3-guard` with the PR's real title: M3-only.
+* `api.log`: no 500s, and no number or UCI.
+* My probes:
+  * **M1 fixed.** After recording, adding a person answers 409 and marking the spouse not travelling answers 409. Both are checked under the case row lock (`api/src/runtime.ts:206,232-237`, `refuseIfCaseRecorded`). The group stays `[submitted, submitted]`. The only two writes to case people are now covered (I searched for other `caseParticipant` writes and found none).
+  * **M2 fixed.** Correcting to the sibling's number answers 400 on `application_number`. It is checked before and again under the lock (`api/src/submission.ts:141,146`). Two filings corrected to the same number at once gave 200 and 400, and the numbers stayed distinct. A number held by another case is saved with the warning "Already on case ACC-…".
+  * **m1.** A UTC "tomorrow" is refused at 12:07 UTC. The builder's choice of the UTC date is sound: it is never behind a Canadian date, and the pack's `inDays(0)` is UTC.
+  * **Other probes held.**
+    * Every field's problem comes back at once (4 fields in one 400).
+    * 6 parallel corrections gave one 200 and five 409s. 4 parallel UCI adds gave one 200 and three 409s ("Already exists"), with 1 row and no 500.
+    * A UCI for a person not on the filing gets 400. Sending both a number and a UCI gets 400. A client gets 403.
+    * An after-filing change opens 5 tasks; restoring the value closes all 5 and the items read `to_do` again (fixes m3).
+    * No spurious task right after recording.
+    * 60 parallel Prepare reads all answered 200 (fixes m7).
+    * Audit summaries carry 0 numbers or UCIs.
+* **The migration was edited in place.** That is acceptable because it is not on main yet. It still only adds tables. The new triggers allow in-place change only in `application_number` and `uci`. The `shape_check` and `IS DISTINCT FROM` constraints are correct for a UCI added later with no before value.
+
+**Still open (Minor, listed in the PR; not blocking):**
+* m2' **Readiness is still read before the lock** (`submission.ts:53` vs the transaction). The builder's answer covers a stale Ready to file seen at read time. It does not cover a fact saved between the view and the lock: answer writes take no case lock, and #861 resets the status only on a read. The window is narrow (one view build). Fix in a follow-up: re-read the view after the write and roll back if it is not ready, as #861's `ready()` does.
+* m4' **Reviewed by is still the representative of record**, now with "Self-reviewed" when that person also prepared it. The follow-up to read C7.6's `filing_review` once #861 lands still stands.
+* n1 **A new rule beyond the contract:** a date before the case was opened is refused (`beforeCaseProblem`, with a day's grace). It does not conflict with BR-11, because Ready to file needs the case first. A future "load a filed case" path (C10.2) would have to set dates on or after the case's creation.
+* n2 **`POST …/record/corrections` also takes `{uci:{subject, uci}, reason}`.** The contract names `application_number`, and adding a UCI field is fine (the breaker's M3). The tech lead may want the M3-CONTRACT row to name it.
+* n3 **Fixed since round 1:** m5 (no toast over the dialog; the field error shows, screenshot 03 at 1024 px) and m6 (409s are `problems/conflict`; the PR's first line now names the -12 premise change).
+
+**Journey score (round 2): 9/10.** Correct data and error recovery rise to 1. Speed stays ½: the 60 reads are fine, but the screen was not timed against §9.
+
+**Could not check:** the merged #861 tree running myself; a screen reader; an intended user's walk (D17, D20).
+
+**Verdict: Approve** (75c0a1a2).

@@ -14,7 +14,7 @@ import { changedSince, filedEarlierWords } from "../../engine/runtime/submission
 
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** One form as it was filed (filing_record.filed_facts). */
-export type FiledForm = { item: string; form: string; subject: string; facts: FormFact[] };
+export type FiledForm = { item: string; form: string; subject: string; facts: Pick<FormFact, "box" | "fact" | "about" | "value">[] };
 
 export const nameOf = (id: string | null | undefined) => (id ? RUNTIME_ACTORS.find((a) => a.id === id)?.name ?? id : null);
 const day = (d: Date) => d.toISOString().slice(0, 10);

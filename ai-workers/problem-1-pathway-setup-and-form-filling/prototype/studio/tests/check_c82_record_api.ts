@@ -63,8 +63,8 @@ r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), s
 ok("C8.2-4 fail: a submission date after today is refused on its field (400)", r.status === 400 && /today|future/i.test(JSON.stringify(r.body)) && field(r) === "filings.0.submitted_on", r.body);
 r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), submitted_on: "2026-02-30" }, line(fS, "V300000102", "SAMPLE-REF-2")] }));
 ok("C8.2-4 fail: a date that does not exist (30 February) is refused (400)", r.status === 400 && field(r) === "filings.0.submitted_on", r.body);
-r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), submitted_on: "1995-01-01" }, line(fS, "V300000102", "SAMPLE-REF-2")] }));
-ok("fail (break m): a date before the case was opened is refused (400)", r.status === 400 && field(r) === "filings.0.submitted_on" && /before this case was opened/.test(JSON.stringify(r.body)), r.body);
+r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), submitted_on: "1985-01-01" }, line(fS, "V300000102", "SAMPLE-REF-2")] }));
+ok("fail (break m): a date implausibly far in the past is refused (400; an earlier submission on a case taken over is allowed, break R2-m3)", r.status === 400 && field(r) === "filings.0.submitted_on" && /too far in the past/.test(JSON.stringify(r.body)), r.body);
 r = await record(body({ filings: [{ ...line(fP, "", "SAMPLE-REF-1"), submitted_on: inDays(3) }, line(fS, "", "SAMPLE-REF-2")] }));
 const fields = ((r.body as { errors?: { field: string }[] })?.errors ?? []).map((e) => e.field);
 ok("fail (break m): every field's problem comes back at once, each on its field", r.status === 400 && ["filings.0.submitted_on", "filings.0.application_number", "filings.1.application_number"].every((x) => fields.includes(x)), fields);
@@ -171,5 +171,37 @@ await answer(c.id, P, "person.family_name", filedName, officer);
 p = (await prepare(c.id, officer)).p;
 ok("pass (break M4): the value changed back to the one filed: no form is marked and every task closed by itself", !itemsOf(p, P).some((i) => i.state === "out_of_date") && sql(`select count(*) from case_task where case_id='${c.id}' and state='open'`) === "0" && Number(sql(`select count(*) from case_task where case_id='${c.id}' and state='done' and done_by='rules'`)) >= 1,
   sql(`select string_agg(state, ',') from case_task where case_id='${c.id}'`));
+
+// Break R2-B1: a UCI travels in no activity line: another firm sees none of this case's lines, and no reader sees a UCI.
+// (C8.1's "sign step" and "signed scan" lines reach other firms on main already: reported to the tech lead on #924.)
+type Line = { entity: string; summary: string; detail: unknown };
+const feedOf = async (who: string) => ((await call("GET", "/activity", undefined, who)).body ?? []) as Line[];
+const mine = (l: Line) => l.summary.includes(c.id.slice(0, 8)) && ["submission group", "application number", "person"].includes(l.entity) && /UCI|submission|application number/i.test(l.summary);
+const [feedS, feedA] = [await feedOf("user-S"), await feedOf("user-A")];
+ok("fail (break R2-B1): another firm's feed has none of this case's record, number or UCI lines, and no feed carries a UCI or a number",
+  !feedS.some(mine) && feedA.some((l) => mine(l) && /UCI/.test(l.summary)) && ![feedS, feedA].some((f) => /2222-3333|2222-2222|1111-1111|V30000010/.test(JSON.stringify(f))), { other: feedS.filter(mine).map((l) => l.summary) });
+
+// Break R2-M1: a record and "not travelling" sent at the same time never both pass (the people are checked under the lock).
+// Break R2-M2 on the same cases: a form filed with an answer left unconfirmed does not read out of date after filing.
+for (const k of [1, 2]) {
+  const rc = await openCase(vv, [{ role: "principal", name: `Sample Client R${k}`, dob: yearsAgo(41) }, { role: "spouse_or_partner", name: `Sample Spouse R${k}`, dob: yearsAgo(39) }], { representative: rep, caseOfficers: [officer] });
+  const [rP, rS] = [rc.subjects[`Sample Client R${k}`], rc.subjects[`Sample Spouse R${k}`]];
+  await fillEverything(rc.id);
+  const typed = JSON.parse(sql(`select value_json from client_canonical_answer where subject_id='${rP}' and canonical_field_key='person.family_name' and superseded_by_id is null`) ?? "null");
+  await answer(rc.id, rP, "person.family_name", typed, officer); // the same value again, left unconfirmed
+  await fixtureReady(rc.id);
+  const rp = (await prepare(rc.id, officer)).p;
+  const fs = rp?.filings.map((x) => x.id) ?? [];
+  const [rec, move] = await Promise.all([
+    call("PATCH", `/runtime/groups/${rp?.groups[0]?.id}/record`, { filings: fs.map((id, i) => line(id, `V30000${k}20${i}`, `SAMPLE-R${k}-${i}`)), ucis: [], version: rp?.version }, officer),
+    call("PATCH", `/runtime/cases/${rc.id}/people/${rS}`, { applies: false }, officer),
+  ]);
+  const active = sql(`select count(*) from filing where case_id='${rc.id}' and active`), records = sql(`select count(*) from filing_record where case_id='${rc.id}'`);
+  ok(`fail (break R2-M1, run ${k}): a record and "not travelling" at once never both pass; a recorded filing never goes inactive`, !(rec.status === 200 && move.status === 200) && (records === "0" || active === records), { record: rec.status, move: move.status, active, records });
+  if (rec.status === 200) {
+    const after = (await prepare(rc.id, officer)).p;
+    ok(`pass (break R2-M2, run ${k}): a form filed with an answer left unconfirmed does not read out of date after filing`, !itemsOf(after, rP).some((i) => i.state === "out_of_date") && sql(`select count(*) from case_task where case_id='${rc.id}'`) === "0", itemsOf(after, rP).map((i) => [i.form, i.state]));
+  }
+}
 
 process.exitCode = summary() ? 1 : 0;

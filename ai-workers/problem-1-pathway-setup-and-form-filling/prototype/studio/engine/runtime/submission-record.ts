@@ -50,7 +50,3 @@ export const filedEarlierWords = (form: string, owner: string, changed: { label:
   const day = new Date(`${on}T12:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   return `Filed with an earlier value: ${shown} changed after ${owner}'s ${form} was filed on ${day}. Re-sign it, or tell IRCC of the change (Unconfirmed: no counsel).`;
 };
-
-/** A submission date before the case was opened (a day's grace for time zones) is a typing mistake. */
-export const beforeCaseProblem = (date: string, opened: Date) =>
-  date < new Date(opened.getTime() - 86_400_000).toISOString().slice(0, 10) ? "The submission date is before this case was opened: give the date IRCC acknowledged it." : null;

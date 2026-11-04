@@ -112,8 +112,8 @@ try {
   await dialog().waitFor();
   await type(dialog().getByLabel("Corrected application number"), "V300000209");
   await press(dialog().getByRole("button", { name: "Correct the number" }));
-  await dialog().getByText(/Say why the number is corrected/).waitFor({ timeout: 10_000 });
-  ok("C8.2-10 (screen): an empty reason is refused on the Reason field; the number is unchanged", /Say why the number is corrected/.test(await dialog().innerText()) && sql(`select application_number from filing_record where filing_id='${fP}'`) === "V300000201");
+  await dialog().getByText(/Give the reason/).waitFor({ timeout: 10_000 });
+  ok("C8.2-10 (screen): an empty reason is refused on the Reason field; the number is unchanged", /Give the reason/.test(await dialog().innerText()) && sql(`select application_number from filing_record where filing_id='${fP}'`) === "V300000201");
   await state("correct-needs-a-reason", "[role=dialog]");
   await type(dialog().getByLabel("Reason"), "Typo in the number (Sample)");
   await press(dialog().getByRole("button", { name: "Correct the number" }));

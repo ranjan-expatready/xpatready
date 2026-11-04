@@ -33,9 +33,11 @@ export type RecordSubmission = z.infer<typeof RecordSubmission>;
  *  UCI (break M3 on #924: a UCI typed wrong, or given later), and why. The old value is kept with the reason. */
 export const CorrectNumber = z.object({
   application_number: z.string({ error: "Give the corrected application number." }).max(200, "That is too long to be an application number.").optional(),
-  uci: z.object({ subject: z.string({ error: "Name the person whose UCI this is." }), uci: z.string({ error: "Give the UCI." }).max(200, "That is too long to be a UCI.") }, { error: "Send the UCI as { subject, uci }." }).optional(),
-  reason: z.string({ error: "Say why the number is corrected: the old one is kept with your reason." }).pipe(plain("the reason", 400))
-    .refine((x) => /[\p{L}\p{N}]/u.test(x), "Say why the number is corrected: the old one is kept with your reason."),
+  // Break R2-m2: the UCI as plain text, as on recording (no newline or hidden character).
+  uci: z.object({ subject: z.string({ error: "Name the person whose UCI this is." }), uci: z.string({ error: "Give the UCI." }).pipe(plain("the UCI", 40)) }, { error: "Send the UCI as { subject, uci }." }).optional(),
+  // Break R2-m5: one reason for both corrections (a UCI added later has no old value).
+  reason: z.string({ error: "Give the reason: it is kept in the history with the change." }).pipe(plain("the reason", 400))
+    .refine((x) => /[\p{L}\p{N}]/u.test(x), "Give the reason in words: it is kept in the history with the change."),
 }).refine((b) => (b.application_number === undefined) !== (b.uci === undefined), { message: "Correct one thing at a time: the application number, or one person's UCI.", path: ["application_number"] });
 export type CorrectNumber = z.infer<typeof CorrectNumber>;
 
