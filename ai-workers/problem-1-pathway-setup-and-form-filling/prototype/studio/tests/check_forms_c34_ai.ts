@@ -23,9 +23,10 @@ const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, ".."), 
 const P2 = join(PROTOTYPE, "p2"), RUNS = join(P2, "runs");
 const log: unknown[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
-// QA-208: node:http without keep-alive (tests/runtime/api.ts). fetch kept an idle socket across the four stub launches
-// (spawnSync blocks this process for seconds each); the server closes a socket idle for 5 s (Node's keep-alive default),
-// so on a loaded Mac the next call met a closed socket: "connection reset" at 64/65.
+// QA-208 (QA-206's cloud run saw the same, 4 Nov): record() below blocks this process for ~6 s (four spawnSync stub
+// launches), longer than the server's 5 s keep-alive, so the server closes the idle socket fetch kept and the next call
+// went out on a closed socket ("connection reset" at 64/65; "other side closed"). The cause is removed instead of
+// retried: node:http without keep-alive (tests/runtime/api.ts), a new socket for every call.
 const { call } = client(PORT, DB);
 const sql = (q: string) => execFileSync("psql", [process.env.DATABASE_URL!, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 // As the PA check (break M2): simulated live runs are stamped 1 Jan 2000 (never outrank a real run) and tagged (gitignored).

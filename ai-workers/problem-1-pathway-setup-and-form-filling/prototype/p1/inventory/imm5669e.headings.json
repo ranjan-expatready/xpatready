@@ -1,0 +1,12 @@
+{
+ "file": "official-sources/ircc/forms/imm5669e.pdf",
+ "sha256": "4bdc23bb6a9dfa3731927f9b93295fb14008ee504d02b3037e349c4cda421f7a",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "#subform.page1": {
+   "heading": "Schedule abackground / declaration",
+   "printed": "SCHEDULE ABACKGROUND / DECLARATION",
+   "how": "banner"
+  }
+ }
+}

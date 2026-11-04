@@ -1,0 +1,27 @@
+{
+ "file": "official-sources/ircc/previous-editions/imm5476e-2021.pdf",
+ "sha256": "0c11cdf3a55be2e4a7e8471074a47873f775ed5c9c9e3c759eb07018b3f75534",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.SectionA": {
+   "heading": "Section A: applicant information",
+   "printed": "SECTION A: APPLICANT INFORMATION",
+   "how": "banner"
+  },
+  "Page1.SectionB": {
+   "heading": "Section B: appointment of representative",
+   "printed": "SECTION B: APPOINTMENT OF REPRESENTATIVE",
+   "how": "banner"
+  },
+  "Page1.sectionC": {
+   "heading": "Section C: cancel the appointment of a representative",
+   "printed": "SECTION C: CANCEL THE APPOINTMENT OF A REPRESENTATIVE",
+   "how": "banner"
+  },
+  "Page1.sectionD": {
+   "heading": "Section D: your declaration",
+   "printed": "SECTION D: YOUR DECLARATION",
+   "how": "banner"
+  }
+ }
+}

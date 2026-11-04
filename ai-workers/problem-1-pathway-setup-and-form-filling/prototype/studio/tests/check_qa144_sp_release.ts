@@ -52,7 +52,9 @@ type Question = { fact: string; about: string; why?: string };
     irm0002Map ? n(`select count(*) from config_release where combination_id = '${vv}'`) === 1 : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 300));
 
   // Row 7: sections from the study permit's own forms (rules, no AI), approved by a second person.
-  ok("QA-144 slice 3 row 7: done, and names the study permit among the combinations set up from their forms", r("7").status === "done" && /sections drafted from .*Study permit › Outside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
+  // QA-206 (tech lead on #883): partial exactly while sections the forms print no heading over wait on To review for a name.
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  ok("QA-144 slice 3 row 7: done (partial exactly while sections wait for a name, QA-206), and names the study permit among the combinations set up from their forms", r("7").status === (heldNow ? "partial" : "done") && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")) && /sections drafted from .*Study permit › Outside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
   // An edition the Visitor visa's forms already drafted (IMM 5707, IMM 5409, IMM 5476, IMM 5475) is not drafted again: its
   // sections are in the library; IMM 1294 and IMM 5646 are drafted on the study permit itself.
   ok("QA-144 slice 3 rules pass: every study permit form edition had its sections drafted by rules (no AI, US$0), IMM 1294 and IMM 5646 on the study permit", n(`select count(*) from source_attachment a where a.combination_id = '${sp}' and a.kind = 'Form' and not exists (select 1 from drafting_job j join source_attachment b on b.id = j.attachment_id where j.kind = 'masters_edition' and j.mode = 'LOCAL' and j.cost_usd = 0 and b.edition = a.edition)`) === 0

@@ -1,0 +1,12 @@
+{
+ "file": "official-sources/ircc/checklists/imm5488e.pdf",
+ "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.DocumentsList": {
+   "heading": "Documents list",
+   "printed": "DOCUMENTS LIST",
+   "how": "banner"
+  }
+ }
+}

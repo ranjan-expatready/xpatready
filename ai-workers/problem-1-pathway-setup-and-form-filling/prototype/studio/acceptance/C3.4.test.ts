@@ -66,7 +66,8 @@ run(async () => {
   // Accepting a section writes a DRAFT library row and a waiting change for a second person (the lander exists today).
   const waitingSections = () => Number(sql(`select count(*) from library_change where status='WAITING' and kind='section'`));
   const w0 = waitingSections();
-  const sec = of("section")[0];
+  // QA-206: a section with no printed heading is accepted only once a person names it, so this accepts one named from the form.
+  const sec = of("section").find((x) => !/^Unnamed section /.test(String(x.title)));
   r = await call("POST", "/review/proposals/decide", { ids: [sec?.id ?? "00000000-0000-4000-8000-000000000000"], action: "accept" }, AUTHOR);
   ok("C3.4 pass: an accepted section lands as a DRAFT section waiting for a second person", !!sec && r.status < 300 && waitingSections() === w0 + 1, r.status >= 300 ? words(r) : undefined);
   // "From sources": the rules (conditions, checks) also come from the combination's guide, not only from a form.
