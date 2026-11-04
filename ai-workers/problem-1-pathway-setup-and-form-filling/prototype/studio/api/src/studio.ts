@@ -69,6 +69,9 @@ const sourceSummary = (lines: SourceLine[] | undefined) => {
 };
 const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
 export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
+/** QA-221 (ruling C): a form line may also name "the principal applicant, a spouse or partner, and each dependent child
+ *  18 or older" (contracts/resolver.ts); documents and rules keep WHO. */
+export const FORM_WHO = [...WHO, "principal_partner_adult_children"];
 
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };
@@ -935,7 +938,7 @@ export class Studio {
     const before = await snapshotLines(this.db, combinationId, [formKey]); // S4: one Undo per combination draft
     const changes: any = {};
     if (b.retire) changes.status = "RETIRED";
-    if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
+    if (b.who) { if (!FORM_WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
     // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
     const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy, copies: b.copies });
     if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);

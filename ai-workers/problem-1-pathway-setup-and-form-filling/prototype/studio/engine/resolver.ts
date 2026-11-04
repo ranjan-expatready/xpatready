@@ -30,7 +30,7 @@ export function subjectsFor(people: PersonOnFiling[], who: string, subjectKind?:
   if (subjectKind === "SPOUSE") return partner;
   if (subjectKind === "DEPENDENT") return children;
   switch (who) {
-    case "each_applicant": case "each_adult_18_plus": return applicants;
+    case "each_applicant": case "each_adult_18_plus": case "principal_partner_adult_children": return applicants;
     case "principal_applicant": return principal;
     case "spouse_or_partner": case "couple_once": return partner;
     case "each_dependent_child": return children;

@@ -36,8 +36,13 @@ const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"])
 /** QA-144 slice 1 (ruling 3): the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
  *  expert" (AGENTS rule 4). IMM 5484 (05-2026) is official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; Guide
  *  5256 is official-sources/ircc/instructions/guide-5256.html, modified 2026-03-31, saved 19 Oct 2026. */
-type FormRule = { form: string; condition?: object; minAge?: number; retire?: true; cite: string };
+type FormRule = { form: string; condition?: object; minAge?: number; who?: string; retire?: true; cite: string };
 export const VV_FORM_RULES: FormRule[] = [
+  // QA-221 (tech lead's ruling C, 4 Nov): the form's own words name who fills it; the minimum age gates dependent
+  // children only (contracts/resolver.ts principal_partner_adult_children). official-sources/ircc/forms/imm5257_1e.pdf,
+  // saved 19 Oct 2026 (its page 1 header, as prototype/expected/source-text/imm5257_1e.xfa-template.txt reads it).
+  { form: "IMM 5257 SCH1", who: "principal_partner_adult_children", minAge: 18,
+    cite: "IMM 5257 SCH1 (09-2023) p. 1: \"The principal applicant, his or her spouse or common-law partner, if applicable, and all dependent children aged 18 years or older listed in the application for temporary residence must complete their own copy of this form.\"" },
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
   { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
@@ -52,8 +57,9 @@ export const VV_FORM_RULES: FormRule[] = [
  *  combination files (Sample, Unconfirmed: expert). Filed on paper or as a PDF upload: IMM 5707; filed online: IMM 5645.
  *  The other one is taken off this combination's draft, with the reason. Each person 18 or older fills it (both lines). */
 export const FAMILY_FORM_BY_CHANNEL = {
-  paper: { form: "IMM 5707", other: "IMM 5645", cite: "IMM 5484 (05-2026) p. 1, the paper checklist: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"; Guide 5256: \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\"" },
-  online: { form: "IMM 5645", other: "IMM 5707", cite: "canada.ca \"Apply for a visitor visa\" (official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html, modified 2026-08-28, saved 27 Oct 2026): \"Your document checklist may include supporting documents such as the following: Family Information (IMM 5645) form\"; Guide 5256: \"This form must be completed by each person, 18 years of age or older\"" },
+  // QA-221 (ruling C): each family form keeps "each applicant, from 18", in its own words first.
+  paper: { form: "IMM 5707", other: "IMM 5645", cite: "IMM 5707 (01-2023) p. 1, Instructions (official-sources/ircc/forms/imm5707e.pdf, saved 19 Oct 2026): \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\" (a minor travelling alone: a follow-up row, it needs a travelling-alone fact); IMM 5484 (05-2026) p. 1, the paper checklist: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"; Guide 5256: \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\"" },
+  online: { form: "IMM 5645", other: "IMM 5707", cite: "canada.ca \"Family Information (IMM 5645)\", Who needs to complete this form? (official-sources/ircc/web-pages/page-imm5645.html, saved 19 Oct 2026): \"This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada.\"; canada.ca \"Apply for a visitor visa\" (official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html, modified 2026-08-28, saved 27 Oct 2026): \"Your document checklist may include supporting documents such as the following: Family Information (IMM 5645) form\"; Guide 5256: \"This form must be completed by each person, 18 years of age or older\"" },
 } as const;
 /** QA-144 slice 1 (tech lead, 4 Nov): IRM 0002's rule reads a fact no form asks, added through C3.6's door for its rule
  *  (a second person approves it) and asked of each person beside their gender. Sample, Unconfirmed: expert. */
@@ -611,7 +617,7 @@ export class Demo {
             try { await this.formLibrary.attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           for (const r of setup.rules) {
-            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge };
+            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
             try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
           }
           // The shared field takes the list once (the first combination's), for every combination after it.

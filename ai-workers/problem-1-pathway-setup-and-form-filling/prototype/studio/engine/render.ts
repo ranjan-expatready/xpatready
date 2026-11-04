@@ -12,7 +12,7 @@ import { factName } from "./fact-name.ts";
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
 import { aboutOf, conditionSubjects, factsOf, formSigners, isFilingFact, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor, type Known, type Person } from "./resolver.ts";
-import { FILING } from "../contracts/resolver.ts";
+import { FILING, ROLE } from "../contracts/resolver.ts";
 export { aboutOf, conditionSubjects, formSigners, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor };
 export type { Known, Person, Role } from "./resolver.ts";
 
@@ -47,10 +47,14 @@ export type BoxRow = { box: string; caption: string; fact: string | null; meanin
   nothing_recorded?: true };
 
 /** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
- *  is known it cannot be told (and the date of birth is asked, as a deciding question). */
+ *  is known it cannot be told (and the date of birth is asked, as a deciding question). QA-221 (ruling C): on a line for
+ *  "the principal applicant, a spouse or partner, and each dependent child 18 or older" the age gates dependent children
+ *  only; the principal applicant and a spouse or partner fill it at any age (IMM 5257 SCH1 (09-2023) p. 1). */
 const BIRTH = "person.date_of_birth";
-function ageGate(known: Known, about: string, minAge: number | null | undefined, today: Date): Cond {
+const ADULT_CHILDREN = "principal_partner_adult_children";
+function ageGate(known: Known, about: string, minAge: number | null | undefined, today: Date, role?: string, who?: string): Cond {
   if (!minAge || about === FILING) return { applies: true, missing: [] };
+  if (who === ADULT_CHILDREN && role !== ROLE.child) return { applies: true, missing: [] };
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(known.get(kkey(about, BIRTH))?.value ?? ""));
   if (!m) return { applies: "cannot_tell", missing: [BIRTH] };
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -104,7 +108,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const forms = s.forms.filter((f) => f.form_kind !== "document" || true).flatMap((f) => {
     return subjectsFor(people, f.who).map((person) => {
       const rule: Cond & { about?: string } = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : lineCondition(s, known, people, person, f.condition);
-      const age = ageGate(known, person, f.min_age, today);
+      const age = ageGate(known, person, f.min_age, today, people.find((p) => p.id === person)?.role, f.who);
       const c = both(rule, age);
       formWaits.set(`${f.form_number}|${person}`, { rule, age });
       const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
