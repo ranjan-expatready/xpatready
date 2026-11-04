@@ -566,6 +566,8 @@ export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
   return null;
 }
+/** QA-192 review r3 M4 (P-121): why an item that needs a person's near reason cannot be ticked with others. */
+export const NEAR_BULK_WHY = "It is close to a library item: open it and say why it is not the same.";
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is
@@ -593,12 +595,15 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     const elsewhere = d.action !== "accept" ? rows.find((r) => ON_ITS_PAGE.has(r.step)) : undefined;
     if (elsewhere) fail(`"${String((elsewhere.payload as { label?: unknown }).label ?? identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey))}" is decided on its ${PAGE_WORDS[elsewhere.step] ?? "own page"}.`, HttpStatus.CONFLICT);
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
+    let libPool: NearPool | null = null; // QA-192 review M3: read once per decision
     if (d.action === "accept" && rows.length > 1) {
-      const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
+      // QA-192 review r3 M4: an item that needs a person's near reason is accepted on its own, as the queue says.
+      libPool = await libraryNearPool(tx, workspaceId);
+      const reuses = await twinsThatReuse(tx, workspaceId, rows);
+      const no = rows.map((r) => [r, bulkWhy(r) ?? (needsNearReason(r, libPool!, reuses) ? NEAR_BULK_WHY : null)] as const).filter(([, why]) => why);
       if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
     const out: { id: string; landedAs: string | null }[] = [];
-    let libPool: NearPool | null = null; // QA-192 review M3: read once per decision
     for (const r of rows) {
       let payload = r.payload as ProposalPayload;
       if (d.action === "edit") {
