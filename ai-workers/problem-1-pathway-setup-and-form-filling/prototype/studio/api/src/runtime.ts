@@ -7,7 +7,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
-import { ConfirmSection, fillsText, releaseLabel, NewCase, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { ConfirmSection, fillsText, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, pqrView, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
@@ -89,7 +89,7 @@ export class Runtime {
     // S4 (SA-1B-90): a case opens only on a startable release. The case officer reads a plain sentence (review M2 on
     // ea7f28b2: no field paths or keys, no author's step); the catalogue's own lines go in `missing` for the authors.
     const missing = await this.programs.startableMissing(b.combinationId, release!);
-    if (missing.length) throw new HttpException({ type: "https://expatready.local/problems/not-startable", title: "Not ready for cases", status: 409, detail: `"${combination!.label}" is not ready for new cases: ${missing.length === 1 ? "1 item" : `${missing.length} items`} to fix in Immigration programs, by the people who set it up. Cases already open are not affected.`, missing: missing.map((m) => ({ code: m.code, text: m.text, step: m.step })) }, HttpStatus.CONFLICT);
+    if (missing.length) throw new HttpException({ type: "https://expatready.local/problems/not-startable", title: "Not ready for cases", status: 409, detail: notReadyForCases(combination!.label, missing.length), missing: missing.map((m) => ({ code: m.code, text: m.text, step: m.step })) }, HttpStatus.CONFLICT);
     let client: Actor | null = null;
     try { client = actorOf(b.clientActor); } catch { /* reported below as a field error */ }
     if (!client || !(client.duties as readonly string[]).includes("answer")) fieldError("clientActor", "Choose a client login (the client who answers the questionnaire).");
@@ -131,6 +131,22 @@ export class Runtime {
       people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
       ...(team ? { employer_link: employerLinkOffer(this.snapshotOf(c)) } : {}) };
+  }
+
+  /** V3 B1 (runtime side, P-297 (3)): what the "Open a case" dialog may offer. Each not retired combination's newest
+   *  release (the one a case opens on), with the startable check `createCase` runs; opening a case keeps refusing a
+   *  release that is not startable, and the dialog now says so before the officer tries. Staff only. */
+  async openable(actor: Actor): Promise<OpenableRelease[]> {
+    need(actor, "case");
+    // The same people as opening a case (review minor): firm staff only.
+    if (!firmOfActor(actor)) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.configRelease.findMany({ where: { workspaceId, combination: { retiredAt: null } }, orderBy: { version: "desc" }, distinct: ["combinationId"], include: { combination: { select: { label: true } } } });
+    const out = await Promise.all(rows.map(async (r) => {
+      const missing = await this.programs.startableMissing(r.combinationId, r);
+      return { combination_id: r.combinationId, combination: r.combination.label, version: r.version, startable: !missing.length, items: missing.length, why: missing.length ? notReadyForCases(r.combination.label, missing.length) : null };
+    }));
+    return out.sort((a, b) => Number(b.startable) - Number(a.startable) || a.combination.localeCompare(b.combination));
   }
 
   /** C11.5 (P-106): before a case opens, whether one on this combination's newest release may rely on an employer case
@@ -458,6 +474,7 @@ export class RuntimeController {
   constructor(@Inject(Runtime) private readonly r: Runtime) {}
   @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string }) { return this.r.list(actorOf(a), q); }
   @Post("cases") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.r.createCase(actorOf(a), b); }
+  @Get("openable") openable(@Headers("x-actor") a: H) { return this.r.openable(actorOf(a)); }
   @Get("combinations/:id/employer-link") employerLink(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.employerLink(actorOf(a), id); }
   @Get("cases/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.get(actorOf(a), id); }
   @Post("cases/:id/people") addPerson(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.r.addPerson(actorOf(a), id, b); }
