@@ -11,21 +11,22 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { formMastersFromRounds, formShapeOk, guideMastersFromRounds, guideShapeOk, MASTERS_FORM_STEP, MASTERS_GUIDE_STEP, type FormAnswer, type GuideAnswer, type MRound } from "../../engine/masters-ai.ts";
 import { editionContextKey, PRINTED_EDITION, replayPattern } from "../../engine/rounds.ts";
 import { actorOf, Audit, Db, fail, need, SOLUTION, type Actor } from "./core.ts";
 import { LIVE_WAITING, PqrDrafts } from "./pqr-drafts.ts";
-import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
+import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, UNNAMED_WHY, type NewProposal, type Work } from "./proposals.ts";
 import { pairOf, roundBudgetUsd, RUNS, runTime, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { aiLive, Sources } from "./sources.ts";
 
 export const MASTERS_STEP = "masters_edition";
 import { printedChoices, type InvField } from "../../engine/printed-choices.ts";
 export { printedChoices }; // QA-196: moved to the engine (proposals.ts reads it too, without importing this module)
-/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part named by a
- *  number word (IMM 5475's "Five", "Seven") is a real part a person fills: it stays, for a person to rename (re-review M2). */
+/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. A part with an internal
+ *  name only ("Five", "Seven") is a real part a person fills: it stays, named from its printed heading or, with none,
+ *  held for a person to name (re-review M2, QA-206). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
 const MACHINE_PART = /^(#?subform\d*|text ?field\d*|header|buttons?( ?header)?|page\d*|fragment\d*|row\d*)$/i;
 
@@ -56,8 +57,9 @@ function choices(f: InvField): { label: string; code: string }[] {
   return out;
 }
 
-/** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set). */
-export function draftFromInventory(fields: InvField[]) {
+/** Pure: the answer lists and sections a form's inventory gives, by the rules alone (one list per distinct choice set),
+ *  each section named by its part's printed heading (QA-206). */
+export function draftFromInventory(fields: InvField[], headings: PartHeadings | null = null) {
   const lists = new Map<string, { label: string; values: { code: string; label: string }[]; quote: string; boxes: string[] }>();
   for (const f of fields) {
     const values = choices(f);
@@ -68,22 +70,77 @@ export function draftFromInventory(fields: InvField[]) {
     if (prev) { prev.boxes.push(f.data_path); continue; }
     lists.set(id, { label: (from ? words(from) : caption(f) || "Choices").slice(0, 120), values, quote: caption(f) || values.map((v) => v.label).join(", "), boxes: [f.data_path] });
   }
-  const sections = new Map<string, { label: string; fieldKeys: string[]; quote: string }>();
+  // QA-206 (P-158, P-319, PRODUCT §4): a section is named by the heading printed on the form above its boxes (the
+  // headings file beside the inventory, read from the form's own text, no AI), never by the PDF's internal part name
+  // ("PageWrapper", "Five"). One section per part of the form (two pages' parts of one name are one part). A part with no
+  // printed heading, or one whose heading another part already carries (IMM 0008 prints "DEPENDANT(S)" over the first
+  // dependant and the others), is still proposed but marked unnamed, with why: it is accepted only once a person gives
+  // it a name (proposals.ts decide).
+  type Draft = { label: string | null; part: string; printed: string | null; fieldKeys: string[]; captions: string[]; quote: string };
+  // Parts are one section when their heading comes from one place on the form: the same part on two pages, the parts a
+  // heading-only part's banner carries to ("from"), and a banner printed "(CONTINUED)" with the part of that heading
+  // before it. Two different parts that each print the same heading are not merged.
+  // Another page's heading is taken only when it is printed "(CONTINUED)" (IMM 5257's marital status, page 1 and 2): a
+  // part name reused on another page ("PageWrapper") is not the same part (review r2 M4).
+  const keyOf = (k: string) => Object.keys(headings ?? {}).find((x) => x.split(".")[1] === k.split(".")[1] && x !== k && headings![x].continues);
+  const anchors = new Map<string, string>();
+  const anchorOf = (key: string): { anchor: string; h: PartHeadings[string] | undefined } => {
+    const own = headings?.[key], h = own ?? (keyOf(key) ? headings![keyOf(key)!] : undefined);
+    if (!h?.heading?.trim()) return { anchor: `p:${key.split(".")[1]}`, h: undefined }; // none, or only its child parts named
+    const at = own ? key : keyOf(key)!;
+    // A part's name, the same part on every page; parts carried from one banner, or under the form's own printed title
+    // (a form with no heading over any part: IRM 0002), are one section.
+    let anchor = ((h.how === "carried" || h.how === "form_title") && h.from ? h.from : at).split(".")[1];
+    const label = h.heading.trim().toLowerCase();
+    if (h.continues && anchors.has(label)) anchor = anchors.get(label)!;
+    if (!anchors.has(label)) anchors.set(label, anchor);
+    return { anchor: `h:${anchor}`, h };
+  };
+  const sections = new Map<string, Draft>();
   for (const f of fields) {
     if (!f.data_path || !f.section || hidden(f)) continue;
     const part = f.section.split(".").slice(0, 2);
     if (part.length < 2 || MACHINE_PART.test(part[1].replace(/\[\d+\]$/, ""))) continue;
-    const key = part.join(".");
-    const s = sections.get(key) ?? { label: words(part[1]).slice(0, 120), fieldKeys: [], quote: caption(f) };
+    // A page's part with no heading of its own takes the one printed over the part of the same name on another page
+    // (IMM 5257's marital status continues under "PERSONAL DETAILS (CONTINUED)" on page 2).
+    // A child part with its own printed banner is a section of its own (review r2 M4: IMM 1295's "EMPLOYMENT" inside the
+    // wrapper that starts with "EDUCATION"); the same child name on another page is the same section.
+    const child = f.section.split(".")[2], own = headings?.[part.join(".")], subH = child ? own?.sub?.[child] : undefined;
+    const { anchor, h } = subH ? { anchor: `s:${part[1]}.${child}`, h: { heading: subH.heading, printed: subH.printed } } : anchorOf(part.join("."));
+    const s = sections.get(anchor) ?? { label: h ? h.heading.trim().slice(0, 120) : null, part: part[1], printed: h ? (h.printed ?? h.heading).slice(0, 300) : null, fieldKeys: [], captions: [], quote: caption(f) };
     if (s.fieldKeys.length < 400) s.fieldKeys.push(f.data_path.slice(0, 120));
+    if (caption(f) && s.captions.length < 3 && !s.captions.includes(caption(f).slice(0, 80))) s.captions.push(caption(f).slice(0, 80));
     if (!s.quote) s.quote = caption(f);
-    sections.set(key, s);
+    sections.set(anchor, s);
   }
-  // One section per name (two pages with a part of the same name are one section of the form).
-  const byName = new Map<string, { label: string; fieldKeys: string[]; quote: string }>();
-  for (const s of sections.values()) { const n = byName.get(s.label); if (n) n.fieldKeys.push(...s.fieldKeys.slice(0, 400 - n.fieldKeys.length)); else byName.set(s.label, s); }
-  // The quote is the form's printed words (a box caption in the part); a part with none is not proposed (P-170).
-  return { lists: [...lists.values()], sections: [...byName.values()].filter((s) => s.fieldKeys.length && s.quote) };
+  // A part with no printed words in it (no box caption) is not proposed (P-170). The source quote is the printed heading
+  // when there is one, else a box caption of the part. Named sections first.
+  const kept = [...sections.values()].filter((s) => s.fieldKeys.length && s.quote), taken = new Map<string, string>();
+  const out = kept.map((s) => {
+    const k = s.label?.toLowerCase();
+    const shared = !!k && taken.has(k);
+    if (k && !shared) taken.set(k, s.part);
+    const named = !!s.label && !shared;
+    // A part held because another part already carries its printed heading keeps that heading (from the form's own text),
+    // so the sample loader can name it by print (tech lead on #883), never by a made-up name.
+    return { label: named ? s.label : null, part: s.part, fieldKeys: s.fieldKeys, captions: s.captions, quote: named ? s.printed ?? s.quote : s.quote, unnamed: !named,
+      heading: shared ? s.label : null, printed: shared ? s.printed : null,
+      why: named ? null : shared ? `The form prints "${s.printed}" over another part too.` : headings === null ? "The printed headings of this form have not been read here yet." : "No printed heading was found above these form fields on the form." };
+  });
+  return { lists: [...lists.values()], sections: [...out.filter((s) => !s.unnamed), ...out.filter((s) => s.unnamed)] };
+}
+
+/** QA-206: the printed heading of each part of a form (prototype/p1/xfa_headings.py, the form's own text, no AI), from
+ *  the headings file beside its inventory ("…/imm5257e.inventory.json" → "…/imm5257e.headings.json"), only when it was
+ *  read from exactly the same file (its checksum). Null when not read (no such file, or read from another file): every
+ *  section of that form is then proposed unnamed, and says its headings were not read (not that the form has none). */
+export type PartHeadings = Record<string, { heading: string; printed?: string; how?: string; from?: string; continues?: boolean; sub?: Record<string, { heading: string; printed: string }> }>;
+export function headingsFor(inventoryFile: string | null | undefined, sha256: string | null | undefined): PartHeadings | null {
+  if (!inventoryFile || !sha256 || !/\.inventory\.json$/.test(inventoryFile)) return null;
+  try {
+    const h = JSON.parse(readFileSync(join(SOLUTION, inventoryFile.replace(/\.inventory\.json$/, ".headings.json")), "utf8")) as { sha256?: string; parts?: PartHeadings };
+    return h.sha256 === sha256 && h.parts && typeof h.parts === "object" ? h.parts : null;
+  } catch { return null; }
 }
 
 /** C3.4 AI step over one form edition: its checks and the document types its form fields are copied from (a draft and a blind
@@ -126,7 +183,7 @@ const RUNNING_FOR_MS = 30 * 60_000;
 
 type Attachment = { id: string; workspaceId: string; combinationId: string; kind: string; fileName: string; sha256: string; recognised: boolean; edition: string | null; inventoryFile: string | null };
 /** What one AI draft reads: a form edition (its inventory) or a combination's guide (its text). */
-type Target = { kind: "form"; step: AiStep; a: Attachment; edition: string; contextKey: string; trail: string; input: { file: string; sha256: string }; chars: number; fields: InvField[]; group: string }
+type Target = { kind: "form"; step: AiStep; a: Attachment; edition: string; contextKey: string; trail: string; input: { file: string; sha256: string }; chars: number; fields: InvField[]; inventorySha: string | null; group: string }
   | { kind: "guide"; step: AiStep; a: Attachment; combination: { id: string; workspaceId: string; label: string; combinationKey: string }; code: string; text: string; contextKey: string; trail: string; input: { file: string; sha256: string }; chars: number; group: string };
 type SavedState = { available: boolean; why: string | null; files: string[] };
 
@@ -140,7 +197,7 @@ export class FormMasters {
     if (!a) fail("This source does not exist.", HttpStatus.NOT_FOUND);
     return a!;
   }
-  private readInventory(a: Attachment, edition: string): { fields?: InvField[] } {
+  private readInventory(a: Attachment, edition: string): { fields?: InvField[]; summary?: { sha256?: string } } {
     try { return JSON.parse(readFileSync(join(SOLUTION, a.inventoryFile!), "utf8")); } catch { return fail(`The reading of ${edition} is missing on this computer: read the form again.`, HttpStatus.CONFLICT); }
   }
 
@@ -158,8 +215,8 @@ export class FormMasters {
     const printed = (a.edition ?? a.fileName).slice(0, 60), m = PRINTED.exec(printed);
     if (!m) fail(`${printed} has no printed form number and edition, so its AI draft cannot be kept for every combination that uses it.`, HttpStatus.CONFLICT);
     let bytes: Buffer; try { bytes = readFileSync(join(SOLUTION, a.inventoryFile!)); } catch { return fail(`The reading of ${printed} is missing on this computer: read the form again.`, HttpStatus.CONFLICT); }
-    const fields = (JSON.parse(bytes.toString("utf8")) as { fields?: InvField[] }).fields ?? [];
-    return { kind: "form", step: MASTERS_FORM_AI, a, edition: printed, contextKey: editionContextKey(m![1], m![2]), trail: printed, input: { file: a.inventoryFile!, sha256: sha(bytes) }, chars: bytes.length, fields, group: `edition:${printed}` };
+    const inv = JSON.parse(bytes.toString("utf8")) as { fields?: InvField[]; summary?: { sha256?: string } };
+    return { kind: "form", step: MASTERS_FORM_AI, a, edition: printed, contextKey: editionContextKey(m![1], m![2]), trail: printed, input: { file: a.inventoryFile!, sha256: sha(bytes) }, chars: bytes.length, fields: inv.fields ?? [], inventorySha: inv.summary?.sha256 ?? null, group: `edition:${printed}` };
   }
 
   /** Both saved rounds of ONE recorded run (C4.7 break B1): the newest usable checker round, then the draft of the same run. */
@@ -177,6 +234,26 @@ export class FormMasters {
   async saved(t: Target): Promise<SavedState> {
     const { d, k } = await this.savedRounds(t);
     return d.ok && k?.ok ? { available: true, why: null, files: [d.runFile, k.runFile] } : { available: false, why: (!d.ok ? d.reason : null) ?? t.step.words.noSaved, files: [] };
+  }
+  /** The one AI draft's key: per form edition, or per combination's guide (P-138). */
+  private aiContext(t: Target) { return t.kind === "form" ? t.contextKey : `guide:${t.combination.id}:${t.code}`; }
+  private usableDone(context: string) { return [{ detail: { path: ["ai"], equals: true } }, { detail: { path: ["context"], equals: context } }, { detail: { path: ["usable"], equals: true } }]; }
+  /** QA-218 (review M1, STANDARDS §5: one request per screen view): what each form and guide of a combination, or one
+   *  source, offers for its library masters: a Saved AI run (US$0) or not, and whether its one AI draft is done, with the
+   *  queue group it waits in. A source that is not a form or the combination's guide is left out (never a refusal). It
+   *  names no run file and no cost, so anyone who sees the combination may read it, like checklist-readings. */
+  async readings(where: { combinationId: string } | { attachmentId: string }) {
+    const list = "attachmentId" in where ? [await this.attachment(where.attachmentId)] : await this.db.sourceAttachment.findMany({ where: { combinationId: where.combinationId, recognised: true }, orderBy: { createdAt: "asc" } });
+    const out: { attachmentId: string; kind: "form" | "guide"; title: string; saved: boolean; drafted: boolean; group: string }[] = [];
+    for (const a of list) {
+      if (!a.recognised || a.kind === "Document checklist") continue;
+      const t = await this.target(a).catch(() => null);
+      if (!t) continue;
+      const saved = await this.saved(t).catch(() => ({ available: false }));
+      const done = await this.db.draftingJob.findFirst({ where: { workspaceId: a.workspaceId, kind: MASTERS_STEP, status: "COMPLETED", AND: this.usableDone(this.aiContext(t)) }, select: { id: true } });
+      out.push({ attachmentId: a.id, kind: t.kind, title: t.kind === "form" ? t.edition : t.code, saved: saved.available, drafted: !!done, group: t.group });
+    }
+    return out;
   }
   /** The most the two Live rounds can reserve (the launcher's own per-round budgets). */
   worstUsd(t: Target) { return round2(roundBudgetUsd(t.step, false, [t.input], t.chars) + roundBudgetUsd(t.step, true, [t.input], t.chars)); }
@@ -212,7 +289,7 @@ export class FormMasters {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`masters:${a.workspaceId}:${edition}`}))`;
       const open = await tx.draftingJob.findFirst({ where: { workspaceId: a.workspaceId, kind: MASTERS_STEP, status: "COMPLETED", detail: { path: ["edition"], equals: edition } }, orderBy: { startedAt: "desc" } });
       if (open) return { job: open, made: 0 };
-      const drafted = this.rulesDraft(inv.fields ?? []);
+      const drafted = this.rulesDraft(inv.fields ?? [], a.inventoryFile, inv.summary?.sha256);
       const job = await tx.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId: a.id, kind: MASTERS_STEP, mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
         message: `Rules pass on ${edition} (no AI, US$0): ${drafted.sections.length} sections from the form's parts and ${drafted.lists.length} answer lists from its drop-down form fields, proposed on To review.${drafted.tooLong.length ? ` Not proposed, too long for one list (a person adds it): ${drafted.tooLong.join(", ")}.` : ""} Form checks and document types need the AI step (Live or Saved).`.slice(0, 1000),
         detail: { operation: "draft_masters", edition, mode: "rules", sections: drafted.sections.length, answerLists: drafted.lists.length, tooLong: drafted.tooLong } } });
@@ -226,8 +303,8 @@ export class FormMasters {
   }
 
   /** The rules' sections and answer lists of an edition. A list longer than the queue's 400 values (a city list) is not cut short: it is named for a person instead. */
-  private rulesDraft(fields: InvField[]) {
-    const drafted = draftFromInventory(fields);
+  private rulesDraft(fields: InvField[], inventoryFile: string | null, inventorySha: string | null | undefined) {
+    const drafted = draftFromInventory(fields, headingsFor(inventoryFile, inventorySha));
     return { lists: drafted.lists.filter((l) => l.values.length <= 400), sections: drafted.sections, tooLong: drafted.lists.filter((l) => l.values.length > 400).map((l) => `${l.label} (${l.values.length} choices)`) };
   }
   /** The rules pass's proposals (sections and answer lists), for the rules pass or the first AI draft of an edition. */
@@ -247,12 +324,17 @@ export class FormMasters {
         rules: [{ rule: "from_pdf_box_choices", passed: true, why: null }], reason: `The choices of ${l.boxes.length} form field${l.boxes.length === 1 ? "" : "s"} on ${edition}, as printed: check the list's name.`.slice(0, 500),
         identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: { boxes: l.boxes.slice(0, 50) } });
     }
+    let unnamed = 0;
+    const formName = edition.split(" (")[0];
     for (const s of sections) {
-      const payload = { kind: "section" as const, label: s.label, aliases: [], fieldKeys: s.fieldKeys };
-      const twin = await sameInLibrary(tx, a.workspaceId, payload);
-      items.push({ ...base, kind: "section", payload, rounds: rulesRead(`Rules read the form part "${s.label}": ${s.fieldKeys.length} form fields`, payload), source: source(s.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
-        rules: [{ rule: "from_form_part", passed: true, why: null }], reason: `A part of ${edition} grouping ${s.fieldKeys.length} form fields: check its name.`.slice(0, 500),
-        identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: {} });
+      // QA-206: a part with no printed heading carries a placeholder name that says so, and never reuses a library item.
+      const label = s.label ?? `Unnamed section ${++unnamed} of ${formName}`.slice(0, 120);
+      const payload = { kind: "section" as const, label, aliases: [], fieldKeys: s.fieldKeys };
+      const twin = s.unnamed ? null : await sameInLibrary(tx, a.workspaceId, payload);
+      items.push({ ...base, kind: "section", payload, rounds: rulesRead(s.unnamed ? `Rules read a part of the form with no printed heading: ${s.fieldKeys.length} form fields` : `Rules read the printed heading "${s.quote}": ${s.fieldKeys.length} form fields under it`, payload), source: source(s.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
+        rules: [{ rule: "from_form_part", passed: true, why: null }, { rule: "printed_heading", passed: !s.unnamed, why: s.unnamed ? `${s.why} ${UNNAMED_WHY}`.slice(0, 300) : null }],
+        reason: (s.unnamed ? `${s.why} ${UNNAMED_WHY} A part of ${edition} grouping ${s.fieldKeys.length} form fields${s.captions.length ? `, starting with: ${s.captions.join("; ")}` : ""}.` : `The ${s.fieldKeys.length} form fields of ${edition} under the printed heading "${s.quote}".`).slice(0, 500),
+        identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: s.unnamed ? { unnamed: true, placeholder: label, ...(s.heading ? { heading: s.heading, printed: s.printed } : {}) } : {} });
     }
     return items;
   }
@@ -269,9 +351,9 @@ export class FormMasters {
       if (plan.totals.worst_usd > plan.totals.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `Not started: the worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.totals.remaining_usd.toFixed(2)}). Nothing was started.`);
     }
     const ws = t.a.workspaceId, combinationId = t.kind === "guide" ? t.combination.id : t.a.combinationId;
-    const once = t.kind === "form" ? { context: t.contextKey } : { context: `guide:${t.combination.id}:${t.code}` };
+    const once = { context: this.aiContext(t) };
     const isAi = [{ detail: { path: ["ai"], equals: true } }, { detail: { path: ["context"], equals: once.context } }];
-    const usableDone = [...isAi, { detail: { path: ["usable"], equals: true } }];
+    const usableDone = this.usableDone(once.context);
     // One AI draft per edition (or per combination's guide), looked up and started under one lock: a second click returns
     // the one draft; one running now refuses a second (never two paid runs side by side).
     const started = await this.db.$transaction(async (tx) => {
@@ -320,7 +402,7 @@ export class FormMasters {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`masters:${ws}:${t.kind === "form" ? t.edition : once.context}`}))`;
         // The first AI draft of an edition also carries the rules' sections and answer lists, unless the rules pass ran before (P-138: one draft).
         const rulesDone = t.kind === "form" ? !!(await tx.draftingJob.findFirst({ where: { workspaceId: ws, kind: MASTERS_STEP, status: "COMPLETED", detail: { path: ["edition"], equals: t.edition } }, select: { id: true } })) : true;
-        const rules = t.kind === "form" && !rulesDone ? this.rulesDraft(t.fields) : null;
+        const rules = t.kind === "form" && !rulesDone ? this.rulesDraft(t.fields, t.a.inventoryFile, t.inventorySha) : null;
         const items: (NewProposal & Work)[] = rules && t.kind === "form" ? await this.rulesItems(tx, t.a, t.edition, rules, job.id) : [];
         for (const x of res.items) {
           // A library kind's identity is its kind's rule (proposals.ts identityKeyOf); a document type a live library type
@@ -372,5 +454,7 @@ export class FormMastersController {
   constructor(@Inject(FormMasters) private readonly m: FormMasters) {}
   // Break minor: the plan names source files, run files and the AI cap, so only those who may draft read it.
   @Post("attachments/:id/draft-masters/plan") @HttpCode(200) plan(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { need(actorOf(a), "author"); return this.m.plan(id, (b ?? {}) as { mode?: unknown }); }
+  @Get("combinations/:id/masters-readings") readings(@Param("id") id: string) { return this.m.readings({ combinationId: id }); }
+  @Get("attachments/:id/masters-reading") reading(@Param("id") id: string) { return this.m.readings({ attachmentId: id }); }
   @Post("attachments/:id/draft-masters") draft(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { return this.m.draft(actorOf(a), id, (b ?? {}) as { mode?: unknown; planSha256?: unknown }); }
 }

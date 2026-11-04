@@ -18,6 +18,7 @@ import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, RO
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
+import { ReviewProposals } from "./review-proposals.ts";
 import { SAMPLE_CREATOR } from "./lifecycle.ts";
 import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
@@ -33,85 +34,8 @@ import { FormLibrary } from "./form-library.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
 const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
-/** QA-144 slice 1 (ruling 3): the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
- *  expert" (AGENTS rule 4). IMM 5484 (05-2026) is official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; Guide
- *  5256 is official-sources/ircc/instructions/guide-5256.html, modified 2026-03-31, saved 19 Oct 2026. */
-type FormRule = { form: string; condition?: object; minAge?: number; who?: string; retire?: true; cite: string };
-export const VV_FORM_RULES: FormRule[] = [
-  // QA-221 (tech lead's ruling C, 4 Nov): the form's own words name who fills it; the minimum age gates dependent
-  // children only (contracts/resolver.ts principal_partner_adult_children). official-sources/ircc/forms/imm5257_1e.pdf,
-  // saved 19 Oct 2026 (its page 1 header, as prototype/expected/source-text/imm5257_1e.xfa-template.txt reads it).
-  { form: "IMM 5257 SCH1", who: "principal_partner_adult_children", minAge: 18,
-    cite: "IMM 5257 SCH1 (09-2023) p. 1: \"The principal applicant, his or her spouse or common-law partner, if applicable, and all dependent children aged 18 years or older listed in the application for temporary residence must complete their own copy of this form.\"" },
-  { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
-    cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
-  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
-    cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"" },
-  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
-    cite: "IMM 5484 p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
-  // Guide 5256, Question 3 note: the form for a person whose gender identifier differs from their documents.
-  { form: "IRM 0002", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.gender_identifier_differs_from_documents", value: true },
-    cite: "Guide 5256, Question 3: \"If you choose a gender identifier that is different than what you currently have or have had on your Canadian temporary resident document (visa, electronic travel authorization, work permit, study permit or visitor record), you need to complete the Request for a Change of Sex or Gender Identifier (IRM 0002) form and send it with your application.\" and \"You also need to complete this form and send it with your application if you’ve never had a Canadian temporary resident document but you intend to apply for one and you identify with a gender that is different than what appears on your foreign travel document or passport.\"" },
-];
-/** QA-144 slice 1 (tech lead, 4 Nov; the RCIC walk #782, IRCC-P2-04a): the family information form follows how the
- *  combination files (Sample, Unconfirmed: expert). Filed on paper or as a PDF upload: IMM 5707; filed online: IMM 5645.
- *  The other one is taken off this combination's draft, with the reason. Each person 18 or older fills it (both lines). */
-export const FAMILY_FORM_BY_CHANNEL = {
-  // QA-221 (ruling C): each family form keeps "each applicant, from 18", in its own words first.
-  paper: { form: "IMM 5707", other: "IMM 5645", cite: "IMM 5707 (01-2023) p. 1, Instructions (official-sources/ircc/forms/imm5707e.pdf, saved 19 Oct 2026): \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\" (a minor travelling alone: a follow-up row, it needs a travelling-alone fact); IMM 5484 (05-2026) p. 1, the paper checklist: \"Family Information form. Must be completed by those aged 18 years or older.\" and \"You must complete the Family Information form (IMM 5707) listed in the application package for your region.\"; Guide 5256: \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\"" },
-  online: { form: "IMM 5645", other: "IMM 5707", cite: "canada.ca \"Family Information (IMM 5645)\", Who needs to complete this form? (official-sources/ircc/web-pages/page-imm5645.html, saved 19 Oct 2026): \"This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada.\"; canada.ca \"Apply for a visitor visa\" (official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html, modified 2026-08-28, saved 27 Oct 2026): \"Your document checklist may include supporting documents such as the following: Family Information (IMM 5645) form\"; Guide 5256: \"This form must be completed by each person, 18 years of age or older\"" },
-} as const;
-/** QA-144 slice 1 (tech lead, 4 Nov): IRM 0002's rule reads a fact no form asks, added through C3.6's door for its rule
- *  (a second person approves it) and asked of each person beside their gender. Sample, Unconfirmed: expert. */
-export const GENDER_FACT = { fact: "person.gender_identifier_differs_from_documents", rule: "IRM 0002", cite: "Guide 5256, Question 3", label: "Gender identifier differs from earlier documents", valueType: "yes_no",
-  meaning: "Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002)." };
-/** QA-144 slice 2 (brief on #798): With an LMIA – inside Canada's form lines as IRCC's own words set them. Each is Sample,
- *  "Unconfirmed: expert" (AGENTS rule 4). Guide 5553 is official-sources/ircc/instructions/guide-5553.html (modified
- *  2026-06-05, saved 27 Oct 2026); IMM 5556 (03-2024) is official-sources/ircc/checklists/imm5556e.pdf, saved 27 Oct 2026;
- *  the combination's own page is official-sources/ircc/canada/pages/work-canada-permit-inside-forms-documents.html
- *  (modified 2026-05-15, recorded 27 Oct 2026). Its people are the worker, a spouse or partner, and a representative. */
-export const LMIA_FORM_RULES: FormRule[] = [
-  { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
-    cite: "Guide 5553, \"Completing the forms\": \"The following are the forms that must be filled out and submitted: … Statutory Declaration of Common-law Union [IMM 5409] (opens in a new tab), if applicable\"; IMM 5556 (03-2024), its forms list: \"Statutory Declaration of Common-law Union (IMM 5409), if applicable\"" },
-  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
-    cite: "IMM 5556 (03-2024), its forms list: \"Use of a Representative (IMM 5476) Note: Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5553, \"Use of a Representative (IMM 5476)\": \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative's appointment.\"" },
-  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
-    cite: "IMM 5556 (03-2024), its forms list: \"Authority to Release Personal Information to a Designated Individual (IMM 5475) Note: Complete this form only if you authorize IRCC and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
-];
-/** QA-144 slice 3 (brief on #798): the study permit's form lines (outside Canada) as IRCC's own words set them, each
- *  Sample, "Unconfirmed: expert" (AGENTS rule 4). Guide 5269 is official-sources/ircc/instructions/guide-5269.html
- *  (canada.ca, modified 2026-10-06, saved 27 Oct 2026); IMM 5483 (08-2025) is official-sources/ircc/checklists/imm5483e.pdf
- *  (checked 21 Oct 2026). IMM 1294 stays on the draft as every student files it. Its people are one student and a
- *  representative. */
-export const SP_FORM_RULES: FormRule[] = [
-  // Guide 5269 and IMM 5483 disagree on the age (17 or less, against less than 17): the guide's wider words are taken, for the expert to confirm.
-  { form: "IMM 5646", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.minor_studying_without_parent", value: true },
-    cite: "Guide 5269, Custodians: \"Children 17 years of age or less coming to Canada to study without an accompanying parent or a legal guardian must still be in the care of a responsible adult in Canada. [...] The parents or legal guardians in the country or territory of origin and the custodian in Canada must complete a notarized Custodianship Declaration (IMM 5646)\"; IMM 5483 (08-2025) p. 1: \"Must be completed if the minor studying in Canada is less than 17 years old.\"" },
-  { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
-    cite: "Guide 5269, Step 2: \"Statutory Declaration of Common-law Union (IMM 5409) [...], if applicable\"" },
-  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
-    cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5269: \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative’s appointment.\"" },
-  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
-    cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
-];
-/** QA-144 slice 3: IMM 5646's rule reads a fact no form asks (no age is worked out in this workspace), added through
- *  C3.6's door for its rule and asked of each person beside their date of birth. Sample, Unconfirmed: expert. Guide 5269
- *  also says a student from 17 to the age of majority "may need a custodian at the discretion of an immigration officer":
- *  not in this fact, for the expert. */
-export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", cite: "Guide 5269, Custodians", label: "Minor studying without a parent or guardian", valueType: "yes_no",
-  meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
-  beside: ["person.date_of_birth"] };
-/** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
- *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
- *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] } }> = {
-  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
-  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES,
-    family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
-  // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
-  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT,
-    family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
-};
+import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
+export { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES }; // B71: kept for the callers that read them from here
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
 /** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5257's previous edition (the
@@ -153,13 +77,17 @@ type SampleSetup = { key: string; participants: any[]; sources: string[]; import
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
 /** S7 (P-148): the six agreed combinations the Demo menu loads (samples/wave1.json). */
 export const SAMPLES_SIX = join(STUDIO, "samples", "wave1.json");
-type SixSetup = SampleSetup & { page: string | null; missing: { code: string; title: string; why: string }[] };
+type SixSetup = SampleSetup & { page: string | null; missing: { code: string; title: string; why: string }[]; lines?: SixLines };
+/** C11.7 part B (P-109, P-171 (3)): what a person does on a combination's Forms and Documents tabs when no saved finder
+ *  answer sets them up. Library forms by their code and whose form each is (the channel when not a PDF upload); each
+ *  document line by its type's name (a new name waits as a library proposal, C3.6). Data in the sample file (P-319). */
+type SixLines = { basis: string; forms: { code: string; who?: string; channel?: "ONLINE" | "PAPER" }[]; documents?: { name: string; who: string; always: true; proves: string; quote: string }[] };
 const officialFiles = (): string[] => JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.map((i: { file: string }) => i.file);
 type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals) {}
 
   /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
   private async familyForm(combinationId: string, key: string | undefined) {
@@ -368,7 +296,7 @@ export class Demo {
     const timings: Record<string, number> = {};
     const timed = async <T>(step: string, f: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await f(); } finally { timings[step] = Math.round(((timings[step] ?? 0) + (Date.now() - t) / 1000) * 10) / 10; } };
     let nodes = 0;
-    const made: { id: string; label: string; page: string | null; missing: { code: string; why: string }[]; files: number; absent: string[] }[] = [];
+    const made: { id: string; label: string; page: string | null; missing: { code: string; why: string }[]; files: number; absent: string[]; lines?: SixLines }[] = [];
     for (const p of sample.pathways) {
       await this.studio.createNode(actor, { kind: "PATHWAY", label: p.label, key: p.key, clientType: p.type, description: p.description, sourceBasis: "ILLUSTRATIVE" });
       nodes++;
@@ -387,7 +315,7 @@ export class Demo {
         else if (r.attachmentStatus === "RECOGNISED") await timed("form read (form fields)", () => this.sources.read(actor, r.attachmentId!));
       }
       const missing = [...(c.missing ?? []).map((m) => ({ code: m.code, why: m.why })), ...refused];
-      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: sources.length - absent.length - refused.length, absent });
+      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: sources.length - absent.length - refused.length, absent, lines: c.lines });
       const out = [...absent, ...missing.map((m) => m.code)];
       log.push(`  ${path}: ${sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
     };
@@ -436,10 +364,43 @@ export class Demo {
       drafts = await timed("field-map replay (review queue)", () => this.settled(b.id!));
     }
     const proposals = await this.db.proposalItem.count({ where: { workspaceId, status: "waiting" } });
+    // C11.7 part B: the lines a person adds by hand where the finder's replay set none up (after the drafts, as a person
+    // would: the field-map replay above reads the library's forms, not these lines). Counted after the AI proposals, so
+    // "proposals waiting" stays the replayed AI answers; a document type named here is the person's own proposal.
+    const byHand: { combination: string; combination_id: string; forms_added: string[]; online: string[]; documents: { name: string; who: string; quote: string; status: string }[] }[] = [];
+    for (const c of made) if (c.lines) byHand.push(await timed("form and document lines (as a person adds them)", () => this.linesByHand(actor, c as { id: string; label: string; lines: SixLines }, log)));
     log.push(`library drafts: ${replay.length} saved AI field-map answers replayed through the review queue (US$0): ${proposals} proposals waiting for review; ${[...new Set(waiting)].length} forms wait for "Draft with AI"${waiting.length ? ` (${[...new Set(waiting)].join(", ")})` : ""}`);
     const missing = made.flatMap((c) => [...c.absent.map((f) => ({ combination: c.label, code: f, why: "No saved copy." })), ...c.missing.map((m) => ({ combination: c.label, code: m.code, why: m.why }))]);
     await this.audit.log(workspaceId, actor.id, "loaded", "sample inputs", null, `${actor.name} loaded the sample starting point in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${made.length} combinations (5 Retail, 1 Corporate Sample), ${nodes} names in the Structure, official files through the form intake, the form finder replayed (US$0), ${proposals} AI proposals waiting for review; nothing released`, { log });
-    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, missing, cost_usd: 0, timings, log };
+    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, lines_by_hand: byHand, missing, cost_usd: 0, timings, log };
+  }
+
+  /** C11.7 part B (P-109, P-171 (3)): a combination's sample lines, through the screens' own services as the loading
+   *  person (the author): each library form added from the library (FormLibrary.attach: refused in its own words when the
+   *  library does not hold it or no approved edition is there, which stops the load), its channel set on the Forms tab
+   *  (Forms.setChannel: refused where the library records that IRCC does not accept it), and each document line added on
+   *  the Documents tab (Studio.saveRequirement: a type the library does not hold waits as one library proposal for a
+   *  second person, so the load writes no document type itself, P-108). A form a replayed finder answer already put on
+   *  the combination is left as it is. No AI, US$0. */
+  private async linesByHand(actor: Actor, c: { id: string; label: string; lines: SixLines }, log: string[]) {
+    const rows = await this.db.combinationForm.findMany({ where: { combinationId: c.id }, orderBy: { version: "desc" }, select: { lineageKey: true, status: true, channel: true } });
+    const newest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
+    const added: string[] = [], online: string[] = [], documents: { name: string; who: string; quote: string; status: string }[] = [];
+    for (const f of c.lines.forms) {
+      const had = newest.get(f.code);
+      if (!had || had.status === "RETIRED") { await this.formLibrary.attach(actor, c.id, { formKey: f.code, who: f.who }); added.push(f.code); }
+      if (f.channel && (had?.status === "RETIRED" || had?.channel !== f.channel)) {
+        await this.forms.setChannel(actor, c.id, f.code, { channel: f.channel });
+        if (f.channel === "ONLINE") online.push(f.code);
+      }
+    }
+    for (const d of c.lines.documents ?? []) {
+      const r = await this.studio.saveRequirement(actor, c.id, null, { newTypeName: d.name, proves: d.proves, attachMode: "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: "client", sourceQuote: d.quote });
+      documents.push({ name: d.name, who: d.who, quote: d.quote, status: "status" in r && r.status === "waiting" ? "waiting for a second person" : "line added" });
+    }
+    log.push(`  ${c.label}: by hand (Sample, ${c.lines.basis.split(":")[0]}): ${added.length} library forms added (${added.join(", ") || "none"})${online.length ? `, Online: ${online.join(", ")}` : ""}${documents.length ? `; document lines: ${documents.map((d) => `${d.name} (${d.status})`).join(", ")}` : ""}`);
+    return { combination: c.label, combination_id: c.id, forms_added: added, online, documents };
   }
 
   /** C10.1 the configured checkpoint (the M2 gate, DEMO.md "Checkpoints" 2): Load sample six, then each DEMO.md row
@@ -554,11 +515,33 @@ export class Demo {
     row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations${differ ? `; ${differ} where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)` : ""}`,
       why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
 
+    // C11.7 part B: a document type the sample named on a combination's Documents tab (the nomination certificate) is
+    // decided on To review › Proposals by the author, as the author decides every replayed proposal (row 4); the author
+    // then adds its line, as the Documents tab says ("Once it is accepted, choose it here and save the line"); the new
+    // type then waits for the approver, a second person, in row 5 (BR-7, P-80).
+    for (const c of six.lines_by_hand) for (const d of c.documents.filter((x) => x.status !== "line added")) {
+      const p = await this.db.proposalItem.findFirst({ where: { workspaceId, combinationId: c.combination_id, kind: "document_type", status: "waiting", payload: { path: ["name"], equals: d.name } }, select: { id: true } });
+      if (!p) { log.push(`  ${c.combination}: "${d.name}" is not waiting on To review, so its line was not added`); continue; }
+      // r2-m2: the two steps are told apart, so an accepted type whose line was refused never reads "stays waiting".
+      let key: string | undefined;
+      try {
+        // r2-m1: decided with a reason, as every proposal of the checkpoint is.
+        const r = (await this.proposals.decide(author, { ids: [p.id], action: "accept", reason: `Accepted by the sample loader: ${d.quote}`.slice(0, 300) })) as { items?: { landedAs?: string }[] };
+        key = r.items?.[0]?.landedAs;
+        if (!key) throw new Error(`accepting "${d.name}" gave no library key`);
+      } catch (e) { log.push(`  ${c.combination}: "${d.name}" stays waiting on To review: ${said(e)}`); continue; }
+      try {
+        await this.studio.saveRequirement(author, c.combination_id, null, { documentTypeKey: key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: "client", sourceQuote: d.quote });
+        log.push(`  ${c.combination}: ${author.name} accepted "${d.name}" on To review and added it as a required line; the new type waits for ${approver.name}`);
+      } catch (e) { log.push(`  ${c.combination}: "${d.name}" was accepted, but its required line was not added: ${said(e)}`); }
+    }
+
     // Row 7 (QA-144 slice 1): sections from each form's own parts, by the C3.4 rules pass (no AI, US$0), accepted by the
     // author on To review; the approver approves them with the other new items below (row 5).
     const keyOf = keyOf0;
     const fromForms = six.combinations.filter((c) => SET_UP_FROM_FORMS.has(keyOf.get(c.id) ?? ""));
-    const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [];
+    // sectionsHeld (QA-206): sections the forms print no heading over, left waiting on To review for a person to name.
+    const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [], sectionsHeld: string[] = [];
     let maritalList: string | null = null;
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
@@ -569,12 +552,19 @@ export class Demo {
         for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
         const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition" }, select: { id: true } })).map((j) => j.id);
         // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
-        const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true } }))
+        const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true, work: true, reason: true } }))
           .filter((p) => p.kind === "section" || (p.payload as { label?: string }).label === "Marital status");
         // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
         for (const p of take) {
+          // QA-206 (tech lead on #883; AGENTS rule 4: Sample, never guessed): a section the rules pass holds for a name is
+          // named only by print, through the same naming edit a person uses: with the heading that edition prints over it
+          // (another part prints it too). With no printed heading it stays waiting on To review and is listed as refused.
+          const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
+          if (held?.unnamed && !held.heading) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
           try {
-            const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
+            const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], held?.unnamed
+              ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
+              : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
             if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
           } catch (e) {
             // The card's own words: a section the library already holds is rejected here and that section reused (the
@@ -662,9 +652,11 @@ export class Demo {
         }
       }
     });
-    row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length ? "partial" : "done",
+    // QA-206 (tech lead on #883): each held section is named in one line, so the row says all of them, not the first six.
+    const heldLine = sectionsHeld.length ? `${sectionsHeld.length} section${sectionsHeld.length === 1 ? "" : "s"} held on To review for a person to name (the form prints no heading over their form fields): ${sectionsHeld.join(", ")}` : null;
+    row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length || sectionsHeld.length ? "partial" : "done",
       shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
-      why: [...sectionsRefused, ...setUpRefused].slice(0, 6).join(" · ") || null });
+      why: [...(heldLine ? [heldLine] : []), ...[...sectionsRefused, ...setUpRefused].slice(0, 6)].join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
     await applySampleFormRoles(this.db, workspaceId); // breaker M2: the demo's form roles before any release is made

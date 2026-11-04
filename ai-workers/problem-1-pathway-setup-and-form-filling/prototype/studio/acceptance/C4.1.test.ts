@@ -84,7 +84,15 @@ run(async () => {
   ok("C4.1-Q221a (QA-221) the SCH1 line names whom IMM 5257 SCH1's own words name (the principal, a spouse or partner, each child 18 or older, from 18)", sch1Line === `${WHO_SCH1}|18`, byAuthor ? { before, set_by_author: r.status, words: r.status >= 300 ? words(r) : undefined, line: sch1Line } : { set_by_loader: sch1Line });
   // What the author sees (Smart questionnaire tab, the Child chip; its sample child is under 18): fewer questions once
   // SCH1 is no longer the child's. On the checkpoint the line was right before the pack, so there is no before.
-  if (byAuthor) { const childAfter = await childAsked(); ok("C4.1-Q221b (QA-221) fail: the Child's questionnaire loses SCH1's questions once SCH1 names its own people (the Smart questionnaire tab)", childBefore !== null && childAfter !== null && childAfter < childBefore, { before: childBefore, after: childAfter }); }
+  // Q221b runs wherever the line is set (on the six the people's steps set it from IRCC's words since #993; on the
+  // checkpoint the loader does): the author widens SCH1 to "each applicant" on the Forms tab, the Child's questions are
+  // counted, and the line is put back as its own words set it. The Child loses SCH1's questions only with its own who.
+  const sch1Patch = (body: object) => call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(SCH1)}`, body, AUTHOR);
+  const childRight = await childAsked();
+  const widen = await sch1Patch({ who: "each_applicant", minAge: null });
+  const childWide = await childAsked();
+  const back = await sch1Patch({ attachMode: "COMBINATION_MANDATORY", who: WHO_SCH1, minAge: 18 });
+  ok("C4.1-Q221b (QA-221) fail: the Child's questionnaire loses SCH1's questions once SCH1 names its own people (the Smart questionnaire tab)", widen.status < 300 && back.status < 300 && childRight !== null && childWide !== null && childRight < childWide && lineNow() === `${WHO_SCH1}|18`, { each_applicant: childWide, own_who: childRight, ...(byAuthor ? { set_by_author_before: childBefore } : {}) });
   const snap = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body?.snapshot;
   const today = new Date("2026-11-04T00:00:00Z");
   const born = (age: number) => `${2026 - age}-01-15`;
@@ -113,7 +121,12 @@ run(async () => {
   // P-279: the source gate refuses Submit while a published number (a date counts) has no source entry; answered first.
   await T.sourceGate(wp);
   r = await call("POST", `/combinations/${wp}/submit`, { note: "section order (acceptance C4.1)" }, AUTHOR);
-  const line = ((r.body?.changeSummary ?? []) as any[]).find((c) => /section/i.test(String(c.kind)));
-  ok("C4.1 pass: the review names the move as one change line, in words (the section's title and its new place, now 1st)", !!line && String(line.label).includes(`"${lib}" now 1st`) && /reordered/i.test(String(line.label)), r.status >= 300 ? words(r) : line ?? (r.body?.changeSummary ?? []).map((c: any) => `${c.kind}|${c.key}`).slice(0, 5));
+  const summary = (r.body?.changeSummary ?? []) as any[];
+  const line = summary.find((c) => /section/i.test(String(c.kind)) && /reordered/i.test(String(c.label)));
+  // B71 (P-341): on a combination never released (Visitor visa of the six) the review has no released order to compare
+  // with, so it lists each section as added, in the draft's order; the moved section is then the first one.
+  const firstAdded = summary.find((c) => String(c.kind) === "Section");
+  if (released[0]) ok("C4.1-B71a pass: Submit goes through and the review names the move as one change line, in words (the section's title and its new place, now 1st)", r.status < 300 && !!line && String(line.label).includes(`"${lib}" now 1st`), r.status >= 300 ? words(r) : line);
+  else ok("C4.1-B71a pass: Submit goes through, and on a combination never released the review lists its sections as added in the new order, the moved one first", r.status < 300 && firstAdded?.key === second && firstAdded?.change === "added", r.status >= 300 ? words(r) : { first: firstAdded, moved: second });
   T.done();
 });

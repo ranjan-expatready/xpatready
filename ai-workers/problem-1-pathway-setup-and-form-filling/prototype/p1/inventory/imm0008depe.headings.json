@@ -1,0 +1,41 @@
+{
+ "file": "official-sources/ircc/forms/imm0008depe.pdf",
+ "sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.FormHeader": {
+   "heading": "Protected when completed - B",
+   "printed": "PROTECTED WHEN COMPLETED - B",
+   "how": "banner"
+  },
+  "Page1.Header": {
+   "heading": "Additional dependants / declaration form",
+   "printed": "ADDITIONAL DEPENDANTS / DECLARATION FORM",
+   "how": "banner"
+  },
+  "Page1.AddDependant": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner",
+   "sub": {
+    "natID": {
+     "heading": "National identity document",
+     "printed": "NATIONAL IDENTITY DOCUMENT"
+    },
+    "educationOccupation": {
+     "heading": "Education/occupation detail",
+     "printed": "EDUCATION/OCCUPATION DETAIL"
+    },
+    "languageDetails": {
+     "heading": "Language detail",
+     "printed": "LANGUAGE DETAIL"
+    }
+   }
+  },
+  "Page1.declaration": {
+   "heading": "Consent and declaration of applicant",
+   "printed": "CONSENT AND DECLARATION OF APPLICANT",
+   "how": "banner"
+  }
+ }
+}

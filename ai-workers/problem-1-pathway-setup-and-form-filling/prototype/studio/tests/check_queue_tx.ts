@@ -48,7 +48,7 @@ const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsS
     const s1 = steps();
     ok("C11.7 pass (queue transaction room): every saved field-map answer of the sample replays (the eighteen forms), the slowed IMM 5707 one included", s1.map((s) => s.file).join() === SAVED.join() && s1.every((s) => s.status === "COMPLETED") && a.body.drafts.replayed === SAVED.length, s1.map((s) => `${s.file} ${s.status}`));
     ok("C11.7 pass: each replay puts exactly the fields it reports on the review queue (IMM 5257 Schedule 1: 29, IMM 5707: 9)", s1.every((s) => s.items === s.said && s.items > 0) && s1.find((s) => s.file === "imm5257_1e.pdf")?.items === 29 && s1.find((s) => s.file === "imm5707e.pdf")?.items === 9, s1.map((s) => `${s.file} ${s.items}/${s.said}`));
-    ok("C11.7 pass: the queue holds every replayed proposal", n(`select count(*) from proposal_item where status = 'waiting'`) === s1.reduce((t, s) => t + s.items, 0) && a.body.drafts.proposals_waiting === s1.reduce((t, s) => t + s.items, 0), a.body.drafts);
+    ok("C11.7 pass: the queue holds every replayed proposal", n(`select count(*) from proposal_item where status = 'waiting' and origin = 'ai'`) === s1.reduce((t, s) => t + s.items, 0) && a.body.drafts.proposals_waiting === s1.reduce((t, s) => t + s.items, 0), a.body.drafts);
     ok("C11.7 pass: the load reports where its time goes, step by step", typeof a.body.timings === "object" && Object.keys(a.body.timings).length >= 5, a.body.timings);
 
     // Fail: past the 60 s room the step fails alone, with nothing of it on the queue; the other seventeen keep theirs.
