@@ -45,8 +45,8 @@ Sources: `product/DECISIONS.md` P-276 – P-318, `product/STATE.md` and `history
 | 17 | Our scorecard said 52; an independent re-test said 36 (3 Nov) | wrong forecast | M2/M3 only from qa's CAPABILITIES.md on main; due re-scores listed | every check |
 | 18 | Hand-overs with one standby Lead, or a standby offered and not started (4 Nov 00:58 and 09:25 IST) | risk of no successor | ACT "no standby Lead at context ≥ 30%" | the first check at 30% |
 | 19 | 45% of batches thrown away, mostly conflicts on shared notes files (31 Oct – 3 Nov; audit) | 129 PR-hours | batch failure rate over 10% in 6 h; M2/M3 same-file clashes in the pre-mortem | partly: conflicts show as dequeues (ACT per dequeue), not as failed runs |
-| 21 | All 20 cloud lanes were dead for up to ~13 h because claude.ai's GitHub link was not connected (4 Nov; Lead 4) | ~13 lane-hours with nothing built, unseen by GitHub-only checks | a cloud lane counts as running only after its first push or draft PR: ACT at 25 min; connections line (gh login, Mergify on the newest labelled PR, newest nightly) | 25 min after each lane's start |
 | 20 | QA-144 held C6.1 and C5.4 back to Partial (4 Nov ~10:50 IST); M3 re-scores wait on its checkpoint | M2 −1 | links block: QA-144 first on the critical path | every check while #798 is open |
+| 21 | All 20 cloud lanes were dead for up to ~13 h because claude.ai's GitHub link was not connected (4 Nov; Lead 4) | ~13 lane-hours with nothing built, unseen by GitHub-only checks | a cloud lane counts as running only after its first push or draft PR: ACT at 25 min; connections line (gh login, Mergify on the newest labelled PR, newest nightly) | 25 min after each lane's start |
 
 ## Known limits (from the Opus review of v2, 4 Nov)
 * "Last commit" is the commit time, not the push time: a commit pushed hours later reads as old until it is pushed again.
