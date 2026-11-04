@@ -325,6 +325,13 @@
        "item_version": {
         "type": "integer",
         "minimum": 1
+       },
+       "form_role": {
+        "description": "P-319: the library form's role to IRCC's rules, released with the combination (absent: no role). family_information: [IRCC-F09] Guide 5256.",
+        "type": "string",
+        "enum": [
+         "family_information"
+        ]
        }
       }
      }
