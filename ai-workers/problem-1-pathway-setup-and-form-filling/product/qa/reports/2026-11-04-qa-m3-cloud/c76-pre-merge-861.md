@@ -1,4 +1,4 @@
-# C7.6 before merge: an independent read of #861 at bb6d192 (4 Nov 2026, ~08:40 UTC)
+# C7.6 before merge: an independent read of #861 at bb6d192 (4 Nov 2026, ~14:10 IST)
 
 This is **not the verdict.** The C7.6 verdict comes on `main` after #861 merges. This read gives the tech lead and the builder an independent result early, and the re-score after the merge can then focus on the differences.
 

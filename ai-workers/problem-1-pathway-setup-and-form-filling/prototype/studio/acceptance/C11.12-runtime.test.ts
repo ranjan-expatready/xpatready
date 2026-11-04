@@ -1,7 +1,8 @@
 // C11.12 acceptance, the runtime side (P-220 pack 2; P-119): a case may hold only the person roles its pinned release lists,
 // and no more of each than its maximum. Needs a released combination: none of the six has a release until J4, so it runs
 // on the suites' fixture's Work permit (family) (released in that fixture) until then; then with `vv.single` as 4th
-// argument after J4 releases Visitor visa. Built on main (tests/runtime/check_runtime_r1a.ts): expected green.
+// argument after J4 releases Visitor visa. Built on main (tests/runtime/check_runtime_r1a.ts): expected green on a fresh
+// copy. With no such combination (gate B runs it after Reset to the six): exit 2, setup missing (QA-215).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C11.12-runtime.test.ts 4440 xr_studio_accept [vv.single]
 import { randomUUID } from "node:crypto";
 import { pack2, run } from "./lib/pack2.ts";
@@ -13,7 +14,10 @@ if (!process.argv[4]) process.argv[4] = "wp.family"; // the suites' fixture unti
 
 run(async () => {
   await T.ready();
-  const id = T.combo(T.key("wp.family"));
+  // QA-215: on the six (gate B's Reset to the six) the fixture's combination does not exist: setup missing (exit 2), never
+  // a crash on combination_id='' (exit 1). The combination there without a release is a FAIL below, not setup missing.
+  const want = T.key("wp.family"), id = T.combo(want);
+  if (!id) { console.error(`STOP  setup missing: no combination ${want} on this copy (the suites' fixture loads it; none of the six is released until J4). Run it on a fresh copy, or name a released combination as 4th argument.`); process.exit(2); }
   const snap = JSON.parse(sql(`select snapshot::text from config_release where combination_id='${id}' order by version desc limit 1`) || "null");
   const listed = (snap?.combination?.participants ?? []) as { role: string; max?: number }[];
   ok("setup: the combination has a release listing its people", listed.length >= 2, listed.map((p) => `${p.role}:${p.max}`));
