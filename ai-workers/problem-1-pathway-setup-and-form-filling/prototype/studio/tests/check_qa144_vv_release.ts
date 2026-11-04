@@ -3,7 +3,7 @@
 // person approves them, the shared placement step asks each needed fact in the section of its form box, every form field
 // no saved answer proposed is filled by hand (never "not a fact"), and its form lines follow IRCC's words (Sample,
 // Unconfirmed: expert). On main the same load releases nothing, so this check fails there.
-//   zsh studio/tools/isolated.sh b8_qa144 4470 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_qa144_vv_release.ts 4470 xr_studio_b8_qa144
+//   zsh studio/tools/isolated.sh b8_qa144 4470 start && tsx studio/tests/check_qa144_vv_release.ts 4470 xr_studio_b8_qa144
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";

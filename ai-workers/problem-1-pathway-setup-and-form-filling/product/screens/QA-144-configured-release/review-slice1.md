@@ -147,3 +147,39 @@ Reviewer: the same fresh context. 4 Nov 2026. I read the code only. No copy was 
 **Verdict: Block** 8a1bfd32e
 * To fix: R2-M1.
 * R2-m1 to R2-m3 should be fixed with it, or filed on the slice 2 row.
+
+## Round 3: diff-only re-review of cb87f81cd (`git diff 8a1bfd32e cb87f81cd`; the round-2 fix is 0ae82831c, the rest is a main merge and this file)
+
+Reviewer: the same fresh context. 4 Nov 2026. I read the code only, as the tech lead asked (no copy, no suite). `tsc --noEmit -p api/tsconfig.json`: no error in `form-part-placements.ts` or `check_qa144_vv_release.ts`. CI for cb87f81cd is still queued (run 41779470228). I read the CI logs of 8a1bfd32e (run 41775891982), which found the two Majors below.
+
+### Round 2 findings
+* **R2-M1: fixed in the code.** `form-part-placements.ts:96` counts a coverage row only when `applies === true`. `:97` counts a `case.*` fact only when such a row reads it for FILING (`aboutOf` returns FILING for a filing fact, `engine/resolver.ts:87`). With no answers, the preview of the largest household (`engine/coverage.ts:21-27`) leaves out IMM 5409, IMM 5476, IMM 5475, IRM 0002 and any form with a minimum age (`render.ts:53-55`, unknown birth date gives "cannot_tell").
+* **R2-M1 tests: right form, but unproven.**
+  * The answer keys match `factKey`: `principal|person.marital_status` and `child-1|…` (`contracts/resolver.ts:151`; `engine/resolver.ts:19` gives the ids).
+  * Without `people`, the preview uses the stored counts (`studio.ts:487-489`). For `vv.single` those are principal 1, spouse 0, child 0, with no representative line (`samples/programs.json`), so "on their own" is true.
+  * A non-common-law marital status makes IMM 5409 false. The old code would then add its facts with the reason "a section this row selects" (`render.ts:254-256`), so `:77` fails for the right reason.
+  * Gap (Minor, R3-m1): the `case.*` half is not guarded. With the case facts unanswered, IMM 5476 and IMM 5475 ask them first as "may be needed", and `seen` hides the section reason. Add a preview with those deciding case facts answered so the forms are false.
+* **M3 tests: fixed.** `:84-85` now require `per_row` and `per_person`, so they fail when nothing was placed. Round 2 also asked to check that all `person.previous_residence_*` facts share one section; that was not added (nit).
+* **R2-m2: fixed.** For a `per_row` fact, `:79` picks the section only from list-row boxes about form_subject.
+* **R2-m3: fixed.** `:37` filters `channel: "PDF"` (a valid `EditionChannel` value) with a fixed order. With `editionLabel desc` the Map keeps the lowest label. That is stable, though it does not prefer the label of the snapshot's PDF map (nit).
+* **R2-m1: open for slice 2**, as the PR body says.
+* **At least three chosen sections under `applies === true`: not confirmed.** Only IMM 5257-style forms that always apply now count, for principal, spouse and child together. Whether three sections pass is decided by `check_qa144_vv_release.ts:66`. That check has not run since 0ae82831c (the builder's 16/16 walk, 9ba460fc9, came before it), and CI cannot run it (R3-M1).
+
+### Open
+**R3-M1 (Major, Must). `tests/check_qa144_vv_release.ts:6`: CI never runs this check on a copy**
+* `run-suites.sh:193` starts an isolated copy only when the usage line reads `isolated.sh <name> <port> start && (tsx|node) studio/tests/<file>`. This line has `tsx --tsconfig studio/api/tsconfig.json studio/tests/…`, so it does not match (tested with the same bash regex: NOMATCH).
+* The check then runs "plain", defaulting to port 4470 with no server. CI at 8a1bfd32e: `check_qa144_vv_release.ts | FAIL | 0 s | ECONNREFUSED ::1:4470` (shard 3).
+* So none of the R2-M1, M2 or M3 assertions has run in CI, and the PR cannot go green.
+* Fix: write the usage line as `check_c10_1_configured.ts:6` does (`… start && tsx studio/tests/check_qa144_vv_release.ts 4470 xr_studio_b8_qa144`). Then confirm in CI that `:66`, `:77` and `:79` pass.
+
+**R3-M2 (Major, Must). `tests/check_c10_1_browser.cjs:46` still expects row 7 to say "not built yet"**
+* This PR changes row 7 to "Sections and questions from the forms' own parts" with status waiting, partial or done (`api/src/demo.ts:534`). The browser check still requires `r("7").status === "not built yet"`.
+* CI at 8a1bfd32e: shard 5 failed on exactly `C10.1: rows 7 and 17 say "Not built yet"`. Nothing since changes it.
+* Fix: keep row 17's assertion, and assert row 7's new title and status. Row 7 should be "done" after the configured load, if this check loads it.
+
+### Journey test, round 3
+**7/10, carried. Not walked**: the tech lead keeps the Mac for walks, and this round was code-only by instruction. Correct data can rise from ½ once `:77` and `:79` pass in CI.
+
+**Verdict: Block** cb87f81cd
+* To fix: R3-M1 and R3-M2 (both CI-only: the R2-M1 code holds). Then show CI green with `check_qa144_vv_release` actually run.
+* R3-m1 and the two nits can go with them, or on the slice 2 row.
