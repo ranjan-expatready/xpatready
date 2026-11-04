@@ -54,8 +54,9 @@ export type FormItem = {
   signedBy?: string | null;
   /** Who owes a missing signature (default the client; the representative signs IMM 5476's own part). */
   signerOwes?: Owes;
-  /** Signed or uploaded, then a fact changed: the fact and when (BR-12). */
-  outOfDate?: { fact: string; since: string } | null;
+  /** Signed or uploaded, then a fact changed: the fact and when (BR-12). `key` (C9.2, bot review on #926): a fingerprint of
+   *  every change and its value now, so a pass covers only the changes it was given for, never a later one. */
+  outOfDate?: { fact: string; since: string; key?: string } | null;
   edition?: { label: string; superseded: boolean; acceptedUntil: string | null } | null;
   /** Online lines: the "Download PDF copy" is older than the facts (P-145); an entered section is out of date (C7.3). */
   copyStale?: boolean; enteredOutOfDate?: string[];
@@ -135,7 +136,7 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
     for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
     // BR-9 1: out of date, or a required signature missing.
-    if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
+    if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
     if (signatureNeeded(f) && !f.signed) {
       const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : f.signature === "PEN" ? "signed in pen"
         : "signed (how it is signed is not set on the form line yet; until it is, the signature is waited for)";
