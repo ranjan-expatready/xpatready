@@ -51,14 +51,21 @@
 //      key that was asked.
 //  R10 Roles a "who" names (WHO_ROLES): removing every person of those roles leaves the line with nobody (M4 warning,
 //      X2b BR-C1). It agrees with R2 (checked).
+//  R11 Whom a document's facts are about (C6.5; was "Not yet" (b)): a document type says per fact whom it is about,
+//      relative to the person whose checklist line holds it (DOCUMENT_ABOUTS). holder → the holder (the filing when the
+//      line is the case's); holder.spouse → the holder's partner (R4 partnerOf), nobody when none or when the holder is
+//      the filing; holder.parent → both parents, `${holder}/parent_1` and `/parent_2` (relatives, R4), nobody for the
+//      filing. Any other value is read as holder.parent (the library offers only the three; today's behaviour of
+//      engine/sources.ts kept). The same rule per role (documentRole): the holder's role, the partner's role, and
+//      nobody for parents (they are relatives, not people on the case). The document reader (engine/runtime/mrz.ts)
+//      states its values about "holder"; a document naming two people is not attributed by the reader (its rule M5).
 //
 // Not yet through the resolver (file:line on the SH3 tidy-up's base, main 4cc6d2be):
 //  (a) Conditions of other line types (engine/render.ts): a rule's holders from its condition's subject kind (R2's rule
 //      case); a question's on the person the answer is about. Forms and checks came into R3 with C7.7 (3 Nov); render's
 //      `applicants` copy of R2 and its "case" literals came from the resolver with M1 (#659).
-//  (b) Whom a document's facts are about (holder, holder.spouse, parent_1/parent_2): engine/sources.ts:47-52 and its
-//      role-level twin other() at :267; C6.5's document reader needs it as a resolver rule. Also local there: isAgentFact
-//      (:91), WHO_OF_ROLE (:230, the reverse of WHO_ROLES) and `h === "case"` literals.
+//  (b) Done with C6.5 part 1 (3 Nov): whom a document's facts are about is R11 (engine/sources.ts documentFacts and
+//      checklist call it). Still local in engine/sources.ts: isAgentFact, WHO_OF_ROLE (the reverse of WHO_ROLES).
 //  (c) Done with C7.7 (3 Nov): render's deciders and engine/runtime/case-checklist.ts pass the placement, so an unanswered
 //      fact placed once_per_case is asked once, on the filing; an answered one is kept where its answer is stored (on
 //      the person when it was saved before its placement became once per case, review r2-m1).
@@ -136,6 +143,9 @@ export const BOX_PERSON = ["form_subject", "subject_spouse_or_partner", "subject
 export const SIGNERS = ["person", "parent_for_minor", "principal_for_family", "person_and_representative", "none"] as const;
 /** R9. */
 export const MERGE_HOPS = 5;
+/** R11: whom a document type's supplied fact is about, relative to the line's holder. */
+export const DOCUMENT_ABOUTS = ["holder", "holder.spouse", "holder.parent"] as const;
+export type DocumentAbout = (typeof DOCUMENT_ABOUTS)[number];
 
 /** R8: the key a known value is stored under. */
 export const factKey = (about: string, fact: string, row?: number | null) => `${about}|${fact}${row === undefined || row === null ? "" : `|${row}`}`;
@@ -157,4 +167,6 @@ export interface Resolver {
   /** R7: signer id → the rows (person ids or FILING) they sign for. */ signers(people: PersonOnFiling[], who: string, signedBy: string | null | undefined, minor?: (id: string) => boolean | undefined): Map<string, string[]>;
   /** R9: the database (or any store) answers one hop; the resolver follows the chain. */ canonicalFact(key: string, mergedInto: (key: string) => Promise<string | null | undefined>): Promise<string>;
   /** R10 */ rolesNamedBy(who: string): Role[];
+  /** R11: the about-keys (person ids, relatives or FILING) a document's fact is about, for one holder. */ documentSubjects(people: PersonOnFiling[], holder: string, about: string): string[];
+  /** R11 per role: the role a document's fact is about, for one holder; null for nobody or for relatives. */ documentRole(people: PersonOnFiling[], holder: string, about: string): string | null;
 }
