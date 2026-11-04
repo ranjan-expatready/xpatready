@@ -66,7 +66,7 @@ export function pack2(id: string) {
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
   async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
-    const out = { accepted: 0, applied: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
+    const out = { accepted: 0, applied: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     // Review m6: only what the author's own steps put on To review, never another person's waiting change.
@@ -79,6 +79,12 @@ export function pack2(id: string) {
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
     }
+    // P-214 (tech lead on #883): a form field the saved AI answer left with no decision is filled by hand, decided by the
+    // author on the Form library's field map (its own route), as the configured checkpoint's loader does (demo.ts,
+    // BY_HAND_REASON); never "not a fact", so an applicant's answer is never dropped. Only PDF editions of this
+    // combination's own forms; without it the validator refuses Submit (IMM 5707, IMM 5409 on Visitor visa of the six).
+    for (const [ed, path] of ids(`select e.id || E'\\t' || m.data_path from form_field_map m join form_edition e on e.id = m.form_edition_id where m.outcome = 'unresolved' and m.status = 'DRAFT' and e.channel = 'PDF' and e.gov_form_def_id in (select gov_form_def_id from combination_form where combination_id = '${comboId}' and status <> 'RETIRED') order by e.id, m.data_path`).map((x) => x.split("\t")))
+      if (say("decide a form field by hand", await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: path, decision: "by_hand", reason: "Not proposed by the saved AI answer, so a test marks it filled by hand on the PDF until a person maps it (QA-144 part 1 setup; Sample)." }, AUTHOR))) out.byHand++;
     await approveAll();
     for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Form' order by created_at`)) say("sections from the form's parts", await call("POST", `/attachments/${a}/draft-masters`, { mode: "rules" }, AUTHOR));
     for (const p of ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='masters_edition' and p.kind='section' and p.status='waiting' order by p.created_at, p.identity_key`)) {
