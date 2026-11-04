@@ -11,6 +11,7 @@
 # where the pack's run allows, else on its fixture, labelled "fixture only" (studio/tools/gate-b.mjs, the same runner gate B
 # uses), so qa's re-score after a merge needs no Mac copy:
 #   gh workflow run nightly.yml -f capabilities="C11.10 C5.4"        (on main; --ref <branch> for a branch)
+#   ... -f data=checkpoint   loads the configured checkpoint instead of the six (GATE_B_DATA; tech lead 4 Nov, #798 QA-144)
 # qa still walks the screens like a person and gives the verdict (P-290); the run is the independent machine re-run.
 name: nightly
 on:
@@ -22,6 +23,12 @@ on:
         description: "Re-test only these capabilities' packs, e.g. C11.10 C5.4 (empty = the full nightly set)"
         required: false
         default: ""
+      data:
+        description: "Demo data for the re-test: six (Demo › Reset to the six) or checkpoint (Demo › Load the configured checkpoint)"
+        required: false
+        default: six
+        type: choice
+        options: [six, checkpoint]
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -65,7 +72,7 @@ jobs:
       - name: Playwright's own Chromium
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: ${{ matrix.cap }} acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)
-        env: { CAP: "${{ matrix.cap }}", GATE_B_JOBS: "1", KIND: code }
+        env: { CAP: "${{ matrix.cap }}", GATE_B_JOBS: "1", KIND: code, GATE_B_DATA: "${{ github.event.inputs.data || 'six' }}" }
         run: |
           [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
           echo "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
