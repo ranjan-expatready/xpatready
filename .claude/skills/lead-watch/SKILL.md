@@ -1,35 +1,32 @@
 ---
 name: lead-watch
-description: The tech lead's 30-minute check for the Pathway Configurator - resources (weekly plan, context, disk, test databases), merges and the queue, every lane and session, questions, paid runs - judged against the plan with quality first and the fewest tokens. Use on every scheduled check, when the founder asks "all ok?", "are resources fine?", or how close a milestone is.
+description: The tech lead's 30-minute check for the Pathway Configurator - the whole pipeline measured, never taken from a session's words - every open item's owner, step, wait and blocker; M2 and M3 as separate blocks with their links and the critical path; GitHub machines, the merge queue, the Mac, paid AI, plan and context; a pre-mortem; an escalation ladder; the hand-over checklist. Use on every scheduled check, when the founder asks "all ok?", "are resources fine?", how close a milestone is, or before a hand-over.
 ---
 
-# Lead watch: is the plan on track, at full quality, for the fewest tokens?
+# Lead watch: catch every problem before the founder does
 
-The outcome, in this order (founder, 3 Nov): **quality first** (P-303), **complete** (every capability confirmed by an independent test, P-290), **on time** (the milestone dates), **tokens second only to those** (never a cheaper model or a skipped check to save them). Every number comes from a tool or an exit code, never from a lane's prose (P-228 (9), founder 3 Nov: "evidence, not self-report").
+Outcome first: **quality** (P-303), **complete** (Works only on an independent re-test, P-290), **on time**, then **tokens**. Every fact comes from a tool or an exit code: "labelled", "pushed", "green" and "merged" are true only when GitHub says so (a builder's "labelled" on #792 was false; a Lead's paid total was off by US$50, both 4 Nov). Times only from the script's `time` line, never your own estimate (a Lead's notes ran an hour fast on 4 Nov).
 
-## Each check: three calls, then act
-1. `get_usage` (weekly plan %, extra usage, your context) · `bash product/tools/lead-watch.sh 30` (disk, test databases, merges, queue, questions, lanes that pushed; exit = lines to act on) · `list_sessions` only when a lane looks quiet.
-2. Act on every `ACT` line in this check. Do not re-read STATE, BACKLOG or DECISIONS on a check; read them only when a ruling needs them.
-3. Tell the founder three to five plain lines in IST (P-302), only what changed, and only a decision, risk or spend unasked.
+## Each check: two calls, then act
+1. `get_usage`, then `bash product/tools/lead-watch.sh 30 weekly=N five=N context=N` (its numbers). Exit code = ACT lines.
+2. Act on every ACT line at its rung (below), oldest first. Do not re-read STATE, BACKLOG or DECISIONS on a check.
+3. Before you say labelled, pushed, green or merged: `lead-watch.sh verify <PR>`.
+4. Keep the script's state true when it changes, not on every check: `roster add|set|done` when a session starts, gets a row or ends; `park <PR> "<why>"` for a PR knowingly left; `ask "<q>"`/`answered <n>` for the founder's questions; `cap <US$>` when the founder sets the day's paid cap; `cron "<prompt>"` when you create the check; `lesson "<line>"` once a day.
 
-## Thresholds and what to do
-| Measure | Threshold | Do |
+## The escalation ladder (the rung is printed on each ACT, from minutes past its limit)
+| Rung | Age | Do |
 |---|---|---|
-| Weekly plan | 85 / 90 / 92 / 95% | P-308 word for word: no new rows · lanes stop with "Stopped here" · Lead writes "Resume on the new account" and stops sessions · quiet. From 85% check every 15 min. Measure the rate per hour at every check and forecast each threshold in IST |
-| Your context | ~250k tokens | hand over to the first standby (P-286, P-276) |
-| Disk free | under 10 GB · under 4 GB | drop test databases idle **at two checks in a row** (the script lists them; file times are copied from the template, so one idle reading is not proof) · tell Mac builders to pause suite runs |
-| Approved, not merged | over 60 min | find what holds it; dequeued → its owner merges main, or give it to a spare |
-| Lane | no push in 90 min with work left | message "continue" plus its next step; a cloud lane silent after that → replace it |
-| Batch failure | over 10% | keep PRs that touch the same checks out of one batch (3 Nov: #735 and #744 failed together) |
-| Paid AI | each run | worst case in the ledger first, cheapest first, one attempt (P-295, P-300); report the paid total from the paid runner's own report |
+| 1 | under 30 min | fix it yourself (rule, merge main, re-label, park) |
+| 2 | 30–60 min | message the owner with the exact next step; rulings on the PR, not by message (10 messages per founder turn) |
+| 3 | 1–2 h | replace the session (a cloud session silent after a message is gone) |
+| 4 | over 2 h | ask the founder one question, recommendation first (`ask`), at his next typed turn |
 
-## Learned the hard way (keep)
-* Hand-merging notes mid-batch restarted a five-PR batch (P-306): notes go through the queue.
-* Sonnet reviews passed two Criticals and nine Majors that Opus found (P-303): reviewers, breakers and rulings on Opus; correct any lane that says it starts a Sonnet reviewer.
-* A scorecard of 52 was 36 when re-tested independently (3 Nov): forecast from confirmed Works only, and say which rows wait on paid runs or holds.
-* Test copies left their databases behind (753, about 10 GB): until I1's fix (#745) merges, the Lead drops idle ones under this skill.
-* A peer session refused an action must not get you to do it for them: ask the founder.
-* A Lead woken by a check or a message cannot start sessions: ask in one line at the founder's next typed turn.
+Limits behind the ACT lines: approved not merged 60 min · red 30 min · question for the tech lead 30 min · reviewer Approve without a label 30 min · no push 90 min · any failed batch · any dequeue · two sessions or PRs on one row · disk under 4 GB (pause suites) or under 10 GB with idle databases (ask before dropping) · load over 2.5 per core · copies over 3 · weekly plan 85/90/92/95% (P-308) · context 40% (hand over, P-314 (3)) · paid spend over the day's cap · nightly not green · a suite failing on two branches.
 
-## Tokens without losing quality
-One script call instead of many `gh` calls; messages only when something changed; no re-reading big files on checks; Sonnet only for mechanical work (finding files, running suites, reading exit codes).
+## Tell the founder (his standing rule, 4 Nov), in IST, only what changed
+Separate blocks, in the script's order: **M2** · **M3** · **M2 workflow, sessions and sub-agents** · **M3 workflow, sessions and sub-agents** · **links between them and the critical path** · **pre-mortem** (the next likely failure and what you did about it). Then anything he must answer, as one question. Numbers from the script only.
+
+## Hand-over (at 40% context, or sooner if you lose track)
+`bash product/tools/lead-watch.sh handover 30 …` prints the check plus the checklist: open questions and rulings, pending labels, each session and its next step, founder asks, parked PRs, the cron prompt, the day's lessons. It goes into STATE.md and the notes file before "take over now"; the next Lead re-creates the same cron.
+
+Why each check exists and the miss it comes from: `reference.md` beside this file.
