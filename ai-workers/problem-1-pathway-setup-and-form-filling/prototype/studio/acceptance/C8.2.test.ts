@@ -41,7 +41,9 @@ await main("C8.2", "Record the submission per group (Visitor visa)", async () =>
   ok("C8.2-10 fail: correcting a number without a reason is refused (400)", r.status === 400, r.status);
   r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000009", reason: "Typo in the number (Sample)" }, officer);
   ok("C8.2-11 pass: \"Correct a number\" changes it and keeps the old one in the history with the reason", r.status === 200 && (await prepare(c.id, officer)).p?.filings.find((x) => x.id === fP)?.number === "V300000009" && sql(`select count(*) from filing_record_correction where filing_id='${fP}'`) === "1");
-  await answer(c.id, P, "person.family_name", "SAMPLEDY", CLIENT); // counts as confirmed (P-78), as in C9.2
+  // #924: the family name is entered by the officer from the passport (`collected_from: verified_document` in both Visitor
+  // visa releases), so a client's change is refused (403) and nothing changes; the officer enters the corrected name.
+  await answer(c.id, P, "person.family_name", "SAMPLEDY", officer);
   p = (await prepare(c.id, officer)).p;
   ok("C8.2-12 pass (BR-12, P-142 D7): a fact changed after filing marks the filed items \"Filed with an earlier value\" and opens a task to re-sign or tell IRCC (Unconfirmed: no counsel)",
     itemsOf(p, P).some((i) => i.state === "out_of_date" && /earlier value/i.test(i.reason ?? "")) && Number(sql(`select count(*) from case_task where case_id='${c.id}' and kind='after_filing_change'`) ?? 0) >= 1);
