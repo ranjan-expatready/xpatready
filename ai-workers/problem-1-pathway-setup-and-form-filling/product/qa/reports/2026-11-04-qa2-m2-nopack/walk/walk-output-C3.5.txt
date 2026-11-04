@@ -1,0 +1,3 @@
+field page: Fields | Family name | Family name |  | Family name as shown on passport or travel document |  | v1 | Draft | AI-proposed | about a person | Details (for admins) | Definition | Name |  | Rename shows what it touches first. It applies now as a draft version, or waits for a second person when a released combination uses the fiel
+aliases words: Read from the form, not checked on answers here: IMM 1294 (06-2026): "2. Nickname, maiden name, alias, etc The correct format is: Nickname, maiden name, alias, etc... cannot be the same as Full Name" (no fixed check in code matches it yet) · IMM 1344 (09-2024): "Must be the same as the Family Name of the Sponsor's current spouse/common-law partner" (no fixed check in code matches it yet)
+Merge buttons: 0 · page errors 0

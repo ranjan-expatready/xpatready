@@ -127,3 +127,20 @@ I re-ran everything on fresh copies (ports 4464–4466):
 **Round 2 verdict: Block.** One Must is left: M1's raw section key in the Review and release row prefix
 (`validate.ts` new warning, `item` = section id with no `label`). Once that one-line fix and its test assertion are in,
 nothing else is open from my side.
+
+## Round 3: diff-only check, 64c5d01a..57a61a22 (the last round; tech lead ruling (a))
+I re-ran on fresh copies (ports 4467–4468, US$0):
+* `tests/check_c42_still_asked_browser.cjs`: **13/13**.
+* `tests/check_c42_section_titles.ts`: **12/12**.
+
+* **M1 closed.** The pulled-section warning now carries `label: <title>`, and its message starts "<title>: not chosen …"
+  (`engine/validate.ts:104-105`). `review.tsx:21-22` `problemLine` prints the message alone when it starts with
+  `<label>:`, so the row reads once: **"Questions · Personal details: not chosen for this combination, …"**. I confirmed
+  this in my own run's screenshot (5-review-warning-1440.png). The key appears nowhere in the row. The API check
+  asserts `label === title` and the start of the message. No other test or code relies on the old wording.
+* m5 (new, Should; does not block): the browser step clicks the first "Show all" on the page. That is the sources
+  panel's, so Validation of the draft stays at 8 of 22 rows, and "no row shows its key" covers only the rows shown.
+  The API check covers the full list. Scope it to the validation panel's own "Show all 22".
+
+**Round 3 verdict: Approve** on 57a61a22. No Blocker or Major is open. Minors: m2 (the browser check takes the section
+out by API) as listed in the build notes, and m5 above.

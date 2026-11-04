@@ -7,13 +7,23 @@ export const NOT_AI_READERS: readonly string[] = ["coded_lines", "printed_layout
 
 /** Common Cyrillic and Greek letters that look like Latin ones (break B4 on QA-195: "Pаssport" with a Cyrillic а). */
 const LOOK_ALIKE: Record<string, string> = { "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y", "і": "i", "ј": "j", "ѕ": "s", "к": "k", "м": "m", "т": "t", "в": "b", "н": "h", "ο": "o", "α": "a", "ρ": "p", "ε": "e", "ι": "i", "κ": "k", "ν": "v", "τ": "t" };
+/** Latin letters that are not plain a–z but read as them (#882 break B3): dotless i and j, small capitals. */
+const LATIN_LIKE: Record<string, string> = { "ı": "i", "ȷ": "j", "ᴀ": "a", "ʙ": "b", "ᴄ": "c", "ᴅ": "d", "ᴇ": "e", "ꜰ": "f", "ɢ": "g", "ʜ": "h", "ɪ": "i", "ᴊ": "j", "ᴋ": "k", "ʟ": "l", "ᴍ": "m", "ɴ": "n", "ᴏ": "o", "ᴘ": "p", "ʀ": "r", "ꜱ": "s", "ᴛ": "t", "ᴜ": "u", "ᴠ": "v", "ᴡ": "w", "ʏ": "y", "ᴢ": "z" };
+/** Invisible characters (#882 break B3): every format character (zero-width, word joiner, invisible operators, the
+ *  Mongolian vowel separator), soft hyphen, and the Hangul fillers that print as nothing. */
+const INVISIBLE = /[\p{Cf}\u00ad\u115f\u1160\u3164\uffa0]/gu;
 /** A name as the list reads it (break B4): compatibility forms folded (full-width letters), accents and invisible
  *  characters dropped, look-alike letters read as Latin, curly apostrophes straight, underscores, hyphens and any run of
  *  spaces as one space, lower case. */
 export function identityWords(name: string): string {
-  return name.normalize("NFKD").replace(/[̀-ͯ­​-‏⁠﻿]/g, "").toLowerCase()
-    .replace(/[Ͱ-ӿ]/g, (c) => LOOK_ALIKE[c] ?? c).replace(/[‘’ʼ`]/g, "'").replace(/[_\-‐-―]+/g, " ").replace(/\s+/g, " ").trim();
+  return name.normalize("NFKD").replace(/\p{M}/gu, "").replace(INVISIBLE, "").toLowerCase()
+    .replace(/[Ͱ-ӿ]/g, (c) => LOOK_ALIKE[c] ?? c).replace(/[ıȷᴀ-ᴢʙɢʜɪʟɴʀʏꜰꜱ]/g, (c) => LATIN_LIKE[c] ?? c)
+    .replace(/[‘’ʼ`]/g, "'").replace(/[_\-‐-―]+/g, " ").replace(/\s+/g, " ").trim();
 }
+/** P-153 (1), fail closed (#882 break B3): a word that mixes Latin letters with letters of another script ("Passpօrt"
+ *  with an Armenian օ, "Ꮲassport" with a Cherokee letter) is never a real document name, and no list of look-alikes is
+ *  ever complete, so it is treated as an identity document: a person reads it, never AI. */
+const MIXED_SCRIPT = /(?=\S*\p{Script=Latin})(?=\S*(?!\p{Script=Latin})\p{L})\S+/u;
 
 /** A passport or travel document: an identity document read by its coded (machine-readable) lines (C2.6). */
 export const CODED_IDENTITY = /\bpassport\b|\btravel document\b/i;
@@ -41,7 +51,7 @@ const OWN_PAGE = /\b(page|data|bio|biographic|biographical|information)\b/;
 /** Whether a document type's name names an identity document (QA-195: "Passport" in category "travel" is one). */
 export function isIdentityName(name: string): boolean {
   const w = identityWords(name);
-  return IDENTITY_NAME.test(OWN_PAGE.test(w) ? w : w.replace(PHOTO_ONLY, " "));
+  return MIXED_SCRIPT.test(w) || IDENTITY_NAME.test(OWN_PAGE.test(w) ? w : w.replace(PHOTO_ONLY, " "));
 }
 /** Whether a name is only a photo of passport size (C2.6: a person looks at it; never its coded lines). */
 export function isPassportPhoto(name: string): boolean {
@@ -52,6 +62,7 @@ export function isPassportPhoto(name: string): boolean {
 /** P-134 on every path and at the one door (break B1): a document type is an identity document when it is flagged, its
  *  category is identity, or its name is on the list; then only a reader that is not AI may read it. */
 export const identityOf = (d: { name: string; category?: string | null; identityDocument?: boolean | null }): boolean =>
-  !!d.identityDocument || /identity/i.test(d.category ?? "") || isIdentityName(d.name);
+  // #882 break B8: the category is read by the same list ("Identité", "identification", "ID", "id_documents").
+  !!d.identityDocument || /identity/i.test(d.category ?? "") || isIdentityName(d.category ?? "") || isIdentityName(d.name);
 export const aiReadsIdentity = (d: { name: string; category?: string | null; identityDocument?: boolean | null; readerKind: string }): boolean =>
   identityOf(d) && !NOT_AI_READERS.includes(d.readerKind);

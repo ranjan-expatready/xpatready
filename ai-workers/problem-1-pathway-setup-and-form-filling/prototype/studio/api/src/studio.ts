@@ -9,7 +9,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, effective, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { backgroundPathsOf } from "./background-questions.ts";
-import { backgroundWords, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, readingMissingWords } from "../../engine/form-completeness.ts";
+import { backgroundWords, FAMILY_INFORMATION, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, readingMissingWords } from "../../engine/form-completeness.ts";
 import { slug } from "../../engine/import.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
@@ -231,7 +231,10 @@ export class Studio {
     const maps = asked.length ? await this.db.formFieldMap.findMany({ where: { workspaceId, OR: asked, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { id: true, formEditionId: true, dataPath: true, caption: true, outcome: true, version: true, status: true, supersedesId: true, edition: { select: { form: { select: { formKey: true } } } } } }) : [];
     for (const r of effective(maps, (m) => `${m.formEditionId}|${m.dataPath}`, "draft"))
       if (NOT_A_FACT.has(r.outcome)) out.push({ level: "error", where: "Forms", item: r.edition.form.formKey, message: backgroundWords(r.caption, read.get(r.formEditionId)?.get(r.dataPath)) });
-    const missing = missingFamilyForm(attached.map((a) => formNumberOf(a.edition)), forms);
+    // [IRCC-F09] P-319: which forms are family information forms is the library's (each form's role), never a list here.
+    const packaged = attached.map((a) => formNumberOf(a.edition));
+    const family = new Set((await this.db.govFormDef.findMany({ where: { workspaceId, formRole: FAMILY_INFORMATION, formKey: { in: [...new Set([...forms, ...packaged])] } }, select: { formKey: true } })).map((f) => f.formKey));
+    const missing = missingFamilyForm(packaged, forms, family);
     if (missing) out.push({ level: "error", where: "Forms", item: missing, message: familyFormWords(missing) });
     return out;
   }

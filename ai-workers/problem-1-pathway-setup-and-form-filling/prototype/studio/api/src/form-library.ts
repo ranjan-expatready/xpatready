@@ -17,7 +17,7 @@ import { INDEX_URL, libraryType } from "./finder.ts";
 import { notFiledWords } from "../../engine/form-type.ts";
 import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
-import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
+import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, FormRoleBody, roleWords, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
@@ -250,6 +250,36 @@ export class FormLibrary {
     const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${deleted.length ? `, ${deleted.length} left out that ${deleted.length === 1 ? "was" : "were"} deleted from the library (${deleted.slice(0, 5).join(", ")}${deleted.length > 5 ? "…" : ""}; "List again" under the table brings ${deleted.length === 1 ? "it" : "one"} back)` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
     await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable });
     return { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+  }
+
+  /** P-319 (founder, 4 Nov: "no combination is hard-coded"): an author proposes what a form is to IRCC's rules ([IRCC-F09]
+   *  reads the family information role), with a reason. Lead 4's ruling on #833 (P-149): never written directly; it waits on
+   *  To review for a second person, who applies it (lifecycle.ts applyRole), and each combination's next release names it
+   *  for the immigration expert (engine/validate.ts diff: SME sign-off). A release made before keeps its own role. */
+  async setRole(actor: Actor, code: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(FormRoleBody, body);
+    const workspaceId = await this.ws.id();
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
+    if (!def) throw problem(404, "Not in the library", `${code} is not in the library: add it first (Find forms, or Upload PDF).`);
+    if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it in the library before you change its role.`);
+    // Breaker m3: a role is what a filed form is to IRCC's rules; a guide or a checklist is never filed.
+    if (b.role && libraryType(def.formKind, def.displayName) !== "form") throw problem(409, "Not a form", `${code} is a ${libraryType(def.formKind, def.displayName)}, not a form a person files, so it takes no form role.`);
+    if ((def.formRole ?? null) === b.role) throw problem(409, "Nothing changes", `${code} is already ${roleWords(b.role)}.`);
+    // Review of #833 M2: a returned change does not block a new one (its proposer withdraws it; it is never sent again).
+    const waiting = { workspaceId, kind: "form_role", key: code, status: { in: ["WAITING", "APPROVED"] } };
+    if (await this.db.libraryChange.findFirst({ where: waiting })) throw problem(409, "Already waiting", `A change to ${code}'s role already waits for a second person on To review.`);
+    const label = `${code}: ${roleWords(b.role)} (was ${roleWords(def.formRole)})`;
+    // Breaker M3, review r2 M1: the proposal and its Activity line are written together, or neither is.
+    const c = await this.db.$transaction(async (tx) => {
+      const made = await tx.libraryChange.create({ data: { workspaceId, kind: "form_role", key: code, label, action: "SET_ROLE", reason: b.reason, matches: { from: def.formRole, to: b.role }, status: "WAITING", proposedBy: actor.id } });
+      await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "proposed", entity: "form", entityKey: code, summary: `${actor.name} proposed ${label}: ${b.reason}`.slice(0, 600), detail: { from: def.formRole, to: b.role, reason: b.reason, change: made.id } } });
+      return made;
+    });
+    // Two people proposing at once both pass the check above: the earlier stays, the later is refused (form_accepts pattern).
+    const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_role", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
+    if (first && first.id !== c.id) { await this.db.$transaction([this.db.auditEvent.deleteMany({ where: { workspaceId, entity: "form", entityKey: code, action: "proposed", detail: { path: ["change"], equals: c.id } } }), this.db.libraryChange.delete({ where: { id: c.id } })]); throw problem(409, "Already waiting", `A change to ${code}'s role already waits for a second person on To review.`); }
+    return { id: c.id, status: c.status, label, waits: "A second person approves it on To review; it then goes out with each combination's next release, which the immigration expert signs off." };
   }
 
   /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the
@@ -498,6 +528,7 @@ export class FormLibraryController {
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Post("library/forms/fill-from-index") fill(@Headers("x-actor") a: H) { return this.lib.fillFromIndex(actorOf(a)); }
+  @Post("library/forms/:code/role") role(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.setRole(actorOf(a), code, b); }
   @Post("library/forms/:code/list-again") listAgain(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string) { return this.lib.listAgain(actorOf(a), code); }
   @Get("library/forms/list") list(@Headers("x-actor") a: H, @Query() q: unknown) { return this.lib.list(q, readerOf(a).id); }
   @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }

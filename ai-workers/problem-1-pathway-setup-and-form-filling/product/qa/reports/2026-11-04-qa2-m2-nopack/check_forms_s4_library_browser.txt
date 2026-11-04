@@ -1,0 +1,204 @@
+PASS  performance: Forms first view under 1 s (empty library) — not judged: machine busy (load 11.5 on 8 cores) — 280 ms (cold first page 1223 ms) · load 11.5 on 8 cores
+PASS  C11.11: an empty library teaches the first action (the finder brings forms in; or Upload PDF)
+PASS  axe (WCAG 2.2 AA): empty library — 
+PASS  performance: Forms first view under 1 s with the sample — not judged: machine busy (load 10.1 on 8 cores) — 1105 ms · load 10.1 on 8 cores
+PASS  C11.11: one list with the board's columns (Number, Title, Type, Edition, Field map, IRCC accepts, Used by, Status) — Number	Title	Type	Edition	Field map	IRCC accepts	Used by	Status	
+Actions
+
+
+PASS  C11.11: forms, guides and checklists in one list (no groups); the guide the finder read is in it — Guide 5256,Guide 5269,Guide 5289,Guide 5487,IMM 1295,IMM 5257,IMM 5257 SCH1,IMM 5409,IMM 5475,IMM 5476,IMM 5484,IMM 5488,IMM 5707,IMM 5802,IMM 5881,IMM 5905
+PASS  C11.11 (change 2): IRCC accepts shows the value with who said it (IMM 5476: PDF upload · Sample · canada.ca words); a form whose page says nothing shows Not set yet (IMM 5257) — IMM 5476	
+Use of Representative
+	Form	11-2025
+Published 2025-11
+	46 of 53 form fields decided	PDF upload
+Sample · canada.ca words
+	3 combinations	
+Ready
+	
+Edit
+IMM 5476
+Retire
+IMM 5476
+PASS  C11.11 (change 2): guides and checklists say Not filed
+PASS  C11.11 (change 3): a guide's date says what it is (Updated on canada.ca, or when it was read), never an edition — Guide 5256	
+Applying for a visitor visa (temporary resident visa) - paper application
+	Guide	Read from canada.ca on 2026-11-04	No field map	Not filed	2 combinations	
+Ready
+	
+Edit
+Guide 5256
+Retire
+Guide 5256
+PASS  C11.11 (change 1): Used by shows the combination's place — IMM 1295	
+Application for work permit made outside of Canada
+	Form	09-2023
+Published 2023-09
+	226 of 242 form fields decided	
+Not set yet
+	
+With an LMIA · Retail › Temporary residence › Work permits › Employer-specific w
+PASS  C3.12: a Field map column; IMM 1295 says how many of its form fields are decided (the database's count), a guide says No field map — [object Object]
+PASS  axe (WCAG 2.2 AA): list with the sample — 
+PASS  C11.11 (Lead fix 4): one way in: Upload PDF, no second "Choose files" box
+PASS  C11.11: two files, two run cards, both Done (rules read them, no AI call)
+PASS  DV-bb-1 pass: a finished upload card has Dismiss; it removes that card only — 1 card(s) left
+PASS  DV-bb-1 fail: a dismissed card does not come back after the page reloads — 1 card(s) after reload
+PASS  C11.11: the uploaded forms are in the list afterwards
+PASS  DV-bb-5 pass: the form number and the title use one font family — "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif | "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+PASS  DV-bb-5 fail: no mono type on the form number — "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+PASS  C11.11: Type = Guides lists guides only — Guide 5256,Guide 5269,Guide 5289,Guide 5487
+PASS  axe (WCAG 2.2 AA): filtered to guides — 
+PASS  C11.11 (change 1), C11.3 QA-150: the Used by choices name each combination first, then its full place from the Pathway type (a closed filter still tells them apart) — With an LMIA · Retail › Temporary residence › Work permits › Employer-specific work permit
+PASS  C11.11: Used by = With an LMIA lists exactly the forms it files and the guide and checklists it reads (and only those) — Guide 5487,IMM 1295,IMM 5257 SCH1,IMM 5409,IMM 5475,IMM 5476,IMM 5488,IMM 5707,IMM 5905 | Guide 5487,IMM 1295,IMM 5257 SCH1,IMM 5409,IMM 5475,IMM 5476,IMM 5488,IMM 5707,IMM 5905
+PASS  C11.11: Status = Retired lists the retired form, marked Retired
+PASS  C11.11: a search that matches nothing says so and offers Clear filters
+PASS  axe (WCAG 2.2 AA): no match — 
+PASS  C11.11: search finds a form by its number — IMM 1295
+PASS  C11.11: the row drawer opens by keyboard with Definition, What IRCC accepts, Where it is used and History — IMM 1295 · Application for work permit made outside of Canada
+Ready
+
+Form · IMM 1295 (09-2023)
+
+Definition
+
+Current edition: IMM 1295 (09-2023) · canada.ca last updated 2023-09
+
+Published 2023-09 (pri
+PASS  C11.11: the drawer says where the form came from and whether canada.ca was compared, the fingerprint kept in Details
+PASS  C11.11: Where it is used lists the LMIA combination and its release — Where it is used
+Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA · It files this form
+Retail › Temporary residence › Work permits › Employer-specific work pe
+PASS  C3.12: the drawer's Definition says the field map of the current edition, with what it means — IMM 1295 · Application for work permit made outside of Canada
+Ready
+
+Form · IMM 1295 (09-2023)
+
+Definition
+
+Current edition: IMM 1295 (09-2023) · canada.ca last updated 2023-09
+
+Published 2023-09 (printed on the form)
+Fi
+PASS  C3.12 K3 pass: the drawer says IRCC's month and where it is read (IMM 1295: Published 2023-09, printed on the form) — IMM 1295 · Application for work permit made outside of Canada
+Ready
+
+Form · IMM 1295 (09-2023)
+
+Definition
+
+Current edition: IMM 1295 (09-2023) · canada.ca last updated 2023-09
+
+Published 2023-09 (printed on the form)
+Fi
+PASS  C3.12 K3 pass: the file's own date is kept apart and said not to be IRCC's (file saved 2026-06-04) — IMM 1295 · Application for work permit made outside of Canada
+Ready
+
+Form · IMM 1295 (09-2023)
+
+Definition
+
+Current edition: IMM 1295 (09-2023) · canada.ca last updated 2023-09
+
+Published 2023-09 (printed on the form)
+Fi
+PASS  C3.12 K3 fail: the drawer never presents the PDF file's date as the published date
+PASS  axe (WCAG 2.2 AA): row drawer — 
+PASS  review M8: closing the drawer puts focus back on the number that opened it — <button type="button" class="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[
+PASS  review minor: the table's name includes every column, IRCC accepts too
+PASS  review M8: the hidden file input is not a stop of its own when tabbing
+PASS  C3.12 K3 pass: at 1440 the Edition column shows IRCC's published month under the edition
+PASS  C3.12 K3 fail: a file that names no date of its own still shows IRCC's printed month (IMM 5409: Published 2023-01)
+PASS  C3.12 K3 fail: a file that could not be read never hides IRCC's printed month (IMM 5409: Published 2023-01)
+PASS  C3.12 published: at 1440 px the date is shown and the page has no sideways scroll — wide · wide=false
+PASS  C3.12 review m1 fail: at 1024 px the date never breaks in the middle (one line box) — 1
+PASS  C3.12 published: at 1024 px the date is shown in the row's short line and the page has no sideways scroll — · Published 2023-09 · wide=false
+PASS  C3.12 review m1 fail: at 400 px the date never breaks in the middle (one line box) — 1
+PASS  C3.12 published: at 400 px the date is shown in the row's short line and the page has no sideways scroll — · Published 2023-09 · wide=false
+PASS  axe (WCAG 2.2 AA): Forms list at 400 px with published dates — 
+PASS  review round 2 M1: at 1024 px with every sample row, the table fits: every ⋯ in view, no sideways scroll — 750,750
+PASS  review round 2 M5: keyboard focus is visible on a filter chip (a ring, not nothing) — <button type="button" aria-pressed="true" class="rounded-full border px-3 py-1 t
+PASS  review M5: at 1024 px the Status and ⋯ columns stay in view (no sideways scroll to reach them)
+PASS  review M5: Used by shows the combination's own name first, its place after it, muted — With an LMIA · Retail › Temporary residence › Work permits › Employer-specific work permit
+PASS  P-116 amended: IMM 1295 (filed by a release) shows one written action, Retire, greyed with the guard's reason as visible text — Still used: Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA; Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA · release 1. See where us
+PASS  P-116 amended fail: the greyed action is described by its reason (aria-describedby) and opens nothing
+PASS  C11.11 (P-123, P-116 amended): the ⋯ menu keeps Replace, Re-read with AI and See where it is used; Retire and Delete are the row's written action, not in it — Replace with a new edition…
+Re-read with AI (shared fields and form fields)
+Draft fields with AI…
+See where it is used (1)
+PASS  axe (WCAG 2.2 AA): row actions with a reason shown — 
+PASS  review must 1 (P-51): an official canada.ca file's action is Retire, never Delete (it is kept)
+PASS  P-116 amended: the confirm opens in the right panel: what happens, who approves and when (never a centred modal) — Retire "IMM 5604 · Declaration from non-accompanying parent/guardian for minors immigrating to Canada"?
+
+It disappears from pickers and AI suggestions for new setups. Open cases and earlier releases k
+PASS  P-116 amended fail: Send for approval waits for a reason
+PASS  QA-64: the confirm says a library retire takes effect when it is approved, not with the next release — Retire "IMM 5604 · Declaration from non-accompanying parent/guardian for minors immigrating to Canada"?
+
+It disappears from pickers and AI suggestions for new setups. Open cases and earlier releases keep it. You can rest
+PASS  axe (WCAG 2.2 AA): retire confirm (impact panel) — 
+PASS  C11.11 (P-116): Retire of an unused official form is asked of a second person (waiting on To review)
+PASS  break minor: the row shows the request waiting ("Retire waiting"), not just Ready
+PASS  P-116 amended: the author's own waiting change makes the row's action Withdraw, and the Undo toast shows — WITHDRAW
+PASS  R69 takesEffect fail: the Withdraw confirm has no Takes effect line (the override is for Retire and Restore only) — Withdraw the waiting change to "IMM 5604 · Declaration from non-accompanying parent/guardian for minors immigrating to Canada"?
+
+Nothing changes: the request leaves To review.
+
+Why withdraw it? Requir
+PASS  R69-2 fail: after switching to another person without reloading, the author's Withdraw is not shown to them (their own action, greyed) — RETIRE
+PASS  R69-2 pass: switching back to the author shows Withdraw of their own waiting change again
+PASS  QA-66 pass: the author's row says the retire was returned and offers Withdraw (never a greyed Delete) — IMM 5604 Declaration from non-accompanying parent/guardian for minors immigrating to Canada Form 02-2023 Published 2023-02 Not mapped yet Not set yet Not used R
+PASS  QA-68 fail: a returned retire's page offers no Name or Meaning to edit (they would be dropped)
+PASS  axe (WCAG 2.2 AA): returned retire: send again — 
+PASS  QA-68 pass: Send again with only what changed puts it back with a second person
+PASS  C11.11: a person without the author duty sees no Upload PDF
+PASS  P-116 amended: and the row's action is greyed for them
+PASS  C11.11: and every changing menu action is disabled; See where it is used stays
+PASS  axe (WCAG 2.2 AA): read-only — 
+PASS  P-116: the second person's retire page shows Where it is used before Approve (IMM 5604: nothing uses it) — Where it is used Nothing uses it: no combination, release or waiting change.
+PASS  axe (WCAG 2.2 AA): retire approval with where used — 
+PASS  C11.11: a long title is clamped to two lines and kept whole in its tooltip — 1 <td class="whitespace-nowrap text-xs tabular-nums"><button type="button" class="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IMM 1344</butt
+PASS  C11.18 fail: sending with neither the canada.ca line nor a reason says what is missing, nothing is sent
+PASS  axe (WCAG 2.2 AA): set what IRCC accepts — 
+PASS  C11.18 pass: with the line, it waits for a second person; the row says Change waiting
+PASS  C11.18: the row shows the change waiting
+PASS  C11.18 pass: after the second person approves, the row shows PDF upload · Online, set by a person · Sample — IMM 1295	
+Application for work permit made outside of Canada
+	Form	09-2023
+Published 2023-09
+	226 of 242 form fields decided	PDF upload · Online
+Set by a person · Sample
+	
+With an LMIA · Retail › Temporary residence › Wo
+PASS  N8 DV-d1-1 fail: the Used-by count is a button with no dotted line (before: a dotted underline that read as struck through) — {"tag":"BUTTON","style":"solid","line":"none","text":"2 combinations"}
+PASS  N8 DV-d1-1 pass: the count opens the form's drawer, which says where it is used
+PASS  N8 DV-d1-2: the loading list says so as a status (role status, busy)
+PASS  axe (WCAG 2.2 AA): N8 DV-d1-2 fail: Forms while the list loads, 1440 px (before: aria-prohibited-attr on the loading list) — 
+PASS  X5 review m4 fail: a double click on Fill sends one fill (before: two) — requests 1
+PASS  X5 C2.6 pass: Fill from IRCC's forms list adds the listed forms, each 'Listed by IRCC · no file yet' (the first 50 shown, then Show more) — Showing 50 of 237 formsShow 50 more forms
+PASS  X5 review m5 fail: after Fill, keyboard focus is on the Fill button again — <button data-slot="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap ro
+PASS  X5 break M5 fail: the Ready chip shows only forms with a file (before: no such chip) — ready,ready,ready,ready,ready
+PASS  X5 review (86f9447c, 5a5f0d16) M1 fail: after the fill, search, the Guides chip and widening back to All answer in under 200 ms (STANDARDS §9; before: 184-375, 207-217 and 316-325 ms) — {"searches":[96,45,22],"guidesMs":15,"allMs":95}
+PASS  X5 the outside check (#145) fail: a form with no file offers no 'Set what IRCC accepts'; the drawer says to upload or find its PDF first
+PASS  X5 review m1 fail: Show more moves focus to the first row it added (row 51; before: the button below the new rows) — focused row index 50
+PASS  X5 review (0fc3f8a7) M7 fail: the row Show more focuses draws a visible outline (WCAG 2.4.7; before: outline-style none) — solid 2px
+PASS  X5 review m2 fail: the count is a status, and the button says forms — Showing 100 of 237 forms
+PASS  X5 review (310acb9c) 1 fail: a second Enter after Show more opens no drawer (before: row 51's drawer opened) — dialogs 0, rows 150
+PASS  X5 review (310acb9c) 2 fail: after the last Show more the count is still said (before: the status left with the button) — Showing 237 of 237 forms
+PASS  X5 break m11 fail: after the last Show more, focus is on a row it added (before: the page body) — rows 237 of 237
+PASS  X5 review (310acb9c) 3 fail: a chip pressed with every row shown shows at most 50 rows on every render (before: every match, then cut to 50) — rows shown, render by render: 237 > 50
+PASS  X5 review (310acb9c) 2 fail: a short filter (no pager) still says its count — Showing 4 of 4 forms
+PASS  X5 review m3 fail: a filter change starts the list again at 50 (Showing 50 of N) — Showing 50 of 237 formsShow 50 more forms
+PASS  X5 review m3 fail: a search finds a form past the first 50 rows — IRM 0005
+PASS  X5 review (0fc3f8a7) 2 fail: typing a search speaks the count once it pauses (before: 5 updates for 8 keys) — {"n":1,"text":"Showing 2 of 2 forms"}
+PASS  X5 review (337cdfd5) 2 fail: Clear filters says the new count at once (before: 'No form matches' for 700 ms more) — Showing 50 of 237 forms
+PASS  X5 review (337cdfd5) 1 fail: opening a drawer while the count waits on typing says it then (before: it landed behind the drawer, never heard) — Showing 50 of 196 forms
+PASS  X5 break (0fc3f8a7) m20 / (337cdfd5) m24 fail: when the list fails to load, the count says nothing and shows no rows (before: the old list's 'Showing 100 of 237', data-shown 50) —  | 0
+PASS  axe (WCAG 2.2 AA): X5: the library after the fill from IRCC's forms list — 
+PASS  X5 slice c pass: the library names the forms deleted from it, each with List again
+PASS  axe (WCAG 2.2 AA): X5 slice c: deleted forms with List again — 
+PASS  X5 slice c (review 00007dd0 2) fail: after List again by keyboard, focus is on the next List again (before: the page)
+PASS  X5 slice c fail: with the last one listed again the section goes and focus lands on Fill from IRCC's forms list
+PASS  X5 C2.6 fail: a person without the author duty has no Fill from IRCC's forms list
+PASS  no page errors — 
+
+113 passed, 0 failed

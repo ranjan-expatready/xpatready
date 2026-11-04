@@ -1,0 +1,21 @@
+PASS  C1.1 QA-22: while the session loads, the author never reads the non-author message — 36 looks
+PASS  C1.1 QA-22: once the session arrives the author's own message and Add combination show (P-128 (5)) — Immigration programs Program structure Add combination Every combination your firm can open, and where its setup stands. Retail 0 Corporate and employers 0 Card
+PASS  control QA-22: a non-author still reads the non-author message and Add combination stays disabled — Immigration programs Program structure Add combination Every combination your firm can open, and where its setup stands. Retail 0 Corporate and employers 0 Card
+PASS  C1.1 break m1: a session that never answers does not hide Immigration programs (the empty page shows within 9 s) — Product Studio Pathway Configurator Prototype · demo workspace Demo Acting as Simulated No unreleased changes. Configure Program structure Immigration programs 
+PASS  C1.1 break m3: a session refused (401) shows its own notice and neutral words, not the non-author's — Product Studio Pathway Configurator Prototype · demo workspace Demo Acting as Simulated No unreleased changes. Configure Program structure Immigration programs To review Shared library Fields Sections
+PASS  C1.1 break m3: a session failed (500) shows its own notice and neutral words, not the non-author's — Product Studio Pathway Configurator Prototype · demo workspace Demo Acting as Simulated No unreleased changes. Configure Program structure Immigration programs To review Shared library Fields Sections
+PASS  C1.1 break m3: a session an answer with no person (200, not JSON) shows its own notice and neutral words, not the non-author's — Product Studio Pathway Configurator Prototype · demo workspace Demo Acting as Simulated Configure Program structure Immigration programs To review Shared library Fields Sections Document types Forms C
+PASS  C3.1 QA-4: a stored source file under a dot-folder downloads — 200 attachment; filename="imm5257e.pdf"
+PASS  C3.1 QA-4: a filled PDF under a dot-folder downloads — 200 attachment; filename="qa4.pdf"
+PASS  control: an unknown filled PDF still answers 404 — 404
+PASS  C3.1 QA-4: a filled PDF whose file is gone answers 404 with the plain reason, not a server error — 404 Not found (it may have been removed by a reset).
+PASS  C3.1 break m5: a stored path through a file (ENOTDIR) answers the plain 404, not a server error — 404 Not found (it may have been removed by a reset).
+PASS  C3.1 break m5: an id with a NUL byte answers 404, not a server error — 404
+PASS  C1.6 QA-20: 400 px, the combination page with the "Filed as" selects has no sideways scroll — page 400 px
+PASS  C1.6 QA-20: 390 px, the combination page with the "Filed as" selects has no sideways scroll — page 390 px
+PASS  C1.6 QA-20: 1024 px, the combination page with the "Filed as" selects has no sideways scroll — page 1024 px
+PASS  C1.6 QA-20 P-107: 400 px with a line filed Online (its later-wave note shown), still no sideways scroll — 400
+PASS  C1.6 review should 1: at 400 px every sideways-scrolling area takes keyboard focus (axe scrollable-region-focusable) — none
+PASS  C1.6 break K1: arrow presses on Filed as save nothing until focus leaves, then once; focus stayed on it — while pressing 0, focus "How IMM 1295 is filed", after Tab 1
+PASS  C1.6 break m4: while the session loads, the author never sees the forms' channels as read-only words — read-only looks 0
+all passed
