@@ -321,6 +321,8 @@ async function runPack(id, file, wanted, slot) {
     const sec = (a, b) => Math.round((b - a) / 1000);
     if (setupBad) return { log, why: `${file}: ${setupBad}; the pack did not run` };
     log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, ${demo} ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
+    // A held part's steps (P-284) print HELD and fail nothing; the report names them, so a held step is never unseen.
+    for (const l of out.split("\n").filter((x) => /^HELD\s/.test(x)).slice(0, 5)) log.push(`      ${l.slice(0, 200)}`);
     const why = packVerdict(id, wanted, last, out);
     return { log, why: why ? `${file} ${where}: ${why}${fails(out)}` : null };
   } finally {

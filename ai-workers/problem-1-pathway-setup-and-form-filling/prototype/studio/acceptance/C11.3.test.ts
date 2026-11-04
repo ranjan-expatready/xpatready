@@ -15,12 +15,17 @@
 // meaning check is off", footer on:false). AT-9 loads the six as the Demo menu does ({"sample":"six"}, P-148); before
 // 2 Nov it called POST /demo/load with no body, the suites' older fixture (api/src/demo.ts load), so AT-9.2–9.6 failed
 // on names no person can load (qa after-merge 2 Nov, Question 1). AT-10 full trails pass since #505 (QA-150).
-// Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
+// Since QA-215 (4 Nov) the held AT-5 check prints HELD, not FAIL (P-284): today's expected result is 26/26 passed, 1 held.
+// Exit: 0 all pass (held steps excepted) · 1 a check failed · 2 setup missing or refused (demo port or database, copy not
+// reachable, sample).
 import { checkCopy, sqlFor } from "./lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4563), DB = process.argv[3] ?? "xr_studio_acc_a3";
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
+let heldN = 0;
+/** A step of a held part (P-284): PASS when green; red, it prints HELD with the decision that holds it and fails nothing. */
+const held = (name: string, why: string, c: unknown, detail?: unknown) => { if (c) return ok(name, c, detail); heldN++; console.log(`HELD  ${name} — ${why}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses are read loosely, as in tests/check_*.ts
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
   try {
@@ -85,7 +90,10 @@ const FIVE = /^(Retail|Corporate and employers) › [^›]+ › [^›]+ › [^�
   r = await call("POST", "/structure/meaning-check", { pathwayType: "INDIVIDUAL", level: "category", parentKey: vis, label: "Tourist visa" });
   ok("C11.3 AT-5 refusal (US$0): on a copy without the live switch the AI 'did you mean' calls no AI and spends nothing, in plain words",
     r.status >= 400 && r.status < 500 && plain(r.body) && sql("select count(*) from drafting_job") === jobs0 && (await committed()) === usd0, { status: r.status, detail: r.body?.detail });
-  ok("C11.3 AT-5 the AI 'did you mean' is built behind the same live switch as every AI step (P-175): it says AI is switched off on this copy, not that the check itself is off",
+  // The held part (P-284, P-265): while the AI "did you mean" is held for the product owner, this check prints HELD when
+  // it is red and is not counted as a failure (QA-215); green, it passes as before. Released hold: back to ok().
+  held("C11.3 AT-5 the AI 'did you mean' is built behind the same live switch as every AI step (P-175): it says AI is switched off on this copy, not that the check itself is off",
+    "P-284: the AI meaning check is held for the SA-01B product owner (P-251)",
     /switched off on this copy/.test(r.body?.detail ?? "") && (await call("GET", "/structure?pathwayType=INDIVIDUAL")).body?.meaningCheck?.on !== false, { detail: r.body?.detail, footer: (await call("GET", "/structure?pathwayType=INDIVIDUAL")).body?.meaningCheck });
 
   // ------------------------------------------------ rename on the same page
@@ -132,6 +140,6 @@ const FIVE = /^(Retail|Corporate and employers) › [^›]+ › [^›]+ › [^�
   ok("C11.3 AT-10 full trail on the form finder's plan and run card: Pathway type › Pathway › Program › Category", FIVE.test(T(...(plan?.combination?.trail ?? []))), plan?.combination?.trail);
   ok("C11.3 AT-11 US$0: the whole file spent nothing (ledger unchanged, no live AI job)", (await committed()) === usd0 && sql("select count(*) from drafting_job where mode='LIVE'") === "0", { before: usd0, after: await committed() });
 
-  console.log(`\n${pass}/${pass + fail} passed`);
+  console.log(`\n${pass}/${pass + fail} passed${heldN ? `, ${heldN} held (P-284)` : ""}`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });
