@@ -1,0 +1,13 @@
+# qa findings closed on 5 Nov 2026 (moved word for word from `qa/BUGS.md` and `qa/reports/bugs-open-detail.md`, AGENTS.md rule 8)
+
+## QA-225 — closed 5 Nov 2026 (after-merge batch 14)
+
+Closed by the qa lane on main **1c71c9894** (fixed by #948; C6.1, C8.1). `api/src/case-feed.ts` now lists "sign step" and "signed scan" (and "case document", "checklist line", the assessments) as case entities, so a firm's staff read only their own firm's case lines. qa re-ran on main's head: `tests/check_case_feed.ts` exit 0, 25/25 (a sweep of every audit write: each entity is on one list, every line naming a case uses a case entity); `tests/check_c81_signing_api.ts` on a fresh isolated copy (qa_c61) exit 0, 13/13, including "the firm's own officer reads this case's sign and scan lines" (200, 3 lines) and "another firm's staff (user-S) never read this case's sign or scan lines" (200, `[]`). Output `qa/reports/2026-11-05-after-merge/c81-signing-api-1c71c9894.txt`.
+
+From `qa/BUGS.md`:
+
+| QA-225 | Bug · Major (the tech lead, from the C8.2 builder on #924; confirmed in code by qa on main) | C6.1, C8.1 · C6.11 review Major 1 (firm staff read only their own firm's case lines), PRODUCT privacy | main e840d2d88 | The activity feed hides another firm's case lines only for the audit entities in `CASE_ENTITIES` (`api/src/studio.ts:1223`, `:1234`). `api/src/sign-steps.ts:100` writes "sign step" and `:127` writes "signed scan"; neither is in the set, so both are treated as configuration lines and reach every firm's staff, naming the form, the signer and the case id (e.g. "Case officer marked IMM 5476 'Signed by hand' on case 3185450e" seen by user-S of the other firm). Expected: both entities are case entities, with a check that another firm's user cannot see the line while the case's firm still does | runtime (fix lane, Lead 7) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-225 | Bug · Major (the tech lead, from the C8.2 builder on #924; confirmed in code by qa on main) | C6.1, C8.1 · C6.11 review Major 1 (firm staff read only their own firm's case lines), PRODUCT privacy | main e840d2d88 | The activity feed hides another firm's case lines only for the audit entities in `CASE_ENTITIES` (`api/src/studio.ts:1223`, `:1234`). `api/src/sign-steps.ts:100` writes "sign step" and `:127` writes "signed scan"; neither is in the set, so both are treated as configuration lines and reach every firm's staff, naming the form, the signer and the case id (e.g. "Case officer marked IMM 5476 'Signed by hand' on case 3185450e" seen by user-S of the other firm). Expected: both entities are case entities, with a check that another firm's user cannot see the line while the case's firm still does | runtime (fix lane, Lead 7) | Open |
