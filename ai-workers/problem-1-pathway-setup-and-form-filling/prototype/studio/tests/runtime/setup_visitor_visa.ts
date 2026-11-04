@@ -254,6 +254,13 @@ async function main() {
     const ff = (await call("GET", `/jobs/${j.id}/form-fields`)).body;
     for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, (f as { background?: boolean }).background ? { dataPath: f.dataPath, decision: "by_hand", reason: "A Background question: recorded by hand in the thin slice (Sample; C3.8, IRCC-F08)." } : { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
   }
+  // G5 (C5.1, P-248; tech lead's ruling on #868): a release needs a document line beside its forms. One line through the
+  // Documents route as the author would: the passport (its information page, photocopied) from each applicant, with the
+  // library's own document type (Sample until the immigration expert confirms the line). check_vv_checklist_api.ts adds
+  // its other Sample lines next to it.
+  const docLine = { documentTypeKey: "passport_or_travel_document_information_page_photocopy", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client", sourceQuote: "Sample (test setup): a document line so the release has one (P-248)." };
+  r = await call("POST", `/combinations/${vv}/requirements`, docLine, AUTHOR);
+  ok("4.5a one document line (the passport, from each applicant; Sample): a release needs one (P-248)", r.status === 201 && sql(`select count(*) from document_requirement where combination_id='${vv}'`) !== "0", r.status === 201 ? undefined : r.body);
   for (const c of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
   const o = (await call("GET", `/combinations/${vv}`)).body;
   const problems = o.draft.problems as { level: string; item: string; message: string }[];
