@@ -1,6 +1,6 @@
 {
  "job_id": "studio-masters-form-imm-5257-09-2023-4abab0ac",
- "path_code_sha256": "d478ed039fc2462d5c8e6ed9f868376c764de04fe12c43f9243aff2beb4f8664",
+ "path_code_sha256": "fe69db582e674b23673ccbbb7d53ec225686d0e36aa0d03f1aa266d8494356d1",
  "screening_sources": [
   {
    "file": "prototype/expected/slice-1-field-map.json",
@@ -19,8 +19,8 @@
    "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
   }
  ],
- "digest_sha256": "7682dcf1c1e805c6a4da6969fea628daf68c454a1fcfe2c1cbe6a31a6301fe74",
- "run_id": "studio-masters-form-imm-5257-09-2023-4abab0ac-stub-20261102t182546308z-6a8bc5",
- "at": "2026-11-02T18:25:46.654Z",
+ "digest_sha256": "43d3df5d5dadf751048a9f311bc0b0684ac967b7b26aa770799e248b29a689da",
+ "run_id": "studio-masters-form-imm-5257-09-2023-4abab0ac-stub-20261103t150331340z-09e45c",
+ "at": "2026-11-03T15:03:31.707Z",
  "stub_calls": 1
 }
