@@ -1,11 +1,11 @@
 // C10.1 the configured checkpoint (DEMO.md "Checkpoints" 2; plan screens/W1-reset-and-sample/c10.1-plan.md): Load sample
 // six, then each DEMO.md row through the screens' services by the people who hold each duty. One check per row, and the
 // rules it must not get round: the author never approves their own library items or release, an off-list copy is
-// approved by a second person (X9a) and an older edition is never used, a held file whose edition cannot be read is never approved, an empty combination is never released, row 17 says "not built yet"
+// approved by a second person (X9a) and an older edition is never used, a held file whose edition cannot be read is never approved, an empty combination is never released, row 17 holds IMM 5476's new edition (or waits for its 2021 map)
 // in plain words, no form waits for a paid run (IMM 5645 replays from its saved parts), no live AI call, Reset returns to blank. US$0.
 //   zsh studio/tools/isolated.sh runtime_c101 4431 start && tsx studio/tests/check_c10_1_configured.ts 4431 xr_studio_runtime_c101
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
 
@@ -38,18 +38,20 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
 
   // Row 1: the six's files through the intake; a held file whose edition cannot be read is never approved.
   ok("C10.1 row 1: the six's official files are read through the form intake (code, edition, checksum)", /official files read/.test(r("1").shows) && n(`select count(*) from source_attachment`) > 30, r("1").shows);
-  // Row 1 (X9a): an off-list copy of IMM 5476 (11-2021) with a readable edition, held, its IRCC page recorded by the
+  // Row 1 (X9a): an off-list copy of IMM 5257's previous edition (QA-207: not IMM 5476 2021, the library's edition once
+  // row 17 runs) with a readable edition, held, its IRCC page recorded by the
   // uploader, approved by a second person; the files whose edition cannot be read stay held and are never approved.
-  const copy = sql(`select sha256 || '|' || created_by || '|' || coalesce(ircc_page, '') || '|' || coalesce(edition_label, '') from intake_item where file_name = 'imm5476e-2021-from-email.pdf' and reason like 'Approved as a source by %' and status = 'DONE'`).split("|");
+  const copy = sql(`select sha256 || '|' || created_by || '|' || coalesce(ircc_page, '') || '|' || coalesce(edition_label, '') from intake_item where file_name = 'imm5257e-pre-2023-from-email.pdf' and reason like 'Approved as a source by %' and status = 'DONE'`).split("|");
+  const older = /^IMM 5257 \(\d\d-20(1\d|2[0-2])\)$/; // the previous edition, older than the library's 09-2023
   const manifestHas = (hash: string) => (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "manifest.json"), "utf8")).items as { sha256?: string }[]).some((i) => i.sha256 === hash);
-  ok("C10.1 row 1 / X9a pass: an off-list copy of IMM 5476 (11-2021) was held, its IRCC page recorded by the author, and approved by the Approver (user-B)", r("1").status === "done" && copy[1] === "user-A" && /canada\.ca\/.*imm5476\.html$/.test(copy[2] ?? "") && copy[3] === "IMM 5476 (11-2021)"
+  ok("C10.1 row 1 / X9a pass: an off-list copy of IMM 5257's previous edition was held, its IRCC page recorded by the author, and approved by the Approver (user-B)", r("1").status === "done" && copy[1] === "user-A" && /canada\.ca\/.*imm5257\.html$/.test(copy[2] ?? "") && older.test(copy[3] ?? "")
     && n(`select count(*) from approved_source where sha256 = '${copy[0]}' and uploaded_by = 'user-A' and approved_by = 'user-B'`) === 1 && /approved by Approver/.test(r("1").shows), { shows: r("1").shows, copy });
-  ok("C10.1 row 1 / X9a fail-guard: the copy really is off-list (its checksum is on no approved list) and is a different file from the official 2021 one", !!copy[0] && !manifestHas(copy[0]), copy[0]);
-  ok("C10.1 row 1 / X9a fail: approved or not, an edition older than the library's is never used (set aside by the Approver, not in the library, nothing left on To review)", n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 0 && n(`select count(*) from intake_item where sha256 = '${copy[0]}' and status = 'HELD'`) === 0 && n(`select count(*) from intake_item where sha256 = '${copy[0]}' and outcome = 'refused' and reason like 'Set aside by Approver: %'`) === 1 && /set it aside: not used/.test(r("1").shows), r("1").shows);
+  ok("C10.1 row 1 / X9a fail-guard: the copy really is off-list (its checksum is on no approved list) and is a different file from IRCC's own previous edition", !!copy[0] && !manifestHas(copy[0]), copy[0]);
+  ok("C10.1 row 1 / X9a fail: approved or not, an edition older than the library's is never used (set aside by the Approver, not in the library, nothing left on To review)", n(`select count(*) from form_edition where edition_label = '${copy[3]}'`) === 0 && n(`select count(*) from intake_item where sha256 = '${copy[0]}' and status = 'HELD'`) === 0 && n(`select count(*) from intake_item where sha256 = '${copy[0]}' and outcome = 'refused' and reason like 'Set aside by Approver: %'`) === 1 && /set it aside: not used/.test(r("1").shows), r("1").shows);
   // #300 m4: the trail says the older edition was set aside (not used), never that an approved source was "rejected as a source".
-  const trail = sql(`select action || '§' || summary from audit_event where entity = 'held file' and summary like '%IMM 5476 (11-2021)%' order by at`).split("\n").filter(Boolean);
-  ok("C10.1 row 1 / m4 pass: after the approval, the audit trail reads \"set aside … (an edition not used)\" by the Approver", trail.some((l) => /^set aside§Approver set aside IMM 5476 \(11-2021\) \(an edition not used\)/.test(l)), trail);
-  ok("C10.1 row 1 / m4 fail: the trail never says the approved copy was \"rejected … as a source\"", trail.length > 0 && !trail.some((l) => /^rejected§|rejected IMM 5476 \(11-2021\) as a source/.test(l)), trail);
+  const trail = sql(`select action || '§' || summary from audit_event where entity = 'held file' and summary like '%${copy[3]}%' order by at`).split("\n").filter(Boolean);
+  ok("C10.1 row 1 / m4 pass: after the approval, the audit trail reads \"set aside … (an edition not used)\" by the Approver", trail.some((l) => l.startsWith(`set aside§Approver set aside ${copy[3]} (an edition not used)`)), trail);
+  ok("C10.1 row 1 / m4 fail: the trail never says the approved copy was \"rejected … as a source\"", trail.length > 0 && !trail.some((l) => /^rejected§/.test(l) || l.includes(`rejected ${copy[3]} as a source`)), trail);
   ok("C10.1 row 1 fail: a held file whose edition cannot be read stays held and is not approved (Break M4); the only approved file is the copy", n(`select count(*) from intake_item where status = 'HELD' and outcome = 'held'`) === Number(/(\d+) official files? stays?/.exec(r("1").why ?? "")?.[1] ?? 0) && n(`select count(*) from approved_source`) === 1, r("1").why);
   // Rows 3–4: saved answers replayed (US$0), decided by the author with a reason, one edit and one return kept visible.
   const jobs = n(`select count(*) from drafting_job where kind = 'field_map' and mode = 'REPLAY'`);
@@ -66,7 +68,13 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 rows 6 and 8: Reset and the Smart questionnaire (SQR) and Preview tabs are named as built", r("6").status === "done" && r("8").status === "done");
   // QA-144 slice 1: row 7 is the C3.4 rules pass and the shared placement step on the Visitor visa (tests/check_qa144_vv_release.ts).
   ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7").shows);
-  ok("C10.1 row 17: not built yet, said in plain words (its lane's function is not on main)", r("17").status === "not built yet" && /^Not built yet: /.test(r("17").shows), r("17").shows);
+  // Row 17 (QA-207): IMM 5476 2021 in the library and 11-2025 held as the new edition, once the 2021 edition's saved field
+  // map is recorded (p2/runs, the paid runner's); until then the row waits for it, in words, and the library keeps 11-2025.
+  const map2021 = existsSync(join(import.meta.dirname, "..", "..", "p2", "runs")) && readdirSync(join(import.meta.dirname, "..", "..", "p2", "runs")).some((f) => f.startsWith("studio-fieldmap-imm5476e-2021-live-") && !f.includes(".reconverted"));
+  if (map2021) ok("C10.1 row 17 (QA-207): IMM 5476 (11-2025) is held as a new edition over the library's IMM 5476 (11-2021), which the combinations file", r("17").status === "done" && /held as a new edition over the library's IMM 5476 \(11-2021\)/.test(r("17").shows)
+    && n(`select count(*) from intake_item where outcome = 'new_edition_held' and status = 'HELD' and code = 'IMM 5476'`) === 1 && n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 1, r("17"));
+  else ok("C10.1 row 17 (QA-207): waits, in words, for IMM 5476 (11-2021)'s saved field map; the library keeps IMM 5476 (11-2025)", r("17").status === "waiting" && /^Waits for a saved field map of IMM 5476 \(11-2021\)/.test(r("17").why ?? "")
+    && n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 0, r("17"));
   // Row 10: release through submit, SME sign-off and a different person; the validator's refusals said, empty never released.
   const released = sql(`select c.label || '§' || r.version || '§' || p.approver_id from config_release r join combination c on c.id = r.combination_id join pack_version p on p.id = r.pack_version_id`).split("\n").filter(Boolean);
   ok("C10.1 row 10: any release goes through submit by the author, SME sign-off by user-C and approval by user-B", released.every((x) => x.endsWith("§user-B")) && n(`select count(*) from review_submission where status = 'APPROVED' and submitted_by = 'user-A'`) === released.length && (released.length === 0 || n(`select count(*) from review_signoff where actor_id = 'user-C' and action = 'signed'`) > 0), released);
