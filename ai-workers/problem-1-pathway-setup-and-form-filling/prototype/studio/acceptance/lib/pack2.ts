@@ -67,7 +67,7 @@ export function pack2(id: string) {
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
   async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
-    const out = { accepted: 0, applied: 0, ownYesNo: 0, sections: 0, reused: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
+    const out = { accepted: 0, applied: 0, ownYesNo: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     // Review m6: only what the author's own steps put on To review, never another person's waiting change.
@@ -94,7 +94,14 @@ export function pack2(id: string) {
     await approveAll();
     for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Form' order by created_at`)) say("sections from the form's parts", await call("POST", `/attachments/${a}/draft-masters`, { mode: "rules" }, AUTHOR));
     for (const p of ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='masters_edition' and p.kind='section' and p.status='waiting' order by p.created_at, p.identity_key`)) {
-      const r = await call("POST", "/review/proposals/decide", { ids: [p], action: "accept", reason: "Accepted by a test: drafted from the form's own parts (rules, US$0; QA-144 part 1 setup)." }, AUTHOR);
+      // QA-206 (tech lead on #883), as the configured checkpoint's loader does: a section held for a name is named only by the
+      // heading its form prints over it (the naming edit a person uses); with none it stays waiting for a person.
+      const held = JSON.parse(sql(`select coalesce(work, '{}'::jsonb)::text from proposal_item where id = '${p}'`) || "{}") as { unnamed?: boolean; heading?: string };
+      if (held.unnamed && !held.heading) { out.held++; continue; }
+      const payload = held.unnamed ? JSON.parse(sql(`select payload::text from proposal_item where id = '${p}'`)) : null;
+      const r = await call("POST", "/review/proposals/decide", held.unnamed
+        ? { ids: [p], action: "edit", payload: { ...payload, label: held.heading }, reason: `Named by a test from the heading the form prints over it, "${held.heading}" (QA-144 part 1 setup).` }
+        : { ids: [p], action: "accept", reason: "Accepted by a test: drafted from the form's own parts (rules, US$0; QA-144 part 1 setup)." }, AUTHOR);
       if (r.status < 300) { out.sections++; continue; }
       const same = /already in the library as (\S+?)[ )]/.exec(words(r))?.[1];
       if (same && say("reject a section held already", await call("POST", "/review/proposals/decide", { ids: [p], action: "reject", reason: `The library already holds this section (${same}): reused, not added again.` }, AUTHOR))) out.reused++;
