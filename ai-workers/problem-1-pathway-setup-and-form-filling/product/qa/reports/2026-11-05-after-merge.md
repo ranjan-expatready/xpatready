@@ -30,3 +30,10 @@
 | C4.1 (M2) | Partial (unchanged), 16/18 | G4's words vs IMM 5257's printed headings (qa rewords); the passport step waits for #1005; QA-221 |
 
 **M2: 54/60 confirmed** (was 53; +C3.6). Thin slice 7/8. M3 1/17.
+
+## Batch 17 — #978 (QA-231, C9.1) · main 8b4b1b881 · ~03:10–03:40 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C9.1 (M2) | **Works** (was Partial, 14/17) | `C9.1.test.ts` on the checkpoint 0 · 17/17 on main's head (run 41919519444); gate A on #978; added to `REGRESSION-DATA.md` (checkpoint) |
+
+**Closed:** QA-231. **New:** QA-232 (UX · Minor, #1005's supplies panel, from qa's gate A). **M2: 55/60 confirmed** (+C3.6 in batch 16, +C9.1).
