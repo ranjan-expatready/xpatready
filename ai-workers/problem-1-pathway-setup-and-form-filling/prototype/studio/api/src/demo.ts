@@ -60,16 +60,6 @@ type SixSetup = SampleSetup & { page: string | null; missing: { code: string; ti
  *  answer sets them up. Library forms by their code and whose form each is (the channel when not a PDF upload); each
  *  document line by its type's name (a new name waits as a library proposal, C3.6). Data in the sample file (P-319). */
 type SixLines = { basis: string; forms: { code: string; who?: string; channel?: "ONLINE" | "PAPER" }[]; documents?: { name: string; who: string; always: true; proves: string; quote: string }[] };
-/** C11.7 part B: the sample file's document lines by combination path, as loadSix labels each combination. */
-const sixLines = () => {
-  const out = new Map<string, NonNullable<SixLines["documents"]>>();
-  const f = JSON.parse(readFileSync(SAMPLES_SIX, "utf8")) as SampleFile;
-  for (const p of f.programs) for (const cat of p.categories) {
-    for (const sub of cat.subcategories ?? []) { const l = (sub.setup as SixSetup | undefined)?.lines; if (l?.documents) out.set(`${p.label} › ${cat.label} › ${sub.label}`, l.documents); }
-    const l = (cat.setup as SixSetup | undefined)?.lines; if (l?.documents) out.set(`${p.label} › ${cat.label}`, l.documents);
-  }
-  return out;
-};
 const officialFiles = (): string[] => JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.map((i: { file: string }) => i.file);
 type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
@@ -329,7 +319,7 @@ export class Demo {
     // C11.7 part B: the lines a person adds by hand where the finder's replay set none up (after the drafts, as a person
     // would: the field-map replay above reads the library's forms, not these lines). Counted after the AI proposals, so
     // "proposals waiting" stays the replayed AI answers; a document type named here is the person's own proposal.
-    const byHand: { combination: string; forms_added: string[]; online: string[]; documents: { name: string; status: string }[] }[] = [];
+    const byHand: { combination: string; combination_id: string; forms_added: string[]; online: string[]; documents: { name: string; who: string; quote: string; status: string }[] }[] = [];
     for (const c of made) if (c.lines) byHand.push(await timed("form and document lines (as a person adds them)", () => this.linesByHand(actor, c as { id: string; label: string; lines: SixLines }, log)));
     log.push(`library drafts: ${replay.length} saved AI field-map answers replayed through the review queue (US$0): ${proposals} proposals waiting for review; ${[...new Set(waiting)].length} forms wait for "Draft with AI"${waiting.length ? ` (${[...new Set(waiting)].join(", ")})` : ""}`);
     const missing = made.flatMap((c) => [...c.absent.map((f) => ({ combination: c.label, code: f, why: "No saved copy." })), ...c.missing.map((m) => ({ combination: c.label, code: m.code, why: m.why }))]);
@@ -348,7 +338,7 @@ export class Demo {
     const rows = await this.db.combinationForm.findMany({ where: { combinationId: c.id }, orderBy: { version: "desc" }, select: { lineageKey: true, status: true, channel: true } });
     const newest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
-    const added: string[] = [], online: string[] = [], documents: { name: string; status: string }[] = [];
+    const added: string[] = [], online: string[] = [], documents: { name: string; who: string; quote: string; status: string }[] = [];
     for (const f of c.lines.forms) {
       const had = newest.get(f.code);
       if (!had || had.status === "RETIRED") { await this.formLibrary.attach(actor, c.id, { formKey: f.code, who: f.who }); added.push(f.code); }
@@ -359,10 +349,10 @@ export class Demo {
     }
     for (const d of c.lines.documents ?? []) {
       const r = await this.studio.saveRequirement(actor, c.id, null, { newTypeName: d.name, proves: d.proves, attachMode: "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: "client", sourceQuote: d.quote });
-      documents.push({ name: d.name, status: "status" in r && r.status === "waiting" ? "waiting for a second person" : "line added" });
+      documents.push({ name: d.name, who: d.who, quote: d.quote, status: "status" in r && r.status === "waiting" ? "waiting for a second person" : "line added" });
     }
     log.push(`  ${c.label}: by hand (Sample, ${c.lines.basis.split(":")[0]}): ${added.length} library forms added (${added.join(", ") || "none"})${online.length ? `, Online: ${online.join(", ")}` : ""}${documents.length ? `; document lines: ${documents.map((d) => `${d.name} (${d.status})`).join(", ")}` : ""}`);
-    return { combination: c.label, forms_added: added, online, documents };
+    return { combination: c.label, combination_id: c.id, forms_added: added, online, documents };
   }
 
   /** C10.1 the configured checkpoint (the M2 gate, DEMO.md "Checkpoints" 2): Load sample six, then each DEMO.md row
@@ -456,19 +446,21 @@ export class Demo {
     // decided on To review › Proposals by the author, as the author decides every replayed proposal (row 4); the author
     // then adds its line, as the Documents tab says ("Once it is accepted, choose it here and save the line"); the new
     // type then waits for the approver, a second person, in row 5 (BR-7, P-80).
-    const SIX_LINES = sixLines();
     for (const c of six.lines_by_hand) for (const d of c.documents.filter((x) => x.status !== "line added")) {
-      const combo = six.combinations.find((x) => x.label === c.combination);
-      const p = combo && await this.db.proposalItem.findFirst({ where: { workspaceId, combinationId: combo.id, kind: "document_type", status: "waiting", payload: { path: ["name"], equals: d.name } }, select: { id: true } });
-      const line = (SIX_LINES.get(c.combination) ?? []).find((x) => x.name === d.name);
-      if (!combo || !p || !line) { log.push(`  ${c.combination}: "${d.name}" is not waiting on To review, so its line was not added`); continue; }
+      const p = await this.db.proposalItem.findFirst({ where: { workspaceId, combinationId: c.combination_id, kind: "document_type", status: "waiting", payload: { path: ["name"], equals: d.name } }, select: { id: true } });
+      if (!p) { log.push(`  ${c.combination}: "${d.name}" is not waiting on To review, so its line was not added`); continue; }
+      // r2-m2: the two steps are told apart, so an accepted type whose line was refused never reads "stays waiting".
+      let key: string | undefined;
       try {
-        const r = (await this.proposals.decide(author, { ids: [p.id], action: "accept" })) as { items?: { landedAs?: string }[] };
-        const key = r.items?.[0]?.landedAs;
+        // r2-m1: decided with a reason, as every proposal of the checkpoint is.
+        const r = (await this.proposals.decide(author, { ids: [p.id], action: "accept", reason: `Accepted by the sample loader: ${d.quote}`.slice(0, 300) })) as { items?: { landedAs?: string }[] };
+        key = r.items?.[0]?.landedAs;
         if (!key) throw new Error(`accepting "${d.name}" gave no library key`);
-        await this.studio.saveRequirement(author, combo.id, null, { documentTypeKey: key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: line.who, providedBy: "client", sourceQuote: line.quote });
+      } catch (e) { log.push(`  ${c.combination}: "${d.name}" stays waiting on To review: ${said(e)}`); continue; }
+      try {
+        await this.studio.saveRequirement(author, c.combination_id, null, { documentTypeKey: key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: "client", sourceQuote: d.quote });
         log.push(`  ${c.combination}: ${author.name} accepted "${d.name}" on To review and added it as a required line; the new type waits for ${approver.name}`);
-      } catch (e) { log.push(`  ${c.combination}: "${d.name}" stays waiting: ${said(e)}`); }
+      } catch (e) { log.push(`  ${c.combination}: "${d.name}" was accepted, but its required line was not added: ${said(e)}`); }
     }
 
     // Row 5: every new library item waits for a second person (BR-7); the approver approves them on To review.
