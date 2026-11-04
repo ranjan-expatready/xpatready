@@ -3,6 +3,7 @@
 // read changes; it is marked Out of date with the fact, the old and the new value and the date, in words (concept r5c
 // l. 62: "… is out of date: date of marriage changed on 29 Oct. Prepare it again or undo the change before filing.").
 // Pure: the API passes what the item read then and what the case says now. No model call (US$0).
+import { createHash } from "node:crypto";
 import type { FormFact } from "./forms.ts";
 
 /** One fact that reads differently now from when the item was made: whose, which, the value then and now, and when. */
@@ -21,7 +22,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
  *  (a fact written in several form fields is one change). A fact no longer read is a change to "no answer", or to its
  *  newest saved value marked not confirmed yet. Representative facts (from the firm record) are about "representative". */
 export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "value">[], now: Pick<FormFact, "fact" | "about" | "row" | "value">[], words: ChangeWords): FactChange[] {
-  // The whole "about" (a person, or a person's relation such as "<id>/parent_1"; Devin on #926): two relatives with the
+  // The whole "about" (a person, or a person's relation such as "<id>/parent_1"; bot review on #926): two relatives with the
   // same fact are never folded into one, so a change to either one is seen.
   const key = (f: { fact: string; about: string; row: number | null }) => `${f.about}|${f.fact}|${f.row ?? ""}`;
   const a = new Map(then.map((f) => [key(f), f])), b = new Map(now.map((f) => [key(f), f]));
@@ -101,7 +102,7 @@ export function representativeWords(earlier: string | null, now: string | null, 
  *  differs from it (a confirmation of the same value is not a change). Undo never redoes (review of #926): when the
  *  current answer stands on an earlier one (`restoredFrom`: the answer a restore put back, or the answer a confirmation
  *  confirmed), the walk starts below that one, so a second Undo goes further back, a confirmation in between or not
- *  (Devin on #926). `earlier` is newest first. Null when there is nothing to undo. */
+ *  (bot review on #926). `earlier` is newest first. Null when there is nothing to undo. */
 export function undoTarget<T extends { id: string; value: unknown; restoredFrom?: string | null }>(current: T, earlier: T[]): T | null {
   let anchor: T = current; const seen = new Set<string>();
   while (anchor.restoredFrom && !seen.has(anchor.id)) { seen.add(anchor.id); const back = earlier.find((x) => x.id === anchor.restoredFrom); if (!back) break; anchor = back; }
@@ -115,3 +116,10 @@ export const restoredFromOf = (source: unknown): string | null => {
   const v = s?.restored?.from ?? s?.from;
   return typeof v === "string" ? v : null;
 };
+
+/** The identity of an out-of-date mark (bot review on #926): every change with its value now, and the state now of the
+ *  repeating groups the form reads (a group-only change names no fact), so a pass on it covers that state only. */
+export function markKey(changes: { subject: string; fact: string; now: unknown }[], groupsNow: unknown): string {
+  const cs = changes.map((x) => [x.subject, x.fact, x.now]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  return createHash("sha256").update(JSON.stringify([cs, groupsNow ?? null])).digest("hex").slice(0, 16);
+}

@@ -26,7 +26,7 @@ import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom 
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
-import { factChanges, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
+import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
@@ -339,9 +339,11 @@ export class CasePrepare {
     const markOf = (i: (typeof items)[number] | undefined) => {
       if (!i || i.state !== "out_of_date" || ("channel" in i && i.channel === "ONLINE")) return null;
       const cs = (i as { changes?: ChangeRow[] }).changes ?? [];
-      // Devin on #926: the warning's identity is every change with its value now (a pass never covers a later change);
+      // bot review on #926: the warning's identity is every change with its value now (a pass never covers a later change);
       // its date is the latest change's.
-      const key = createHash("sha256").update(JSON.stringify(cs.map((x) => [x.subject, x.fact, x.now]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))))).digest("hex").slice(0, 16);
+      // A repeating group's state now is in it too (bot review on #926: a group-only change has no fact change to name).
+      const groupsNow = "form" in i && i.form ? groupFacts(view, i.form, i.subject) : [];
+      const key = markKey(cs, groupsNow);
       const since = cs.map((x) => x.at).filter((x): x is string => !!x).sort().at(-1) ?? today.toISOString();
       return { fact: cs.length ? `${cs[0].label}${cs.length > 1 ? ` and ${cs.length - 1} more` : ""}` : "a fact it reads", since, key };
     };

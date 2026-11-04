@@ -55,7 +55,7 @@ ok("C9.2 undo: the audit names the undo (never the values)", Number(sql(`select 
 const u2 = await undo({ subjectId: P, fact: FN });
 ok("C9.2 undo (fail): a second Undo never puts the change back: with nothing further back, 409 and nothing written", u2.status === 409 && current() === before && rowsOf() === n1 + 1, [u2.status, current()]);
 
-// (2b) Devin on #926: Undo restores a value never confirmed, Confirm section confirms it, and a further Undo goes on back
+// (2b) bot review on #926: Undo restores a value never confirmed, Confirm section confirms it, and a further Undo goes on back
 // (to SAMPLE), never redoing the change just undone.
 await answer(c.id, P, FN, "SAMPLEUD"); // entered by the officer, not confirmed (DECLARED)
 await answer(c.id, P, FN, "SAMPLEUE"); await confirmAll(c.id, P);
@@ -63,7 +63,7 @@ const u3 = await undo({ subjectId: P, fact: FN });
 ok("setup: Undo puts back SAMPLEUD, never confirmed", u3.status === 200 && current() === "SAMPLEUD" && u3.body?.answer?.status === "DECLARED", u3.body?.answer);
 await confirmAll(c.id, P);
 const u4 = await undo({ subjectId: P, fact: FN });
-ok("C9.2 undo (Devin on #926): after a confirmation of the restored value, Undo goes further back, never redoes SAMPLEUE", u4.status === 200 && current() === before, [u4.status, current()]);
+ok("C9.2 undo (bot review on #926): after a confirmation of the restored value, Undo goes further back, never redoes SAMPLEUE", u4.status === 200 && current() === before, [u4.status, current()]);
 
 // (3) A signed IMM 5476 out of date, signed again.
 let p = (await prepare(c.id, officer)).p;

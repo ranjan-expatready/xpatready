@@ -54,7 +54,7 @@ export type FormItem = {
   signedBy?: string | null;
   /** Who owes a missing signature (default the client; the representative signs IMM 5476's own part). */
   signerOwes?: Owes;
-  /** Signed or uploaded, then a fact changed: the fact and when (BR-12). `key` (C9.2, Devin on #926): a fingerprint of
+  /** Signed or uploaded, then a fact changed: the fact and when (BR-12). `key` (C9.2, bot review on #926): a fingerprint of
    *  every change and its value now, so a pass covers only the changes it was given for, never a later one. */
   outOfDate?: { fact: string; since: string; key?: string } | null;
   edition?: { label: string; superseded: boolean; acceptedUntil: string | null } | null;

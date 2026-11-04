@@ -58,3 +58,13 @@ Contract (fixed): `POST /runtime/cases/:id/changes/undo {subjectId, fact}`; an i
   only ids go to the history query. Reproduced locally first (131/132), then green: r1c 132/132, r1d 96/96, r1a 99/99
   in run-suites' order on one fresh copy. New step (4) in `tests/check_c92_undo_api.ts` (a case-level fact on IMM 5257:
   listed on the case's subject, the view answers, Undo works), 27/27.
+
+## Merge of main (C7.6 #861, C8.2) and the bot review of cfc59bb2 / 50bd5d4e
+* Merge c53afbcf resolves two conflicts only (case-prepare.ts, sign-steps.ts), keeping both sides.
+* With C7.6 in main, an out-of-date validated, signed or uploaded item feeds readiness as a CRITICAL `out_of_date`
+  line (P-237); C9.2-5 runs and passes (no WAIT). The same value typed again (unconfirmed) is no change (C8.2 break M4).
+* The line's identity (`markKey`) is every change with its value now plus the form's repeating groups now, so a pass
+  covers only the state it was given for (bot review on #926, two findings).
+* **Follow-up (not in this PR):** a validated upload copy is "current" by its facts only (C-10, `paperValidated`), so
+  a change to a list alone (an entry added) never marks an upload copy Out of date; a signed copy's check includes
+  lists. Fix row for C7.7 / C-10: compare the copy's groups too.
