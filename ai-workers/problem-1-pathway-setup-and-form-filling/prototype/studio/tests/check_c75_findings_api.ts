@@ -1,0 +1,144 @@
+// C7.5 part 1 Review findings (runtime lane, M3-E; BR-19; AG-11-69, -70, -71): the routes on an isolated copy with the
+// Visitor visa released twice (as check_c82_filing_record_api.ts). It runs pack 4's acceptance/C7.5.test.ts and requires
+// its part 1 steps (C7.5-1…4, C7.5-10…14) to pass; C7.5-5…9 and -15 (the replayed AI review) are part 2 and are not
+// required here. Then each rule of the finding's life with a passing and a failing case: who may read and act (a client
+// 403, another firm's officer 404), waive (CRITICAL only, the representative of record), dismiss (never a CRITICAL one),
+// one move per finding (409), a dismissed finding stays dismissed for the same facts and a changed fact is a new
+// finding, two reads at once make one finding, hand-added findings checked, audit lines without values or reasons.
+// No model call (US$0).
+//   zsh studio/tools/isolated.sh runtime_c75 4435 start && tsx studio/tests/check_c75_findings_api.ts 4435 xr_studio_runtime_c75
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { client, recorder } from "./runtime/api.ts";
+import * as m3 from "../acceptance/lib/m3.ts"; // pack 4's helpers (open a case, answer, confirm), on this same copy
+
+const PORT = Number(process.argv[2] ?? 4435), DB = process.argv[3] ?? "xr_studio_runtime_c75";
+const { call, sql } = client(PORT, DB);
+const { ok, summary } = recorder();
+const STUDIO = join(import.meta.dirname, "..");
+const tsx = (file: string) => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", join(STUDIO, "api", "tsconfig.json"), join(STUDIO, file), String(PORT), DB], { encoding: "utf8", timeout: 900_000 });
+const releases = () => Number(sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") ?? 0);
+type F = { id: string; filing: string | null; subject: string; person: string; form: string | null; field: string | null; severity: string; source: string; state: string; quote: string; rule: string | null; state_by: string | null; state_at: string | null; state_reason: string | null; resolved_by: string | null; resolved_at: string | null };
+const PART1 = ["C7.5-1 ", "C7.5-2 ", "C7.5-3 ", "C7.5-4 ", "C7.5-10 ", "C7.5-11 ", "C7.5-12 ", "C7.5-13 ", "C7.5-14 "];
+
+(async () => {
+  if (releases() === 0) ok("setup: release 1 of the Visitor visa", tsx("tests/runtime/setup_visitor_visa.ts").status === 0 && releases() === 1);
+  if (releases() === 1) { tsx("acceptance/lib/setup_vv_m3.ts"); ok("setup: release 2 (pack 4 setup)", releases() === 2); }
+
+  const spend0 = sql("select count(*) from ai_batch");
+  // Pack 4's own test: its part 1 lines must pass (the replayed AI review lines are part 2).
+  const pack = tsx("acceptance/C7.5.test.ts");
+  for (const step of PART1) { const line = pack.stdout.split("\n").find((l) => l.includes(` ${step}`)); ok(`C7.5 pack ${step.trim()} passes`, !!line && line.startsWith("PASS"), line ?? pack.stdout.slice(-400)); }
+
+  const f = await m3.firms(), officer = f.officer ?? m3.OFFICER, rep = f.rep;
+  const vv = m3.needVisitorVisa();
+  const c = await m3.openCase(vv, [{ role: "principal", name: "Sample Client A", dob: "1986-04-13" }, { role: "child", name: "Sample Child A1", dob: m3.yearsAgo(10) }], { representative: rep, caseOfficers: [officer] });
+  const [P, K] = [c.subjects["Sample Client A"], c.subjects["Sample Child A1"]];
+  const list = async (q = "", actor = officer) => { const r = await call("GET", `/runtime/cases/${c.id}/findings${q}`, undefined, actor); return { r, fs: (r.body?.findings ?? []) as F[] }; };
+  let { r, fs } = await list();
+  ok("C7.5 a new case with no facts that disagree has no findings, and the counts say so", r.status === 200 && fs.length === 0 && r.body?.counts?.open === 0, r.body);
+  ok("C7.5 AI off: the page says the AI review comes next, the rules still run (AG-11-71)", r.body?.ai?.available === false && /rules/i.test(r.body?.ai?.words ?? ""));
+
+  // Who: a client 403 on every route, another firm's officer "not found".
+  ok("C7.5 fail: a client cannot add a finding (403)", (await call("POST", `/runtime/cases/${c.id}/findings`, { subject: P, severity: "MINOR", note: "From a client" }, m3.CLIENT)).status === 403);
+  ok("C7.5 fail: another firm's officer does not find the case (404)", (await call("GET", `/runtime/cases/${c.id}/findings`, undefined, m3.FIRM_READERS.solo)).status === 404);
+  ok("C7.5 fail: a configuration person reaches no case (403)", (await call("GET", `/runtime/cases/${c.id}/findings`, undefined, m3.AUTHOR)).status === 403);
+  ok("C7.5 fail: an unknown filter is refused in words (400)", (await list("?source=robots")).r.status === 400);
+
+  // The visit and the child's passport disagree: one finding on the child, filed on the child's filing, on IMM 5257.
+  await m3.answer(c.id, c.caseSubject, "case.intended_stay_from", "2030-03-01"); await m3.answer(c.id, c.caseSubject, "case.intended_stay_to", "2030-04-15");
+  await m3.answer(c.id, K, "person.passport_expiry_date", "2030-04-01");
+  // Breaker M2: read before Prepare worked out the filings (the case page shows the Review panel first): no filing yet,
+  // then the finding gets the child's filing on the next read once it exists.
+  ({ fs } = await list());
+  ok("C7.5 a finding read before Prepare has no filing yet", fs.length === 1 && fs[0].filing === null, fs.map((x) => x.filing));
+  await m3.prepare(c.id);
+  ({ r, fs } = await list());
+  const kid = fs.find((x) => x.subject === K);
+  ok("C7.5 breaker M2: once Prepare made the filings, the same finding sits on the child's own filing", !!kid?.filing && kid.filing === sql(`select f.id from filing f join filing_applicant a on a.filing_id=f.id where f.case_id='${c.id}' and a.subject_id='${K}' and f.active limit 1`), kid?.filing);
+  ok("C7.5 a rule finding is about the person whose fact disagrees, quotes both facts and names the rule in words", fs.length === 1 && !!kid && kid.person === "Sample Child A1" && kid.field === "person.passport_expiry_date" && /Apr 1, 2030.*Apr 15, 2030/.test(kid.quote) && /valid/.test(kid.rule ?? ""), fs);
+  ok("C7.5 the rule finding names the form the fact fills (IMM 5257)", kid?.form === "IMM 5257", kid?.form);
+
+  // Two reads at once make one finding (the partial unique index).
+  await m3.answer(c.id, c.caseSubject, "case.intended_stay_to", "2030-02-01"); // the visit now ends before it starts (and the child's passport is fine)
+  const both = await Promise.all([list(), list(), list()]);
+  ({ fs } = await list());
+  const stay = fs.filter((x) => x.state === "open" && x.field === "case.intended_stay_to");
+  ok("C7.5 three reads at once: one open finding for the visit's dates, never three", both.every((b) => b.r.status === 200) && stay.length === 1, fs.map((x) => [x.field, x.state]));
+  ok("C7.5 the child's passport finding resolved itself when the visit moved (by the rules)", fs.find((x) => x.id === kid?.id)?.state === "resolved" && fs.find((x) => x.id === kid?.id)?.resolved_by === "rules");
+  ok("C7.5 a case-fact finding sits on the principal's filing", !!stay[0]?.filing && stay[0].filing === sql(`select f.id from filing f join filing_applicant a on a.filing_id=f.id where f.case_id='${c.id}' and a.subject_id='${P}' and f.active limit 1`), stay[0]?.filing);
+
+  // Dismiss: needs a reason; stays dismissed for the same facts; a changed fact is a new finding.
+  ok("C7.5 fail: dismiss without a reason (400)", (await call("POST", `/runtime/findings/${stay[0]?.id}/dismiss`, {}, officer)).status === 400);
+  r = await call("POST", `/runtime/findings/${stay[0]?.id}/dismiss`, { reason: "The client confirmed the dates (Sample)" }, officer);
+  ok("C7.5 dismissed with a reason, who and when (200)", r.status === 200 && r.body?.state === "dismissed" && r.body?.state_by === officer && !!r.body?.state_at && r.body?.state_reason === "The client confirmed the dates (Sample)", r.body);
+  ({ fs } = await list("?state=open"));
+  ok("C7.5 the dismissed finding does not come back on the next read (same facts)", !fs.some((x) => x.field === "case.intended_stay_to"), fs);
+  ok("C7.5 fail: a dismissed finding is not moved again (409)", (await call("POST", `/runtime/findings/${stay[0]?.id}/acknowledge`, { reason: "Again" }, officer)).status === 409);
+  await m3.answer(c.id, c.caseSubject, "case.intended_stay_to", "2030-02-10");
+  ({ fs } = await list());
+  ok("C7.5 a changed fact that still disagrees is a new Open finding; the dismissed one stays dismissed", fs.filter((x) => x.field === "case.intended_stay_to" && x.state === "open").length === 1 && fs.find((x) => x.id === stay[0]?.id)?.state === "dismissed", fs.map((x) => [x.field, x.state]));
+
+  // Hand-added findings: checked; CRITICAL waived only by the representative of record, never dismissed.
+  ok("C7.5 fail: a hand-added finding needs a severity from the team's list (400)", (await call("POST", `/runtime/cases/${c.id}/findings`, { subject: P, severity: "HUGE", note: "Photo (Sample)" }, officer)).status === 400);
+  ok("C7.5 fail: a hand-added finding is about a person on this case (422)", (await call("POST", `/runtime/cases/${c.id}/findings`, { subject: "00000000-0000-4000-8000-000000000000", severity: "MINOR", note: "Photo (Sample)" }, officer)).status === 422);
+  // Breaker m3: a hand-added finding is about a person (not the application), on that person's own filing, about a fact asked of them.
+  const add = (b: Record<string, unknown>) => call("POST", `/runtime/cases/${c.id}/findings`, { severity: "MINOR", note: "Photo (Sample)", ...b }, officer);
+  const childFiling = sql(`select f.id from filing f join filing_applicant a on a.filing_id=f.id where f.case_id='${c.id}' and a.subject_id='${K}' and f.active limit 1`);
+  ok("C7.5 breaker m3 fail: not about the application itself (422)", (await add({ subject: c.caseSubject })).status === 422);
+  ok("C7.5 breaker m3 fail: not on another person's filing (422)", !!childFiling && (await add({ subject: P, filing: childFiling })).status === 422);
+  ok("C7.5 breaker m3 fail: not about a fact this case never asks (422), nor a malformed fact (400)", (await add({ subject: P, field: "person.favourite_colour" })).status === 422 && (await add({ subject: P, field: "Favourite colour" })).status === 400);
+  r = await add({ subject: K, field: "person.passport_expiry_date" });
+  ok("C7.5 breaker m3 pass: about the child's passport date, it sits on the child's own filing (201)", r.status === 201 && r.body?.filing === childFiling && r.body?.field === "person.passport_expiry_date", r.body);
+  // Reviewer M2 (STANDARDS §4): one key per "Add finding" dialog: a double click stores one row; the key reused for another finding is refused.
+  const idem = `walk-${Date.now().toString(36)}`;
+  const dbl = await Promise.all([1, 2].map(() => add({ subject: P, note: "Visa photo too dark (Sample)", idempotencyKey: idem })));
+  ok("C7.5 reviewer M2: the same key twice at once stores one finding and answers both with it", dbl.every((x) => x.status === 201) && dbl[0].body?.id === dbl[1].body?.id && sql(`select count(*) from review_finding where case_id='${c.id}' and idempotency_key='${idem}'`) === "1", dbl.map((x) => [x.status, x.body?.id]));
+  ok("C7.5 reviewer M2 fail: the key reused for a different finding is refused (409), nothing added", (await add({ subject: P, note: "Another note (Sample)", idempotencyKey: idem })).status === 409 && sql(`select count(*) from review_finding where case_id='${c.id}' and idempotency_key='${idem}'`) === "1");
+  // Breaker m2 (QA-25): typed text has no hidden or control characters.
+  const nul = String.fromCharCode(0), zw = "\u200b".repeat(5), bidi = "Seen \u202e(Sample)";
+  ok("C7.5 breaker m2 fail: a note with a NUL, only zero-width spaces, or a bidi mark is refused in words (400)", (await Promise.all([`Photo${nul} (Sample)`, zw, bidi].map((note) => add({ subject: P, note })))).every((x) => x.status === 400 && /hidden or control character|at least 3/.test(JSON.stringify(x.body))));
+  r = await call("POST", `/runtime/cases/${c.id}/findings`, { subject: P, severity: "CRITICAL", note: "Signature missing on the family form (Sample)", form: "IMM 5645" }, officer);
+  const crit = r.body as F;
+  ok("C7.5 staff add a CRITICAL finding by hand (201, source manual, open)", r.status === 201 && crit.source === "manual" && crit.state === "open" && crit.form === "IMM 5645", r.body);
+  ok("C7.5 fail: a CRITICAL finding is not dismissed (422)", (await call("POST", `/runtime/findings/${crit.id}/dismiss`, { reason: "Not relevant" }, officer)).status === 422);
+  ok("C7.5 breaker M3 fail: a CRITICAL finding is not acknowledged either, so only the representative's waive passes it (422)", (await call("POST", `/runtime/findings/${crit.id}/acknowledge`, { reason: "Checked by phone" }, officer)).status === 422 && sql(`select state from review_finding where id='${crit.id}'`) === "open");
+  ok("C7.5 breaker m7: the list says who may waive (the representative yes, the case officer no)", (await list("", rep ?? "")).r.body?.may_waive === true && (await list()).r.body?.may_waive === (rep === officer));
+  ok("C7.5 fail: the case officer who is not the representative of record cannot waive it (403)", !rep || rep === officer || (await call("POST", `/runtime/findings/${crit.id}/waive`, { reason: "Checked by phone" }, officer)).status === 403);
+  ok("C7.5 fail: the representative's waive needs a reason (400)", !!rep && (await call("POST", `/runtime/findings/${crit.id}/waive`, {}, rep)).status === 400);
+  r = await call("POST", `/runtime/findings/${crit.id}/waive`, { reason: "Signed copy received by courier (Sample)" }, rep ?? "");
+  ok("C7.5 the representative of record waives the CRITICAL finding with a reason (200)", r.status === 200 && r.body?.state === "waived" && r.body?.state_by === rep, r.body);
+
+  // Acknowledge once only: a second acknowledge is refused, nothing overwritten.
+  r = await call("POST", `/runtime/cases/${c.id}/findings`, { subject: K, severity: "MINOR", note: "Photo to retake (Sample)" }, officer);
+  const minor = r.body as F;
+  const two = await Promise.all([1, 2].map((n) => call("POST", `/runtime/findings/${minor.id}/acknowledge`, { reason: `Seen ${n} (Sample)` }, officer)));
+  ok("C7.5 two acknowledges at once: one 200, one 409, one reason kept", two.filter((x) => x.status === 200).length === 1 && two.filter((x) => x.status === 409).length === 1 && Number(sql(`select count(*) from review_finding where id='${minor.id}' and state='acknowledged'`)) === 1, two.map((x) => x.status));
+  ok("C7.5 fail: no such finding (404), a malformed id (404)", (await call("POST", `/runtime/findings/00000000-0000-4000-8000-000000000000/acknowledge`, { reason: "x y z" }, officer)).status === 404 && (await call("POST", `/runtime/findings/nope/acknowledge`, { reason: "x y z" }, officer)).status === 404);
+  ok("C7.5 fail: another firm's officer cannot move a finding (404)", (await call("POST", `/runtime/findings/${minor.id}/acknowledge`, { reason: "From another firm" }, m3.FIRM_READERS.solo)).status === 404);
+  ok("C7.5 breaker m5: a client gets 403 for an existing and an unknown finding alike (nothing learnt)", (await call("POST", `/runtime/findings/${minor.id}/acknowledge`, { reason: "x y z" }, m3.CLIENT)).status === 403 && (await call("POST", `/runtime/findings/00000000-0000-4000-8000-000000000000/acknowledge`, { reason: "x y z" }, m3.CLIENT)).status === 403);
+  ok("C7.5 breaker m2 fail: a reason with a NUL is refused in words (400), not a 404", (await call("POST", `/runtime/findings/${minor.id}/dismiss`, { reason: `Not${String.fromCharCode(0)} relevant` }, officer)).status === 400);
+
+  // Breaker M1: acknowledged, then the fact fixed: resolved by the rules, and who acknowledged it stays.
+  r = await call("POST", `/runtime/cases/${c.id}/findings`, { subject: K, severity: "MINOR", note: "Second photo (Sample)" }, officer); // keeps the list busy
+  await m3.answer(c.id, c.caseSubject, "case.intended_stay_to", "2030-04-15"); await m3.answer(c.id, K, "person.passport_expiry_date", "2030-04-01"); // the child's finding is back (new facts)
+  ({ fs } = await list("?state=open"));
+  const again = fs.find((x) => x.source === "rules" && x.subject === K);
+  await call("POST", `/runtime/findings/${again?.id}/acknowledge`, { reason: "Renewal booked (Sample)" }, officer);
+  await m3.answer(c.id, K, "person.passport_expiry_date", "2034-04-01");
+  ({ fs } = await list());
+  const res = fs.find((x) => x.id === again?.id);
+  ok("C7.5 breaker M1: resolved by the rules, and who acknowledged it, when and why are kept", res?.state === "resolved" && res.resolved_by === "rules" && !!res.resolved_at && res.state_by === officer && res.state_reason === "Renewal booked (Sample)" && !!res.state_at, res);
+  ok("C7.5 breaker m8: the rules' resolve writes an audit line", Number(sql(`select count(*) from audit_event where entity='case' and entity_key='${c.id}' and action='resolved' and actor='rules'`)) >= 1);
+
+  // Breaker m9: the database refuses a dismissed CRITICAL and a blank reason, whatever writes it.
+  const refusedSql = (q: string) => { try { return sql(q) === null; } catch { return true; } };
+  ok("C7.5 breaker m9 fail: the database refuses a dismissed CRITICAL, and a dismiss with a blank reason", refusedSql(`update review_finding set state='dismissed', state_reason='x', state_by='user-O', state_at=now() where id='${crit.id}'`) && refusedSql(`update review_finding set state='dismissed', state_reason='   ', state_by='user-O', state_at=now() where id='${minor.id}'`) && sql(`select state from review_finding where id='${crit.id}'`) === "waived");
+
+  // STANDARDS §5: audit lines name the case and the finding, never a fact's value or a typed reason.
+  const audit = sql(`select string_agg(summary || ' ' || coalesce(detail::text,''), ' | ') from audit_event where entity='case' and entity_key='${c.id}' and action in ('acknowledged','waived','dismissed','added')`) ?? "";
+  ok("C7.5 audit lines for each move and hand-added finding, without values or reasons", /acknowledged a MINOR/.test(audit) && /waived a CRITICAL/.test(audit) && /dismissed a MAJOR Rules finding/.test(audit) && !/2030|courier|Sample\)|Photo/.test(audit), audit.slice(0, 300));
+  ok("C7.5 no model call anywhere (US$0)", spend0 !== null && sql("select count(*) from ai_batch") === spend0);
+
+  process.exitCode = summary() ? 1 : 0;
+})();
