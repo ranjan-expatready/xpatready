@@ -222,8 +222,13 @@ const loadFixture = async () => {
   await checkCopy(PORT, DB);
   const parts = readdirSync(RUNS).filter((f) => /^studio-fieldmap-imm5645e-p\dof4-[0-9a-f]{12}-live-/.test(f));
   if (parts.length !== 4) stop(`IMM 5645's four saved parts are not in p2/runs (found ${parts.length}); they come from the C11.8 live run (#746)`);
-  const ai = (await call("GET", "/session")).body?.ai;
-  if (ai?.live !== false || ai?.launcher !== "stand-in") stop(`start this copy without the live switch and with the stand-in launcher (see the run line); GET /session → ai: ${JSON.stringify(ai)}`);
+  let ai = (await call("GET", "/session")).body?.ai;
+  if (ai?.live !== false) stop(`start this copy without the live switch (see the run line); GET /session → ai: ${JSON.stringify(ai)}`);
+  // Gate B (tools/gate-b.mjs) starts the copy with a plain "isolated.sh <name> <port> start": the pack then restarts it
+  // itself with the stand-in launcher (never a live switch), as it does for its other steps, so "the launcher was never
+  // asked" can be read from the launcher's log.
+  if (ai?.launcher !== "stand-in") { await restart(); ai = (await call("GET", "/session")).body?.ai; }
+  if (ai?.live !== false || ai?.launcher !== "stand-in") stop(`the copy did not come back with live AI off and the stand-in launcher; GET /session → ai: ${JSON.stringify(ai)}`);
   ok("C11.8 (P-175): live AI is off on this copy (no server switch)", ai.live === false);
   // The stand-in launcher logs every call; a live call through it fails, so any call made by Saved shows in its log.
   writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 0, out: { ok: true } }, live: { exit: 1, err: "the stand-in launcher was asked for a live call" } }));
