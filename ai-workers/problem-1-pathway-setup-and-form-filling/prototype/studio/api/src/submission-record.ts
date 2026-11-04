@@ -61,7 +61,7 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
       const facts = changedSince(filed.facts, a.factsOf(filed.form, filed.subject));
       Object.assign(item, { filed: { on: day(rec.submittedOn), current: !facts.length } });
       if (!facts.length) continue;
-      const words = filedEarlierWords(filed.form, facts.map((x) => ({ fact: x.fact, person: a.label.get(x.about.split("/")[0]) ?? "a person" })), day(rec.submittedOn));
+      const words = filedEarlierWords(filed.form, a.label.get(filed.subject) ?? "a person", facts.map((x) => ({ fact: x.fact, person: a.label.get(x.about.split("/")[0]) ?? "a person" })), day(rec.submittedOn));
       Object.assign(item, { state: "out_of_date", reason: words, changed_facts: facts.map((x) => ({ fact: x.fact, subject: x.about.split("/")[0] })) });
       changed.push({ filing: f.id, item: item.id, words });
     }

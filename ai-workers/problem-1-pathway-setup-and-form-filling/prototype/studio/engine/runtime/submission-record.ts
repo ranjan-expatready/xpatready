@@ -37,8 +37,9 @@ export function changedSince(then: Fact[], now: Fact[]): { fact: string; about: 
 export const factWords = (fact: string) => (fact.split(".").pop() ?? fact).replace(/_/g, " ");
 
 /** BR-12 (P-142 D7): the words on a form filed with a value that changed since, naming whose fact. Unconfirmed: no counsel. */
-export const filedEarlierWords = (form: string, changed: { fact: string; person: string }[], on: string) => {
+export const filedEarlierWords = (form: string, owner: string, changed: { fact: string; person: string }[], on: string) => {
   const list = changed.map((c) => `${c.person}'s ${factWords(c.fact)}`);
   const shown = list.length > 3 ? `${list.slice(0, 3).join(", ")} and ${list.length - 3} more` : list.join(", ");
-  return `Filed with an earlier value: ${shown} changed after ${form} was filed on ${on}. Re-sign it, or tell IRCC of the change (Unconfirmed: no counsel).`;
+  const day = new Date(`${on}T12:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  return `Filed with an earlier value: ${shown} changed after ${owner}'s ${form} was filed on ${day}. Re-sign it, or tell IRCC of the change (Unconfirmed: no counsel).`;
 };
