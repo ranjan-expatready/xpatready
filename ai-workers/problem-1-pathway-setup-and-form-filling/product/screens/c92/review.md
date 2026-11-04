@@ -78,3 +78,12 @@ Only `git diff 18c8c52a..1fd2b1b7`, on a fresh copy `rv_c92` at :4430. Live AI o
 * No new findings. The scores and the journey score (9.5/10) are unchanged.
 
 **Verdict: Approve** for **1fd2b1b78fd35c8cdd922c942da4665654a0c5ce**. No open Blocker, Major or Minor of mine. -7's wording stays with the tech lead.
+
+## Round 4 (CI fix, diff-only): 4642e2f3..5d9f0b8f, 4 Nov 2026
+Only `git diff 4642e2f3..5d9f0b8f` (`case-prepare.ts`, step 4 of `check_c92_undo_api.ts`, build notes), on a fresh copy `rv_c92` at :4430.
+* **Runs:** `check_runtime_r1c.cjs` **132/132** after `setup_visitor_visa` (CI's shard 6 failure is gone). Setup 44/46 (the same S2w and S7a as main). `check_c92_undo_api` **27/27**: step 4 uses `case.funds_available_cad` on IMM 5257, and the view returns 200 with the item Out of date. `C9.2.test.ts` 10/10, -5 WAIT. `check_c92_out_of_date_browser` 19/19. I put back the screenshots the browser suite rewrote, so the tree is clean.
+* **The fix is right.** `subjectOfAbout` maps "case" to the case participant's own subject, the same subject the Undo route accepts (`participants`) and that `caseView` reads. It is used consistently for the person words, the date, the pending value, the change's `subject` and Undo. Undo is offered only for a uuid subject (`UUID` from `case-prepare.ts:38`). Only uuids reach the history query, so Prisma can no longer raise P2023. A missing case subject degrades to no Undo, not a 404.
+* **Its test can fail:** without the fix, `GET …/prepare` returns 404, and step 4's `status === 200` check fails. The step also undoes the case-level fact on the case's own subject (200).
+* No new findings. The scores and the journey score (9.5/10) are unchanged.
+
+**Verdict: Approve** for **5d9f0b8f1cac88d553323640f75958778035e7d5**. No open Blocker, Major or Minor of mine. -7's wording stays with the tech lead.
