@@ -1,7 +1,7 @@
 // QA-144 slice 1 walk at 1440 px (P-312): after Demo › Load the configured checkpoint on a blank copy, the author opens
 // the Visitor visa as a person would: its Questionnaires (sections from the forms' parts, questions per person), its
-// Forms (the rules from IRCC's words), Preview, and Review and release (IRM 0002 the one named block until its saved
-// map lands). Screenshots to product/screens/QA-144-configured-release/screenshots; axe on each page; US$0.
+// Forms (the rules from IRCC's words), Preview, and Review and release (released once IRM 0002's saved map is
+// replayed, #891). Screenshots to product/screens/QA-144-configured-release/screenshots; axe on each page; US$0.
 //   zsh studio/tools/isolated.sh b8_qa144 4470 start && node studio/tests/qa/check_qa144_vv_walk.cjs 4470 xr_studio_b8_qa144
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../../node_modules/playwright");
@@ -47,8 +47,10 @@ const ok = (name, c, d) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "F
     ok("walk Forms: no form says its condition is in words only", !/in words only/i.test(t));
   });
   await visit("preview", "3-preview-1440.png", (t) => ok("walk Preview: the principal's questionnaire has questions", t.length > 200 && !/no questions yet/i.test(t), t.slice(0, 160)));
-  await visit("review", "4-review-one-block-1440.png", (t) => {
-    ok("walk Review and release: one problem before submitting, IRM 0002 named in words", /1 problem/i.test(t) && t.includes("IRM 0002") && /No form fields mapped yet/.test(t), t.slice(0, 300));
+  // IRM 0002's saved map (#840) is replayed by the checkpoint (#891): the Visitor visa is released (review m2).
+  ok("walk: the configured checkpoint released the Visitor visa", Number(sql(`select count(*) from config_release where combination_id = '${vv}'`)) === 1);
+  await visit("review", "4-review-released-1440.png", (t) => {
+    ok("walk Review and release: release 1 is out, approved by the Approver, with nothing left to fix", /Last released: version 1, in Release 1, by Approver/.test(t) && /0 problems to fix/.test(t) && !/[1-9]\d* problems? to fix/.test(t), t.slice(0, 300));
     ok("walk Review and release: no form field without a decision and no rule in words only", !/no decision in this draft/.test(t) && !/in words only/.test(t));
   });
   await b.close();
