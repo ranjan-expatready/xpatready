@@ -33,3 +33,16 @@ export type SupplyCite = { fact: string; label: string; about: (typeof DOCUMENT_
 export type SuppliesView = { document: string; before: string[]; after: string[]; added: string[]; removed: string[]; cites: SupplyCite[]; uses: number; reason: string };
 /** Said with an answer when a supplied fact has no question placed: it cannot be asked when the document is missing. */
 export type SuppliesWarning = { fact: string; label: string; why: string };
+
+/** GET /library/document-types/:key/supplies[?combination=]: what the panel reads (C4.5 concept §4). `cites` are the
+ *  official words recorded with the facts it supplies now (null for a fact with none recorded, e.g. imported);
+ *  `open` is the change that waits, was returned or is approved and not released yet; `fields` lists the shared fields
+ *  a person may pick, the suggested first (rules: the document's own name in the field's meaning, US$0); `prefill` is
+ *  the checklist line's own words when a combination is named. */
+export type SuppliesPanelView = {
+  key: string; name: string; uses: number;
+  facts: { fact: string; label: string; about: (typeof DOCUMENT_ABOUTS)[number]; cite: { source: string; quote: string; readOn: string } | null }[];
+  open: { id: string; status: "WAITING" | "RETURNED" | "APPROVED"; by: string; byId: string; reason: string; note: string | null; supplies: SuppliesView } | null;
+  fields: { key: string; label: string; suggested: boolean }[];
+  prefill: { source: string; quote: string } | null;
+};

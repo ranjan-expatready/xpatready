@@ -7,11 +7,11 @@
 // approval the document type gets a draft version with the facts (checked again first), published with the next release
 // that carries it (publishLibraryChanges marks the change released). Nothing changes before approval. Sample until the
 // immigration expert confirms (the cites are kept on the change, shown to the second person and in History).
-import { Body, Controller, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import { Prisma, type LibraryChange } from "@prisma/client";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { ABOUT_WORDS, SUPPLIES_ACTION, SUPPLIES_KIND, SuppliesBody, type SupplyCite, type SuppliesView, type SuppliesWarning } from "../../contracts/document-supplies.ts";
-import { actorOf, Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
+import { ABOUT_WORDS, SUPPLIES_ACTION, SUPPLIES_KIND, SuppliesBody, type SupplyCite, type SuppliesPanelView, type SuppliesView, type SuppliesWarning } from "../../contracts/document-supplies.ts";
+import { ACTORS, actorOf, Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { refuseRetired } from "./library-items.ts";
 
 type H = string | undefined;
@@ -29,6 +29,8 @@ async function typeOf(db: Pick<Db, "documentType">, workspaceId: string, key: st
 const aboutOf = (cites: { fact: string; about: About }[]) => Object.fromEntries(cites.filter((c) => c.about !== "holder").map((c) => [c.fact, c.about]));
 const same = (a: { facts: string[]; about: Record<string, string> }, b: { facts: string[]; about: Record<string, string> }) =>
   JSON.stringify([...a.facts].sort()) === JSON.stringify([...b.facts].sort()) && JSON.stringify(Object.entries(a.about).sort()) === JSON.stringify(Object.entries(b.about).sort());
+/** Words of a document's name that say nothing about what it shows (never used to suggest a fact). */
+const SUGGEST_STOP = new Set(["information", "document", "documents", "photocopy", "proof", "evidence", "certificate", "letter", "application"]);
 /** A new version copies the row; a Json column that is null is written as the database's null (Prisma refuses a bare null). */
 const copyType = (r: Record<string, unknown>) => { const x = strip(r); if (x.readerProfile === null) x.readerProfile = Prisma.DbNull; return x; };
 const nameOfField = (f: { canonicalFieldKey: string; meaning: string | null; label: string | null }) => (f.meaning ?? f.label ?? f.canonicalFieldKey).trim().replace(/\.$/, "").replace(/^./, (x) => x.toUpperCase());
@@ -41,6 +43,32 @@ export async function openSuppliesChange(db: Pick<Db, "libraryChange">, workspac
 @Injectable()
 export class DocumentSupplies {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(Workspace) private readonly ws: Workspace) {}
+
+  /** What the panel reads (concept §4): the facts now with their official words, the open change, the fields to pick. */
+  async view(key: string, combinationId?: string): Promise<SuppliesPanelView> {
+    const workspaceId = await this.ws.id();
+    const { current } = await typeOf(this.db, workspaceId, key);
+    if (!current) throw problem(404, "Not in the library", "That document type is not in the shared library.");
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId, status: { not: "RETIRED" }, mergedIntoKey: null }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true, label: true } });
+    const named = new Map<string, string>(); for (const f of rows) if (!named.has(f.canonicalFieldKey)) named.set(f.canonicalFieldKey, nameOfField(f));
+    // The official words recorded with what it supplies now: the newest approved or released change of its facts.
+    const last = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: SUPPLIES_KIND, key, status: { in: ["APPROVED", "RELEASED"] } }, orderBy: { proposedAt: "desc" } });
+    const cites = ((last?.matches ?? {}) as { cites?: SupplyCite[] }).cites ?? [];
+    const about = (current.suppliesAbout ?? {}) as Record<string, About>;
+    const facts = current.suppliesFacts.map((f) => { const c = cites.find((x) => x.fact === f); return { fact: f, label: named.get(f) ?? f, about: about[f] ?? "holder", cite: c ? { source: c.source, quote: c.quote, readOn: c.readOn } : null }; });
+    const o = await openSuppliesChange(this.db, workspaceId, key);
+    // Suggested first (rules, US$0): a field whose meaning names the document ("passport"), not supplied yet.
+    const words = current.name.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 5 && !SUGGEST_STOP.has(w));
+    const have = new Set(current.suppliesFacts);
+    const fields = [...named].map(([k, label]) => ({ key: k, label, suggested: !have.has(k) && words.some((w) => label.toLowerCase().includes(w)) }))
+      .sort((a, b) => Number(b.suggested) - Number(a.suggested) || a.label.localeCompare(b.label));
+    const line = combinationId ? await this.db.documentRequirement.findFirst({ where: { workspaceId, combinationId, documentTypeKey: key, status: { not: "RETIRED" } }, orderBy: { version: "desc" }, select: { sourceFile: true, sourceQuote: true } }) : null;
+    const form = /^(imm|irm)(\d{4})/i.exec(line?.sourceFile ?? "");
+    const uses = (await this.db.documentRequirement.findMany({ where: { workspaceId, documentTypeKey: key, status: { not: "RETIRED" } }, distinct: ["combinationId"], select: { combinationId: true } })).length;
+    return { key, name: current.name, uses, facts,
+      open: o ? { id: o.id, status: o.status as "WAITING" | "RETURNED" | "APPROVED", by: ACTORS.find((a) => a.id === o.proposedBy)?.name ?? "A person", byId: o.proposedBy, reason: o.reason ?? "", note: o.decisionNote, supplies: suppliesView(o) } : null,
+      fields, prefill: line?.sourceQuote ? { source: form ? `${form[1].toUpperCase()} ${form[2]}, page ` : "", quote: line.sourceQuote } : null };
+  }
 
   async propose(actor: Actor, key: string, body: unknown) {
     need(actor, "author");
@@ -125,5 +153,6 @@ export async function releaseSupplies(tx: Prisma.TransactionClient, workspaceId:
 @Controller("api")
 export class DocumentSuppliesController {
   constructor(@Inject(DocumentSupplies) private readonly s: DocumentSupplies) {}
+  @Get("library/document-types/:key/supplies") view(@Param("key") key: string, @Query("combination") combination?: string) { return this.s.view(key, combination && /^[0-9a-f-]{36}$/i.test(combination) ? combination : undefined); }
   @Post("library/document-types/:key/supplies") propose(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.propose(actorOf(a), key, b); }
 }
