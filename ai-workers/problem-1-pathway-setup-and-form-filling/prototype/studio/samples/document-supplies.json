@@ -1,0 +1,23 @@
+{
+  "about": "C4.5 (P-130, P-319; Lead 9's ruling, 5 Nov): the facts each document type of the six supplies, which an author proposes in the library and a second person approves (POST /api/library/document-types/:key/supplies, then To review). The packs make that person's step with this file; the product never reads it. Each fact cites the official words that say the document shows it (AGENTS.md rule 4, P-170): form, edition, page and quote, read on 5 Nov 2026 from the committed files official-sources/ircc/checklists/imm5484e.pdf (SHA-256 e48deef4a6343edda19e04b3ab598a275b12bb07047d4351f00c7c239f7883fc) and official-sources/ircc/forms/imm5257e.pdf (SHA-256 0dc03b24e7914a178ad29e2cfae811045835a1d36d7a3c35f040251d0aca562e), whose words are in prototype/expected/source-text/. A fact no official words tie to the document is left out (the passport's country of issue: IMM 5257 asks it in its Passport section but does not say the passport shows it). Sample, Unconfirmed: expert.",
+  "basis": "Sample · Unconfirmed: expert",
+  "read_on": "2026-11-05",
+  "document_types": [
+    {
+      "documentType": "passport_information_page_copy",
+      "checklist": "IMM 5484",
+      "reason": "IMM 5484 lists what the passport's information page includes, and IMM 5257 asks the names as shown on the passport (Sample, Unconfirmed: expert).",
+      "facts": [
+        { "fact": "person.passport_number", "source": "IMM 5484 (05-2026), page 1", "quote": "The passport number;" },
+        { "fact": "person.passport_issue_date", "source": "IMM 5484 (05-2026), page 1", "quote": "The issuance and expiry dates;" },
+        { "fact": "person.passport_expiry_date", "source": "IMM 5484 (05-2026), page 1", "quote": "The issuance and expiry dates;" },
+        { "fact": "person.family_name", "source": "IMM 5257 (09-2023), page 1, Personal details", "quote": "Family name (as shown on your passport or travel document)" },
+        { "fact": "person.given_names", "source": "IMM 5257 (09-2023), page 1, Personal details", "quote": "Given name(s) (as shown on your passport or travel document)" },
+        { "fact": "person.date_of_birth", "source": "IMM 5484 (05-2026), page 1", "quote": "Your photo, name, date and place of birth." },
+        { "fact": "person.birth_city", "source": "IMM 5484 (05-2026), page 1", "quote": "Your photo, name, date and place of birth." },
+        { "fact": "person.birth_country", "source": "IMM 5484 (05-2026), page 1", "quote": "Your photo, name, date and place of birth." },
+        { "fact": "person.citizenship", "source": "IMM 5484 (05-2026), page 1", "quote": "the country of citizenship listed on your passport" }
+      ]
+    }
+  ]
+}

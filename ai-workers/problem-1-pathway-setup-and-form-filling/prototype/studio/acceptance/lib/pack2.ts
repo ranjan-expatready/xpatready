@@ -6,7 +6,7 @@
 // The sample is the six a person loads from the Demo menu; a 4th argument names another combination (a fixture key loads
 // the suites' older fixture instead).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/<id>.test.ts 4440 xr_studio_accept [combination key]
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
@@ -102,6 +102,42 @@ export function pack2(id: string) {
     await approveAll();
     return out;
   }
+  /** C4.5 (P-322): a combination of the six gets its document lines the way people give them, US$0: on the Documents
+   *  tab the author drafts each document checklist from its saved reading (Saved, never Live), accepts its Ready lines
+   *  and new document types on To review, and a second person approves the new library items. Lines for a person to
+   *  decide (visa office words) stay waiting. Test setup only; the product never calls it. */
+  async function documentsBySteps(comboId: string) {
+    const out = { drafted: 0, accepted: 0, approved: 0, refused: [] as string[] };
+    const ids = (q: string) => sql(q).split("\n").filter(Boolean);
+    const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
+    for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Document checklist' order by created_at`)) if (say("draft the checklist", await call("POST", `/attachments/${a}/draft-checklist`, { mode: "replay" }, AUTHOR))) out.drafted++;
+    // The library's new document types first (a line lands only on a type the library holds), then the lines.
+    for (const kind of ["document_type", "requirement_line"]) {
+      const ready = ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='checklist_draft' and p.kind='${kind}' and p.status='waiting' order by p.created_at, p.identity_key`);
+      const v = await queued(comboId), lib = (await call("GET", "/review/proposals")).body?.groups ?? [];
+      const bands = new Map<string, string>(v.map((x: any) => [x.id, x.band]));
+      for (const g of lib as any[]) { const b = (await call("GET", `/review/proposals?group=${encodeURIComponent(g.id)}`)).body?.group?.bands ?? {}; for (const x of [...(b.ready ?? []), ...(b.check ?? []), ...(b.decide ?? [])]) bands.set(x.id, x.band); }
+      for (const p of ready.filter((x) => bands.get(x) !== "decide")) if (say(`accept a ${kind}`, await call("POST", "/review/proposals/decide", { ids: [p], action: "accept", reason: "Accepted by a test as the saved reading proposed it (C4.5 setup)." }, AUTHOR))) out.accepted++;
+    }
+    for (const c of ids(`select id from library_change where status='WAITING' and proposed_by='${AUTHOR}' order by proposed_at`)) if (say("approve", await call("POST", `/library/changes/${c}/approve`, { note: "Approved by a test as the second person (C4.5 setup)." }, APPROVER))) out.approved++;
+    return out;
+  }
+  /** C4.5 (P-322, P-319): the facts each document type of a combination's checklist supplies, as a person sets them in
+   *  the library, US$0: the author proposes each type's facts from samples/document-supplies.json (each with its
+   *  official words) and a second person approves it on To review. Only types this combination's checklist names. */
+  async function suppliesBySteps(comboId: string) {
+    const out = { proposed: 0, approved: 0, refused: [] as string[] };
+    const sample = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "document-supplies.json"), "utf8")) as { document_types: { documentType: string; reason: string; facts: unknown[] }[] };
+    const named = new Set(sql(`select distinct document_type_key from document_requirement where combination_id='${comboId}' and status <> 'RETIRED'`).split("\n").filter(Boolean));
+    for (const t of sample.document_types.filter((x) => named.has(x.documentType))) {
+      const r = await call("POST", `/library/document-types/${encodeURIComponent(t.documentType)}/supplies`, { facts: t.facts, reason: t.reason }, AUTHOR);
+      if (r.status >= 300) { out.refused.push(`propose ${t.documentType}: ${r.status} ${words(r).slice(0, 160)}`); continue; }
+      out.proposed++;
+      const a = await call("POST", `/library/changes/${r.body?.id ?? sql(`select id from library_change where kind='document_supplies' and key='${t.documentType}' and status='WAITING'`)}/approve`, { note: "Approved by a test as the second person (C4.5 setup)." }, APPROVER);
+      if (a.status < 300) out.approved++; else out.refused.push(`approve ${t.documentType}: ${a.status} ${words(a).slice(0, 160)}`);
+    }
+    return out;
+  }
   const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
   const attachment = (comboId: string, file: string) => sql(`select id from source_attachment where combination_id='${comboId}' and lower(file_name) like lower('%${file}') order by created_at limit 1`);
   /** Every waiting proposal of a combination's own group in the one review queue (all three bands). */
@@ -145,7 +181,7 @@ export function pack2(id: string) {
     if (waits.length) console.log(`${waits.length} waiting (not passed): ${waits.map((w) => w.on).filter((x, i, a) => a.indexOf(x) === i).join("; ")}`);
     process.exit(fail ? 1 : waits.length ? 2 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
+  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, documentsBySteps, suppliesBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */
