@@ -97,3 +97,24 @@ Reviewer: a fresh context that did not build this. I read `git diff 9caa043b...b
 - An online-only form through a screen: none can be made today (online capture is parked). It is covered by the pure rule only.
 
 **Verdict: Approve** (no open Blocker or Major). This applies to b2d33367. The commit after it, d9e32a43, is notes only. Minors m1–m5 can be fixed in this PR or recorded as follow-ups.
+
+## Round 2: diff-only re-review at 816e8e7c (`git diff b2d33367..816e8e7c`)
+Runs on :4447 (fresh copy, US$0, stopped afterwards):
+- Pack on the fixture: **37/37, exit 0**. I did not re-run the checkpoint, because the diff does not touch part B or the API.
+- Browser at 1440, 1024, 400 and 200 % zoom: the count now reads "0 other errors (block submission)". axe is clean, there is no sideways scroll and no page errors.
+- **m1 fixed.** `review.tsx:83` says "other" when the form-line box is shown, as it already did for unsourced numbers.
+- **m2 fixed.**
+  - `isFormLine` now reads `libraryType(form_kind ?? "data_form", title ?? "")`. The snapshot carries `title` (`engine/snapshot.ts:200`), so this is the library's one rule.
+  - A new pass step covers the IMM 5802-style row, with a checklist-titled document row as its fail.
+  - `isFormLine` is used only by `formLineProblem` and the pack, so nothing else changes.
+- **m5 fixed.**
+  - The property step runs 500 drafts against an oracle written by hand. Run outside the repo, it killed two mutants: the old data_form-only rule, and a rule that counts Not needed.
+  - fast-check is not new: existing suites already use it (for example `tests/check_c75_cross_checks.ts`).
+  - The four screenshots are in `screenshots/`, and the header's wording now matches.
+- **m3 and m4 recorded, as I asked.**
+  - m3: the header and `notes.md` say why the live Not-needed step prints NOTE. The rule step and the property cover it.
+  - m4: the header points to `check_s5_slice1.ts` for BR-14.
+- **Nit, not a finding:** the doc comment at `engine/programs.ts:162-165` still says "a document form is not one". The code line below it and `notes.md` give the accurate rule. Update the comment when the file is next touched.
+- No new Blocker, Major or Minor.
+
+**Verdict (round 2): Approve** for 816e8e7c (no open Blocker or Major).
