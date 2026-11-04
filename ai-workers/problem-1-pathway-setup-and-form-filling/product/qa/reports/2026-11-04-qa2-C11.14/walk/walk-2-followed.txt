@@ -1,0 +1,14 @@
+=== ready row controls: A:Decide on its form-field page:/c/058dfcee-c7e9-4458-bdf6-47e8efd6ee3a/jobs/acc39c30-cdf7-45ee-9d7c-d64d5a12c0f5
+url http://localhost:4480/c/058dfcee-c7e9-4458-bdf6-47e8efd6ee3a/jobs/acc39c30-cdf7-45ee-9d7c-d64d5a12c0f5
+Visitor visa ⏎ Forms ⏎ AI field-map draft ⏎ IMM 5257 (09-2023): AI-proposed field map ⏎ Saved ⏎ Completed ⏎ US$0.00 ⏎ 0s ⏎ Saved: no model was called now. The AI sees only the public list of the form's fields; it never sees the library, a family or an answer key. Rules, not AI, compare each proposal with the library below. ⏎ Compared with the library as it was when the draft was read ⏎ The library then had 0 shared field versions. If the shared library changes before you apply, applying is refused as stale; comparing again keeps every decision that still holds and reopens the rest. ⏎ Compare a
+…
+(no 'reading' words on the page)
+
+=== decide row controls: A:Decide on its form-field page:/c/058dfcee-c7e9-4458-bdf6-47e8efd6ee3a/jobs/acc39c30-cdf7-45ee-9d7c-d64d5a12c0f5
+url http://localhost:4480/c/058dfcee-c7e9-4458-bdf6-47e8efd6ee3a/jobs/acc39c30-cdf7-45ee-9d7c-d64d5a12c0f5
+Visitor visa ⏎ Forms ⏎ AI field-map draft ⏎ IMM 5257 (09-2023): AI-proposed field map ⏎ Saved ⏎ Completed ⏎ US$0.00 ⏎ 0s ⏎ Saved: no model was called now. The AI sees only the public list of the form's fields; it never sees the library, a family or an answer key. Rules, not AI, compare each proposal with the library below. ⏎ Compared with the library as it was when the draft was read ⏎ The library then had 0 shared field versions. If the shared library changes before you apply, applying is refused as stale; comparing again keeps every decision that still holds and reopens the rest. ⏎ Compare a
+…
+(no 'reading' words on the page)
+
+sideways scroll: false
+page/console errors: 0 
