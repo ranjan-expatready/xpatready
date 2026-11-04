@@ -17,8 +17,8 @@ const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "QA-219", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
 const PSQL = ["/opt/homebrew/opt/postgresql@18/bin/psql", "/usr/lib/postgresql/18/bin/psql"].find((x) => fs.existsSync(x)) ?? "psql";
 const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
-let fail = 0;
-const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 400)}` : ""}`); };
+let fail = 0, steps = 0;
+const step = (name, ok, detail) => { steps++; if (!ok) fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 400)}` : ""}`); };
 const stop = (why, detail) => { console.error(`STOP  ${why}`, detail ?? ""); process.exit(2); };
 const GOES = "person.alt_phone_number", STAYS = "person.alternate_telephone_number", OTHER = "person.phone_number";
 const field = (k) => `/library/fields/${encodeURIComponent(k)}`;
@@ -147,6 +147,6 @@ const field = (k) => `/library/fields/${encodeURIComponent(k)}`;
     step("QA-219: one merge was written in all", sql("select count(*) from field_merge") === String(Number(merges0) + 1));
     step("no page error", errs.length === 0, errs.join(" | "));
   } finally { await b.close(); }
-  console.log(`\n${fail ? `FAIL  ${fail} step(s)` : "PASS  every step"}`);
+  console.log(`\nC3.5 (QA-219): ${steps - fail}/${steps} passed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error("FAIL  QA-219 the check itself stopped:", e); process.exit(1); });
