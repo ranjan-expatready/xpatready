@@ -98,18 +98,19 @@ export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: 
   beside: ["person.date_of_birth"] };
 /** G5 (C5.1, P-248; tech lead's ruling on #868, Lead 8, 20:5x IST): a document line the checkpoint sets from an official
  *  checklist's own words, cited (P-170): the document type (an existing library name is reused), whose it is, and the
- *  page and quote. Sample, Unconfirmed: expert (AGENTS rule 4). */
-export type CitedDocumentLine = { type: string; who: "principal_applicant" | "each_applicant"; quote: string };
+ *  page and quote. Sample, Unconfirmed: expert (AGENTS rule 4). `reuse`: the type must already be in the library (the
+ *  Visitor visa, set up first, adds it), and the line uses it rather than proposing a new one. */
+export type CitedDocumentLine = { type: string; who: "principal_applicant" | "each_applicant"; quote: string; reuse?: true };
 /** The Study permit (outside Canada)'s always-needed documents, from IMM 5483 (08-2025), the document checklist for a
  *  study permit: official-sources/ircc/checklists/imm5483e.pdf (the PDF modified 2025-08-11, sha256 6f885da2…). */
 const IMM5483 = "IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11";
 export const SP_DOCUMENT_LINES: CitedDocumentLine[] = [
-  { type: "Proof of fee payment (processing fee and other applicable fees receipt)", who: "principal_applicant",
+  { type: "Fee payment receipt", who: "principal_applicant", reuse: true,
     quote: `${IMM5483}, p. 1, documents list item 1: "Proof of payment showing the amount paid. You must pay your processing fees and any other applicable fees and include a copy of the payment receipt with your application." (Sample, Unconfirmed: expert)` },
-  { type: "Passport or travel document information page photocopy", who: "each_applicant",
+  { type: "Passport information page copy", who: "each_applicant", reuse: true,
     quote: `${IMM5483}, p. 1, documents list item 2: "A Photocopy of the information page of your valid passport or travel document which includes: The passport number, The issuance and expiry dates, Your photo, name, date and place of birth." (Sample, Unconfirmed: expert)` },
   { type: "Letter of acceptance", who: "principal_applicant",
-    quote: `${IMM5483}, p. 2, documents list: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert)` },
+    quote: `${IMM5483}, p. 2, documents list item 4: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert)` },
 ];
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
@@ -265,13 +266,19 @@ export class Demo {
   }
 
   /** G5 (#868, Lead 8's option 1 for the Study permit): document lines from an official checklist's own words, each cited
-   *  with its page and quote (P-170), through the Documents route as the author. A type the library already names is
-   *  reused; a new one waits as a proposal the content reviewer accepts, and the Approver approves its ADD (BR-7). */
+   *  with its page and quote (P-170), through the Documents route as the author. A `reuse` line takes the library's
+   *  type of that name (a draft one too: the Visitor visa's types publish with its release) (refused in words if there is none); a new one waits as a proposal the content reviewer accepts, and the Approver approves its ADD (BR-7). */
   private async citedDocumentLines(author: Actor, reviewer: Actor, workspaceId: string, combinationId: string, lines: CitedDocumentLine[], refused: string[], say: (e: unknown) => string) {
     let n = 0;
     for (const l of lines) {
       const line = { attachMode: "COMBINATION_MANDATORY" as const, appliesToRoles: l.who, providedBy: "client", sourceQuote: l.quote };
       try {
+        if (l.reuse) {
+          const t = await this.db.documentType.findFirst({ where: { workspaceId, name: l.type, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { documentTypeKey: true } });
+          if (!t) { refused.push(`${l.type}: the library has no type of that name to reuse`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: t.documentTypeKey } as Parameters<Studio["saveRequirement"]>[3]);
+          n++; continue;
+        }
         const r = (await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeName: l.type } as Parameters<Studio["saveRequirement"]>[3])) as { proposalId?: string } | null;
         if (r && r.proposalId) {
           const key = ((await decide(this.db, this.audit, reviewer, workspaceId, [r.proposalId], { action: "accept", reason: "Accepted by the sample loader: a document the official checklist asks for, cited (Sample, Unconfirmed: expert)." })).items[0] as { landedAs?: string } | undefined)?.landedAs;

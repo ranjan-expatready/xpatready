@@ -144,3 +144,41 @@ Runs on :4447 (fresh copy, US$0, stopped afterwards): I ran the pack file at f25
 - No Blocker or Major.
 
 **Verdict (round 3): Approve** for f25503a2 (no open Blocker or Major). m6 and m7 can be follow-ups.
+
+## Round 8 (diff-only, 51141bed + 8e223e87), 4 Nov 2026
+Scope: the merge's conflict resolution (`git show --remerge-diff 51141bed`) and commit 8e223e87 only. Fresh copy `rv5` on :4449 (stopped and removed afterwards), Live AI off, US$0.
+
+**Run:** `check_qa144_sp_release` 24/24 on the head. Then the database of that copy was read, and the Study permit's Documents tab was walked in headless Chrome (journey report, round 8 section).
+
+**What holds**
+- **The merge:**
+  - The only conflict was `FORM_SETUP`'s type, and both sides are kept: main's `ruleFact?: typeof GENDER_FACT & { beside?: string[] }`, plus `documentsFromReviewedRelease?` and `documentsFromChecklist?`.
+  - The `vv.single` and `wp.lmia_inside` rows keep G5's flags.
+  - `git diff a11c5921 51141bed` does not touch `tests/check_qa144_vv_release.ts` or `tests/check_c10_1_configured.ts`, so both are main's.
+- **The quotes against `imm5483e.pdf`** (sha256 6f885da2…, ModDate 2025-08-11, footer "IMM 5483 (08-2025) E"):
+  - The p. 1 item 1 quote is the item's first two sentences, word for word.
+  - The p. 1 item 2 quote matches, with the bullet marks dropped and the PDF's own commas kept.
+  - The p. 2 quote "Letter of acceptance from where … Designated Learning Institutions)." is exact.
+- **`citedDocumentLines`:**
+  - Every line is saved as the author (`saveRequirement` enforces `need(actor, "author")`).
+  - A name the library has resolves through `namedDocumentType`. A new name returns a `proposalId`. `decide(accept)` runs as user-C, and the line is saved again with `landedAs`.
+  - Every throw, and a missing `landedAs`, lands in `setUpRefused` with the type's name. Nothing is silently dropped.
+- **BR-9 / BR-7, from the database:**
+  - Letter of acceptance was proposed by user-A, accepted by user-C (`proposal_item.decided_by`) and approved by user-B (`library_change.decided_by`). Three different people.
+  - All 3 `sp.outside` lines are PUBLISHED, COMBINATION_MANDATORY, `updated_by` user-A, with the cited `source_quote`.
+- **P-319:** the form number and date sit in `SP_DOCUMENT_LINES`/`IMM5483`, which only `FORM_SETUP["sp.outside"].documentsCited` reads. The step code (`citedDocumentLines`, the loop at about line 774) names no form.
+- **Rows 7 and 17:** untouched by the diff. Row 7 is "done" in the check.
+
+**Findings**
+1. **Major: the "reuse the passport and fee-receipt types" part of the ruling is not what runs, and the notes and commit say it is.**
+   - On the checkpoint, `sp.outside` is set up before `wp.lmia_inside`. Its two "reused" names are not in the library yet, so all three of its lines go through new proposals: 3 `proposal_item` rows for `sp.outside`, all accepted by user-C.
+   - The names it uses come from the LMIA release, which then reuses them. The library already held the Visitor visa's "Passport information page copy" and "Fee payment receipt", which were not reused.
+   - Net effect: the final library has the same types as before, plus Letter of acceptance, so no new duplicate is added. But the record is wrong (P-188), and the ruling's process (one new type only) is not met.
+   - Fix: make the reuse true, for example by using the library names that exist when the Study permit runs, or by setting the LMIA up first. Or put the difference to the tech lead in the PR and correct `notes.md`.
+2. Minor: Letter of acceptance lands with proves "Not stated yet: …". The checklist's own note (issued by the institution, tuition, dates) could say what it proves.
+3. Minor: the Letter of acceptance quote reads "p. 2, documents list" while the other two give item numbers. It is item 4.
+4. Minor: on the line's panel, "IRCC's words" shows the citation prefix and "(Sample, Unconfirmed: expert)" inside IRCC's quotation marks. The label is not IRCC's words.
+
+**Journey score (round 8, diff-only): 8.5/10, pass.** See `journey-test-reviewer-2026-11-04.md`, round 8.
+
+**Verdict (round 8): Block** for 8e223e87. To fix: finding 1. Minors 2–4 can be follow-ups.

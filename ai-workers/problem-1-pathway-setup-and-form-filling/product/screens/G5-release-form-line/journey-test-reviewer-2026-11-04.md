@@ -72,3 +72,34 @@ Fixes that would raise the low criteria, most valuable first:
 2. Make the live Not-needed step reachable, or mark it WAIT.
 
 Not tested: a real screen reader, and an intended user's unaided walk (D17/D20 stay with the founder). An online-only form made through a screen cannot be made yet: online capture is parked.
+
+## Round 8 (diff-only, 8e223e87)
+Setup: a fresh copy on :4449 (`rv5`), the checkpoint loaded by `check_qa144_sp_release` (24/24). Headless Chrome, as user-C and user-A. US$0.
+
+**Journey: author or content reviewer opens Study permit › Outside Canada › Documents.** Goal: "What documents does a student give, and where does each come from?"
+- **Documents tab:**
+  - Shows "Student · 3", "Always 3": Letter of acceptance, Passport or travel document information page photocopy (Each applicant), Proof of fee payment.
+  - All 3 are Released, and the tab says "Sample until the immigration expert confirms."
+  - Load times: 1.23 s at 1440, 1.05 s at 400.
+- **Opening a line:** "IRCC's words" gives the page and quote from IMM 5483 (08-2025), marked Sample. The quote matches the PDF.
+- **Review and release:** loads in 0.93 s. The combination is "In Release 2".
+- **Checks:**
+  - axe WCAG 2.2 A/AA: 0 violations on Documents and on Review.
+  - Sideways scroll: 0 px at 1440 and at 400.
+  - No page or console errors.
+- **Database:** see review round 8. Three lines, each saved once, by user-A. The new type was accepted by user-C and approved by user-B. Finding 1 (the reuse claim) is from this check.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | The Study permit releases with 3 cited document lines |
+| Next step obvious | 1 | Lines in the Documents table, opened by a click |
+| Plain words | 1 | Document names and who gives them are plain |
+| Feedback and state | 1 | Released badges agree with "In Release 2" |
+| Correct data | ½ | Lines are correct. The "reused" types were proposed new (review round 8, finding 1) |
+| Error recovery | 1 | Unchanged since round 1. Errors go into setUpRefused by name |
+| Accessibility and screen sizes | 1 | axe 0, 400 px with no sideways scroll |
+| Speed | 1 | ≤ 1.23 s |
+| Visual quality | 1 | Same table and panel as other lines |
+| Trust and sources | ½ | Cited and marked Sample, but the Sample label sits inside "IRCC's words" (finding 4), and proves is "Not stated yet" (finding 2) |
+
+**Score: 8.5/10, pass.** Not tested: a screen reader, or a walk by an intended user.
