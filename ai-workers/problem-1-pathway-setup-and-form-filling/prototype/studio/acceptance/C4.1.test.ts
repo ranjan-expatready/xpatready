@@ -81,10 +81,10 @@ run(async () => {
   const childBefore = byAuthor ? await childAsked() : null;
   if (byAuthor) r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(SCH1)}`, { attachMode: "COMBINATION_MANDATORY", who: WHO_SCH1, minAge: 18 }, AUTHOR);
   const sch1Line = lineNow();
-  ok("C4.1 (QA-221): the SCH1 line names whom IMM 5257 SCH1's own words name (the principal, a spouse or partner, each child 18 or older, from 18)", sch1Line === `${WHO_SCH1}|18`, byAuthor ? { before, set_by_author: r.status, words: r.status >= 300 ? words(r) : undefined, line: sch1Line } : { set_by_loader: sch1Line });
+  ok("C4.1-Q221a (QA-221) the SCH1 line names whom IMM 5257 SCH1's own words name (the principal, a spouse or partner, each child 18 or older, from 18)", sch1Line === `${WHO_SCH1}|18`, byAuthor ? { before, set_by_author: r.status, words: r.status >= 300 ? words(r) : undefined, line: sch1Line } : { set_by_loader: sch1Line });
   // What the author sees (Smart questionnaire tab, the Child chip; its sample child is under 18): fewer questions once
   // SCH1 is no longer the child's. On the checkpoint the line was right before the pack, so there is no before.
-  if (byAuthor) { const childAfter = await childAsked(); ok("C4.1 fail (QA-221): the Child's questionnaire loses SCH1's questions once SCH1 names its own people (the Smart questionnaire tab)", childBefore !== null && childAfter !== null && childAfter < childBefore, { before: childBefore, after: childAfter }); }
+  if (byAuthor) { const childAfter = await childAsked(); ok("C4.1-Q221b (QA-221) fail: the Child's questionnaire loses SCH1's questions once SCH1 names its own people (the Smart questionnaire tab)", childBefore !== null && childAfter !== null && childAfter < childBefore, { before: childBefore, after: childAfter }); }
   const snap = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body?.snapshot;
   const today = new Date("2026-11-04T00:00:00Z");
   const born = (age: number) => `${2026 - age}-01-15`;
@@ -96,17 +96,17 @@ run(async () => {
   const person = (id: string, role: string): Person => ({ id, role, label: id, applies: true });
   const family = [person("principal", "principal"), person("spouse", "spouse_or_partner"), person("child-1", "child"), person("child-2", "child")];
   const f1 = snap ? fills(family, { principal: 40, spouse: 38, "child-1": 10, "child-2": 19 }) : {};
-  ok("C4.1 fail (QA-221): a dependent child under 18 (10) does not fill IMM 5257 SCH1, so is not asked its facts", f1["child-1"] === false, f1);
-  ok("C4.1 pass (QA-221): a dependent child of 18 or older (19) fills IMM 5257 SCH1", f1["child-2"] === true, f1);
-  ok("C4.1 pass (QA-221): the spouse or partner fills IMM 5257 SCH1", f1.spouse === true && f1.principal === true, f1);
+  ok("C4.1-Q221c (QA-221) fail: a dependent child under 18 (10) does not fill IMM 5257 SCH1, so is not asked its facts", f1["child-1"] === false, f1);
+  ok("C4.1-Q221d (QA-221) pass: a dependent child of 18 or older (19) fills IMM 5257 SCH1", f1["child-2"] === true, f1);
+  ok("C4.1-Q221e (QA-221) pass: the spouse or partner fills IMM 5257 SCH1", f1.spouse === true && f1.principal === true, f1);
   const f2 = snap ? fills([person("principal", "principal")], { principal: 16 }) : {};
-  ok("C4.1 pass (QA-221): a principal applicant under 18 (16) still fills IMM 5257 SCH1 (the form names the principal at any age)", f2.principal === true, f2);
+  ok("C4.1-Q221f (QA-221) pass: a principal applicant under 18 (16) still fills IMM 5257 SCH1 (the form names the principal at any age)", f2.principal === true, f2);
   // IMM 5707's own words: "each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone":
   // its line stays "each applicant, from 18", so the age gates every person as before (travelling alone: a follow-up row).
   const fam = snap ? { ...snap, forms: [...snap.forms.filter((f: any) => f.form_number !== "IMM 5707"), { ...(snap.forms.find((f: any) => f.form_number === "IMM 5707") ?? { form_number: "IMM 5707", title: "Family information", status: "always", condition: null }), who: "each_applicant", status: "always", condition: null, min_age: 18 }] } : null;
   const f3 = fam ? fills(family, { principal: 40, spouse: 38, "child-1": 10, "child-2": 19 }, "IMM 5707", fam) : {};
   const f4 = fam ? fills([person("principal", "principal")], { principal: 16 }, "IMM 5707", fam) : {};
-  ok("C4.1 (QA-221): the engine keeps 'each applicant, from 18' as before, as IMM 5707's line on the checkpoint uses it (a child of 10 not, adults and a child of 19 yes, a principal of 16 not)", f3["child-1"] === false && f3["child-2"] === true && f3.principal === true && f3.spouse === true && f4.principal === false, { f3, f4 });
+  ok("C4.1-Q221g (QA-221) the engine keeps 'each applicant, from 18' as before, as IMM 5707's line on the checkpoint uses it (a child of 10 not, adults and a child of 19 yes, a principal of 16 not)", f3["child-1"] === false && f3["child-2"] === true && f3.principal === true && f3.spouse === true && f4.principal === false, { f3, f4 });
   if (!had) await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(SCH1)}`, { retire: true }, AUTHOR);
 
   // The move is one named change line of the next review (C4.8): submitted last, so nothing after it depends on it.
