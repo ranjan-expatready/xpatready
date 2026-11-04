@@ -220,3 +220,30 @@ Scope: `git show --remerge-diff 048ad588` and the merged `api/src/demo.ts`. I di
 - No Blocker or Major.
 
 **Verdict (round 11): Approve** for 048ad588.
+
+## Round 12 (diff-only, 5985f9b4 + 2be3acbd), 4 Nov 2026
+Scope: `git show --remerge-diff 5985f9b4`, `git diff 192baa17 5985f9b4` of `api/src/form-setup.ts` and `api/src/demo.ts`, and `git show 2be3acbd`. I did not re-run anything. The evidence is the builder's C4.1 run (16/18 on the six, the same as main d442c8e1; 18/18 on the fixture) and the tsc count (15, unchanged).
+
+**The merge (#993 moved the IRCC-words table to `form-setup.ts`)**
+- **Nothing was lost.** `diff` of main's `form-setup.ts` against the merged one shows only G5's additions: `CitedDocumentLine`, `IMM5483`, `SP_DOCUMENT_LINES`, the three optional fields on the `FORM_SETUP` type, and the three flags.
+- **Nothing was changed.**
+  - Each line of the moved block (the type, the constant, the three lines with their quotes for items 1, 2 and 4, and the `FORM_SETUP` header) is byte-identical to the 192baa17 `demo.ts`.
+  - The `vv.single`, `wp.lmia_inside` and `sp.outside` rows are identical: `documentsFromChecklist: "IMM 5484"`, `documentsFromReviewedRelease: true`, `documentsCited: SP_DOCUMENT_LINES`.
+- **`demo.ts`** imports `type CitedDocumentLine` and the table from `./form-setup.ts`, and keeps main's re-export.
+  - The three readers (lines 756, 760 and 762) read `setup.*` from that table.
+  - Nothing else imports `SP_DOCUMENT_LINES`.
+  - `form-setup.ts` stays free of imports and decorators.
+- P-319 holds: the form numbers for these lines are only in the table.
+
+**2be3acbd (`acceptance/C4.1.test.ts`)**
+- **The cause is right.** #993's B71a submits the six's Visitor visa, which has forms but no document line, so P-248 refuses it.
+- **The fix is test input only, through the product's routes, guarded and with no new step.**
+  - It only runs when the combination has no document line.
+  - It uses a PUBLISHED type, or else names a type, which becomes a proposal. The author accepts it on To review, and the line is saved by key.
+  - The Approver approves only the WAITING `document_type` changes the author proposed (BR-7, second person).
+  - If no key is found, the line is skipped and Submit still fails visibly.
+- **No later step is affected.** No later C4.1 step counts `changeSummary`: they use `find()` on the section lines.
+- Minor (no fix needed): the test type is named "Passport information page copy (C4.1 test)", which is labelled as test input.
+- No Blocker or Major.
+
+**Verdict (round 12): Approve** for 2be3acbd.
