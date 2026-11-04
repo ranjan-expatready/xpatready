@@ -4,7 +4,7 @@
 // Written 4 Nov (G5): C5.1 had no pack. Part A is P-248: the form line (A1–A24) and the document line (A25–A32, added on
 // the tech lead's ruling on #868 after qa's gate A); part B is C5.1's own rule (submit, the expert's tick, a different
 // person releases). A combination with forms and no document line is refused the same way, in its own words ("No
-// document line yet", Add a document): on the checkpoint the Visitor visa as loaded, on the fixture Super visa.
+// document line yet", Add a document): on the checkpoint a combination loaded with forms only, on the fixture Super visa.
 // As a person: on a combination with documents and no form, its Review and release tab shows "No form line yet: this
 // combination cannot be released" with Add a form, Submit for review is greyed, and the shared Release page lists the
 // row "Held back: No form line yet: …". Underneath: Submit is refused (400) and Approve (409), and so is the Release
@@ -153,11 +153,14 @@ run(async () => {
 
   // ---------------------------------------------------------------- A, second half: a document line (tech lead's ruling on #868)
   // P-248 is one rule: a release needs its form line and its document line. The combination here has forms and no
-  // document line: on the checkpoint the Visitor visa as loaded (its forms, 0 documents, the case qa found); on the
-  // fixture Super visa, given IMM 5257 through the Forms route (it starts empty, and Super visa files IMM 5257).
-  const D = T.combo(FIXTURE ? "sv.super_visa" : "vv.single");
+  // document line: on the checkpoint the first combination loaded with forms and 0 documents (the case qa found on the
+  // Visitor visa, which now gets its lines from IMM 5484); on the fixture Super visa, given IMM 5257 through the Forms
+  // route (it starts empty, and Super visa files IMM 5257).
+  // On the checkpoint, the first combination that has forms and no document line yet (the Visitor visa and With an
+  // LMIA now get theirs from the checkpoint's own steps).
+  const D = FIXTURE ? T.combo("sv.super_visa") : sql(`select c.id from combination c where c.retired_at is null and exists (select 1 from combination_form f where f.combination_id = c.id and f.status <> 'RETIRED') and not exists (select 1 from document_requirement d where d.combination_id = c.id) order by c.combination_key limit 1`);
   if (FIXTURE) { r = await call("POST", `/combinations/${D}/forms`, { formKey: "IMM 5257" }, AUTHOR); if (r.status >= 300) console.log(`NOTE  setup: IMM 5257 was not added to Super visa (${r.status} ${words(r).slice(0, 100)})`); }
-  ok(`setup (${DATA}): ${FIXTURE ? "Super visa" : "Visitor visa"} has form lines and no document line`, !!D && Number(sql(`select count(*) from combination_form where combination_id='${D}' and status<>'RETIRED'`)) > 0 && sql(`select count(*) from document_requirement where combination_id='${D}'`) === "0", D);
+  ok(`setup (${DATA}): ${FIXTURE ? "Super visa" : sql(`select label from combination where id='${D}'`) || "a combination"} has form lines and no document line`, !!D && Number(sql(`select count(*) from combination_form where combination_id='${D}' and status<>'RETIRED'`)) > 0 && sql(`select count(*) from document_requirement where combination_id='${D}'`) === "0", D);
   const docRule = (forms: object[], docs: number) => documentLineProblem({ forms, document_requirements: Array(docs).fill({}) } as any);
   ok("C5.1-A25 P-248 fail (rule): forms and no document line hold the release with one error in the document-line words; with a document line, or with nothing at all (F8), none", docRule([{ form_kind: "data_form" }], 0).length === 1 && docRule([{ form_kind: "data_form" }], 0)[0].message === DOCUMENT_LINE_WORDS && docRule([{ form_kind: "data_form" }], 1).length === 0 && docRule([], 0).length === 0 && releaseLineProblems({ forms: [{ form_kind: "checklist" }], document_requirements: [] } as any).length === 2);
   ok("C5.1-A26 P-248 (words): the document-line words say what to add and where (a document the applicant provides, the Documents tab)", /^No document line yet: /.test(DOCUMENT_LINE_WORDS) && /Add at least one document/.test(DOCUMENT_LINE_WORDS) && /Documents tab/.test(DOCUMENT_LINE_WORDS));
