@@ -10,7 +10,7 @@ import type { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
+import { applySampleFormRoles, importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
@@ -23,7 +23,7 @@ import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
 import { Screen02 } from "./screen02.ts";
 import { Studio } from "./studio.ts";
-import { seedSampleSources } from "./source-register.ts";
+import { draftSourceProblems, seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
 import { FormLibrary } from "./form-library.ts";
@@ -108,6 +108,8 @@ type ReviewedRelease = { configuration_sha256: string; drafting_run_ids: string[
 /** The six's "With an LMIA – inside Canada" (samples/wave1.json), the combination Demo › Start With an LMIA from its
  *  reviewed release starts (C5.4). */
 export const SIX_LMIA = "wp.lmia_inside";
+/** The combination's basis note once Demo › Start With an LMIA has loaded the reviewed setup as its draft (runs once). */
+export const STARTED_FROM_RELEASE = "Sample: from the outside-Canada release c1-v3 (p3/releases/c1-v3: a work permit applied for from outside Canada), loaded by Demo › Start With an LMIA into this inside-Canada combination. It is not this combination's source-backed setup. A draft until its sources are answered, submitted, signed and approved.";
 /** The demo controls (load, Reset, Reset to the six, Start With an LMIA; forms-demo.ts's forms story) refuse (409)
  *  outside the demo workspace (P-240, G2 BR-3): they write sample content or releases, or empty the workspace. */
 export const DEMO_ONLY = "This demo control works only in the demo workspace.";
@@ -161,7 +163,9 @@ export class Demo {
     const log: string[] = [];
     try {
       if (await this.db.programDef.count({ where: { workspaceId } })) fail("The Structure already has names in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
-      return configured ? await this.loadConfigured(actor, workspaceId, t0, log) : six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
+      const out = configured ? await this.loadConfigured(actor, workspaceId, t0, log) : six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
+      await applySampleFormRoles(this.db, workspaceId); // P-319: the demo's form roles on the forms the load added (the form intake adds them)
+      return out;
     }
     catch (e) {
       if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT && !log.length) throw e;
@@ -199,8 +203,8 @@ export class Demo {
   /** The reviewed work-permit release (p3/releases/c1-v3) as a combination's Release 1: its configuration imported
    *  (engine/import.ts, which writes the source entries the release's own quotes state, "From the sample load"), the
    *  frozen snapshot recorded with the release's own author, submitter and approver, and the combination's read files
-   *  marked as in the library. Used by the suites' fixture (loadSteps) and by Demo › "Start With an LMIA from its
-   *  reviewed release" on the six (releaseWithSources). */
+   *  marked as in the library. Used only by the suites' fixture (loadSteps), which the Demo menu never loads; Demo ›
+   *  "Start With an LMIA from its reviewed release" releases nothing (releaseWithSources, P-322). */
   private async fromReviewedRelease(actor: Actor, workspaceId: string, combinationId: string, cfg: Record<string, unknown>, rel: ReviewedRelease) {
     const counts = await importConfiguration(this.db, workspaceId, combinationId, cfg, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256 });
     const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, combinationId, "published");
@@ -214,10 +218,14 @@ export class Demo {
 
   /** C5.4 on the six (F6, 3 Nov; re-test of 1a79dbf9: the release with its sources was reachable only on the suites'
    *  fixture, which the Demo menu never loads). Demo › "Start With an LMIA from its reviewed release": after Reset to the
-   *  six, "With an LMIA – inside Canada" starts from the same reviewed work-permit release the fixture's With an LMIA starts
-   *  from (Release 1, source-backed), so its Review and release tab lists the published numbers that have no source
-   *  entry, each with Add source, and Submit waits for them (G1, P-240, P-279). Scaffolding (P-33, P-35): the author, in
-   *  the demo workspace, once, on the six only; no AI call (US$0), nothing approved past the rules. */
+   *  six, "With an LMIA – inside Canada" gets the reviewed work-permit release's configuration (p3/releases/c1-v3) as its
+   *  draft, so its Review and release tab lists the published numbers that have no source entry, each with Add source,
+   *  and Submit waits for them (G1, P-240, P-279). QA-214 (tech lead ruling, P-294): c1-v3 is a work permit applied for
+   *  from outside Canada and the six have no outside-Canada With an LMIA, so the combination stays Sample (illustrative),
+   *  never labelled source-backed, and says where its setup came from. P-322 (tech lead ruling, 4 Nov): nothing is released
+   *  here. Release 1 comes only through the product's own steps: a person answers the sources, the author submits, the
+   *  SME signs and a different person approves. Scaffolding (P-33, P-35): the author, in the demo workspace, once, on
+   *  the six only; no AI call (US$0), nothing approved past the rules. */
   async releaseWithSources(actor: Actor) {
     need(actor, "author");
     if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT);
@@ -229,13 +237,25 @@ export class Demo {
       if (!c) fail("The six are not loaded: choose Demo › Reset to the six first.", HttpStatus.CONFLICT);
       if (c!.retiredAt) fail(`"${c!.label}" is retired: choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
       if (await this.db.configRelease.count({ where: { combinationId: c!.id } })) fail(`"${c!.label}" already has a release: choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
+      if (c!.basisNote === STARTED_FROM_RELEASE) fail(`"${c!.label}" already has the reviewed setup as its draft (or part of it, if loading stopped): carry on on Review and release, or choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
       const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as Record<string, unknown>;
       const rel = JSON.parse(readFileSync(join(RELEASE, "release.json"), "utf8")) as ReviewedRelease;
-      await this.db.combination.update({ where: { id: c!.id }, data: { sourceBasis: "SOURCE_BACKED", basisNote: "Started from the reviewed work-permit release (p3/releases/c1-v3) by Demo › Start With an LMIA from its reviewed release." } });
-      const counts = await this.fromReviewedRelease(actor, workspaceId, c!.id, config, rel);
+      // The run-once mark first, so a load that stops part way is never loaded over (review m1): the guard above then
+      // sends the person to Reset to the six.
+      await this.db.combination.update({ where: { id: c!.id }, data: { sourceBasis: "ILLUSTRATIVE", basisNote: STARTED_FROM_RELEASE } });
+      // Its forms, documents, rules and checks as draft rows by the author, who submits them. The one shortcut (review
+      // M1, said in the dialog and the audit line): the shared library rows (fields, sections, placements, document
+      // types, the field maps) and the numbers its own quotes state come in as the reviewed release's, already in the
+      // library (engine/import.ts), so no paid AI drafting runs again.
+      const counts = await importConfiguration(this.db, workspaceId, c!.id, config, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256, combinationStatus: "DRAFT" })
+        // D1 (m1): the details go to the server log, the person reads plain words.
+        .catch((e) => { console.error(`[demo] loading the reviewed setup into "${c!.label}" stopped`, e); return fail(`Loading the reviewed setup into "${c!.label}" stopped part way (the details are in the server log): choose Demo › Reset to the six to start again.`, HttpStatus.INTERNAL_SERVER_ERROR); });
+      for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId: c!.id, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
+      const { snapshot } = await buildSnapshot(this.db, workspaceId, c!.id, "draft");
+      const held = draftSourceProblems(snapshot, isDemoWorkspace()).length;
       const said = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ");
-      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} started "${c!.label}" from the reviewed work-permit release (Release 1; ${said})`, { counts }, c!.id);
-      return { combinationId: c!.id, label: c!.label, release: 1, counts };
+      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} loaded the outside-Canada release c1-v3 (a work permit applied for from outside Canada) into "${c!.label}" as a Sample draft, not its source-backed setup (${said}); its shared library items came in as the reviewed release's, already in the library; ${held} number${held === 1 ? "" : "s"} wait for a source before it can be submitted; its field maps have no signed answer-key test, so its release is a Demo release`, { counts, held }, c!.id);
+      return { combinationId: c!.id, label: c!.label, release: null, held, counts };
     } finally { this.loading = false; }
   }
 
@@ -566,7 +586,7 @@ export class Demo {
           if (beside) { try { await this.studio.placeField(author, f.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(f.fact); } catch (e) { setUpRefused.push(`${f.fact}: ${said(e)}`); } }
           else setUpRefused.push(`${f.fact}: none of ${f.beside.join(", ")} is asked in a section`);
         }
-        setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a box that reads it`));
+        setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a form field that reads it`));
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
@@ -596,10 +616,11 @@ export class Demo {
       }
     });
     row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length ? "partial" : "done",
-      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form box; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)`,
+      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)`,
       why: [...sectionsRefused, ...setUpRefused].slice(0, 6).join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
+    await applySampleFormRoles(this.db, workspaceId); // breaker M2: the demo's form roles before any release is made
     // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
     // different person's approval. A combination the validator refuses stays a draft, with the validator's words.
     const released: string[] = [], blocked: string[] = [];

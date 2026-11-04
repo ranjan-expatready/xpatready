@@ -1,0 +1,11 @@
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/F1-setup/screenshots/c18/01-copies-refused-on-field-1440.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/F1-setup/screenshots/c18/02-row-shows-two-copies-1440.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-01-filter-bar-1024.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-01-filter-bar-1440.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-02-filtered-1024.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-02-filtered-1440.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-03-add-combination-pop-up-1024.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-03-add-combination-pop-up-1440.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-04-after-add-1024.png
+ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-visual-system/screenshots/programs/r3-04-after-add-1440.png
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json

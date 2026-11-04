@@ -1,0 +1,83 @@
+PASS  C11.3 BR-5 pass: 'Visiter visa' is close to 'Visitor visa' (1 letter) — "1 letter apart"
+PASS  C11.3 BR-5 pass: singular and plural, and the same words in another order, are close
+PASS  C11.3 BR-5 fail: an unrelated name is not close; an exact match is a twin, not 'close'
+PASS  C11.3 BR-5: short names allow one letter only ('LMIA' vs 'LMIB' close, 'PNP' vs 'PGP' close, 'PNP' vs 'SUV' not)
+PASS  C11.10 A3 pass (QA-184): progress is out of 5 steps, at the step of the next item, in the card's words — [{"step":1,"of":5,"done":[false,false,false,false,false],"live":false,"label":"0 of 5 steps"},{"step":3,"of":5,"done":[true,true,false,false,false],"live":false,"label":"2 of 5 steps"}]
+PASS  C11.10 A3 pass (QA-184): a Live combination says Live first, then what its next release needs; with nothing open, just Live — ["✓ Live · Next release: 3 of 5 steps to do","✓ Live"]
+PASS  C11.10 A3 fail (QA-184): never the older four-step words
+PASS  C11.10 A4 pass: PDF lines say 'PDF'; one Online line says 'PDF + answer sheet (later wave)'
+PASS  C11.10 A4 fail: no lines say 'No forms yet', never a promise of a sheet
+PASS  C11.7 B1 pass: reads on an empty workspace create no Pathway (the type is a fixed value, never a row)
+PASS  C11.3 B1: GET /structure on an empty workspace says it is empty, under the words of the type
+PASS  C11.5 BR-1 pass: the same Pathway name is accepted in both types (index per type) — [201,201]
+PASS  C11.3 BR-1/BR-4 fail: a twin Pathway in one type is refused, with the existing one — "\"Temporary residence\" already exists in Retail: choose it instead (names are compared ignoring case, spaces and punctuation)."
+PASS  C11.3 BR-1 pass: a second Retail Pathway is accepted (several per type)
+PASS  C11.3 BR-1: both Retail Pathways are listed on the Structure and offered to pickers; Corporate's is not — ["Temporary residence","Permanent residence"]
+PASS  C11.3 BR-1: the stored rows are Pathways with their type; no row stands for the type itself
+PASS  C11.3 levels fail: a pathway has no parent — "A pathway is the top level under its type; it has no parent."
+PASS  C11.3 levels fail: a program needs its Pathway — "Choose the pathway it belongs to."
+PASS  C11.5 BR-8 fail: a Retail name cannot go under a Corporate Pathway — "\"Temporary residence\" is under Corporate and employers, not Retail (BR-8: the two types are separate)."
+PASS  C11.3 BR-4 pass+fail: 4 adds of one name at the same moment store one; the others are refused 409 — [201,409,409,409]
+PASS  C11.3 M5 pass: a category without stated locations gets both (Sample) — ["inside_canada","outside_canada"]
+PASS  C11.10 BR-2 pass: a new last-level name is listed at once as a Not started combination with its five-part trail — ["Retail","Temporary residence","Visitors","Visitor visa","No sub-category"]
+PASS  C11.10 BR-7/A3/A4 (QA-184): a Not started card is at step 1 of 5 (0 of 5 steps) and says 'No forms yet' — ["0 of 5 steps","No forms yet"]
+PASS  C11.3 M5 pass: a sub-category takes its category's locations unless told — ["outside_canada"]
+PASS  C11.3 M5 fail: a program has no locations — "Where cases may be opened is set on a category or sub-category."
+PASS  C11.3 BR-2 fail: a sub-category under a category that has its setup is refused (category_has_setup) — "\"Visitor visa\" already has its own setup, so it is the combination. A sub-category would leave that setup above a combination."
+PASS  C11.3 BR-5 pass: name-check warns 'Visiter visa' with the existing trail and why — {"exact":null,"close":[{"key":"temporary_residence.visitors.visitor_visa","label":"Visitor visa","trail":["Retail","Temporary residence","Visitors","Visitor visa"],"why":"1 letter apart"}]}
+PASS  C11.3 BR-5 fail: an unrelated name gets no warning — {"exact":null,"close":[]}
+PASS  C11.5 BR-8: the other type's names are never offered as close — {"exact":null,"close":[]}
+PASS  C11.3 BR-5 fail: saving a close name without 'add anyway' is refused with the close names (warn, then decide) — "Did you mean \"Retail › Temporary residence › Visitors › Visitor visa\"? Choose it, or add the new name anyway."
+PASS  C11.3 BR-5 pass: 'Add anyway' adds it and Activity records it — "temporary_residence.visitors.visiter_visa"
+PASS  C11.3 BR-5 (P-95): the AI meaning check is off: 403 paid_runs_off, no AI job, nothing spent — "The AI meaning check is off, so no AI was called and nothing was spent. The spelling check still runs; the name is saved as Not meaning-checked."
+PASS  C11.3 BR-5: every name shows 'Not meaning-checked' while the switch is off
+PASS  DV-bb-6c pass: the Program structure footer says in plain words that the meaning check is off — "The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked."
+PASS  DV-bb-6c fail: the footer carries no decision number (PRODUCT §4: no ids on the main path) — "The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked."
+PASS  C11.9 BR-15 fail: the approver cannot add, rename, reorder or remove (403 each, on the server) — [403,403,403,403]
+PASS  C11.3 BR-15 fail: an unknown caller is refused (401)
+PASS  C11.9 reorder pass: the new Pathway order is kept and shown on the Structure, with an audit line
+PASS  C11.10 reorder: Programs sections follow the Structure order — ["Permanent residence","Temporary residence"]
+PASS  C11.9 reorder fail: a list that is not exactly the names there is refused with the current list — "The list does not match the names there now (one was added or removed meanwhile). Refresh and reorder again."
+PASS  C11.3 BR-6 pass: rename keeps the key and raises the version
+PASS  C11.3 BR-6 fail: an edit made on an old version is refused with the current row — "Someone saved \"Visitor programs\" after you opened it. Here it is now; make your change again."
+PASS  C11.3 BR-6 fail: a rename onto a sibling's name is refused — "\"Visitor visa\" already exists here: choose another name."
+PASS  C11.3 M5: where cases may be opened is edited on the Structure
+PASS  C11.10 B1 pass: Immigration programs has one section per Retail Pathway, each with its combinations — [["Permanent residence",1],["Temporary residence",3]]
+PASS  C11.9 L1: 'where used' first: an unused draft name may be removed, not retired — {"delete":null,"retire":"It was never released: delete it instead.","restore":"It is not retired."}
+PASS  C11.9 L4: removing is a draft change waiting for a different person (nothing removed yet) — "WAITING"
+PASS  C11.9 L4 fail: a second change while one is open is refused — "A change to it is waiting for a second person."
+PASS  C11.9 L4 fail: the person who proposed it cannot approve it — "You proposed this structure name, so a different person approves or returns it."
+PASS  C11.9 L1 pass: approved by a second person, an unused draft name is removed at once
+PASS  C11.9 L6 / R3-4 fail: a program whose branch holds a setup draft cannot be deleted; the setup is named and listed — "Can't delete: \"Visitor visa\" under it has a setup draft."
+PASS  C11.9 L6 fail: a name whose combination has a setup draft cannot be deleted (its setup draft uses it) — "Can't delete: its setup draft uses it."
+PASS  C11.9 L3 fail: checked again at approval: a name used since it was proposed is not removed — "Changed since it was proposed: \"Outside Canada\" was added under it. Return this change with that reason."
+PASS  C11.9 L1 Undo: the author withdraws an open change — "WITHDRAWN"
+PASS  C11.9 L1 pass: a never-released combination is removed when approved; its name is Not started again
+PASS  C11.7 Reset: 0 names after Reset and none recreated by reads (both tabs empty)
+PASS  setup: the sample inputs load, with their P-112 Pathways added like a person adds them — ["pathway \"Temporary residence\" (Sample)","pathway \"Permanent residence\" (Sample)"]
+PASS  C11.7 fail: loading again while the Structure has names is refused — "The Structure already has names in this workspace. Reset the demo first to load the sample inputs."
+PASS  C11.10 A3 (QA-184): the released sample is Live, its progress in the card's words, and files as PDF — ["✓ Live · Next release: 2 of 5 steps to do","PDF",["Retail","Temporary residence","Work permits","Employer-specific work permit","With an LMIA"]]
+PASS  C11.3 BR-6 pass: a rename gives exactly one name-only change (no expert tick) on the combination under it — [["Row details",false]]
+PASS  C11.3 BR-6: setup shows the new name at once; the release keeps the old one until the next release
+PASS  C11.3 M5 fail-safe: a location edit on a released combination needs the expert tick at release — [["Row details",true]]
+PASS  C11.3 BR-6/BR-14: the renaming author is a draft author, so the approver sees it held until reviewed — "17 numbers have no source entry: fix on Review and release."
+PASS  setup: a case is opened on the Live combination before it is retired — 201
+PASS  C11.9 A2 pass: its own release and its open case do not block retiring a Live combination; they are listed — {"delete":"Can't delete: released items are kept. Retire it instead.","retire":null,"restore":"It is not retired."}
+PASS  C11.9 L2 fail: a released combination is retired, never deleted — "Can't delete: released items are kept. Retire it instead."
+PASS  C11.9 L4: the retire waits on To review for a second person, in words ('Retire the combination', with the reason) — "Retire the combination. Reason: Replaced by the new route (Sample)"
+PASS  C11.9 L4: an approved retire waits for the release (still open on the catalogue until then)
+PASS  C11.9 A2 pass: the release carries the retire: the combination is retired — [{"kind":"combination","key":"bc64d9a9-0f83-402b-a787-ff7bf615f868","label":"Retail › Temporary residence › Work permit programs › Employer-specific work permit › With an LMIA","action":"RETIRE"}]
+PASS  C11.10 A2: a retired combination leaves 'All' and shows under 'Retired' — {"needs":0,"live":0,"all":20,"ready":0,"not_ready":0,"in_setup":4,"in_progress":4,"not_started":16,"ai_proposals":0,"retired":1}
+PASS  C11.9 A2 fail: no new case opens on a retired combination (runtime guard) — "\"With an LMIA\" was retired by a release: new cases are not opened on it. Cases already open keep their release."
+PASS  C11.9 A2 pass: the case already open keeps its pinned release and still opens — 200
+PASS  C11.9 L2: a retired combination is not offered as a combination to open in pickers — ["individual.work_permits.employer_specific.lmia_exempt","individual.work_permits.employer_specific.with_lmia"]
+PASS  C11.9 L3 fail: a category with a name under it that is not retired cannot be retired; the use is listed — "Can't retire yet: \"With an LMIA\" under it is still in use: retire it first; \"LMIA-exempt (employer offer)\" under it was never released: delete it first. Open cases and earlier releases keep everything either way."
+PASS  C11.9 L3 pass: a released name whose combination is retired may be retired (earlier releases and cases listed, not blocking) — {"delete":"Can't delete: released items are kept. Retire it instead.","retire":null,"restore":"It is not retired."}
+PASS  C11.9 L2: after the release the name is retired and hidden from pickers
+PASS  C11.9 L2 fail: nothing new goes under a retired name — "A sub-category goes under a category, not under a sub-category."
+PASS  C11.9 restore fail: a combination whose name is retired is restored only after the name — "\"With an LMIA\" is retired: restore it on the Structure first."
+PASS  C11.9 restore pass: restored by the same path (approve, release): cases open again and it is back in All — 201
+PASS  C11.9 To review: lifecycle changes are named in words ('structure name', 'combination') with the full trail — ["structure name","structure name","combination"]
+PASS  C11.5 BR-8: a Retail list never holds a Corporate combination and the reverse
+
+81/81 passed
