@@ -49,3 +49,12 @@ Contract (fixed): `POST /runtime/cases/:id/changes/undo {subjectId, fact}`; an i
 * **Undo → Confirm section → Undo redid the change** (the reviewer's round 2 Minor too): a confirmation now stands on the
   answer it confirmed (`from`), as a restore stands on the answer it put back, so the walk goes on back. Test through
   the API (a restored DECLARED value, confirmed, then Undo again).
+
+## CI on 4642e2f3 (shard 6: `check_runtime_r1c.cjs`, "no page errors": 3 × 404)
+* Cause (this PR): a case-level fact is "about" `case` in a copy's facts. The change list sent `case` as the answer's
+  subject, and the Undo history query sent it to the database as a uuid (P2023 → the app's generic 404), so
+  `GET …/prepare` answered 404 for a case whose finished item read a changed case-level fact.
+* Fix: `case` maps to the case's own subject (as `caseView` reads it) for the words, the date, the change list and Undo;
+  only ids go to the history query. Reproduced locally first (131/132), then green: r1c 132/132, r1d 96/96, r1a 99/99
+  in run-suites' order on one fresh copy. New step (4) in `tests/check_c92_undo_api.ts` (a case-level fact on IMM 5257:
+  listed on the case's subject, the view answers, Undo works), 27/27.

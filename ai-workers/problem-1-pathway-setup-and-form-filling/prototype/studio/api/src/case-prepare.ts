@@ -211,11 +211,16 @@ export class CasePrepare {
     const placementWords = new Map<string, string>();
     for (const p of s.placements as { fact: string; question_text?: string | null }[]) if (p.question_text?.trim() && !placementWords.has(p.fact)) placementWords.set(p.fact, p.question_text.trim());
     const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? ""]));
+    // A case-level fact is "about" "case" in a form's facts; its answers are stored on the case's own subject (as caseView
+    // reads it). CI on #926: never sent to the database as a subject id.
+    const caseSubject = people.find((p) => p.role === "case")?.subjectId ?? null;
+    const subjectOfAbout = (about: string) => (about === "case" ? caseSubject ?? about : about);
+    const answerOf = (about: string, fact: string) => answers.find((a) => a.subjectId === subjectOfAbout(about) && a.field === fact && !a.rowKey);
     const words: ChangeWords = {
       label: (fact) => questionWords.get(fact) || placementWords.get(fact) || meaning.get(fact) || fact,
-      person: (about) => (about === REPRESENTATIVE ? "the representative" : label.get(about) || "the application"),
-      at: (about, fact) => answers.find((a) => a.subjectId === about && a.field === fact && !a.rowKey)?.at ?? null,
-      saved: (about, fact) => answers.find((a) => a.subjectId === about && a.field === fact && !a.rowKey)?.value ?? null,
+      person: (about) => (about === REPRESENTATIVE ? "the representative" : label.get(subjectOfAbout(about)) || "the application"),
+      at: (about, fact) => answerOf(about, fact)?.at ?? null,
+      saved: (about, fact) => answerOf(about, fact)?.value ?? null,
     };
     const nowFacts = (form: string, subject: string) => formCoverage(s, people, answers, rows, form, subject)?.facts ?? [];
     const changesSince = (copy: string | null | undefined, form: string, subject: string) => {
@@ -228,9 +233,9 @@ export class CasePrepare {
     const placeOf = new Map((s.placements as { fact: string; repeats: string }[]).map((p) => [p.fact, p.repeats]));
     const typeOf = new Map((s.canonical_fields as { id: string; value_type?: string }[]).map((f) => [f.id, f.value_type ?? ""]));
     // A relative's fact (another person on the form, "<id>/parent_1") is changed where it is asked, not undone from here.
-    const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && !x.relation && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
+    const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && !x.relation && UUID.test(subjectOfAbout(x.about)) && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
     // `undo`, `expected_id` and `restores` are filled once every item is worked out (one read of the answers' history).
-    const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: x.about, fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
+    const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: subjectOfAbout(x.about), fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
     const items = stored.items.flatMap((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -292,7 +297,7 @@ export class CasePrepare {
     });
     // C9.2 review M1, M2: what Undo would put back for each change (the same rule as the route: the newest earlier value
     // that differs, undoTarget) and the answer the officer saw, so the screen names the real value and a stale tab gets 409.
-    const rowsOfChanges = items.flatMap((x) => ((x as { changes?: ChangeRow[] }).changes ?? []).filter((y) => y.undo));
+    const rowsOfChanges = items.flatMap((x) => ((x as { changes?: ChangeRow[] }).changes ?? []).filter((y) => y.undo && UUID.test(y.subject)));
     if (rowsOfChanges.length) {
       const pairs = [...new Map(rowsOfChanges.map((y) => [`${y.subject}|${y.fact}`, { subjectId: y.subject, canonicalFieldKey: y.fact, rowKey: null }])).values()];
       const hist = await this.db.clientCanonicalAnswer.findMany({ where: { OR: pairs }, orderBy: [{ effectiveAt: "desc" }, { id: "desc" }], select: { id: true, subjectId: true, canonicalFieldKey: true, valueJson: true, supersededById: true, sourceJson: true } });

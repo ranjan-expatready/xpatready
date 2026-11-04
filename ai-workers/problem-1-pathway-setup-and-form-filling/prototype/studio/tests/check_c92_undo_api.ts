@@ -9,7 +9,7 @@
 //   zsh studio/tools/isolated.sh rt_c92 4439 start && tsx studio/tests/check_c92_undo_api.ts 4439 xr_studio_rt_c92
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { AUTHOR, CLIENT, DB, OFFICER, PORT, agent, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, signByHand, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, CLIENT, DB, OFFICER, PORT, agent, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, signByHand, sql, validateRoundTrip, yearsAgo } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -85,5 +85,19 @@ ok("C9.2 re-sign: printing the new copy starts the signing steps again (print do
 ok("C9.2 re-sign: the earlier signed scan and steps are kept (append-only, superseded)", Number(sql(`select count(*) from signed_scan where item_id='${item?.id}'`)) === 1 && Number(sql(`select count(*) from sign_step where item_id='${item?.id}' and superseded_at is not null`)) === 3);
 p = (await prepare(c.id, officer)).p;
 ok("C9.2 re-sign: the item is no longer out of date once a new copy is printed", itemsOf(p, P, "IMM 5476").length === 1 && itemsOf(p, P, "IMM 5476")[0].state !== "out_of_date", itemsOf(p, P, "IMM 5476").map((x) => x.state));
+
+// (4) CI on #926 (check_runtime_r1c): a case-level fact ("about" "case" in a copy's facts) read by a finished item. The
+// view answers (200), and the change names the case's own subject (an id), never "case".
+type Qv = { subjectId: string; fact: string; value_type: string; options: { key: string }[] | null; fills: { form: string }[]; answer: { id: string; value: unknown } | null };
+const caseQ = ((await agent(c.id))?.sections ?? []).flatMap((s: { questions: Qv[] }) => s.questions)
+  .find((x: Qv) => x.fact.startsWith("case.") && x.answer && x.fills.some((y) => y.form === "IMM 5257") && ["text", "number"].includes(x.value_type) && !x.options?.length) as Qv | undefined;
+ok("setup: IMM 5257 reads a case-level fact answered on this case", !!caseQ, caseQ?.fact);
+ok("setup: IMM 5257 validated and read back", !!(await validateRoundTrip(c.id, "IMM 5257", P)));
+await answer(c.id, caseQ!.subjectId, caseQ!.fact, caseQ!.value_type === "number" ? "7777" : "SAMPLE CASE CHANGE"); await confirmAll(c.id, caseQ!.subjectId);
+const pc = await prepare(c.id, officer);
+const ci = itemsOf(pc.p, P, "IMM 5257")[0] as { state?: string; changes?: { subject: string; fact: string; undo: boolean }[] } | undefined;
+const cc = ci?.changes?.find((x) => x.fact === caseQ!.fact);
+ok("C9.2 changes (CI on #926): a case-level fact's change is listed on the case's own subject and the view answers", pc.res.status === 200 && ci?.state === "out_of_date" && cc?.subject === caseQ!.subjectId && cc?.undo === true, { status: pc.res.status, state: ci?.state, cc });
+ok("C9.2 undo: a case-level fact is undone on the case's own subject", (await undo({ subjectId: caseQ!.subjectId, fact: caseQ!.fact })).status === 200);
 
 process.exitCode = summary() ? 1 : 0;
