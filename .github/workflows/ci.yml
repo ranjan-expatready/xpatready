@@ -21,6 +21,7 @@
 #   BATCH_RUNNER=mac / PR_RUNNER=mac   batches / builders' PRs back on the founder's Mac (P-195, P-213): the "ci" job
 #                        then runs the fast checks there and the suites only for batches, on the chosen set, as before.
 # Each newer push to a pull request cancels its older run (one run per PR at a time).
+# A draft PR runs nothing (every job skipped) until it is marked ready for review; mergify/* batches always run (#875).
 name: ci
 on:
   pull_request:
