@@ -130,7 +130,10 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
 
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
-const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
+// Each command case starts from a clean CI environment: the job's own QUEUE, KIND, RANGE, PR_* and GITHUB_* values
+// (a merge-queue batch sets QUEUE=true, a records PR KIND=records) would otherwise change what the gate does (#826).
+const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "" };
+const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, ...CLEAN, ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13"]);
 const r3a = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13"]), r3b = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192"]);
 ok("command: \"## Claims Works (as built)\" over C11.13 exits 1 naming QA-192, then 0 with the Fixes line", r3a.code === 1 && /QA-192/.test(r3a.out) && r3b.code === 0, [r3a, r3b]);
@@ -150,7 +153,7 @@ r = run(["--title", "forms: C11.13 reason", "--kind", "Code"]);
 ok("command: an unknown KIND is not a skip (only notes and records are)", !/skipped/.test(r.out) && r.code === 0, r);
 r = run([], { PR_TITLE: "merge queue: checking #726 on main", KIND: "code", QUEUE: "true", GITHUB_TOKEN: "" });
 ok("command: a merge-queue batch re-checks its PRs, and without GITHUB_TOKEN it could not run (exit 2)", r.code === 2 && /GITHUB_TOKEN/.test(r.out), r);
-r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--title", "screens: C11.13"], { encoding: "utf8", env: { ...process.env, GATE_B_PORT: "", GITHUB_ACTIONS: "", GITHUB_STEP_SUMMARY: "" } });
+r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--title", "screens: C11.13"], { encoding: "utf8", env: { ...process.env, ...CLEAN, GITHUB_ACTIONS: "" } });
 ok("command: off CI, packs need GATE_B_PORT (exit 2, nothing started)", r.status === 2 && /GATE_B_PORT/.test(r.stdout + r.stderr), r.stdout + r.stderr);
 r = run(["--title", "x", "--bogus"]);
 ok("command: an unknown option exits 2", r.code === 2, r);
