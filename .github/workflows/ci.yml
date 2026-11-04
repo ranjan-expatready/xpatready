@@ -184,7 +184,7 @@ jobs:
     needs: regression-plan
     if: ${{ needs.regression-plan.outputs.caps != '[]' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     permissions: { contents: read }
     concurrency: { group: "regression-${{ github.event.pull_request.number }}-${{ matrix.cap }}", cancel-in-progress: true }
     strategy:
@@ -194,6 +194,7 @@ jobs:
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      RANGE: "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
