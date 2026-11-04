@@ -284,3 +284,55 @@ the new person-named certificate proposal (`origin rules`) added one row to the 
 
 **Verdict: Approve** for 800612bc1. No Blocker and no Major is open. Round 1's Minors m2, m4 and m5, and r2-m2's residual,
 stay open as Minors.
+
+## Merge check 3 (498c9a967, origin/main 5ac8bd71c into 31c871d92), 4 Nov, diff-only
+I read `git show --cc HEAD`, `git diff HEAD^1 HEAD` and `git diff HEAD^2 HEAD` for `prototype/studio/api/src/demo.ts`.
+I also compared each side's own changes since the merge base e840d2d88 with what the merge carries. I ran no suite,
+started no server, ran no typecheck and ran no journey.
+
+1. **The resolution is exactly the ruled one.** `--cc` shows one resolved hunk, at `demo.ts:389`:
+   `made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: sources.length - absent.length - refused.length, absent, lines: c.lines })`.
+   That is main's swap-aware count, then `absent`, then this PR's `lines: c.lines`, in that order. No other file in the
+   merge has a combined hunk. `demo.ts` is the only file both sides touched since e840d2d88.
+   **The swap does not reach the lines.** `opts.swap` maps file names (`imm5476e.pdf` to `imm5476e-2021.pdf`), and only
+   in the local `sources` (`demo.ts:380`). `c.lines` comes straight from the sample. `linesByHand` (`:456`) works by
+   library form code (`formKey: "IMM 5476"`, `lineageKey`), and the PNP setup's code list has no file names in it.
+   `FormLibrary.attach` needs an approved printed edition under that code. `imm5476e-2021.pdf` is in the
+   official-sources manifest (`previous-editions/`), so `approvedShas` holds its checksum. With the swap on, the code
+   still attaches, now at 11-2021. Main's `const sources` is a local inside `setUp`. It does not shadow `this.sources`,
+   which `setUp` still calls for `read`.
+2. **Nothing from either side was lost.** Main's changes from e840d2d88 to HEAD^2 match the PR head to merge diff line
+   for line, 109 changed lines each. This PR's changes from e840d2d88 to HEAD^1 match the main to merge diff line for line,
+   69 each. The only differing line is the `made.push` line, and there it differs exactly by the other side's half. Main's
+   `log.push` count, which uses `sources.length`, is kept. This PR's `SixLines` type, `made` type, `ReviewProposals`
+   import and constructor injection, `linesByHand`, `lines_by_hand` in the return, and the certificate step
+   (`:593`) are all kept.
+3. **No clash with main's new code.**
+   * `opts.swap` and row 17 (QA-207, #885, #886). The swap is computed before `loadSix` and passed only from
+     `loadConfigured`. Reset to the six, which this PR's `check_forms_c117_part_b.ts` uses, runs without it. The
+     certificate step runs at row 4 and touches only `document_type` proposals and `saveRequirement`. Row 17's intake of
+     the 11-2025 file comes later (`:762`) and reads `intake_item`/`combination_form`, so the two do not meet. One
+     property to record, not a finding: #886 brings IMM 5476 (11-2021)'s saved map. So on the configured checkpoint the
+     Provincial nominee's IMM 5476 line files 11-2021, and the nominee counts in row 17's "N combinations file". Main's
+     `check_c10_1_configured.ts` row 17 asserts no count. This PR's widened `check_c91_impact_api.ts` assertion compares
+     against the live `combination_form` set on its own plain-six setup, so either count passes.
+   * Main's `unread` filter (`outcome: "held"`), its `ruleFact.beside` change in row 7, and `sp.outside` joining
+     `SET_UP_FROM_FORMS`. None of them reads `lines_by_hand`, `this.formLibrary` or `this.proposals`. Row 7 takes only
+     `section`/`answer_list` proposals by run id, so the certificate's `document_type` proposal is never swept in. Row 5
+     approves each waiting library change in its own try/catch, so the certificate type waiting there cannot hold up the
+     Study permit's release.
+   * The filing-record migration (`20261104150000_c82_filing_record`) only creates new tables (`filing_record`,
+     `filing_person_record`, `filing_record_correction`, `case_task`) and triggers on them. It alters nothing this PR
+     reads or writes. This PR adds no migration. `main.ts` (where `ReviewProposals` is provided) was not changed by main.
+     Main's other API changes (`sources.ts` apply timeout, `form-part-placements.ts`, `case-prepare.ts`, `runtime.ts`,
+     submission/filing record) are in services that `linesByHand` and the certificate step do not call.
+4. **No LMIA line changed.** `git diff HEAD^2 HEAD -- demo.ts | grep -i lmia` is empty. The LMIA lines of HEAD^2 and HEAD
+   are identical, including `LMIA_FORM_RULES` (`:68`), `FORM_SETUP["wp.lmia_inside"]` and `wp.lmia_inside` in
+   `SET_UP_FROM_FORMS` (`:36`). This PR's side never touched an LMIA line.
+
+**Not checked:** typecheck, Nest DI start-up and the suites at 498c9a967. CI on this head is the check for those. The
+journey score stays **8.5/10** from round 1. No journey was re-run, because none was allowed and this merge changes no
+screen code.
+
+**Verdict: Approve** for 498c9a967. No Blocker and no Major is open. The resolution is exactly the tech lead's ruled line.
+Round 1's Minors m2, m4 and m5, and r2-m2's residual, stay open as Minors.
