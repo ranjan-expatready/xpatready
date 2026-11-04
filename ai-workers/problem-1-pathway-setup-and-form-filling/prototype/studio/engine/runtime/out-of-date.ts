@@ -7,7 +7,9 @@ import type { FormFact } from "./forms.ts";
 
 /** One fact that reads differently now from when the item was made: whose, which, the value then and now, and when. */
 /** `confirmed`: false when the new value is saved but not confirmed yet (so the form does not read it). */
-export type FactChange = { fact: string; about: string; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null };
+/** `about`: the person (subject) the answer is stored on; `relation`: the relative on that person's form it is about
+ *  (for example "parent_1"), or null for the person's own fact. */
+export type FactChange = { fact: string; about: string; relation: string | null; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null };
 /** What the API knows to word a change: the question's words, a person's label, when the current answer was saved, and
  *  (optional) the newest value saved for a fact the form no longer reads because it is not confirmed. */
 export type ChangeWords = { label: (fact: string) => string; person: (about: string) => string; at: (about: string, fact: string) => string | null; saved?: (about: string, fact: string) => unknown };
@@ -19,16 +21,19 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
  *  (a fact written in several form fields is one change). A fact no longer read is a change to "no answer", or to its
  *  newest saved value marked not confirmed yet. Representative facts (from the firm record) are about "representative". */
 export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "value">[], now: Pick<FormFact, "fact" | "about" | "row" | "value">[], words: ChangeWords): FactChange[] {
-  const key = (f: { fact: string; about: string; row: number | null }) => `${subjectOf(f.about)}|${f.fact}|${f.row ?? ""}`;
+  // The whole "about" (a person, or a person's relation such as "<id>/parent_1"; Devin on #926): two relatives with the
+  // same fact are never folded into one, so a change to either one is seen.
+  const key = (f: { fact: string; about: string; row: number | null }) => `${f.about}|${f.fact}|${f.row ?? ""}`;
   const a = new Map(then.map((f) => [key(f), f])), b = new Map(now.map((f) => [key(f), f]));
   const out = new Map<string, FactChange>();
   for (const k of [...new Set([...a.keys(), ...b.keys()])]) {
     const x = a.get(k), y = b.get(k), f = (y ?? x)!;
     if (x && y && same(x.value, y.value)) continue;
-    const about = subjectOf(f.about), id = `${about}|${f.fact}`;
+    const about = subjectOf(f.about), relation = f.about.includes("/") ? f.about.split("/").slice(1).join("/") : null, id = `${f.about}|${f.fact}`;
     if (out.has(id)) continue;
-    const pending = !y ? words.saved?.(about, f.fact) ?? null : null;
-    out.set(id, { fact: f.fact, about, label: words.label(f.fact), person: words.person(about), was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(about, f.fact) });
+    const pending = !y && !relation ? words.saved?.(about, f.fact) ?? null : null;
+    const person = relation ? `${words.person(about)}'s ${relation.replace(/_/g, " ")}` : words.person(about);
+    out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: relation ? null : words.at(about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));
 }
@@ -92,13 +97,19 @@ export function representativeWords(earlier: string | null, now: string | null, 
 
 /** The earlier value Undo restores (C9.2): walking back from the current answer, the newest earlier answer whose value
  *  differs from it (a confirmation of the same value is not a change). Undo never redoes (review of #926): when the
- *  current answer is itself a restore (`restoredFrom`, the answer it put back), the walk starts below that answer, so a
- *  second Undo goes further back. `earlier` is newest first. Null when there is nothing to undo. */
+ *  current answer stands on an earlier one (`restoredFrom`: the answer a restore put back, or the answer a confirmation
+ *  confirmed), the walk starts below that one, so a second Undo goes further back, a confirmation in between or not
+ *  (Devin on #926). `earlier` is newest first. Null when there is nothing to undo. */
 export function undoTarget<T extends { id: string; value: unknown; restoredFrom?: string | null }>(current: T, earlier: T[]): T | null {
   let anchor: T = current; const seen = new Set<string>();
   while (anchor.restoredFrom && !seen.has(anchor.id)) { seen.add(anchor.id); const back = earlier.find((x) => x.id === anchor.restoredFrom); if (!back) break; anchor = back; }
   const from = anchor === current ? earlier : earlier.slice(earlier.indexOf(anchor) + 1);
   return from.find((x) => x.id !== current.id && !same(x.value, current.value)) ?? null;
 }
-/** The answer a restored answer put back (its source's `restored.from`), or null. */
-export const restoredFromOf = (source: unknown): string | null => ((source as { restored?: { from?: unknown } } | null)?.restored?.from as string | undefined) ?? null;
+/** The earlier answer an answer stands on: the one a restore put back (`restored.from`), else the one a confirmation
+ *  confirmed (`from`, as Confirm section writes it); null for an answer typed or entered. */
+export const restoredFromOf = (source: unknown): string | null => {
+  const s = source as { restored?: { from?: unknown }; from?: unknown } | null;
+  const v = s?.restored?.from ?? s?.from;
+  return typeof v === "string" ? v : null;
+};

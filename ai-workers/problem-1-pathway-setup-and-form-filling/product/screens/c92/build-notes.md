@@ -41,3 +41,11 @@ Contract (fixed): `POST /runtime/cases/:id/changes/undo {subjectId, fact}`; an i
 * **(d):** the server checks the stored validated file against its checksum on every read (`checkedFile`); the test
   compares that checksum and that no second validated copy was written.
 * New browser suite `tests/check_c92_out_of_date_browser.ts` (1440 and 400 px, axe, two tabs, keyboard, focus).
+
+## Devin's review of 18c8c52a (two findings, both fixed)
+* **Two relatives with the same fact** (`<id>/parent_1`, `<id>/parent_2`) were folded into one comparison key, so a
+  change to one could be missed. `factChanges` now keys by the whole `about`; a relative's fact is named "Sample Client
+  A's parent 1" and offers no Undo here (it is changed where it is asked). Test: one parent's name changed.
+* **Undo → Confirm section → Undo redid the change** (the reviewer's round 2 Minor too): a confirmation now stands on the
+  answer it confirmed (`from`), as a restore stands on the answer it put back, so the walk goes on back. Test through
+  the API (a restored DECLARED value, confirmed, then Undo again).

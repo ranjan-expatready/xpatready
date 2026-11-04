@@ -227,7 +227,8 @@ export class CasePrepare {
     // Review S1: never offered for the firm record's facts, a list entry or a declaration (the route refuses them).
     const placeOf = new Map((s.placements as { fact: string; repeats: string }[]).map((p) => [p.fact, p.repeats]));
     const typeOf = new Map((s.canonical_fields as { id: string; value_type?: string }[]).map((f) => [f.id, f.value_type ?? ""]));
-    const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
+    // A relative's fact (another person on the form, "<id>/parent_1") is changed where it is asked, not undone from here.
+    const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && !x.relation && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
     // `undo`, `expected_id` and `restores` are filled once every item is worked out (one read of the answers' history).
     const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: x.about, fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
     const items = stored.items.flatMap((i) => {

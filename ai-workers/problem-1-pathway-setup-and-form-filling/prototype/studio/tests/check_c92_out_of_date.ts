@@ -4,7 +4,7 @@
 // the earlier value Undo restores. The routes are proved by tests/check_c92_undo_api.ts and acceptance/C9.2.test.ts on
 // an isolated copy. No database (US$0).
 //   tsx studio/tests/check_c92_out_of_date.ts
-import { changeWords, dayWords, factChanges, outOfDateReason, representativeWords, undoTarget, valueWords, type ChangeWords } from "../engine/runtime/out-of-date.ts";
+import { changeWords, dayWords, factChanges, outOfDateReason, representativeWords, restoredFromOf, undoTarget, valueWords, type ChangeWords } from "../engine/runtime/out-of-date.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -30,6 +30,11 @@ ok("C9.2 changes: a new value saved but not confirmed yet is named, marked not c
 const c6 = factChanges([F("person.date_of_birth", "S", "1988-01-01")], [], W2);
 ok("C9.2 changes (fail): an answer taken away entirely is a change to no answer, confirmed (nothing pending)", c6[0]?.now === null && c6[0]?.confirmed === true && / to no answer on /.test(changeWords(c6[0])), changeWords(c6[0]));
 
+const twoParents = (a: string, b: string) => [F("person.family_name", "A/parent_1", a, "p1"), F("person.family_name", "A/parent_2", b, "p2")];
+const c7 = factChanges(twoParents("ALPHA", "BETA"), twoParents("GAMMA", "BETA"), W);
+ok("C9.2 changes (Devin on #926): one parent's changed name is seen though the other parent's is the same", c7.length === 1 && c7[0].relation === "parent_1" && c7[0].was === "ALPHA" && c7[0].now === "GAMMA" && c7[0].person === "Sample Client A's parent 1", c7);
+ok("C9.2 changes (fail): two parents unchanged → no change", factChanges(twoParents("ALPHA", "BETA"), twoParents("ALPHA", "BETA"), W).length === 0);
+
 // Words.
 ok("C9.2 words: a date reads \"4 Nov 2026\"", dayWords("2026-11-04T15:00:00Z") === "4 Nov 2026", dayWords("2026-11-04T15:00:00Z"));
 ok("C9.2 words (fail): no date or a date that is not one gives no date words", dayWords(null) === null && dayWords("not a date") === null);
@@ -54,6 +59,9 @@ ok("C9.2 undo (fail): an answer never changed has nothing to undo", undoTarget(c
 const hist = [{ id: "u1", value: "SAMPLE", restoredFrom: "2" }, { id: "3", value: "SAMPLEDZ" }, { id: "2", value: "SAMPLE" }, { id: "1", value: "FIRST" }];
 ok("C9.2 undo: a second Undo goes further back from the answer the first one restored (never a redo)", undoTarget(hist[0], hist.slice(1))?.id === "1");
 ok("C9.2 undo (fail): a second Undo with nothing further back has nothing to undo (it never puts the change back)", undoTarget({ id: "u1", value: "FIRST", restoredFrom: "1" }, [{ id: "2", value: "SAMPLE" }, { id: "1", value: "FIRST" }]) === null);
+const conf = [{ id: "k", value: "B", restoredFrom: "u" }, { id: "u", value: "B", restoredFrom: "b" }, { id: "c", value: "C" }, { id: "b", value: "B" }, { id: "a", value: "A" }];
+ok("C9.2 undo (Devin on #926): Undo → Confirm section → Undo goes further back (to A), never redoes C", undoTarget(conf[0], conf.slice(1))?.id === "a");
+ok("C9.2 undo: a confirmation stands on the answer it confirmed; a restore on the one it put back", restoredFromOf({ channel: "confirm_section", from: "x" }) === "x" && restoredFromOf({ from: "x", restored: { from: "y" } }) === "y" && restoredFromOf({ channel: "agent_view" }) === null);
 ok("C9.2 undo: values compare by content (an address object)", undoTarget({ id: "2", value: { city: "B" } }, [{ id: "1b", value: { city: "B" } }, { id: "1", value: { city: "A" } }])?.id === "1");
 
 process.exitCode = summary() ? 1 : 0;
