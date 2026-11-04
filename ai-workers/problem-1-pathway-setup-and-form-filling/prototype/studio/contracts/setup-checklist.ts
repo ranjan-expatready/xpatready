@@ -80,7 +80,8 @@ export const SetupChecklist = z.object({
   steps: z.array(Step).length(5),
   current: z.enum(STEP_KEYS).nullable(),
   next: NextItem.nullable(),
-  bar: z.object({ done: z.number().int().min(0).max(5), of: z.literal(5), text: z.string() }),
+  /** `next`: on a Live combination, what its next release still needs (status-words nextReleaseWords; QA-184). */
+  bar: z.object({ done: z.number().int().min(0).max(5), of: z.literal(5), text: z.string(), next: z.string().nullable().optional() }),
   counts: Counts,
   /** The cache key it was worked out for (concept §8). */
   key: z.string(),
