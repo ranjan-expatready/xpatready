@@ -181,7 +181,17 @@ export type QuestionnaireQuestion = {
   fact: string; wording: string; asked: boolean; meaning: string; help: string | null; answerType: string; filledBy: FilledBy; onlyIf: string | null;
   neededBy: string[]; group: boolean; required: boolean; whereUsed: number; collectedFrom: string | null;
 };
-export type QuestionnaireSection = { id: string; title: string; questions: QuestionnaireQuestion[] };
+/** `stillAsked` (C4.2, P-294 (B)): the section is not chosen for this combination (taken out, or never chosen), yet it
+ *  asks this person questions because forms or rules pull them; the forms that need them (none: a rule or condition
+ *  reads them). Absent on a chosen section. */
+export type QuestionnaireSection = { id: string; title: string; questions: QuestionnaireQuestion[]; stillAsked?: { forms: string[] } };
+/** C4.2: why a section not chosen here still shows, in words ("Still asked: IMM 5257 needs these answers."). */
+export function stillAskedWords(x: { forms: string[] }): string {
+  const f = x.forms;
+  if (!f.length) return "Still asked: a rule or condition reads these answers.";
+  const list = f.length === 1 ? f[0] : `${f.slice(0, -1).join(", ")} and ${f.at(-1)}`;
+  return `Still asked: ${list} need${f.length === 1 ? "s" : ""} these answers.`;
+}
 export type QuestionnaireRole = { role: string; label: string; questions: number; gaps: number };
 export type QuestionnairesView = {
   roles: QuestionnaireRole[]; role: string;

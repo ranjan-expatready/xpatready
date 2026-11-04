@@ -43,6 +43,13 @@ export const ACCOUNT_WORDS: Record<IrccAccount | "ANY", string> = {
 /** Break m6: the account inside a sentence. "No account (paper filing)" is not an account to go "through". */
 export const throughAccount = (a: string) => (a === "PAPER" ? "on paper, with no IRCC account" : `through the ${ACCOUNT_WORDS[a as "ANY"] ?? a}`);
 export const accountSubject = (a: string) => (a === "PAPER" ? "paper filing (no IRCC account)" : `the ${ACCOUNT_WORDS[a as "ANY"] ?? a}`);
+/** C1.6 (P-61, P-143): a line's channel in words, an Online line with its portal: the IRCC account the combination files
+ *  through ("Online · IRCC secure account"), or that none is set yet. Read by the Programs row and the combination page. */
+export const channelWithPortal = (c: Channel, account: string | null | undefined) =>
+  c !== "ONLINE" ? CHANNEL_WORDS[c] : !account ? "Online · IRCC account not set" : account === "PAPER" ? "Online · no IRCC account (paper filing)" : `Online · ${ACCOUNT_WORDS[account as IrccAccount] ?? account}`;
+/** C1.6: a combination's form lines grouped by channel, in the contract's order, for "each form's channel" on one row. */
+export const channelGroups = (lines: { code: string; channel?: string | null; document?: boolean }[], account: string | null | undefined) =>
+  CHANNELS.map((c) => ({ channel: c, words: channelWithPortal(c, account), forms: lines.filter((l) => !l.document && l.channel === c).map((l) => l.code) })).filter((g) => g.forms.length);
 /** P-144 (C-9): barcode forms: filed by PDF upload or on paper, each needs a current validated copy read back into the case
  *  before it is ready to file (IRCC returns it unprocessed otherwise). From P-144's examples and the evidence lane's barcode
  *  evidence (E1 imm5257, imm0008; P1 IMM 1295); IMM 5707 and IMM 5409 make no barcode (Help Centre 1523, read 29 Oct). */

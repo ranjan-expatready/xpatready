@@ -46,7 +46,10 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  long inside the field-map draft's transaction for that file, so the queue's transaction room is tested both ways;
  *  STUDIO_SLOW_APPLY the same inside that file's Apply (QA-144 part 1, tests/check_qa144_place_step.ts). */
 const slowForTest = async (file: string, variable = "STUDIO_SLOW_TX") => { const [f, ms] = (process.env[variable] ?? "").split(":"); if (f && f === file && Number(ms) > 0) await new Promise((r) => setTimeout(r, Number(ms))); };
-const KIND: Record<string, string> = { forms: "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
+// QA-207: a previous edition of a fillable IRCC form (previous-editions/) is a Form too, so it is read and drafted.
+const KIND: Record<string, string> = { forms: "Form", "previous-editions": "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
+/** The kind an official file attaches as, by its folder in official-sources/ircc (a path that leaves its folder is none). */
+export const officialKind = (path: string) => (path.split("/").includes("..") ? undefined : KIND[path.split("/")[0]]) ?? "Official file";
 const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs");
 /** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER naming the test fixture
  *  tests/fixtures/fake-launch.mjs, which stands in for the guarded launcher so the paid-call refusal and provider-limit
@@ -150,11 +153,12 @@ export class Sources {
     let status = "HELD", detail = "Not an approved official source (its content matches no file in the official library). It is kept as an attachment; it is not read or sent to the AI.";
     let edition: string | null = null, kind = "Unrecognised file";
     if (item) {
-      kind = KIND[item.path.split("/")[0]] ?? "Official file"; edition = item.edition;
+      // QA-207: a previous edition is named by the printed edition its manifest row records, not its descriptive label.
+      kind = officialKind(item.path); edition = item.printed ?? item.edition;
       const known = await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: hash, maps: { some: {} } } });
-      if (known) { status = "IN_LIBRARY"; detail = `Recognised: ${item.edition}. Its form fields are already mapped in the library, so no AI drafting is needed.`; }
-      else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${item.edition}, an approved official form. Next: AI drafts its field map.`; }
-      else { status = "ATTACHED"; detail = `Recognised: ${item.edition}, an approved official source. Kept as a source document; its text supports requirements and citations.`; }
+      if (known) { status = "IN_LIBRARY"; detail = `Recognised: ${edition}. Its form fields are already mapped in the library, so no AI drafting is needed.`; }
+      else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${edition}, an approved official form. Next: AI drafts its field map.`; }
+      else { status = "ATTACHED"; detail = `Recognised: ${edition}, an approved official source. Kept as a source document; its text supports requirements and citations.`; }
     }
     // P-80: approved in the product by a second person: a form is read on this computer and drafted like an official one
     // (the drafting guard checks the approval record written at approval); a checklist is kept as a source document.
@@ -868,7 +872,9 @@ export class Sources {
     // An official file, or (P-80) one a second person approved in the product: the edition its approval names.
     const official = manifest().find((i) => i.sha256 === a.sha256), inProduct = official ? null : await this.approvedInProduct(a);
     if (!official && !inProduct?.edition) fail("This file is held until its source is verified, so its draft cannot be applied.", HttpStatus.CONFLICT);
-    const item: { file: string | null; edition: string; applicability: string } = official ?? { file: null, edition: inProduct!.edition!, applicability: `approved in the product (IRCC page ${inProduct!.irccPage})` };
+    // QA-207 (#937 review M1): a previous edition is filed under the printed edition its manifest row records.
+    const item: { file: string | null; edition: string; applicability: string } = official ? { ...official, edition: official.printed ?? official.edition } : { file: null, edition: inProduct!.edition!, applicability: `approved in the product (IRCC page ${inProduct!.irccPage})` };
+    if (!EDITION.test(item.edition)) fail(`${item.edition} is not a printed form number and edition, so its draft cannot be filed under a form.`, HttpStatus.CONFLICT);
     const rec = JSON.parse(readFileSync(join(SOLUTION, job.runFile!), "utf8"));
     const out = checkedOutput(rec);
     const inv = JSON.parse(readFileSync(join(SOLUTION, a.inventoryFile!), "utf8"));
@@ -977,7 +983,7 @@ export class Sources {
     });
   }
 
-  officialLibrary() { return manifest().map((i) => ({ file: i.file, edition: i.edition, kind: KIND[i.path.split("/")[0]] ?? "Official file", approval: i.approval, combination: i.combination, sha256: i.sha256 })); }
+  officialLibrary() { return manifest().map((i) => ({ file: i.file, edition: i.edition, kind: officialKind(i.path), approval: i.approval, combination: i.combination, sha256: i.sha256 })); }
   async attachmentsOf(combinationId: string) { return this.db.sourceAttachment.findMany({ where: { combinationId }, orderBy: { createdAt: "asc" } }); }
   async download(id: string) { const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id } }); return { path: resolve(ROOT, a.storedPath), name: a.fileName }; }
 }
