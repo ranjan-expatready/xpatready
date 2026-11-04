@@ -170,12 +170,15 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
   // here (an edit of its name); its placeholder name is never accepted (the API refuses it too).
   // Devin review on #883: a rules-pass section drafted before printed headings were read has no "printed_heading" result
   // and may carry the PDF's part name: it is named here too, and may keep its name once a person has typed it.
-  const legacy = p.kind === "section" && p.origin === "rules" && p.step === "masters_edition" && p.reuse.match !== "reuse" && !p.rules.some((r) => r.rule === "printed_heading");
+  const legacy = p.kind === "section" && p.origin === "rules" && p.step === "masters_edition" && !(p.reuse.match === "reuse" && !!p.reuse.existing_key) && !p.rules.some((r) => r.rule === "printed_heading");
   const unnamed = (p.kind === "section" && p.rules.some((r) => r.rule === "printed_heading" && !r.passed)) || legacy;
   const [name, setName] = React.useState("");
   const flat = (x: string) => x.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
   const named = flat(name).length >= 2 && !flat(name).startsWith("unnamedsection") && (legacy || flat(name) !== flat(p.title));
-  const acceptFirst = () => (unnamed ? run.mutate({ action: "edit", payload: { ...(p.readings.draft?.payload as object), label: name.trim() } })
+  // A twin waiting on another form's copy (a reuse with no key yet): only the studio knows whether it lands on that copy's
+  // item, so Accept stays on with no name typed and the studio answers (it refuses in words when it would add the name).
+  const twinOpen = legacy && p.reuse.match === "reuse";
+  const acceptFirst = () => (unnamed && !(twinOpen && !name.trim()) ? run.mutate({ action: "edit", payload: { ...(p.readings.draft?.payload as object), label: name.trim() } })
     : p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={p.title} description={`${p.kind_word} · ${p.reads && p.lands_on === "library" ? "every combination that files this form" : p.lands_on === "library" ? "shared library" : "this combination"}${p.basis === "SAMPLE" ? " · Sample until the immigration expert confirms" : ""}`}
@@ -184,7 +187,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
         <span className="flex flex-wrap gap-2">
           {differ ? <Button variant="secondary" busy={run.isPending} disabled={!!p.near_reason_needed_check && reason.trim().length < 8} aria-describedby={p.near_reason_needed_check && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={() => run.mutate({ action: "edit", payload: withSeverity(checkPayload) })}>Accept the checker's reading</Button> : null}
-          <Button busy={run.isPending} disabled={(!!p.near_reason_needed && reason.trim().length < 8) || (unnamed && !named)} aria-describedby={unnamed && !named ? "accept-needs-name" : p.near_reason_needed && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={acceptFirst}>{differ ? "Accept the first reading" : unnamed ? "Accept with this name" : "Accept"}</Button>
+          <Button busy={run.isPending} disabled={(!!p.near_reason_needed && reason.trim().length < 8) || (unnamed && !named && !(twinOpen && !name.trim()))} aria-describedby={unnamed && !named ? "accept-needs-name" : p.near_reason_needed && reason.trim().length < 8 ? "accept-needs-reason" : undefined} onClick={acceptFirst}>{differ ? "Accept the first reading" : unnamed ? "Accept with this name" : "Accept"}</Button>
         </span>
       </>}>
       <div className="flex flex-col gap-4 text-sm">

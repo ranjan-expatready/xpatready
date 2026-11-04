@@ -818,9 +818,19 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // A rules-pass section drafted before printed headings were read (no "printed_heading" rule result; Devin review on
       // #883) may carry the PDF's internal part name ("Page wrapper"), and its edition's one draft (P-138) is never redone:
       // it too is accepted only as an edit with a name a person typed (keeping its name is then the person's choice).
-      // A reuse adds no name to the library (it lands on the existing item), so it is left as it was (review r5 M6: an
-      // edit always lands a new item, so refusing its plain accept would make a duplicate).
-      const legacy = r.kind === "section" && r.step === MASTERS_SECTIONS_STEP && r.origin === "rules" && (r.reuse as { match?: string } | null)?.match !== "reuse" && !((r.rules ?? []) as { rule?: unknown }[]).some((x) => x?.rule === "printed_heading");
+      // A reuse of a named library item adds no name to the library (it lands on that item), so it is left as it was
+      // (review r5 M6: an edit always lands a new item, so refusing its plain accept would make a duplicate). A twin waiting
+      // on another edition's copy (reuse with no key yet) may still resolve to a new item below, so it stays guarded
+      // (Devin review on c0f65af62).
+      const reuseOf = r.reuse as { match?: string; existingKey?: string | null } | null;
+      let lands = reuseOf?.match === "reuse" ? reuseOf.existingKey ?? null : null;
+      const oldShape = r.kind === "section" && r.step === MASTERS_SECTIONS_STEP && r.origin === "rules" && !((r.rules ?? []) as { rule?: unknown }[]).some((x) => x?.rule === "printed_heading");
+      if (oldShape && reuseOf?.match === "reuse" && !lands && r.relatesTo) {
+        // A twin: it lands on its first copy's item when that one is in the library, as the resolution below finds it.
+        const first = await tx.proposalItem.findUnique({ where: { id: r.relatesTo }, select: { status: true, decidedKey: true } });
+        lands = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
+      }
+      const legacy = oldShape && !lands;
       if (d.action !== "reject" && r.kind === "section" && ((r.work as { unnamed?: unknown } | null)?.unnamed === true || legacy)) {
         const was = String((r.payload as { label?: unknown }).label ?? ""), now = String((payload as { label?: unknown }).label ?? "");
         if (d.action === "accept" || isPlaceholder(now) || (!legacy && normalizeLabel(now) === normalizeLabel(was)))

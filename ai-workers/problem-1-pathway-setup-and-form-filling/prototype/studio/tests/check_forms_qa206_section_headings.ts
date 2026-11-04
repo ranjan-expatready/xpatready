@@ -138,6 +138,20 @@ run(async () => {
   const sec0 = Number(sql("select count(*) from logical_section")), w3 = waiting();
   r = await call("POST", "/review/proposals/decide", { ids: [reuser?.id ?? NONE], action: "accept" }, AUTHOR);
   ok("QA-206 pass (review r5 M6): an old-shape section that reuses a library section is accepted as a reuse, adding no library row", !!reuser && r.status < 300 && Number(sql("select count(*) from logical_section")) === sec0 && waiting() === w3 && sql("select count(*) from logical_section where title = 'Education and training'") === "1", r.status >= 300 ? words(r) : r.body?.items);
+  // Devin review on c0f65af62: an old-shape twin whose first copy (another edition's) never landed resolves to a new
+  // item at Accept, so it is not landed under its unreviewed name either.
+  const twin = s5257.find((x: any) => x.title === "US PR card");
+  sql(`update proposal_item set rules = '[{"rule":"from_form_part","passed":true,"why":null}]'::jsonb, work = jsonb_build_object('twinOf', '${rej?.id ?? NONE}'), relates_to = '${rej?.id ?? NONE}', reuse = '{"match":"reuse","existingKey":null}'::jsonb, payload = jsonb_set(payload, '{label}', '"Us card"') where id = '${twin?.id ?? NONE}'`);
+  const sec1 = Number(sql("select count(*) from logical_section"));
+  r = await call("POST", "/review/proposals/decide", { ids: [twin?.id ?? NONE], action: "accept" }, AUTHOR);
+  ok("QA-206 fail (Devin review): an old-shape twin waiting on a first copy that never landed (\"Us card\") is not accepted under that name (409), and adds no library row", !!twin && r.status === 409 && Number(sql("select count(*) from logical_section")) === sec1 && sql("select count(*) from logical_section where title = 'Us card'") === "0", words(r));
+  // Review r6: an old-shape twin whose first copy is in the library lands on that item as a reuse (no new row).
+  const twin2 = s5257.find((x: any) => x.title === "National identity document");
+  const firstOk = sql(`select id from proposal_item where decided_key is not null and status in ('accepted','edited') and kind = 'section' limit 1`);
+  sql(`update proposal_item set rules = '[{"rule":"from_form_part","passed":true,"why":null}]'::jsonb, work = jsonb_build_object('twinOf', '${firstOk || NONE}'), relates_to = '${firstOk || NONE}', reuse = '{"match":"reuse","existingKey":null}'::jsonb, payload = jsonb_set(payload, '{label}', '"Nat id"') where id = '${twin2?.id ?? NONE}'`);
+  const sec2 = Number(sql("select count(*) from logical_section"));
+  r = await call("POST", "/review/proposals/decide", { ids: [twin2?.id ?? NONE], action: "accept" }, AUTHOR);
+  ok("QA-206 pass (review r6): an old-shape twin whose first copy is in the library is accepted onto that item, adding no library row", !!twin2 && !!firstOk && r.status < 300 && Number(sql("select count(*) from logical_section")) === sec2 && sql("select count(*) from logical_section where title = 'Nat id'") === "0", r.status >= 300 ? words(r) : r.body?.items);
   ok("QA-206 pass: the whole check spent US$0", T.spent() === before);
   T.done();
 });
