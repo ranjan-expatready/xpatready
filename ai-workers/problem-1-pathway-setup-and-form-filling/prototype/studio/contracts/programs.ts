@@ -157,8 +157,9 @@ export type CatalogueLeaf = {
   pathwayKey: string;
   pathwayLabel: string;
   trail: string[];
-  /** The four setup steps (addendum A3): Forms · Draft · Review · Release; all four done = Live. */
-  progress: { step: number; of: 4; label: string; done: boolean[]; live: boolean };
+  /** QA-184: the setup checklist's five steps (P-157), the same as the card and the Overview: the step its next item is
+   *  on, which steps are done, Live (the chip) and the card's words. */
+  progress: { step: number; of: 5; label: string; done: boolean[]; live: boolean };
   /** "Filed:" (addendum A4): PDF · PDF + answer sheet (later wave) · No forms yet. */
   filed: string;
   /** P-116: retired by a release (left out of All; shown under the Retired status). */
