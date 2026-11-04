@@ -20,7 +20,7 @@ Every online line in A and B is filed through the **APR Portal** (P-98: the one 
 | 6 | Master data recreated: Reset → blank workspace with sources only → AI drafts the library again from the replayed answers | Reset checkpoint | demo | runtime + screens |
 | 7 | AI drafts setup beyond fields: sections, document requirements from the checklist (IMM 5484, IMM 5881) | A | C2.6, C3.4 | forms, screens |
 | 8 | Questionnaires: SQR per person from what the forms need; PQR picks; preview by person with the Sample family | A, B | C4.1–C4.3, C4.7 | runtime |
-| 9 | Channels: PDF upload · Online · Signed PDF upload; filing method Mixed | A release 2: IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 Signed PDF upload | C1.6, C1.7, C3.11 | screens, runtime |
+| 9 | Channels: PDF upload · Online · Signed PDF upload; filing method Mixed | A release 2: IMM 5257 Online, so the family information form is IMM 5645 (filed online it is IMM 5645, on paper or as a PDF upload IMM 5707: tech lead on #798, IRCC-P2-04a; Sample, Unconfirmed: expert), IMM 5476 Signed PDF upload | C1.6, C1.7, C3.11 | screens, runtime |
 | 10 | Review and release: submit, expert ticks, a different person releases; library changes go out with it | A release 1, release 2; B | C5.1, C5.2 | runtime, screens |
 | 11 | A case on a release: answers once, each person; the minor answered by the principal; confirm by section | A family case on release 1 | C6.1–C6.3, C6.6, C6.10 | runtime |
 | 12 | PDF auto-fill with barcodes, read back equal, Adobe Validate | A release 1: IMM 5257 PDF (5/5 barcodes); B: IMM 1295 | C7.1, C7.2 | runtime, evidence |

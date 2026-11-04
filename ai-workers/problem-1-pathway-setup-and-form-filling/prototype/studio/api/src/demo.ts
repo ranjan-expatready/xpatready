@@ -508,11 +508,13 @@ export class Demo {
         }
         const p = await placeFromFormParts(this.db, this.studio, author, c.id);
         placedFacts.push(...p.placed.map((x) => x.fact));
-        // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's gender).
+        // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's sex or gender as
+        // the forms read it, else their date of birth).
         if (keyOf.get(c.id) === "vv.single") {
-          const beside = await this.db.sectionQuestion.findFirst({ where: { workspaceId, canonicalFieldKey: "person.gender" }, orderBy: { version: "desc" }, select: { sectionKey: true } });
+          const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: ["person.sex", "person.gender", "person.date_of_birth"] } }, select: { canonicalFieldKey: true, sectionKey: true } });
+          const beside = ["person.sex", "person.gender", "person.date_of_birth"].map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
           if (beside) { try { await this.studio.placeField(author, GENDER_FACT.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(GENDER_FACT.fact); } catch (e) { setUpRefused.push(`${GENDER_FACT.fact}: ${said(e)}`); } }
-          else setUpRefused.push(`${GENDER_FACT.fact}: the person's gender is asked in no section`);
+          else setUpRefused.push(`${GENDER_FACT.fact}: neither the person's sex, gender nor date of birth is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a box that reads it`));
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
@@ -553,7 +555,7 @@ export class Demo {
     row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", status: !released.length ? "waiting" : blocked.length ? "partial" : "done", shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
       why: blocked.length ? blocked.join(" · ") : null });
     const visitor = released.some((l) => /Visitor visa/.test(l));
-    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
+    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });

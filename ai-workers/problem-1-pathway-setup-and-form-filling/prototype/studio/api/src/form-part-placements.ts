@@ -1,5 +1,5 @@
 // QA-144 (P-158, P-120; tech lead on #798): a rules step, no AI, US$0. Each fact a combination's forms need and nobody is
-// asked for (engine/coverage.ts) is placed in the library section that groups its form box, as the author, through the
+// asked for (engine/coverage.ts, engine/validate.ts) is placed in the library section that groups its form box, as the author, through the
 // same placeField a person uses. The sections are the C3.4 rules pass's (api/src/form-masters.ts): each accepted section
 // proposal names the boxes of one form edition it groups. A box no section names takes the section of the nearest named
 // box on the same form (the longest shared data path). Who fills it: the client's questionnaire; how often: once per case
@@ -18,7 +18,12 @@ const shared = (a: string, b: string) => { let n = 0; while (n < a.length && n <
 export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, combinationId: string): Promise<PlacedFromParts> {
   const c = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
   const { snapshot } = await buildSnapshot(db, c.workspaceId, combinationId, "draft");
+  // What to place: every fact a coverage gap names, and every other mapped fact asked of nobody that no document type
+  // supplies (the validator's own two readings: engine/coverage.ts and engine/validate.ts "unplaced").
+  const placedNow = new Set((snapshot.placements as { fact: string }[]).map((p) => p.fact));
+  const docFacts = new Set(((snapshot.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
   const gaps = new Set(coverageGaps(snapshot).map((g) => g.fact));
+  for (const m of snapshot.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]) for (const e of m.entries) if (e.outcome === "mapped" && e.fact && !placedNow.has(e.fact) && !docFacts.has(e.fact)) gaps.add(e.fact);
   // The accepted section proposals of this combination's rules passes: edition → [section key, the boxes it groups].
   const runs = (await db.draftingJob.findMany({ where: { combinationId, kind: MASTERS_STEP }, select: { id: true } })).map((j) => j.id);
   const groups = new Map<string, { section: string; boxes: string[] }[]>();
