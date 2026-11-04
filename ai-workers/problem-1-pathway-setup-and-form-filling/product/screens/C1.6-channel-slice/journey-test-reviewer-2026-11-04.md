@@ -56,3 +56,17 @@ row's accessible description.
 ## Not tested
 A real screen reader. An intended user's unaided walk (D17, D20: the founder's). Keyboard-only use of the native pickers on the
 Forms tab. Hostile files and non-English text (this slice takes no free text).
+
+## Round 2 (34defe0f, reviewer)
+I re-walked only what changed: the fixture's With an LMIA (Live · Release 1), set by the author to IRCC secure account
+with IMM 5409 Online. I read its card and List row at 1440, 1024, 640 at 2× DPR, 639 and 400 px. I read the Retired filter
+through the builder's check (31/31), and the Forms tab's paper, approver and tooltip words through the same check.
+
+| Criterion | Round 1 | Round 2 | Evidence |
+|---|---|---|---|
+| Plain words | ½ | 1 | no "P-143" in the tooltip; the paper message appears once; the approver reads only the fact |
+| Accessibility and screen sizes | ½ | 1 | nothing cut at any width; the row's name carries filing and channels; axe clean; no new tab stop |
+| Correct data | 1 | ½ | the channels are now labelled "In the draft for the next release", but the tag "Mixed" sits outside that label, and so does "filing: Mixed" in the row's name. Release 1 is PDF only (review r2-m1) |
+| All other criteria | | unchanged | as in round 1 |
+
+**9.5/10, no criterion at 0: pass.** To raise the half: put the filing tag inside the next-release label on a Live row whose draft differs.

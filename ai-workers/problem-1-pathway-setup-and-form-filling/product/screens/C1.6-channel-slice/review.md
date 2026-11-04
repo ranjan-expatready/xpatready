@@ -80,3 +80,58 @@ The builder's other green checks (listed above). The builder's "5 fail on main" 
 **Verdict: Approve.** No open Blocker or Major. Minors to fix (Should): m1 untested paper branch · m2 paper message twice ·
 m3 instructions shown to the approver · m4 "P-143" in the Signature tooltip and the check's overclaim · m5 portal cut in narrow
 List rows · m6 the grid row's name leaves out the channels. Journey score 9/10 (`journey-test-reviewer-2026-11-04.md`).
+
+## Round 2 (34defe0f)
+Diff-only (P-277): `git diff 3557aa1a..34defe0f`. Isolated copy `rev_c16` on :4458 (web/dist built 08:01 from 34defe0f, after
+the 07:52 commit), live AI off, US$0, copy stopped at the end. Suites' rewritten screenshots (W1-qa-1029, W1-questions-and-documents,
+W1-visual-system) restored with `git checkout --`.
+
+**Re-run:** `tests/check_c16_portal_browser.cjs 4458 xr_studio_rev_c16` **31/31**. `acceptance/C1.6.test.ts` **31/31** (AT-13
+both steps, AT-12's new paper and "never next release on the six" steps). Not re-run: "9 fail on c74dbcda" (needs the old web build).
+
+**My own walk** (fixture, With an LMIA = Live · Release 1, PDF only; set to IRCC secure account and IMM 5409 Online, the
+breaker's state): card and List read "Mixed | In the draft for the next release: | Online · IRCC secure account: IMM 5409 |
+PDF upload: IMM 1295, IMM 5257 SCH1, IMM 5475, IMM 5476, IMM 5707". Nothing cut (`scrollWidth = clientWidth` on every `li`), no
+sideways scroll and axe clean at 1440, 1024, 640 CSS px at 2× DPR (= 1280 at 200 %), 639 and 400 px. No page or console error.
+
+### The fixes, checked
+* **M1, the new full-width gridcell:** right. Placement measured in the row: mobile (400, 639 px) it is `row-start-4`, `col-span-2`,
+  at y 94, under the step bar (y 53 + 37) and the Open button, full row width; sm and up (640×2, 1024, 1440) it is
+  `sm:row-start-2 sm:col-span-5`, at y 43 under all five cells, 574 / 718 / 1134 px wide. DOM order equals visual order. Keyboard:
+  ArrowDown moves row to row (8 presses, 8 rows, no stop inside), and the cell holds 0 focusable elements, so no tab stop is added.
+  axe clean at every width. See n1 for the header count.
+* **M2:** right. Retired rows: `rowChannels` gives none on card, List and in the row's name (tested, browser steps 29–30). Live
+  row: `account` now comes from `snapshot.combination.portal` (`engine/snapshot.ts:194`), the same draft snapshot as `forms`, so
+  the row no longer mixes the two. `channelsChanged` is additive and optional on `CatalogueLeaf`.
+* **`channelKey` ignoring signatures and checklist lines: right.** It describes exactly what the row shows: `channelGroups` drops
+  `document` lines and the row never shows a signature, so a signature-only change must not label the row. It does include the
+  set of data-form lines, so an added or removed line labels it. The defaults match the snapshot's own rule: `channel` is omitted
+  when PDF_UPLOAD (`snapshot.ts:200`) and `portal` when unset (`:194`), and the key fills both the same way on each side. By hand:
+  a line-only change (IMM 5409 to Paper, account untouched) gives `channelsChanged: true`, and putting it back gives false. AT-13
+  covers only the account change (r2-m2).
+* **The Live label's words:** "In the draft for the next release:" is plain, matches the row's own "Live · Next release: 4 of 5
+  steps to do", and the list's name becomes "Each form's channel in the draft for the next release". Good. The tag is outside it (r2-m1).
+* **Cost of the extra key:** two `JSON.stringify` and one sort of at most n short strings per combination, on snapshots already in
+  memory (`relSnap` is already read for `diff` and `relProblems`). No query, no per-row request. `/catalogue` took 26 ms after a change on the fixture.
+  The real cost is height: a List row with channels is now 96 px instead of 43 at 1440. This is the price of "never cut" (M1) and is not a finding.
+* **Breaker m3, m4 and my m1–m6:** all fixed, and each has a step that fails if the fix is removed. m1: AT-12 has paper pass and fail steps, browser
+  steps 21–22. m2: the grey line is gone under PAPER (`forms.tsx:156`, `accountKey !== "PAPER"`), step 23. m3: the approver reads
+  "IRCC account not set: no portal to type it into yet", step 20. m4: "(P-143; …)" removed, and the check now reads the tooltip, step 27.
+  m5 and breaker m3: the label has `whitespace-nowrap`, the forms wrap and nothing is truncated, steps 12–14. m6: the row's `aria-label` adds filing and channels, step 11.
+
+### Issues (no Blocker, no Major)
+* **r2-m1 Should: on a Live row whose draft files differently, the filing tag is outside the "next release" label.** The tag
+  "Mixed" sits left of "In the draft for the next release:" (screenshot at 1024 and 400 px). The row's new screen-reader name says
+  "…, filing: Mixed: online and PDF, next release: Online · IRCC secure account: IMM 5409; …". Both present "Mixed" as what
+  Release 1 files, but Release 1 is PDF only. The tag already read the draft before this PR. This PR's label, and the `aria-label` added by m6,
+  now set the two claims side by side. Fix: when `channelsChanged`, put the tag after the label inside the box, and put "next release:" before
+  "filing:" in the `aria-label` (`programs.tsx:646`, `:658`).
+* **r2-m2 Should: the visible label has no test.** AT-13 checks only the API flag, and only for an account change. No browser step
+  asserts `[data-channels-next]`, so removing the `<p>` at `programs.tsx:557` fails nothing. Fix: add a browser pass step (With an LMIA after
+  the change shows the label and the list name "…in the draft for the next release") and a fail step (put back, no label). Also add an AT-13 step for a line-only change.
+* **n1 (nit):** the List has 5 `columnheader`s, and a row with channels has 6 `gridcell`s. A screen reader in table mode may read the
+  new cell as a sixth column with no header. axe does not flag it. `aria-colspan={5}` on the new cell would say what it is.
+
+**Verdict: Approve.** Both Majors (M1, M2) and every Minor from round 1 are fixed and proved by steps that fail without them;
+no open Blocker or Major. Should, for a follow-up: r2-m1 (filing tag outside the next-release label) · r2-m2 (the label is untested).
+Journey score 9.5/10 (round 2 in `journey-test-reviewer-2026-11-04.md`).
