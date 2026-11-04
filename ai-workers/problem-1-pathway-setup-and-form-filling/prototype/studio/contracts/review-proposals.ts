@@ -39,8 +39,9 @@ export type QueueProposal = {
   /** C3.6: a choice fact's (or an answer list's) answer values, as the second person reads them; null for other kinds. */
   values: { code: string; label: string }[] | null;
   /** QA-196 (tech lead, 4 Nov): a check's reads, each as the shared field it becomes (a form field through its edition's
-   *  field map; shared null: not mapped yet, or a guide answer not in the library yet); null for other kinds. */
-  reads: { field: string; words: string; shared: string | null; shared_words: string | null }[] | null;
+   *  field map; shared null: not mapped yet, or a guide answer not in the library yet), and each printed choice it
+   *  compares with as that field's answer (shared null: the field holds no such answer yet); null for other kinds. */
+  reads: { field: string; words: string; shared: string | null; shared_words: string | null; values: { printed: string; shared: string | null }[] }[] | null;
   band: Band; agreement: string; agreement_word: string; reason: string | null;
   lands_on: "library" | "combination"; reuse: { match: "reuse" | "new"; existing_key: string | null }; origin: "ai" | "rules"; step: string;
   readings: { draft: Reading; check: Reading };

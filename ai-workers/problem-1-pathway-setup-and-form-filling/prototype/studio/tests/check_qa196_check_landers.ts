@@ -83,6 +83,8 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
 
   const checksOn = (combo: string) => sql(`select coalesce(string_agg(check_key || '|' || check_group || '|' || severity || '|' || status || '|' || origin || '|' || coalesce(message,''), ';' order by check_key), '') from check_def where combination_id='${combo}'`);
   const decide = (ids: string[], action: string, extra: object = {}, actor = "user-A") => call("POST", "/review/proposals/decide", { ids, action, ...extra }, actor);
+  // Draft Preview (GET /combinations/:id/preview): which landed checks fire for which person, for these answers.
+  const firing = async (combo: string, key: string, answers?: Record<string, unknown>) => (((await call("GET", `/combinations/${combo}/preview${answers ? `?answers=${encodeURIComponent(JSON.stringify(answers))}` : ""}`)).body?.checks ?? []) as { id: string; person: string }[]).filter((c) => c.id === key);
   const listed = async (key: string) => ((await call("GET", "/library/checks")).body ?? []).find((c: any) => c.key === key); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // ── a guide check over one answer: lands on Visitor visa
@@ -95,6 +97,11 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   ok("QA-196 pass: it lands as a DRAFT check of Visitor visa: an official rule that warns (P-136, though the AI read block), its sentence, the answer it reads, the guide's quote, made by AI", row1 === `official_rule|warn|DRAFT|AI_PROPOSAL|${guideCheck.sentence}|passport_number|false|true`, row1);
   const l1 = k1 ? await listed(k1) : null;
   ok("QA-196 pass: after a reload, Library › Checks lists it, used in Visitor visa, made by AI, warning", !!l1 && l1.used_in?.length === 1 && l1.used_in[0].id === vv && l1.serious === false && /AI/i.test(String(l1.origin)), l1 && { used_in: l1.used_in, serious: l1.serious, origin: l1.origin });
+  // Review B1: the AI writes the condition TRUE when the answers pass; the landed check fires when they do not.
+  const blank = k1 ? await firing(vv, k1) : [];
+  const who = blank[0]?.person;
+  const given = who ? await firing(vv, k1!, { [`${who}|passport_number`]: "AB123456" }) : [{ id: "", person: "" }];
+  ok("QA-196 pass (review B1): on Draft Preview the landed check warns the person whose passport number is not given, and is silent once it is (before: the other way round)", blank.length >= 1 && !given.some((c) => c.person === who), { blank, given });
   r = await call("POST", `/review/proposals/undo/${r.body?.batchId}`, {});
   ok("QA-196 pass: Undo takes the landed check back and the proposal waits again", r.status === 201 && checksOn(vv) === "" && sql(`select status from proposal_item where id='${one?.id}'`) === "waiting", { status: r.status, said: said(r), left: checksOn(vv) });
 
@@ -116,7 +123,7 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   ok("QA-196 pass: a reject writes no check and records the reason", r.status === 201 && !sql(`select count(*) from check_def where check_key='${k3}'`).match(/[1-9]/) && sql(`select status || '|' || decision_reason from proposal_item where id='${two?.id}'`) === "rejected|Not what the guide asks", sql(`select status from proposal_item where id='${two?.id}'`));
 
   // ── IMM 5257's form check: it reads the form's own fields, so it needs them mapped to shared fields
-  const readsOf = async (id: string) => ((await band("edition:IMM 5257 (09-2023)")).find((i) => i.id === id)?.reads ?? null) as { field: string; words: string; shared: string | null; shared_words: string | null }[] | null;
+  const readsOf = async (id: string) => ((await band("edition:IMM 5257 (09-2023)")).find((i) => i.id === id)?.reads ?? null) as { field: string; words: string; shared: string | null; shared_words: string | null; values: { printed: string; shared: string | null }[] }[] | null;
   const unmappedReads = await readsOf(formCheck?.id);
   ok("QA-196 pass (tech lead): To review shows what the form check reads, each form field by its printed words and \"not mapped yet\"", unmappedReads?.length === 2 && unmappedReads.every((x) => x.shared === null && !/form1\[0\]/.test(x.words)) && /Have you ever committed/.test(unmappedReads[0].words), unmappedReads);
   const guideReads = one?.reads; // as To review showed it when the guide was drafted
@@ -124,15 +131,26 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   const before = Number(sql("select count(*) from check_def"));
   r = await decide([formCheck?.id], "accept");
   ok("QA-196 fail: IMM 5257's form check is refused in plain words while the form fields it reads are not mapped to shared fields, and nothing is written", r.status === 409 && /not mapped to a shared field yet/.test(said(r)) && /field page first/.test(said(r)) && /Have you ever committed, been arrested/.test(said(r)) && !/form1\[0\]|BackgroundInfo3/.test(said(r)) && Number(sql("select count(*) from check_def")) === before && sql(`select status from proposal_item where id='${formCheck?.id}'`) === "waiting", said(r));
-  // The edition's field map maps the two form fields (as an applied field-map draft leaves them).
+  // The edition's field map maps the two form fields (as an applied field-map draft leaves them), first without saying
+  // how the yes/no box's printed choices are held on the shared field.
   const ed = sql(`select id from form_edition where edition_label='IMM 5257 (09-2023)'`), ws = sql("select id from workspace limit 1");
   const OFFENCE = "person.criminal_offence_declared", OFFENCE_DETAILS = "person.criminal_offence_details";
   for (const [p, key] of [[CHOICE, OFFENCE], [DETAILS, OFFENCE_DETAILS]]) sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, outcome, canonical_field_key, version, status, origin, updated_by) values (gen_random_uuid(), '${ws}', '${ed}', '${p}', 'mapped', '${key}', 1, 'DRAFT', 'HUMAN', 'user-A')`);
+  r = await decide([formCheck?.id], "accept");
+  ok("QA-196 fail (review M1): a printed choice (\"Yes\") the shared field holds no answer for is refused in plain words, nothing written (it would never match an answer)", r.status === 409 && /compares .* with "Yes"/.test(said(r)) && Number(sql("select count(*) from check_def")) === before, said(r));
+  // The yes/no box is held as a yes/no answer (transform yes_no_code, as IMM 5257's saved field-map answer says).
+  sql(`update form_field_map set transform='yes_no_code:Y/N' where form_edition_id='${ed}' and data_path='${CHOICE}'`);
   const mappedReads = await readsOf(formCheck?.id);
-  ok("QA-196 pass (tech lead): once mapped, To review shows each form field → the shared field it becomes", JSON.stringify(mappedReads?.map((x) => x.shared)) === JSON.stringify([OFFENCE, OFFENCE_DETAILS]) && mappedReads!.every((x) => !!x.shared_words), mappedReads);
+  ok("QA-196 pass (tech lead): once mapped, To review shows each form field → the shared field it becomes, and \"Yes\" → true", JSON.stringify(mappedReads?.map((x) => x.shared)) === JSON.stringify([OFFENCE, OFFENCE_DETAILS]) && mappedReads!.every((x) => !!x.shared_words) && JSON.stringify(mappedReads![0].values) === JSON.stringify([{ printed: "Yes", shared: "true" }]), mappedReads);
+  // A second combination files IMM 5257 (attached from the library, as a person does on its Forms tab).
+  const sp = sql(`select id from combination where combination_key='sp.outside'`);
+  const attached = await call("POST", `/combinations/${sp}/forms`, { formKey: "IMM 5257" });
   r = await decide([formCheck?.id], "accept");
   ok("QA-196 pass (tech lead): accepted as it is, a form check warns", r.status === 201 && sql(`select string_agg(distinct severity, ',') from check_def where check_key='${r.body?.items?.[0]?.landedAs}'`) === "warn", said(r));
-  await call("POST", `/review/proposals/undo/${r.body?.batchId}`, {});
+  const kAll = r.body?.items?.[0]?.landedAs as string | undefined;
+  const onBoth = kAll ? Number(sql(`select count(distinct combination_id) from check_def where check_key='${kAll}'`)) : 0;
+  r = await call("POST", `/review/proposals/undo/${r.body?.batchId}`, {});
+  ok("QA-196 pass (review m4): it landed on both combinations that file IMM 5257, and one Undo takes it back from both", attached.status < 300 && onBoth === 2 && r.status === 201 && kAll !== undefined && Number(sql(`select count(*) from check_def where check_key='${kAll}'`)) === 0, { attached: attached.status, onBoth, undo: r.status });
   r = await decide([formCheck?.id], "edit", { payload: { ...(formCheck?.readings?.draft?.payload ?? {}), severity: "block" } });
   const k4 = r.body?.items?.[0]?.landedAs as string | undefined;
   const filing = sql(`select coalesce(string_agg(distinct cf.combination_id::text, ',' order by cf.combination_id::text), '') from combination_form cf join gov_form_def g on g.id=cf.gov_form_def_id where g.form_key='IMM 5257' and cf.status <> 'RETIRED'`).split(",").filter(Boolean);
@@ -140,7 +158,12 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   ok("QA-196 pass: once mapped, IMM 5257's form check lands on every combination whose draft files IMM 5257, under one key", r.status === 201 && filing.length > 0 && JSON.stringify(landedOn) === JSON.stringify(filing), { status: r.status, said: said(r), filing: filing.length, landedOn: landedOn.length });
   const tree = k4 ? sql(`select predicate_json::text from check_def where check_key='${k4}' limit 1`) : "";
   ok("QA-196 pass (tech lead): made a serious warning before Accept, it lands as one (block)", !!k4 && sql(`select string_agg(distinct severity, ',') from check_def where check_key='${k4}'`) === "block");
-  ok("QA-196 pass: the landed form check reads the shared fields, never the form's own field names", tree.includes(OFFENCE) && tree.includes(OFFENCE_DETAILS) && !tree.includes("form1[0]"), tree.slice(0, 200));
+  ok("QA-196 pass: the landed form check reads the shared fields and their answers, never the form's own field names or printed words", tree.includes(OFFENCE) && tree.includes(OFFENCE_DETAILS) && !tree.includes("form1[0]") && !tree.includes('"Yes"') && tree.includes("true"), tree.slice(0, 200));
+  // Review B1 on the form check: declared with no details fires; with details, or not declared, it is silent.
+  const fired = async (a: Record<string, unknown>) => (k4 ? await firing(vv, k4, a) : []).length;
+  const pa = who ?? ""; // the person the guide check warned above (the principal applicant)
+  const yes = await fired({ [`${pa}|${OFFENCE}`]: true }), yesDetails = await fired({ [`${pa}|${OFFENCE}`]: true, [`${pa}|${OFFENCE_DETAILS}`]: "A fine in 2015" }), no = await fired({ [`${pa}|${OFFENCE}`]: false });
+  ok("QA-196 pass (review B1): on Draft Preview IMM 5257's check warns when an offence is declared with no details, and is silent with details or with no offence", yes >= 1 && yesDetails === 0 && no === 0, { yes, yesDetails, no });
   const l4 = k4 ? await listed(k4) : null;
   ok("QA-196 pass: after a reload, Library › Checks lists IMM 5257's check once, used in each of those combinations", !!l4 && l4.used_in?.length === filing.length, l4 && l4.used_in?.map((u: any) => u.label)); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("QA-196 pass: the whole check spent US$0", spent() === spent0, spent());

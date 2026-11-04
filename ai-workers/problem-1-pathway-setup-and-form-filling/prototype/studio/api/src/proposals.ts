@@ -25,7 +25,8 @@ import { nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
 import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
 import { canonical } from "../../../contracts/rules.ts";
-import { fieldsOf, renamed } from "../../engine/masters-ai.ts";
+import { fieldsOf } from "../../engine/masters-ai.ts";
+import { printedChoices, type InvField } from "../../engine/printed-choices.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -56,6 +57,7 @@ export function lineTitle(p: { documentType?: unknown; roles?: unknown }): strin
 /** The words a person reads for an item: its name, never an answer list's code list or hash (C3.4 review Minor 5). */
 export function nameOf(p: ProposalPayload, given: string): string {
   if (p.kind === "requirement_line") return lineTitle(p);
+  if (p.kind === "form_check" || p.kind === "cross_check") return p.sentence; // QA-196 review m1: never its identity key
   const named = (p as { label?: unknown; name?: unknown }).label ?? (p as { name?: unknown }).name;
   return typeof named === "string" && named.trim() ? named : identityKeyOf(p, given);
 }
@@ -371,35 +373,77 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
 }
 
 /** A form edition's printed captions by form field, read once per reading file (a committed reading does not change). */
-const CAPTIONS = new Map<string, Map<string, string>>();
-function captionsOf(file: string | null): Map<string, string> {
+/** A form edition's reading (its boxes), read once per file (a committed reading does not change). */
+const READINGS = new Map<string, Map<string, InvField>>();
+function readingOf(file: string | null): Map<string, InvField> {
   if (!file) return new Map();
-  let m = CAPTIONS.get(file);
-  if (!m) { try { m = new Map((JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fields?: { data_path?: string; caption?: string }[] }).fields?.map((x) => [x.data_path ?? "", x.caption?.trim() ?? ""]) ?? []); CAPTIONS.set(file, m); } catch { return new Map(); } }
+  let m = READINGS.get(file);
+  if (!m) { try { m = new Map(((JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fields?: InvField[] }).fields ?? []).map((x) => [x.data_path ?? "", x])); READINGS.set(file, m); } catch { return new Map(); } }
   return m;
 }
-export type CheckRead = { field: string; words: string; shared: string | null; sharedWords: string | null };
+export type CheckRead = { field: string; words: string; shared: string | null; sharedWords: string | null; values: { printed: string; shared: string | null }[] };
 const fieldWords = (k: string) => { const w = (k.split(".").pop() ?? k).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
 const shortWords = (w: string) => (w.length > 70 ? `${w.slice(0, 68).trimEnd()}…` : w);
+type Loose = { op?: unknown; field?: unknown; value?: unknown; args?: unknown; arg?: unknown; [k: string]: unknown };
+/** The values a condition compares each field with (eq, neq, in), as written. */
+function comparedValues(n: unknown, out = new Map<string, unknown[]>()): Map<string, unknown[]> {
+  const o = n && typeof n === "object" && !Array.isArray(n) ? (n as Loose) : null;
+  if (!o) return out;
+  if (typeof o.field === "string" && ["eq", "neq", "in"].includes(String(o.op))) out.set(o.field, [...(out.get(o.field) ?? []), ...(Array.isArray(o.value) ? o.value : [o.value])]);
+  if (Array.isArray(o.args)) o.args.forEach((a) => comparedValues(a, out));
+  if (o.arg) comparedValues(o.arg, out);
+  return out;
+}
+/** QA-196 review M1: a form check compares a form field with the form's printed choice words ("* Yes", "Other"); on the
+ *  shared field the same answer is what the field holds (engine/qd-conditions.ts): a yes/no box (transform yes_no_code)
+ *  true or false; a choice whose field map has an option map, the answer-list value whose form code that word prints.
+ *  Anything else cannot be read on the shared field yet (undefined: the lander refuses it, fail closed). */
+function sharedValue(v: unknown, m: { transform: string | null; optionMap: unknown }, box: InvField | undefined): unknown {
+  if (typeof v !== "string") return undefined;
+  const choices = box ? printedChoices(box) : [];
+  const code = Array.isArray(choices) ? choices.find(([w]) => w === v)?.[1] : undefined;
+  if (/^yes_no_code\b/.test((m.transform ?? "").trim())) {
+    const word = [v, code ?? ""].map((x) => x.toLowerCase().replace(/[^a-z]/g, ""));
+    return word.some((w) => w === "yes" || w === "y") ? true : word.some((w) => w === "no" || w === "n") ? false : undefined;
+  }
+  const map = (m.optionMap as { map?: Record<string, string> } | null)?.map;
+  if (map && code !== undefined) return Object.entries(map).find(([, c]) => c === code)?.[0];
+  return undefined;
+}
+function translated(n: unknown, field: (f: string) => string, value: (f: string, v: unknown) => unknown): unknown {
+  const o = n && typeof n === "object" && !Array.isArray(n) ? (n as Loose) : null;
+  if (!o) return n;
+  const f = typeof o.field === "string" ? o.field : null;
+  const compared = f !== null && ["eq", "neq", "in"].includes(String(o.op));
+  return { ...o, ...(f !== null ? { field: field(f) } : {}), ...(compared ? { value: Array.isArray(o.value) ? o.value.map((v) => value(f!, v)) : value(f!, o.value) } : {}),
+    ...(Array.isArray(o.args) ? { args: o.args.map((a) => translated(a, field, value)) } : {}), ...(o.arg ? { arg: translated(o.arg, field, value) } : {}) };
+}
 /** QA-196 (tech lead, 4 Nov): what a check reads, each as the shared field it becomes, for the lander and for To review.
- *  A form edition's check reads the form's own fields: each by its printed caption (the edition's reading), and the
- *  shared field the edition's field map maps it to (null: not mapped yet). A guide's check reads answers: a shared field
- *  when the library has it, else its words (null: not in the library yet; a draft may read it, release warns). */
-export async function checkReads(db: Client, ws: string, r: Pick<Row, "formEdition" | "combinationId">, tree: unknown): Promise<{ reads: CheckRead[]; edition: { id: string; label: string; formId: string; formKey: string } | null }> {
-  const read = fieldsOf(tree);
+ *  A form edition's check reads the form's own fields: each by its printed caption (the edition's reading), the shared
+ *  field the edition's field map maps it to (null: not mapped yet), and each printed choice it compares with as that
+ *  field's answer (null: not readable on the shared field yet). A guide's check reads answers: a shared field when the
+ *  library has it, else its words (null: not in the library yet; a draft may read it, release warns). `tree` is the
+ *  condition over the shared fields, or null while anything is not translated. */
+export async function checkReads(db: Client, ws: string, r: Pick<Row, "formEdition" | "combinationId">, tree: unknown): Promise<{ reads: CheckRead[]; edition: { id: string; label: string; formId: string; formKey: string } | null; tree: unknown | null }> {
+  const read = fieldsOf(tree), compared = comparedValues(tree);
   const names = async (keys: string[]) => new Map((await db.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: { in: keys }, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, label: true } })).map((f) => [f.canonicalFieldKey, f.label?.trim() || fieldWords(f.canonicalFieldKey)]));
   if (r.combinationId || !r.formEdition) {
     const lib = await names(read);
-    return { reads: read.map((f) => ({ field: f, words: lib.get(f) ?? fieldWords(f), shared: lib.has(f) ? f : null, sharedWords: lib.get(f) ?? null })), edition: null };
+    return { reads: read.map((f) => ({ field: f, words: lib.get(f) ?? fieldWords(f), shared: lib.has(f) ? f : null, sharedWords: lib.get(f) ?? null, values: [] })), edition: null, tree };
   }
   const ed = await db.formEdition.findFirst({ where: { workspaceId: ws, editionLabel: r.formEdition }, include: { form: { select: { id: true, formKey: true } } } });
-  if (!ed) return { reads: read.map((f) => ({ field: f, words: f, shared: null, sharedWords: null })), edition: null };
-  const maps = effective(await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: read } } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED");
-  const to = new Map(maps.filter((m) => m.outcome === "mapped" && m.canonicalFieldKey).map((m) => [m.dataPath, m.canonicalFieldKey!]));
-  const printed = captionsOf(ed.inventoryFile);
-  const lib = await names([...to.values()]);
-  return { reads: read.map((f) => { const k = to.get(f) ?? null; return { field: f, words: shortWords(maps.find((m) => m.dataPath === f)?.caption?.trim() || printed.get(f) || f.split(".").slice(-2).join(".").replace(/\[0\]/g, "")), shared: k, sharedWords: k ? lib.get(k) ?? fieldWords(k) : null }; }),
-    edition: { id: ed.id, label: ed.editionLabel, formId: ed.form.id, formKey: ed.form.formKey } };
+  if (!ed) return { reads: read.map((f) => ({ field: f, words: f, shared: null, sharedWords: null, values: [] })), edition: null, tree: null };
+  const maps = new Map(effective(await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: read } } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED" && m.outcome === "mapped" && m.canonicalFieldKey).map((m) => [m.dataPath, m]));
+  const boxes = readingOf(ed.inventoryFile);
+  const lib = await names([...maps.values()].map((m) => m.canonicalFieldKey!));
+  const reads = read.map((f) => {
+    const m = maps.get(f), k = m?.canonicalFieldKey ?? null;
+    const values = [...new Set((compared.get(f) ?? []).map((v) => JSON.stringify(v)))].map((j) => { const v = JSON.parse(j) as unknown; const to = m ? sharedValue(v, m, boxes.get(f)) : undefined; return { printed: String(v), shared: to === undefined ? null : String(to) }; });
+    return { field: f, words: shortWords(m?.caption?.trim() || boxes.get(f)?.caption?.trim() || f.split(".").slice(-2).join(".").replace(/\[0\]/g, "")), shared: k, sharedWords: k ? lib.get(k) ?? fieldWords(k) : null, values };
+  });
+  const whole = reads.every((x) => x.shared && x.values.every((v) => v.shared !== null));
+  return { reads, edition: { id: ed.id, label: ed.editionLabel, formId: ed.form.id, formKey: ed.form.formKey },
+    tree: whole ? translated(tree, (f) => maps.get(f)!.canonicalFieldKey!, (f, v) => sharedValue(v, maps.get(f)!, boxes.get(f))) : null };
 }
 
 /** QA-196 (P-149 (1) one door, P-120): an accepted AI check becomes a DRAFT check where checks live, on a combination
@@ -423,12 +467,14 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
     if (!one) fail("The combination this check was drafted for is no longer there: reject it.", HttpStatus.NOT_FOUND);
     combos = [one!];
   } else {
-    const { reads, edition: ed } = await checkReads(tx, l.ws, r, c.tree);
+    const got = await checkReads(tx, l.ws, r, c.tree), ed = got.edition, reads = got.reads;
     if (!ed) fail(`The form edition this check was drafted from (${r.formEdition ?? "none named"}) is no longer in the library: reject it.`, HttpStatus.CONFLICT);
     const unmapped = reads.filter((x) => !x.shared);
     if (unmapped.length) fail(`This check reads ${unmapped.length === 1 ? "a form field" : `${unmapped.length} form fields`} of ${ed!.label} that ${unmapped.length === 1 ? "is" : "are"} not mapped to a shared field yet (${unmapped.slice(0, 3).map((x) => `"${x.words}"`).join(", ")}${unmapped.length > 3 ? ", …" : ""}). Map ${unmapped.length === 1 ? "it" : "them"} on the form's field page first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
-    const to = new Map(reads.map((x) => [x.field, x.shared!]));
-    tree = renamed(c.tree, (f) => to.get(f) ?? f);
+    // Review M1: a printed choice the shared field cannot hold would never match an answer (contracts/rules.ts compares strictly).
+    const odd = reads.flatMap((x) => x.values.filter((v) => v.shared === null).map((v) => ({ x, v })));
+    if (odd.length) fail(`This check compares "${odd[0].x.words}" with "${odd[0].v.printed}", a choice printed on ${ed!.label} that the shared field ${odd[0].x.sharedWords} does not hold as an answer yet (its field map gives no answer for it). Set that form field's answers on its field map first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
+    tree = got.tree;
     const lines = effective(await tx.combinationForm.findMany({ where: { workspaceId: l.ws, govFormDefId: ed!.formId }, include: { combination: { select: { id: true, label: true } } } }), (x) => `${x.combinationId}|${x.lineageKey}`, "draft").filter((x) => x.status !== "RETIRED");
     combos = [...new Map(lines.map((x) => [x.combination.id, x.combination])).values()].sort((a, b) => a.label.localeCompare(b.label));
     if (!combos.length) fail(`No combination files ${ed!.formKey} yet, so this check has nowhere to apply: add the form to a combination's Forms first, then accept it; or reject it.`, HttpStatus.CONFLICT);
@@ -445,17 +491,23 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
   const errs = checkCondition(tree, fields, derived).filter((e) => !/, which is not in the library$/.test(e));
   if (errs.length) fail(`Its condition does not fit the condition language (${errs[0]}): reject it, or edit its condition.`);
   const cross = c.kind === "cross_check";
-  const group = cross ? "cross_record" : typeof work.group === "string" && /^[a-z_]{3,40}$/.test(work.group) ? work.group : "official_rule";
+  // Review m2 (P-153): only the guide prompt's own groups; any other word is an official rule (a section check would stop a
+  // filing, P-136, and form_native or document_validity would never be evaluated).
+  const group = cross ? "cross_record" : work.group === "readiness_warning" ? "readiness_warning" : "official_rule";
   // A landed check warns unless the person chose otherwise before Accept (an edit; tech lead, 4 Nov); a cross-answer one only warns.
   const severity = c.kind === "form_check" ? c.severity ?? "warn" : "warn";
   const appliesTo = fieldsOf(tree)[0] ?? null;
   const message = c.sentence.trim().slice(0, 500);
   const quote = ((r.source as { quote?: string } | null)?.quote ?? "").trim();
   const key = `AC-${createHash("sha256").update(r.id).digest("hex").slice(0, 10)}`;
+  // Review B1: the AI writes a check's condition TRUE when the answers pass (p2/prompts/masters-*.v2.md); a stored check
+  // fires when its condition holds (engine/render.ts, like a section check), so what lands is "not" the passing condition.
+  const { subjectKind, ...passes } = (tree ?? {}) as { subjectKind?: unknown; [k: string]: unknown };
+  const fires = { op: "not", arg: passes, ...(subjectKind !== undefined ? { subjectKind } : {}) };
   for (const k of combos) {
-    const same = (await tx.check.findMany({ where: { combinationId: k.id, status: "DRAFT", checkGroup: group, appliesTo, message }, select: { predicateJson: true } })).some((x) => canonical(x.predicateJson as never) === canonical(tree as never));
+    const same = (await tx.check.findMany({ where: { combinationId: k.id, status: "DRAFT", checkGroup: group, appliesTo, message }, select: { predicateJson: true } })).some((x) => canonical(x.predicateJson as never) === canonical(fires as never));
     if (same) fail(`"${message}" is already in ${k.label}'s draft: reject this one.`, HttpStatus.CONFLICT);
-    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: tree as Prisma.InputJsonValue, severity, message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: fires as Prisma.InputJsonValue, severity, message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
   }
   return key;
 }

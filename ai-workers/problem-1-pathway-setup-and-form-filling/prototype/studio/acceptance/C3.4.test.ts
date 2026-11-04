@@ -83,16 +83,18 @@ run(async () => {
   const c0 = checkRows();
   r = await call("POST", "/review/proposals/decide", { ids: [fc?.id ?? NONE], action: "accept" }, AUTHOR);
   ok("QA-196 fail: IMM 5257's form check is refused in plain words while the form fields it reads are not mapped to shared fields yet; nothing is written", !!fc && r.status === 409 && /not mapped to a shared field yet/.test(words(r)) && checkRows() === c0, words(r));
-  // Setup: IMM 5257's field map maps those form fields to the facts its saved field-map answer gives them (as applying
-  // that draft on the form-field page leaves them; deciding its 84 items is C3.2's journey, not this one).
-  const fieldMap = JSON.parse(JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "p2", "runs", "studio-fieldmap-imm5257e-live-20261021t060247723z.json"), "utf8")).raw_output) as { entries: { data_path: string; outcome: string; fact: string | null }[] };
+  // Setup: IMM 5257's field map maps those form fields to the facts (and the yes/no transform) its saved field-map answer
+  // gives them, as applying that draft on the form-field page leaves them; deciding its 84 items is C3.2's journey, not
+  // this one. A row already there is kept (review m5).
+  const fieldMap = JSON.parse(JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "p2", "runs", "studio-fieldmap-imm5257e-live-20261021t060247723z.json"), "utf8")).raw_output) as { entries: { data_path: string; outcome: string; fact: string | null; transform: string | null }[] };
   const reads: string[] = fc?.readings?.draft?.payload?.reads ?? [];
-  const facts = reads.map((p) => fieldMap.entries.find((e) => e.data_path === p && e.outcome === "mapped")?.fact ?? null);
-  for (const [i, p] of reads.entries()) if (facts[i]) sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, outcome, canonical_field_key, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, '${p}', 'mapped', '${facts[i]}', 1, 'DRAFT', 'HUMAN', '${AUTHOR}' from form_edition where edition_label='IMM 5257 (09-2023)'`);
+  const mapped = reads.map((p) => fieldMap.entries.find((e) => e.data_path === p && e.outcome === "mapped") ?? null);
+  const facts = mapped.map((e) => e?.fact ?? null);
+  for (const [i, p] of reads.entries()) if (facts[i]) sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, outcome, canonical_field_key, transform, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, '${p}', 'mapped', '${facts[i]}', ${mapped[i]!.transform ? `'${mapped[i]!.transform}'` : "null"}, 1, 'DRAFT', 'HUMAN', '${AUTHOR}' from form_edition where edition_label='IMM 5257 (09-2023)' on conflict do nothing`);
   r = await call("POST", "/review/proposals/decide", { ids: [fc?.id ?? NONE], action: "accept" }, AUTHOR);
   const fcKey = r.body?.items?.[0]?.landedAs as string | undefined;
   const fcTree = fcKey ? sql(`select predicate_json::text from check_def where check_key='${fcKey}' and combination_id='${vv}'`) : "";
-  ok("QA-196 pass: once mapped, accepting IMM 5257's form check lands it as a DRAFT check of Visitor visa (which files IMM 5257), reading the shared fields", r.status < 300 && facts.every(Boolean) && !!fcTree && facts.every((f) => fcTree.includes(f!)) && !fcTree.includes("form1[0]"), r.status >= 300 ? words(r) : { facts, tree: fcTree.slice(0, 160) });
+  ok("QA-196 pass: once mapped, accepting IMM 5257's form check lands it as a DRAFT check of Visitor visa (which files IMM 5257), reading the shared fields and their answers", r.status < 300 && facts.every(Boolean) && !!fcTree && facts.every((f) => fcTree.includes(f!)) && !fcTree.includes("form1[0]") && !/"\* ?Yes"/.test(fcTree), r.status >= 300 ? words(r) : { facts, tree: fcTree.slice(0, 160) });
   const gc = fromGuide.find((x: any) => x.kind === "cross_check") ?? fromGuide.find((x: any) => x.kind === "form_check");
   r = await call("POST", "/review/proposals/decide", { ids: [gc?.id ?? NONE], action: "accept" }, AUTHOR);
   const gcKey = r.body?.items?.[0]?.landedAs as string | undefined;

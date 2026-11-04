@@ -68,7 +68,7 @@ export function fieldsOf(n: unknown): string[] {
   return [...new Set(out)];
 }
 /** Rewrites a condition's fields (and leaves the rest as it is). */
-export function renamed<T>(n: T, to: (f: string) => string): T {
+function renamed<T>(n: T, to: (f: string) => string): T {
   const o = looseOf(n);
   if (!o) return n;
   return { ...o, ...(typeof o.field === "string" ? { field: to(o.field) } : {}), ...(Array.isArray(o.args) ? { args: o.args.map((a) => renamed(a, to)) } : {}), ...(o.arg ? { arg: renamed(o.arg, to) } : {}) } as T;

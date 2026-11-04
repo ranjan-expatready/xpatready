@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 const BAND_TONE: Record<Band, string> = { ready: "ok", check: "warn", decide: "danger" };
 const inv = [["proposals"], ["review-queue"], ["catalogue"], ["change-batch"], ["fact-sources"], ["pqr-country"]]; // C4.7: a pick ticks a question
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+/** QA-196: a shared yes/no answer in words; an answer-list value by its key. */
+const answerWord = (v: string) => (v === "true" ? "Yes (true)" : v === "false" ? "No (false)" : v);
 
 function Crumbs({ here }: { here: string }) {
   return <nav aria-label="Path" className="text-xs text-text-muted"><Link to="/review" className="hover:underline">To review</Link> › {here}</nav>;
@@ -166,7 +168,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
   const withSeverity = (payload: unknown) => (p.kind === "form_check" && payload && typeof payload === "object" ? { ...payload, severity } : payload);
   const acceptFirst = () => (p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
   return (
-    <Panel open onOpenChange={(o) => !o && onClose()} title={p.title} description={`${p.kind_word} · ${p.lands_on === "library" ? "shared library" : "this combination"}${p.basis === "SAMPLE" ? " · Sample until the immigration expert confirms" : ""}`}
+    <Panel open onOpenChange={(o) => !o && onClose()} title={p.title} description={`${p.kind_word} · ${p.reads && p.lands_on === "library" ? "every combination that files this form" : p.lands_on === "library" ? "shared library" : "this combination"}${p.basis === "SAMPLE" ? " · Sample until the immigration expert confirms" : ""}`}
       badge={<Pill tone={BAND_TONE[p.band]}>{BAND_WORDS[p.band]}</Pill>}
       footer={<>
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
@@ -187,9 +189,16 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
                 <span>{x.words}</span><span aria-hidden className="text-text-muted">→</span>
                 {x.shared ? <span><span className="sr-only">reads the shared field </span>{x.shared_words} <span className="text-xs text-text-muted">{x.shared}</span></span>
                   : <Pill tone="warn">{p.lands_on === "library" ? "Not mapped to a shared field yet" : "Not in the library yet: read in words"}</Pill>}
+                {x.values.length ? (
+                  <span className="basis-full text-xs text-text-muted" data-read-values>
+                    {x.values.map((v, i) => <span key={v.printed} className="mr-2">{i ? "· " : ""}“{v.printed}” → {v.shared !== null ? <span className="font-medium text-text">{answerWord(v.shared)}</span> : <span className="font-medium text-text">no answer of the shared field yet</span>}</span>)}
+                  </span>
+                ) : null}
               </li>))}
             </ul>
-            {p.lands_on === "library" && p.reads.some((x) => !x.shared) ? <p className="mt-1 text-xs text-text-muted">Map these on the form's field page before you accept it.</p> : null}
+            {p.lands_on === "library" && p.reads.some((x) => !x.shared || x.values.some((v) => v.shared === null)) ? (
+              <p className="mt-1 text-xs text-text-muted">It cannot be accepted until each form field is mapped and each choice is an answer of its shared field: draft and apply the form's field map from <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link>.</p>
+            ) : null}
           </section>
         ) : null}
         {p.kind === "form_check" ? (

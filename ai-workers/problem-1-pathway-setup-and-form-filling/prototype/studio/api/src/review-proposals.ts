@@ -75,7 +75,7 @@ export class ReviewProposals {
       // QA-196: a check's reads as the shared fields it will read, so the reviewer sees the translation before Accept.
       const reads = new Map<string, QueueProposal["reads"]>();
       for (const r of rows) if (groupOf(r) === chosen.id && (r.kind === "form_check" || r.kind === "cross_check"))
-        reads.set(r.id, (await checkReads(this.db, workspaceId, r, (r.payload as { tree?: unknown }).tree)).reads.map((x) => ({ field: x.field, words: x.words, shared: x.shared, shared_words: x.sharedWords })));
+        reads.set(r.id, (await checkReads(this.db, workspaceId, r, (r.payload as { tree?: unknown }).tree)).reads.map((x) => ({ field: x.field, words: x.words, shared: x.shared, shared_words: x.sharedWords, values: x.values })));
       for (const r of rows) if (groupOf(r) === chosen.id) bands[r.confidence as Band].push(this.view(r, facts, reads.get(r.id) ?? null));
       group = { ...chosen, bands };
     }
