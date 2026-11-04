@@ -29,7 +29,8 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // QA-165 (Devin on #715): a "recorded" Yes/No box whose facts are asked under their own Yes/No question (gateOf).
   const placements = s.placements as (GatePlacement & { question_text?: string | null })[];
   const present = (x: unknown) => !(x === undefined || x === null || x === "" || x === false || (Array.isArray(x) && !x.length));
-  const gatesOf = (b: BoxRow) => { const d = recordedDerivation(b.transform); return d && b.fact ? [...new Set([b.fact, ...d.facts].map((f) => gateOf(placements, f)).filter((x): x is string => !!x))] : []; };
+  // B52: a box asked as its own question reads its gate itself (its fact is not among the facts its step names).
+  const gatesOf = (b: BoxRow) => { const d = recordedDerivation(b.transform); return d && b.fact ? [...new Set([...(d.facts.length && !d.facts.includes(b.fact) ? [b.fact] : []), ...[b.fact, ...d.facts].map((f) => gateOf(placements, f)).filter((x): x is string => !!x)])] : []; };
   const confirmedAt = (about: string, fact: string) => { const v = known.get(kkey(about.split("/")[0], fact)); return v?.status === "confirmed" ? v : undefined; };
   const words = (fact: string) => placements.find((p) => p.fact === fact)?.question_text || (s.canonical_fields as { id: string; meaning?: string }[]).find((f) => f.id === fact)?.meaning || fact;
   const boxes = cov.boxes.map((b) => {

@@ -130,6 +130,22 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("QA-227 fail: a case answering No lists neither", !unrepresented.has("IMM 5476") && !unrepresented.has("IMM 5475"), [...unrepresented]);
   ok("QA-227 pass: a case nobody answered yet lists both as not decided yet (asked, never silently missing)", unanswered.has("IMM 5476") && unanswered.has("IMM 5475"), [...unanswered]);
 
+  // ------------------------------------------------------------ B52: the box reading its own question, on a case (QA-165 kept)
+  {
+    const id = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `B52-box-${Date.now()}`, clientActor: CLIENT, principal: { displayName: "Sample Client D" } }, OFFICER)).body?.id as string;
+    const P = ((await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[]).find((p) => p.role === "principal")!.subject_id;
+    const open5257 = async () => (((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string; why: string }[] }[]).find((f) => f.form === "IMM 5257" && f.subject_id === P)?.fields_open ?? []);
+    const before5257 = (await open5257()).find((o) => o.box === ALIAS);
+    ok("B52 pass: before an answer, the list before the file says the Yes/No box needs its own question's answer, naming it (never \"no question asks it yet\")", before5257?.reason === "needs an answer" && /^answer "/.test(before5257?.why ?? ""), before5257);
+    type Sec = { section: string; subjectId: string; questions: { fact: string; answer: { id: string } | null; rows: { answer: { id: string } | null }[] }[]; group?: { none_apply?: { id: string } | null } | null };
+    const view = async () => (await call("GET", `/runtime/cases/${id}/questionnaire?mode=agent`, undefined, OFFICER)).body.sections as Sec[];
+    const put = async (fact: string, value: unknown) => { const q = (await view()).flatMap((x) => x.questions.map((y) => ({ ...y, subjectId: x.subjectId }))).find((x) => x.subjectId === P && x.fact === fact); return call("PUT", `/runtime/cases/${id}/answers/${P}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, OFFICER); };
+    const confirmAll = async () => { for (const x of await view()) { const seen = [...x.questions.flatMap((y) => [y.answer?.id, ...y.rows.map((r) => r.answer?.id)]), x.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${id}/sections/${x.section}/confirm`, { subjectId: x.subjectId, seen }, OFFICER); } };
+    const w1 = await put("person.has_national_id", false), w2 = await put("person.national_id_number", "SAMPLEID1"); await confirmAll();
+    const clash = (await open5257()).find((o) => o.box === NATID);
+    ok("B52 fail (QA-165 kept): a confirmed No to \"Has national ID\" while a number is recorded is never written; the list says to correct one", w1.status === 200 && w2.status === 200 && clash?.reason === "needs an answer" && /answered No, but .* is recorded: correct one/.test(clash?.why ?? ""), { w1: w1.status, w2: w2.status, clash });
+  }
+
   ok("B52/QA-227: no paid call (the spend ledger is unchanged)", ledger() === before);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
