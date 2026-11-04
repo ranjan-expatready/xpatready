@@ -43,7 +43,8 @@ try {
   // ---------------------------------------------------------------- the people's earlier steps, then the step
   server("restart");
   const steps = await T.questionsBySteps(vv, { place: false });
-  ok("setup: the people's earlier steps ran through the API (field maps applied, sections accepted, a second person approved)", steps.applied === 7 && steps.sections > 0 && steps.refused.length === 0, steps);
+  // B71: the people's steps also attach IRM 0002's official file and replay its saved map (US$0), so 8 maps are applied.
+  ok("setup: the people's earlier steps ran through the API (field maps applied, sections accepted, a second person approved)", steps.applied === 8 && steps.sections > 0 && steps.refused.length === 0, steps);
   ok("QA-144 pass: with the room, every field-map Apply goes through, IMM 5475 included", sql(`select status from drafting_job where id='${slowJob}'`) === "APPLIED");
   ok("QA-144 fail: before the step, Visitor visa asks no person anything", (await questions(vv)).every((x) => x.questions === 0), await questions(vv));
 
