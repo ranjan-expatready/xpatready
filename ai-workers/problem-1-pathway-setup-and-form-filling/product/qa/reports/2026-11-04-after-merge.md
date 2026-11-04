@@ -40,3 +40,36 @@
 
 ### Questions for the Lead
 None.
+
+## Batch 2 — #781 (C9.1 saved AI run), then records #749, #782, #786, #737 · main 6e11bc3b1, then 0932558ff · tested ~08:05–08:25 IST
+
+The four records PRs change no app code (`git diff 6e11bc3b1 0932558ff` touches no `prototype/` and no `qa/built/` file): nothing to re-score for them.
+
+| Row | Verdict | Why |
+|---|---|---|
+| C9.1 New edition: comparison and AI impact (M2) | **Partial** (unchanged; the AI part now works at US$0) | The held IMM 5476 11-2025 review offers Saved; one click puts 8 proposals on To review at US$0. Pack part 2 is still red: the configured checkpoint holds no IMM 5476 11-2025 (DEMO row 17) |
+
+**M2: 43/60 confirmed** (unchanged).
+
+### Runs (exit code · tests passed)
+
+| Check | Copy | Round 1 | Round 2 |
+|---|---|---|---|
+| `acceptance/C9.1.test.ts` | qa_c91p1, qa_c91p2 :4492 | 1 · 8/17 | 1 · 8/17 |
+| `tests/check_c91_impact_ai.ts` (no server, `--tsconfig api/tsconfig.json`) | — | 0 · 24/24 | 0 · 24/24 |
+| `tests/check_c91_impact_browser.cjs` | qa_c91b1, qa_c91b2 :4493 | 2 (timeout) | 2 (timeout) |
+| CI merge-queue run 41758140165 (tree 98aba93470 = main 6e11bc3b1) | CI | browser check PASS (shard 2) · `check_c91_impact_api.ts` 33/33 (shard 3) · all shards success | |
+
+Part 2's eight red cases all fail at the same point: the checkpoint has no held edition (row 17, a configuration row).
+
+### Person walk at 1440 px (qa_c91b3 :4493)
+Setup (API, as the browser check does): Reset demo, upload IMM 5476 11-2021, Load sample (the six). Then as the Configuration author: To review › "New edition · IMM 5476 (11-2025) … it touches Visitor visa" › Review impact. The page shows 30 unchanged, 7 reworded, 16 new and 6 removed form fields; the 2026-03-12 accepted-until date with IRCC's quote; and "AI for the new and reworded boxes · Saved · A saved AI run of this comparison is here: use it at US$0", with no priced button (`2026-11-04-after-merge/c91-saved-offer-1440.png`). "Use the saved AI run (US$0)" gave "Saved AI run (US$0, no AI call) … 8 proposals on To review, read by both rounds. A person accepts each one". No sideways scroll. The spend ledger was 238,169 bytes before and after.
+Underneath: the 8 proposals are 5 agreed by both rounds (Application type, Application number and Name (organisation) Ready; Family name and Given names Check) and 3 one-round readings marked Decide: Email address (draft only, for office[1], "If you do not have an email address, provide either your telephone number or your address"), Representative action (draft only) and Representative request type (checker only), both for the same radio list. P-121 holds: a single reading is never Ready. The PR body says the doubtful office[1] mapping "is not among the 8 proposals". It is, as a Decide item. That is a wording error in the PR, not an app bug.
+Each box's count adds to 10 against the headline's 8: the radio list shows "2 on To review" (two competing readings), and Family name and Given names each answer a reworded and a new box. That is consistent.
+
+### Disclosures
+1. My first AI-check rounds ran without `--tsconfig api/tsconfig.json` and failed to compile (decorators): the tester's error. The rounds above are the re-runs, run as `run-suites.sh` runs them.
+2. On this Mac the browser check's 30 s request limit is shorter than Load sample (106 s timed at load average 18, with other lanes' copies running). It passed in CI on main's exact tree.
+
+### Demo data (P-304 (2))
+After Reset to the six, IMM 5476 is held at 11-2025 (`form_edition` SAMPLE) and only Visitor visa carries it. So no new edition is held on the six: the C9.1 journey on the demo needs the configured checkpoint (pack part 2).
