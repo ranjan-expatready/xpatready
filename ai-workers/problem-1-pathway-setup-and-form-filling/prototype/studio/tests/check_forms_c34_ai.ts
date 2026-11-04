@@ -60,7 +60,7 @@ import { evaluate } from "../../contracts/rules.ts";
   e = bad({ quote: "If you answered yes, please give us everything." });
   ok("C3.4 E fail: a check whose words are not printed on the form is not proposed, with the reason (M1)", !e.items.length && /not printed on IMM 5257/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = bad({ reads: [CHOICE, "form1[0].Barcodes[0].PaperFormsBarcode1[0]"] });
-  ok("C3.4 E fail: a check that reads a box not visible on this edition is not proposed (M2)", !e.items.length && /not a visible box/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
+  ok("C3.4 E fail: a check that reads a box not visible on this edition is not proposed (M2)", !e.items.length && /not a visible form field/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = bad({ reads: [CHOICE] });
   ok("C3.4 E fail: a check whose condition reads a box it does not name is not proposed (M2)", !e.items.length && /does not name/.test(e.dropped[0]?.why ?? ""), e.dropped[0]);
   e = bad({ tree_json: JSON.stringify({ op: "between", field: CHOICE, value: 1 }) });

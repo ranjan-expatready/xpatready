@@ -33,10 +33,10 @@ export function fieldMapShapeOk(o: unknown): o is FieldMapOutput {
 export const sameEdition = (o: FieldMapOutput, e: Pick<EditionSource, "printed">) => o.form_edition.trim() === e.printed;
 
 export const FIELD_DRAFT_WORDS = {
-  noSaved: "No saved AI draft of this form edition yet: Draft fields with AI runs it (about US$x · at most US$y), or a person maps the boxes.",
+  noSaved: "No saved AI draft of this form edition yet: Draft fields with AI runs it (about US$x · at most US$y), or a person maps the form fields.",
   badSaved: "The saved AI draft of this form edition could not be read, so it was not used.",
-  nothingUsed: "Nothing of it was used: a person maps the boxes, or Draft fields with AI runs again.",
-  otherEdition: (got: string, want: string) => `The AI answer was for another form edition (${got}), not ${want}. Nothing of it was used: a person maps the boxes, or Draft fields with AI runs again.`,
+  nothingUsed: "Nothing of it was used: a person maps the form fields, or Draft fields with AI runs again.",
+  otherEdition: (got: string, want: string) => `The AI answer was for another form edition (${got}), not ${want}. Nothing of it was used: a person maps the form fields, or Draft fields with AI runs again.`,
 };
 
 /** The step. Whole-form readings: a 250-box form answers with up to about 64 000 output tokens (IMM 1295, 20 Oct); each

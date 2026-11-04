@@ -68,7 +68,7 @@ export function differing(boxes: { box: string; caption?: string | null; meaning
  *  "derive_inverse:…", "phone_part:…") never reach a person. */
 export function plainWhy(why: string | null | undefined): string {
   const w = (why ?? "").trim();
-  if (/is not in the executable set/.test(w)) return "The product cannot work this box out from the case's answers yet: write it by hand.";
+  if (/is not in the executable set/.test(w)) return "The product cannot work this form field out from the case's answers yet: write it by hand.";
   return w.replace(/\b(derived?|derive_inverse|phone_part|address_part|date_part|code_list|yes_no_code|select):[^\s,;]*/g, "a calculation").replace(/[a-z]+\.[a-z_]+\([^)]*\)/g, "a calculation");
 }
 
