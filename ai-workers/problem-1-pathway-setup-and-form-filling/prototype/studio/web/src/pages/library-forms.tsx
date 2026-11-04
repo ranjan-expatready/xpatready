@@ -339,7 +339,7 @@ function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: bool
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[300px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             <DropdownMenu.Item className={item} disabled={!canAuthor || row.type === "guide" || row.status === "retired"} onSelect={() => check.mutate(undefined)}>Replace with a new edition…</DropdownMenu.Item>
-            <DropdownMenu.Item className={item} disabled={!canAuthor || !row.attachment_id || row.type !== "form"} onSelect={() => setReread(true)}>Re-read with AI (fields and boxes)</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} disabled={!canAuthor || !row.attachment_id || row.type !== "form"} onSelect={() => setReread(true)}>Re-read with AI (shared fields and form fields)</DropdownMenu.Item>
             {/* C11.13 (P-138): Draft fields lives in the form's drawer, with its saved-or-not state and cost. */}
             <DropdownMenu.Item className={item} disabled={row.type !== "form" || !row.edition} onSelect={onWhereUsed}>Draft fields with AI…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={onWhereUsed}>See where it is used ({row.used_by.length})</DropdownMenu.Item>
