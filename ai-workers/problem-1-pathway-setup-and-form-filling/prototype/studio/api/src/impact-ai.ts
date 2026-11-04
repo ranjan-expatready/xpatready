@@ -18,7 +18,7 @@ import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { costWords } from "../../contracts/start-setup.ts";
 import { costBesideLimit, isProviderLimit } from "../../engine/ai-run.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
-import { editionContextKey, replayPattern, savedRunKey, type SavedRun } from "../../engine/rounds.ts";
+import { editionContextKey, PRINTED_EDITION, replayPattern, savedRunKey, type SavedRun } from "../../engine/rounds.ts";
 import { SOLUTION } from "./core.ts";
 import { fieldMapShapeOk, sameEdition, type FieldMapOutput } from "./field-drafts.ts";
 import { MODEL, roundBudgetUsd, RUNS, type AiStep } from "./rounds.ts";
@@ -110,7 +110,7 @@ export const answersInside = (o: FieldMapOutput, inside: Set<string>) => o.entri
 
 /** The round context of the step: the edition's key (`edition:<code>:<edition>`, the launcher's known printed edition). */
 export const impactContext = (printed: string, part: ReturnType<typeof impactPart>, batchId?: string) => {
-  const m = /^(IMM [0-9A-Z ]+?) \(([0-9]{2}-[0-9]{4})\)$/.exec(printed);
+  const m = PRINTED_EDITION.exec(printed);
   return { trail: part.file.replace(/\.part\.json$/, ""), contextKey: m ? editionContextKey(m[1], m[2]) : `edition:${printed}`, inputs: [{ file: part.rel, sha256: part.sha256 }], batchId };
 };
 

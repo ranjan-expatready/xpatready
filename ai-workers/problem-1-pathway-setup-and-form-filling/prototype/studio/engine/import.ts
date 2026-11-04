@@ -109,7 +109,7 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
     inc("field map entries (form fields)", map.entries.length);
   }
 
-  const rules = config.rules.filter((r: any) => keepWho(r.for_whom) && (!/form (IMM [\d ]+[A-Z0-9 ]*)/.test(r.then) || keepForm((/form (IMM [0-9]+(?: SCH1)?)/.exec(r.then) ?? [])[1] ?? "")));
+  const rules = config.rules.filter((r: any) => keepWho(r.for_whom) && (!/form ((?:IMM|IRM) [\d ]+[A-Z0-9 ]*)/.test(r.then) || keepForm((/form ((?:IMM|IRM) [0-9]+(?: SCH1)?)/.exec(r.then) ?? [])[1] ?? "")));
   await db.predicate.createMany({ data: rules.map((r: any, i: number) => ({ ...ws, combinationId, predicateKey: `R-${String(i + 1).padStart(2, "0")}`, predicateJson: r.when, whenPlain: r.when_plain ?? null, thenPlain: r.then, forWhom: r.for_whom, sourceQuote: r.source_quote, version: 1, status: cs, origin: "IMPORTED_RELEASE", updatedBy: o.by })) });
   inc("rules", rules.length);
   const checks = config.checks.filter((c: any) => c.group !== "form_native");

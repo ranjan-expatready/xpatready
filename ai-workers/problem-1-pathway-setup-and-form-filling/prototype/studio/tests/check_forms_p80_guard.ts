@@ -129,6 +129,13 @@ const made: string[] = []; // generated drafting files this run leaves in shared
     };
     let f = put({});
     ok("C2.3 guard pass: an intact copy of the approval in a folder of the right shape, named for the run, is admitted", admitInput(f, undefined, S).approved?.sha256 === A, why(() => admitInput(f, undefined, S)));
+    // IRM editions (tech lead, 4 Nov): IRCC prints IRM numbers too (IRM 0002, Guide 5256); any other prefix is still refused.
+    f = put({ rec: { ...rec, code: "IRM 0002", edition: "IRM 0002 (03-2021)" } });
+    ok("IRM guard pass: an approval for a form printed with an IRM edition (IRM 0002, IRM 0002 (03-2021)) is admitted", admitInput(f, undefined, S).approved?.sha256 === A, why(() => admitInput(f, undefined, S)));
+    f = put({ rec: { ...rec, edition: "IRM 0002 (03-2021)" } });
+    ok("IRM guard fail (breaker m1): an approval whose edition prints another form number than its code is refused", refused(() => admitInput(f, undefined, S), /form number is not the one its edition prints/), why(() => admitInput(f, undefined, S)));
+    f = put({ rec: { ...rec, edition: "XYZ 1 (01-2020)" } });
+    ok("IRM guard fail: an approval whose edition has another prefix (XYZ 1 (01-2020)) is still refused", refused(() => admitInput(f, undefined, S), /not for a form with a printed edition/), why(() => admitInput(f, undefined, S)));
     f = put({ rec: null });
     ok("C2.3 guard fail: no approval record for the checksum is refused", refused(() => admitInput(f, undefined, S), /approval\.json is missing \(no approval recorded/), why(() => admitInput(f, undefined, S)));
     f = put({ rec: { ...rec, sha256: H } });
