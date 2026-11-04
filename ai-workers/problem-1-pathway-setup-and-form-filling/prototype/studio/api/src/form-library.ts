@@ -266,7 +266,8 @@ export class FormLibrary {
     // Breaker m3: a role is what a filed form is to IRCC's rules; a guide or a checklist is never filed.
     if (b.role && libraryType(def.formKind, def.displayName) !== "form") throw problem(409, "Not a form", `${code} is a ${libraryType(def.formKind, def.displayName)}, not a form a person files, so it takes no form role.`);
     if ((def.formRole ?? null) === b.role) throw problem(409, "Nothing changes", `${code} is already ${roleWords(b.role)}.`);
-    const waiting = { workspaceId, kind: "form_role", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } };
+    // Review of #833 M2: a returned change does not block a new one (its proposer withdraws it; it is never sent again).
+    const waiting = { workspaceId, kind: "form_role", key: code, status: { in: ["WAITING", "APPROVED"] } };
     if (await this.db.libraryChange.findFirst({ where: waiting })) throw problem(409, "Already waiting", `A change to ${code}'s role already waits for a second person on To review.`);
     const label = `${code}: ${roleWords(b.role)} (was ${roleWords(def.formRole)})`;
     // Breaker M3, review r2 M1: the proposal and its Activity line are written together, or neither is.

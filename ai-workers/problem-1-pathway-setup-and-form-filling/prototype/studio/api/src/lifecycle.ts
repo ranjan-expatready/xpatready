@@ -450,7 +450,7 @@ export class Lifecycle {
     const m = c.matches as { from?: string | null; to?: string | null };
     await this.db.$transaction(async (tx) => {
       const moved = await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key, retiredAt: null, formRole: m.from ?? null }, data: { formRole: m.to ?? null } });
-      if (!moved.count) throw problem(409, "Changed meanwhile", `${c.key}'s role is no longer what this change was proposed against (or the form was retired): return it, and propose again.`);
+      if (!moved.count) throw problem(409, "Changed meanwhile", `${c.key}'s role is no longer what this change was proposed against (or the form was retired). It still waits: return it, and its proposer withdraws it and proposes again.`);
       await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Applied at approval; each combination's next release names it for the immigration expert." } });
       await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "approved", entity: "form", entityKey: c.key, summary: `${actor.name} approved ${c.label ?? c.key}: it applies now, and goes out with each combination's next release`.slice(0, 600), detail: { from: m.from ?? null, to: m.to ?? null, change: c.id } } });
     });

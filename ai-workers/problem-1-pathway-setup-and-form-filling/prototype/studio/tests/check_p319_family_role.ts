@@ -69,6 +69,30 @@ const said = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "
   v = await review();
   ok("P-319 pass: given back its role through the same two people, the combination's draft matches its release again", r.status < 300 && role("IMM 5707") === "family_information" && !v.draft.changes.some((c) => c.key === "IMM 5707"), { status: r.status, changes: v.draft.changes.filter((c) => c.key === "IMM 5707") });
 
+  // ── review of #833 M1, M2: To review's words come from what approval applies; a returned change is withdrawn, never sent
+  // again with other words, and a new proposal can follow; approval refuses a change whose role moved meanwhile
+  r = await propose("IMM 5707", { role: null, reason: "Round two: test the return path" });
+  const two = r.body?.id as string | undefined;
+  const queue = ((await call("GET", "/review-queue?filter=all", undefined, "user-B")).body?.items ?? []) as { id: string; what: string; title: string }[];
+  const line = queue.find((i) => i.id === `change:${two}`);
+  ok("P-319 pass (review M1): To review says the role change in words built from what approval applies (before → after, the reason)", !!line && /IMM 5707's role, for every combination that files it: a family information form → no role/.test(line.what) && /Reason: Round two/.test(line.what), line);
+  r = two ? await call("POST", `/library/changes/${two}/return`, { note: "Not this one: keep IMM 5707 as the family form" }, "user-B") : { status: 0, body: null };
+  const resent = two ? await call("POST", `/library/changes/${two}/resubmit`, { label: "IMM 5707: a family information form (was no role)", reason: "Relabelled after the return" }) : { status: 0, body: null };
+  ok("P-319 fail (review M1): a returned role change is never sent again with other words (409); the role stays", r.status < 300 && resent.status === 409 && /withdraw it/.test(said(resent)) && role("IMM 5707") === "family_information", { returned: r.status, resent: resent.status, said: said(resent) });
+  r = await propose("IMM 5707", { role: null, reason: "A new proposal after a return" });
+  const three = r.body?.id as string | undefined;
+  ok("P-319 pass (review M2): a returned change does not block a new proposal for the same form", r.status < 300 && r.body?.status === "WAITING", { status: r.status, said: said(r) });
+  const wd = two ? await call("POST", `/library/changes/${two}/withdraw`, { note: "Withdrawn after the return" }) : { status: 0, body: null };
+  const wd3 = three ? await call("POST", `/library/changes/${three}/withdraw`, { note: "Withdrawn while it waits" }) : { status: 0, body: null };
+  ok("P-319 pass (review M2): its proposer withdraws a returned or a waiting role change; nothing was applied", wd.status < 300 && wd3.status < 300 && sql(`select string_agg(status, ',' order by proposed_at) from library_change where id in ('${two}', '${three}')`) === "WITHDRAWN,WITHDRAWN" && role("IMM 5707") === "family_information", { wd: wd.status, wd3: wd3.status, said: said(wd) });
+  r = await propose("IMM 5707", { role: null, reason: "Moved meanwhile: approval must refuse" });
+  const four = r.body?.id as string | undefined;
+  sql("update gov_form_def set form_role = null where form_key = 'IMM 5707'");
+  r = four ? await approve(four) : { status: 0, body: null };
+  ok("P-319 fail (review m3): approval refuses a change whose form's role moved meanwhile (409, in words), and the change waits again", r.status === 409 && /no longer what this change was proposed against/.test(said(r)) && sql(`select status from library_change where id = '${four}'`) === "WAITING", { status: r.status, said: said(r) });
+  sql("update gov_form_def set form_role = 'family_information' where form_key = 'IMM 5707'");
+  if (four) await call("POST", `/library/changes/${four}/withdraw`, { note: "End of the test" });
+
   // ── as main: IMM 5707 removed while the package lists it
   r = await call("DELETE", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5707")}`, {});
   v = await review();
