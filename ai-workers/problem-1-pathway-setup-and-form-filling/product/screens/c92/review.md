@@ -99,3 +99,13 @@ Only this PR's side of the merge and the three commits after it; main's own chan
 * Scores and the journey score (9.5/10) are unchanged.
 
 **Verdict: Approve** for **50bd5d4ea22bbbf61cfa24a0482708205963c5f3**. No open Blocker or Major. m2 and -7's wording are Should items.
+
+## Round 6 (diff-only): 50bd5d4e..fe0049e9, verdict for head 24265e5f, 4 Nov 2026
+`fe0049e9..24265e5f` adds only my round 5 text to `review.md`. Runs were on fe0049e9's code: a fresh copy `rv_c92` at :4430, from a clean tree, stopped afterwards.
+* **Runs:** `check_c92_out_of_date` 29/29 (the two `markKey` checks pass), `check_c76_readiness` 75/75. Setup 13/13 and 44/46. Packs: C9.2 11/11, C7.6 25/25, C8.1 14/14. `check_c76_readiness_api` 23/23, `check_c92_undo_api` 27/27.
+* **`markKey` (m2): fixed.** The key is now a pure function of the sorted changes (subject, fact, value now) plus the form's repeating groups now (`groupFacts`, the same reading `changedGroups` uses). A list-only change on a signed form now changes the key, so a pass no longer covers a later change of the list. The pure suite has a pass case (same input, same key) and fail cases (another value, another change, a group's rows alone). Groups are in every mark's key, which is conservative: a pass reopens when a list the form reads changes.
+* **Removed API step, and the follow-up:** agreed. A validated upload copy counts as current by its facts only (C-10 `paperValidated`, existing behaviour), so a list-only change never marks one. That is why the earlier step could not open a line. It is recorded as a follow-up for C7.7 / C-10, outside this PR.
+* **Still open from m2 (Minor, not reachable on Visitor visa):** a mark with no named change still dates itself `since = today`. A pass on a list-only mark of a signed form would reopen the next day. No Visitor visa hand-signed form reads a list. Fix with the follow-up: date it from the group change.
+* **Comment wording:** "bot review on #926" in place of the tool's name; comments only, no change in behaviour.
+
+**Verdict: Approve** for **24265e5f9d8cf3444257b730c4fd1dedce889c9e** (code as at fe0049e9). No open Blocker or Major. Should items: m2's date, the C-10 list follow-up, and -7's wording (with the tech lead).
