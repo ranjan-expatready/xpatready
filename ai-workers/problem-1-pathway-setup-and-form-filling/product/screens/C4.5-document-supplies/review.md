@@ -227,3 +227,5 @@ Reviewer agent, Opus. I did not build this and did not review rounds 1 or 2. 5 N
 * The tech lead asked for this section only, so there is no separate journey-test report this round.
 
 **Verdict: Approve.** No open Blocker or Major in this diff. The Minors r3-m1 to r3-m5 are at the builder's judgment.
+
+Round 3b (4ea39ba0b): Approve. The diff is the `.cjs` only (17 lines): when no combination id is given, the check runs `setup_c45_walk.ts` itself on the same port and database. Run the way CI runs it (`node … 4453 xr_studio_c45r3`, fresh copy): 29/29, exit 0. Given the wrong database, the setup's guard stops it with exit 2 and says why. A combination id is still accepted as a fourth argument; the usage line in `setup_c45_walk.ts` is unchanged and still right.
