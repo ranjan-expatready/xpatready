@@ -234,3 +234,9 @@ Walk on the six at 1440 px (one Mac copy, stopped): the Saved C3.4 draft of IMM 
 Closed: **QA-196**. New: **QA-216** (Minor, from qa tester 2: the finder line says "A step failed" on 4 of the six) and **QA-217** (Minor: "Ready to accept" on a form check that cannot be accepted yet).
 
 **M2: 43/60 confirmed** (unchanged). Thin slice 6/8.
+
+## Records update ~14:00 IST: M3 round 0 from the independent cloud qa (#864), #840 merged
+* C6.12, C6.4, C7.6, C7.7 and C7.3: **Partial, unchanged** (`qa/reports/2026-11-04-qa-m3-cloud/runs.md`). Every pack is fixture only, run twice with the same result each time; on the checkpoint they wait for QA-144. C7.6's readiness routes are not built yet (404).
+* **QA-149 closed** (`check_qa_vv_1102_decider.ts` 6/6). Still failing: QA-153 (Major), QA-155 and QA-151 (Minor).
+* #840 (IRM 0002's saved field map, qa PASS earlier) merged.
+* M2: 43/60 (unchanged). M3: 2/17 Works.

@@ -84,3 +84,16 @@ From `qa/BUGS.md`:
 
 | QA-196 | Gap · Major | C3.4 · P-120 (AI drafts a form's checks as proposals), P-149 (1) (one door) | 762dbae6 (Opus re-review of #585) | AI form checks and guide checks from the C3.4 masters step reach To review at Ready, but Accept answers 409, "A form check proposal is accepted with its own step, not yet on this queue" (`api/src/proposals.ts:576-577`; `LANDERS` at `:367` has no `form_check` or `cross_check`). C3.4's acceptance accepts only a section. Noted before only as review Minor 3 in `screens/C3.4-ai-step/review.md`. Expected: a lander for both kinds, or the items held off the queue with a reason | forms (C3.4) | Open |
 
+
+## QA-149 — closed 4 Nov 2026 (independent cloud qa for M3, round 0, PR #864)
+
+Retested on main **9caa043be** on the suites' fixture: `tests/qa/check_qa_vv_1102_decider.ts` 0 · 6/6. The answered "Is this person travelling to Canada alone?" stays in the officer's case view and the client's questionnaire, and can be changed to "both parents". C6.4 stays Partial (fixture only; on the checkpoint it waits for QA-144).
+
+From `qa/BUGS.md`:
+
+| QA-149 | Bug · Major | C6.4 (also C4.4 renderer) · VV-R08, P-62 | 59d2da74 (after-merge 2 Nov) | A question asked only because it decides a document line drops out of the case once answered: the child's "Is this person travelling to Canada alone?" answered yes adds the letter of authorization line, then vanishes from the officer's case view and the client's questionnaire, so nobody can correct it to no; a PUT with the officer view's (missing) answer id is refused 409 "Changed by someone else" and the line stays … | runtime | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-149 | Bug · Major | C6.4 | **59d2da74** | Steps: an isolated copy; `tests/runtime/setup_visitor_visa.ts`, `acceptance/lib/setup_vv_m3.ts`; open the family case (4 people); as the client answer the child A1's `person.travelling_alone_to_canada` = yes → the checklist gets "Letter of authorization for a minor" (right). Then read `GET /runtime/cases/:id/questionnaire?mode=agent` (officer) and `?mode=client`. Expected: the question is still asked (it decides a line, P-62), so it can be changed to no and the line goes (pack C6.4-9). Actual: after yes the question is gone from both views (`engine/runtime/case.ts` caseView keeps a question only when it fills a box or `q.decides` is non-empty, and once answered it decides nothing open); a change to no sent with the view's answer id (none) is refused 409 "Someone changed this answer after you opened it", and the line stays. Sent with the real id it saves, so the API can still change it, but no screen can. | `tests/qa/check_qa_am_1102_c64_answer_no.ts` (1/4 today; passes when fixed) · acceptance C6.4-9 | runtime | Open |
+
