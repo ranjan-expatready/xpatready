@@ -283,3 +283,8 @@ All three Partials have one root: on the six, no step places a form's facts into
 * **Works, confirmed** (main 4c3b16f0e): C5.3, C5.7, C11.9, C11.18. New **QA-220** (UX · Minor, C11.9).
 * **C5.6 stays Works.** qa tester 3 saw on 4c3b16f0e that the LMIA's imported Sample release counted as a real release (a real Conflict then). #837 fixed it before it was logged. qa re-tested on b8496bfe1: Reset to the six, then With an LMIA released through the steps, and Releases reads "0 real releases · 1 demo release (Sample content; not counted as published)", with "v1 Demo release". So no bug is logged, and the tester's question to the tech lead is answered by #837.
 * **M2: 40/60 confirmed** (unchanged).
+
+## Batch 8 — #882 (QA-195; C3.4) · main 4807cac9a · ~15:20–15:30 IST
+* **QA-195 closed.** `check_forms_c34_ai.ts` 0 · 87/87 twice on fresh Mac copies (load 1.6). Its 14 QA-195 cases all pass: identity documents are decided by name, and every door refuses an AI-read Passport in plain words. `C3.4.test.ts` on the six on GitHub: 0 · 20/20 (run 41810052972). US$0; ledger unchanged across the runs.
+* **C3.4 stays Partial**, held by QA-218, QA-206, QA-144 and the flaky checks QA-208/209.
+* **M2: 40/60 confirmed** (unchanged).
