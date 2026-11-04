@@ -485,6 +485,7 @@ export class Demo {
     const rows: CheckpointRow[] = [];
     const row = (r: CheckpointRow) => { rows.push(r); log.push(`  row ${r.row} ${r.title}: ${r.status}${r.why ? ` (${r.why.slice(0, 200)})` : ""}`); };
     log.push("configured checkpoint (C10.1): each DEMO.md row through the screens' services");
+    const keyOf0 = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true } })).map((x) => [x.id, x.combinationKey]));
 
     // Row 1: every official file through the intake (the six load), then one off-list file with a readable edition, held
     // and approved by a second person through the intake's own steps (X9a; the forms lane's demo story does the same).
@@ -496,6 +497,21 @@ export class Demo {
       shows: `${files} official files read on the six combinations (code, edition, checksum; no AI)${offList.ok ? `; ${offList.shows}` : ""}`,
       why: offList.ok ? (unreadWords.trim() || null) : `${offList.why}${unreadWords}` });
     row({ row: "2", title: "Online forms captured with the browser extension", status: "out", shows: "Parked (P-102, W6)", why: null });
+
+    // QA-144 slice 1 (#840): the Visitor visa's IRM 0002 line has no file in the sample. The author attaches the library's
+    // official file to it, the form is read, and its saved AI field-map answer (a draft and a blind checker round, #840)
+    // replays through the review queue at US$0, so rows 3–4 decide and apply it with the others. Nothing runs live.
+    const vvId = six.combinations.find((c) => keyOf0.get(c.id) === "vv.single")?.id;
+    let irmWhy: string | null = null; // review m4: a failed attach is said on row 3, never only logged
+    if (vvId) await timed("IRM 0002 attached and its saved answer replayed", async () => {
+      const r = await this.intake.sample(author, vvId, "irm0002e.pdf");
+      if (!r.attachmentId) { irmWhy = `IRM 0002 was not attached to the Visitor visa: ${r.message}`; log.push(`  ${irmWhy}`); return; }
+      if (r.attachmentStatus === "RECOGNISED") await this.sources.read(author, r.attachmentId);
+      const plan = await this.ai.plan({ kind: "source", ids: [r.attachmentId] }, "REPLAY");
+      if (!plan.targets.some((t) => t.action === "reuse_saved_output")) { irmWhy = `IRM 0002's saved AI answer does not replay (${plan.targets.map((t) => t.why ?? t.action).join("; ").slice(0, 200)})`; log.push(`  ${irmWhy}`); return; }
+      const b = await this.ai.launch(author, { scope: { kind: "source", ids: [r.attachmentId] }, mode: "REPLAY", idempotencyKey: `configured-irm0002-${workspaceId}`, planSha256: plan.plan_sha256 });
+      await this.settled(b.id!);
+    });
 
     // Rows 3–4: the replayed field-map drafts, decided by the author on each draft's own page, then applied to the draft.
     const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" }, orderBy: { startedAt: "asc" } });
@@ -524,14 +540,16 @@ export class Demo {
       } catch (e) { refused.push(`${form}: ${said(e)}`); }
     }
     const waitingForAi = six.drafts.waiting_for_draft_with_ai;
-    row({ row: "3", title: "AI maps form fields to shared fields (saved answers, US$0)", status: !jobs.length ? "waiting" : waitingForAi.length ? "partial" : "done", shows: `${jobs.length} saved AI answers replayed (US$0)`,
-      why: waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : null });
-    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations`,
+    row({ row: "3", title: "AI maps form fields to shared fields (saved answers, US$0)", status: !jobs.length ? "waiting" : waitingForAi.length || irmWhy ? "partial" : "done", shows: `${jobs.length} saved AI answers replayed (US$0)`,
+      why: [waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : "", irmWhy ?? ""].filter(Boolean).join(" ") || null });
+    // Review m1: the Sample loader also accepts the items where the draft and the checker rounds differ; the row says how many.
+    const differ = jobs.length ? await this.db.proposalItem.count({ where: { runId: { in: jobs.map((j) => j.id) }, agreement: "differ", choice: "ACCEPTED" } }) : 0;
+    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations${differ ? `; ${differ} where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)` : ""}`,
       why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
 
     // Row 7 (QA-144 slice 1): sections from each form's own parts, by the C3.4 rules pass (no AI, US$0), accepted by the
     // author on To review; the approver approves them with the other new items below (row 5).
-    const keyOf = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true } })).map((x) => [x.id, x.combinationKey]));
+    const keyOf = keyOf0;
     const fromForms = six.combinations.filter((c) => SET_UP_FROM_FORMS.has(keyOf.get(c.id) ?? ""));
     const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [];
     let maritalList: string | null = null;
