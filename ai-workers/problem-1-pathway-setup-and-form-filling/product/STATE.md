@@ -1,13 +1,13 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-05 02:35 IST by **Lead 9 · 4 Nov 23:18 IST (ending at ~340k tokens)**; **Lead 10 takes over** (hand-over note lead9-handover-2026-11-05.md) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-341; DECISIONS P-342 and P-343 are newer) · earlier STATE: git history of this file (Lead 8 at 23:18 IST), `history/STATE-2026-11-04-0925.md` · Lead 9's running log: lead9-2026-11-04.md in Lead 5's side-session notes folder (`local_a8344098-…`)
+updated: 2026-11-05 02:30 IST by **Lead 9 · 4 Nov 23:18 IST (ending at ~340k tokens)**; **Lead 10 takes over** (hand-over note lead9-handover-2026-11-05.md) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-341; DECISIONS P-342 and P-343 are newer) · earlier STATE: git history of this file (Lead 8 at 23:18 IST), `history/STATE-2026-11-04-0925.md` · Lead 9's running log: lead9-2026-11-04.md in Lead 5's side-session notes folder (`local_a8344098-…`)
 
 ## Where we are
 * **M2: 52/60 confirmed by qa on main; 53 when #1004 (C3.4 records) lands** (in batch #1008). Confirmed since 23:18 IST: C6.1 (after #948), C11.7 (after #881), C3.4 (after #982); C4.8 now 12/12 on the six and 11/11 on the checkpoint, and back in the protected set on the checkpoint (#991 B77, #1002). **M3: 1/17**, no new M3 work (P-332).
 * **Left for M2 (8), each with an owner:** C5.1 #868 · C3.6 #998 (labelled) · C9.1 #978 · C4.11 + C7.7 #967 (+ paid B74) · C4.5 #1005 · C4.1 (#973 QA-221 + qa pack PR after #1004 and #1005) · C10.1 (#1009 rows 9/11/12; rows 7 and 10 are new rows, so not tonight). **60 is not reachable by the morning of 5 Nov**; forecast 56–58 by 07:00 IST.
 * **Weekly plan 59% at 02:28 IST**, about 2% an hour (P-331: 85% no new rows; 90% clean stop, "Resume on the new account"). Paid AI today US$0.76 of US$30. Disk 9 GB free (21 idle test databases, 0.49 GB, not dropped, P-334 (11)).
 
-## In flight (02:35 IST), critical path first
+## In flight (02:30 IST), critical path first
 | PR / session | What | Next |
 |---|---|---|
 | #1006 Builder 1 `local_8b65d77f…` | QA-193 root cause: engine ties ranked by key (audit-trail bug) | Opus diff + all-suites CI, label, queue; then s4_run_browser row |
@@ -23,7 +23,7 @@ updated: 2026-11-05 02:35 IST by **Lead 9 · 4 Nov 23:18 IST (ending at ~340k to
 **demo.ts chain:** #978 → #868 → #973 → #967 → #1009 (all conflict pairwise; merge main once each).
 
 ## Leads, in order (highest = current)
-**Lead 10** `local_e336999f-beb6-41ae-a978-a5bdc886991c` (current from ~02:40 IST) · standbys: **Lead 11** `local_55e21a98-68ad-4429-a441-0462a75e910b`, **Lead 12** `local_9ab43f49-877d-45e4-aa0d-a0abc561c2de` · Lead 9 `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` ended ~02:40 IST · Leads 1, 2, 3, 5, 7, 8 ended · Lead 4 archived. Founder (~23:25 IST): "the standbys exist so the night never stalls … 60 out of 60 by the time he wakes … ask him only for what you need from the product side, or what you really can't do yourself".
+**Lead 10** `local_e336999f-beb6-41ae-a978-a5bdc886991c` (current from ~02:31 IST) · standbys: **Lead 11** `local_55e21a98-68ad-4429-a441-0462a75e910b`, **Lead 12** `local_9ab43f49-877d-45e4-aa0d-a0abc561c2de` · Lead 9 `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` ended 02:31 IST · Leads 1, 2, 3, 5, 7, 8 ended · Lead 4 archived. Founder (~23:25 IST): "the standbys exist so the night never stalls … 60 out of 60 by the time he wakes … ask him only for what you need from the product side, or what you really can't do yourself".
 
 ## Next (in order)
 1. #1006 → batches stop failing on QA-193; #868, #998 green.
