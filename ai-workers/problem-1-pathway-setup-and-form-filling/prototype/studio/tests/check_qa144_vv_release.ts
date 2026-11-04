@@ -53,8 +53,9 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   ok("QA-144 row 7: done, said in plain words (sections, questions, form fields, form lines)", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7"));
   ok("QA-144 rules pass: every Visitor visa form it files had its sections drafted by rules (no AI, US$0; not IMM 5645, which the paper channel takes off)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form' and coalesce(edition, '') not like 'IMM 5645 (%'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
-  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver", n(`select count(*) from library_change where kind = 'section' and status = 'APPROVED' and decided_by = 'user-B'`) > 10
-    && n(`select count(*) from library_change where kind = 'section' and status not in ('APPROVED', 'RELEASED')`) === 0); // RELEASED: a combination released with it (slice 3)
+  // Slice 2: an approved item a release uses reads RELEASED (With an LMIA is released by the same load).
+  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver", n(`select count(*) from library_change where kind = 'section' and status in ('APPROVED', 'RELEASED') and decided_by = 'user-B'`) > 10
+    && n(`select count(*) from library_change where kind = 'section' and status not in ('APPROVED', 'RELEASED')`) === 0);
   ok("QA-144 BR-7 fail: the author approved no library item", n(`select count(*) from library_change where decided_by = 'user-A'`) === 0);
 
   // The shared placement step: each placement is the author's, asked of the client, in a section the combination uses.
@@ -111,8 +112,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
     && n(`select count(*) from answer_list_value v join answer_list l on l.id = v.answer_list_id join canonical_field f on f.answer_list_key = l.answer_list_key where f.canonical_field_key = 'person.marital_status' and v.value_key = 'common_law'`) > 0);
 
   // The rest of the M2 gate keeps its words: the other combinations are still refused with their own reasons.
-  // Slice 3 sets up the Study permit (outside Canada) from its forms too (check_qa144_sp_release.ts); no other combination yet.
-  ok("QA-144 scope: only the slices' combinations are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'sp.outside')`) === 0);
+  // Slices 2 and 3 add With an LMIA (check_qa144_lmia_release.ts) and the Study permit (check_qa144_sp_release.ts); R2-m1
+  // keeps the Visitor visa's chosen sections ones its people all answer (the toddler and never-married checks above run
+  // after their placements).
+  ok("QA-144 scope: only the Visitor visa, With an LMIA and the Study permit are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();

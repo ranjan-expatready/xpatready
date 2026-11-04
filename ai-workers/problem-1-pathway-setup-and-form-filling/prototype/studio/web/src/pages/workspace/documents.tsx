@@ -179,7 +179,7 @@ function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, on
       <div className="space-y-3 text-sm" data-doc-drawer data-doc-drawer-automatic>
         <p data-drawer-reason>{line.automatic.reason}</p>
         <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Who</dt><dd>{whoLabel(line.who)}</dd><dt className="text-text-muted">When</dt><dd>{line.base ? "Always" : `Only if: ${line.when}`}</dd><dt className="text-text-muted">Supplies</dt><dd>None: filed as is.</dd></dl>
-        <p className="text-xs text-text-muted">{SAY.automatic(line.automatic.form)} Filed another way, this line goes away at once. Sample until the immigration expert confirms (P-62 §3, P-143).</p>
+        <p className="text-xs text-text-muted">{SAY.automatic(line.automatic.form)} Filed another way, this line goes away at once. Sample until the immigration expert confirms.</p>
       </div>
     </Panel>
   );
