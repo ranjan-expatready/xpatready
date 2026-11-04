@@ -251,3 +251,36 @@ code.
 
 **Verdict: Approve** for 28bbb74de. No Blocker and no Major is open. The resolution follows the tech lead's rule exactly.
 Round 1's Minors m2, m4 and m5, and r2-m2's residual, stay open as Minors.
+
+## Fix check (s7 dialogs): 800612bc1 against ba802f035, 4 Nov, diff-only
+I looked only at `git diff ba802f035 HEAD`, which is one line in `tests/check_s7_dialogs_browser.cjs:58`. I ran no suite,
+started no server and ran no journey. The reason for the change: on ba802f035, CI shard 1 failed only on this step, because
+the new person-named certificate proposal (`origin rules`) added one row to the unfiltered count.
+
+1. **The intent is kept.** The step still asks for three things: the dialog shows 6 combinations, the dialog's "AI
+   proposals waiting for review" equals the waiting proposals in the database, and that count is above 0. The only change
+   is that the database side now adds `and origin='ai'`, so it counts the replayed AI proposals and not the person's
+   certificate. The query matches `check_s7_load.ts:75`, `check_d1_reset_to_six.ts:88`,
+   `check_d1_reset_to_six_browser.cjs:124` and `check_queue_tx.ts:51`, which are round 1's M1 fix. Like
+   `check_d1_reset_to_six_browser`, it has no `workspace_id` filter. That is safe here because the step comes right after
+   Reset to blank, which line 43 checks.
+2. **The dialog's count is the AI count.** `web/src/App.tsx:281` renders `data-count="AI proposals waiting for review"`
+   from `loaded6.drafts.proposals_waiting`. In `api/src/demo.ts`, `loadSix` sets that value from `proposals`. `proposals`
+   is `proposalItem.count({ workspaceId, status: "waiting" })` at line 400, which runs after the field-map replay and
+   before `linesByHand` at line 405. The return at line 409 passes it on unchanged. On a blank workspace, nothing that
+   runs before line 400 writes a non-AI proposal, so it counts AI proposals only. Gate B's `origin='ai'` checks on
+   ba802f035 confirm that empirically. One property is worth recording: the server's count has no origin filter, so if a
+   later load step ever wrote a rules proposal before line 400, this step would now go red. That is better than before,
+   when the test would have quietly agreed with a wrong label. This is not a finding.
+3. **No other assertion is affected.** The diff touches only line 58. The other SQL in the file is `combination` and
+   `canonical_field` counts (lines 43 and 53), and the text checks on the dialog and the missing list do not read
+   `proposal_item`. I also searched the repo for other unfiltered `proposal_item … status='waiting'` comparisons.
+   `tests/qa/check_qa_golden_2.cjs:71` and `acceptance/C11.14.test.ts:63` only check `> 0`, which the extra rules row
+   cannot break. `check_c10_1_configured.ts` and `acceptance/C10.1.test.ts` were settled under round 2's M2. No other
+   check compares the dialog or API count with an unfiltered total.
+
+**Not checked:** CI on 800612bc1. Shard 1 re-running green on this head is the remaining check. The journey score stays
+**8.5/10** from round 1. No journey was re-run, because none was allowed and this commit changes no screen code.
+
+**Verdict: Approve** for 800612bc1. No Blocker and no Major is open. Round 1's Minors m2, m4 and m5, and r2-m2's residual,
+stay open as Minors.
