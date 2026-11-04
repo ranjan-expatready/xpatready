@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { irccWords } from "../../../contracts/workspace";
 import { normalizeLabel } from "../../../contracts/programs";
 import { ItemSources, SOURCE_SAY } from "@/components/source-panel";
+import { fieldName } from "@/lib/field-name";
 
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
@@ -21,7 +22,9 @@ export function useLibraryFields() {
   const all: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type, name: f.name ?? null }));
   const list = all.filter((_, i) => !(q.data ?? [])[i]?.retired);
   const meaning = React.useCallback((k: string) => all.find((f) => f.key === k)?.meaning ?? k, [all]);
-  return { list, meaning, loading: q.isLoading };
+  // QA-219: a field's name in words, retired and merged fields included (a merge names the field that went away).
+  const name = React.useCallback((k: string) => all.find((f) => f.key === k)?.name || fieldName(k), [all]);
+  return { list, meaning, name, loading: q.isLoading };
 }
 
 export function OriginPill({ origin, status }: { origin?: string; status?: string }) {
