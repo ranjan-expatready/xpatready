@@ -7,6 +7,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Level, PathwayType, StructureNode, StructurePathResult } from "../../../contracts/structure";
+import { labelProblem } from "../../../contracts/programs";
 import { api, ApiError, useApi } from "@/lib/api";
 import { Button, Dialog } from "@/components/ui/controls";
 import { LevelMark, type LevelName } from "@/components/levels";
@@ -24,17 +25,24 @@ const TYPES: { value: PathwayType; label: string; tip: string }[] = [
 const FIELDS: Level[] = ["pathway", "program", "category", "subCategory"];
 const WORD: Record<Level, string> = { pathway: "Pathway", program: "Program", category: "Category", subCategory: "Sub-category" };
 const EXAMPLE: Record<Level, string> = { pathway: "e.g. Temporary residence", program: "e.g. Visitors", category: "e.g. Visitor visa", subCategory: "e.g. Outside Canada" };
+/** The pop-up's own places for a message: each level's field, the Pathway type switch and "Cases may be opened from". */
+const SLOTS = ["pathwayType", ...FIELDS, "allowedLocations"] as const;
+const SLOT_WORD: Record<string, string> = { ...WORD, pathwayType: "Pathway type", allowedLocations: "Cases may be opened from" };
+/** A refusal's field path ("category.label", "allowedLocations.0") names the place it shows: its first part (QA-183). */
+const slotOf = (field: string) => { const head = field.split(".")[0]; return (SLOTS as readonly string[]).includes(head) ? head : null; };
 const norm = (s: string) => s.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
 export const LOCS = [["inside_canada", "Inside"], ["outside_canada", "Outside"], ["both", "Both"]] as const;
 export const locKey = (l: string[]) => (l.length === 2 ? "both" : l[0] ?? "both");
 export const locList = (k: string) => (k === "both" ? ["inside_canada", "outside_canada"] : [k]);
 export const LOC_TIP = "Where a case for it may be opened. Sample until the immigration expert confirms.";
-export function LocationPicker({ value, onChange, disabled, label }: { value: string[]; onChange: (l: string[]) => void; disabled?: boolean; label: string }) {
+export function LocationPicker({ value, onChange, disabled, label, note }: { value: string[]; onChange: (l: string[]) => void; disabled?: boolean; label: string;
+  /** The id of a refusal shown under it: the group is then invalid and described by it (review of #867). */
+  note?: string }) {
   const cur = locKey(value);
   return (
     <Tip tip={LOC_TIP}>
-      <div role="radiogroup" aria-label={label} className="inline-flex overflow-hidden rounded-lg border border-border-strong text-xs">
+      <div role="radiogroup" aria-label={label} aria-invalid={note ? true : undefined} aria-describedby={note} className="inline-flex overflow-hidden rounded-lg border border-border-strong text-xs">
         {LOCS.map(([k, w]) => (
           <button key={k} type="button" role="radio" aria-checked={cur === k} disabled={disabled} onClick={() => onChange(locList(k))}
             className={cn("px-2.5 py-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&+&]:border-l [&+&]:border-border", cur === k ? "bg-primary font-semibold text-primary-foreground" : "bg-surface-raised text-text hover:bg-surface", disabled && "cursor-not-allowed opacity-60")}>{w}</button>
@@ -132,11 +140,15 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   const subOff = !isSet("category") ? "Choose the category first." : catSetUp ? `${catNode!.label} already has its own setup, so it is the combination. A sub-category would leave that setup above a combination.` : null;
   const useNone = !subOff && none && !catHasSubs;
   const enabled = (lv: Level) => { const p = parentOf(lv); return !p || isSet(p); };
+  // The name rules the server applies (contracts/programs.ts labelProblem), checked under each new name as you type; shown
+  // only for a level that would be sent (a Sub-category left under None is not sent, so it neither shows nor blocks).
+  const nameProblem = (lv: Level) => (isNew(lv) ? labelProblem(text[lv]) : null);
 
   // What one Add writes: every level set, down to the first empty one (AD-3).
   const path = FIELDS.filter((lv, i) => FIELDS.slice(0, i + 1).every((x) => isSet(x)) && (lv !== "subCategory" || (!useNone && !subOff)));
   const last = path[path.length - 1];
   const fresh = path.filter((lv) => isNew(lv));
+  const blocked = path.find((lv) => nameProblem(lv));
   const makesCombination = !!last && ((last === "category" && (useNone || catSetUp) && !catHasSubs) || last === "subCategory");
   const showLocs = !!last && (last === "category" || last === "subCategory") && fresh.includes(last);
   const short = !!last && !fresh.length && FIELDS.indexOf(last) < FIELDS.indexOf(aim);
@@ -148,7 +160,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     const t = setTimeout(() => {
       for (const lv of FIELDS) {
         const p = parentOf(lv);
-        if (!isNew(lv) || (p && !sel[p] && lv !== "pathway")) { setClose((c) => (c[lv] ? { ...c, [lv]: [] } : c)); continue; }
+        if (!isNew(lv) || labelProblem(text[lv]) || (p && !sel[p] && lv !== "pathway")) { setClose((c) => (c[lv] ? { ...c, [lv]: [] } : c)); continue; }
         void api<{ close: Close[] }>("/structure/name-check", { method: "POST", json: { pathwayType: type, level: lv, parentKey: p ? sel[p] : null, label: text[lv] } })
           .then((r) => setClose((c) => ({ ...c, [lv]: r.close }))).catch(() => undefined);
       }
@@ -157,11 +169,11 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   }, [open, type, text.pathway, text.program, text.category, text.subCategory, sel.pathway, sel.program, sel.category]);
 
   const typeIn = (lv: Level, v: string) => {
-    setProblem(null); setErrors((e) => ({ ...e, [lv]: "" }));
     const match = optionsFor(lv).find((n) => norm(n.label) === norm(v) && norm(v));
-    // A level changed: the levels under it start again.
-    const below = FIELDS.slice(FIELDS.indexOf(lv) + 1);
-    setText((t) => ({ ...t, [lv]: v, ...(sel[lv] !== (match?.key ?? null) ? Object.fromEntries(below.map((b) => [b, ""])) : {}) }));
+    // A level changed: the levels under it start again, and so do their messages (review of #867).
+    const below = FIELDS.slice(FIELDS.indexOf(lv) + 1), reset = sel[lv] !== (match?.key ?? null);
+    setProblem(null); setErrors((e) => ({ ...e, [lv]: "", ...(reset ? Object.fromEntries(below.map((b) => [b, ""])) : {}) }));
+    setText((t) => ({ ...t, [lv]: v, ...(reset ? Object.fromEntries(below.map((b) => [b, ""])) : {}) }));
     setSel((s) => ({ ...s, [lv]: match?.key ?? null, ...(s[lv] !== (match?.key ?? null) ? Object.fromEntries(below.map((b) => [b, null])) : {}) }));
     setKeep((k) => ({ ...k, [lv]: false }));
     if (lv === "category") { setNone(true); if (match?.allowedLocations.length) setLocs(match.allowedLocations); }
@@ -175,7 +187,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   const pick = (lv: Level, n: StructureNode) => { typeIn(lv, n.label); next(lv); };
 
   const send = async (again: boolean) => {
-    if (!fresh.length || busy) return;
+    if (!fresh.length || blocked || busy) return;
     setBusy(true); setProblem(null); setErrors({});
     const lvPick = (lv: Level) => (sel[lv] ? { key: sel[lv]! } : { label: text[lv].trim() });
     const body: Record<string, unknown> = { pathwayType: type, decision: Object.values(keep).some(Boolean) ? "add_anyway" : "new" };
@@ -202,8 +214,13 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       if (again) setText((t) => (t[lastLevel] ? t : { ...t, [lastLevel]: sentText }));
       const p = e instanceof ApiError ? (e.problem as { code?: string; existing?: { key: string }; errors?: { field: string; message: string }[] }) : {};
       // Close names keep their "Did you mean … Use it / Keep mine" box under the field instead of an error (AD-4).
-      if (p.code !== "close_names") setErrors(Object.fromEntries((p.errors ?? []).map((x) => [x.field, x.message])));
-      setProblem({ text: `Nothing was added. ${(e as Error).message}`, existing: p.code === "exists" ? p.existing?.key : undefined });
+      // Each refusal shows under its own field (P-128, QA-183): the server names it by its path ("category.label"). The
+      // alert below then only says nothing was added and where to look; a refusal with no field of its own keeps its words.
+      const placed = p.code === "close_names" ? [] : (p.errors ?? []).flatMap((x) => { const at = slotOf(x.field); return at ? [[at, x.message] as const] : []; });
+      setErrors(Object.fromEntries(placed));
+      const all = placed.length > 0 && placed.length === (p.errors ?? []).length;
+      const where = [...new Set(placed.map(([at]) => SLOT_WORD[at]))].join(" and ");
+      setProblem({ text: all ? `Nothing was added: see the note under ${where}.` : `Nothing was added. ${(e as Error).message}`, existing: p.code === "exists" ? p.existing?.key : undefined });
     } finally { setBusy(false); }
   };
 
@@ -217,25 +234,26 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       footer={
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Tip tip="Adds, then keeps the levels above so you can type the next name."><span><Button variant="secondary" className={fresh.length ? undefined : OFF} disabled={!fresh.length || busy} onClick={() => void send(true)} data-add-again>Add and add another</Button></span></Tip>
-          <Tip tip={fresh.length ? `Writes ${fresh.length === 1 ? "the new name" : `the ${fresh.length} new names`} in one go; all or nothing.` : exists ? "Everything you chose is already in the Program structure." : "Type or pick a name first."}><span><Button disabled={!fresh.length || busy} busy={busy} onClick={() => void send(false)} data-add-submit>{fresh.length ? verb : "Add"}</Button></span></Tip>
+          <Tip tip={blocked ? `Fix the ${WORD[blocked].toLowerCase()} first: see the note under it.` : "Adds, then keeps the levels above so you can type the next name."}><span><Button variant="secondary" className={fresh.length && !blocked ? undefined : OFF} disabled={!fresh.length || !!blocked || busy} onClick={() => void send(true)} data-add-again>Add and add another</Button></span></Tip>
+          <Tip tip={blocked ? `Fix the ${WORD[blocked].toLowerCase()} first: see the note under it.` : fresh.length ? `Writes ${fresh.length === 1 ? "the new name" : `the ${fresh.length} new names`} in one go; all or nothing.` : exists ? "Everything you chose is already in the Program structure." : "Type or pick a name first."}><span><Button disabled={!fresh.length || !!blocked || busy} busy={busy} onClick={() => void send(false)} data-add-submit>{fresh.length ? verb : "Add"}</Button></span></Tip>
         </div>}>
       <div className="space-y-3" data-add-dialog>
         <div className="space-y-1">
           <span className="text-xs font-medium">Pathway type</span>
-          <div role="radiogroup" aria-label="Pathway type" className="flex w-fit gap-0.5 rounded-xl border border-border bg-surface p-0.5">
+          <div role="radiogroup" aria-label="Pathway type" aria-invalid={errors.pathwayType ? true : undefined} aria-describedby={errors.pathwayType ? "add-note-pathwayType" : undefined} className="flex w-fit gap-0.5 rounded-xl border border-border bg-surface p-0.5">
             {TYPES.map((t) => (
               <Tip key={t.value} tip={t.tip}>
-                <button type="button" role="radio" aria-checked={type === t.value} onClick={() => { if (type !== t.value) { setType(t.value); setText({ pathway: "", program: "", category: "", subCategory: "" }); setSel({ pathway: null, program: null, category: null, subCategory: null }); } }}
+                <button type="button" role="radio" aria-checked={type === t.value} onClick={() => { if (type !== t.value) { setType(t.value); setErrors({}); setProblem(null); setText({ pathway: "", program: "", category: "", subCategory: "" }); setSel({ pathway: null, program: null, category: null, subCategory: null }); } }}
                   className={cn("inline-flex h-8 items-center rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground" : "text-text-muted hover:text-text")}>{t.label}</button>
               </Tip>
             ))}
           </div>
+          <FieldNote slot="pathwayType" text={errors.pathwayType} />
         </div>
         {FIELDS.map((lv) => (
           <NameField key={lv} level={lv} label={WORD[lv]} value={text[lv]} options={optionsFor(lv)} isNew={isNew(lv)} underNew={underNew(lv)}
             enabled={enabled(lv) && !(lv === "subCategory" && (useNone || !!subOff))} inputRef={(el) => { refs.current[lv] = el; }}
-            onType={(v) => typeIn(lv, v)} onPick={(n) => pick(lv, n)} onNext={() => next(lv)} error={errors[lv]} close={close[lv] ?? []} keep={!!keep[lv]}
+            onType={(v) => typeIn(lv, v)} onPick={(n) => pick(lv, n)} onNext={() => next(lv)} error={(path.includes(lv) ? nameProblem(lv) : null) ?? errors[lv]} close={close[lv] ?? []} keep={!!keep[lv]}
             onKeep={() => setKeep((k) => ({ ...k, [lv]: true }))} onUse={(c) => { const n = optionsFor(lv).find((x) => x.key === c.key); if (n) pick(lv, n); }}
             extra={lv === "subCategory" ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -248,7 +266,10 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
               </div>) : null} />
         ))}
         {showLocs ? (
-          <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-medium">Cases may be opened from</span><LocationPicker value={locs} onChange={setLocs} label="Cases may be opened from" /><span className="text-text-muted">Sample until the immigration expert confirms.</span></div>
+          <div className="space-y-1" data-field="allowedLocations">
+            <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-medium">Cases may be opened from</span><LocationPicker value={locs} onChange={(l) => { setLocs(l); setErrors((e) => ({ ...e, allowedLocations: "" })); setProblem(null); }} label="Cases may be opened from" note={errors.allowedLocations ? "add-note-allowedLocations" : undefined} /><span className="text-text-muted">Sample until the immigration expert confirms.</span></div>
+            <FieldNote slot="allowedLocations" text={errors.allowedLocations} />
+          </div>
         ) : null}
         <div className="rounded-lg bg-surface px-3 py-2.5 text-sm" aria-live="polite" data-you-are-adding>
           <span className="text-text-muted">You are adding </span>
@@ -268,6 +289,11 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       </div>
     </Dialog>
   );
+}
+
+/** A refusal under a control that is not a name field (the Pathway type switch, "Cases may be opened from"). */
+function FieldNote({ slot, text }: { slot: string; text?: string }) {
+  return text ? <p role="alert" id={`add-note-${slot}`} className="text-xs text-text-danger" data-field-note={slot}>{text}</p> : null;
 }
 
 /** One level: pick a name under the field above, or type a new one (tagged New); checks show under it as you type. */
@@ -311,7 +337,11 @@ function NameField({ level, label, value, options, isNew, underNew, enabled, inp
               <li key={n.key} id={`${id}-o${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); choose(n); }}
                 className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5", i === active ? "bg-text/5" : "hover:bg-text/5")}>{n.label}{n.retired ? <span className="text-xs text-text-muted">(retired)</span> : null}</li>
             ))}
-            {typedNew ? (
+            {typedNew && error ? (
+              // The name breaks a rule: the list says so where "Add …" would be, so the note is never hidden (review of #867).
+              <li id={`${id}-o${shown.length}`} role="option" aria-selected={false} aria-disabled="true" onMouseDown={(e) => e.preventDefault()} data-add-refused
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-text-danger">{error}</li>
+            ) : typedNew ? (
               <li id={`${id}-o${shown.length}`} role="option" aria-selected={active === shown.length} onMouseDown={(e) => { e.preventDefault(); setShow(false); onNext(); }} data-add-new
                 className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-text-link", active === shown.length ? "bg-text/5" : "hover:bg-text/5")}>
                 Add “{value.trim()}” <span className="rounded bg-primary/10 px-1 text-[11px] font-semibold">New</span>
