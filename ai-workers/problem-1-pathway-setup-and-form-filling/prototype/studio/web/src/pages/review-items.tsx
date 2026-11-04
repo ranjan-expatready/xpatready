@@ -307,7 +307,7 @@ export function EditionImpactPage() {
       {x.previous_accepted_words ? <div data-accepted-until><Notice tone={/has passed/.test(x.previous_accepted_words) ? "warn" : "info"} title={`Previous edition accepted until ${x.previous_accepted_until}`}>
         {x.previous_accepted_words}{x.previous_accepted_source ? <> IRCC: “{x.previous_accepted_source.quote}”{x.previous_accepted_source.url ? <> (<a className="text-text-link underline" href={x.previous_accepted_source.url} target="_blank" rel="noreferrer">form page</a>, saved {x.previous_accepted_source.saved})</> : null}</> : null}</Notice></div> : null}
       <section aria-labelledby="impact-ai" className="space-y-2 rounded-lg border border-border bg-surface-raised p-4" data-impact-ai>
-        <div className="flex flex-wrap items-center gap-2"><h2 id="impact-ai" className="text-base font-semibold">AI for the new and reworded boxes</h2>{x.ai.saved ? <Pill tone="success">Saved</Pill> : null}{x.ai.drafted ? <Pill tone="info">Drafted</Pill> : null}</div>
+        <div className="flex flex-wrap items-center gap-2"><h2 id="impact-ai" className="text-base font-semibold">AI for the new and reworded form fields</h2>{x.ai.saved ? <Pill tone="success">Saved</Pill> : null}{x.ai.drafted ? <Pill tone="info">Drafted</Pill> : null}</div>
         {x.ai.drafted ? null : <p className="text-sm" data-offer>{x.ai.offer.words}</p>}
         {x.ai.saved_words && !x.ai.drafted ? <p className="text-sm text-text-muted" data-saved-words>{x.ai.saved_words}</p> : null}
         {x.ai.drafted ? <p className="text-sm" data-drafted tabIndex={-1} ref={draftedRef}>{x.ai.drafted.message} <Link className="text-text-link underline" to="/review">{x.ai.drafted.waiting} waiting on To review</Link></p>
