@@ -63,7 +63,9 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   const onLoad = Number(sql("select count(*) from proposal_item where status = 'waiting'"));
   const readyOneRound = Number(sql("select count(*) from proposal_item where status = 'waiting' and origin = 'ai' and confidence = 'ready' and (agreement <> 'agreed' or rounds->'draft' is null or rounds->'draft' = 'null'::jsonb or rounds->'check' is null or rounds->'check' = 'null'::jsonb)"));
   const oneRoundSaid = Number(sql("select count(*) from proposal_item where status = 'waiting' and origin = 'ai' and agreement = 'one_round' and kind = 'field' and reason like 'Needs a checker round%'"));
-  ok("C11.14 AT-1 Load sample (the six) puts the saved proposals on To review through the same door, and no AI proposal is Ready without a checker round agreeing (QA-176, US$0)", onLoad > 0 && readyOneRound === 0 && oneRoundSaid > 0, { onLoad, readyWithoutBothRounds: readyOneRound, saidNeedsChecker: oneRoundSaid });
+  // Tech lead on #785 (4 Nov): with every form's checker round recorded no item needs to say "Needs a checker round", so that
+  // count is reported, not required.
+  ok("C11.14 AT-1 Load sample (the six) puts the saved proposals on To review through the same door, and no AI proposal is Ready without a checker round agreeing (QA-176, US$0)", onLoad > 0 && readyOneRound === 0, { onLoad, readyWithoutBothRounds: readyOneRound, saidNeedsChecker: oneRoundSaid });
 
   // ── the field-map step (replay of the saved IMM 5257 answer)
   const d = await call("POST", `/attachments/${att}/draft`, { mode: "replay" });
@@ -71,7 +73,10 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   if (!jobId || !(await until(async () => (await call("GET", `/jobs/${jobId}`)).body?.status === "COMPLETED"))) setupMissing("the saved IMM 5257 answer did not replay");
   const rows = sql(`select agreement || '|' || confidence || '|' || (rounds->'draft' is not null and rounds->'draft' <> 'null'::jsonb)::text || '|' || (rounds->'check' is not null and rounds->'check' <> 'null'::jsonb)::text || '|' || jsonb_array_length(rules)::text from proposal_item where run_id='${jobId}'`).split("\n").map((l) => l.split("|"));
   const twoRounds = rows.filter((r) => r[2] === "true" && r[3] === "true").length;
-  ok("C11.14 AT-2 every field-mapping proposal has a draft round and an independent checker round (both readings kept)", rows.length > 0 && twoRounds === rows.length, { items: rows.length, withBothRounds: twoRounds, agreement: [...new Set(rows.map((r) => r[0]))] });
+  // Tech lead on #785 (4 Nov): the checker round runs once per form edition; a field it did not name keeps the draft reading
+  // only and counts as a disagreement (differ → Decide, a person decides), never as agreed or Ready.
+  const unnamed = rows.filter((r) => r[3] !== "true"), unnamedDecide = unnamed.filter((r) => r[0] === "differ" && r[1] === "decide").length;
+  ok("C11.14 AT-2 every field-mapping proposal has a draft round, the form edition has an independent checker round, and a field the checker did not name is differ → Decide", rows.length > 0 && rows.every((r) => r[2] === "true") && twoRounds > 0 && unnamedDecide === unnamed.length, { items: rows.length, withBothRounds: twoRounds, checkerDidNotName: unnamed.length, ofThemDecide: unnamedDecide, agreement: [...new Set(rows.map((r) => r[0]))] });
   const ready = rows.filter((r) => r[1] === "ready");
   const readyOk = ready.filter((r) => r[0] === "agreed" && Number(r[4]) > 0).length;
   const rulePassed = Number(sql(`select count(*) from proposal_item where run_id='${jobId}' and confidence='ready' and jsonb_array_length(rules) > 0 and not exists (select 1 from jsonb_array_elements(rules) x where (x->>'passed')::boolean = false)`));

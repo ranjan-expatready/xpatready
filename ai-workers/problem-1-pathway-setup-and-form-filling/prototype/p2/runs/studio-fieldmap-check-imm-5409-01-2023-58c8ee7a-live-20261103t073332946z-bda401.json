@@ -1,0 +1,549 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-imm-5409-01-2023-58c8ee7a-live-20261103t073332946z-bda401",
+  "idempotency_key": "edb34c24dd5dc84ef31ed9f23215ec1188ccfdd607b0beae517daa0cbe386dd4",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "f0ee5b3101cd45117815061bac7fd221bb427a73c512917e1b1269763408f564",
+  "inputs": {
+   "combination": "edition:IMM 5409:01-2023",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5409e.inventory.json",
+     "sha256": "b241232ecf5adbf15e5183b25b2b39a61a7bd14b6ae5f9a31836fcebcb70bf5a"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 1.62,
+   "max_output_tokens": 32000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 10268,
+    "output_tokens": 7359,
+    "duration_ms": 56436
+   }
+  ],
+  "usage": {
+   "input_tokens": 10268,
+   "output_tokens": 7359,
+   "cost_usd": 0.188252,
+   "duration_ms": 56436
+  },
+  "started_at": "2026-11-03T07:33:32.948Z",
+  "ended_at": "2026-11-03T07:34:29.588Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Jurisdiction where the declaration is sworn; depends on where the declaration is commissioned, which the case record does not normally hold",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Country"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Province[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Jurisdiction where the declaration is sworn; depends on where the declaration is commissioned, which the case record does not normally hold",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Province/State/Territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].FirstName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_name_passport",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(full name of declarant as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].SecondName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.full_name_passport",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(full name of declarant's partner as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].City[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.residence_city",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(name of city, town, village)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].County[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.residence_county",
+    "transform": "as_is",
+    "condition": "Only if a county applies to the residence",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].Province[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.residence_province_state",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(name of province, state, territory)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].Country[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.residence_country",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(name of country)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].YearsTogether[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "relationship.cohabitation_duration_years",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "(number of years)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].startDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "relationship.cohabitation_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Info[0].endDate[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "form_subject",
+    "fact": "relationship.cohabitation_end_date",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.joint_residence_agreement",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "a) Have jointly signed a residential lease, mortgage or purchase agreement relating to a residence in which we both live"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[1].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.joint_other_property",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "b) Jointly own property other than our residence."
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[2].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.joint_financial_accounts",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "c) Have joint bank, trust, credit union or charge card accounts."
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[3].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.common_law_declared_income_tax",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "d) Have declared our common-law union under the Canadian Income Tax Act. (T-1 \"General - Individual Income Tax Return\")"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section2[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.life_insurance_names_partner_beneficiary",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "I have life insurance on myself which names my common-law partner as beneficiary."
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section3[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.life_insurance_names_partner_beneficiary",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "My common-law partner has life insurance on themselves which names me as beneficiary."
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section4[0].TextField2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "relationship.other_documentary_evidence",
+    "transform": "as_is",
+    "condition": "Only when none of the preceding sections applies",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "If none of the above sections applies, what other documentary evidence do you have that would indicate your relationship as common-law partners?"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].NameDecl[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.full_name_passport",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Name of declarant (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].SignatureDecl[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the declarant made before the commissioner",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Signature of declarant"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].NamePartner[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.full_name_passport",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Name of declarant's partner (as shown on passport/travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].SignaturePartner[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the declarant's partner made before the commissioner",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Signature of declarant's partner"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].City[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Declared before me at (City, Town, Village)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Name of the notary or commissioner who administers the declaration; not a person in the case record",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Name of the person who administered the declaration"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].County[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only if a county applies to the place of declaration",
+    "unresolved_reason": "Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "county of (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].Province[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "in the province/state/territory of"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].Country[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "in (country)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].Title[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Title of the official who administers the declaration (codes 1 Notary Public, 2 Commissioner of Oaths, 3 Commissioner of Taking Affidavits); not known until commissioning",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "SOLEMN DECLARATION"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].Day[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Day the declaration is sworn; must match the actual commissioning date, which the case record does not hold in advance",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "this (day)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].Month[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Month the declaration is sworn; must match the actual commissioning date, which the case record does not hold in advance",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "day of (month)"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].Year[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Year the declaration is sworn; must match the actual commissioning date, which the case record does not hold in advance",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "of the year"
+    }
+   },
+   {
+    "form_edition": "IMM 5409 (01-2023)",
+    "form_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "data_path": "IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the official who administers the declaration",
+    "evidence": {
+     "file_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+     "quote": "Signature of the person who administered the declaration"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "5d5a6d61ad29a013cd6ac645e6dd226fdef3cb7743d4d23d4b6a628aa9eae60c",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5409 (01-2023)"
+  },
+  "screened": true,
+  "output_sha256": "f0ee5b3101cd45117815061bac7fd221bb427a73c512917e1b1269763408f564",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "1a8535635fb41c9c7e7e0b4b32dc07fd1968f9c9f481c1ebe33ce98c5a7f35be",
+  "request_bytes": 23762,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 51.19273599999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5409e.inventory.json",
+    "sha256": "b241232ecf5adbf15e5183b25b2b39a61a7bd14b6ae5f9a31836fcebcb70bf5a",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "31170ed9cdfcab39014623f834b02354994aa4c412c4a900cbf3418709fd0a97",
+   "digest_made_at": "2026-11-03T07:33:32.947Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "2a95186d890c562594c0bf2dd3245e6c",
+   "ticket_expires_at": "2026-11-03T07:35:32.947Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5409 (01-2023)\",\"canonical_fields\":[{\"id\":\"person.full_name_passport\",\"meaning\":\"Person's full name exactly as shown on their passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.residence_city\",\"meaning\":\"City, town or village where the person currently lives\",\"value_type\":\"text\"},{\"id\":\"person.residence_county\",\"meaning\":\"County where the person currently lives, if applicable\",\"value_type\":\"text\"},{\"id\":\"person.residence_province_state\",\"meaning\":\"Province, state or territory where the person currently lives\",\"value_type\":\"text\"},{\"id\":\"person.residence_country\",\"meaning\":\"Country where the person currently lives\",\"value_type\":\"country\"},{\"id\":\"relationship.cohabitation_duration_years\",\"meaning\":\"Number of years the couple has lived together in a common-law relationship\",\"value_type\":\"number\"},{\"id\":\"relationship.cohabitation_start_date\",\"meaning\":\"Date the couple began living together in a common-law relationship\",\"value_type\":\"date\"},{\"id\":\"relationship.cohabitation_end_date\",\"meaning\":\"End date of the declared period of cohabitation\",\"value_type\":\"date\"},{\"id\":\"relationship.joint_residence_agreement\",\"meaning\":\"Whether the couple jointly signed a residential lease, mortgage or purchase agreement for a residence where both live\",\"value_type\":\"yes_no\"},{\"id\":\"relationship.joint_other_property\",\"meaning\":\"Whether the couple jointly own property other than their residence\",\"value_type\":\"yes_no\"},{\"id\":\"relationship.joint_financial_accounts\",\"meaning\":\"Whether the couple hold joint bank, trust, credit union or charge card accounts\",\"value_type\":\"yes_no\"},{\"id\":\"relationship.common_law_declared_income_tax\",\"meaning\":\"Whether the couple declared their common-law union under the Canadian Income Tax Act\",\"value_type\":\"yes_no\"},{\"id\":\"person.life_insurance_names_partner_beneficiary\",\"meaning\":\"Whether the person holds life insurance on themselves naming their partner as beneficiary\",\"value_type\":\"yes_no\"},{\"id\":\"relationship.other_documentary_evidence\",\"meaning\":\"Description of other documentary evidence showing the common-law relationship\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Jurisdiction where the declaration is sworn; depends on where the declaration is commissioned, which the case record does not normally hold\",\"evidence_quote\":\"Country\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Province[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Jurisdiction where the declaration is sworn; depends on where the declaration is commissioned, which the case record does not normally hold\",\"evidence_quote\":\"Province/State/Territory\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].FirstName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_name_passport\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(full name of declarant as shown on passport/travel document)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].SecondName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.full_name_passport\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"(full name of declarant's partner as shown on passport/travel document)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].City[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.residence_city\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(name of city, town, village)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].County[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.residence_county\",\"transform\":\"as_is\",\"condition\":\"Only if a county applies to the residence\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(if applicable)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].Province[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.residence_province_state\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(name of province, state, territory)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].Country[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.residence_country\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(name of country)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].YearsTogether[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.cohabitation_duration_years\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(number of years)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].startDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.cohabitation_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Info[0].endDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.cohabitation_end_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.joint_residence_agreement\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"a) Have jointly signed a residential lease, mortgage or purchase agreement relating to a residence in which we both live\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[1].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.joint_other_property\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Jointly own property other than our residence.\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[2].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.joint_financial_accounts\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"c) Have joint bank, trust, credit union or charge card accounts.\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[3].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.common_law_declared_income_tax\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"d) Have declared our common-law union under the Canadian Income Tax Act. (T-1 \\\"General - Individual Income Tax Return\\\")\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section2[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.life_insurance_names_partner_beneficiary\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"I have life insurance on myself which names my common-law partner as beneficiary.\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section3[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.life_insurance_names_partner_beneficiary\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"My common-law partner has life insurance on themselves which names me as beneficiary.\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section4[0].TextField2[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.other_documentary_evidence\",\"transform\":\"as_is\",\"condition\":\"Only when none of the preceding sections applies\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"If none of the above sections applies, what other documentary evidence do you have that would indicate your relationship as common-law partners?\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].NameDecl[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.full_name_passport\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of declarant (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].SignatureDecl[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the declarant made before the commissioner\",\"evidence_quote\":\"Signature of declarant\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].NamePartner[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.full_name_passport\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of declarant's partner (as shown on passport/travel document)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].SignaturePartner[0]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the declarant's partner made before the commissioner\",\"evidence_quote\":\"Signature of declarant's partner\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].City[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record\",\"evidence_quote\":\"Declared before me at (City, Town, Village)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Name of the notary or commissioner who administers the declaration; not a person in the case record\",\"evidence_quote\":\"Name of the person who administered the declaration\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].County[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if a county applies to the place of declaration\",\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record\",\"evidence_quote\":\"county of (if applicable)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].Province[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record\",\"evidence_quote\":\"in the province/state/territory of\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].Country[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Place where the declaration is made before the commissioner; set at commissioning and not held in an ordinary case record\",\"evidence_quote\":\"in (country)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].Title[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Title of the official who administers the declaration (codes 1 Notary Public, 2 Commissioner of Oaths, 3 Commissioner of Taking Affidavits); not known until commissioning\",\"evidence_quote\":\"SOLEMN DECLARATION\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].Day[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Day the declaration is sworn; must match the actual commissioning date, which the case record does not hold in advance\",\"evidence_quote\":\"this (day)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].Month[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Month the declaration is sworn; must match the actual commissioning date, which the case record does not hold in advance\",\"evidence_quote\":\"day of (month)\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].Year[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Year the declaration is sworn; must match the actual commissioning date, which the case record does not hold in advance\",\"evidence_quote\":\"of the year\"},{\"data_path\":\"IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the official who administers the declaration\",\"evidence_quote\":\"Signature of the person who administered the declaration\"}]}"
+}
