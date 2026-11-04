@@ -715,6 +715,8 @@ export class Demo {
         // DEMO.md's family has a second child, 18 or over, who answers for themselves; the Sample record has one child, so
         // the second child's few facts are Sample, made up here (a name and a date of birth that make them 19 in 2026).
         for (const [k, v] of [["person.family_name", A["person.family_name"] ?? "SAMPLE"], ["person.given_names", "SECOND CHILD (SAMPLE)"], ["person.date_of_birth", "2007-03-14"]] as const) await put(C2, k, v);
+        // The Sample record gives the first child no date of birth; one is made up here (Sample) so the child is under 18.
+        await put(C1, "person.date_of_birth", "2016-05-20");
         const subjects = [P, SP, C1, C2];
         applicants = subjects.length; onCase = (made.people as unknown[]).length + 3;
         const copies: string[] = [];
@@ -761,7 +763,15 @@ export class Demo {
         const items = (sub.changeSummary as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`);
         if (items.length) await this.studio.signoff(sme, vvId, { items, action: "signed", note: "Signed by the sample loader as the SME (C10.1 checkpoint, release 2)." });
         await this.studio.approve(approver, vvId);
-      } catch (e) { r2Why = `Release 2 was not made: ${said(e)}`; }
+      } catch (e) {
+        // Lead 10's ruling on #1009 (c'): IMM 5645 (01-2021) prints 7 marital-status choices on its parents' and
+        // children's boxes and no "unknown", so some list values have no code there and Submit refuses them. A person
+        // marking a value "not on this form" (filling then refuses it in words) is row B81, not this loader's.
+        const words = said(e), choices = (words.match(/no code for|no option map yet/g) ?? []).length;
+        // Plain words for a person (no form field codes): how many IMM 5645 boxes, and why, when that is the cause.
+        r2Why = choices ? `Release 2 was not made: ${choices} marital-status boxes of IMM 5645 (01-2021, page 1) cannot take every value of the marital status list. The form prints 7 choices on its parents' and children's boxes (Annulled marriage, Common-law, Divorced, Legally separated, Married, Single, Widowed) and no "unknown", and the list's two married values cannot share its one "Married". Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words.`
+          : `Release 2 was not made: ${words}`;
+      }
     });
     const vvReleases = vvId ? await this.db.configRelease.count({ where: { combinationId: vvId } }) : 0;
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: !r2Why && vvReleases >= 2 ? "done" : "waiting",
