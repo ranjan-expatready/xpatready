@@ -40,6 +40,16 @@ const ID = /\b[Cc](\d{1,2})\.(\d{1,2})(?![\d.]*\d)\b/g, BUG = /\bQA-\d+\b/gi, GA
 const ids = (s) => [...s.matchAll(ID)].map((m) => `C${m[1]}.${m[2]}`);
 const KEY = /\b(capabilit(?:y|ies)|claims?\s+works?)\b[^:|\n]{0,40}:/gi;
 
+/** The text a person writes as prose: a fenced block (``` or ~~~) and an inline `code span` are examples, not claims
+ *  (#804's own description quoted the syntax and was read as a claim); the line count stays the same. A "Claims Works"
+ *  line whose ids sit only in code names nothing readable, so it still refuses. */
+export const prose = (text) => {
+  let fence = false;
+  return text.split(/\r?\n/).map((l) => {
+    if (/^\s*(```|~~~)/.test(l)) { fence = !fence; return ""; }
+    return fence ? "" : l.replace(/`[^`]*`/g, " ");
+  }).join("\n");
+};
 /** A body line in plain words: markdown marks, quotes, list bullets and headings gone; a table row "| key | value |"
  *  becomes "key: value". */
 const plain = (line) => {
@@ -51,7 +61,7 @@ const plain = (line) => {
  *  closes / closed / resolves with no negation earlier in the sentence. */
 export function fixedIn(text) {
   const out = new Set();
-  for (const raw of text.split(/\r?\n/)) {
+  for (const raw of prose(text).split(/\r?\n/)) {
     const line = plain(raw);
     const f = line.match(/^fix(?:es|ed)?\s*:\s*(.*)$/i);
     if (f) { for (const b of f[1].split(/\b(?:not|n't)\b/i)[0].match(BUG) ?? []) out.add(b.toUpperCase()); continue; }
@@ -69,6 +79,7 @@ export function fixedIn(text) {
  *  it says it fixes, and the "Claims Works" lines it could not read. */
 export function claims(title = "", body = "") {
   const caps = new Map(), works = new Set(), unread = [];
+  title = prose(title); body = prose(body);
   const add = (id, steps) => caps.set(id, steps ? [...new Set([...(caps.get(id) ?? []), ...steps])] : caps.has(id) ? caps.get(id) : null);
   for (const id of ids(title)) add(id, null);
   const lines = body.split(/\r?\n/).map(plain);

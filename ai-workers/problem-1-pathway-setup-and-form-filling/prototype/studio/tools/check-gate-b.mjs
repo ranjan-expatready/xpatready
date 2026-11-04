@@ -59,6 +59,10 @@ for (const [label, body] of [["a list under the key", "Claims Works:\n- C11.13\n
 ok("\"Capability:\" (one) names a capability", claims("forms: x", "Capability: C11.13").caps.has("C11.13"));
 ok("prose that claims Works without a readable line refuses (never a silent skip)", part1(claims("forms: x", "This PR claims Works for C11.13 once qa agrees."), bugs).length === 1);
 ok("\"Claims Works:\" with nothing readable refuses; \"Claims Works: none\" does not", part1(claims("forms: x", "Claims Works: the reason dialog"), bugs).length === 1 && part1(claims("forms: x", "Claims Works: none"), bugs).length === 0);
+ok("an example in inline code or a fenced block is not a claim (#804's own description, run 41765883303)",
+  claims("infra: gate B", "A pack names its steps, e.g. `Capabilities: C7.5 (steps 1-4, 10-14)`.\n```\nClaims Works: C11.13\n```\n").caps.size === 0);
+ok("a Claims Works line whose ids are only in code refuses", part1(claims("forms: x", "Claims Works: `C11.13`"), bugs).length === 1);
+ok("a fix inside code does not count", w("forms: C11.13 reason", "`Fixes: QA-192`").join() === "QA-192");
 ok("a Works claim is the whole pack: steps never narrow it", claims("forms: x", "Claims Works: C7.5 (steps 1-4)").caps.get("C7.5") === null);
 ok("a Claims Works line names its capabilities for the packs too", [...claims("forms: x", "Claims Works: C11.13, C4.7").caps.keys()].join() === "C11.13,C4.7" && [...claims("forms: x", "**Claims Works:** C11.13").works].join() === "C11.13");
 ok("a Minor does not stop a PR (QA-150 on C11.3)", w("screens: C11.3 trail").length === 0);
