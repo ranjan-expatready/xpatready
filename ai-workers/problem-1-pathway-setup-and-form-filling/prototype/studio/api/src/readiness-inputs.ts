@@ -17,7 +17,7 @@ const SIGNER: Record<string, string> = { person: "the person", parent: "a parent
 export type PreparedForm = { id: string; filing: string; subject: string; person: string; form: string; channel: Channel; signature: Signature; signed_by: string | null; signers?: string[]; state: string;
   reason?: string; steps?: { key: string; done: boolean | null }[];
   /** C9.2 (BR-12, P-136): a validated, signed or uploaded copy of it is out of date: the first fact changed and when. */
-  outOfDate?: { fact: string; since: string } | null };
+  outOfDate?: { fact: string; since: string; key?: string } | null };
 // Review B1 on #861: `signers` may be missing on a line (`signers?` in its type), so readiness never assumes it.
 export type ReadinessInputs = {
   workspaceId: string; caseId: string; filings: string[];

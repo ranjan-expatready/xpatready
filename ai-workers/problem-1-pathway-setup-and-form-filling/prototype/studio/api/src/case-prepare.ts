@@ -338,8 +338,12 @@ export class CasePrepare {
     const records = new Map(items.flatMap((i) => ("record" in i && i.record === "signed_scan" && "item" in i ? [[i.item as string, i]] : [])));
     const markOf = (i: (typeof items)[number] | undefined) => {
       if (!i || i.state !== "out_of_date" || ("channel" in i && i.channel === "ONLINE")) return null;
-      const first = ((i as { changes?: ChangeRow[] }).changes ?? [])[0];
-      return { fact: first?.label ?? "a fact it reads", since: first?.at ?? today.toISOString() };
+      const cs = (i as { changes?: ChangeRow[] }).changes ?? [];
+      // Devin on #926: the warning's identity is every change with its value now (a pass never covers a later change);
+      // its date is the latest change's.
+      const key = createHash("sha256").update(JSON.stringify(cs.map((x) => [x.subject, x.fact, x.now]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))))).digest("hex").slice(0, 16);
+      const since = cs.map((x) => x.at).filter((x): x is string => !!x).sort().at(-1) ?? today.toISOString();
+      return { fact: cs.length ? `${cs[0].label}${cs.length > 1 ? ` and ${cs.length - 1} more` : ""}` : "a fact it reads", since, key };
     };
     const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form && !("record" in i) ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
       channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,

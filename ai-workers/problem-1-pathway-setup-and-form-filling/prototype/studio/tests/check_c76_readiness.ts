@@ -217,4 +217,16 @@ prop("C7.6 property: never a percentage; every line has words, a known code and 
 prop("C7.6 property (P-237): the only block is a barcode form without its validated copy; every former block is CRITICAL", (x) => x.blocks.every((b) => b.code === "barcode_not_validated" && b.severity === "block") && x.warns.every((w) => w.severity === (isCritical(w.code) ? "critical" : "warning")));
 prop("C7.6 property: owes counts add up to the open lines", (x) => Object.values(x.owes).reduce((a, b) => a + (b ?? 0), 0) === x.blocks.length + x.warns.length);
 
+
+// C9.2 (Devin on #926): an out-of-date mark's pass covers only the changes it was given for.
+{
+  const mark = (key: string) => i5476({ outOfDate: { fact: "Family name", since: "2026-11-01T09:00:00Z", key } });
+  const r1 = filingReadiness(done({ forms: [i5257(), mark("k1")] }));
+  const w1 = r1.warns.find((w) => w.code === "out_of_date");
+  const passed = [{ code: "out_of_date", keys: [w1!.key], reason: "The copy filed is the one the representative checked (Sample)", by: "user-R", at: "2026-11-01T10:00:00Z" }];
+  const same = filingReadiness(done({ forms: [i5257(), mark("k1")], passes: passed as never }));
+  const later = filingReadiness(done({ forms: [i5257(), mark("k2")], passes: passed as never }));
+  ok("C9.2 (Devin on #926): a pass of an out-of-date mark holds while its changes are the same", !same.warns.some((w) => w.code === "out_of_date"), same.warns.map((w) => w.code));
+  ok("C9.2 (Devin on #926, fail): a later change on the same day is a new out-of-date line, not covered by the old pass", later.warns.some((w) => w.code === "out_of_date") && w1!.key !== later.warns.find((w) => w.code === "out_of_date")!.key, later.warns.map((w) => w.key));
+}
 process.exitCode = summary() ? 1 : 0;
