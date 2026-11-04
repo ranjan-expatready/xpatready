@@ -20,6 +20,14 @@ run(async () => {
   const KEY = T.key("vv.single");
   const wp = T.combo(KEY);
   await T.needQuestions(wp);
+  // qa lane, 5 Nov (Lead 9/10): the passport's facts come from the people's own steps too: its checklist lines
+  // (documentsBySteps), then the facts it supplies, proposed by the author and approved by a second person (#1005,
+  // suppliesBySteps, samples/document-supplies.json, Sample). Nothing is written directly.
+  if (KEY === "vv.single") {
+    const docs = await T.documentsBySteps(wp);
+    const sup = await T.suppliesBySteps(wp);
+    console.log(`SETUP document lines and the facts they supply through the people's steps: ${JSON.stringify({ docs, sup }).slice(0, 300)}`);
+  }
   const q = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body;
   const roles = q?.questionnaire?.roles ?? [];
   const applying = (q?.people?.lines ?? []).filter((l: any) => l.applies).map((l: any) => l.role);
@@ -31,12 +39,16 @@ run(async () => {
   const allSections = q?.questionnaire?.sections ?? [];
   // qa-1 G10 / QA-133: every section header is the library's title in words, never a system key.
   ok("C4.1 pass (G10, QA-133): every section header is a title in words, never a system key", allSections.length > 0 && allSections.every((x: any) => !!x.title && !/^[a-z0-9]+(_[a-z0-9]+)+$/.test(x.title) && x.title !== x.id), allSections.map((x: any) => x.title).slice(0, 6));
-  // qa-1 G4: IMM 5257's own parts "Your visit" and "Previous countries of residence" are sections of Visitor visa (from the
-  // form's parts, P-158: never added by hand). Visitor visa only.
-  if (KEY === "vv.single") ok("C4.1 pass (G4): Visitor visa's questionnaire has the sections Your visit and Previous countries of residence", ["your visit", "previous countries of residence"].every((t) => allSections.some((x: any) => String(x.title).toLowerCase().includes(t))), allSections.map((x: any) => x.title));
   const pv = (await call("GET", `/combinations/${wp}/workspace?tab=preview&person=principal`)).body?.preview;
   const fromDocs = (pv?.sets?.sqr?.fromDocuments ?? []).flatMap((d: any) => d.facts);
   const askedLabels = new Set((pv?.questionnaire?.sections ?? []).flatMap((s: any) => (s.questions ?? []).flatMap((x: any) => [x.label, x.meaning])));
+  // qa-1 G4, reworded by the qa lane on 5 Nov: sections take the form's printed headings (P-158, #883). IMM 5257 (09-2023)
+  // prints PERSONAL DETAILS, NATIONAL IDENTITY DOCUMENT, US PR CARD, CONTACT INFORMATION, DETAILS OF VISIT TO CANADA,
+  // EDUCATION, EMPLOYMENT and BACKGROUND INFORMATION (prototype/p1/inventory/imm5257e.headings.json); there is no "Your
+  // visit" heading, and "Previous countries of residence" is a set of questions under Personal details. So: the visit
+  // and personal-details sections exist, and the previous countries of residence are asked of the principal.
+  const prevAsked = (pv?.questionnaire?.sections ?? []).some((s: any) => (s.questions ?? []).some((x: any) => /previous countr|countries of residence/i.test(`${x.label ?? ""} ${x.meaning ?? ""}`)));
+  if (KEY === "vv.single") ok("C4.1 pass (G4): Visitor visa's questionnaire has IMM 5257's printed sections Details of visit to Canada and Personal details, and asks the principal's previous countries of residence", ["details of visit to canada", "personal details"].every((t) => allSections.some((x: any) => String(x.title).toLowerCase().includes(t))) && prevAsked, { sections: allSections.map((x: any) => x.title), prevAsked });
   ok("C4.1 pass: a fact the passport supplies is not asked of the principal in the SQR", fromDocs.length > 0 && askedLabels.size > 0 && !fromDocs.some((f: string) => askedLabels.has(f)), fromDocs.slice(0, 3));
 
   // ---------------------------------------------------------------- section order per combination (P-216 (1))
