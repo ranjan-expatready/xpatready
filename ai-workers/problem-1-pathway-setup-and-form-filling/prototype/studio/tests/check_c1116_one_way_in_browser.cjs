@@ -109,6 +109,9 @@ const saveFor = (key) => SAVED.forEach((f, i) => {
     await p.goto(`${BASE}/?pathway=INDIVIDUAL&filter=all`); await ready();
     await card(tvKey).locator("[data-start-setup]").click();
     await p.waitForURL(/\/c\/[^/]+\/forms/, { timeout: 15000 }); await ready();
+    // Batch flake (#883, run 41854761362): ready() accepts the workspace's h1, which renders before its header's Path, so
+    // on a loaded runner the step below read the trail too early. Wait for what it reads: the Path with this place.
+    await p.waitForFunction(() => { const n = document.querySelector('nav[aria-label="Path"]'); const m = document.querySelector("main")?.innerText ?? ""; return !!n && /Transit visa/.test(m) && /Visitors/.test(m); }, null, { timeout: 30000 });
     const tvId = p.url().match(/\/c\/([^/]+)\//)[1];
     step("C11.16: Start setup on a card opens that combination's workspace (Forms tab)", combos() === 1 && !!tvId, p.url());
     const EDIT = "input, select, textarea, [role='combobox'], [contenteditable='true']";
