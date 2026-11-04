@@ -69,7 +69,13 @@ export class Forms {
   /** The library field (other than `except`) that already answers to this label: an alias or its own name. */
   private namedBy(rows: Library, label: string, except: string) {
     const k = normLabel(label);
-    return rows.find((r) => r.canonicalFieldKey !== except && !r.mergedIntoKey && r.status !== "RETIRED" && (r.aliases.some((a) => normLabel(a) === k) || normLabel(r.canonicalFieldKey.split(".").slice(1).join(" ").replace(/_/g, " ")) === k));
+    // QA-219: its name as shown (a rename's label) counts too, not only the key's words.
+    return rows.find((r) => r.canonicalFieldKey !== except && !r.mergedIntoKey && r.status !== "RETIRED" && (r.aliases.some((a) => normLabel(a) === k) || normLabel(r.canonicalFieldKey.split(".").slice(1).join(" ").replace(/_/g, " ")) === k || (!!r.labelChecked && !!r.label && normLabel(r.label) === k)));
+  }
+  /** QA-219: a library field in words for a refusal a person reads on its page: its confirmed name, else its key's words. */
+  private shown(rows: Library, key: string) {
+    const r = rows.find((x) => x.canonicalFieldKey === key), w = (key.split(".").pop() ?? key).replace(/_/g, " ");
+    return (r?.labelChecked && r.label) || w.charAt(0).toUpperCase() + w.slice(1);
   }
 
   async editions(formKey: string) {
@@ -145,16 +151,20 @@ export class Forms {
     const b = parse(NewAlias, body);
     const workspaceId = await this.ws.id();
     const k = normLabel(b.alias);
-    if (!/[\p{L}\p{N}]/u.test(k)) fail("An alias needs letters or digits.");
-    // Read and written under a row lock: aliases added at the same moment are all kept (break m8).
+    if (!/[\p{L}\p{N}]/u.test(k)) fail("A name needs letters or digits.");
+    // QA-219 break m5: a name shaped like a field key is a key, not a name a form's wording uses.
+    if (/^[a-z]+\.[a-z0-9_]+$/.test(b.alias.trim())) fail("Use words a form uses (for example \"Second phone number\"), not a field key.");
+    // Read and written under a row lock: aliases added at the same moment are all kept (break m8). QA-219 break M1: one
+    // lock per workspace for names, so the same name added to two fields at the same moment is kept on one only.
     const u = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`field-names:${workspaceId}`}))`;
       const rows = await this.libraryRows(workspaceId, tx);
       const f = rows.find((r) => r.canonicalFieldKey === key);
-      if (f?.mergedIntoKey) conflict(`${key} was merged into ${f.mergedIntoKey}: add the label there.`);
-      if (!f || f.status === "RETIRED") fail(`${key} is not in the library.`, HttpStatus.NOT_FOUND);
+      if (f?.mergedIntoKey) conflict(`This field was merged into "${this.shown(rows, f.mergedIntoKey)}": add the name there.`);
+      if (!f || f.status === "RETIRED") fail("This field is not in the library (it may have been removed since the page was opened).", HttpStatus.NOT_FOUND);
       await tx.$queryRaw`SELECT id FROM canonical_field WHERE id = ${f!.id}::uuid FOR UPDATE`;
       const other = this.namedBy(await this.libraryRows(workspaceId, tx), b.alias, key);
-      if (other) conflict(`"${b.alias}" already names ${other.canonicalFieldKey}: one label points to one shared field (a reviewed merge joins two fields).`);
+      if (other) conflict(`"${b.alias}" already names the field "${this.shown(rows, other.canonicalFieldKey)}": one name points to one shared field. If the two mean the same, merge them instead.`);
       const now = await tx.canonicalField.findUniqueOrThrow({ where: { id: f!.id } });
       if (now.aliases.some((a) => normLabel(a) === k)) return null;
       return tx.canonicalField.update({ where: { id: f!.id }, data: { aliases: [...now.aliases, b.alias] } });
@@ -291,14 +301,17 @@ export class Forms {
     need(actor, "author");
     const b = parse(NewMerge, body);
     if (b.keep === b.merge) fail("Choose two different fields.");
+    // QA-219 break m10: the reason is read by the second person, so it is said in words.
+    if (b.reason.replace(/[^\p{L}\p{N}]/gu, "").length < 10) fail("Say why the two fields mean the same in words (at least 10 letters or digits).");
     const workspaceId = await this.ws.id();
     const rows = await this.libraryRows(workspaceId);
     const keep = rows.find((r) => r.canonicalFieldKey === b.keep), merge = rows.find((r) => r.canonicalFieldKey === b.merge);
-    for (const [k, r] of [[b.keep, keep], [b.merge, merge]] as const) if (!r || r.status === "RETIRED" || r.mergedIntoKey) fail(`${k} is not an active field of the library.`, HttpStatus.NOT_FOUND);
-    if (keep!.valueType !== merge!.valueType) conflict(`${b.keep} holds a ${keep!.valueType} and ${b.merge} a ${merge!.valueType}: fields of different kinds are not the same meaning.`);
+    for (const [k, r] of [[b.keep, keep], [b.merge, merge]] as const) if (!r || r.status === "RETIRED" || r.mergedIntoKey) fail(`"${this.shown(rows, k)}" is not an active field of the library (retired or merged since).`, HttpStatus.NOT_FOUND);
+    if (keep!.valueType !== merge!.valueType) conflict(`"${this.shown(rows, b.keep)}" and "${this.shown(rows, b.merge)}" take different kinds of answer (${keep!.valueType.replace(/_/g, " ")}, ${merge!.valueType.replace(/_/g, " ")}): fields of different kinds are not the same meaning.`);
     // One pending merge per field (break M5): a chain or a cycle of merges waits until the first is decided.
     const pending = await this.db.fieldMerge.findFirst({ where: { workspaceId, status: "PROPOSED", OR: [{ keepKey: { in: [b.keep, b.merge] } }, { mergeKey: { in: [b.keep, b.merge] } }] } });
-    if (pending) conflict(pending.keepKey === b.keep && pending.mergeKey === b.merge ? "This merge is already waiting for a second person." : `${[b.keep, b.merge].find((k) => k === pending.keepKey || k === pending.mergeKey)} is already in a merge waiting for a second person (${pending.mergeKey} into ${pending.keepKey}): decide that one first.`);
+    // QA-219: said in the fields' names (the field page shows it on the control).
+    if (pending) conflict(pending.keepKey === b.keep && pending.mergeKey === b.merge ? "This merge is already waiting for a second person." : `"${this.shown(rows, [b.keep, b.merge].find((k) => k === pending.keepKey || k === pending.mergeKey)!)}" is already in a merge waiting for a second person ("${this.shown(rows, pending.mergeKey)}" into "${this.shown(rows, pending.keepKey)}"): that one is decided first.`);
     // G-CORE B2 (BR-1, BR-2): through the change-set door: the fixed rules check (both fields active, same kind of answer
     // and the same answer list, every condition the swap rewrites still sound, no new loop) refuses in words, nothing
     // written; a stale preview answers "look again". A merge always waits for a second person (BR-4).
@@ -311,7 +324,7 @@ export class Forms {
         await this.sets.record(tx, workspaceId, actor.id, items, "person", r, "waiting", { fieldMergeId: fm.id });
         return fm;
       });
-    } catch (e) { if ((e as { code?: string }).code === "P2002") conflict(`${b.merge} is already in a merge waiting for a second person (proposed at the same moment).`); throw e; }
+    } catch (e) { if ((e as { code?: string }).code === "P2002") conflict(`"${this.shown(rows, b.merge)}" is already in a merge waiting for a second person (proposed at the same moment).`); throw e; }
     await this.audit.log(workspaceId, actor.id, "proposed", "field merge", b.merge, `${actor.name} proposed merging ${b.merge} into ${b.keep}: ${b.reason}`);
     return m;
   }
@@ -331,7 +344,8 @@ export class Forms {
     const items: ChangeItem[] = [{ action: "merge", kind: "field", key: from, into: to }];
     // A field retired or merged since the proposal keeps its own words (review 7, break M5), before the full check.
     const newest = async (k: string) => this.db.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: k }, orderBy: { version: "desc" } });
-    for (const k of [to, from]) { const f = await newest(k); if (!f || f.status === "RETIRED" || f.mergedIntoKey) conflict(`${k} was ${f?.mergedIntoKey ? `merged into ${f.mergedIntoKey}` : "retired"} after this merge was proposed: nothing was changed; reject this merge.`); }
+    const named = await this.libraryRows(ws);
+    for (const k of [to, from]) { const f = await newest(k); if (!f || f.status === "RETIRED" || f.mergedIntoKey) conflict(`"${this.shown(named, k)}" was ${f?.mergedIntoKey ? `merged into "${this.shown(named, f.mergedIntoKey)}"` : "retired"} after this merge was proposed: nothing was changed; reject this merge.`); }
     const checked = await this.sets.guard(items, "person", b.expected, ws);
     const swap = <T>(j: T): T => (j == null ? j : (JSON.parse(JSON.stringify(j).split(`"field":"${from}"`).join(`"field":"${to}"`)) as T));
     const reads = (j: unknown) => !!j && JSON.stringify(j).includes(`"field":"${from}"`);
@@ -343,8 +357,14 @@ export class Forms {
       const fields = await tx.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: { in: [from, to] } }, orderBy: { version: "desc" } });
       const keep = fields.find((f) => f.canonicalFieldKey === to)!, gone = fields.find((f) => f.canonicalFieldKey === from)!;
       // Checked again now (review 7, break M5): both fields still active, or the merge is refused and nothing moves.
-      for (const [k, f] of [[to, keep], [from, gone]] as const) if (!f || f.status === "RETIRED" || f.mergedIntoKey) conflict(`${k} was ${f?.mergedIntoKey ? `merged into ${f.mergedIntoKey}` : "retired"} after this merge was proposed: nothing was changed; reject this merge.`);
-      await tx.canonicalField.update({ where: { id: keep.id }, data: { aliases: [...new Set([...keep.aliases, from, ...gone.aliases])] } });
+      for (const [k, f] of [[to, keep], [from, gone]] as const) if (!f || f.status === "RETIRED" || f.mergedIntoKey) conflict(`"${this.shown(named, k)}" was ${f?.mergedIntoKey ? `merged into "${this.shown(named, f.mergedIntoKey)}"` : "retired"} after this merge was proposed: nothing was changed; reject this merge.`);
+      // QA-219 break M3: the field that goes away keeps its name too, as a name of the field that stays (so it is not free
+      // for a third field), beside its key that redirects and its own other names.
+      const own = normLabel(this.shown(named, to)), seen = new Set<string>([own]);
+      const names = [...keep.aliases, from, this.shown(named, from), ...gone.aliases].filter((a) => { const n = normLabel(a); if (seen.has(n)) return false; seen.add(n); return true; });
+      await tx.canonicalField.update({ where: { id: keep.id }, data: { aliases: names } });
+      // QA-219 break M2: a field merged into this one before now redirects to the field that stays (one hop, never a chain).
+      await tx.canonicalField.updateMany({ where: { workspaceId: ws, mergedIntoKey: from }, data: { mergedIntoKey: to } });
       if (gone.status === "DRAFT") await tx.canonicalField.update({ where: { id: gone.id }, data: { status: "RETIRED", mergedIntoKey: to, updatedBy: actor.id } });
       else await tx.canonicalField.create({ data: { ...strip(gone), version: gone.version + 1, status: "RETIRED", supersedesId: gone.id, mergedIntoKey: to, updatedBy: actor.id } as Prisma.CanonicalFieldUncheckedCreateInput });
       // Each versioned lineage is moved once, on its newest row (a published row gets a new draft version).
