@@ -145,3 +145,29 @@ From `qa/reports/bugs-open-detail.md`:
 
 | QA-183 | UX · Minor | C11.17 · P-128, skill qa §2 (message on its field) | 762dbae6 (after-merge) | Program structure › Add: a category name over 120 characters is refused (400, nothing saved), but "Keep the name under 120 characters" shows only in the dialog's general alert; the Category field shows no message (`acceptance/C11.17.test.ts` 23/24 twice; `web/src/components/add-to-structure.tsx` unchanged since 2 Nov). Expected: the words under the Category field | Steps, expected and actual: this row and `qa/reports/2026-11-03-after-merge-explore.md`. Pack output is quoted there; the run logs are not committed (AGENTS.md rule 1) | screens | Open |
 
+
+## QA-219 — closed 4 Nov 2026
+
+Closed by the qa lane on main **22ff438aa** (fixed by #935). `acceptance/C3.5.test.ts` 0 · 42/42 on the six (runs 41826813974, 41838951364) and qa's gate A walk: a person starts a merge (Merge into…, a second person approves on To review) and adds another name from a field's page.
+
+From `qa/BUGS.md`:
+
+| QA-219 | Gap · Major (qa tester 2, M2 no-pack re-proof, #903) | C3.5 · P-65 (a reviewed merge redirects one shared field into the other), P-322 | main 4c3b16f0e (qa2 re-proof) | Shared library › Fields › a field's page (`/library/fields/person.family_name`, configured checkpoint, 352 fields): no Merge and no aliases on the page; no screen offers "Merge into…" or "Add another name". `POST /api/library/merges` is called by no screen (`grep library/merges web/src`: only GET, approve, reject). Expected: from a field's page, the author proposes a merge with another field (with a reason), it waits on To review for a second person, and the page lists the field's other names. Actual: only an API call starts a merge; the second-person panel works once one exists (`check_screen02_slice2_browser.cjs` creates it by API) | Builder S2 (Lead 5, 4 Nov ~16:50 IST) | forms |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-219 | Gap · Major (qa tester 2, M2 no-pack re-proof, #903) | C3.5 · P-65 (a reviewed merge redirects one shared field into the other), P-322 | main 4c3b16f0e (qa2 re-proof) | Shared library › Fields › a field's page (`/library/fields/person.family_name`, configured checkpoint, 352 fields): no Merge and no aliases on the page; no screen offers "Merge into…" or "Add another name". `POST /api/library/merges` is called by no screen (`grep library/merges web/src`: only GET, approve, reject). Expected: from a field's page, the author proposes a merge with another field (with a reason), it waits on To review for a second person, and the page lists the field's other names. Actual: only an API call starts a merge; the second-person panel works once one exists (`check_screen02_slice2_browser.cjs` creates it by API) | Builder S2 (Lead 5, 4 Nov ~16:50 IST) | forms |
+
+
+## QA-215 — closed 4 Nov 2026
+
+Closed by the qa lane on main **1f16c2b8e** (fixed by #933). GitHub re-test run 41833528376: `C11.3.test.ts` exit 0, 26/26 with AT-5 reported as held (P-284); `C11.12-runtime.test.ts` now exits 2 with setup missing (no crash, no Mac psql path).
+
+From `qa/BUGS.md`:
+
+| QA-215 | Bug · Minor (test tooling) | C11.12, C11.3 (packs) · P-322, P-284 | main 9caa043be (GitHub re-test run 41788362078; qa's run on the six) | Two pack faults that make gate B misreport. (1) `acceptance/C11.12-runtime.test.ts` assumes a released combination: on the six it queries `config_release where combination_id=''` and crashes (exit 1), instead of saying "setup missing: no released combination" (exit 2) as C4.7 and C3.6 do. Its `lib/pack1.ts:22` psql path is also the Mac's unless PSQL is set. (2) `acceptance/C11.3.test.ts` AT-5 is the held AI "did you mean" (P-284), yet it is a plain FAIL, so gate B refuses C11.3 on main. Expected: a held step prints NOTE/WAIT and does not fail the pack, or gate B reads the held list | forms (acceptance packs) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-215 | Bug · Minor (test tooling) | C11.12, C11.3 (packs) · P-322, P-284 | main 9caa043be (GitHub re-test run 41788362078; qa's run on the six) | Two pack faults that make gate B misreport. (1) `acceptance/C11.12-runtime.test.ts` assumes a released combination: on the six it queries `config_release where combination_id=''` and crashes (exit 1), instead of saying "setup missing: no released combination" (exit 2) as C4.7 and C3.6 do. Its `lib/pack1.ts:22` psql path is also the Mac's unless PSQL is set. (2) `acceptance/C11.3.test.ts` AT-5 is the held AI "did you mean" (P-284), yet it is a plain FAIL, so gate B refuses C11.3 on main. Expected: a held step prints NOTE/WAIT and does not fail the pack, or gate B reads the held list | forms (acceptance packs) | Open |
+
