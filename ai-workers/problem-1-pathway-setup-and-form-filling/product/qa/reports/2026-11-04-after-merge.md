@@ -310,3 +310,9 @@ Walk on the checkpoint at 1440 px (one Mac copy, stopped): the Visitor visa has 
 
 ### Question for the tech lead
 C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #798 body says "Works on the checkpoint, not on the six" is the founder's call (P-304 (2)), and P-322 says setup rows count on the six. qa keeps C4.7 Partial until the screen step exists. If the founder's call is that the checkpoint counts for setup rows that a person cannot yet reach on the six, C4.7 becomes Works.
+
+## Records update ~16:45 IST: the qa testers' verdicts after #798 (#914–#918)
+* C4.1, C4.8 and C10.1 are confirmed Partial on the checkpoint, the same counts as qa's batch 9. C4.2 is Partial: the PQR tick works on the checkpoint but reaches no release. C3.10 Works stands on the checkpoint (its one red step is IRCC's own printed label "P.O. box").
+* **New QA-221 (Bug · Major, C4.1, C10.1):** on the checkpoint, a child aged 0–4 is asked 24 facts only IMM 5257 Schedule 1 needs. The form says "dependent children aged 18 years or older … must complete their own copy", but the checkpoint files SCH1 "each applicant" with no age rule.
+* **New QA-222 (UX · Minor, C10.1):** the checkpoint's result row 10 cuts each problem list in the middle of a word.
+* M2: 40/60 (unchanged).
