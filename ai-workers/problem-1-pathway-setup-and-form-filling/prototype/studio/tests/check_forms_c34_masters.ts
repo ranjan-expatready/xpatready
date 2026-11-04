@@ -74,7 +74,9 @@ run(async () => {
   const of = (k: string) => items.filter((x) => x.kind === k);
   ok("C3.4 pass (G2): one answer list per drop-down list of IMM 5257 (at least 13), each resting on the form", of("answer_list").length >= 13 && of("answer_list").every((x) => /imm5257/i.test(x.source?.file ?? "")), of("answer_list").length);
   ok("C3.4 pass: every item lands on the library and rests on the IMM 5257 file with its quote found", items.length > 0 && items.every((x) => x.lands_on === "library" && /imm5257/i.test(x.source?.file ?? "") && x.source?.quote_found === true));
-  const marital = of("answer_list").find((x) => /marital/i.test(x.title));
+  // IMM 5257 has two lists named for marital status ("Marital status", "Marital status history"), drafted in the same
+  // instant, so their order in the queue is not fixed: the check names the list it means.
+  const marital = of("answer_list").find((x) => /^marital status$/i.test(String(x.title).trim()));
   const labels = (marital?.readings?.draft?.payload?.values ?? []).map((x: any) => String(x.label).toLowerCase());
   ok("C3.4 pass: the marital-status answer list carries the form's own 8 choices (IRCC-P2-25)", labels.length === 8 && ["annulled", "common", "divorced", "separated", "married", "single", "unknown", "widowed"].every((w) => labels.some((c: string) => c.includes(w))), labels);
   ok("C3.4 pass: every section names the form fields it groups (from the form's parts)", of("section").length > 0 && of("section").every((x) => (x.readings?.draft?.payload?.fieldKeys ?? []).length > 0));
