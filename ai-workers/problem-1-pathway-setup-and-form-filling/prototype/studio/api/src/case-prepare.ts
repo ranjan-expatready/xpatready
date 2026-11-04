@@ -4,10 +4,14 @@
 // stays split and a form keeps the channel the case officer chose. Fees are worked out per group on each read
 // (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. Visitor
 // visa only in this slice; other combinations answer "not derived yet". No model call (US$0). Readiness is C7.6's
-// (engine/runtime/readiness.ts, M3-A3): the view leaves its slot and never decides it here.
+// (engine/runtime/readiness.ts, M3-A3; L-SA3, P-315): this view gathers its inputs (api/src/readiness-inputs.ts) and
+// shows the result per filing; the rules are never decided here.
 // One implementation (#356 on #325's tables, migration 20261102030000): #325's guards are kept (the release must match
 // its fingerprint, B2; a read with nothing new takes no transaction, B1; HEAD is refused, B4); a filing or item that
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
+// C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
+// ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
+import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
 import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json" };
@@ -16,7 +20,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { CHANNEL_WORDS, isBarcodeForm } from "../../contracts/forms.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
-import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, knownOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
@@ -31,6 +35,8 @@ import { CaseForms, formPassed } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
+import { readinessOfCase, type PreparedForm } from "./readiness-inputs.ts";
+import { pdfMapInUse } from "../../engine/programs.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -108,7 +114,7 @@ export class CasePrepare {
       q.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
     ] as const;
     const sync = async (tx: Tx | Db, write: boolean) => {
-      const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead" });
+      const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead", maxWait: 10_000 }); // C7.6: as the write path (C6.12 B1, 120 reads at once)
       let groups = g0;
       const liveOwner = new Map(filings0.filter((f) => f.active).map((f) => [f.subjectId, f.id]));
       const live = new Map([...onFiling].filter(([, o]) => liveOwner.has(o)).map(([subject, o]) => [subject, liveOwner.get(o)!]));
@@ -168,7 +174,7 @@ export class CasePrepare {
     const idOfFiling = new Map(stored.filings.map((f) => [`filing-${f.subjectId}`, f.id]));
     const fid = (x: string) => idOfFiling.get(x) ?? x;
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
-    const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status, number: f.number }));
+    const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
     const groups = done.groups.map((g) => ({ ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }));
     // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
     const fees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
@@ -196,6 +202,7 @@ export class CasePrepare {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
       return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;
     };
+    const staleOf = new Map<string, string[]>(); // C7.6: Online sections entered before a fact changed, per item
     const items = stored.items.map((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -206,7 +213,10 @@ export class CasePrepare {
         // FQ-6, P-168), Done when every section is entered and current.
         const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? []) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
-        if (sheet && stale.length && !waits) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
+        if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
+        // Review B1 on #861: this line names who signs too (readiness reads it; the prepare view answered 500 without it).
+        if (sheet && stale.length && !waits) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null,
+          signers: signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor), channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
           state: "out_of_date", reason: `Out of date: ${stale.map((x) => x.title).join(", ")} changed after it was entered in the portal. Enter the new answers, then tick it again.` };
         // Review M2: Done only when every section is entered, current and waits for nothing.
         const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length);
@@ -228,8 +238,41 @@ export class CasePrepare {
     });
     // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
-    // C7.6 (M3-A3) fills this from engine/runtime/readiness.ts; until then each filing is not ready and says why.
-    const readiness = filings.map((f) => ({ filing: f.id, ready: false, blocks: [] as { code: string; item?: string; words: string }[], warns: [] as { code: string; item?: string; words: string }[], built: false, why: "Ready to file is worked out by C7.6 (not built yet)." }));
+    // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
+    // The edition a form is filled on: the release's PDF edition in use (pdfMapInUse, P-32: the newest, as the fill picks
+    // it; review M2 on #861); on a line filed Online, its online version, else the PDF edition its answer sheet follows
+    // (C7.3 order_basis pdf_twin).
+    const maps = ((s as { field_maps?: { form_number: string; form_edition: string; channel?: string }[] }).field_maps ?? []);
+    const pdfOf = (form: string) => pdfMapInUse(maps, form)?.form_edition ?? null;
+    const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
+    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
+    // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
+    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
+      channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
+      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined }] : []);
+    const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
+    const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
+      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
+      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
+      validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
+      editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
+        // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
+        // answer as given now (an unconfirmed change is a change the representative did not review).
+        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value])]);
+        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${JSON.stringify(waiting)}`).digest("hex");
+      }, today });
+    // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
+    // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
+    // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".
+    const statusOf = new Map(stored.filings.map((f) => [f.id, f.status]));
+    for (const f of filings) {
+      if (statusOf.get(f.id) === "READY_TO_FILE" && readiness.find((x) => x.filing === f.id)?.ready === false) {
+        const n = await this.db.filing.updateMany({ where: { id: f.id, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
+        if (n.count) await this.audit.log(c.workspaceId, actor.id, "ready_to_file_reopened", "filing", f.id, `A filing on case ${short(c.id)} is no longer Ready to file: something changed after it was marked (C7.6).`);
+        statusOf.set(f.id, "NOT_STARTED");
+      }
+      const st = statusOf.get(f.id); if (st && st !== "NOT_STARTED") f.status = st.toLowerCase();
+    }
     // Review r3 m1: the version from the very rows this view shows (never a later read), so a write from it is checked
     // against what the officer saw.
     const version = versionOf(stored.filings, stored.items);
