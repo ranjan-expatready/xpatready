@@ -9,6 +9,9 @@
 // One implementation (#356 on #325's tables, migration 20261102030000): #325's guards are kept (the release must match
 // its fingerprint, B2; a read with nothing new takes no transaction, B1; HEAD is refused, B4); a filing or item that
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
+// C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
+// ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
+import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
 import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json" };
@@ -243,13 +246,21 @@ export class CasePrepare {
     const pdfOf = (form: string) => pdfMapInUse(maps, form)?.form_edition ?? null;
     const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
     const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
-    const formItems = items.filter((i) => i.kind === "form") as unknown as PreparedForm[]; // break B3: "cannot start" ones too
+    // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
+    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
+      channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
+      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined }] : []);
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
       factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
-      editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []), today });
+      editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
+        // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
+        // answer as given now (an unconfirmed change is a change the representative did not review).
+        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value])]);
+        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${JSON.stringify(waiting)}`).digest("hex");
+      }, today });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
     // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".

@@ -76,6 +76,9 @@ export type FilingInput = {
   reviewed: boolean;
   /** Break B2: a review exists but the facts changed after it (or another person is now the representative): its day. */
   reviewedBefore?: string | null;
+  /** Break N2 (#861 round 2): the fingerprint of the filing's facts now; the review line's key carries it, so a pass of
+   *  "not reviewed" never covers the filing after its facts change. */
+  factsKey?: string;
   passes?: Pass[];
   /** Today, YYYY-MM-DD (the firm's date; UTC until firms have a time zone). */
   today: string;
@@ -157,7 +160,7 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     else if (fee.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `Fee "${fee.line}" has a newer amount${until ? `; it is accepted until ${until}` : ""}. Adopt update.` });
   }
   const before = x.reviewed ? null : dayOf(x.reviewedBefore, "the earlier review");
-  if (!x.reviewed) critical({ code: "representative_review", part: before ?? "none", owes: "representative", words: before
+  if (!x.reviewed) critical({ code: "representative_review", part: `${before ?? "none"}|${x.factsKey ?? ""}`, owes: "representative", words: before
     ? `The filing changed after it was reviewed on ${before} (or the representative of record changed). The representative of record reviews it again.`
     : "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
   for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
@@ -188,10 +191,14 @@ export function passProblem(reason: unknown): string | null {
   const t = typeof reason === "string" ? reason.trim() : "";
   // Break B5: only characters a person can see count: format characters (joiners, soft hyphen, tags, U+180E), the
   // combining grapheme joiner, blank Hangul fillers and the braille blank are left out of the count.
-  const seen = [...t.replace(/[\p{Cf}\u034f\u115f\u1160\u3164\uffa0\u2800\s]/gu, "")];
+  // Break B5 (round 2): combining marks never count on their own (a letter with accents is one character).
+  const seen = [...t.replace(/[\p{Cf}\p{M}\u115f\u1160\u3164\uffa0\u2800\s]/gu, "")];
   if (seen.length < 5 || !/[\p{L}\p{N}]/u.test(seen.join(""))) return "Say why this warning is passed (at least 5 characters, with words).";
   if (t.length > 300) return "Keep it to 300 characters.";
   if (/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(t)) return "Remove the control or invisible characters from this text.";
+  // Break B5 (round 2): no hidden format character inside a reason (word joiner, soft hyphen, tags …); the joiners some
+  // scripts need (U+200C, U+200D) stay allowed, as for the case team's reasons.
+  if (/\p{Cf}/u.test(t.replace(/[\u200c\u200d]/g, ""))) return "Remove the invisible characters from this text.";
   return null;
 }
 

@@ -160,7 +160,9 @@ export type Prepare = {
   fees: { filing: string; subject?: string; payer?: string; line: string; amount: number; exempt?: boolean; reason?: string; source?: string }[];
   /** C7.6 (P-315): `severity` block (never passed) · critical (a former block, passed with a reason) · warning. */
   readiness: { filing: string; ready: boolean; blocks: { code: string; item?: string; words: string; severity?: string; key?: string }[]; warns: { code: string; item?: string; words: string; severity?: string; key?: string }[];
-    passed?: { code: string; key?: string; words: string; severity?: string; reason: string; by: string; at: string }[]; owes?: Record<string, unknown> }[];
+    passed?: { code: string; key?: string; words: string; severity?: string; reason: string; by: string; at: string }[]; owes?: Record<string, unknown>;
+    /** C7.6 (#861 N1): the filing's facts fingerprint; a review sends back the one it read. */
+    facts_hash?: string }[];
 };
 export async function prepare(caseId: string, actor = officerOf(caseId)): Promise<{ res: Res; p: Prepare | null }> {
   const res = await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, actor);
@@ -233,7 +235,8 @@ export async function readyToFile(caseId: string, rep: string | null): Promise<s
   p = (await prepare(caseId)).p;
   const done: string[] = [];
   for (const f of p?.filings ?? []) {
-    await call("POST", `/runtime/filings/${f.id}/review`, { note: "Reviewed (Sample)" }, rep ?? "");
+    // C7.6 (#861 N1): the review sends back the facts fingerprint the representative read.
+    await call("POST", `/runtime/filings/${f.id}/review`, { note: "Reviewed (Sample)", facts_hash: readinessOf((await prepare(caseId)).p, f.id)?.facts_hash }, rep ?? "");
     for (const w of readinessOf((await prepare(caseId)).p, f.id)?.warns ?? []) await call("POST", `/runtime/filings/${f.id}/warnings/${w.code}/pass`, { reason: "Passed for the acceptance test (Sample)" }, officer);
     if ((await call("POST", `/runtime/filings/${f.id}/ready`, {}, officer)).status === 200) done.push(f.id);
   }

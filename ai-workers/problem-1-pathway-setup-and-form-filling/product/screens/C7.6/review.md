@@ -1,97 +1,75 @@
-# Review: C7.6 Ready to file (L-SA3, P-315), PR #861, commit 0159564
+# Review: C7.6 Ready to file (L-SA3, P-315), PR #861
 
-Reviewer: a fresh agent that did not build it. 4 Nov 2026. Scope: `git diff origin/main...0159564` (11 files): API, rules, schema. There is no screen, so the visual checks are skipped.
-Read word for word: P-315, P-237, P-238, P-144, P-151, P-155, P-168, P-172. Also read: r5c BR-9, BR-11, BR-19, BR-21; AG07-D24/D25 (the team's DEV-HANDOVER line 228: the Case Officer holds `waive-deficiency`, so the claim holds); M3-CONTRACT C7.6 row; STANDARDS §4–§7, §9.
-Ran on my own copy, :4450 / `xr_studio_rev`, server started 07:22:48 before any local edits, so every result below is for 0159564. US$0, live AI off. Copy stopped at the end.
-Note: during the review, someone else's session changed 7 tracked files in this clone and added `build-notes.md` and `break-report.md`. Those local changes are not reviewed here.
+Reviewer: a fresh agent that did not build it. 4 Nov 2026. API, rules and schema only (no screen), so the visual checks are skipped.
+* Round 1 was on 0159564: Block (B1, M1, M2, m1–m6, journey 6/10). Its full text is in git at 08b5720.
+* **Round 2 (P-293, diff only) is on 08b5720:** `git diff 0159564..08b5720` (12 files). This is the round-1 fixes plus the breaker's B1–B10.
+* I ran it on my own copy, :4450 / `xr_studio_rev`, started fresh because the migration changed. Both setups ran first. The copy was stopped at the end. US$0, live AI off.
 
-## Verdict: Rework (Block)
-The rules are right and faithful to P-315. The pack rework is honest and tight. But this commit makes the shared prepare view crash on a common case state (it breaks C7.3-13). Two Majors also give wrong results on the P-144 and P-151 rules.
+## Verdict (round 2): Approve (commit 08b5720)
+Every Blocker and Major from round 1 is fixed, each with a test that fails without the fix. Nothing new rises above Minor.
 
-## Exit codes
+## Exit codes (round 2)
 * `setup_visitor_visa`: 0 (13/13).
-* `setup_vv_m3`: 1 (44/46). The failures are S2w (release check) and S7a (`PUT /api/library/fees` 404), both outside this PR's files.
-* **C7.6: 0 (25/25)** · **C8.1: 0 (14/14)** · C8.2: 1 (1/12: `PATCH /runtime/groups/:gid/record` is not built, which is C8.2's own row).
-* **`check_c76_readiness`: 0 (69/69)** · C6.12: 0 (24/24) · C7.7: 0 (26/26) · C11.6: 0 (14/14).
-* **C7.3: 1 (12/13; C7.3-13, Blocker B1)**. qa recorded C7.3-13 green on main (`qa/reports/2026-11-02-vv-m3-round2.md:22`).
-* C7.5: 1 (9/16). The failures need C7.5's plan route and saved AI review, not this PR.
-* `graph.mjs --check`: 0.
-* Mutation spot checks on the engine: 4/4 caught. Barcode made passable: 3 checks fail. Missing-facts key without its facts: 1 fails. No CRITICAL severity: 22 fail. Review rule removed: 6 fail.
+* `setup_vv_m3`: 1 (44/46; the same S2w and S7a as round 1, outside this PR's files).
+* **C7.6: 0 (25/25)** · **C8.1: 0 (14/14)** · C8.2: 1 (1/12; the record route is not built, which is C8.2's own row).
+* **C7.3: 0 (13/13, was 12/13)** · C6.12: 0 (24/24) · C7.7: 0 (26/26) · C11.6: 0 (14/14).
+* **`check_c76_readiness`: 0 (72/72)** · **`check_c76_readiness_api` (new): 0 (18/18)**.
 
-## Issues, ranked
-**B1 Blocker (Must): `GET /runtime/cases/:id/prepare` answers 500 once an Online section goes out of date after it was entered.**
-* `api/src/readiness-inputs.ts:64`: `f.signers.map` runs on `undefined`.
-* `api/src/case-prepare.ts:213-214`: the early `out_of_date` return carries no `signers` and no `steps`.
-* `case-prepare.ts:242`: the cast `as unknown as PreparedForm[]` hides the gap from the type check.
-* Failing scenario: C7.3-13. Tick "Entered in the portal" on IMM 5707 Section A, change the family name, confirm. GET /prepare then answers 500 (`TypeError … readiness-inputs.ts:64:33` in the API log).
-* Impact: `review`, `warnings/:code/pass` and `ready` all call `prepare.view`, so all three answer 500 on that case. So does the Prepare application screen. The `entered_out_of_date` input this PR wires is never reached through the API.
-* Fix: return `signers` and `steps` on that branch, or read `f.signers ?? []`. Drop the `as unknown` cast so tsc catches the next gap. Add a C7.6 step for an Online line with a stale entered section.
+## Round-1 findings, checked on the diff
+* **B1, fixed:**
+  * The out-of-date Online branch now carries `signers` (`api/src/case-prepare.ts:216`).
+  * `readiness-inputs.ts:79` reads `f.signers ?? []`.
+  * C7.3-13 is green, and GET /prepare no longer answers 500.
+  * The `as unknown as PreparedForm[]` cast is still there (`case-prepare.ts:246`), so the type check still cannot catch the next missing field. Kept as m7.
+* **M1, fixed:**
+  * A READY_TO_FILE filing that is no longer ready goes back to NOT_STARTED, under a status-guarded update with a `ready_to_file_reopened` audit line (`case-prepare.ts:257-263`). Concurrent reads write only one line.
+  * "Uploaded to IRCC" now reads Ready to file through the view (`sign-steps.ts:76-79`).
+  * API check B1: a fact change sets the stored status to `NOT_STARTED`, and the upload tick then answers 409.
+  * `version` does not cover status (`case-prepare.ts:437`), so a revert never gives a false 409 on a later write.
+* **M2, fixed:** `pdfMapInUse` (`case-prepare.ts:243`). There is still no two-edition test; the Visitor visa seed has one edition per form.
+* **m1, fixed:** Ready on a filing that is already ready answers 200 `already: true` and writes no audit line (`readiness.ts:113-114`). I checked this live.
+* **m2, m3, m5, m6, and m4 (b):** left, with reasons in `build-notes.md`. `contracts/` and M3-CONTRACT are the tech lead's. I accept the reasons; they stay open as rows.
 
-**M1 Major (Must): "Ready to file" never comes back off, so the one hard stop (P-144, P-237) is bypassed after it.**
-* `case-prepare.ts:246-248` shows the stored status whatever readiness says.
-* `api/src/readiness.ts:313` sets READY_TO_FILE one way; nothing reverts it.
-* Failing scenario (probe, live):
-  1. The filing reaches Ready to file.
-  2. The officer corrects the family name (on the client's behalf, with a reason).
-  3. `/prepare` now shows `status: "ready_to_file"` beside `ready: false`, `blocks: [barcode_not_validated]`.
-  4. `POST /runtime/items/<IMM 5476>/sign-steps/uploaded_to_ircc` answers **200**, because C8.1's gate (`sign-steps.ts:73`) reads the stored status.
-* A second `/ready` correctly answers 409. BR-11 refuses Record on BR-9's blocks at record time, so Ready to file was never a one-time gate.
-* Fix inside C7.6: when a READY_TO_FILE filing's readiness has a block or an unpassed warning, set the status back with a conditional update and an audit line ("Ready to file withdrawn: codes"). Then C8.1 and C8.2 gates hold unchanged. Add a pack step: after Ready, a fact change gives status not `ready_to_file` and "Uploaded to IRCC" 409.
+## Breaker fixes, checked
+* **B2:** a review counts only from the representative of record now, for the facts as they are now (`facts_hash`, `readiness-inputs.ts:68,95`). The CRITICAL line keys on the earlier review's day, so a pass for "not reviewed" never covers "changed after the review".
+* **B3:** `cannot_start` forms are no longer dropped. Each stands as a CRITICAL "whether IMM … applies" line.
+* **B4, B6, B7:** shape checks, each answering 400 (checked in the API suite).
+* **B8:** passes are written under a `FOR UPDATE` row lock; three passes at once gave [200, 409, 409]. A submitted filing is closed to review and pass.
+* **B10:** the database checks code, keys and severity together.
+* **Migration:** still additive, with its rollback recorded. `licence_number` is NOT NULL now, which is safe because these tables are new in this PR.
 
-**M2 Major (Must): the edition check reads the oldest PDF edition, not the one the case fills (P-151 (1)).**
-* `case-prepare.ts:239` uses `maps.find(...)`. `engine/programs.ts:146-153` says a snapshot carries every mapped PDF edition oldest first, and that "a reader that takes the first" gets the oldest. The fill uses `pdfMapInUse` (`fill-case.ts:96`).
-* The comment at `case-prepare.ts:236-237` says "as the fill picks it", which is not true.
-* Failing scenario (by code; the Visitor visa seed has one edition per form, so the pack never reaches it):
-  * The release carries IMM 5707 (01-2023) plus a newer edition, and 01-2023 is past its accepted-until date.
-  * The filing is filled on the newer edition, yet it gets a CRITICAL "edition IMM 5707 (01-2023) was accepted by IRCC until …".
-  * Before that date it shows a false "Adopt update".
-* Fix: `pdfMapInUse(maps, form)?.form_edition`, plus a two-edition check.
+## New Minors (Should; none blocks)
+* **m7:** `case-prepare.ts:246` keeps the `as unknown as PreparedForm[]` cast. B1 was exactly a field this cast hid. Build the `PreparedForm` objects explicitly, or type the item union, so tsc checks it.
+* **m8 (B9 narrows BR-21):** `readiness.ts:62` refuses Self-reviewed with 409 whenever the firm is not solo.
+  * r5c BR-21 reads "When the preparer is the representative (**a solo firm, or the representative did it all**)…".
+  * P-155 (1) gives "(a solo firm)" as its example.
+  * A representative who did the whole filing in a multi-person firm now has to hand the review off, or pass the CRITICAL warning; that is no longer recorded as "Self-reviewed".
+  * The break report gives the plan's wording as the reason. Either restore BR-21's second case, or record the narrower reading in `challenge.md` for the founder. Do not leave it silent.
+* **m9:** a `cannot_start` form never waits for its barcode Validate (`readiness-inputs.ts:72`, `needsValidate: false`). If IMM 5257, 0008, 1344 or 1295 could be undecided on a PDF or Paper line, passing "whether it applies" would leave no hard stop. This cannot happen on the Visitor visa path (in the API check, only IMM 5476 and IMM 5707 wait). Keep `needsValidate` for barcode forms when the line is PDF or Paper.
+* **m10:** GET /prepare now writes: the status revert and its audit line, recorded under whichever officer read the view. The guard is safe and idempotent. Say so in the route's header comment (`case-prepare.ts:10` still says a read with nothing new takes no transaction), and consider recording "system (on read)" as the actor.
 
-**Minors (Should)**
-* m1: a repeated `/ready` on a filing that is already ready answers 200 and writes another audit line (`readiness.ts:313` matches status READY_TO_FILE). I saw 3 `ready_to_file` lines on one filing. Make it a no-op without an audit line, or 409.
-* m2: `acceptance/M3-CONTRACT.md:31` still lists `missing_facts … edition_expired` as block codes. Per the contract header, a change to what a rule expects goes to the tech lead. Ask for the row to be updated to P-315 (one block; CRITICAL codes; `severity`; `passed[]`).
-* m3: one field, filing `status`, mixes `NOT_STARTED` (derived) and `ready_to_file` (stored). `contracts/runtime.ts:240` types it as `"NOT_STARTED"`, and `case-prepare.ts:170`'s `as string` hides that. Pick one form and update the type.
-* m4: pass keys.
-  * (a) Partly fixing passed missing facts reopens the line: {a,b} passed, then b answered, leaves an open line for "a" that needs a new pass. This fails closed, but it is a nuisance; consider treating a subset of a passed set as covered.
-  * (b) `fact_problem` is keyed by the fact only. A pass written for 1990-13-45 still covers 1990-02-31 (probe), but BR-19 says a waiver "reopens when its fact changes". Key it on the answer.
-* m5: the new route bodies are checked by hand, with no zod schema in `contracts/` (STANDARDS §6). None of the writes carries a version (contract convention). Ready is still race-safe: two concurrent calls gave one 200 and one 409.
-* m6: an edition counts as superseded only when an author has set an accepted-until date (`readiness-inputs.ts:67`). A newer edition with no date gives no "Adopt update", although P-151 (1) says "no longer current" warns. Derive it from a newer edition, or list it under "Not here".
+## D1–D20 (1–5; API only; round 2)
+D1 4: P-315 is exact; BR-21 is narrowed (m8) · D2 4: status drift closed, edition right, passes locked · D3 3: contract type and M3-CONTRACT row still stale (m2, m3) · D4 4 · D5 4: no 500; repeats and races safe · D6 4 · D7 n/a.
+D8–D14 n/a (no screen) · D15 5: `/prepare` takes 0.16 s with sequential reads · D16 5: every breaker and reviewer finding has a failing API test · D17, D20 simulated only · D18 4 · D19 4: Ready leads to "Uploaded to IRCC" only while still ready.
 
-## What held
-* **Rules:** only `barcode_not_validated` blocks. The seven former blocks are CRITICAL, with words starting "CRITICAL:". The property check enforces this.
-* **The barcode block is refused three ways:** by the route (409), by the engine (`cannotPass`) and by the database (`readiness_pass_code_check`).
-* **Pass scope:** a pass stores the keys it covered, so a pass for two facts never covers a third (pure check and pack 22).
-* **Roles:** author, reviewer, approver and client get 403 on pass, ready and review. Another firm gets 404. A case officer cannot review (403). An officer setting accepted-until gets 403. A bad date or a missing reason gets 400. Invisible-character reasons get 400.
-* **Data:** append-only triggers refuse UPDATE (tried). The migration is additive and records its rollback.
-* **Queries:** a constant number per view (5), with no request per row. `/prepare` takes 0.14–0.19 s; `/ready` takes 0.16 s.
-* **Pack rework is faithful:** steps 2, 4, 7, 8, 12, 14 and 20 move exactly P-315's codes, and step 12 is stricter than before. Steps 6b and 22 add the hard stop. No assertion is loosened beyond P-315.
-* **"Not built" list is honest and acceptable:** open checks, fee dates, out-of-date signed items, P-172. No input source exists yet, and P-315 (2) keeps P-172 for Express Entry, which is not on the M3 path.
-* **The representative's review is passable by staff:** this follows P-237 (4) and AG07-D24. The PR's question to the founder is right.
-* **Online edition fallback:** reasonable, once M2's fix applies to it too.
-
-## D1–D20 (1–5; API only)
-D1 4: P-315 rules exact; M1 breaks P-144's hold after Ready · D2 2: status drift (M1), wrong edition (M2), duplicate audit (m1) · D3 3: contract type and M3-CONTRACT row stale (m2, m3) · D4 4 · D5 1: the view crashes (B1) · D6 4: who, when, reason; licence on the review · D7 n/a.
-D8–D14 n/a (no screen) · D15 5 · D16 4: rules mutation-tested; the API path through Online lines untested (B1) · D17, D20 simulated only · D18 4: passes and reviews show their origin · D19 2: Ready leads to "Uploaded to IRCC" with the block back (M1).
-
-## Journey test (reviewer, API-level; the one score for this check)
-**Journeys:** J1 main path, officer prepares, representative reviews, officer passes, Ready (held) · J2 solo representative, Self-reviewed (held) · J3 CRITICAL missing facts passed, barcode still blocks (held) · J4 no reason or barcode pass refused (held) · J5 wrong role or firm refused (held).
-J6 double click on Ready: one 200, one 409 (held); a third call 200 with a duplicate audit line (m1) · J7 boundary to C8.1: a fact changes after Ready, status stays, upload tick works (failed, M1) · J8 Online line with a stale entered section (failed, B1) · J9 accepted-until by the author (held).
+## Journey test (reviewer, API-level; the one score for this check, round 2)
+* **The round-1 journeys, rerun:** J1–J6 and J9 still hold. J7 (a fact changes after Ready) now holds: the status goes back to Not started and the upload tick answers 409. J8 (Online stale section) now holds: C7.3-13 green.
+* **New:** a review made before a change reopens with the words "changed after it was reviewed on …". A repeated Ready answers `already`.
 
 | Criterion | Score | Evidence |
 |---|---|---|
-| Task completed | ½ | J1 passes (C7.6-19), but J8 cannot open the view. |
-| Next step obvious | 1 | The 409 names every block and warning, who owes it and how it clears. |
-| Plain words | 1 | Words, never keys (`cannotPass`); "CRITICAL: IMM 5257 for …". |
-| Feedback and state | 0 | `ready_to_file` is shown beside `ready: false` with a block (M1). |
-| Correct data | ½ | Passes, reviews and audit are right, but the edition is wrong (M2) and an audit line is duplicated (m1). |
-| Error recovery | 0 | A 500 on the view and on all three routes for that case (B1). |
+| Task completed | 1 | C7.6-19 passes, and C7.3's Online case opens the view (13/13). |
+| Next step obvious | 1 | The 409 names every block and warning and who owes it. |
+| Plain words | 1 | "CRITICAL: …"; "changed after it was reviewed on …"; no internal keys. |
+| Feedback and state | 1 | A stale Ready goes back to Not started and is recorded (API check B1). |
+| Correct data | 1 | `pdfMapInUse`; one row per pass under a lock; no duplicate audit line. |
+| Error recovery | 1 | No 500; "passed meanwhile. Reload" 409; `already` 200. |
 | Accessibility and sizes | ½ | No UI; held at ½. |
-| Speed | 1 | 0.14–0.19 s, constant queries. |
+| Speed | 1 | `/prepare` 0.16 s; constant queries. |
 | Visual quality | ½ | No UI; held at ½. |
-| Trust and sources | 1 | Who, when, reason, severity, licence. |
-| **Total** | **6 / 10, fail** | Two criteria score 0. |
+| Trust and sources | 1 | Who, when, reason, severity, licence, and the facts fingerprint on a review. |
+| **Total** | **9 / 10, pass** | No criterion at 0. |
 
-Fixes that would raise it, most valuable first: B1, then M1, then M2 and m1.
-Not tested: a real browser or screen reader (no screen); an intended user's unaided walk (D17/D20 stay with the founder); C7.3-13 on main by my own run (I relied on qa's record and the stack trace in the new code).
+Not tested: a real browser or screen reader (no screen); an intended user's unaided walk (D17/D20 stay with the founder); two PDF editions of one form (no seed has them); a load of 120 concurrent reads (the `maxWait` change was not re-run under load).
 
-**Verdict: Block**. Fix B1, M1 and M2 before approval. The Minors may follow as rows.
+**Verdict: Approve** (commit 08b5720). No open Blocker or Major. m2–m10 may follow as rows; m8 needs a recorded challenge or a fix before the founder's walkthrough.

@@ -6,7 +6,8 @@
 // on the form it fills); a required signature missing (IMM 5476 signed by hand and scanned); the representative's
 // review not done; a form edition past IRCC's accepted-until date. Warnings, passed with a reason: a missing document,
 // an AI finding (C7.5-8). P-315 rework (this PR): steps 2, 4, 7, 8, 12, 14 and 20 read the CRITICAL warnings where they
-// read blocks; 6b and 22 are new (the barcode block cannot be passed, and stops Ready to file alone).
+// read blocks; 6b and 22 are new (the barcode block cannot be passed, and stops Ready to file alone). The review's body
+// (13, 14, 21) also sends the filing's facts_hash it read (breaker N1 on #861: a review is of the facts it saw).
 // Breadth, after Visitor visa: the Express Entry police and medical block (P-172, the one named exception), Paper lines.
 //   tsx studio/acceptance/C7.6.test.ts 4440 xr_studio_accept
 import { CLIENT, call, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, validateRoundTrip, yearsAgo, agent, answer, confirmAll, filingOf, inDays, signByHand } from "./lib/m3.ts";
@@ -60,9 +61,9 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   ok("C7.6-11 pass: IMM 5476 printed, signed by hand, and its scan uploaded", signed === 201, signed);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
   ok("C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains", !codes(rd?.blocks).length && !codes(rd?.warns).includes("missing_signature") && critical(rd?.warns).join() === "representative_review", { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
-  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)" }, officer);
+  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, officer);
   ok("C7.6-13 fail (P-155): a case officer cannot do the representative's review (403)", !!f.rep && officer !== f.rep && r.status === 403, r.status);
-  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)" }, f.rep ?? "");
+  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, f.rep ?? ""); // #861 N1: the facts it read
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
   ok("C7.6-14 pass: the representative of record reviews; the warning clears; the record will read \"Prepared by · Reviewed by\"", r.status === 200 && !codes(rd?.warns).includes("representative_review") && r.body?.reviewed_by === f.rep, r.body);
   r = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
@@ -90,8 +91,8 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
 
   // Solo firm: "Self-reviewed".
   const solo = await openCase(vv, [{ role: "principal", name: "Sample Client S", dob: yearsAgo(30) }], { representative: f.soloRep, caseOfficers: [f.soloRep ?? ""] });
-  const sf = (await prepare(solo.id, f.soloRep ?? "")).p?.filings[0]?.id;
-  r = await call("POST", `/runtime/filings/${sf}/review`, { self: true, note: "I prepared and reviewed this filing myself" }, f.soloRep ?? "");
+  const sp = (await prepare(solo.id, f.soloRep ?? "")).p, sf = sp?.filings[0]?.id;
+  r = await call("POST", `/runtime/filings/${sf}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: readinessOf(sp, sf)?.facts_hash }, f.soloRep ?? "");
   ok("C7.6-21 pass: a solo representative's review is logged \"Self-reviewed\" with name, licence number and time, never as a second person", r.status === 200 && r.body?.kind === "self_reviewed" && !!r.body?.licence_number, r.body);
 
   // P-315 (P-237, P-238): with facts still missing, every warning (CRITICAL ones too) is passed with a reason; Ready to

@@ -24,6 +24,8 @@ const f = await firms();
 const officer = f.officer ?? OFFICER, rep = f.rep ?? "user-R";
 const codes = (x: { code: string }[] | undefined) => (x ?? []).map((b) => b.code);
 const count = (q: string) => Number(sql(q) ?? 0);
+/** The filing's facts fingerprint as the prepare view shows it (a review sends back the one it read, N1). */
+const fh = async (caseId: string, filing: string, actor = officer) => readinessOf((await prepare(caseId, actor)).p, filing)?.facts_hash;
 
 // B1: Ready to file, then a fact the barcode form reads changes.
 const c = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(41) }], { representative: rep, caseOfficers: [officer] });
@@ -43,9 +45,16 @@ r = await call("POST", `/runtime/items/${i5476?.id}/sign-steps/uploaded_to_ircc`
 ok("B1 fail: \"Uploaded to IRCC\" is then refused (409), the hard stop is not skipped", r.status === 409, r.status);
 // B2: the facts changed after the review, so the review is reopened.
 ok("B2 fail: the review made before the change no longer counts; the CRITICAL warning says it was reviewed before", (rd?.warns ?? []).some((w) => w.code === "representative_review" && /reviewed on/.test(w.words)), codes(rd?.warns));
+// N1 (round 2): a review of facts that changed after the representative read them is refused, never stamped.
+const seen = await fh(c.id, fid, rep);
+await answer(c.id, P, "person.passport_number", "ZX9999998", officer);
+r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Looked fine (Sample)", facts_hash: seen }, rep);
+ok("N1 fail: a review sending the facts it read, after they changed, is refused (409), nothing stored", r.status === 409 && count(`select count(*) from filing_review where filing_id='${fid}' and note like 'Looked fine%'`) === 0, r.status);
+r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Looked fine (Sample)" }, rep);
+ok("N1 fail: a review that does not say which facts it read is refused (400)", r.status === 400, r.status);
 // Breaker B1 recheck: with the new validated copy and a fresh review, it is ready again.
 await validateRoundTrip(c.id, "IMM 5257", P);
-r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed again (Sample)" }, rep);
+r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed again (Sample)", facts_hash: await fh(c.id, fid, rep) }, rep);
 rd = readinessOf((await prepare(c.id, officer)).p, fid);
 ok("B2 pass: a fresh review by the representative of record clears it again", r.status === 200 && !codes(rd?.warns).includes("representative_review"), { status: r.status, warns: codes(rd?.warns) });
 // B2: a new representative of record: the earlier one's review no longer counts.
@@ -60,12 +69,17 @@ ok("B2 fail (data): a review row written by anyone else (a client, in SQL) never
 // B4, B6: bad shapes are refused.
 r = await call("POST", `/runtime/filings/${fid}/warnings/representative_review/pass`, { reason: "Representative away (Sample)", key: 123 }, officer);
 ok("B4 fail: a pass with a key that is not text is refused (400), nothing recorded", r.status === 400 && count(`select count(*) from readiness_pass where filing_id='${fid}' and code='representative_review'`) === 0, r.status);
-const noteBad = await call("POST", `/runtime/filings/${fid}/review`, { note: "Fine‮enif" }, "user-T");
-const noteLong = await call("POST", `/runtime/filings/${fid}/review`, { note: "x".repeat(401) }, "user-T");
+const hT = await fh(c.id, fid, "user-T");
+const noteBad = await call("POST", `/runtime/filings/${fid}/review`, { note: "Fine‮enif", facts_hash: hT }, "user-T");
+const noteLong = await call("POST", `/runtime/filings/${fid}/review`, { note: "x".repeat(401), facts_hash: hT }, "user-T");
 ok("B6 fail: a review note with a hidden direction mark, or over 400 characters, is refused (400), never cut", noteBad.status === 400 && noteLong.status === 400, [noteBad.status, noteLong.status]);
 // B8: two passes at once record one row; a submitted filing is closed.
 const both = await Promise.all([1, 2, 3].map(() => call("POST", `/runtime/filings/${fid}/warnings/representative_review/pass`, { reason: "Representative on leave; partner read it (Sample)" }, officer)));
 ok("B8 fail: three passes of one line at once record it once (one 200, the others 409)", both.filter((x) => x.status === 200).length === 1 && both.filter((x) => x.status === 409).length === 2 && count(`select count(*) from readiness_pass where filing_id='${fid}' and code='representative_review'`) === 1, both.map((x) => x.status));
+// N2 (round 2): a pass of "not reviewed" does not cover the filing once its facts change again.
+await answer(c.id, P, "person.passport_number", "ZX9999997", officer);
+rd = readinessOf((await prepare(c.id, officer)).p, fid);
+ok("N2 fail: after a passed review warning, a further fact change opens the review warning again", codes(rd?.warns).includes("representative_review"), codes(rd?.warns));
 sql(`update filing set status='SUBMITTED' where id='${fid}' returning 1`);
 const closed = [await call("POST", `/runtime/filings/${fid}/review`, {}, "user-T"), await call("POST", `/runtime/filings/${fid}/warnings/missing_document/pass`, { reason: "Passport uploaded in the portal (Sample)" }, officer)];
 ok("B8 fail: a filing recorded as submitted takes no review and no pass (409)", closed.every((x) => x.status === 409), closed.map((x) => x.status));
@@ -82,13 +96,26 @@ const fam = await openCase(vv, [{ role: "principal", name: "Sample Client F", do
 const pf = (await prepare(fam.id, officer)).p, S = fam.subjects["Sample Spouse F"];
 const waiting = (pf?.items ?? []).filter((i) => i.subject === S && i.kind === "form" && i.state === "cannot_start");
 const frd = readinessOf(pf, filingOf(pf, S)?.id);
+// N6 (round 2): a stored pass whose reason the rule refuses never takes its line: a real pass is still possible.
+const line = (frd?.warns ?? []).find((w) => w.code === "missing_facts" && w.key);
+sql(`insert into readiness_pass (id, workspace_id, filing_id, code, keys, severity, reason, passed_by) select gen_random_uuid(), workspace_id, id, 'missing_facts', array['${line?.key ?? "x"}'], 'critical', 'a' || repeat(chr(8288), 4), 'user-O' from filing where id='${filingOf(pf, S)?.id}' returning 1`);
+r = await call("POST", `/runtime/filings/${filingOf(pf, S)?.id}/warnings/missing_facts/pass`, { reason: "Spouse sends the date of birth today (Sample)", key: line?.key }, officer);
+ok("N6 fail: a stored pass the rule refuses (hidden characters) never blocks a real pass of its line (200)", !!line && r.status === 200, r.status);
 ok("B3 fail: a form that cannot start yet stands as a CRITICAL \"missing facts\" line naming the form", waiting.length > 0 && waiting.every((i) => (frd?.warns ?? []).some((w) => w.code === "missing_facts" && w.item === i.id && w.words.includes(i.form ?? "?"))), { waiting: waiting.map((i) => i.form), warns: (frd?.warns ?? []).map((w) => w.words.slice(0, 60)) });
 
-// B9: in a firm with another representative, the one who prepared the filing is not "Self-reviewed".
+// B9, review m8 (BR-21: "a solo firm, or the representative did it all"): the representative who was the case's only
+// officer self-reviews; once another officer worked on it, even after leaving it (N4), that is refused.
 const own = await openCase(vv, [{ role: "principal", name: "Sample Client G", dob: yearsAgo(39) }], { representative: rep, caseOfficers: [rep] });
-const og = (await prepare(own.id, rep)).p?.filings[0]?.id;
-r = await call("POST", `/runtime/filings/${og}/review`, { self: true, note: "I prepared and reviewed this filing myself" }, rep);
-ok("B9 fail: in the Sample firm (another representative exists) the representative who prepared it cannot self-review (409)", r.status === 409 && count(`select count(*) from filing_review where filing_id='${og}'`) === 0, r.status);
+const og = (await prepare(own.id, rep)).p?.filings[0]?.id ?? "";
+r = await call("POST", `/runtime/filings/${og}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(own.id, og, rep) }, rep);
+ok("B9 pass (BR-21): the representative who did it all self-reviews, logged Self-reviewed", r.status === 200 && r.body?.kind === "self_reviewed", r.body);
+const two = await openCase(vv, [{ role: "principal", name: "Sample Client H", dob: yearsAgo(38) }], { representative: rep, caseOfficers: [rep] });
+const tg = (await prepare(two.id, rep)).p?.filings[0]?.id ?? "";
+const add = await call("POST", `/runtime/cases/${two.id}/team/officers`, { userId: officer }, rep);
+const end = await call("POST", `/runtime/cases/${two.id}/team/officers/${rep}/end`, { reason: "Handing the case over (Sample)" }, rep);
+r = await call("POST", `/runtime/filings/${tg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(two.id, tg, rep) }, rep);
+const r2 = await call("POST", `/runtime/filings/${tg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(two.id, tg, rep) }, rep);
+ok("N4 fail: a representative who prepared it with another officer (then left the officer list) cannot review it, as a second person or as Self-reviewed (409)", add.status < 300 && end.status < 300 && r.status === 409 && r2.status === 409 && count(`select count(*) from filing_review where filing_id='${tg}'`) === 0, [add.status, end.status, r.status, r2.status]);
 
 // B7: accepted-until takes a plain day only.
 const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5707' and e.channel <> 'ONLINE' limit 1`);

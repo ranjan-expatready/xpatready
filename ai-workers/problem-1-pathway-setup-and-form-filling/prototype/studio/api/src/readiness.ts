@@ -45,10 +45,14 @@ export class FilingReadinessRoutes {
    *  a case officer on the case (they prepared it: a solo firm), it is "Self-reviewed", logged with their own statement. */
   async review(actor: Actor, id: string, body: unknown) {
     const { f, c } = await this.filing(actor, id);
-    const team = await this.db.caseTeamMember.findMany({ where: { caseId: c.id, endedAt: null } });
-    const rep = team.find((m) => m.role === "LEAD_REPRESENTATIVE")?.userId ?? null;
+    // Break N4 (#861 round 2): who prepared it reads every officer row, ended ones too.
+    const everyone = await this.db.caseTeamMember.findMany({ where: { caseId: c.id } });
+    const rep = everyone.find((m) => m.role === "LEAD_REPRESENTATIVE" && !m.endedAt)?.userId ?? null;
     if (!rep || rep !== actor.id) fail("Only the representative of record reviews this filing (P-155). A case officer prepares it; the representative reviews it.", HttpStatus.FORBIDDEN);
-    const b = (body ?? {}) as { note?: unknown; self?: unknown };
+    const b = (body ?? {}) as { note?: unknown; self?: unknown; facts_hash?: unknown };
+    // Break N1 (#861 round 2): the review is of the facts the representative read: the view's `facts_hash` is sent back
+    // and a filing changed since is refused (409, Reload), never stamped as reviewed for facts nobody saw.
+    if (typeof b.facts_hash !== "string" || !/^[0-9a-f]{64}$/.test(b.facts_hash)) problem(400, "Some details need fixing", "Send facts_hash: the filing's facts_hash from the prepare view you reviewed.", { errors: [{ field: "facts_hash", message: "The facts_hash you read (Reload)." }] });
     // Break B6 on #861: a note is optional, but when given it follows the reason's text rule (no hidden or control
     // characters), and a long one is refused, never cut silently.
     if (b.note !== undefined && b.note !== null && typeof b.note !== "string") problem(400, "Some details need fixing", "Write the note as text.", { errors: [{ field: "note", message: "Text, or leave it out." }] });
@@ -56,15 +60,18 @@ export class FilingReadinessRoutes {
     const noteWhy = note ? (note.length > 400 ? "Keep the note to 400 characters." : /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(note) ? "Remove the control or invisible characters from the note." : null) : null;
     if (noteWhy) problem(400, "Some details need fixing", noteWhy, { errors: [{ field: "note", message: noteWhy }] });
     const firm = firmOfActor(actor), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
-    const prepared = team.some((m) => m.role === "OFFICER" && m.userId === actor.id);
-    // Break B9 on #861 (P-155 (1)): "Self-reviewed" is a solo firm's: in a firm with another representative, the one who
-    // prepared the filing does not review it as if a second person had.
-    if (prepared && !firm?.solo) fail("You prepared this filing, and your firm has another representative: hand the review to them (change the representative of record), or pass the review warning with a reason.", HttpStatus.CONFLICT);
+    const officers = new Set(everyone.filter((m) => m.role === "OFFICER").map((m) => m.userId));
+    const prepared = officers.has(actor.id);
+    // Break B9 (P-155 (1); review m8, the concept's BR-21: "a solo firm, or the representative did it all"): Self-reviewed
+    // when the firm is solo or the representative was the case's only officer ever; when another officer worked on it
+    // too, the one who prepared it does not review it as if a second person had.
+    if (prepared && !firm?.solo && officers.size > 1) fail("You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason.", HttpStatus.CONFLICT);
     if (prepared && b.self !== true) problem(400, "Some details need fixing", "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person.", { errors: [{ field: "self", message: "Confirm you prepared and reviewed it yourself." }] });
     if (!licence) fail("A review needs the representative's licence number on the firm record; none is set.", HttpStatus.CONFLICT);
     const kind = prepared ? "self_reviewed" : "reviewed";
     // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
     const rd = await this.now(actor, c.id, f.id);
+    if (rd.facts_hash !== b.facts_hash) fail("This filing changed after you read it. Reload and review it again.", HttpStatus.CONFLICT);
     const row = await this.db.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
     await this.audit.log(f.workspaceId, actor.id, kind, "filing", f.id, `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`, { case: c.id, note });
     const name = firm ? userIn(firm, actor.id)?.name ?? actor.name : actor.name;
@@ -90,7 +97,8 @@ export class FilingReadinessRoutes {
     // Break B8: under the filing's row lock, a line already passed meanwhile (two passes at once) is not passed twice.
     const row = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM filing WHERE id = ${f.id}::uuid FOR UPDATE`;
-      const taken = new Set((await tx.readinessPass.findMany({ where: { filingId: f.id, code }, select: { keys: true } })).flatMap((p) => p.keys));
+      // Break N6 (#861 round 2): only a pass the rules honour takes its lines (a row whose reason the rule refuses never does).
+      const taken = new Set((await tx.readinessPass.findMany({ where: { filingId: f.id, code }, select: { keys: true, reason: true } })).filter((p) => passProblem(p.reason) === null).flatMap((p) => p.keys));
       const fresh = keys.filter((k) => !taken.has(k));
       if (!fresh.length) return null;
       return tx.readinessPass.create({ data: { workspaceId: f.workspaceId, filingId: f.id, code, keys: fresh, severity, reason, passedBy: actor.id } });
@@ -114,6 +122,10 @@ export class FilingReadinessRoutes {
     if (now?.status === "READY_TO_FILE") return { filing: f.id, status: "ready_to_file", already: true, passed: rd.passed, reviewed: rd.reviewed };
     const n = await this.db.filing.updateMany({ where: { id: f.id, status: now?.status ?? f.status }, data: { status: "READY_TO_FILE" } });
     if (n.count !== 1) fail("This filing changed since you read it. Reload, then mark it again.", HttpStatus.CONFLICT);
+    // Break N3 (#861 round 2): a change saved while it was being marked is caught here: read again, and the view takes a
+    // filing that is no longer ready back to Not started (audited), so the answer is 409, never a stale 200.
+    const again = await this.now(actor, c.id, f.id);
+    if (!again.ready) problem(409, "Not ready to file", "Something changed while this filing was being marked Ready to file. Reload.", { blocks: again.blocks, warns: again.warns });
     await this.audit.log(f.workspaceId, actor.id, "ready_to_file", "filing", f.id, `${actor.name} marked a filing Ready to file on case ${c.id.slice(0, 8)} (${rd.passed.length} warning${rd.passed.length === 1 ? "" : "s"} passed with a reason)`, { case: c.id, passed: rd.passed.map((p) => ({ code: p.code, key: p.key, by: p.by })) });
     return { filing: f.id, status: "ready_to_file", passed: rd.passed, reviewed: rd.reviewed };
   }

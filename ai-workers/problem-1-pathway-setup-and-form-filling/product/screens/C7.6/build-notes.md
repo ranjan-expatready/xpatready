@@ -53,3 +53,18 @@ Each fix has a fail test: `tests/check_c76_readiness_api.ts` (18, API; new suite
   `fact_problem` pass covers a later, different bad value of the same fact (the readiness input carries no value yet;
   safe direction otherwise) · m5 no zod schemas or versions on the new bodies (`contracts/` is hot; ready is race-safe) ·
   m6 an edition is "superseded" only once an author sets its accepted-until date (no newer-edition signal without one).
+
+## Round 2: reviewer Approve on 08b5720; breaker N1 (Major) + N2–N6, review m7–m10, fixed
+New fail cases in `tests/check_c76_readiness_api.ts` (23) and `tests/check_c76_readiness.ts` (73).
+* **N1 (Major):** a review sends back the filing's `facts_hash` from the prepare view it read; a mismatch is 409 and a
+  review without it 400. The fingerprint now also covers the facts still waiting, with their current answers, so an
+  unconfirmed change counts. Pack bodies changed for this only: C7.6-13/14/21 and `lib/m3.ts` readyToFile send it.
+* **N2:** the review line's key carries the facts fingerprint, so a pass of "not reviewed" never covers later facts.
+* **N3:** Ready to file reads readiness again after marking; a change saved meanwhile answers 409 and the view sets it back.
+* **N4 / review m8:** Self-reviewed in a solo firm, or when the representative was the case's only officer ever (the
+  concept's BR-21 "or the representative did it all"); ended officer rows count, so leaving the list does not dodge it.
+* **N5 / review m9:** a barcode form that may apply still waits for its own Validate.
+* **N6:** only a pass the rule honours takes its lines.
+* **B5 rest:** combining marks never count alone; a hidden format character inside a reason is refused (U+200C/D allowed).
+* **Review m7:** the prepare view's items are mapped field by field into readiness (no `as unknown` cast).
+* **Review m10:** the header of case-prepare.ts says a read can write the Ready-to-file revert.

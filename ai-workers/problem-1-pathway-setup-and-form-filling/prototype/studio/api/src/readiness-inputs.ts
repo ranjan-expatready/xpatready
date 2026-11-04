@@ -69,7 +69,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const forms: FormItem[] = mineForms.map((f) => {
       // Break B3: a form that cannot start yet (an answer decides whether it applies) is never dropped: it stands as a
       // CRITICAL "missing facts" line until that answer is in. No signature or Validate is waited for until it applies.
-      if (f.state === "cannot_start") return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, needsValidate: false, validatedCurrent: false, signature: "TYPED_NAME", signed: false, edition: null,
+      // Break N5 (#861 round 2): a barcode form that may apply still waits for its own Validate: P-237's one hard stop is
+      // never skipped by passing "whether it applies".
+      if (f.state === "cannot_start") return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, needsValidate: x.barcode(f.form), validatedCurrent: x.validatedCurrent(f.form, f.subject), signature: "TYPED_NAME", signed: false, edition: null,
         readiness: { ready: false, missing: [{ fact: `applies:${f.form}`, label: `whether ${f.form} applies (${(f.reason ?? "it waits for an answer").replace(/\.$/, "")})`, about: f.person, reason: "not answered" }] }, owesFact: { [`applies:${f.form}`]: "staff" } } satisfies FormItem;
       const label = x.editionOf(f.form, f.channel), until = label ? untilOf.get(label) ?? null : null;
       const facts = x.factsOf(f.form, f.subject);
@@ -94,7 +96,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const latest = reviews.find((r) => r.filingId === filing) ?? null;
     const review = latest && latest.reviewedBy === rep && latest.factsHash === factsHash ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
-    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, passes: mine, today });
+    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), passes: mine, today });
     return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });
