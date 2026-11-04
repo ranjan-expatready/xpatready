@@ -240,3 +240,9 @@ Closed: **QA-196**. New: **QA-216** (Minor, from qa tester 2: the finder line sa
 * **QA-149 closed** (`check_qa_vv_1102_decider.ts` 6/6). Still failing: QA-153 (Major), QA-155 and QA-151 (Minor).
 * #840 (IRM 0002's saved field map, qa PASS earlier) merged.
 * M2: 43/60 (unchanged). M3: 2/17 Works.
+
+## Records update ~14:15 IST: qa tester 2's C3.4 verdict (#874)
+* It agrees: **C3.4 is Partial**, its pack is green, QA-196 is fixed.
+* **New QA-218 (Gap · Major):** no screen offers Saved (US$0 replay) for the AI masters run that #771 committed. On the six, the only masters control runs the rules pass. **qa correction:** qa's batch 6 walk started that Saved draft through the API, not a screen. It proved the To review queue and the refusal words, not the step a person meets. The C3.4 row now says so.
+* qa tester 2's Minor is folded into QA-217: the "Ready to accept" badge, plus a form check whose first field shows only "*".
+* M2: 43/60 (unchanged).
