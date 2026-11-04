@@ -73,3 +73,24 @@ Journey: on a blank copy, the author runs Demo › Load the configured checkpoin
 * A real screen reader, 200 % zoom, and an intended user's unaided walk (D17 and D20 stay with the founder).
 
 **Verdict: Approve 32c7a0782** (on green CI for that head). Should-fix list: m2 and m3 (`check_qa144_vv_release.ts:44-48, 57, 98-108`; `check_qa144_vv_walk.cjs:51`; `check_c10_1_configured.ts:85`), m1 and m4 (`demo.ts:433, 436, 460, 470`), m5 (`review.tsx:65`), m6 (`demo.ts:414/475`).
+
+## Round 2: diff-only re-check of 32c7a0782..8520401e3
+
+**Verdict: Block 8520401e3.** CI is red on this head: run 41817641068, shard 5 failed and shard 1 was cancelled. The m3 strictness is wrong in scope, not in timing.
+
+| Item | Holds? | Evidence |
+|---|---|---|
+| m1 | Yes, with a nit | `demo.ts:472` counts `proposalItem` rows on the replayed field-map runs where `agreement: "differ"` and the status is not waiting. `agreement` (String) and `runId` are ProposalItem columns (`prisma/schema.prisma`). The `types` job passed. Nit: `status: { not: "waiting" }` also counts the showcase's one returned and one edited item if either is "differ", yet the words say "accepted by the sample loader". Use `choice: "ACCEPTED"`, or say "decided". |
+| m2 | Yes | The release, walk and c10_1 row 10 assertions are now unconditional. The new "IRM 0002 is attached and mapped … row 3 done" check passed in CI (`19 saved AI answers replayed`, `why: null`). Nit: `check_qa144_vv_release.ts:39-41` still has the "Until IRM 0002's saved field map lands …" comment. Line 48's `errors.every(e => e.item === "IRM 0002")` still tolerates an IRM 0002 error. After a release it should be `errors.length === 0`; CI shows `[]`. |
+| m3 | **No, Major** | Form lines: `PUBLISHED` holds. CI shows IMM 5409, IMM 5707 and IRM 0002 lines as `…\|PUBLISHED\|…`. Library: `status = 'RELEASED'` for **every** section fails in CI: `FAIL QA-144 BR-7 pass: every section in the library was approved by the Approver and released with the Visitor visa`. The cause is not timing. The release is committed before the load returns (`released ["Visitors › Visitor visa"]`), and all the other release checks pass. The cause is scope: `publishLibraryChanges` (`library-changes.ts:239-244`) releases only the items the releasing combination uses ("A change approved in between, used by nothing released now, waits for the next release"). Of the 41 sections row 7 drafts, the ones the Visitor visa does not choose (placement M2: "not every one") correctly stay APPROVED. Fix: require RELEASED for the sections the release's snapshot carries, keep APPROVED-or-RELEASED (by user-B) for the rest, and make the IRM 0002 fact RELEASED. Commit 6123019dd, pushed while this round ran, does this; it is not reviewed here. |
+| m4 | Yes | Both failure branches set `irmWhy`. Row 3 becomes `partial`, with the reason joined after any waiting-for-AI words. An exception thrown inside `timed` still escapes the checkpoint as an error, which is visible, not silent. That is acceptable. |
+| m5 | Not changed, noted for the screens lane | Accepted as stated in the PR. It stays in the journey score below. |
+| m6 | Yes | `const keyOf = keyOf0`. The combinations do not change between `:414` and `:478`; only intake and replay steps run in between. The walk header is wrapped. |
+
+No new defect in `demo.ts`. `irmWhy` is assigned inside the awaited `timed` callback; TS narrows it to `null` at row 3, but the code compiles (`types` green) and is correct at runtime.
+
+CI (`gh pr checks 891`, head 8520401e3): kind, types, shards 2, 3, 4 and 6 pass; **shard 5 fails** (`check_qa144_vv_release.ts` 28/29, the BR-7 line above); shard 1 was cancelled, so `check_c10_1_configured` and the walk are unconfirmed on this head.
+
+Journey test: no screen changed this round, and m5 is open. **Score 7.5/10, unchanged.** Row 4's words now admit the loader's acceptances, but that is not yet worth half a point while the m1 count can include returned items.
+
+Fix before Approve: m3 (`check_qa144_vv_release.ts:56-58` and the IRM 0002 fact line), then green CI on all six shards. Nits: m1's count filter; the stale comment at `:39-41`; `errors.length === 0` at `:48`.

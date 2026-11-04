@@ -36,16 +36,14 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   const vv = sql(`select id from combination where combination_key = 'vv.single'`);
   console.log(`      loaded in ${l.body.seconds.toFixed(1)} s; released ${JSON.stringify(l.body.released)}`);
 
-  // The Done-when (tech lead on #798): the Visitor visa is released by the checkpoint. Until IRM 0002's saved field map
-  // lands (the paid runner, #798), IRM 0002's "no form fields mapped" is its one named block (QA-180 stays strict:
-  // a conditional form needs its map too); once a saved map exists, nothing but the release passes.
+  // The Done-when (tech lead on #798): the Visitor visa is released by the checkpoint, with no release block left.
   const o = (await call("GET", `/combinations/${vv}`)).body;
   const errors = (o?.draft?.problems ?? []).filter((p: { level: string }) => p.level === "error");
   // IRM 0002's saved map (#840) is replayed by the checkpoint (#891): the release is the one outcome (review m2).
   const released = (l.body.released as string[]).some((x) => /Visitor visa/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${vv}' order by version desc limit 1`) === "1|user-B|user-A";
   ok("QA-144 pass: the configured checkpoint releases the Visitor visa (release 1, submitted by the author, approved by the Approver)", released, { released: l.body.released, row10: r("10").why?.slice(0, 300) });
   ok("QA-144 pass: IRM 0002 is attached and mapped from its saved answer (US$0)", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0 && r("3").status === "done", r("3"));
-  ok("QA-144 fail: nothing else blocks the Visitor visa's release (no form field without a decision, no fact asked of nobody, no rule in words only)", errors.every((e: { item: string }) => e.item === "IRM 0002") && !(o?.draft?.problems ?? []).some((p: { message: string }) => /nobody is asked for it/.test(p.message)), errors.slice(0, 4).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 120)}`));
+  ok("QA-144 fail: nothing blocks the Visitor visa's release (no form field without a decision, no fact asked of nobody, no rule in words only)", errors.length === 0 && !(o?.draft?.problems ?? []).some((p: { message: string }) => /nobody is asked for it/.test(p.message)), errors.slice(0, 4).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 120)}`));
   ok("QA-144 fail-guard: no live AI call and nothing spent (US$0)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before);
 
   // Row 7: sections from the forms' own parts (rules, no AI), approved by a second person.

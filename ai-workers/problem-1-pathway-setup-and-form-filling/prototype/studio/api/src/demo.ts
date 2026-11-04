@@ -469,7 +469,7 @@ export class Demo {
     row({ row: "3", title: "AI maps form fields to shared fields (saved answers, US$0)", status: !jobs.length ? "waiting" : waitingForAi.length || irmWhy ? "partial" : "done", shows: `${jobs.length} saved AI answers replayed (US$0)`,
       why: [waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : "", irmWhy ?? ""].filter(Boolean).join(" ") || null });
     // Review m1: the Sample loader also accepts the items where the draft and the checker rounds differ; the row says how many.
-    const differ = jobs.length ? await this.db.proposalItem.count({ where: { runId: { in: jobs.map((j) => j.id) }, agreement: "differ", status: { not: "waiting" } } }) : 0;
+    const differ = jobs.length ? await this.db.proposalItem.count({ where: { runId: { in: jobs.map((j) => j.id) }, agreement: "differ", choice: "ACCEPTED" } }) : 0;
     row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations${differ ? `; ${differ} where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)` : ""}`,
       why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
 
