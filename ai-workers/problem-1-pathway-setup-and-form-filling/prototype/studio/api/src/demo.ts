@@ -62,24 +62,23 @@ export const GENDER_FACT: RuleFact = { fact: "person.gender_identifier_differs_f
   meaning: "Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002).",
   beside: ["person.sex", "person.gender", "person.date_of_birth"] };
 /** QA-144 slice 3: the study permit's form lines (outside Canada) as IRCC's own words set them, each Sample, "Unconfirmed:
- *  expert" (AGENTS rule 4). Guide 5269 is official-sources/ircc/instructions/guide-5269.html (canada.ca, last modified
- *  27 Oct 2026, saved 27 Oct 2026); IMM 5483 (08-2025) is official-sources/ircc/checklists/imm5483e.pdf (checked 21 Oct
+ *  expert" (AGENTS rule 4). Guide 5269 is official-sources/ircc/instructions/guide-5269.html (canada.ca, modified
+ *  2026-10-06, saved 27 Oct 2026); IMM 5483 (08-2025) is official-sources/ircc/checklists/imm5483e.pdf (checked 21 Oct
  *  2026). IMM 1294 stays on the draft as every student files it. The family information form follows the channel
- *  (FAMILY_FORM_BY_CHANNEL), with IMM 5483's words in SP_FAMILY_CITE. */
+ *  (FAMILY_FORM_BY_CHANNEL); for the study permit IMM 5483 (08-2025) p. 1 says: "Family Information (IMM 5707)
+ *  Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada." "Or a minor
+ *  travelling alone" needs an age rule no line has yet (a line has a minimum age only): Unconfirmed: expert, said on #879. */
 export const SP_FORM_RULES: FormRule[] = [
   // Guide 5269 and IMM 5483 disagree on the age (17 or less, against less than 17): the guide's wider words are taken, for the expert to confirm.
   { form: "IMM 5646", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.minor_studying_without_parent", value: true },
     cite: "Guide 5269, Custodians: \"Children 17 years of age or less coming to Canada to study without an accompanying parent or a legal guardian must still be in the care of a responsible adult in Canada. [...] The parents or legal guardians in the country or territory of origin and the custodian in Canada must complete a notarized Custodianship Declaration (IMM 5646)\"; IMM 5483 (08-2025) p. 1: \"Must be completed if the minor studying in Canada is less than 17 years old.\"" },
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
-    cite: "Guide 5269, Step 2: \"Statutory Declaration of Common-law Union (IMM 5409), if applicable\"" },
+    cite: "Guide 5269, Step 2: \"Statutory Declaration of Common-law Union (IMM 5409) [...], if applicable\"" },
   { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
     cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5269: \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative’s appointment.\"" },
   { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
     cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
 ];
-/** IMM 5483 (08-2025) p. 1 on the family information form: from age 18. "Or a minor travelling alone" needs an age rule
- *  no line has yet (a line has a minimum age only): Unconfirmed: expert, said on the PR. */
-export const SP_FAMILY_CITE = "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"";
 /** QA-144 slice 3: IMM 5646's rule reads a fact no form asks (no age is worked out in this workspace), added through
  *  C3.6's door for its rule and asked of each person beside their date of birth. Sample, Unconfirmed: expert. */
 export const MINOR_FACT: RuleFact = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", label: "Minor studying without a parent or guardian", valueType: "yes_no",
@@ -573,13 +572,14 @@ export class Demo {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
             try { await this.library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON }); byHand++; } catch (e) { setUpRefused.push(`${f.dataPath}: ${said(e)}`); }
           }
-          // A choice field's list values matched to the form's own codes (no AI), as the Form library's button does.
+          // A choice field's list values matched to the form's own codes (no AI), through the Forms service's own draft step.
           let drafted: Awaited<ReturnType<Forms["draftOptionMaps"]>>["option_maps"] = [];
           try { drafted = (await this.forms.draftOptionMaps(author, ed.id)).option_maps; } catch (e) { setUpRefused.push(`option maps: ${said(e)}`); }
           // QA-144 slice 3: a value the form's own labels left open takes the code another form already gives it for the
           // same fact, when that form uses the same code list and this form has the code unused (IRCC's shared code lists:
-          // IMM 1294's "Separated" and IMM 5257's "Legally Separated" are both 05). Set as a person would on the Form library
-          // (Sample; no AI).
+          // IMM 1294's "Separated" and IMM 5257's "Legally Separated" are both 05). Set through Forms.setOptionMap, which
+          // checks each value and code and audits it (Sample; no AI). No screen edits an option map yet (G3), and a later
+          // draft of this edition's option maps would replace it (review m1, slice 3).
           for (const m of drafted.filter((x) => x.unmatched.length && x.fact)) {
             const sameList = (codes?: string[]) => !!codes && codes.length === m.optionMap.codes.length && codes.every((c) => m.optionMap.codes.includes(c));
             const others = (await this.db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: m.fact, formEditionId: { not: ed.id }, status: { not: "RETIRED" } }, select: { optionMap: true } }))
