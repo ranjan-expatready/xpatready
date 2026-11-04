@@ -43,7 +43,7 @@ run(async () => {
   let fam = sql("select label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null order by canonical_field_key limit 1");
   if (!fam) {
     const seed = await tryInsert(item("Family name"));
-    const d = await call("POST", "/review/proposals/decide", { ids: seed.ids, action: "accept" }, AUTHOR);
+    const d = await call("POST", "/review/proposals/decide", { ids: seed.ids, action: "accept", reason: "Seeded as the library field this check collides with (Sample)." }, AUTHOR); // QA-192: a near seed needs a person's line
     fam = d.status < 300 ? sql("select label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null order by canonical_field_key limit 1") : "";
   }
   const famKey = sql(`select canonical_field_key from canonical_field where label='${fam.replace(/'/g, "''")}' limit 1`);
@@ -63,7 +63,8 @@ run(async () => {
   const q = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body;
   const near = [...(q?.group?.bands?.ready ?? []), ...(q?.group?.bands?.check ?? []), ...(q?.group?.bands?.decide ?? [])].find((x: any) => x.title === "Family name at birth");
   ok("C11.13 pass: the queue shows the near match and its reason, and the one door puts a near item in Check whatever band the producer gave (BAND_TIPS: close to a library item)", !!near && near.near?.includes(famKey) && near.near_reason === REASON && near.band !== "ready", near && { band: near.band, near: near.near, reason: near.near_reason });
-  let r = await call("POST", "/review/proposals/decide", { ids: [near?.id ?? w.ids[0]], action: "accept" }, AUTHOR);
+  // QA-192 (P-120): the producer's reason is not a person's, so the decider gives the one line.
+  let r = await call("POST", "/review/proposals/decide", { ids: [near?.id ?? w.ids[0]], action: "accept", reason: REASON }, AUTHOR);
   ok("setup: the author accepts it (a DRAFT field and a waiting library change)", r.status < 300, r.status >= 300 ? words(r) : undefined);
   const batches = (await call("GET", "/review/changes?group=batch", undefined, APPROVER)).body?.batches ?? [];
   ok("C11.13 fail→pass: the second person's batch shows the near reason beside the new item", JSON.stringify(batches).includes(REASON), batches.length);
@@ -93,6 +94,121 @@ run(async () => {
   r = await call("POST", "/review/proposals/decide", { ids: [a], action: "reject", reason: "Not this one (test)." }, AUTHOR);
   r = await call("POST", "/review/proposals/decide", { ids: [bb], action: "accept" }, AUTHOR);
   ok("C11.13 pass (review M2): with the first rejected, the twin is accepted and adds the item itself", r.status === 201 && !!r.body?.items?.[0]?.landedAs && sql(`select reuse->>'match' from proposal_item where id='${bb}'`) === "new", [r.status, words(r) || r.body?.items]);
+  // QA-192 + Devin on #726: a twin of a near item whose first copy did not land adds the item itself, so it needs a
+  // person's one-line reason like any near item (the gate runs after the twin's reuse choice is resolved).
+  const nearOf = (label: string) => ({ identity: { key: P.identityKeyOf(payload(label), ""), near: ["Twin colour"], nearReason: "An AI sentence: it is not the same." } });
+  const nTwinA = (await tryInsert(item("Twin colour tone", nearOf("Twin colour tone")))).ids[0];
+  const nTwinB = (await tryInsert(item("Twin colour tone", { ...nearOf("Twin colour tone"), scope: { formEdition: "IMM 5257 Schedule 1 (test)", combinationId: null }, runId: run2 }))).ids[0];
+  await call("POST", "/review/proposals/decide", { ids: [nTwinA], action: "reject", reason: "Not this one (test)." }, AUTHOR);
+  r = await call("POST", "/review/proposals/decide", { ids: [nTwinB], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (Devin on #726): a near twin whose first copy was rejected is not accepted without a person's reason (400); it stays waiting", !!nTwinA && !!nTwinB && r.status === 400 && /say in one line why it is not the same/.test(words(r)) && sql(`select status || '|' || (reuse->>'match') from proposal_item where id='${nTwinB}'`) === "waiting|reuse", [nTwinA, nTwinB, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [nTwinB], action: "accept", reason: "A tone, not the colour itself (test)." }, AUTHOR);
+  ok("QA-192 pass: with the person's reason the twin adds the item itself, and the reason is kept as a person's", r.status === 201 && sql(`select (reuse->>'match') || '|' || coalesce(identity->>'nearReasonBy', '-') from proposal_item where id='${nTwinB}'`) === "new|person", [r.status, words(r)]);
+  // QA-192 review m4: Undo puts the twin back as proposed (the person's reason goes with it), and a re-accept needs it again.
+  r = await call("POST", `/review/proposals/undo/${sql(`select batch_id from proposal_item where id='${nTwinB}'`)}`, undefined, AUTHOR);
+  const afterUndo = sql(`select status || '|' || coalesce(identity->>'nearReasonBy', '-') from proposal_item where id='${nTwinB}'`);
+  const reAccept = await call("POST", "/review/proposals/decide", { ids: [nTwinB], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (review m4): Undo puts the item back as proposed, without the person's reason; a re-accept without one is refused (400)", r.status < 300 && afterUndo === "waiting|-" && reAccept.status === 400, [r.status, afterUndo, reAccept.status]);
+  // Review M1: a twin the door finds close to a library field by itself (no producer near), with its first copy rejected.
+  const atEntry = `${fam} at entry`;
+  const tA = (await tryInsert(item(atEntry))).ids[0], tB = (await tryInsert(ed2(atEntry))).ids[0];
+  await call("POST", "/review/proposals/decide", { ids: [tA], action: "reject", reason: "Not this one (test)." }, AUTHOR);
+  r = await call("POST", "/review/proposals/decide", { ids: [tB], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (review M1): a twin close to a library field (found by the rule, its first copy rejected) is not accepted without a person's reason (400, naming it)", !!tA && !!tB && r.status === 400 && words(r).includes(fam), [tA, tB, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [tB], action: "accept", reason: "one name holds the other" }, AUTHOR);
+  ok("QA-192 fail (review m2): the rule's own words are not a person's reason (400)", r.status === 400 && /your own words/.test(words(r)), [r.status, words(r)]);
+  // Review M2: an edit that renames an item to a name close to a library field needs the reason too.
+  const plainId = (await tryInsert(item("Zebra quokka wombat"))).ids[0];
+  const edited = { ...payload(`${fam} at arrival`) };
+  r = await call("POST", "/review/proposals/decide", { ids: [plainId], action: "edit", payload: edited }, AUTHOR);
+  ok("QA-192 fail (review M2): an edit renaming an item to a name close to a library field is not accepted without a person's reason (400)", !!plainId && r.status === 400 && words(r).includes(fam), [plainId, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [plainId], action: "edit", payload: edited, reason: "The family name used at arrival, not today's (test)." }, AUTHOR);
+  ok("QA-192 pass (review M2): with the person's reason the edit lands, its near list and reason kept", r.status === 201 && sql(`select coalesce(identity->>'nearReasonBy', '-') || '|' || (identity->'near')::text from proposal_item where id='${plainId}'`).startsWith("person|") && sql(`select identity->'near' from proposal_item where id='${plainId}'`).includes(fam), [r.status, words(r)]);
+  // Devin r2 on #726: an edit's new name is compared under the key it will land with, never the proposer's key, so a
+  // proposer's key equal to the library field's cannot hide the match.
+  const keyed = (await tryInsert(item("Quokka zebra wombat", { work: { proposedKey: famKey } }))).ids[0];
+  r = await call("POST", "/review/proposals/decide", { ids: [keyed], action: "edit", payload: payload(`${fam} at departure`) }, AUTHOR);
+  ok("QA-192 fail (Devin r2 on #726): an edit to a name close to a library field is refused without a reason (400) even when the proposer's key is that field's", !!keyed && r.status === 400 && words(r).includes(fam), [keyed, r.status, words(r)]);
+  // Devin r2 on #726: an edit no longer close to anything drops the old near list (the approver is not told it is close);
+  // Undo puts it back.
+  const wasNear = (await tryInsert(item(`${fam} before marriage`, { identity: { key: P.identityKeyOf(payload(`${fam} before marriage`), ""), near: [famKey], nearReason: REASON } }))).ids[0];
+  r = await call("POST", "/review/proposals/decide", { ids: [wasNear], action: "edit", payload: payload("Hull paint of the ferry") }, AUTHOR);
+  const dropped = sql(`select (identity->'near')::text || '|' || coalesce(identity->>'nearReason', '-') from proposal_item where id='${wasNear}'`);
+  ok("QA-192 pass (Devin r2 on #726): an edit to a name close to nothing lands without a reason and drops the old near list and reason", !!wasNear && r.status === 201 && dropped === "[]|-", [wasNear, r.status, dropped, words(r)]);
+  const undoNear = await call("POST", `/review/proposals/undo/${r.body?.batchId}`, undefined, AUTHOR);
+  ok("QA-192 pass (Devin r2 on #726): Undo puts the old near list and reason back", undoNear.status < 300 && sql(`select (identity->'near' ? '${famKey}')::text || '|' || coalesce(identity->>'nearReason', '-') from proposal_item where id='${wasNear}'`) === `true|${REASON}`, [undoNear.status, undoNear.body]);
+  // Review M3 (round 2): a Ready item whose close match was proposed after it needs no reason (the later item carries the
+  // pair); the queue says so and the server agrees; the later item needs one.
+  const [mFirst, mLater] = await P.insertProposals(db, ws, [item("Mother maiden surname"), item("Maiden surname of mother")] as never);
+  const grp = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group;
+  const inQueue = (id: string) => [...(grp?.bands?.ready ?? []), ...(grp?.bands?.check ?? []), ...(grp?.bands?.decide ?? [])].find((x: { id: string }) => x.id === id);
+  const firstView = inQueue(mFirst), laterView = inQueue(mLater);
+  r = await call("POST", "/review/proposals/decide", { ids: [mFirst], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (review M3): the first of two close names (the later one carries the pair) shows no reason needed, and is accepted without one", firstView?.near_reason_needed === false && r.status === 201, [firstView?.near_reason_needed, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [mLater], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (review M3): the later one shows a reason is needed, and is refused without one (400)", laterView?.near_reason_needed === true && r.status === 400, [laterView?.near_reason_needed, r.status, words(r)]);
+  // P-294/P-299 with QA-192: a Ready new item that comes to need a near reason (its close name, proposed later, was
+  // accepted) is never accepted in bulk: no new library item is (main's rule, the box gives that reason first).
+  const [kFirst, kLater, osprey, heron] = await P.insertProposals(db, ws, [item("Kestrel plume tint"), item("Tint of kestrel plume"), item("Osprey wing span"), item("Heron beak length")] as never);
+  const kAcc = await call("POST", "/review/proposals/decide", { ids: [kLater], action: "accept", reason: "The tint of the plume, read the other way round (test)." }, AUTHOR);
+  const g4 = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group;
+  const kView = (g4?.bands?.ready ?? []).find((x: { id: string }) => x.id === kFirst);
+  r = await call("POST", "/review/proposals/decide", { ids: [kFirst, osprey], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (P-294/P-299): a Ready new item that now needs a near reason cannot be ticked in bulk (the box says why), and a bulk accept with it is refused (409); nothing is accepted", kAcc.status === 201 && kView?.near_reason_needed === true && !!kView?.bulk_why && r.status === 409 && sql(`select string_agg(status, ',' order by status) from proposal_item where id in ('${kFirst}', '${osprey}')`) === "waiting,waiting", [kAcc.status, kView && { needed: kView.near_reason_needed, bulk: kView.bulk_why }, r.status, words(r)]);
+  r = await call("POST", "/review/proposals/decide", { ids: [osprey], action: "accept" }, AUTHOR);
+  const kOwn = await call("POST", "/review/proposals/decide", { ids: [kFirst], action: "accept", reason: "The plume's tint, named the other way (test)." }, AUTHOR);
+  ok("QA-192 pass (P-294/P-299): each is accepted on its own, the near one with its reason and the other without one", r.status === 201 && kOwn.status === 201 && sql(`select count(*) from proposal_item where id = '${heron}' and status = 'waiting'`) === "1", [r.status, words(r), kOwn.status, words(kOwn)]);
+  // Review r3 M5: the checker's reading is offered only when the readings differ, so an agreed item never says a reason
+  // is needed for it; the server accepts it without one.
+  const kKey = kAcc.body?.items?.[0]?.landedAs;
+  const kReuse = (await tryInsert(item("Tint of kestrel plume", { reuse: { match: "reuse", existingKey: kKey } }))).ids[0];
+  const g5 = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group;
+  const kReuseView = [...(g5?.bands?.ready ?? []), ...(g5?.bands?.check ?? []), ...(g5?.bands?.decide ?? [])].find((x: { id: string }) => x.id === kReuse);
+  r = await call("POST", "/review/proposals/decide", { ids: [kReuse], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (review r3 M5): an agreed item whose reading is close to a library item but reuses one says no reason is needed, for either reading, and is accepted without one", !!kKey && kReuseView?.agreement === "agreed" && kReuseView.near_reason_needed === false && kReuseView.near_reason_needed_check === false && r.status === 201 && r.body?.items?.[0]?.landedAs === kKey, [kKey, kReuseView && { agreement: kReuseView.agreement, own: kReuseView.near_reason_needed, check: kReuseView.near_reason_needed_check }, r.status, words(r)]);
+  // Review r3 M4 (P-121), the case main's new-item rule does not cover: a Ready twin whose first copy has not landed adds
+  // the item itself, so when it is close to a library field it needs a person's reason and cannot be ticked with others
+  // (the box says why); decide() refuses the batch naming it (409), nothing accepted. Once its first copy is in the
+  // library it reuses that item, needs no reason and can be ticked again.
+  const tw = "Kestrel plume tint shade";
+  const twA = (await tryInsert(item(tw))).ids[0], twB = (await tryInsert(ed2(tw))).ids[0];
+  sql(`update proposal_item set confidence = 'ready', agreement = 'agreed', reason = null where id = '${twB}'`);
+  const ospreyKey = sql(`select decided_key from proposal_item where id = '${osprey}'`);
+  const cleanReuse = (await tryInsert(item("Osprey wing span", { reuse: { match: "reuse", existingKey: ospreyKey } }))).ids[0];
+  const twinOf = (gid: string) => call("GET", `/review/proposals?group=${encodeURIComponent(gid)}`).then((x) => (x.body?.group?.bands?.ready ?? []).find((y: { id: string }) => y.id === twB));
+  const twView = await twinOf("edition:IMM 5257 Schedule 1 (test)");
+  r = await call("POST", "/review/proposals/decide", { ids: [twB, cleanReuse], action: "accept" }, AUTHOR);
+  ok("QA-192 fail (review r3 M4): a Ready twin whose first copy has not landed, close to a library field, cannot be ticked in bulk (the box says why) and a bulk accept with it is refused naming it (409); nothing is accepted", !!twA && !!twB && !!cleanReuse && twView?.near_reason_needed === true && twView?.bulk_why === P.NEAR_BULK_WHY && r.status === 409 && words(r).includes(tw) && /close to a library item/.test(words(r)) && sql(`select string_agg(status, ',') from proposal_item where id in ('${twB}', '${cleanReuse}')`) === "waiting,waiting", [twView && { needed: twView.near_reason_needed, bulk: twView.bulk_why }, r.status, words(r)]);
+  const twAcc = await call("POST", "/review/proposals/decide", { ids: [twA], action: "accept", reason: "A shade of the tint, not the tint itself (test)." }, AUTHOR);
+  const twAfter = await twinOf("edition:IMM 5257 Schedule 1 (test)");
+  r = await call("POST", "/review/proposals/decide", { ids: [twB, cleanReuse], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (review r3 M4): once its first copy is in the library the twin needs no reason, can be ticked, and is accepted with others as a reuse of that item", twAcc.status === 201 && twAfter?.near_reason_needed === false && twAfter?.bulk_why === null && r.status === 201 && r.body?.items?.find((x: { id: string }) => x.id === twB)?.landedAs === twAcc.body?.items?.[0]?.landedAs, [twAcc.status, twAfter && { needed: twAfter.near_reason_needed, bulk: twAfter.bulk_why }, r.status, words(r)]);
+  // Devin r3 on #726: a twin whose first copy was accepted (with its reason) now reuses it: the queue asks no reason, as
+  // the server does not.
+  const arr = `${fam} on arrival`;
+  const rA = (await tryInsert(item(arr))).ids[0], rB = (await tryInsert(ed2(arr))).ids[0];
+  const accA = await call("POST", "/review/proposals/decide", { ids: [rA], action: "accept", reason: "The family name used on arrival, not today's (test)." }, AUTHOR);
+  const ed2Group = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 Schedule 1 (test)")}`)).body?.group;
+  const rBView = [...(ed2Group?.bands?.ready ?? []), ...(ed2Group?.bands?.check ?? []), ...(ed2Group?.bands?.decide ?? [])].find((x: { id: string }) => x.id === rB);
+  r = await call("POST", "/review/proposals/decide", { ids: [rB], action: "accept" }, AUTHOR);
+  ok("QA-192 pass (Devin r3 on #726): a near twin whose first copy was accepted shows no reason needed, and is accepted without one as a reuse of that item", accA.status === 201 && rBView?.near_reason_needed === false && r.status === 201 && r.body?.items?.[0]?.landedAs === accA.body?.items?.[0]?.landedAs, [accA.status, rBView?.near_reason_needed, r.status, words(r)]);
+  // Devin r3 (red) on #726: an edit lands its reading as a new item even for a twin whose first copy landed, so the
+  // checker's reading close to another library field still needs a person's reason, on the queue and on the server.
+  const dep = `${fam} on departure`, rd3 = (label: string) => ({ reading: `${label} (test)`, payload: payload(label), from: "replay", runFile: "runs/test.json", costUsd: 0 });
+  const eA = (await tryInsert(item("Hull paint shade"))).ids[0];
+  const eB = (await tryInsert(ed2("Hull paint shade"))).ids[0];
+  await call("POST", "/review/proposals/decide", { ids: [eA], action: "accept" }, AUTHOR);
+  sql(`update proposal_item set confidence = 'decide', agreement = 'differ', rounds = '${JSON.stringify({ draft: rd3("Hull paint shade"), check: rd3(dep) }).replace(/'/g, "''")}'::jsonb where id = '${eB}'`);
+  const g3 = (await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 Schedule 1 (test)")}`)).body?.group;
+  const eBView = [...(g3?.bands?.ready ?? []), ...(g3?.bands?.check ?? []), ...(g3?.bands?.decide ?? [])].find((x: { id: string }) => x.id === eB);
+  r = await call("POST", "/review/proposals/decide", { ids: [eB], action: "edit", payload: payload(dep) }, AUTHOR);
+  ok("QA-192 fail (Devin r3 on #726): editing a twin whose first copy landed to a name close to a library field is refused without a reason (400); the queue says the checker's reading needs one", !!eB && eBView?.near_reason_needed_check === true && r.status === 400 && words(r).includes(fam), [eBView?.near_reason_needed_check, r.status, words(r)]);
+  // Devin r2 on #726: the checker's reading has its own "reason needed", the one decide() applies to that edit.
+  const rd = (label: string) => ({ reading: `${label} (test)`, payload: payload(label), from: "replay", runFile: "runs/test.json", costUsd: 0 });
+  const dv = (await tryInsert(item("Ferry hull colour", { confidence: "decide", agreement: "differ", reason: "The two readings differ (test).", rounds: { draft: rd("Ferry hull colour"), check: rd(`${fam} at sea`) } }))).ids[0];
+  const dvView = [...(((await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`)).body?.group?.bands?.decide) ?? [])].find((x: { id: string }) => x.id === dv);
+  r = await call("POST", "/review/proposals/decide", { ids: [dv], action: "edit", payload: payload(`${fam} at sea`) }, AUTHOR);
+  ok("QA-192 pass (Devin r2 on #726): the queue says the checker's reading needs a reason when its name is close to a library field, and its own reading does not; the server agrees (400 without one)", !!dvView && dvView.near_reason_needed === false && dvView.near_reason_needed_check === true && r.status === 400 && words(r).includes(fam), [dvView && { own: dvView.near_reason_needed, check: dvView.near_reason_needed_check }, r.status, words(r)]);
   const c = (await tryInsert(item("Twin shade"))).ids[0], dd = (await tryInsert(ed2("Twin shade"))).ids[0];
   const rc = await call("POST", "/review/proposals/decide", { ids: [c], action: "accept" }, AUTHOR);
   r = await call("POST", "/review/proposals/decide", { ids: [dd], action: "accept" }, AUTHOR);

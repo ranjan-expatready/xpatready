@@ -82,14 +82,14 @@ export async function nearOf(db: Db, workspaceId: string, changes: Pick<LibraryC
   if (!ids.length) return out;
   const items = await db.proposalItem.findMany({ where: { workspaceId, id: { in: ids } }, select: { id: true, identity: true, origin: true } });
   const originOf = new Map(items.map((i) => [i.id, i.origin]));
-  const near = new Map(items.map((i) => [i.id, i.identity as { near?: string[]; nearReason?: string | null } | null]).filter(([, x]) => !!(x as { near?: string[] } | null)?.near?.length && !!(x as { nearReason?: string | null }).nearReason) as [string, { near: string[]; nearReason: string }][]);
+  const near = new Map(items.map((i) => [i.id, i.identity as { near?: string[]; nearReason?: string | null; nearReasonBy?: string } | null]).filter(([, x]) => !!(x as { near?: string[] } | null)?.near?.length && !!(x as { nearReason?: string | null }).nearReason) as [string, { near: string[]; nearReason: string; nearReasonBy?: string }][]);
   if (!near.size) return out;
   const words = [...new Set([...near.values()].flatMap((x) => x.near))];
   const fields = await db.canonicalField.findMany({ where: { workspaceId, OR: [{ canonicalFieldKey: { in: words } }, { label: { in: words } }] }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, label: true } });
   const byKey = new Map<string, string>(), byName = new Map<string, string>();
   for (const f of fields) { if (!byKey.has(f.canonicalFieldKey)) byKey.set(f.canonicalFieldKey, f.label ?? f.canonicalFieldKey); if (f.label && !byName.has(normalizeLabel(f.label))) byName.set(normalizeLabel(f.label), f.canonicalFieldKey); }
   const item = (w: string) => byKey.has(w) ? { key: w, name: byKey.get(w)! } : byName.has(normalizeLabel(w)) ? { key: byName.get(normalizeLabel(w))!, name: w } : { key: null, name: w };
-  for (const c of changes) { const x = c.proposalItemId ? near.get(c.proposalItemId) : undefined; if (x) out.set(c.id, { items: x.near.map(item), reason: x.nearReason, given: !isRuleWhy(x.nearReason), by: originOf.get(c.proposalItemId!) === "ai" ? "ai" : "person" }); }
+  for (const c of changes) { const x = c.proposalItemId ? near.get(c.proposalItemId) : undefined; if (x) out.set(c.id, { items: x.near.map(item), reason: x.nearReason, given: !isRuleWhy(x.nearReason), by: x.nearReasonBy === "person" || originOf.get(c.proposalItemId!) !== "ai" ? "person" : "ai" }); }
   return out;
 }
 
