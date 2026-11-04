@@ -25,6 +25,7 @@ import { RuleFacts } from "@/components/rule-facts";
 import { peopleWords } from "@/lib/people";
 import { DraftPqrPicks } from "@/components/pqr-draft";
 import { DraftQuestionsDocuments } from "@/components/qd-draft";
+import { PlaceFromFormParts } from "@/components/place-from-form-parts";
 import { appliesOf, FILING_TIP, filingWarnings, filingWords, previewFilings } from "../../../../engine/filing-modes";
 import type { LineMode } from "../../../../contracts/workspace";
 import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
@@ -497,9 +498,16 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       {q.coverage.gaps.length ? (
         <div className={FOCUS_RING} data-focus="questionnaires:gaps"><Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
-          <p className="mt-1">Fix: add the library section that asks it, or have the case officer fill it (set once in the shared library).</p>
+          <p className="mt-1">Fix: ask them in the sections of their form fields (the step below), add the library section that asks it, or have the case officer fill it (set once in the shared library).</p>
         </Notice></div>
+      ) : !q.sections.length ? (
+        <Notice tone="info" title="No section asks anything yet">
+          <p>Once the forms' field maps are applied and their sections drafted (Forms tab), ask each answer the forms need in the section of its form field (the step below).</p>
+        </Notice>
       ) : null}
+      {/* QA-144 part 1: offered while answers are asked of nobody or no section asks anything; it stays mounted, so its
+          result (what no section groups, what a rule refused) stays readable once the gaps are gone. */}
+      <PlaceFromFormParts id={id} offer={q.coverage.gaps.length > 0 || !q.sections.length} />
       {q.sections.map((s) => {
         const isOpen = opened.has(s.id) || filter !== "all";
         const lines = s.questions.filter((x) => keep(x.fact));

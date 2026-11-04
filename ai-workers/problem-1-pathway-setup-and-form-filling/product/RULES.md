@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-318**, 4 Nov 07:50 IST)
+# Rules in force — one page (the tech lead keeps it; as of **P-341**, 4 Nov 23:35 IST; the section "Added 4 Nov" below wins over older lines here)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
@@ -44,6 +44,25 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 * Sessions start only in a turn the founder typed. All times to the founder in IST (P-302). Talk in capabilities and plain words (P-291).
 * Product questions that decisions, canada.ca or best practice settle are ruled by the tech lead and recorded (P-294); real preference questions go to the founder one at a time with a recommendation.
 * Immigration values only from official sources with page, quote and date (AGENTS.md rule 4, P-170).
+
+## Added 4 Nov (P-319–P-337): these win over older lines above
+* **Order now (P-336, P-337):** finish M2 to 60, lean, before anything else; then the scale changes before M3 restarts (scorecard split, generated records, a GitHub App for agent approvals, packs for the 18 pack-less Works rows). **Trip-wire:** at 6 Nov 23:00 IST, if M2 is under 57 confirmed or the burn is over 2.5% of the weekly plan an hour, switch to scale-first.
+* **No new M3 work until M2 = 60** (P-332); M3 PRs in flight finish. M3 stays on main against the M3 contract on M3-only files when it restarts (P-323, P-325).
+* **Works is frozen at P-322 until M2 = 60** (P-337): setup capabilities count on the six; later steps on the configured checkpoint only if product steps built it. qa re-scores only the rows a merged PR names or a closed blocker frees; no whole-table re-proofs.
+* **Lean crew** (P-337): about 7–8 working sessions; a lane ends when its PR is labelled; no side-builds (#945, #951, #858 paused to 6 Nov). Files many PRs touch (demo.ts, form-part-placements.ts) merge one PR at a time.
+* **Budget (P-331, replaces P-327):** no extra usage. Measure the burn per hour at every check. At 85% weekly, no new rows (P-308); at 90%, every lane stops at a clean pushed point and the tech lead writes "Resume on the new account".
+* **Paid AI today:** cap US$30 a day (founder, 4 Nov); the tech lead approves each run inside it with the worst case first (P-295, P-309). A paid run happens where Works is counted (the six or the checkpoint), never fixture-only.
+* **No hard-coding (P-319):** no combination or form number in code; the chain is the guard, family forms, IRCC checklist coverage, then M3 tables.
+* **Cloud lanes (P-326):** each check reads claude.ai/code as text; a lane counts as running only after its first push or draft PR; type into an idle lane only after confirming its URL; a platform decision needs one live canary; run the connection checklist after any account, plan or visibility change.
+* **Reports (P-324):** separate blocks M2, M3, M2 workflow and sessions, M3 workflow and sessions, interdependencies, pre-mortem; only qa's numbers; times from the clock in IST. No wasted work or tokens: a hard rule.
+* **Labels (P-324):** the tech lead labels on the founder's behalf; auto mode refuses the Lead's own records PRs unless the founder names them in that Lead's chat.
+* **Gate B:** never drop a capability id to pass it; name its steps or hold (P-330 (7)). A WAIT or HELD line is never green (P-334 (6)).
+* **Immigration wording:** each form's own official words decide who fills it and what it asks (AGENTS.md rule 4; QA-221 ruling, 4 Nov).
+* **No multi-tenant work in the reference app** (P-335): the team's platform owns tenant isolation (P-249); our two-firm checks stay as the spec.
+* **Records once a day, plus each hand-over** (P-336, amends P-314); rulings live as PR comments and are summed up in that day's row.
+* **ETA board (P-338):** every report names the next 3–6 capabilities to reach Works with an IST time, the step each waits on, and on time or late by N minutes and why.
+* **Warm lanes (P-341):** a lane whose PR is labelled may take one more M2 row that builds on what it knows, while working sessions stay about 8 and the burn under 2.5%/h; otherwise it ends. Questions to the founder one at a time, with a recommendation.
+* **App view and prompt answers (P-339):** each check reads the claude.ai Code list and the archived list; the Lead answers a lane's prompt only inside its brief and the rules; blocks go to the founder at once ("go" resets the Lead's 10-message cap). qa marks Works only after the pack is green on main's head on GitHub's runners on the data its verdict counts on (six or checkpoint, P-322); the protected set runs each row on that data (B77), and until then a checkpoint row is held from the six run, not demoted.
 
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.

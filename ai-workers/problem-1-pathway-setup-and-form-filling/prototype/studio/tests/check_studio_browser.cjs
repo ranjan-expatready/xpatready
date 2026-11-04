@@ -351,10 +351,13 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const counts = (await api(`/jobs/${p.url().split("/jobs/")[1]}`)).detail.counts;
   step("B4: adding IMM 5476 reuses library definitions, proposes new ones and flags ambiguous ones (address parts, near duplicates)", counts.reuse > 0 && counts.new > 0 && counts.ambiguous > 0 && /Looks like one part/.test(main), JSON.stringify(counts));
   await shot("B4-imm5476-normalisation.png");
-  // C3.2 (P-121): a saved one-round draft has no High reuse match, so the bulk button is off and says why; there is no
-  // bulk accept of new definitions any more. Every proposal is decided one by one below (decideRest).
-  const bulk = btn("Accept High exact reuse (0)");
-  step("C3.2: bulk accept takes only High reuse matches: on a one-round draft it is off and says it needs a checker round; no bulk accept of new definitions", await bulk.isDisabled() && /checker round/.test((await bulk.getAttribute("title")) ?? "") && (await btn("Accept clean new definitions").count()) === 0, await bulk.getAttribute("title"));
+  // C3.2 (P-121): bulk accept takes only High reuse matches (both AI rounds agree and the rules pass). Since the C11.14
+  // result (#671's checker rounds, 3 Nov) IMM 5476's replay has its checker round, so some reuse matches may be High: the
+  // button counts them and is on, or with none it is off and says why. There is no bulk accept of new definitions. Every
+  // proposal is decided one by one below (decideRest).
+  const bulk = p.getByRole("button", { name: /^Accept High exact reuse \(\d+\)$/ });
+  const highN = Number(/\((\d+)\)/.exec((await bulk.innerText()) ?? "")?.[1] ?? -1), bulkTitle = (await bulk.getAttribute("title")) ?? "";
+  step("C3.2: bulk accept takes only High reuse matches: on when some are High (both rounds agree, rules pass), off with the reason when none is; no bulk accept of new definitions", highN >= 0 && (highN > 0 ? !(await bulk.isDisabled()) && /both AI rounds agree/.test(bulkTitle) : (await bulk.isDisabled()) && bulkTitle.length > 10) && (await btn("Accept clean new definitions").count()) === 0, `${highN}: ${bulkTitle}`);
   const tel = p.locator("article", { hasText: "Ambiguous" }).filter({ has: p.getByRole("button", { name: "Return" }) }).last();
   if (await tel.count()) { await click(tel.getByRole("button", { name: "Return" })); await tel.getByLabel(/Why it goes back/).fill("Returned for the form owner: confirm the meaning on this form before it joins the library."); await click(tel.getByRole("button", { name: "Return", exact: true }).last()); }
   await decideRest();

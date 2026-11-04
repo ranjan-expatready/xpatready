@@ -81,17 +81,25 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   const caseRel = sql(`select i.config_release_id from form_instance i join runtime_case c on c.id = i.case_id where c.combination_id = '${vv || "00000000-0000-0000-0000-000000000000"}' limit 1`);
   // K1: the new edition's undecided boxes block submit, counted from the combination's own problem list (not the first
   // three in the refusal), so other problems of the draft do not make the check pass (qa-2 on #295).
-  const p5476 = async () => vv ? (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as { where?: string; item?: string; message?: string }[]).filter((x) => /IMM 5476/.test(`${x.item ?? ""} ${x.message ?? ""}`)) : [];
-  const before5476 = (await p5476()).length;
+  const p5476 = async () => vv ? (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as { level?: string; where?: string; item?: string; message?: string }[]).filter((x) => /IMM 5476/.test(`${x.item ?? ""} ${x.message ?? ""}`)) : [];
+  // K1 counts the form-box lines (where "Forms"). Accepting a new edition also makes the answer-key gate judge the draft,
+  // and each IMM 5476 map then warns that it has no answer-key test (SA-1B-296 r5: a new edition needs its own key; C5.5).
+  // Those are not K1 lines; the step below asserts they are exactly those warnings, one per IMM 5476 edition (qa lane,
+  // 4 Nov, on #978: Lead 8's recommendation, P-334 (4)).
+  const k1 = (xs: { where?: string }[]) => xs.filter((x) => x.where === "Forms");
+  const keyWarn = (x: { level?: string; where?: string; message?: string }) => x.level === "warning" && x.where === "Tests" && /^no answer-key test: allowed only in a Demo release\./.test(x.message ?? "");
+  const before5476 = k1(await p5476()).length;
   const acc = id2 ? await call("POST", `/intake/held/${id2}/impact/accept`, { expected: imp2?.counts?.form_fields }) : { status: 0, body: null };
   ok("C9.1 SA-1-32 pass: accepting the impact changes no released configuration (same release, same hash)", acc.status >= 200 && acc.status < 300 && (vv ? sql(`select coalesce(max(version), 0) || '§' || coalesce(max(sha256), '') from config_release where combination_id = '${vv}'`) : "x") === relBefore, { status: acc.status, words: words(acc) });
-  const after5476 = await p5476();
+  const after5476 = k1(await p5476());
   ok("C9.1 fail (K1, check_screen02_slice2.ts): after accepting, the Visitor visa's draft lists the new edition's undecided IMM 5476 boxes as problems, by caption (no raw form-field path)", after5476.length > before5476 && after5476.every((x) => !/\[0\]/.test(`${x.item ?? ""} ${x.message ?? ""}`)), { before: before5476, after: after5476.length, first: after5476[0] });
   // Deciding every box of the new edition (K1 route) clears them: none of the IMM 5476 problems remain.
   const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id = e.gov_form_def_id where g.form_key = 'IMM 5476' and e.edition_label like '%11-2025%' limit 1`);
   const open = ed ? (((await call("GET", `/editions/${ed}/form-fields`)).body?.fields ?? []) as { dataPath: string; outcome?: string }[]).filter((x) => x.outcome === "unresolved") : [];
   for (const b of open) await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: b.dataPath, decision: "by_hand", reason: "acceptance: filled by hand for now" });
-  ok("C9.1 pass (K1): once every new or reworded box of IMM 5476 11-2025 is decided, no IMM 5476 problem is left on the Visitor visa", ed !== "" && open.length > 0 && (await p5476()).length === before5476, { edition: ed, decided: open.length, left: (await p5476()).length - before5476 });
+  const left = await p5476(), rest = left.filter((x) => x.where !== "Forms");
+  const editions5476 = Number(sql(`select count(*) from form_edition e join gov_form_def g on g.id = e.gov_form_def_id where g.form_key = 'IMM 5476'`) || 0);
+  ok("C9.1 pass (K1): once every new or reworded box of IMM 5476 11-2025 is decided, no IMM 5476 form-box problem is left on the Visitor visa, and the only other IMM 5476 lines are the answer-key gate's Demo warnings, one per IMM 5476 edition", ed !== "" && open.length > 0 && k1(left).length === before5476 && rest.every(keyWarn) && rest.length === editions5476, { edition: ed, decided: open.length, forms_left: k1(left).length - before5476, other: rest.map((x) => `${x.level}|${x.where}|${x.message}`), editions: editions5476 });
   ok("C9.1 P-67: the family case stays on its release while the new edition waits", caseRel !== "" && sql(`select i.config_release_id from form_instance i join runtime_case c on c.id = i.case_id where c.combination_id = '${vv}' limit 1`) === caseRel);
   ok("C9.1 (R-143): no live AI call at any step, US$0, the spend ledger unchanged", spent() === 0 && ledger() === ledgerBefore);
   process.exit(summary() ? 1 : 0);

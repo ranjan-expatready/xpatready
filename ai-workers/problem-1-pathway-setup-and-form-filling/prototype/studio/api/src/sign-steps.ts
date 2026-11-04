@@ -71,12 +71,16 @@ export class SignSteps {
     const { c, item, handScanned } = await this.item(actor, itemId);
     if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it has no signing steps. Nothing was recorded.`, HttpStatus.CONFLICT);
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
+    // C9.2 (BR-12, BR-20): a form printed from a copy whose facts changed since (the representative of record among them)
+    // is signed again: a new print starts its steps again (the earlier steps superseded, the signed scan kept). Once it is
+    // uploaded to IRCC it is not (after filing is C8.2's record).
+    const restart = key === "print" && !!done.print && !done.uploaded_to_ircc && !!done.print.copy && (await this.changedSince(c, item, done.print.copy!)).length > 0;
     // Ready to file is C7.6's (L-SA3, P-315). Break B1 on #861: it is read now, from the prepare view (which takes a
     // filing that is no longer ready back to Not started), never from the stored status alone.
     const filingReady = key === "uploaded_to_ircc"
       ? ((await this.prepare.view(actor, c.id)) as { filings: { id: string; status: string }[] }).filings.find((x) => x.id === item.filingId)?.status === "ready_to_file"
       : item.filing.status.toLowerCase() === "ready_to_file";
-    const refusal = stepRefusal(key, done, item.itemKey, { filingReady });
+    const refusal = restart ? null : stepRefusal(key, done, item.itemKey, { filingReady });
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
     let copyId: string | null = null;
     if (key === "print") {
@@ -87,17 +91,29 @@ export class SignSteps {
       // Break M1 on #617: the copy printed must still say what the case says (C-10: a fact the form reads changed since
       // it was made → out of date), so a person never signs a form with old answers.
       // Devin on #617 (a31b1dfe): and the repeating groups it reads ("none apply" taken back, an entry added), as `lock` does.
-      const { answers, rows, groups } = await this.r.state(c);
-      const snap = this.r.snapshotOf(c), people = this.r.peopleOf(c);
-      const cov = formCoverage(snap, people, answers, rows, item.itemKey, item.subjectId);
-      const stored = (copy!.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] };
-      const view = caseView(snap, people, answers, rows, "agent", new Date(), groups);
-      const changed = [...changedFacts(stored.facts ?? [], cov?.facts ?? []), ...changedGroups(stored.groups, groupFacts(view, item.itemKey, item.subjectId))];
+      const changed = await this.changedSince(c, item, copy!.id, copy!.snapshot?.factsJson);
       if (changed.length) fail(`This copy of ${item.itemKey} is out of date: ${changed.length} change${changed.length === 1 ? "" : "s"} since it was made. Generate a new copy and print that one. Nothing was recorded.`, HttpStatus.CONFLICT);
       copyId = copy!.id;
     }
-    await this.save(c, item, key, actor, copyId);
+    if (restart) {
+      await this.db.$transaction(async (tx) => {
+        await tx.signStep.updateMany({ where: { itemId: item.id, supersededAt: null }, data: { supersededAt: new Date() } });
+        await this.save(c, item, key, actor, copyId, tx as unknown as Db);
+      });
+      await this.audit.log(c.workspaceId, actor.id, "signed", "sign step", item.id, `${actor.name} printed a new copy of ${item.itemKey} on case ${short(c.id)}: the signed one was out of date, so its signing starts again (the earlier signed scan is kept)`);
+    } else await this.save(c, item, key, actor, copyId);
     return this.read(actor, itemId);
+  }
+
+  /** The facts and repeating groups a copy of the item's form read that differ from the case now (C-10, C9.2). */
+  private async changedSince(c: Awaited<ReturnType<Runtime["reach"]>>, item: { itemKey: string; subjectId: string }, copyId: string, factsJson?: unknown): Promise<string[]> {
+    const json = factsJson ?? (await this.db.formInstance.findUnique({ where: { id: copyId }, select: { snapshot: { select: { factsJson: true } } } }))?.snapshot?.factsJson;
+    const { answers, rows, groups } = await this.r.state(c);
+    const snap = this.r.snapshotOf(c), people = this.r.peopleOf(c);
+    const cov = formCoverage(snap, people, answers, rows, item.itemKey, item.subjectId);
+    const stored = (json ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] };
+    const view = caseView(snap, people, answers, rows, "agent", new Date(), groups);
+    return [...changedFacts(stored.facts ?? [], cov?.facts ?? []), ...changedGroups(stored.groups, groupFacts(view, item.itemKey, item.subjectId))];
   }
 
   private async save(c: { id: string; workspaceId: string }, item: { id: string; itemKey: string }, key: (typeof SIGN_STEPS)[number], actor: Actor, copyId: string | null = null, tx: Db = this.db) {

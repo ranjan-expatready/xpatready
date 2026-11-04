@@ -2,7 +2,8 @@
 // (1) An adult dependent child signs their own IMM 5257; a child under 18 is signed for by a parent (VV-R09), by the date
 // of birth on the case. (2) Signing steps and the signed scan are refused on a form that is not signed by hand and
 // scanned on this application. (3) Changing a form's channel sets its signing steps aside (kept as history), so steps
-// done for the old channel never make it Ready. Sample data, no model call (US$0).
+// done for the old channel never make it Ready. (4) #924: the sign and scan lines reach the firm's own staff only, never
+// another firm's (user-S). Sample data, no model call (US$0).
 // It runs the pack's own setup on its copy first when the copy has no release 2 of Visitor visa yet
 // (tests/runtime/setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts), so the suites runner can run it alone (CI on #617).
 //   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
@@ -68,6 +69,13 @@ else {
   await sendFile(`/runtime/items/${it.id}/signed-scan`, signedScan(it.form!), "signed.pdf");
   const done = async () => ((await call("GET", `/runtime/items/${it.id}`, undefined, OFFICER)).body?.sign_steps ?? []).filter((x: { done: unknown }) => x.done).map((x: { key: string }) => x.key);
   ok(`setup: ${it.form} printed, signed and its scan received`, JSON.stringify(await done()) === JSON.stringify(["print", "signed", "scan_received"]), await done());
+  // #924 (P-278): the sign and scan lines reach this firm's staff only; user-S (the other firm) never reads them.
+  type Ev = { entity: string; summary: string };
+  // Each feed must be read (200): a refused read would otherwise pass "never reads" without testing anything (break m7).
+  const feed = async (actor: string) => { const x = await call("GET", "/activity", undefined, actor); return { status: x.status, lines: (x.status === 200 ? x.body as Ev[] : []).filter((e) => (e.entity === "sign step" || e.entity === "signed scan") && e.summary.includes(c.id.slice(0, 8))) }; };
+  const { status: sm, lines: mine } = await feed(f.officer ?? OFFICER), { status: st, lines: theirs } = await feed("user-S");
+  ok("pass (#924): the firm's own officer reads this case's sign and scan lines in the activity feed", sm === 200 && mine.some((e) => e.entity === "sign step") && mine.some((e) => e.entity === "signed scan"), { status: sm, entities: mine.map((e) => e.entity) });
+  ok("fail (#924, security): another firm's staff (user-S) never read this case's sign or scan lines", st === 200 && theirs.length === 0, { status: st, lines: theirs.map((e) => e.summary) });
   p = (await prepare(c.id)).p;
   const to = (it.accepts ?? []).find((x) => x !== it.channel)!;
   const ch = await call("PATCH", `/runtime/items/${it.id}/channel`, { channel: to, reason: "Sample: filed another way", version: (p as unknown as { version: string }).version }, OFFICER);
