@@ -81,3 +81,39 @@ A real screen reader; a headed browser pane (walk was headless with screenshots)
 **Verdict: Block** (one open Major). To fix:
 1. Issue 1 (Major): replace the per-row plan requests with one per-combination read of the saved masters state.
 Should, not blocking: issues 2–6 (2 goes away with 1).
+
+## Round 2 (048bc1cfe)
+Diff-only: `git diff 2db26cc18..048bc1cfe` (`form-masters.ts` readings routes, `ai-launch.tsx`, the check, notes.md; 913441be9
+adds only screenshots, and this file and the journey report unchanged). Own copy `rev218` :4486 at 048bc1cfe, reset to the six,
+stopped after. Live off; no priced button.
+
+* **M1, fixed.** One `GET /combinations/:id/masters-readings` per Forms view (Visitor visa and With an LMIA: exactly one masters
+  request; panel settled in 1.0 s on the loaded machine; route 25–110 ms on each of the six); the Library dialog sends one
+  `GET /attachments/:id/masters-reading`. After Saved: the draft POST plus one re-read. `aiDraft` uses the same `aiContext` and
+  `usableDone` (same JSON filters as before), so the screen's "drafted" and the door's once-per-source rule cannot drift.
+  **No author check: acceptable.** It returns title, saved/drafted booleans and the queue group only (no run file, no cost, less
+  than `checklist-readings`, which also returns a run file); the global actor guard still applies (401 with no actor), an
+  approver may read it (200) and still cannot draft (403); bad ids give 404.
+* **m2, fixed.** With an LMIA: guide 5553 is left out on the server (`[]` for it alone), one request, no console error.
+* **m3, fixed.** Keyboard: after Enter on Saved, focus is on that row's "Open Proposals"; Enter on it opens
+  `/review/proposals?group=edition:IMM 5257 (09-2023)`.
+* **m4, fixed.** After a reload both rows read "Drafted with AI (Saved, US$0): its proposals are on To review. Open Proposals"
+  and offer no Saved button; the Library dialog shows the same. No second job (2 REPLAY jobs, US$0, 47 + 13 proposals).
+* **m5, m6:** recorded as deviations with recommendations in notes.md; for the tech lead, not blocking.
+* Evidence: builder's check 21/21, exit 0 (its four fail→pass steps pass); `acceptance/C3.4.test.ts` 20/20 after a fresh reset;
+  axe 0 on the panel after drafting; no sideways scroll at 400, 720 (200 %), 1024, 1440 px; approver sees no panel; 0 page or
+  console errors.
+
+New, both Minor (Should, not blocking):
+7. **Minor — "Saved" claimed for any AI draft.** `web/src/components/ai-launch.tsx:190` always says "Drafted with AI (Saved,
+   US$0)", but `readings` (`api/src/form-masters.ts:196`) counts any completed usable AI masters job, Live included. On a copy
+   with the live switch on, a form drafted by a paid Live run would read "Saved, US$0". Fix: return the job's mode (and cost)
+   and say "Drafted with AI (Live, US$x.xx)" for those.
+8. **Minor — one query per source inside the read.** `api/src/form-masters.ts:191–196` loops the combination's sources and runs a
+   `draftingJob.findFirst` (plus file reads) for each: N+1 against STANDARDS §5's wording, but N is one combination's sources
+   (≤ 9 on the six) inside one request of 25–110 ms, so no user-visible cost at sample scale (§9). Fix when convenient: one
+   `findMany` of the workspace's completed AI masters jobs for the listed contexts, matched in memory.
+
+Round 2 journey score: 9 / 10 (next step obvious stays ½: placement m6; feedback and state and accessibility now 1).
+
+**Verdict: Approve** (no open Blocker or Major; Minors 5–8 for the builder or the tech lead).
