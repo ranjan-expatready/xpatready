@@ -13,7 +13,8 @@ import { PrismaClient } from "@prisma/client";
 import { buildSnapshot } from "../engine/snapshot.ts";
 import { factSources } from "../engine/sources.ts";
 import { pqrPicksFromRounds, type PqrAnswer, type Round } from "../engine/pqr-picks.ts";
-import { conditionsFromRounds, type CondAnswer, type CondRound } from "../engine/qd-conditions.ts";
+import { conditionProblem, conditionsFromRounds, quoteNames, workedOut, type CondAnswer, type CondRound } from "../engine/qd-conditions.ts";
+import { conditionDetails } from "../api/src/draft-qd.ts";
 import { namesOf } from "../engine/fact-words.ts";
 import { questionList } from "../api/src/pqr-drafts.ts";
 import { admitInput } from "../../p2/guard.ts";
@@ -85,7 +86,9 @@ const saved = <T>(f: string) => ({ output: JSON.parse(String(JSON.parse(readFile
   // ---- C4.11 step 5: the saved conditional questions
   const cd = saved<CondAnswer>(SAVED.cond.draft), ck = saved<CondAnswer>(SAVED.cond.check);
   const conds = cd.output.conditions.length + ck.output.conditions.length;
-  const c = conditionsFromRounds(s, { draft: cd as CondRound, check: ck as CondRound }, guide, at, names);
+  // QA-162: the forms library, as the step passes it (a condition naming a form is left out saying which form).
+  const library = sql(`select form_key || '|' || display_name from gov_form_def where workspace_id='${sql(`select workspace_id from combination where id='${vv}'`)}' and retired_at is null and form_kind='data_form'`).split("\n").filter(Boolean).map((l) => ({ form_number: l.split("|")[0], title: l.split("|").slice(1).join("|") }));
+  const c = conditionsFromRounds(s, { draft: cd as CondRound, check: ck as CondRound }, guide, at, names, library);
   const cLanded = conds - c.dropped.length;
   const asked = facts.filter((f) => f.placed && f.forms.length > 0);
   const cBefore = [...cd.output.conditions, ...ck.output.conditions].filter((x) => exactOne(x.role, x.asks, asked) && exactOne(x.role, x.depends_on, asked)).length;
@@ -102,9 +105,25 @@ const saved = <T>(f: string) => ({ output: JSON.parse(String(JSON.parse(readFile
   const deciderOf = (target: string) => c.items.filter((x) => x.payload.kind === "condition" && (x.payload as { target?: { key?: string } }).target?.key === target).map((x) => ((x.payload as { condition: { tree: unknown } }).condition.tree as { field?: string; value?: unknown }));
   ok("QA-162 pass: \"Ever used other name\" decides both other-name questions through IMM 5257's own Yes/No question (yes), never through a name question", ["person.other_family_name", "person.other_given_names"].every((k) => deciderOf(k).some((d) => d.field === "person.used_other_name" && d.value === true)), ["person.other_family_name", "person.other_given_names"].map(deciderOf));
   ok("QA-162 pass: the national ID number and the green card number are decided by their own Yes/No questions", deciderOf("person.national_id_number").some((d) => d.field === "person.has_national_id") && deciderOf("person.us_green_card_number").some((d) => d.field === "person.us_lawful_permanent_resident"), [deciderOf("person.national_id_number"), deciderOf("person.us_green_card_number")]);
-  ok("QA-162 fail: a deciding question no question asks (\"Lived elsewhere past five years\", \"Residence same as mailing\") still leaves its condition out with the reason", ["Lived elsewhere past five years", "Residence same as mailing"].every((w) => c.dropped.some((x) => x.why.includes(`"${w}"`) && /not a question this combination asks/.test(x.why))));
-  ok("QA-162 pass: at least 8 of the 22 saved conditions land (was 4 before the Yes/No questions could decide)", cLanded >= 8, { now: cLanded });
-  ok("QA-162 fail: words that fit several questions (\"Other names used\") are left out naming them, never guessed", c.dropped.some((x) => x.asks === "Other names used" && /could be 2 questions/.test(x.why)), c.dropped.find((x) => x.asks === "Other names used"));
+  // QA-162 (C4.11, 4 Nov): IMM 5257 asks these Yes/No questions but its field map works their answers out from other
+  // answers, so no question asks them: the condition is left out naming the form field and what a person can do.
+  const worked = ["Lived elsewhere past five years", "Residence same as mailing", "Applying from residence country"];
+  ok("C4.11 fail (QA-162): a deciding answer the form works out itself (\"Lived elsewhere past five years\", \"Residence same as mailing\", \"Applying from residence country\") leaves its condition out, naming IMM 5257's form field and what to do", worked.every((w) => c.dropped.some((x) => x.why.includes(`"${w}"`) && /IMM 5257 asks .* but works its answer out from/.test(x.why) && /add a Yes\/No question for it to the library/.test(x.why))), c.dropped.filter((x) => worked.some((w) => x.why.includes(`"${w}"`))).map((x) => x.why.slice(0, 160)));
+  ok("C4.11 pass (QA-162): the explanation names the one form field meant: \"Residence same as mailing\" is the same-as-mailing question, \"Lived elsewhere past five years\" the past-5-years one", /same as your mailing address/.test(workedOut(s, "Residence same as mailing")?.caption ?? "") && /past 5 years/.test(workedOut(s, "Lived elsewhere past five years")?.caption ?? ""), [workedOut(s, "Residence same as mailing"), workedOut(s, "Lived elsewhere past five years")]);
+  ok("C4.11 fail (QA-162): words no worked-out form field holds name none (never the nearest one)", workedOut(s, "Owns a boat in Canada") === null && workedOut(s, "Residence") === null);
+  ok("QA-162 pass: at least 9 of the 22 saved conditions land (was 8 before the guide's sentence could break a tie)", cLanded >= 9, { now: cLanded });
+  // QA-162 (C4.11, 4 Nov): "Other names used" fits both other-name questions; the sentence it quotes ("type any other
+  // family name …") names only the family name, so the second reading lands there and agrees with the first, to check.
+  const fam = tree("person.other_family_name");
+  ok("C4.11 pass (QA-162): the guide's sentence breaks a tie of words: \"Other names used\" lands on the other family name only, both readings agree, for a person to check (never Ready)", !!fam && !!fam.rounds.draft && !!fam.rounds.check && fam.agreement === "agreed" && fam.confidence === "check" && (() => { const o = ck.output.conditions.find((x) => x.asks === "Other names used"); const r = o ? conditionProblem(s, guide.text, guide.code, o, names, facts) : null; return !!r && !("why" in r) && r.target.fact === "person.other_family_name" && /the guide's sentence it quotes names only/.test(r.loose ?? ""); })() && !c.dropped.some((x) => x.asks === "Other names used") && !tree("person.other_given_names")?.rounds.check, { agreement: fam?.agreement, confidence: fam?.confidence, named: fam?.rules.find((r) => r.rule === "named_exactly")?.why });
+  ok("C4.11 fail (QA-162): a tie the sentence does not break (\"Other country of residence details\") is left out naming both, with what to do, never guessed", c.dropped.some((x) => x.asks === "Other country of residence details" && /could be 2 questions/.test(x.why) && /set it by hand/.test(x.why)) && !c.items.some((x) => x.payload.kind === "condition" && x.payload.target.key === "person.current_residence_status_other"));
+  const tie = facts.filter((f) => f.role === "principal" && ["person.other_family_name", "person.other_given_names"].includes(f.fact));
+  ok("C4.11 fail (QA-162): a sentence that names both tied questions, or neither, breaks no tie", tie.length === 2 && quoteNames(tie, "Type any other family name and any other given name that you have ever used.") === null && quoteNames(tie, "If you checked Yes, choose the correct information below:") === null && quoteNames(tie, "Type any other family name that you have ever used.")?.fact === "person.other_family_name", tie.map((f) => f.fact));
+  ok("C4.11 fail (QA-162): \"Common-law union declaration\" is a form, not a question: left out naming IMM 5409, in the forms library but not one of Visitor visa's forms", c.dropped.some((x) => x.asks === "Common-law union declaration" && /names a form, not a question: IMM 5409/.test(x.why) && /not one of this combination's forms/.test(x.why)), c.dropped.find((x) => x.asks === "Common-law union declaration")?.why);
+  const acts = /draft again with Saved \(US\$0\)|set it by hand|set on the Forms tab|already proposed once/;
+  ok("C4.11 pass (QA-162): every condition left out says what a person can do (draft again with Saved, set it by hand, or the Forms tab), never only that it is not guessed", c.dropped.length > 0 && c.dropped.every((x) => acts.test(x.why)), c.dropped.filter((x) => !acts.test(x.why)).map((x) => x.why.slice(0, 160)));
+  const det = conditionDetails(c) ?? "";
+  ok("C4.11 pass (QA-162): the run card's list holds every condition left out and every passage the AI could not turn into one condition, each with its reason", det.split("\n").length === c.dropped.length + c.unresolved.length && c.dropped.every((x) => det.includes(x.why)) && c.unresolved.every((u) => det.includes(u.reason.trim())), { lines: det.split("\n").length, dropped: c.dropped.length, unresolved: c.unresolved.length });
   ok("QA-162 pass: more saved conditions land than the 0 of 22 before", cLanded > cBefore && cLanded > 0, { before: cBefore, now: cLanded });
   ok("QA-162 pass: every condition left out has its reason, and every condition is landed or left out", c.dropped.every((x) => x.why.length > 20) && cLanded + c.dropped.length === conds);
   const cReadings = c.items.reduce((n, x) => n + (x.rounds.draft ? 1 : 0) + (x.rounds.check ? 1 : 0), 0);

@@ -15,7 +15,8 @@
 // its cost stated before it is spent) and committed with the build.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.11.test.ts 4440 xr_studio_accept
 import { randomUUID } from "node:crypto";
-import { AUTHOR, pack2, run } from "./lib/pack2.ts";
+import { AUTHOR, pack2, run, VV_PEOPLE } from "./lib/pack2.ts";
+import { WHO_HOLDERS, WHO_ROLES, type Who } from "../contracts/resolver.ts";
 
 const T = pack2("C4.11");
 const { call, sql, ok, words } = T;
@@ -51,27 +52,39 @@ run(async () => {
   const runId = r.body?.runId;
   const again = await call("POST", `/combinations/${vv}/draft`, { planSha256: plan?.plan_sha256 ?? plan?.planSha256, idempotencyKey: key, spendLimitUsd: 0 }, AUTHOR);
   ok("C4.11 pass: the same click twice is one run (idempotency key)", !!runId && again.body?.runId === runId);
-  const done = !!runId && await T.until(async () => ["COMPLETED", "FAILED"].includes(String((await call("GET", `/runs/${runId}`)).body?.status ?? "").toUpperCase()), 120_000);
+  // QA-162 (4 Nov): the run view says its state in words (done, failed, stopped), as the run card shows it.
+  const ENDED = ["COMPLETED", "DONE", "FAILED", "STOPPED", "CANCELLED"];
+  const done = !!runId && await T.until(async () => ENDED.includes(String((await call("GET", `/runs/${runId}`)).body?.status ?? "").toUpperCase()), 120_000);
   const view = (await call("GET", `/runs/${runId}`)).body;
   ok("C4.11 pass: the run finishes, each of the 7 steps with its outcome", done && (view?.steps ?? []).length === 7 && view.steps.every((s: any) => ["done", "nothing_to_do"].includes(s.state)), (view?.steps ?? []).map((s: any) => `${s.step}:${s.state}`));
 
   // ---------------------------------------------------------------- what waits in the queue
   const items = await T.queued(vv);
   const kinds = new Set(items.map((x: any) => x.kind));
-  ok("C4.11 pass: the queue gets documents per person, where facts come from, conditions and PQR picks", ["requirement_line", "comes_from", "condition", "pqr_pick"].every((k) => kinds.has(k)), [...kinds]);
-  const runSteps = new Set((view?.steps ?? []).map((s: any) => s.step));
+  ok("C4.11 pass: the queue gets documents per person, conditions and PQR picks", ["requirement_line", "condition", "pqr_pick"].every((k) => kinds.has(k)), [...kinds]);
+  // Step 4 is rules only: where each answer comes from applies at once and a person changes it on the Questions tab
+  // (its run step says so); nothing of it waits on To review. Every fact a form needs has its source.
+  const fs = (await call("GET", `/combinations/${vv}/fact-sources`, undefined, AUTHOR)).body;
+  const step4 = (view?.steps ?? []).find((s: any) => s.step === "comes_from");
+  ok("C4.11 pass: step 4 gives every fact a form needs its source (document, client or case officer), changeable on the Questions tab", (fs?.facts ?? []).length > 0 && fs.facts.every((f: any) => ["DOCUMENT", "CLIENT", "AGENT"].includes(f.source)) && /Questions tab/.test(String(step4?.message ?? "")), { facts: fs?.facts?.length, step4: step4?.message });
+  // Step 2 replays the checklist's own saved reading (the one door, QA-157), so its items carry the checklist's step name.
+  const runSteps = new Set([...(view?.steps ?? []).flatMap((s: any) => [s.step, s.kind]), ...((view?.steps ?? []).some((s: any) => s.step === "documents") ? ["checklist_draft"] : [])]);
   ok("C4.11 pass: every item names a step of this run (acceptance rate per step, P-130 §6.3)", items.length > 0 && items.every((x: any) => runSteps.has(x.step)), [...new Set(items.map((x: any) => x.step))]);
   ok("C4.11 pass: every AI item has both readings (draft and the independent checker) or is marked One reading only", items.length > 0 && items.filter((x: any) => x.origin === "ai").every((x: any) => (x.readings?.draft && x.readings?.check) || x.agreement === "one_round"));
   ok("C4.11 pass: every requirement line and condition rests on an official file with its quote found", items.length > 0 && items.filter((x: any) => ["requirement_line", "condition"].includes(x.kind)).every((x: any) => x.source?.quote_found === true));
   // Checker rules (step 7): a PQR pick is only for a fact a question asks (PQR ⊂ SQR, P-76); every fact said to come
   // from a document has that document on the person's checklist.
-  const asked = new Set(items.filter((x: any) => x.kind === "comes_from" && x.readings?.draft?.payload?.from !== "case_officer").map((x: any) => `${x.readings.draft.payload.role}|${x.readings.draft.payload.factKey}`));
-  ok("C4.11 pass (checker): every PQR pick is a fact a client or document question asks (PQR ⊂ SQR)", items.length > 0 && items.filter((x: any) => x.kind === "pqr_pick").every((x: any) => asked.has(`${x.readings?.draft?.payload?.role}|${x.readings?.draft?.payload?.factKey}`) || x.band === "decide"));
+  const asked = new Set((fs?.facts ?? []).filter((f: any) => f.placed && f.source !== "AGENT").map((f: any) => `${f.role}|${f.fact}`));
+  const pick = (x: any) => x.readings?.draft?.payload ?? x.readings?.check?.payload;
+  ok("C4.11 pass (checker): every PQR pick is a fact a client or document question asks (PQR ⊂ SQR)", items.some((x: any) => x.kind === "pqr_pick") && items.filter((x: any) => x.kind === "pqr_pick").every((x: any) => asked.has(`${pick(x)?.role}|${pick(x)?.factKey}`)), items.filter((x: any) => x.kind === "pqr_pick").map((x: any) => `${pick(x)?.role}|${pick(x)?.factKey}`));
   const docs = new Set(items.filter((x: any) => x.kind === "requirement_line").map((x: any) => x.readings?.draft?.payload?.documentType));
   ok("C4.11 pass (checker): every fact from a document names a document on the checklist", items.length > 0 && items.filter((x: any) => x.kind === "comes_from" && x.readings?.draft?.payload?.from === "document").every((x: any) => docs.has(x.readings.draft.payload.documentType) || x.band !== "ready"));
   ok("C4.11 data: every item is Sample; nothing is in the combination's draft until accepted", items.length > 0 && items.every((x: any) => x.basis === "SAMPLE") && sql(`select count(*) from document_requirement where combination_id='${vv}'`) === "0");
   // BR-7: a role not in "Who can be in this application" never reaches the queue (Visitor visa lists no sponsor).
-  ok("C4.11 pass (BR-7): no item names a person role that Who can be does not list", items.length > 0 && items.every((x: any) => (x.readings?.draft?.payload?.roles ?? [x.readings?.draft?.payload?.role].filter(Boolean)).every((role: string) => ["principal", "spouse_or_partner", "child", "representative", "case"].includes(role))));
+  // A line's "who" may be a group (each_applicant, couple_once): it names the roles WHO_ROLES gives (none for every applicant).
+  const can = new Set([...VV_PEOPLE.map((p) => p.role), "case"]);
+  const rolesOf = (x: any) => { const p = pick(x) ?? {}; return (p.roles ?? [p.role].filter(Boolean)).flatMap((r: string) => r in WHO_HOLDERS ? (WHO_ROLES[r as Who] ?? []) : [r]); };
+  ok("C4.11 pass (BR-7): no item names a person role that Who can be does not list", items.length > 0 && items.every((x: any) => rolesOf(x).every((role: string) => can.has(role))), [...new Set(items.flatMap(rolesOf))]);
   // G5 (qa-1): after accepting every Ready item, no fact a form needs is asked of nobody.
   const ready = items.filter((x: any) => x.band === "ready").map((x: any) => x.id);
   // P-305 (review M1): an item that changes the shared library (a condition, a new item) is accepted on its own.
@@ -87,18 +100,24 @@ run(async () => {
   if (livePlan?.live?.approved !== false) r = { status: 0, body: { detail: "not tested: this copy did not say live AI is off (live.approved false)" } };
   else r = await call("POST", `/combinations/${vv}/draft`, { planSha256: livePlan?.plan_sha256 ?? livePlan?.planSha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0.01 }, AUTHOR);
   ok("C4.11 fail (BR-12): a live run whose worst case is over the spend limit is refused before any call (409, 'use saved results or rules only')", !!livePlan?.steps && r.status === 409 && /saved|rules only/i.test(words(r)), words(r));
-  // BR-10: a newer edition of the checklist makes its saved result Out of date; it never replays silently.
-  sql(`update source_attachment set edition='IMM 5484 (06-2026)' where combination_id='${vv}' and file_name='imm5484e.pdf'`);
+  // BR-10: a newer text of the checklist is never replayed with an older reading. A saved reading is matched to the
+  // checklist's text by checksum, not by its edition label (relabelling the same text changes nothing): here the
+  // combination's checklist becomes a text no saved reading has read, so Saved is not offered for it. The exact
+  // "earlier text → Out of date" rule is checked on scratch files by check_forms_c411_contract (O).
+  const ckl = sql(`select id || '|' || coalesce(official_file, '') from source_attachment where combination_id='${vv}' and file_name='imm5484e.pdf' limit 1`).split("|");
+  sql(`update source_attachment set official_file='imm5484e-newer-text.pdf' where id='${ckl[0]}'`);
   r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: saved }, AUTHOR);
+  sql(`update source_attachment set official_file=${ckl[1] ? `'${ckl[1]}'` : "null"} where id='${ckl[0]}'`);
   const docStep = (r.body?.steps ?? []).find((s: any) => s.step === "documents");
-  ok("C4.11 fail (BR-10): with a newer IMM 5484 edition, the documents step's saved result is Out of date and is not offered as Replay", docStep?.saved?.state === "out_of_date", docStep?.saved);
+  ok("C4.11 fail (BR-10): a checklist text no saved reading has read is not offered as Saved (Out of date or none, with the reason), never replayed silently", ["out_of_date", "none"].includes(docStep?.saved?.state) && !!docStep?.saved?.why, docStep?.saved);
   // Stop: a run can be stopped; it says so and adds nothing more.
   r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: STEPS.map((step) => ({ step, mode: "rules" })) }, AUTHOR);
   r = await call("POST", `/combinations/${vv}/draft`, { planSha256: r.body?.plan_sha256 ?? r.body?.planSha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0 }, AUTHOR);
   const stopRun = r.body?.runId;
   const st = await call("POST", `/runs/${stopRun ?? randomUUID()}/stop`, {}, AUTHOR);
   const after = (await call("GET", `/runs/${stopRun ?? randomUUID()}`)).body;
-  ok("C4.11 pass: Stop stops a run (its state says stopped or finished, in words)", !!stopRun && st.status < 300 && /stop|complet|finish/i.test(String(after?.status ?? "")), { stop: st.status, status: after?.status });
-  ok("C4.11 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd ?? 0) === 0);
+  ok("C4.11 pass: Stop stops a run (its state says stopped or finished, in words)", !!stopRun && st.status < 300 && /stop|complet|finish|done/i.test(String(after?.status ?? "")), { stop: st.status, status: after?.status });
+  // The run view gives its cost as { spent, worst } (US$).
+  ok("C4.11 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd?.spent ?? view?.usd ?? NaN) === 0, view?.usd);
   T.done();
 });

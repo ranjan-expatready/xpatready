@@ -77,7 +77,7 @@ export function quoteNames(several: FactSourceView[], quote: string): FactSource
  *  holds, number words as digits and a long word's first 7 letters enough ("residence" in "residential"). */
 const NUM: Record<string, string> = { one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", ten: "10" };
 const near = (text: string, asks: string) => {
-  const norm = (t: string) => wordsOf(t).map((w) => NUM[w] ?? w);
+  const norm = (t: string) => wordsOf(t.replace(/\b(one|two|three|four|five|six|ten)\b/gi, (w) => NUM[w.toLowerCase()]));
   const have = norm(text), want = [...new Set(norm(asks))];
   const held = want.filter((w) => have.some((h) => h === w || (w.length >= 7 && h.length >= 7 && h.slice(0, 7) === w.slice(0, 7)))).length;
   return { held, want: want.length };
@@ -104,9 +104,11 @@ export function workedOut(s: Snapshot, words: string): { form: string; caption: 
   // The same form field read twice (two map rows of one box) is one field.
   const one = [...new Map(top.map((x) => [`${x.form}|${x.e.caption}`, x])).values()];
   if (one.length !== 1) return null;
-  return { form: one[0].form, caption: (one[0].e.caption ?? "").replace(/^question\s+[\w.]+\s*/i, "").replace(/^[a-z]\.\s*/i, "").trim().slice(0, 140), from: label.get(one[0].e.fact!) ?? one[0].e.fact! };
+  return { form: one[0].form, caption: (one[0].e.caption ?? "").replace(/^(?:[a-z ]{0,40}\s)?question\s+\d+\s*[a-z]?\.?\s*/i, "").trim().slice(0, 140), from: label.get(one[0].e.fact!) ?? one[0].e.fact! };
 }
 
+/** The deciding question can take the condition's answer (a yes-no question "yes", a list one of its answers). */
+const canAnswer = (s: Snapshot, f: FactSourceView, when: string) => !("why" in answerOf((s.canonical_fields as { id: string; value_type?: string; answer_list?: { values?: { key: string; label: string }[] } }[]).find((x) => x.id === f.fact), when));
 /** The deciding question a condition names, or why not (only to say where its question would be). */
 function deciderOf(s: Snapshot, all: FactSourceView[], c: CondAnswer["conditions"][number], names: Names): { f: FactSourceView; loose: string | null } | Miss {
   return named([...all, ...askedOnly(s, all)], c.role, c.depends_on, names, (x) => x, (f) => f.placed);
@@ -128,7 +130,7 @@ export function targetNotAsked(s: Snapshot, c: CondAnswer["conditions"][number],
       : `If a form asks it, map that form field to a question (Forms › the form › Field map) and place it, then draft again with Saved (US$0).`);
   } else {
     why.push(`If a form asks it, map that form field to a question (Forms › the form › Field map) and place it, then draft again with Saved (US$0).`);
-    const w = decider.miss === "none" ? workedOut(s, c.depends_on) : null;
+    const w = decider.miss === "none" || (decider.miss === "several" && !decider.several?.some((f) => canAnswer(s, f, c.when))) ? workedOut(s, c.depends_on) : null;
     if (w) why.push(`Its deciding answer ${q(c.depends_on, 80)} is not a question either: ${w.form} works "${w.caption}" out from "${w.from}" (its field map), so a Yes/No question for it is needed first.`);
     else if (decider.miss === "several") why.push(`Its deciding words ${q(c.depends_on, 80)} ${decider.why.replace(/^"[^"]*"\s*/, "")}`);
   }
@@ -136,9 +138,10 @@ export function targetNotAsked(s: Snapshot, c: CondAnswer["conditions"][number],
 }
 
 /** QA-162 (C4.11 step 5): why a condition's deciding question is not one this combination asks, with what a person can do. */
-export function deciderNotAsked(s: Snapshot, dependsOn: string, target: FactSourceView): string {
+export function deciderNotAsked(s: Snapshot, dependsOn: string, target: FactSourceView, tie = false): string {
   const d = q(dependsOn, 80), t = q(target.label);
   const w = workedOut(s, dependsOn);
+  if (!w && tie) return `${d} (what decides ${t}) fits several questions of this person, none of which can take that answer, so it is not guessed. ${HAND(target.label)[0].toUpperCase()}${HAND(target.label).slice(1)}.`;
   if (w) return `${w.form} asks ${d} ("${w.caption}") but works its answer out from "${w.from}" (its field map), so no question asks it and it cannot decide ${t}. To ask ${t} only after that answer: add a Yes/No question for it to the library, map that form field to it and place it, then draft again with Saved (US$0); or ${HAND(target.label)}. Until then ${t} is asked whenever its form applies.`;
   return `No question of this combination asks ${d} of this person, so it cannot decide ${t} and is not guessed. Add that question to the library and place it, then draft again with Saved (US$0); or ${HAND(target.label)}.`;
 }
@@ -190,7 +193,9 @@ export function conditionProblem(s: Snapshot, guideText: string, guideCode: stri
   const canTake = (f: FactSourceView) => !("why" in answerOf(fieldOf.get(f.fact), c.when));
   const what = (x: string) => `${x} (what decides "${target.label}")`;
   const d = pickDecider(pool, canTake, c.role, c.depends_on, names, what, c.when);
-  if ("why" in d) return { why: d.miss === "none" ? deciderNotAsked(s, c.depends_on, target) : d.miss === "several" ? `${d.why} If one of them decides it, ${HAND(target.label)}.` : d.why };
+  // A tie of detail questions none of which can take the answer, when the form works that Yes/No out itself: said so.
+  const worked = d && "why" in d && (d.miss === "none" || (d.miss === "several" && !d.several?.some(canTake)));
+  if ("why" in d) return { why: worked ? deciderNotAsked(s, c.depends_on, target, d.miss === "several") : d.miss === "several" ? `${d.why} If one of them decides it, ${HAND(target.label)}.` : d.why };
   const decider = d.f, loose = t.loose ?? d.loose;
   if (target.fact === decider.fact) return { why: `"${target.label}" cannot decide itself.` };
   if (!isSentence(c.quote) || !sameText(guideText).includes(sameText(c.quote))) return { why: `Its sentence is not in ${guideCode}'s text, so it is not proposed.` };
