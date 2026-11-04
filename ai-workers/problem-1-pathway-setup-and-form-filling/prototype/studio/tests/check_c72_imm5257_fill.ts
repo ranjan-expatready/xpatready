@@ -212,7 +212,9 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   ok("QA-165 fail: answered No but not confirmed yet, the 3 Yes/No boxes stay \"not written\"", NOT_ASKED.every((b) => !unconfirmed.values[b]), NOT_ASKED.map((b) => unconfirmed.byBox.get(b)?.result));
   await confirmAll();
   const gatedCopy = await generate(4);
-  ok("QA-165 pass: other names, national identity document and US card are written \"N\" from their own question answered No and confirmed, with that as the reason", NOT_ASKED.every((b) => gatedCopy.values[b] === "N" && /answered No and confirmed/.test(gatedCopy.byBox.get(b)?.why ?? "") && gatedCopy.byBox.get(b)?.nothing_recorded === true), NOT_ASKED.map((b) => [gatedCopy.values[b], gatedCopy.byBox.get(b)?.why]));
+  // B52: each of the 3 boxes now reads its own Yes/No question (asked as its own question), so the confirmed No is the
+  // value written, as any confirmed answer is (no longer a "nothing recorded" mark).
+  ok("QA-165 pass: other names, national identity document and US card are written \"N\" from their own question answered No and confirmed", NOT_ASKED.every((b, i) => gatedCopy.values[b] === "N" && gatedCopy.byBox.get(b)?.result === "written" && gatedCopy.byBox.get(b)?.fact === GATES[i]), NOT_ASKED.map((b) => [gatedCopy.values[b], gatedCopy.byBox.get(b)?.result, gatedCopy.byBox.get(b)?.fact]));
   const empty2 = mandatory.filter((p) => !gatedCopy.values[p]);
   ok("QA-165 pass: the app's copy now fills 43 of IMM 5257's 46 mandatory form fields; the 3 left are exactly the boxes published as \"not a fact\" (fill in Adobe)", empty2.length === 3 && empty2.every((p) => NOT_A_FACT.includes(p)), { filled: mandatory.length - empty2.length, empty: empty2 });
   {
@@ -226,7 +228,9 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const flipped = (await call("GET", `/runtime/form-copies/${nCopy}`, undefined, OFFICER)).body;
   ok("QA-165 pass (Devin on #715): \"other names\" changed from No to Yes after the copy makes the copy that says N out of date, naming the question", flipped?.out_of_date === true && (flipped?.changed ?? []).some((c: string) => /used_other_name|other name/i.test(c)), { out_of_date: flipped?.out_of_date, changed: flipped?.changed });
   const yes = await generate(5);
-  ok("QA-165 fail: after a Yes to \"other names\" with no name given, its box is never \"N\" (Yes needs the names)", !yes.values[NOT_ASKED[0]] && yes.values[NOT_ASKED[1]] === "N", [yes.values[NOT_ASKED[0]], yes.byBox.get(NOT_ASKED[0])?.result]);
+  // B52: the box reads the person's Yes; the names it needs are then required, so the form is not ready until they are given.
+  const yesReady = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { ready: boolean; missing: { fact: string }[] } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P)?.readiness;
+  ok("QA-165 fail: after a Yes to \"other names\" with no name given, its box is never \"N\": it says Yes, and IMM 5257 is not ready until the names are given", yes.values[NOT_ASKED[0]] === "Y" && yes.values[NOT_ASKED[1]] === "N" && yesReady?.ready === false && (yesReady?.missing ?? []).some((m) => /other_(family|given)_name/.test(m.fact)), [yes.values[NOT_ASKED[0]], yes.byBox.get(NOT_ASKED[0])?.result, yesReady]);
   // Devin on #715 (2): a confirmed No to "national identity document" while a number is still recorded contradicts
   // itself: the Yes/No box is never written (neither Y from the number nor N from the No), and the open list says why.
   await put(P, "person.national_id_number", "SAMPLEID1"); await confirmAll();

@@ -66,7 +66,8 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     else if (b && (b as { fix?: string }).fix && e?.fact) out.push({ box: path, label, reason: "needs an answer", why: (b as { fix?: string }).fix! });
     // QA-165: when its facts are asked under their own Yes/No question, that question's answer writes it: a "No",
     // confirmed, writes "N"; so the box needs that answer.
-    else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded && !(b as { fix?: string }).fix && e?.fact && words.gateOf?.(e.fact)) out.push({ box: path, label, reason: "needs an answer", why: `answer "${words.gateOf(e.fact)}" and confirm it: No writes No, Yes needs the details` });
+    // B52: a box asked as its own question (its fact is that Yes/No question) needs the same answer.
+    else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded && !(b as { fix?: string }).fix && e?.fact && (words.gateOf?.(e.fact) ?? (b.coverage === "client question" ? asked : undefined))) out.push({ box: path, label, reason: "needs an answer", why: `answer "${words.gateOf?.(e.fact) ?? asked}" and confirm it: No writes No, Yes needs the details` });
     else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded) out.push({ box: path, label, reason: "no question asks it yet", why: "the form's Yes/No: Yes is written when the answer is recorded, and no question records a No yet" });
     // Review M-2 on #592: a row field of a group whose "none apply" is confirmed has no answer to give: IRCC's form still
     // requires it, so the person completes it in Adobe, or the officer takes back "none apply" and adds the entry.
