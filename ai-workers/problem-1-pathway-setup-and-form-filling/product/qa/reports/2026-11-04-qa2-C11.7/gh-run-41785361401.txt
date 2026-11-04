@@ -1,0 +1,6 @@
+Gate B: the PR names C11.7; claims Works for none (no bug check).
+  packs: C11.7.test.ts
+    C11.7.test.ts on the six: exit 1, 18/21 passed (61 s: copy 5, Reset to the six 19, run 38)
+  packs took 62 s in all
+Gate B refuses:
+  * C11.7.test.ts on the six: exit 1; first FAIL lines: FAIL  C11.7 part B (P-109, P-112): the Provincial nominee combination is the IRCC PR application: IMM 0008, IMM 5669, IMM 5406, IMM 0008DEP and IMM 5476 come fr | FAIL  C11.7 part B (P-109): the provincial nomination certificate is a required document on the Provincial nominee combination | FAIL  C11.7 part B (P-171 (3), Sample): on the Provincial nominee combination IMM 5669 and IMM 5406 are Online lines (answer sheet, no PDF)
