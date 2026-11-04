@@ -62,3 +62,86 @@ From `qa/BUGS.md`:
 
 | QA-200 | Bug · Critical | C7.2, C6.1 (case fill; re-tagged from C2.4 by the tech lead on #801, 4 Nov 09:00 IST: C2.4's own behaviour is met) · P-32 (the newest printed edition is the one in use) | main 4d1973b8 (Opus re-review of #698; not caused by #698) | After a newer edition of a form is released next to its older map, a case fills the OLDEST edition. `engine/snapshot.ts:157` puts every mapped PDF edition into the snapshot, oldest first; `api/src/fill.ts:42` `writeForm` takes the first match, and `fill-case.ts:95`, `:110` and `engine/render.ts:108` read it the same way. The combination's Forms tab (`api/src/workspace.ts:71`) and the library show the newest. Scenario: IMM 5476 11-2025 accepted through impact review (its map copied as a draft, the 11-2021 map stays published) → release (`studio.ts:1149` retires no older map) → Forms tab says 11-2025, the case's PDF is 11-2021. Unconfirmed: whether a release gate refuses two mapped editions. Expected: fill, render and the Forms tab pick the same, newest edition, or the release retires the older map | runtime / forms | Open |
 
+
+## QA-182 — closed 4 Nov 2026 (after-merge, #829)
+
+Closed by the qa lane on main **9caa043be** (fixed by #829). `acceptance/C3.10.test.ts` exit 0, 8/8 on the six on GitHub (run 41787750850), and a 1440 px walk of 15 pages on the six finds no "box" or "boxes".
+
+From `qa/BUGS.md`:
+
+| QA-182 | Gap · Minor | C3.10 · P-63 (never "box") | 762dbae6 (after-merge) | `acceptance/C3.10.test.ts` 7/8 twice: 18 messages the API, engine or web can show still say box/boxes, e.g. "X is not a form with boxes" (`api/src/field-drafts-routes.ts:31`), "a person maps the boxes" (`api/src/field-drafts.ts:36–39`), "write it by hand… this box" (`api/src/fill-case.ts:70`), "Re-read with AI (fields and boxes)" (`web/src/pages/library-forms.tsx:339`). The 28-page walk of 1 Nov never reached these states. Expected: form field(s) everywhere | forms / screens | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-182 | Gap · Minor | C3.10 · P-63 (never "box") | 762dbae6 (after-merge) | `acceptance/C3.10.test.ts` 7/8 twice: 18 messages the API, engine or web can show still say box/boxes, e.g. "X is not a form with boxes" (`api/src/field-drafts-routes.ts:31`), "a person maps the boxes" (`api/src/field-drafts.ts:36–39`), "write it by hand… this box" (`api/src/fill-case.ts:70`), "Re-read with AI (fields and boxes)" (`web/src/pages/library-forms.tsx:339`). The 28-page walk of 1 Nov never reached these states. Expected: form field(s) everywhere | Steps, expected and actual: this row and `qa/reports/2026-11-03-after-merge-explore.md`. Pack output is quoted there; the run logs are not committed (AGENTS.md rule 1) | forms / screens | Open |
+
+
+## QA-196 — closed 4 Nov 2026 (after-merge, #802 with #771)
+
+Closed by the qa lane on main **4c3b16f0e** (fixed by #802; #771's saved runs on main). `acceptance/C3.4.test.ts` on the six on GitHub (run 41791603864): exit 0, 20/20, accepting IMM 5257's form check and a guide 5256 check through the one door. Walk on the six at 1440 px: the Saved C3.4 draft of IMM 5257 (US$0, ledger unchanged) puts 47 proposals on To review, 17 of them form checks. Accept on a form check whose form fields are not mapped yet answers, as the tech lead ruled (P-149 (1)): "This check reads 2 form fields of IMM 5257 (09-2023) that are not mapped to a shared field yet (…). Map them on the form's field page first, then accept it again; or reject it." Its "Ready to accept" badge at that point is QA-217 (Minor).
+
+From `qa/BUGS.md`:
+
+| QA-196 | Gap · Major | C3.4 · P-120 (AI drafts a form's checks as proposals), P-149 (1) (one door) | 762dbae6 (Opus re-review of #585) | AI form checks and guide checks from the C3.4 masters step reach To review at Ready, but Accept answers 409, "A form check proposal is accepted with its own step, not yet on this queue" (`api/src/proposals.ts:576-577`; `LANDERS` at `:367` has no `form_check` or `cross_check`). C3.4's acceptance accepts only a section. Noted before only as review Minor 3 in `screens/C3.4-ai-step/review.md`. Expected: a lander for both kinds, or the items held off the queue with a reason | forms (C3.4) | Open |
+
+
+## QA-149 — closed 4 Nov 2026 (independent cloud qa for M3, round 0, PR #864)
+
+Retested on main **9caa043be** on the suites' fixture: `tests/qa/check_qa_vv_1102_decider.ts` 0 · 6/6. The answered "Is this person travelling to Canada alone?" stays in the officer's case view and the client's questionnaire, and can be changed to "both parents". C6.4 stays Partial (fixture only; on the checkpoint it waits for QA-144).
+
+From `qa/BUGS.md`:
+
+| QA-149 | Bug · Major | C6.4 (also C4.4 renderer) · VV-R08, P-62 | 59d2da74 (after-merge 2 Nov) | A question asked only because it decides a document line drops out of the case once answered: the child's "Is this person travelling to Canada alone?" answered yes adds the letter of authorization line, then vanishes from the officer's case view and the client's questionnaire, so nobody can correct it to no; a PUT with the officer view's (missing) answer id is refused 409 "Changed by someone else" and the line stays … | runtime | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-149 | Bug · Major | C6.4 | **59d2da74** | Steps: an isolated copy; `tests/runtime/setup_visitor_visa.ts`, `acceptance/lib/setup_vv_m3.ts`; open the family case (4 people); as the client answer the child A1's `person.travelling_alone_to_canada` = yes → the checklist gets "Letter of authorization for a minor" (right). Then read `GET /runtime/cases/:id/questionnaire?mode=agent` (officer) and `?mode=client`. Expected: the question is still asked (it decides a line, P-62), so it can be changed to no and the line goes (pack C6.4-9). Actual: after yes the question is gone from both views (`engine/runtime/case.ts` caseView keeps a question only when it fills a box or `q.decides` is non-empty, and once answered it decides nothing open); a change to no sent with the view's answer id (none) is refused 409 "Someone changed this answer after you opened it", and the line stays. Sent with the real id it saves, so the API can still change it, but no screen can. | `tests/qa/check_qa_am_1102_c64_answer_no.ts` (1/4 today; passes when fixed) · acceptance C6.4-9 | runtime | Open |
+
+
+## QA-212 — closed 4 Nov 2026 (after-merge, #837)
+
+Closed by the qa lane on main **aa017f3a1** (fixed by #837). Demo › Start With an LMIA from its reviewed release now loads a Sample **draft**: on a copy of the six at 1440 px the dialog says "Load as a draft … answer its sources to release it", the control writes no release and no pack version (0 and 0 in the database), and Review and release shows "Numbers without a source (17)" with Submit disabled. Release 1 comes only through Add source, submit, the immigration expert's sign-off and a second person's approval: `acceptance/C5.4.test.ts` 27/27 on the configured checkpoint and on the six on GitHub (runs 41805556293, 41805568135). (`qa/reports/2026-11-04-after-merge/qa212-lmia-draft-1440.png`)
+
+From `qa/BUGS.md`:
+
+| QA-212 | Gap · Major (tech lead's ruling, 4 Nov ~12:30 IST, P-294 under P-322) | C6.1, C5.4 · P-322 (after setup, Works counts only on a checkpoint built by the product's own steps), BR-7 (a different person releases) | main 10868af42 (qa's P-322 check, `qa/verdicts/2026-11-04-checkpoint-built-by-product-steps.md`) | Demo › "Start With an LMIA from its reviewed release" (`api/src/demo.ts` ~127–170, `releaseWithSources` → `fromReviewedRelease`) imports the reviewed work-permit release with `importConfiguration`, then writes Release 1 straight into the database: `packVersion.create`, `configRelease.create`, `sourceAttachment.update` to IN_LIBRARY. No submit, sign-off by the immigration expert or approval by a second person runs. Expected: it releases through `studio.submit`, `studio.signoff` and `studio.approve` as the people who hold each duty, as `loadConfigured` does, so a release on the demo is always one the product's own rules made | builder (the tech lead assigns) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-212 | Gap · Major (tech lead's ruling, 4 Nov ~12:30 IST, P-294 under P-322) | C6.1, C5.4 · P-322 (after setup, Works counts only on a checkpoint built by the product's own steps), BR-7 (a different person releases) | main 10868af42 (qa's P-322 check, `qa/verdicts/2026-11-04-checkpoint-built-by-product-steps.md`) | Demo › "Start With an LMIA from its reviewed release" (`api/src/demo.ts` ~127–170, `releaseWithSources` → `fromReviewedRelease`) imports the reviewed work-permit release with `importConfiguration`, then writes Release 1 straight into the database: `packVersion.create`, `configRelease.create`, `sourceAttachment.update` to IN_LIBRARY. No submit, sign-off by the immigration expert or approval by a second person runs. Expected: it releases through `studio.submit`, `studio.signoff` and `studio.approve` as the people who hold each duty, as `loadConfigured` does, so a release on the demo is always one the product's own rules made | builder (the tech lead assigns) | Open |
+
+
+## QA-214 — closed 4 Nov 2026 (after-merge, #837)
+
+Closed by the qa lane on main **aa017f3a1** (fixed by #837, the tech lead's option (b), P-294): the inside-Canada load of the outside-Canada c1-v3 stays, but the combination is Sample (`source_basis` ILLUSTRATIVE) with the basis note "Sample: from the outside-Canada release c1-v3 …", and the dialog says "It stays Sample: this is not the inside-Canada combination's own source-backed setup". Never labelled source-backed.
+
+From `qa/BUGS.md`:
+
+| QA-214 | Bug · Major (breaker on #837; checked by qa on main 3b2f3139f) | C11.7, C6.1 (the demo's With an LMIA) · P-322, AGENTS rule 4 (values from official sources) | main 3b2f3139f | Demo › "Start With an LMIA from its reviewed release" loads c1-v3 into the inside-Canada combination `wp.lmia_inside` (`demo.ts:41` SIX_LMIA; its page is `…/work-canada/permit-inside/forms-documents.html`) and marks it SOURCE_BACKED. But c1-v3's `configuration.json` says "1: work permit applied from outside Canada", and its forms are IMM 1295 "Application for Work Permit made Outside of Canada", IMM 5488 and IMM 5905 (a New Delhi visa office checklist). On the configured checkpoint, the draft then files both IMM 5710 (the inside-Canada form the six's finder chose) and IMM 1295. Expected: the reviewed outside-Canada release goes onto an outside-Canada combination, or the LMIA start is labelled Sample; a source-backed label never sits on the wrong forms. Evidence: Lead's notes `pr837-QA-212/break-report.md` B3 | forms or runtime (demo) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-214 | Bug · Major (breaker on #837; checked by qa on main 3b2f3139f) | C11.7, C6.1 (the demo's With an LMIA) · P-322, AGENTS rule 4 (values from official sources) | main 3b2f3139f | Demo › "Start With an LMIA from its reviewed release" loads c1-v3 into the inside-Canada combination `wp.lmia_inside` (`demo.ts:41` SIX_LMIA; its page is `…/work-canada/permit-inside/forms-documents.html`) and marks it SOURCE_BACKED. But c1-v3's `configuration.json` says "1: work permit applied from outside Canada", and its forms are IMM 1295 "Application for Work Permit made Outside of Canada", IMM 5488 and IMM 5905 (a New Delhi visa office checklist). On the configured checkpoint, the draft then files both IMM 5710 (the inside-Canada form the six's finder chose) and IMM 1295. Expected: the reviewed outside-Canada release goes onto an outside-Canada combination, or the LMIA start is labelled Sample; a source-backed label never sits on the wrong forms. Evidence: Lead's notes `pr837-QA-212/break-report.md` B3 | forms or runtime (demo) | Open |
+
+
+## QA-195 — closed 4 Nov 2026 (after-merge, #882)
+
+Closed by the qa lane on main **4807cac9a** (fixed by #882; the name list `engine/identity-documents.ts` decides, never only a flag or a category). `tests/check_forms_c34_ai.ts` 0 · 87/87 twice on fresh copies at load 1.6, all 14 QA-195 cases pass: "Passport" in category travel with an AI reader becomes an identity document for a person's reading; other identity documents by name and categories naming identity in other words are never AI-read; an edit, an accept, a bulk accept, a payload without its kind and a reuse of an AI-read library Passport are each refused (409) in plain words; the coded-lines versions are accepted. `acceptance/C3.4.test.ts` on the six on GitHub (run 41810052972): exit 0, 20/20. US$0; ledger unchanged.
+
+From `qa/BUGS.md`:
+
+| QA-195 | Gap · Major | C3.4 · P-134 (AI never reads identity documents), P-153 (code is the guard) | 762dbae6 (Opus re-review of #585, probe on main's code) | In the masters step a document type is treated as an identity document only when a reading flags it or its category contains "identity" (`engine/masters-ai.ts:197`); the name is never checked. If both rounds return "Passport" with category "travel", reader "letter_or_record" and identity_document false, the result is a Ready, agreed document type with an AI reader. The rule `identity_not_read_by_ai` passes, so it can be bulk accepted. C2.6 decides by the name (`api/src/checklist.ts:138-139`, passport or travel document). Expected: the same name rule in the masters guard | forms (C3.4) | Open |
+
+
+## QA-183 — closed 4 Nov 2026 (after-merge, #867)
+
+Closed by the qa lane on main **03ea24052** (fixed by #867). `acceptance/C11.17.test.ts` on the six on GitHub: exit 0, 24/24 on the PR head (run 41818523697) and on main (run 41825099237). Walk at 1440 px on the six: in Program structure › Add, a 130-character Category is `aria-invalid` with "Keep the name under 120 characters." under its own field.
+
+From `qa/BUGS.md`:
+
+| QA-183 | UX · Minor | C11.17 · P-128, skill qa §2 (message on its field) | 762dbae6 (after-merge) | Program structure › Add: a category name over 120 characters is refused (400, nothing saved), but "Keep the name under 120 characters" shows only in the dialog's general alert; the Category field shows no message (`acceptance/C11.17.test.ts` 23/24 twice; `web/src/components/add-to-structure.tsx` unchanged since 2 Nov). Expected: the words under the Category field | screens | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-183 | UX · Minor | C11.17 · P-128, skill qa §2 (message on its field) | 762dbae6 (after-merge) | Program structure › Add: a category name over 120 characters is refused (400, nothing saved), but "Keep the name under 120 characters" shows only in the dialog's general alert; the Category field shows no message (`acceptance/C11.17.test.ts` 23/24 twice; `web/src/components/add-to-structure.tsx` unchanged since 2 Nov). Expected: the words under the Category field | Steps, expected and actual: this row and `qa/reports/2026-11-03-after-merge-explore.md`. Pack output is quoted there; the run logs are not committed (AGENTS.md rule 1) | screens | Open |
+
