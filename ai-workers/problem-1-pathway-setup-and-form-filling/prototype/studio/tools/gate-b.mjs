@@ -89,7 +89,9 @@ export function claims(title = "", body = "") {
       const isWorks = /works?/i.test(m[1]);
       if (!isWorks) value = value.split(/\s·\s/)[0];
       // A list under the key: the next lines that are list items (the raw line starts with a bullet or a number).
-      if (!ids(value).length) for (const t of listUnder(i)) value += " " + t;
+      // A Works key always reads the list under it, also when its own value names an id ("Claims Works: C11.10" over
+      // "- C11.13"; #850 round 2 M4); a capabilities key only when its value names none.
+      if (isWorks || !ids(value).length) for (const t of listUnder(i)) value += " " + t;
       const named = ids(value);
       if (isWorks && !named.length && !/^\s*(none|nothing|no capability)\b/i.test(value)) unread.push(line.slice(0, 120));
       for (const id of named) if (isWorks) works.add(id);

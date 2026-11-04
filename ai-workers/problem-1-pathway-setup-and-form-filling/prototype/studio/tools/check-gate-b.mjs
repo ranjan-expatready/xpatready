@@ -86,6 +86,12 @@ for (const [label, body] of [["two phrases on one line", "Claims Works on C11.13
   ["a bullet, the id before the phrase", "- C11.13 (reason field): claims Works after this PR, steps 1-14 green"], ["a note with C1 that is no id", "Claims Works (C1 pass): C11.13"], ["a note with a time", "Claims Works (as of 10:30 IST): C11.13"],
   ["a phrase, then a list", "This PR claims Works on C11.10.\n- C11.13 is untouched (next section)"]])
   ok(`#850 review: refuses as a Works claim: ${label}`, part1(claims("forms: x", body), bugs).length > 0, [...claims("forms: x", body).works]);
+// #850 round 2 (Opus, 4 Nov): M4, a Works key's list under it when its value names an id; m3, cases that pin "every
+// phrase is read" and "a phrase beside a Works key". Each must claim C11.13 Works and refuse on QA-192.
+for (const [label, body] of [["M4: a Works key naming an id, a list under it", "Claims Works: C11.10\n- C11.13"], ["M4: none · an id, a list under it", "Claims Works: none · see C11.10\n- C11.13"],
+  ["M4: a key with a note, an id after a dot, a list", "Claims Works (as built): · C11.10 notes\n- C11.13"], ["M4: bold key, a blank line, a list", "**Claims Works:** C11.10\n\n- C11.13"],
+  ["m3: two phrases around a capabilities key", "Claims Works on C11.10 · Capabilities: C3.5 · claims Works on C11.13"], ["m3: a phrase before a Works key", "This PR claims Works on C11.13 · Claims Works: C11.10"]])
+  ok(`#850 round 2: ${label}`, claims("forms: x", body).works.has("C11.13") && gate("forms: x", body).includes("QA-192"), [...claims("forms: x", body).works]);
 ok("#850 review m2: \"Claims Works for C11.10:\" over \"- C11.13\" claims both", ["C11.10", "C11.13"].every((id) => claims("forms: x", "Claims Works for C11.10:\n- C11.13").works.has(id)), [...claims("forms: x", "Claims Works for C11.10:\n- C11.13").works]);
 ok("…and the capabilities key beside it stays a plain capability", !claims("forms: x", "Claims Works on C11.13 · Capabilities: C11.10").works.has("C11.10") && claims("forms: x", "Claims Works on C11.13 · Capabilities: C11.10").caps.has("C11.10"));
 ok("\"This PR claims Works on C11.13\" is a Works claim", gate("forms: x", "This PR claims Works on C11.13 once qa agrees.").join() === "QA-192");
