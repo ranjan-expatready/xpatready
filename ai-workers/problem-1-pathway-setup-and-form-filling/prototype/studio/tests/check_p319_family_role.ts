@@ -78,6 +78,8 @@ const said = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "
   ok("P-319 fail: a form that is not in the library is refused (404), in words", r.status === 404 && /not in the library/.test(said(r)), { status: r.status, said: said(r) });
   r = await setRole(NEW, { role: "family_information", reason: "ok\u0000 a NUL" });
   const rtl = await setRole(NEW, { role: "family_information", reason: "ok \u202E reversed words" });
+  const half = await setRole(NEW, { role: "family_information", reason: "half \ud83d of an emoji" });
+  ok("P-319 fail (review r2 M1): a reason holding half of a character (a lone surrogate) is refused (400), nothing changes", half.status === 400 && role(NEW) === "-", { status: half.status, said: said(half) });
   ok("P-319 fail (breaker M3): a reason with a character that cannot be stored (NUL) or that reorders the text (U+202E) is refused (400), nothing changes", r.status === 400 && rtl.status === 400 && role(NEW) === "-", { nul: r.status, rtl: rtl.status, said: said(r) });
   const guide = sql("select form_key from gov_form_def where form_kind in ('guide', 'checklist', 'document') and retired_at is null order by form_key limit 1");
   r = guide ? await setRole(guide, { role: "family_information", reason: "a guide is never filed" }) : { status: 0, body: null };

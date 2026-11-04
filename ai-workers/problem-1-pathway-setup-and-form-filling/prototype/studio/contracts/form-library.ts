@@ -43,7 +43,9 @@ export const FORM_ROLE_WORDS: Record<FormRole, string> = { family_information: "
 // Breaker M3 (as contracts/cost-check.ts): a control character cannot be stored with the Activity line, and a direction
 // mark (U+202A–U+202E, U+2066–U+2069) would make Activity read otherwise than it was written: both refused before anything.
 export const FormRoleBody = z.object({ role: z.enum(FORM_ROLES).nullable(), reason: z.string().trim().min(3, "Say why, in a few words.").max(300)
-  .regex(/^[^\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]*$/, "The reason has a character that cannot be stored or would reorder the text. Type it again; nothing was changed.") }).strict();
+  .regex(/^[^\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]*$/, "The reason has a character that cannot be stored or would reorder the text. Type it again; nothing was changed.")
+  // Review r2 M1 (as cost-check.ts, runtime.ts LONE): half of a character (a lone surrogate) cannot be stored either.
+  .refine((s) => !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s), "The reason has a character that cannot be stored (half of a character). Type it again; nothing was changed.") }).strict();
 
 /** GET /library/forms?type&usedBy&status&q — the one lean list (P-123): filters, never groups. */
 export const LIBRARY_TYPES = ["form", "guide", "checklist"] as const;

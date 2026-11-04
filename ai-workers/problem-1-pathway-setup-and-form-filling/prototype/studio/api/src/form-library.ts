@@ -267,9 +267,13 @@ export class FormLibrary {
     const word = (r: string | null) => (r ? FORM_ROLE_WORDS[r as keyof typeof FORM_ROLE_WORDS] ?? r : "no role");
     if ((def.formRole ?? null) === b.role) return { code, role: def.formRole, changed: false };
     // Breaker m1: changed only from the role this request read, so two changes at once never both say "changed".
-    const moved = await this.db.govFormDef.updateMany({ where: { id: def.id, formRole: def.formRole }, data: { formRole: b.role } });
-    if (!moved.count) throw problem(409, "Changed meanwhile", `${code}'s role was changed by someone else just now: reload and look again.`);
-    await this.audit.log(workspaceId, actor.id, "updated", "form", code, `${actor.name} set ${code} to ${word(b.role)} (was ${word(def.formRole)}): ${b.reason}`, { from: def.formRole, to: b.role, reason: b.reason });
+    // Review r2 M1: the role and its Activity line are written together, or neither is (a line that cannot be stored never
+    // leaves a changed role with nothing to show for it).
+    await this.db.$transaction(async (tx) => {
+      const moved = await tx.govFormDef.updateMany({ where: { id: def.id, formRole: def.formRole }, data: { formRole: b.role } });
+      if (!moved.count) throw problem(409, "Changed meanwhile", `${code}'s role was changed by someone else just now: reload and look again.`);
+      await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "updated", entity: "form", entityKey: code, summary: `${actor.name} set ${code} to ${word(b.role)} (was ${word(def.formRole)}): ${b.reason}`.slice(0, 600), detail: { from: def.formRole, to: b.role, reason: b.reason } } });
+    });
     return { code, role: b.role, changed: true };
   }
 
