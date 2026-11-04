@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { formMastersFromRounds, formShapeOk, guideMastersFromRounds, guideShapeOk, MASTERS_FORM_STEP, MASTERS_GUIDE_STEP, type FormAnswer, type GuideAnswer, type MRound } from "../../engine/masters-ai.ts";
-import { editionContextKey, replayPattern } from "../../engine/rounds.ts";
+import { editionContextKey, PRINTED_EDITION, replayPattern } from "../../engine/rounds.ts";
 import { actorOf, Audit, Db, fail, need, SOLUTION, type Actor } from "./core.ts";
 import { LIVE_WAITING, PqrDrafts } from "./pqr-drafts.ts";
 import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
@@ -132,7 +132,7 @@ export const MASTERS_GUIDE_AI: AiStep = {
     nothingUsed: "Nothing of it is proposed.",
   },
 };
-const PRINTED = /^(IMM [0-9A-Z ]+?) \(([0-9]{2}-[0-9]{4})\)$/;
+const PRINTED = PRINTED_EDITION;
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
