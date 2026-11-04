@@ -74,7 +74,7 @@
    "properties": {
     "form_edition": {
      "type": "string",
-     "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+     "pattern": "^(IMM|IRM) [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
     },
     "form_sha256": {
      "type": "string",

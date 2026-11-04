@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["form_edition", "form_sha256", "data_path", "outcome"],
   "properties": {
-    "form_edition": { "type": "string", "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$" },
+    "form_edition": { "type": "string", "pattern": "^(IMM|IRM) [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$" },
     "form_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "data_path": { "type": "string", "minLength": 3, "description": "XFA data path, indices explicit, repeated rows as [n]" },
     "outcome": { "enum": ["mapped", "unresolved", "never_filled", "not_a_fact"], "description": "not_a_fact: form mechanics, not a fact (W1 3.1 ready: an explicit 'not a fact' mark); added in P1 revision 4" },
