@@ -109,11 +109,6 @@ jobs:
         if: matrix.shard == 1 && env.KIND == 'code'
         env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
         run: node "$S/tools/gate-b.mjs"
-      - name: gate B timing on GitHub's machines (TEMPORARY, #804 only)
-        if: matrix.shard == 1 && env.KIND == 'code'
-        run: |
-          time node "$S/tools/gate-b.mjs" --title "measure: C11.13 (QA-192)" || true
-          time node "$S/tools/gate-b.mjs" --title "measure: C11.13, C11.10" || true
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
