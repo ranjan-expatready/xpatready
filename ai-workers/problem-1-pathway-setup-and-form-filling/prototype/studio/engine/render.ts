@@ -77,7 +77,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const field = new Map(s.canonical_fields.map((f) => [f.id, f]));
   const place = new Map<string, any>();
   for (const p of s.placements) if (!place.has(p.fact)) place.set(p.fact, p);
-  const sectionTitle = new Map(s.sections.map((x) => [x.id, x.title]));
+  // C4.2 (P-91): a pulled question's section not chosen here is named by its title too (snapshot section_titles).
+  const sectionTitle = new Map([...(s.section_titles ?? []), ...s.sections].map((x) => [x.id, x.title]));
   const sectionOrder = new Map(s.sections.map((x, i) => [x.id, i]));
   const label = (about: string | null) => {
     if (!about) return "nobody on this case";
