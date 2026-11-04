@@ -3,11 +3,16 @@
  "rules": [
   {
    "combination": "vv.single",
-   "condition": { "subjectKind": "EACH_APPLICANT", "op": "eq", "field": "person.minor_travelling_without_parents", "value": true },
+   "condition": {
+    "subjectKind": "EACH_APPLICANT",
+    "op": "eq",
+    "field": "person.minor_travelling_without_parents",
+    "value": true
+   },
    "whenPlain": "the person is under 18 and travels alone or with a person other than their parents or legal guardians",
-   "thenPlain": "a letter of authorization signed by both parents or legal guardians, preferably in English or French, naming the adult responsible for the child in Canada, goes with the application (Sample, Unconfirmed: expert)",
+   "thenPlain": "custody documents, or a letter of authorization from the parent who does not travel, or one signed by both parents or legal guardians (preferably in English or French, naming the adult responsible for the child in Canada), must go with the application (Sample, Unconfirmed: expert)",
    "forWhom": "each_applicant",
-   "sourceQuote": "Guide 5256 (official-sources/ircc/instructions/guide-5256.html; page modified 2026-03-31, saved 19 Oct 2026), Supporting documents › Minors travelling alone: \"Minors (under 18 years of age) travelling alone or with a person other than their parents or legal guardians should have a letter of authorization, preferably in English or French, signed by both parents or legal guardians. It should also include the name of the adult who will be responsible for the children in Canada.\""
+   "sourceQuote": "IMM 5484 (05-2026) p. 1 (official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026): \"Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians.\" Guide 5256 (official-sources/ircc/instructions/guide-5256.html; page modified 2026-03-31, saved 19 Oct 2026), Step 1. Gather documents › Minors travelling alone: \"Minors (under 18 years of age) travelling alone or with a person other than their parents or legal guardians should have a letter of authorization, preferably in English or French, signed by both parents or legal guardians. It should also include the name of the adult who will be responsible for the children in Canada.\""
   }
  ]
 }

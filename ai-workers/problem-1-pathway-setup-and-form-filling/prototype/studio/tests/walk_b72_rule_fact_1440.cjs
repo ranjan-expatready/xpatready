@@ -23,7 +23,7 @@ const ok = (n, c, d) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL
   await panel.scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(OUT, "1-facts-a-rule-needs-1440.png") });
   const text = await panel.innerText();
-  ok("B72 walk: Visitor visa's Questionnaires tab lists the fact the Sample rule reads, with the rule's words", /minor.travelling.without.parents/i.test(text) && /letter of authorization/i.test(text), text.slice(0, 400));
+  ok("C3.6: Visitor visa's Questionnaires tab lists the fact the Sample rule reads, with the rule's words", /minor.travelling.without.parents/i.test(text) && /letter of authorization/i.test(text), text.slice(0, 400));
   await panel.getByRole("button", { name: "Add the fact this rule needs" }).first().click();
   await page.screenshot({ path: join(OUT, "2-add-open-1440.png") });
   await panel.getByLabel("Name a person reads").first().fill("Minor travelling without parents");
@@ -31,14 +31,14 @@ const ok = (n, c, d) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL
   await panel.getByLabel("What it means").first().fill("Whether the person is under 18 and travels alone or with a person other than their parents or legal guardians (Guide 5256, Minors travelling alone; Sample).");
   await page.screenshot({ path: join(OUT, "3-filled-1440.png") });
   await panel.getByRole("button", { name: /Propose it/ }).first().click();
-  await page.waitForTimeout(2000);
+  await panel.getByText("Proposed: waits on To review").first().waitFor({ timeout: 30_000 });
   await panel.scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(OUT, "4-proposed-1440.png") });
-  const item = sql("select origin || '|' || status || '|' || coalesce(work->>'ruleFact', '') from proposal_item where kind = 'field' and step = 'rule_fact' order by created_at desc limit 1");
-  ok("B72 walk: \"Propose it · US$0\" puts one rules proposal for the rule's fact on To review (a second person approves it)", item === "rules|waiting|person.minor_travelling_without_parents", item);
-  ok("B72 walk: the panel says the proposal waits on To review", /To review/i.test(await panel.innerText()));
+  const items = sql("select origin || '|' || status || '|' || coalesce(work->>'ruleFact', '') from proposal_item where kind = 'field' and step = 'rule_fact'").split("\n").filter(Boolean);
+  ok("C3.6: \"Propose it · US$0\" puts exactly one rules proposal for the rule's fact on To review (a second person approves it)", items.length === 1 && items[0] === "rules|waiting|person.minor_travelling_without_parents", items);
+  ok("C3.6: the panel says the proposal waits on To review", /Proposed: waits on To review/.test(await panel.innerText()));
   const sideways = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
-  ok("B72 walk: no sideways scroll at 1440 px", !sideways);
+  ok("C3.6: no sideways scroll at 1440 px", !sideways);
   await browser.close();
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
