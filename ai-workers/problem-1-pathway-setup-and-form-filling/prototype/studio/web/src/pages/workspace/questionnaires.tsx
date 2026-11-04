@@ -9,7 +9,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { type BulkSourceResult, type CountryPqrView, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
+import { type BulkSourceResult, type CountryPqrView, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView, stillAskedWords } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useApi, useSessionView, useToast } from "@/lib/api";
 import type { CombinationSummary } from "../../../../contracts/programs";
 import { Button, Dialog, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
@@ -516,10 +516,12 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
               {/* QA-93: a question the shared library places in a section is asked whether or not the section is chosen, so
                   removing it here would only move it to the end. Offered only where it changes something: a section that
                   asks this person nothing. */}
-              {canAuthor ? (s.questions.length
+              {canAuthor && !s.stillAsked ? (s.questions.length
                 ? <span className="max-w-64 text-right text-xs text-text-muted" data-remove-why>Remove from questionnaire: not here. Its {s.questions.length} question{s.questions.length === 1 ? " is" : "s are"} placed in it in the shared library and stay{s.questions.length === 1 ? "s" : ""} asked; change the placement there.</span>
                 : <Button size="sm" variant="ghost" onClick={() => setRemoving({ key: s.id, title: s.title })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button>) : null}
             </div>
+            {/* C4.2 (P-294 (B)): a section taken out (or never chosen) whose questions forms still need says so. */}
+            {s.stillAsked ? <p className="border-t border-border px-4 py-2 text-sm text-text-muted" data-still-asked><span className="font-medium text-text">{stillAskedWords(s.stillAsked)}</span> The section is not chosen for this combination: add it from the library above to give its questions their own place.</p> : null}
             {isOpen ? (lines.length ? (
               <div className="border-t border-border px-4 py-3">
                 <Table dense head={head(lines.map((x) => x.fact))} label={`${s.title}: questions`}>

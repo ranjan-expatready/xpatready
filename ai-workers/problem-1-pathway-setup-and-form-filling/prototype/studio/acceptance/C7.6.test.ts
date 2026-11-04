@@ -1,15 +1,20 @@
-// C7.6 Only the form's own Validate and missing or conflicting facts, plus the hard blocks, stop "Ready to file"
-// (M3-E; r5c BR-9, BR-21; P-71, P-136, P-144, P-151, P-155, P-168). Visitor visa part, per filing, grouped by who owes
-// it, never a percentage. Blocks: a required fact missing, unconfirmed or with a problem on that form (P-71; QA-122: an
-// optional fact with a problem is still a problem on the form it fills); IMM 5257 on PDF upload with no validated copy
-// read back (P-144, VV-R18); a required signature missing (IMM 5476 signed by hand and scanned); the representative's
-// review not done; a form edition past IRCC's accepted-until date (P-151). Everything else warns and is passed with a
-// reason: a missing document, an AI finding (C7.5-8).
-// Breadth, after Visitor visa: the Express Entry police and medical block (P-172), Paper lines.
+// C7.6 Only a barcode form's own Validate stops "Ready to file" (M3-E; r5c BR-9, BR-21; L-SA3 under P-315, P-237,
+// P-238; P-144, P-151, P-155). Visitor visa part, per filing, grouped by who owes it, never a percentage. The one block:
+// IMM 5257 on PDF upload with no validated copy read back (P-144, VV-R18); it is never passed. CRITICAL warnings (the
+// former blocks of P-71, P-136, P-151 (1), P-155, P-168), passed with a recorded reason or fixed: a required fact
+// missing, unconfirmed or with a problem on that form (P-238; QA-122: an optional fact with a problem is still a problem
+// on the form it fills); a required signature missing (IMM 5476 signed by hand and scanned); the representative's
+// review not done; a form edition past IRCC's accepted-until date. Warnings, passed with a reason: a missing document,
+// an AI finding (C7.5-8). P-315 rework (this PR): steps 2, 4, 7, 8, 12, 14 and 20 read the CRITICAL warnings where they
+// read blocks; 6b and 22 are new (the barcode block cannot be passed, and stops Ready to file alone). The review's body
+// (13, 14, 21) also sends the filing's facts_hash it read (breaker N1 on #861: a review is of the facts it saw).
+// Breadth, after Visitor visa: the Express Entry police and medical block (P-172, the one named exception), Paper lines.
 //   tsx studio/acceptance/C7.6.test.ts 4440 xr_studio_accept
 import { CLIENT, call, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, validateRoundTrip, yearsAgo, agent, answer, confirmAll, filingOf, inDays, signByHand } from "./lib/m3.ts";
 
 const codes = (x: { code: string }[] | undefined) => (x ?? []).map((b) => b.code);
+/** P-315 (P-237, P-238): the CRITICAL warnings, the former blocks now passed with a reason. */
+const critical = (x: { code: string; severity?: string }[] | undefined) => codes((x ?? []).filter((w) => w.severity === "critical"));
 
 await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", async () => {
   const vv = needVisitorVisa();
@@ -21,7 +26,7 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   const fid = filingOf(p, P)?.id;
   let rd = readinessOf(p, fid);
   ok("C7.6-1 pass: readiness is per filing with blocks and warnings, each saying who owes it and what it unblocks; no percentage", !!rd && Array.isArray(rd.blocks) && Array.isArray(rd.warns) && rd.blocks.every((b) => !!b.words) && !/%/.test(JSON.stringify(rd)), rd);
-  ok("C7.6-2 fail (P-71): with facts unanswered, IMM 5257 blocks with \"missing facts\"", rd?.ready === false && codes(rd?.blocks).includes("missing_facts"), codes(rd?.blocks));
+  ok("C7.6-2 fail (P-238): with facts unanswered, IMM 5257 has a CRITICAL \"missing facts\" warning (never a block)", rd?.ready === false && critical(rd?.warns).includes("missing_facts") && !codes(rd?.blocks).includes("missing_facts"), { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
   let r = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
   ok("C7.6-3 fail: \"Ready to file\" is refused by the server (409) and lists the blocks", r.status === 409 && Array.isArray(r.body?.blocks) && r.body.blocks.length > 0, r.status);
 
@@ -36,14 +41,16 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   const bad = opt ? await answer(c.id, P, opt.fact, "1990-13-45", by) : null;
   if (opt && by !== CLIENT) await confirmAll(c.id, P);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok("C7.6-4 fail (QA-122): an optional date given as 1990-13-45 is saved and flagged (P-47) and blocks IMM 5257 as a fact with a problem", !!opt && (bad?.status ?? 0) < 300 && codes(rd?.blocks).includes("fact_problem") && (rd?.blocks ?? []).some((b) => b.words.includes("IMM 5257")), { fact: opt?.fact, status: bad?.status, blocks: codes(rd?.blocks) });
+  ok("C7.6-4 fail (QA-122, P-238): an optional date given as 1990-13-45 is saved and flagged (P-47) and is a CRITICAL \"fact with a problem\" on IMM 5257", !!opt && (bad?.status ?? 0) < 300 && critical(rd?.warns).includes("fact_problem") && (rd?.warns ?? []).some((b) => b.code === "fact_problem" && b.words.includes("IMM 5257")), { fact: opt?.fact, status: bad?.status, warns: codes(rd?.warns) });
   if (opt) await answer(c.id, P, opt.fact, "1990-01-15", by);
   await fillEverything(c.id);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok("C7.6-5 pass: with every fact confirmed, the fact blocks are gone", !!rd && !codes(rd?.blocks).some((x) => ["missing_facts", "fact_problem", "open_check"].includes(x)), codes(rd?.blocks));
+  ok("C7.6-5 pass: with every fact confirmed, the fact warnings are gone", !!rd && ![...codes(rd?.blocks), ...codes(rd?.warns)].some((x) => ["missing_facts", "fact_problem", "open_check"].includes(x)), codes(rd?.warns));
   ok("C7.6-6 fail (P-144, VV-R18): IMM 5257 on PDF upload with no validated copy read back blocks", codes(rd?.blocks).includes("barcode_not_validated") && (rd?.blocks ?? []).some((b) => b.code === "barcode_not_validated" && /IMM 5257/.test(b.words)));
-  ok("C7.6-7 fail (P-136): IMM 5476 (signed by hand and scanned) with no signed scan blocks as a missing required signature", (rd?.blocks ?? []).some((b) => b.code === "missing_signature" && /IMM 5476/.test(b.words)), codes(rd?.blocks));
-  ok("C7.6-8 fail (P-155): the representative's review not done blocks", codes(rd?.blocks).includes("representative_review"));
+  r = await call("POST", `/runtime/filings/${fid}/warnings/barcode_not_validated/pass`, { reason: "Validated outside the case (Sample)" }, officer);
+  ok("C7.6-6b fail (P-237): the barcode block cannot be passed, even with a reason (409, nothing recorded)", r.status === 409 && Number(sql(`select count(*) from readiness_pass where filing_id='${fid}'`) ?? 0) === 0, r.status);
+  ok("C7.6-7 fail (P-136, P-237): IMM 5476 (signed by hand and scanned) with no signed scan is a CRITICAL \"missing signature\" warning", (rd?.warns ?? []).some((b) => b.code === "missing_signature" && b.severity === "critical" && /IMM 5476/.test(b.words)) && !codes(rd?.blocks).includes("missing_signature"), codes(rd?.warns));
+  ok("C7.6-8 fail (P-155, P-237): the representative's review not done is a CRITICAL warning", critical(rd?.warns).includes("representative_review") && !codes(rd?.blocks).includes("representative_review"));
   ok("C7.6-9 pass: a missing document (passport not received) only warns", codes(rd?.warns).includes("missing_document") && !codes(rd?.blocks).includes("missing_document"));
 
   // Clear each block the way the item's channel requires.
@@ -53,12 +60,12 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
 
   ok("C7.6-11 pass: IMM 5476 printed, signed by hand, and its scan uploaded", signed === 201, signed);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok("C7.6-12 pass: the barcode and signature blocks are gone; only the review remains", !codes(rd?.blocks).includes("barcode_not_validated") && !codes(rd?.blocks).includes("missing_signature") && codes(rd?.blocks).includes("representative_review"), codes(rd?.blocks));
-  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)" }, officer);
+  ok("C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains", !codes(rd?.blocks).length && !codes(rd?.warns).includes("missing_signature") && critical(rd?.warns).join() === "representative_review", { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
+  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, officer);
   ok("C7.6-13 fail (P-155): a case officer cannot do the representative's review (403)", !!f.rep && officer !== f.rep && r.status === 403, r.status);
-  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)" }, f.rep ?? "");
+  r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, f.rep ?? ""); // #861 N1: the facts it read
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok("C7.6-14 pass: the representative of record reviews; the block clears; the record will read \"Prepared by · Reviewed by\"", r.status === 200 && !codes(rd?.blocks).includes("representative_review") && r.body?.reviewed_by === f.rep, r.body);
+  ok("C7.6-14 pass: the representative of record reviews; the warning clears; the record will read \"Prepared by · Reviewed by\"", r.status === 200 && !codes(rd?.warns).includes("representative_review") && r.body?.reviewed_by === f.rep, r.body);
   r = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
   ok("C7.6-15 fail: with only warnings left, Ready to file still needs each warning passed with a reason (409 names them)", r.status === 409 && codes(r.body?.warns).includes("missing_document"), r.body);
   r = await call("POST", `/runtime/filings/${fid}/warnings/missing_document/pass`, {}, officer);
@@ -78,13 +85,22 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   ok("C7.6-20a pass (P-151): before IMM 5707's accepted-until date it only warns, with \"Adopt update\"", soon && codes(rd?.warns).includes("edition_superseded") && /Adopt update/.test(JSON.stringify(rd?.warns)) && !codes(rd?.blocks).includes("edition_expired"), rd);
   const past = await setUntil(yearsAgo(0, 1));
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok("C7.6-20 fail (P-151): after IMM 5707's accepted-until date it blocks Ready to file", past && codes(rd?.blocks).includes("edition_expired"), codes(rd?.blocks));
+  ok("C7.6-20 fail (P-151, P-237): after IMM 5707's accepted-until date it is a CRITICAL warning (no longer \"Adopt update\"), never a block", past && critical(rd?.warns).includes("edition_expired") && !codes(rd?.warns).includes("edition_superseded") && !codes(rd?.blocks).length, { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
   ok("C7.6-20b pass: the dates are restored for the tests that follow", await setUntil(null));
 
 
   // Solo firm: "Self-reviewed".
   const solo = await openCase(vv, [{ role: "principal", name: "Sample Client S", dob: yearsAgo(30) }], { representative: f.soloRep, caseOfficers: [f.soloRep ?? ""] });
-  const sf = (await prepare(solo.id, f.soloRep ?? "")).p?.filings[0]?.id;
-  r = await call("POST", `/runtime/filings/${sf}/review`, { self: true, note: "I prepared and reviewed this filing myself" }, f.soloRep ?? "");
+  const sp = (await prepare(solo.id, f.soloRep ?? "")).p, sf = sp?.filings[0]?.id;
+  r = await call("POST", `/runtime/filings/${sf}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: readinessOf(sp, sf)?.facts_hash }, f.soloRep ?? "");
   ok("C7.6-21 pass: a solo representative's review is logged \"Self-reviewed\" with name, licence number and time, never as a second person", r.status === 200 && r.body?.kind === "self_reviewed" && !!r.body?.licence_number, r.body);
+
+  // P-315 (P-237, P-238): with facts still missing, every warning (CRITICAL ones too) is passed with a reason; Ready to
+  // file is then refused by the barcode form's own Validate alone.
+  let srd = readinessOf((await prepare(solo.id, f.soloRep ?? "")).p, sf);
+  const passedAll = critical(srd?.warns).includes("missing_facts");
+  for (const w of [...new Set(codes(srd?.warns))]) passedAll && (await call("POST", `/runtime/filings/${sf}/warnings/${w}/pass`, { reason: "Client confirms the answers by phone today (Sample)" }, f.soloRep ?? ""));
+  srd = readinessOf((await prepare(solo.id, f.soloRep ?? "")).p, sf);
+  r = await call("POST", `/runtime/filings/${sf}/ready`, {}, f.soloRep ?? "");
+  ok("C7.6-22 fail (P-315): missing facts passed as a CRITICAL warning with a reason, Ready to file is still refused by IMM 5257's missing Validate alone (409)", passedAll && !srd?.warns.length && (srd?.passed ?? []).some((x) => x.code === "missing_facts") && r.status === 409 && codes(r.body?.blocks).join() === "barcode_not_validated" && !codes(r.body?.warns).length, { status: r.status, blocks: codes(r.body?.blocks), warns: codes(r.body?.warns) });
 });
