@@ -145,3 +145,56 @@ I reviewed only `git diff 54410819..ea30e005`. Before starting each copy I check
 * the body's "Claims Works: C11.7" becomes `Capabilities: C11.7 (part B cases 1, 3)` until the ruling.
 
 Either one turns this into **Approve for ea30e005** with no further code review needed. r2-m1 to r2-m3 do not hold the PR.
+
+## Merge check: 7e7ca86fc (origin/main a155fe772 into 24559602), 4 Nov, diff-only
+I read the diffs only (`git show --cc`, then each parent against the merge and against the merge base d4146dbd). I ran no
+suites and started no server, as the tech lead asked (other runs share the folder). The PR head is 7e7ca86fc. The body reads
+`Capabilities: C11.7 (part B cases 1, 3)` with no Works claim, under the tech lead's ruling. **That clears M3.**
+
+**Only two files changed on both sides:** `api/src/demo.ts` and `tests/check_c10_1_configured.ts`. Every other file in the merge
+is byte-equal to the one side that changed it.
+
+1. **`demo.ts` resolution: correct.**
+   * **Constructor:** it has main's 13 parameters, then `FormLibrary` and `ReviewProposals`. `Forms` appears once.
+   * **Imports:** lines 8–33 have no duplicate. `Forms` is imported once (line 30, main's place), and there are no conflict markers.
+   * **Nothing lost:** I compared the changed lines of the branch against the base with those of the merge against main.
+     They are identical, except the constructor and `Forms` import that both sides wrote. The same holds the other way for
+     main's changes.
+   * **LMIA:** 0 changed lines in the merge against main mention LMIA. The merged file's LMIA lines are main's (10 of 10).
+   * **Order in `loadConfigured`:** row 4 (l.494), then the certificate step (l.497–516), then main's row 7 sections (l.518–551),
+     then row 5 (l.553). The approver approves the certificate type and the sections in one pass.
+2. **`check_c10_1_configured.ts`: main's file exactly** (no diff against ^2). Row 4 now counts
+   `proposal_item p join drafting_job j … where j.kind = 'field_map' and p.status = 'waiting'`. The certificate's job is
+   `kind requirement_type`, mode LOCAL (studio.ts:838), so the query **still excludes it**. It also excludes row 7's answer
+   lists, which are left waiting on purpose. The branch's `mode = 'REPLAY'` line would also have excluded both, so its intent
+   is kept. Main's C10.1 pack line 35 now filters `j.mode = 'REPLAY'`, so it no longer depends on the certificate step either.
+3. **Row 7 with the certificate step: no bad interaction.**
+   * **One door:** `ReviewProposals.decide` calls the same `decide` from proposals.ts (review-proposals.ts:115) as main's row 7 does
+     directly. Both go through one door, with the same rules.
+   * **No shared items:** row 7 decides only `section` and `answer_list` items of `masters_edition` runs on `SET_UP_FROM_FORMS`
+     combinations (the Visitor visa). The certificate is a `document_type` on Provincial nominee. So neither step decides the
+     other's items.
+   * **Counters:** row 4's counters are read before the certificate step and do not change. Row 5's "N of N" goes up by one
+     item, the certificate type.
+   * **Main's QA-195 check:** the one door now refuses a `document_type` payload that fails the contract (`docTypeWhy`). The
+     certificate's payload comes from the product's own `saveRequirement`, with `readerKind person_only` and
+     `identityDocument: isIdentityName(…)`. It fits `contracts/proposal-item.ts:41`, and "Provincial nomination certificate"
+     matches no identity pattern. So the accept still lands. *Not run.*
+   * **Row 5 includes the certificate type:** the certificate's library ADD is WAITING when row 5 reads every WAITING change,
+     so user-B approves it. The checks still read the same at the merge: `check_c10_1_configured` row 5 needs WAITING = 0 and no
+     item decided by its proposer, and `check_qa144_vv_release.ts:58` needs "the author approved no library item".
+4. **The r2 Minors in 24559602:**
+   * **r2-m1: fixed.** The accept now carries `Accepted by the sample loader: <P-109 quote>` (246 characters, under the 300 cut).
+   * **r2-m2: fixed in words.** The accept and the line now have separate catches. A refused line now reads "was accepted, but its
+     required line was not added". It is still log only, with no row status and no test of either branch. That is a residual
+     Minor and does not hold the PR.
+   * **r2-m3: fixed.** `sixLines()` is gone. `linesByHand` returns `combination_id`, `who` and `quote`, so wave1.json is read once
+     and nothing is matched by path text.
+   * **Round 1's m2, m4 and m5 stay open as Minors.**
+
+**Not checked:** typecheck, Nest DI start-up and the suites at 7e7ca86fc. CI on this head is the check for those. The journey
+score stays **8.5/10** from round 1. No journey was re-run, because none was allowed here, and the merge does not change the
+screens' code.
+
+**Verdict: Approve** for 7e7ca86fc. No Blocker and no Major is open: M1 and M2 were closed in round 2, M3 is cleared by the
+body, and the merge resolution is clean.
