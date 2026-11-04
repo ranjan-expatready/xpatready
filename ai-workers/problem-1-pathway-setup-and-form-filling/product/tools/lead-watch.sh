@@ -5,7 +5,8 @@
 # of every ACT line. Every number is read from git, GitHub, the Mac or get_usage, never from a session's own words
 # (P-228 (9); a builder's "labelled" on #792 was false on 4 Nov). Read-only on GitHub and on the Mac (it writes only its
 # state folder, and `git fetch` updates the clone's remote refs); US$0.
-# Exit code = number of ACT lines (0 = nothing to act on; a crash prints what it had plus one ACT line and exits 1).
+# Exit code = number of ACT lines (0 = nothing to act on; a crash prints what it had, the ACT lines found so far and one
+# crash line, and the exit code counts them all).
 # Skill: .claude/skills/lead-watch (reference.md: the why and the misses each check comes from).
 #
 # Usage, from the repository root of any copy (W = ai-workers/problem-1-pathway-setup-and-form-filling/product/tools):
@@ -123,7 +124,7 @@ query($o:String!,$n:String!){ repository(owner:$o,name:$n){ pullRequests(states:
  number title body headRefName isDraft createdAt headRefOid
  labels(first:10){nodes{name}}
  files(first:80){nodes{path}}
- commits(last:1){nodes{commit{committedDate statusCheckRollup{state contexts(first:40){nodes{__typename ... on CheckRun{name status conclusion startedAt completedAt}}}}}}}
+ commits(last:1){nodes{commit{committedDate messageHeadline statusCheckRollup{state contexts(first:40){nodes{__typename ... on CheckRun{name status conclusion startedAt completedAt}}}}}}}
  timelineItems(last:100,itemTypes:[LABELED_EVENT,UNLABELED_EVENT,ISSUE_COMMENT]){nodes{__typename
   ... on LabeledEvent{createdAt label{name}} ... on UnlabeledEvent{createdAt label{name}}
   ... on IssueComment{createdAt body}}}
@@ -147,7 +148,9 @@ for l in open(sys.argv[1]):
     if r["status"]!="completed": print(r["id"])
     elif r["conclusion"]=="failure" and datetime.fromisoformat(r["updated_at"].replace("Z","+00:00")).timestamp()>=win: print(r["id"])
 ' "$T/runs.ndjson" "$SINCE" 2>/dev/null | sort -u | head -30 \
-  | xargs -P 8 -I{} gh api "repos/$REPO/actions/runs/{}/jobs?per_page=100" --jq '.jobs[]|{id,run_id,name,status,conclusion}' > "$T/jobs.ndjson" 2>/dev/null
+  | xargs -P 8 -I{} sh -c 'gh api "repos/$1/actions/runs/$2/jobs?per_page=100" --jq ".jobs[]|{id,run_id,name,status,conclusion}" > "$3/jobs.$2" 2>/dev/null' _ "$REPO" {} "$T"
+# Each parallel call writes its own file: one shared output interleaved lines (4 Nov review run).
+cat "$T"/jobs.[0-9]* > "$T/jobs.ndjson" 2>/dev/null || : > "$T/jobs.ndjson"
 # Suite names come from the failed job's log ("::group::<suite> failed (exit n)", run-suites.sh); each log is read once.
 mkdir -p "$ST/suites"
 # A job whose log names no suite (a failed step outside the suites) is cached empty, so no log is downloaded twice.
@@ -209,7 +212,7 @@ done < <(git worktree list --porcelain | sed -n 's/^worktree //p')
 fact MACB "$(echo "$busy" | tr ' ' '\n' | grep . | sort -u | tr '\n' ' ')"; fact MACB_OK "${MAC_BUILDERS_OK:-builder-1 builder-8}"
 
 # ---- 4. Judge it: flow per item, M2/M3, links, capacity, outcome, pre-mortem, ladder ----
-python3 -I - "$T" <<'PY'
+python3 -I - "$T" "$(grep -n "^python3 -I - \"\$T\"" "$0" | cut -d: -f1)" <<'PY'
 import json,os,re,sys,time,subprocess
 from datetime import datetime,timezone,timedelta
 T=sys.argv[1]; IST=timezone(timedelta(hours=5,minutes=30)); now=time.time()
@@ -218,9 +221,15 @@ out=[]; say=out.append
 # counts every ACT line printed, the crash line included.
 def _crash(t,e,tb):
     import traceback
-    line=traceback.extract_tb(tb)[-1].lineno if tb else '?'
-    print('\n'.join(out)); print('ACT  [1 fix it yourself · 0m] lead-watch failed (%s: %s, script line %s): the lines above are all it read {crash}'%(t.__name__,e,line))
-    sys.stdout.flush(); os._exit(min(1+sum(1 for l in out if l.startswith('ACT')),125))
+    fr=[f for f in traceback.extract_tb(tb) if f.filename=='<stdin>'] if tb else []
+    off=int(sys.argv[2]) if len(sys.argv)>2 and sys.argv[2].isdigit() else 0
+    line=(fr[-1].lineno+off) if fr else '?'
+    print('\n'.join(out))
+    # ACTs found before the crash and not yet printed are printed (and counted) as found.
+    late=[] if any(l.startswith('ACT') for l in out) else ['ACT  [found before the crash] %s {%s}'%(x[1],x[0]) for x in globals().get('acts',[])]
+    for l in late: print(l)
+    print('ACT  [1 fix it yourself · 0m] lead-watch failed (%s: %s, lead-watch.sh line %s): the lines above are all it read {crash}'%(t.__name__,e,line))
+    sys.stdout.flush(); os._exit(min(1+len(late)+sum(1 for l in out if l.startswith('ACT')),125))
 sys.excepthook=_crash
 E={}
 for l in open(T+'/facts.env'):
@@ -271,24 +280,26 @@ def caps_line(body):
     m=re.search(r'(?im)^\W*Capabilities:\s*(.+)$',body or ''); return m.group(1) if m else ''
 # A session's PRs (Lead 4, 4 Nov): its branch or prefix; else a PR whose title starts with the session's row text, or whose
 # title or "Capabilities:" line names one of the row's capability or bug ids (briefs say: a draft PR within 20 minutes).
-def session_match(r,ref,title,body):
-    if r['branch'] not in ('-','') and ref.startswith(r['branch']): return True
+# Ranked: 1 the branch, 2 the title prefix, 3 the ids (a qa session only on qa PRs, any other only on non-qa PRs); a PR
+# belongs to the one session that ranks best on it, so no session claims another's PR.
+def match_rank(r,ref,title,body):
+    if r['branch'] not in ('-','') and ref.startswith(r['branch']): return 1
     row=r['row'].strip()
-    if row not in ('-','') and title.lower().startswith(row.lower()): return True
-    if title.lower().startswith('qa') and r['kind']!='qa': return False
+    if row not in ('-','') and title.lower().startswith(row.lower()): return 2
+    if bool(re.match(r'(?i)qa\b[: ]',title))!=(r['kind']=='qa'): return 0
     ids=row_ids(r)
-    return bool(ids and ids & set(re.findall(r'C\d+\.\d+|QA-\d+',title+' '+caps_line(body))))
+    return 3 if ids and ids & set(re.findall(r'C\d+\.\d+|QA-\d+',title+' '+caps_line(body))) else 0
 def owner_of(ref,title='',body=''):
-    for r in roster:
-        if session_match(r,ref,title,body): return r['name']
-    return None
+    best=[(match_rank(r,ref,title,body),i,r['name']) for i,r in enumerate(roster)]
+    best=[b for b in best if b[0]]
+    return min(best)[2] if best else None
 
 # ---- open PRs: step, wait, blocker ----
 try: nodes=json.load(open(T+'/prs.json'))['data']['repository']['pullRequests']['nodes']
 except Exception: nodes=[]
 # A ruling answers a question only when the comment opens with it ("Tech lead ruling (Lead 4 …)", "The tech lead's rulings",
 # "Lead 3's Go"): reviewers quote rulings mid-line ("scoped check per the tech lead's ruling"), and a quote is no answer.
-RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b(?![^\n]{0,20}\b(needed|pending|waiting|asked)\b)|^\W*ruled\b",re.I)
+RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b\s*(\([^)]*\))?\s*\**:?(?!\s*[^\n]{0,20}\b(needed|pending|waiting|asked)\b)|^\W*ruled\b",re.I)
 QUESTION=re.compile(r'question for the tech lead',re.I)
 # A reviewer's verdict in the team's own wordings, near the top: "Reviewer (Opus …): Approve for a7335f0f9", "Head
 # da77b7ab2 has the Opus diff-only Approve", "**Approve**, no Blocker (Opus review)", "Review round 1 (Opus): Changes
@@ -296,18 +307,26 @@ QUESTION=re.compile(r'question for the tech lead',re.I)
 VW=r'(Approve[ds]?|Block(?:ed|s)?|Changes needed)\b'
 VERDICT=[re.compile(r'\b(?:review|reviewer|opus)\b[^\n]{0,80}?(?::|\*\*|has the[^\n]{0,30}?)\s*\**\s*'+VW,re.I),
          re.compile(r'\bhas the\b[^\n]{0,40}?\b(?:review|reviewer|opus)\b[^\n]{0,30}?\s'+VW,re.I),
-         re.compile(r'^\W*'+VW,re.I)]
+         re.compile(r'^\W*'+VW+r'(?=[^\n]*\b(?:review|reviewer|opus)\b)',re.I)]
 REVIEWISH=re.compile(r'\b(review|reviewer|opus)\b',re.I)
+# Negative words count in the reviewer phrase itself (brackets removed: "(not committed to review.md)" is no negative),
+# and just after the verdict word ("Approve once CI is green", "Approved by the founder", "Approve expected").
 NEG=re.compile(r'\b(until|not|no|before|once|if|waiting)\b',re.I)
+AFTER=re.compile(r'^[\s*.,]{0,3}(once|if|until|expected|pending|by|still|after|later)\b',re.I)
 def verdict_of(b):
     top=re.sub(r'review: approved','',b[:300],flags=re.I)
     if QUESTION.search(top) or not REVIEWISH.search(top): return None
     for rx in VERDICT:
         m=rx.search(top)
-        if m and not NEG.search(top[max(0,m.start(1)-30):m.start(1)]):
-            return 'approve' if m.group(1).lower().startswith('approve') else 'block'
+        if not m: continue
+        lead_in=re.sub(r'\([^)]*\)','',top[m.start():m.start(1)])
+        if NEG.search(lead_in) or AFTER.search(top[m.end(1):m.end(1)+30]): continue
+        return 'approve' if m.group(1).lower().startswith('approve') else 'block'
     return None
-SHA=re.compile(r'\b[0-9a-f]{7,40}\b')
+# A sha has a letter a–f (run ids are all digits); the base of a range ("from ec50644a5", "ec50644a5..") is not the head.
+SHA=re.compile(r'\b(?=[0-9]*[a-f])[0-9a-f]{7,40}\b')
+def head_shas(b):
+    return [m.group(0) for m in SHA.finditer(b) if not re.search(r'from\s*`?$',b[max(0,m.start()-6):m.start()]) and not b[m.end():m.end()+2]=='..']
 CAPRE=re.compile(r'\bC\d{1,2}\.\d{1,2}\b'); QARE=re.compile(r'\bQA-\d+\b')
 hot=[h.strip() for h in rd(T+'/hot.txt').splitlines() if h.strip() and not h.startswith('#')]
 PROTO=A+'/prototype/'
@@ -337,8 +356,8 @@ for p in nodes:
     q=[t for t,b in comments if QUESTION.search(b[:400]) and not RULING.search(b[:300])]
     qt=max(q) if q else None
     # Answered by a ruling on the PR; a newer commit also closes it (the owner moved on, so it is not blocked on the Lead).
-    q_open=qt is not None and not any(t>qt for t in rul) and not ((pushed or 0)>qt)
-    verdicts=[(t,vk,SHA.findall(b[:800])) for t,b in comments for vk in [verdict_of(b)] if vk]
+    q_open=qt is not None and not any(t>qt for t in rul) and not ((pushed or 0)>qt and not (c.get('messageHeadline') or '').startswith('Merge '))
+    verdicts=[(t,vk,head_shas(b[:800])) for t,b in comments for vk in [verdict_of(b)] if vk]
     v=max(verdicts,key=lambda x:x[0]) if verdicts else None
     head=p['headRefOid']
     # A verdict that names a sha counts for the head only if one of its shas is the head; one naming none, by its time.
@@ -371,8 +390,11 @@ for p in nodes:
     else: step,since='in review (reviewer, breaker) or owner',pushed
     prs.append(dict(n=p['number'],title=title,ref=p['headRefName'],L=L,draft=p['isDraft'],pushed=pushed,ci=ci,red_since=red_since,
         fail=[x['name'] for x in fail],lab=lab,q_open=q_open,qt=qt,head_ok=head_ok,caps=caps_named,qas=qas,m3=m3,kind=kind,files=files,
-        body=p.get('body') or '',approved=approved,step=step,since=since or now,owner=owner_of(p['headRefName'],p['title'],p.get('body') or '') or p['headRefName'],mergify=any((x.get('name') or '').startswith('Mergify') for x in ((c.get('statusCheckRollup') or {}).get('contexts') or {}).get('nodes',[])),
+        body=p.get('body') or '',approved=approved,step=step,since=since or now,owner_row=owner_of(p['headRefName'],p['title'],p.get('body') or ''),created=ts(p.get('createdAt')),
+        mergify_t=max([ts(x.get('completedAt') or x.get('startedAt')) or 0 for x in ((c.get('statusCheckRollup') or {}).get('contexts') or {}).get('nodes',[]) if (x.get('name') or '').startswith('Mergify')]
+                      +[t for t,b in comments if 'Mergify Payload' in b[:200]]+[lab.get('queued') or 0,lab.get('dequeued') or 0]),
         parked=str(p['number']) in parked))
+for p in prs: p['owner']=p['owner_row'] or p['ref']
 byn={p['n']:p for p in prs}
 prev={r[0]:r[1:] for r in tsv('acts.tsv') if len(r)>1 and r[1].isdigit()}
 
@@ -417,7 +439,7 @@ for x,ns in rows.items():
 
 # Sessions: a working session shows itself only by pushes (lead skill); waiting on a merge or the Lead is not idle.
 def session_prs(r):
-    mine=[p for p in prs if session_match(r,p['ref'],p['title'],p['body'])]
+    mine=[p for p in prs if p['owner_row']==r['name']]
     return mine,(max([x for x in [last_push(r['branch'])]+[p['pushed'] for p in mine] if x] or [0]) or None)
 for r in roster:
     k=r['kind']; nm=r['name']
@@ -427,8 +449,10 @@ for r in roster:
     a0=age(int(r['since'])) if r['since'].isdigit() else 0
     # Running only after its first push or draft PR (Lead 4, 4 Nov): a cloud lane gets 25 minutes, any other session 90.
     lim=25 if k=='cloud' else 90
-    if not mine and not (r['branch'] not in ('-','') and lp):
-        if a0>lim: ACT('nobranch-'+nm,'%s (%s) started or given its row %s ago, no branch or draft PR: not running (4 Nov: 20 cloud lanes dead up to ~13 h, claude.ai GitHub not connected); check the claude.ai Code list, else replace'%(nm,k,dur(a0)),a0-lim)
+    t0=int(r['since']) if r['since'].isdigit() else 0
+    fresh=any((p['pushed'] or 0)>t0 or (p['created'] or 0)>t0 for p in mine) or (last_push(r['branch']) or 0)>t0
+    if not fresh and r['row'] not in ('-',''):
+        if a0>lim: ACT('nobranch-'+nm,'%s (%s) started or given its row %s ago, no push or draft PR since then: not running (4 Nov: 20 cloud lanes dead up to ~13 h, claude.ai GitHub not connected); check the claude.ai Code list, else replace'%(nm,k,dur(a0)),a0-lim)
     elif not waiting:
         a=age(max(lp or 0,int(r['since']) if r['since'].isdigit() else 0))
         if a>90: ACT('idle-'+nm,'%s (%s, %s) no push %s: message "continue" plus its next step; a cloud session silent after that → replace'%(nm,k,r['row'],dur(a)),a-90)
@@ -652,13 +676,16 @@ for x in cp[:1]:
 lab_prs=[p for p in prs if p['approved'] and p['lab'].get('review: approved')]
 newest=max(lab_prs,key=lambda p:p['lab']['review: approved']) if lab_prs else None
 nn=sorted([r for r in runs if r['name']=='nightly'],key=lambda r:r['created_at'])[-1:] or night[:1]
-cline='── connections  gh %s · Mergify on newest labelled PR: %s · newest nightly run: %s'%(
+# Mergify counts as connected only if it reacted after the label (a check, a queued/dequeued label or a payload comment);
+# its checks on every push say nothing about the label.
+mg_ok=bool(newest and newest['mergify_t']>=newest['lab']['review: approved'])
+cline='── connections  gh %s · Mergify after the newest label: %s · newest nightly run: %s'%(
     'logged in' if E.get('GH_AUTH')=='ok' else 'NOT OK ('+E.get('GH_AUTH','?')+')',
-    ('#%d %s'%(newest['n'],'yes' if newest['mergify'] else 'NO CHECK')) if newest else 'no labelled PR open',
+    ('#%d %s'%(newest['n'],'reacted' if mg_ok else 'NO REACTION')) if newest else 'no labelled PR open',
     ('%s %s (%s)'%(hm(ts(nn[0]['created_at'])),nn[0].get('conclusion') or nn[0]['status'],nn[0]['event'])) if nn else '?')
 if E.get('GH_AUTH')!='ok': ACT('ghauth','gh is not logged in on this Mac (%s): every GitHub number above is unknown; fix the login first'%E.get('GH_AUTH','?'))
-if newest and not newest['mergify'] and age(newest['lab']['review: approved'])>5:
-    ACT('mergify#%d'%newest['n'],'#%d labelled %s ago and Mergify has posted no check: the Mergify app may be disconnected; check the repository\'s installed apps'%(newest['n'],dur(age(newest['lab']['review: approved']))))
+if newest and not mg_ok and age(newest['lab']['review: approved'])>5:
+    ACT('mergify#%d'%newest['n'],'#%d labelled %s ago and Mergify has not reacted since: the Mergify app may be disconnected; check the repository\'s installed apps'%(newest['n'],dur(age(newest['lab']['review: approved']))))
 say(cline)
 say('── capacity')
 say('   github  runs %d running, %d waiting%s · jobs %d of 40 (+%d waiting) · open batches %d · 6 h: batches %d passed, %d failed (%d%%), %d cancelled'%(

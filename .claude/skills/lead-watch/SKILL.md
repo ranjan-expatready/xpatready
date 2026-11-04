@@ -10,7 +10,7 @@ Outcome first: **quality** (P-303), **complete** (Works only on an independent r
 ## Each check: usage, the script, cloud eyes, then act
 1. `get_usage`, then from the repository root `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/lead-watch.sh 30 weekly=N five=N context=N` (its numbers). Exit code = ACT lines.
 2. **Cloud eyes** (founder, 4 Nov ~12:50 IST; 20 of 20 cloud lanes were dead and unseen for up to ~13 h): read https://claude.ai/code in the built-in browser's signed-in tab as text (`find`/`read_page`, no screenshots). Note each cloud lane's state: Running · Unread response · Awaiting input · "This session can't continue". Then:
-   * archive the dead lanes;
+   * archive the dead lanes, then `roster done <name>`;
    * answer the lanes awaiting input;
    * rename lanes whose titles are stale;
    * if "Connect GitHub" shows, tell the founder at once.
