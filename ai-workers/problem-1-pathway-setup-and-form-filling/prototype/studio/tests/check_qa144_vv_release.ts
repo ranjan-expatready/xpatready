@@ -53,8 +53,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   ok("QA-144 row 7: done, said in plain words (sections, questions, form fields, form lines)", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7"));
   ok("QA-144 rules pass: every Visitor visa form it files had its sections drafted by rules (no AI, US$0; not IMM 5645, which the paper channel takes off)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form' and coalesce(edition, '') not like 'IMM 5645 (%'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
-  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver", n(`select count(*) from library_change where kind = 'section' and status = 'APPROVED' and decided_by = 'user-B'`) > 10
-    && n(`select count(*) from library_change where kind = 'section' and status <> 'APPROVED'`) === 0);
+  // Approved by the Approver; once the Visitor visa is released (IRM 0002's map, #891), the release marks them RELEASED.
+  const approved = "status in ('APPROVED', 'RELEASED')";
+  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver (and released with the Visitor visa once it is)", n(`select count(*) from library_change where kind = 'section' and ${approved} and decided_by = 'user-B'`) > 10
+    && n(`select count(*) from library_change where kind = 'section' and not (${approved})`) === 0);
   ok("QA-144 BR-7 fail: the author approved no library item", n(`select count(*) from library_change where decided_by = 'user-A'`) === 0);
 
   // The shared placement step: each placement is the author's, asked of the client, in a section the combination uses.
@@ -93,18 +95,18 @@ type Row = { row: string; status: string; shows: string; why: string | null };
 
   // Ruling 3: the form lines from IRCC's words, as rules a case can read.
   const line = (form: string) => sql(`select f.attach_mode || '|' || f.status || '|' || coalesce(f.min_age::text, '') || '|' || coalesce(f.predicate_json::text, '') from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${vv}' and g.form_key = '${form}' order by f.version desc limit 1`);
-  ok("QA-144 rule IMM 5409 (Guide 5256, Question 10): only for an applicant in a common-law union", /^ANSWER_CONDITIONAL\|DRAFT\|\|.*"field": "person\.marital_status".*"value": "common_law"/.test(line("IMM 5409")), line("IMM 5409"));
+  ok("QA-144 rule IMM 5409 (Guide 5256, Question 10): only for an applicant in a common-law union", /^ANSWER_CONDITIONAL\|(DRAFT|PUBLISHED)\|\|.*"field": "person\.marital_status".*"value": "common_law"/.test(line("IMM 5409")), line("IMM 5409"));
   ok("QA-144 rule IMM 5476 and IMM 5475 (IMM 5484 p. 1): only when the case says so", /case\.representative_form_action/.test(line("IMM 5476")) && /case\.release_authorization_action/.test(line("IMM 5475")));
   // The family information form by how the combination files (tech lead, 4 Nov; IRCC-P2-04a): the sample files IMM 5257
   // as a PDF upload, so IMM 5707 (IMM 5484, the paper checklist); filed online it would be IMM 5645 (canada.ca APPLY).
   const filed = sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${vv}' and g.form_key = 'IMM 5257' order by f.version desc limit 1`);
   const [pick, other] = filed === "ONLINE" ? ["IMM 5645", "IMM 5707"] : ["IMM 5707", "IMM 5645"];
-  ok(`QA-144 rule, family information form by channel (IMM 5257 filed ${filed}): ${pick} required of each person 18 or older, ${other} taken off this draft`, line(pick).startsWith("COMBINATION_MANDATORY|DRAFT|18|") && line(other).split("|")[1] === "RETIRED", [line(pick), line(other)]);
+  ok(`QA-144 rule, family information form by channel (IMM 5257 filed ${filed}): ${pick} required of each person 18 or older, ${other} taken off this draft`, /^COMBINATION_MANDATORY\|(DRAFT|PUBLISHED)\|18\|/.test(line(pick)) && line(other).split("|")[1] === "RETIRED", [line(pick), line(other)]);
   // IRM 0002 (Guide 5256, Question 3): only for a person whose gender identifier differs from their documents; the fact
   // is added for its rule (C3.6), approved by the Approver and asked of each person.
   const g = "person.gender_identifier_differs_from_documents";
-  ok("QA-144 rule IRM 0002 (Guide 5256, Question 3): only when the person's gender identifier differs from their documents", new RegExp(`^ANSWER_CONDITIONAL\\|DRAFT\\|\\|.*"field": "${g.replace(/\./g, "\\.")}"`).test(line("IRM 0002")), line("IRM 0002"));
-  ok("QA-144 IRM 0002's fact: in the library, approved by the Approver (not the author), asked of each person", n(`select count(*) from library_change where key = '${g}' and status = 'APPROVED' and decided_by = 'user-B'`) === 1
+  ok("QA-144 rule IRM 0002 (Guide 5256, Question 3): only when the person's gender identifier differs from their documents", new RegExp(`^ANSWER_CONDITIONAL\\|(DRAFT|PUBLISHED)\\|\\|.*"field": "${g.replace(/\./g, "\\.")}"`).test(line("IRM 0002")), line("IRM 0002"));
+  ok("QA-144 IRM 0002's fact: in the library, approved by the Approver (not the author), asked of each person", n(`select count(*) from library_change where key = '${g}' and ${approved} and decided_by = 'user-B'`) === 1
     && n(`select count(*) from section_question where canonical_field_key = '${g}' and repeats = 'per_person' and collected_from = 'client_questionnaire'`) > 0);
   ok("QA-144 rule fail-guard: no Visitor visa form is left with its condition in words only", !/condition is in words only/.test(JSON.stringify(o?.draft?.problems ?? [])));
   ok("QA-144 IMM 5409's rule reads a list value: person.marital_status has the form's own marital status list, with common_law", sql(`select l.answer_list_key from canonical_field f join answer_list l on l.answer_list_key = f.answer_list_key where f.canonical_field_key = 'person.marital_status' order by f.version desc limit 1`) !== ""
