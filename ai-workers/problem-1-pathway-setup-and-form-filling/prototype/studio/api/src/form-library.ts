@@ -252,8 +252,6 @@ export class FormLibrary {
     return { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
   }
 
-  /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the
-   *  form is listed again from IRCC's forms list at once (the ordinary fill, US$0: no AI, no download). */
   /** P-319 (founder, 4 Nov: "no combination is hard-coded"): an author sets what a form is to IRCC's rules ([IRCC-F09]
    *  reads the family information role), with a reason, in Activity. It goes out with each combination's next release (its
    *  snapshot carries the role); a release made before keeps its own. */
@@ -264,13 +262,19 @@ export class FormLibrary {
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
     if (!def) throw problem(404, "Not in the library", `${code} is not in the library: add it first (Find forms, or Upload PDF).`);
     if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it in the library before you change its role.`);
+    // Breaker m3: a role is what a filed form is to IRCC's rules; a guide or a checklist is never filed.
+    if (b.role && libraryType(def.formKind, def.displayName) !== "form") throw problem(409, "Not a form", `${code} is a ${libraryType(def.formKind, def.displayName)}, not a form a person files, so it takes no form role.`);
     const word = (r: string | null) => (r ? FORM_ROLE_WORDS[r as keyof typeof FORM_ROLE_WORDS] ?? r : "no role");
     if ((def.formRole ?? null) === b.role) return { code, role: def.formRole, changed: false };
-    await this.db.govFormDef.update({ where: { id: def.id }, data: { formRole: b.role } });
+    // Breaker m1: changed only from the role this request read, so two changes at once never both say "changed".
+    const moved = await this.db.govFormDef.updateMany({ where: { id: def.id, formRole: def.formRole }, data: { formRole: b.role } });
+    if (!moved.count) throw problem(409, "Changed meanwhile", `${code}'s role was changed by someone else just now: reload and look again.`);
     await this.audit.log(workspaceId, actor.id, "updated", "form", code, `${actor.name} set ${code} to ${word(b.role)} (was ${word(def.formRole)}): ${b.reason}`, { from: def.formRole, to: b.role, reason: b.reason });
     return { code, role: b.role, changed: true };
   }
 
+  /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the
+   *  form is listed again from IRCC's forms list at once (the ordinary fill, US$0: no AI, no download). */
   async listAgain(actor: Actor, code: string) {
     need(actor, "author");
     const workspaceId = await this.ws.id();

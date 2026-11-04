@@ -5,7 +5,8 @@
 //   the demo data marks IMM 5707 and IMM 5645; the released sample stays clean; IMM 5707 removed is an error, as on main;
 //   a new family form the code never listed (any library form, marked by an author) fills the line, and the validator reads its
 //   role from the snapshot (its "no field map" words say it is the family information form); unmarked again, the error
-//   is back; a role the library does not know, a viewer, an unknown form and a missing reason are refused.
+//   is back; a role the library does not know, a person without the author duty, an unknown form and a missing reason
+//   are refused.
 // No model call (US$0).
 //   zsh studio/tools/isolated.sh forms_p319 4612 start && tsx studio/tests/check_p319_family_role.ts 4612 xr_studio_forms_p319
 import { Ajv } from "ajv";
@@ -71,10 +72,21 @@ const said = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "
   ok("P-319 fail: a role the library does not know is refused (400), nothing changes", r.status === 400 && role(NEW) === "-", { status: r.status, said: said(r) });
   r = await setRole(NEW, { role: "family_information" });
   ok("P-319 fail: a role change without a reason is refused (400)", r.status === 400 && role(NEW) === "-", { status: r.status, said: said(r) });
-  r = await setRole(NEW, { role: "family_information", reason: "a viewer tries" }, "user-C");
-  ok("P-319 fail: a person without the author duty cannot set a form's role (403)", r.status === 403 && role(NEW) === "-", r.status);
+  r = await setRole(NEW, { role: "family_information", reason: "the content reviewer tries" }, "user-C");
+  ok("P-319 fail: a person without the author duty (the content reviewer, SME duty) cannot set a form's role (403)", r.status === 403 && role(NEW) === "-", r.status);
   r = await setRole("IMM 9999", { role: "family_information", reason: "not in the library" });
   ok("P-319 fail: a form that is not in the library is refused (404), in words", r.status === 404 && /not in the library/.test(said(r)), { status: r.status, said: said(r) });
+  r = await setRole(NEW, { role: "family_information", reason: "ok\u0000 a NUL" });
+  const rtl = await setRole(NEW, { role: "family_information", reason: "ok \u202E reversed words" });
+  ok("P-319 fail (breaker M3): a reason with a character that cannot be stored (NUL) or that reorders the text (U+202E) is refused (400), nothing changes", r.status === 400 && rtl.status === 400 && role(NEW) === "-", { nul: r.status, rtl: rtl.status, said: said(r) });
+  const guide = sql("select form_key from gov_form_def where form_kind in ('guide', 'checklist', 'document') and retired_at is null order by form_key limit 1");
+  r = guide ? await setRole(guide, { role: "family_information", reason: "a guide is never filed" }) : { status: 0, body: null };
+  ok("P-319 fail (breaker m3): a guide or a checklist takes no form role (409, in words)", !guide || (r.status === 409 && /not a form a person files/.test(said(r))), { guide, status: r.status, said: said(r) });
+  // Breaker M1: a workspace upgraded in place keeps IMM 5707's and IMM 5645's role: the migration's own data step.
+  sql("update gov_form_def set form_role = null where form_key = 'IMM 5707'");
+  const step = readFileSync(join(import.meta.dirname, "..", "prisma", "migrations", "20261104100000_p319_form_role", "migration.sql"), "utf8").split("\n").filter((l) => /^UPDATE /.test(l)).join("\n");
+  sql(step);
+  ok("P-319 pass (breaker M1): the migration's data step gives IMM 5707 its family information role on a workspace that had none", /^UPDATE "gov_form_def" SET "form_role" = 'family_information'/.test(step) && role("IMM 5707") === "family_information", step.slice(0, 160));
   let refusedDb = false;
   try { sql(`update gov_form_def set form_role = 'other' where form_key = '${NEW}'`); } catch { refusedDb = true; }
   ok("P-319 fail: the database refuses an unknown role written past the API (gov_form_def_form_role_known)", refusedDb && role(NEW) === "-");

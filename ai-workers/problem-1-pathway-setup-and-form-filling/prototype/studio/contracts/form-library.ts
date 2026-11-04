@@ -35,13 +35,17 @@ export const FinderLaunchBody = FinderBody.extend({
 /** POST /combinations/:id/forms: attach a library form by hand. */
 export const AttachBody = z.object({ formKey: code, who: z.string().optional() });
 
-/** GET /library/forms?type&usedBy&status&q — the one lean list (P-123): filters, never groups. */
 /** P-319: what a form is to IRCC's rules, set per form in the library (gov_form_def.form_role; the database refuses any
  *  other value). family_information: [IRCC-F09] Guide 5256, "the Family Information form (IMM 5707 or IMM 5645)". */
 export const FORM_ROLES = ["family_information"] as const;
 export type FormRole = (typeof FORM_ROLES)[number];
 export const FORM_ROLE_WORDS: Record<FormRole, string> = { family_information: "Family information form" };
-export const FormRoleBody = z.object({ role: z.enum(FORM_ROLES).nullable(), reason: z.string().trim().min(3, "Say why, in a few words.").max(300) }).strict();
+// Breaker M3 (as contracts/cost-check.ts): a control character cannot be stored with the Activity line, and a direction
+// mark (U+202A–U+202E, U+2066–U+2069) would make Activity read otherwise than it was written: both refused before anything.
+export const FormRoleBody = z.object({ role: z.enum(FORM_ROLES).nullable(), reason: z.string().trim().min(3, "Say why, in a few words.").max(300)
+  .regex(/^[^\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]*$/, "The reason has a character that cannot be stored or would reorder the text. Type it again; nothing was changed.") }).strict();
+
+/** GET /library/forms?type&usedBy&status&q — the one lean list (P-123): filters, never groups. */
 export const LIBRARY_TYPES = ["form", "guide", "checklist"] as const;
 /** "online_only" (C11.11, P-152 (2)): held only as its online version, no official PDF (never asked for one). */
 export const LIBRARY_STATUSES = ["ready", "needs_ok", "newer_file", "no_file", "online_only", "retired"] as const;

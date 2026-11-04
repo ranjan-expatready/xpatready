@@ -4,3 +4,7 @@
 -- code on main before this runs on this schema unchanged (it reads no such column).
 ALTER TABLE "gov_form_def" ADD COLUMN "form_role" TEXT;
 ALTER TABLE "gov_form_def" ADD CONSTRAINT "gov_form_def_form_role_known" CHECK ("form_role" IS NULL OR "form_role" IN ('family_information'));
+-- Breaker M1: the forms the code listed until now (IMM 5707, IMM 5645; Guide 5256, [IRCC-F09]) keep their role in every
+-- workspace that already has them (the shared demo is upgraded in place, never reset), so the rule gives the same results
+-- the day this runs. From here an author changes a form's role in the library; nothing in the code names a form.
+UPDATE "gov_form_def" SET "form_role" = 'family_information' WHERE "form_key" IN ('IMM 5707', 'IMM 5645') AND "form_role" IS NULL;
