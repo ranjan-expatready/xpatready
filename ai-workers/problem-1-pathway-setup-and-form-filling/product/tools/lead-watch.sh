@@ -134,7 +134,7 @@ gh pr list --state merged --search "merged:>=$(date -u -r "$day0" +%Y-%m-%dT%H:%
 # Runs of the last 6 hours: machines in use and waiting, batch results, flaky suites, main's health.
 gh api "repos/$REPO/actions/runs?per_page=100&created=>=$(date -u -v-6H +%Y-%m-%dT%H:%M:%SZ)" --paginate \
   --jq '.workflow_runs[]|{id,name,event,status,conclusion,run_attempt,created_at,updated_at,run_started_at,head_branch,display_title}' > "$T/runs.ndjson" 2>/dev/null || fact ERR_RUNS 1
-gh api "repos/$REPO/actions/workflows/nightly.yml/runs?per_page=12" --jq '.workflow_runs[]|{id,status,conclusion,created_at,event}' > "$T/nightly.ndjson" 2>/dev/null || fact ERR_NIGHTLY 1
+gh api "repos/$REPO/actions/workflows/nightly.yml/runs?event=schedule&per_page=2" --jq '.workflow_runs[]|{id,status,conclusion,created_at,event}' > "$T/nightly.ndjson" 2>/dev/null || fact ERR_NIGHTLY 1
 # Jobs of runs not finished (the 40-machine limit counts jobs), and the jobs of runs that failed recently (for suite names).
 python3 -I -c '
 import json,sys,time
@@ -429,11 +429,14 @@ if rate>10 and bok+len(bfail)>=4: ACT('batchrate','batch failure rate %d%% in 6 
 if jobs_busy+jobs_wait>=36: ACT('jobs','GitHub machines: %d jobs running + %d waiting (limit 40): M3 PR pushes wait (A100) until under 30'%(jobs_busy,jobs_wait))
 if queued and oldest_q>10: ACT('runwait','%d runs waiting for a machine, oldest %s: pause M3 pushes so M2 batches get machines (A100)'%(len(queued),dur(oldest_q)),oldest_q-10)
 night=[json.loads(l) for l in rd(T+'/nightly.ndjson').splitlines() if l.strip()]
-nd=[r for r in night if r['status']=='completed' and r['event']=='schedule'] or [r for r in night if r['status']=='completed']
+nd=[r for r in night if r['status']=='completed']
+# Re-tests of named capabilities run the nightly workflow by hand (workflow_dispatch, #819): counted apart from the night.
+rt=[r for r in runs if r['name']=='nightly' and r['event']=='workflow_dispatch' and r['status']=='completed']
+rtline=' · re-tests 6 h: %d passed, %d failed'%(sum(1 for r in rt if r['conclusion']=='success'),sum(1 for r in rt if r['conclusion']=='failure')) if rt else ''
 nline='nightly ?'
 if nd:
     r=nd[0]; nline='nightly %s %s (%s)'%(hm(ts(r['created_at'])),r['conclusion'],r['event'])
-    if r['conclusion']!='success': ACT('nightly-%s'%r['id'],'last nightly %s (%s): read it now (3–4 Nov it ended "cancelled" twice and nobody saw)'%(r['conclusion'],hm(ts(r['created_at']))))
+    if r['conclusion']!='success': ACT('nightly-%s'%r['id'],'last scheduled nightly %s (%s): read it now (3–4 Nov it ended "cancelled" twice and nobody saw)'%(r['conclusion'],hm(ts(r['created_at']))))
     elif age(ts(r['created_at']))>26*60: ACT('nightly-old','no nightly for %s: the schedule did not fire'%dur(age(ts(r['created_at']))))
 mainruns={}
 for r in sorted(runs,key=lambda r:r['created_at']):
@@ -609,7 +612,7 @@ say('── capacity')
 say('   github  runs %d running, %d waiting%s · jobs %d of 40 (+%d waiting) · open batches %d · 6 h: batches %d passed, %d failed (%d%%), %d cancelled'%(
     len(inprog),len(queued),' (oldest %s)'%dur(oldest_q) if queued else '',jobs_busy,jobs_wait,len(batches_open),bok,len(bfail),rate,bcan))
 if flaky: say('   suites failing on 2+ branches: '+', '.join('%s (%d)'%x for x in flaky))
-say('   %s · main: %s'%(nline,mline))
+say('   %s%s · main: %s'%(nline,rtline,mline))
 say('   '+pline)
 say('   mac     disk %.1f GB (%+.1f per 30 min%s) · load %.0f on %d cores · memory free %s%% · copies %d + %d suite runs (cap 3) · test DBs %s · worktrees %s · Mac builders working: %s'%(
     disk,trend,eta,load,ncpu,E.get('MEMFREE','?'),copies,srun,E.get('DBS','?'),E.get('WORKTREES','?'),' '.join(macb) or 'none'))
