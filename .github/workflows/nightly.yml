@@ -1,52 +1,113 @@
-# Nightly full set (test-speed plan, founder 31 Oct): each pull request checks only the suites its files can affect, on
-# the same Mac since P-195 (ci.yml, run-suites.sh --changed); every suite runs here every night on main, on the founder's Mac
-# (self-hosted runner "xr-mac", ~/actions-runner-xpatready: no GitHub-hosted minutes are billed, US$0). The Mac must be
-# on at 21:00 UTC; "Run workflow" (workflow_dispatch) starts it by hand. The :4400 demo is never touched (the browser
-# suite runs on its own isolated copy). No model call: every suite replays saved runs.
+# Nightly full set (test-speed plan, founder 31 Oct): each pull request checks only the suites its files can affect
+# (ci.yml, run-suites.sh --changed) and each merge-queue batch every suite but the quarantined ones; every suite,
+# quarantined ones included, runs here every night on main. CI order (a), founder 4 Nov ~09:45 IST "Yes, this order": on
+# GitHub's machines, split like a merge-queue batch (run-suites.sh --shard i/6, each part its own fresh copy, about 30
+# minutes in all), because the one-Mac run (xr-mac, 90-minute timeout) no longer fits the full set: it ended
+# "cancelled" on 3 and 4 Nov and started hours late. The repository is public, so GitHub's machines bill no minutes
+# (US$0). "Run workflow" (workflow_dispatch) starts it by hand; from a branch it tests that branch's suites. Every
+# part runs to its end (no fail-fast), so one red suite never hides another. No model call: every suite replays saved runs.
+# Re-test (founder 4 Nov ~10:30 IST "Yes, build it"): "Run workflow" with capabilities "C11.10 C5.4" runs only those
+# capabilities' acceptance packs instead of the full set, one GitHub machine each, on the demo data (Reset to the six)
+# where the pack's run allows, else on its fixture, labelled "fixture only" (studio/tools/gate-b.mjs, the same runner gate B
+# uses), so qa's re-score after a merge needs no Mac copy:
+#   gh workflow run nightly.yml -f capabilities="C11.10 C5.4"        (on main; --ref <branch> for a branch)
+# qa still walks the screens like a person and gives the verdict (P-290); the run is the independent machine re-run.
 name: nightly
 on:
   schedule:
     - cron: "0 21 * * *"
   workflow_dispatch:
+    inputs:
+      capabilities:
+        description: "Re-test only these capabilities' packs, e.g. C11.10 C5.4 (empty = the full nightly set)"
+        required: false
+        default: ""
 jobs:
-  suites:
-    runs-on: [self-hosted, macOS, xr-mac]
-    timeout-minutes: 90   # P-183: a busy Mac never stops a run halfway
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      caps: ${{ steps.p.outputs.caps }}
+    steps:
+      - id: p
+        name: full set, or the named capabilities' packs?
+        env: { CAPS: "${{ github.event.inputs.capabilities }}" }
+        run: |
+          caps=$(printf '%s' "$CAPS" | tr ',;' '  ' | xargs -n1 2>/dev/null | sort -u | tr '\n' ' ')
+          for c in $caps; do [[ "$c" =~ ^C[0-9]{1,2}\.[0-9]{1,2}$ ]] || { echo "not a capability id: \"$c\" (want e.g. C11.10)"; exit 1; }; done
+          json="[]"; [ -n "$caps" ] && json="[$(for c in $caps; do printf '"%s",' "$c"; done | sed 's/,$//')]"
+          echo "caps=$json" >> "$GITHUB_OUTPUT"
+          [ "$json" = "[]" ] && echo "**Full nightly set** on 6 parts" >> "$GITHUB_STEP_SUMMARY" || echo "**Re-test** of $caps (one machine each)" >> "$GITHUB_STEP_SUMMARY"
+  packs:
+    needs: plan
+    if: ${{ needs.plan.outputs.caps != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions: { contents: read }
-    concurrency: { group: nightly, cancel-in-progress: false }
+    strategy:
+      fail-fast: false
+      matrix:
+        cap: ${{ fromJSON(needs.plan.outputs.caps) }}
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main }
-      - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
-        run: |
-          [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
-          # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
-          echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
-      - name: node 24
-        run: |
-          node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
-      - name: packages (npm ci)
-        run: cd "$S" && npm ci --no-fund --no-audit
-      - name: web app build (the browser suites need it)
-        run: cd "$S" && ./node_modules/.bin/prisma generate && bash tools/web-fresh.sh build   # stamped (QA-181)
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser packs need)
+        run: bash "$P/tools/cloud-setup.sh"
       - name: Playwright's own Chromium
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: every studio suite (run-suites.sh, browser suite on its own copy; no model call, US$0)
-        # The same Mac setup as the pull request check had (P-183): copies named ci_*, CI first (lanes' full runs wait).
-        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+      - name: ${{ matrix.cap }} acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)
+        env: { CAP: "${{ matrix.cap }}", GATE_B_JOBS: "1", KIND: code }
         run: |
-          bash "$P/tools/run-suites.sh" | tee suites.md
+          [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+          echo "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          node "$S/tools/gate-b.mjs" --title "$CAP" --kind code
+  suites:
+    needs: plan
+    if: ${{ needs.plan.outputs.caps == '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions: { contents: read }
+    concurrency: { group: "nightly-${{ matrix.shard }}", cancel-in-progress: false }
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      N: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser suites need)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: every studio suite, quarantined ones included, part ${{ matrix.shard }} of 6 (run-suites.sh --demo --shard; US$0)
+        run: |
+          bash "$P/tools/run-suites.sh" --demo --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always()
-        run: '[ -f suites.md ] && { echo "Nightly full set on main $(git rev-parse --short HEAD)"; echo; cat suites.md; } >> "$GITHUB_STEP_SUMMARY" || true'
+        run: '[ -f suites.md ] && { echo "Nightly full set, part ${{ matrix.shard }} of 6, on $(git rev-parse --short HEAD)"; echo; cat suites.md; } >> "$GITHUB_STEP_SUMMARY" || true'
       - name: logs (only when something failed)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-suite-logs
+          name: nightly-suite-logs-part-${{ matrix.shard }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
