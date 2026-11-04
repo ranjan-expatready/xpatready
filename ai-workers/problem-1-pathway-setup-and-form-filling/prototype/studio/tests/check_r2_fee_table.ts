@@ -1,7 +1,7 @@
 // R2 (P-230 (7)): fees live in a dated data table (samples/fee-table.json), never in code; filing modes and the
 // checklist's combinations are data too, so another combination is a data edit. Visitor visa totals stay what they were
 // in code before (CAD 100 each, CAD 500 for 5 or more; biometrics CAD 85, CAD 170 for 2 or more, none under 14 or over
-// 79). Each rule has a pass and a fail. Pure: no server, no database; US$0.
+// 79). C6.12 step 24 adds the study permit, work permit, open work permit holder and visitor extension lines. Each rule has a pass and a fail. Pure: no server, no database; US$0.
 //   tsx studio/tests/check_r2_fee_table.ts
 import { ageCheck, deriveFilings, FEE_BASES, FEE_TABLE, feeRule, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
 import { DERIVED_FOR } from "../engine/runtime/case-checklist.ts";
@@ -55,6 +55,23 @@ ok("R2: spouse sponsorship from data only: the principal pays CAD 1,260, each de
 ok("R2 fail: a role the table gives no filing (the spouse here) files nothing and pays nothing, and says why", sp.not_filing.length === 0 && !(viaData("fs.spouse", family(2, 0), spouse) as Derived).fees.some((f) => f.payer === "S") && (viaData("fs.spouse", family(2, 0), spouse) as Derived).not_filing.some((n) => n.subject === "S"));
 ok("R2 fail: a combination not in the table is not derived and says so; an inherited name is never a combination", deriveFilings("fs.spouse", family(1, 0)).derived === false && /not derived yet/.test((deriveFilings("fs.spouse", family(1, 0)) as { why: string }).why) && rulesFrom(FEE_TABLE, "constructor") === undefined && rulesFrom(FEE_TABLE, "__proto__") === undefined);
 ok("R2: spouse and PNP fee lines are in the table, cited, ready for their combinations (data edit)", ["spouse_sponsorship", "spouse_dependent_child", "pr_adult", "pr_dependent_child"].every((k) => FEE_TABLE.lines.some((l) => l.key === k && l.per_person_cad > 0)));
+
+// ── C6.12 step 24: study permit, work permit, open work permit holder and visitor extension lines (IRCC fee list, page
+// date 2026-09-21, read 3 Nov 2026; compliance-trace FEE-R01…R04). Each is charged to every person applying, none capped.
+const OTHER: [string, number, RegExp][] = [["study_permit", 150_00, /^Study permit \(including extensions\) – per person 150\.00$/], ["work_permit", 155_00, /^Work permit \(including extensions\) – per person 155\.00$/],
+  ["open_work_permit_holder", 100_00, /^Open work permit holder 100\.00$/], ["visitor_extension", 100_00, /^Extend your stay as a visitor – per person 100\.00$/]];
+const usingLine = (key: string, table: FeeTable = FEE_TABLE): FeeTable => ({ ...table, combinations: { ...table.combinations, "t.one": { label: "Test", lines: [key], modes: { principal: "files_own", spouse_or_partner: "files_own", child: "files_own" } } } });
+for (const [key, cents, quote] of OTHER) {
+  const l = FEE_TABLE.lines.find((x) => x.key === key);
+  ok(`C6.12-24 ${key}: CAD ${cents / 100} per person on IRCC's fee list, quoted word for word with its date read, per person by role for every applicant role, no family maximum`,
+    !!l && Math.round(l.per_person_cad * 100) === cents && quote.test(l.source.quote) && l.source.url === "https://ircc.canada.ca/english/information/fees/fees.asp" && l.source.read === "2026-11-03" && l.basis === "per_person_by_role" && JSON.stringify(l.roles) === JSON.stringify(["principal", "spouse_or_partner", "child"]) && !l.family_max && !l.exempt, l);
+  const sixPay = total(viaData("t.one", six, usingLine(key)), key), onePays = total(viaData("t.one", family(1, 0), usingLine(key)), key);
+  ok(`C6.12-24 ${key} pass: one person pays CAD ${cents / 100}; six people applying together pay six times that (never capped)`, onePays === cents && sixPay === 6 * cents, [onePays, sixPay]);
+  const capped: FeeTable = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((x) => (x.key === key ? { ...x, family_max: { cad: 1, from_people: 2 } } : x)) };
+  ok(`C6.12-24 ${key} fail: a family maximum written on the line by mistake is not applied (the basis is per person: only family_maximum caps)`, total(viaData("t.one", six, usingLine(key, capped)), key) === 6 * cents);
+}
+ok("C6.12-24 fail: no shipped combination uses these lines yet (their combinations come with their releases); Visitor visa's lines are unchanged", Object.values(FEE_TABLE.combinations).every((c) => !c.lines.some((k) => OTHER.some(([o]) => o === k))) && JSON.stringify(FEE_TABLE.combinations["vv.single"].lines) === JSON.stringify(["visitor_visa", "biometrics"]));
+ok("C6.12-24: the open work permit holder line says its \"per holder\" reading is Sample (IRCC's row gives no \"per person\") and cites Help Centre 176 for \"paid with the work permit fee\"; the work permit line says the performing-artist group maximum is not modelled", /qnum=176.*at the same time that you pay the work permit fee/.test(FEE_TABLE.lines.find((x) => x.key === "open_work_permit_holder")?.source.checked ?? "") && /our reading \(Sample/.test(FEE_TABLE.lines.find((x) => x.key === "open_work_permit_holder")?.source.checked ?? "") && /performing artists only, not a family maximum, and is not modelled/.test(FEE_TABLE.lines.find((x) => x.key === "work_permit")?.source.checked ?? ""));
 
 // ── outside check on #455: per application counts applications; an uncapped line names no cap; the basis names its own table
 const perApp: FeeTable = { ...FEE_TABLE, as_of: "2027-01-01", read: "2027-01-02", lines: [...FEE_TABLE.lines, { key: "app_fee", label: "Application fee", status: "Researched (test, 2027-01-02): may change", basis: "per_application", per_person_cad: 100, source: FEE_TABLE.lines[0].source }],
