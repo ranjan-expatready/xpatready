@@ -247,3 +247,13 @@ Scope: `git show --remerge-diff 5985f9b4`, `git diff 192baa17 5985f9b4` of `api/
 - No Blocker or Major.
 
 **Verdict (round 12): Approve** for 2be3acbd.
+
+## Round 13 (diff-only, merge 6e45c0a9), 4 Nov 2026
+Scope: `git show --remerge-diff 6e45c0a9`, and how main's #978 and #998 interact with G5. I did not re-run anything. The evidence is the builder's runs: the #978 trial with c10_1 at 36/36 and C5.1 at 49/49 and 48/48, the C5.1, C3.6 and C4.1 runs now going on the real head, and the tsc count (15, unchanged).
+- **The conflict resolution is correct.** The resolved Demo constructor keeps every injection from both sides: #978's `CaseForms` and `Runtime` (both imported), #881's `ReviewProposals`, and G5's `Checklists`. No other hunk differs from a clean merge.
+- **`studio.ts`** merged without conflict. #978's change is to the form-fields summary wording, away from G5's `contentProblems`.
+- **Row 11 (#978):** `openSampleFamilyCase` runs only when `visitor` is true, meaning the Visitor visa is among the released combinations (line 810). G5 does not stop that release: the Visitor visa gets its document lines from IMM 5484's saved reading before the release step, and it was released on the checkpoint in rounds 8 and 9. So row 11 still gets its release 1.
+- **#998 (C3.6 rule on the six) submits and releases nothing.** `pack2.ruleBySteps` only adds Sample rules through the author's `POST /combinations/:id/rules`, and `C3.6.test.ts` has no submit, approve or release. P-248 is never asked.
+- No Blocker or Major.
+
+**Verdict (round 13): Approve** for 6e45c0a9.
