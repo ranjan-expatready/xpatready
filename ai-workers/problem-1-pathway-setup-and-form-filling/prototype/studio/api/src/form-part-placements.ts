@@ -36,8 +36,10 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
     if (!section) continue;
     groups.set(p.formEdition ?? "", [...(groups.get(p.formEdition ?? "") ?? []), { section, boxes: pay.fieldKeys ?? [] }]);
   }
+  // A form's sections may come from another edition of it than the map being read (its box paths stay the same).
+  const formOf = (edition: string) => edition.replace(/\s*\([^)]*\)\s*$/, "");
   const sectionOf = (edition: string, path: string) => {
-    const g = groups.get(edition) ?? [];
+    const g = groups.get(edition) ?? [...groups.entries()].filter(([e]) => formOf(e) === formOf(edition)).flatMap(([, x]) => x);
     const own = g.find((x) => x.boxes.includes(path));
     if (own) return own.section;
     let best: { section: string; n: number } | null = null;
