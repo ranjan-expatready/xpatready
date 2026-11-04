@@ -79,7 +79,7 @@ export function assemble(mode: string, runFiles: string[], opts: AssembleOptions
     // barcode identifier (may be older: IMM 1295's barcodes say IMM1295_06-2018) and the exact file hash are
     // three different facts, kept side by side; none is rewritten to match another.
     const manifestItem = JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.find((i: any) => `official-sources/ircc/${i.path}` === inv.summary.file);
-    const internal = [...new Set<string>((JSON.stringify(inv).match(/IMM[0-9A-Z]+_[0-9]{2}-[0-9]{4}/g) ?? []))];
+    const internal = [...new Set<string>((JSON.stringify(inv).match(/(?:IMM|IRM)[0-9A-Z]+_[0-9]{2}-[0-9]{4}/g) ?? []))];
     const edition_metadata = { package_edition: manifestItem?.edition ?? null, package_url: manifestItem?.url ?? null, internal_template_identifiers: internal, internal_identifier_note: internal.length ? "read from the form's own barcode/template data; differs from the package edition where the form was repackaged without a new template" : "none found in the form's inventory", model_read_edition: o.form_edition, artifact_sha256: inv.summary.sha256 };
     return { form_edition: (run.entries ?? [])[0]?.form_edition ?? o.form_edition, drafted_edition: o.form_edition, edition_metadata, form_sha256: inv.summary.sha256, drafting_run_id: run.run_id, inventory: invFile, entries: run.entries ?? [], boxes: boxes.size, inv };
   });

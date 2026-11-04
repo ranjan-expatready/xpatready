@@ -37,6 +37,7 @@ for (const file of ["field-map-entry.v0.schema.json", "released-configuration.v0
 const { knownOk } = await import("../../p2/launch.ts");
 const lv = verdicts((x) => knownOk({ form_edition: x }));
 ok("IRM pass/fail: the launcher admits an IRM edition as a field-map job's known fact, and still refuses \"XYZ 1 (01-2020)\" and the other bad shapes", clean(lv), lv);
+ok("IRM fail (breaker m2): a known edition that is not text (a list holding the words) is refused", !knownOk({ form_edition: ["IRM 0002 (03-2021)"] }) && !knownOk({ form_edition: [["IMM 5257 (09-2023)"]] }));
 
 // ── the studio's one edition rule, and its parts (the edition's context key a saved answer belongs to)
 const rounds = (await import("../engine/rounds.ts")) as { PRINTED_EDITION?: RegExp; printedEditionParts?: (p: string) => { code: string; edition: string } | null; editionContextKey: (c: string, e: string) => string };
@@ -53,10 +54,16 @@ const part = { file: "x.part.json", rel: "prototype/p2/parts/x.part.json", sha25
 ok("IRM pass: the impact step files an IRM edition's saved answer under edition:IRM 0002:03-2021 (before: edition:IRM 0002 (03-2021))", impactContext("IRM 0002 (03-2021)", part).contextKey === "edition:IRM 0002:03-2021", impactContext("IRM 0002 (03-2021)", part).contextKey);
 ok("IRM fail: a bad prefix still falls back to its own words, never an edition key", impactContext("XYZ 1 (01-2020)", part).contextKey === "edition:XYZ 1 (01-2020)");
 
-// ── one rule: no studio API file keeps its own IMM-only edition pattern (they use engine/rounds.ts)
+// ── one rule: no studio API file keeps its own IMM-only edition pattern (they use engine/rounds.ts); and (breaker m5) no
+// pattern in the studio's api, engine or the drafting path reads IMM without IRM. The one kept: finder.ts's guide numbers
+// (IRCC's guides are numbered IMM only).
 const API = join(import.meta.dirname, "..", "api", "src");
 const own = readdirSync(API).filter((f) => f.endsWith(".ts")).filter((f) => /\/\^\(?(?:\?:)?IMM \[0-9A-Z \]/.test(readFileSync(join(API, f), "utf8")));
 ok("IRM fail (drift): no studio API file holds its own IMM-only edition pattern", own.length === 0, own);
+const dirs = [API, join(import.meta.dirname, "..", "engine"), join(PROTOTYPE, "p2")];
+const imOnly = dirs.flatMap((d) => readdirSync(d).filter((f) => f.endsWith(".ts")).flatMap((f) => readFileSync(join(d, f), "utf8").split("\n").map((line, i) => ({ at: `${f}:${i + 1}`, line }))))
+  .filter(({ at, line }) => !/^\s*(\/\/|\/?\*)/.test(line) && /\/[^/\n]*IMM[^/\n]*\/[gimsuy]*[.;,) ]/.test(line) && !/IRM/.test(line) && !/^finder\.ts:/.test(at)).map((x) => x.at);
+ok("IRM fail (breaker m5): no pattern in the studio's api or engine, or in p2, reads IMM without IRM (finder.ts's guide numbers aside)", imOnly.length === 0, imOnly);
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
