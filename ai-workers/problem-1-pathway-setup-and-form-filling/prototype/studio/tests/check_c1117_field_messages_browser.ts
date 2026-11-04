@@ -50,6 +50,13 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   };
   const addOff = async () => (await dlg.locator("[data-add-submit]").isDisabled()) && (await dlg.locator("[data-add-again]").isDisabled());
   const shot = (file: string) => dlg.screenshot({ path: join(SHOTS, file) });
+  /** The tip of a footer button, read from the tooltip its trigger is described by once it opens (a tip over a disabled button stays open after the pointer leaves, so each opening reads one). */
+  const tipOf = async (sel: string) => {
+    const trigger = dlg.locator(sel).locator("xpath=..");
+    await trigger.hover();
+    await p.waitForFunction((s) => !!document.querySelector(s)?.parentElement?.getAttribute("aria-describedby"), sel, { timeout: 3000 });
+    return trigger.evaluate((el) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent ?? "");
+  };
 
   // ------------------------------------------------- (1) as you type: under each name field, Add off, nothing sent
   await fresh();
@@ -68,13 +75,19 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   await field("program").fill(LONG); await field("program").press("Tab");
   ok("C11.17 fail: a Program name over 120 characters shows its message under Program, not elsewhere", /under 120 characters/.test(await underText("program")) && (await under("pathway").count()) === 0 && !(await generalAlert()), { program: await underText("program"), alert: await generalAlert() });
   await shot("2-program-too-long.png");
-  await field("program").fill(""); await pickOrType("program", "Visitors");
-  await field("category").fill(LONG); await field("category").press("Tab");
+  const tip = await tipOf("[data-add-submit]");
+  ok("C11.17 fail: Add is off and its tip names the field to fix", (await addOff()) && /Fix the program first/.test(tip), tip);
+  await fresh(); // the Add tip stays open in this opening: a new one for the Category step
+  await pickOrType("pathway", "Temporary residence"); await pickOrType("program", "Visitors");
+  await field("category").fill(LONG);
+  const listWhileTyping = { refused: (await dlg.locator("[data-field=category] [data-add-refused]").innerText().catch(() => "")).trim(), addNew: await dlg.locator("[data-field=category] [data-add-new]").count() };
+  ok("C11.17 fail: while typing, the open list shows the rule where “Add …” would be (the note is never hidden behind it)", /under 120 characters/.test(listWhileTyping.refused) && listWhileTyping.addNew === 0, listWhileTyping);
+  await field("category").press("Tab");
   ok("C11.17 fail (QA-183): a Category name over 120 characters shows \"Keep the name under 120 characters.\" under Category", /Keep the name under 120 characters\./.test(await underText("category")), await underText("category"));
   ok("C11.17 fail (QA-183): the Category input is marked invalid and its message is its description (read with the field)", await field("category").evaluate((el) => el.getAttribute("aria-invalid") === "true" && !!document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent?.includes("under 120 characters")));
-  await dlg.locator("[data-add-submit]").locator("xpath=..").hover();
-  const tip = await p.getByRole("tooltip").first().waitFor({ timeout: 3000 }).then(() => p.getByRole("tooltip").first().innerText(), () => "");
-  ok("C11.17 fail (QA-183): Add is off and its tip names the field to fix", (await addOff()) && /Fix the category first/.test(tip), tip);
+  const tipAgain = await tipOf("[data-add-again]");
+  ok("C11.17 fail (QA-183): Add and add another is off too, and its tip names the field to fix", (await addOff()) && /Fix the category first/.test(tipAgain), tipAgain);
+
   await field("category").hover();
   await shot("3-category-too-long-QA-183.png");
   await p.screenshot({ path: join(SHOTS, "3b-category-too-long-1440-page.png") }); // the whole 1440 px page, pop-up open
@@ -114,6 +127,11 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   await shot("5-server-refusal-under-category.png");
   await field("category").fill(TV(2)); await field("category").press("Tab");
   ok("C11.17 pass: typing in Category again clears its refusal and the alert", (await under("category").count()) === 0 && !(await generalAlert()));
+  await rewrite((b) => { b.category = { label: LONG }; });
+  await sendAndWait();
+  await field("program").fill("Study permits"); await field("program").press("Tab");
+  ok("C11.17 pass: changing the Program above clears the emptied Category's refusal (no message outlives its name)", (await field("category").inputValue()) === "" && (await under("category").count()) === 0 && (await field("category").getAttribute("aria-invalid")) === null, await underText("category"));
+  await field("program").fill("Visitors"); await field("program").press("Tab"); await pickOrType("category", TV(2));
 
   before = names();
   await rewrite((b) => { b.program = { label: "!!!" }; delete b.category; delete b.subCategory; delete b.allowedLocations; });
@@ -129,6 +147,8 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   const loc = (await dlg.locator("[data-field=allowedLocations] [role=alert]").count()) ? await dlg.locator("[data-field=allowedLocations] [role=alert]").innerText() : "";
   ok("C11.17 fail: a refusal of where cases may be opened (allowedLocations) shows under \"Cases may be opened from\"", r.status() === 400 && /Choose where a case for it may be opened/.test(loc) && /under Cases may be opened from\./.test(await generalAlert()) && names() === before, { loc, alert: await generalAlert() });
   await shot("6-server-refusal-under-locations.png");
+  const lg = await dlg.getByRole("radiogroup", { name: "Cases may be opened from" }).evaluate((el) => ({ invalid: el.getAttribute("aria-invalid"), note: document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent ?? "" }));
+  ok("C11.17 fail: \"Cases may be opened from\" is marked invalid and described by its note", lg.invalid === "true" && /Choose where a case/.test(lg.note), lg);
   await dlg.getByRole("radio", { name: "Inside", exact: true }).click();
   ok("C11.17 pass: choosing where cases may be opened clears its refusal", (await dlg.locator("[data-field=allowedLocations] [role=alert]").count()) === 0 && !(await generalAlert()));
 
@@ -136,12 +156,19 @@ const TV = (n: number) => `Sample transit visa ${RUN} ${n}`;
   await rewrite((b) => { b.pathwayType = "SAMPLE"; });
   r = await sendAndWait();
   const pt = (await dlg.locator("[data-field-note=pathwayType]").count()) ? await dlg.locator("[data-field-note=pathwayType]").innerText() : "";
+  const group = await dlg.getByRole("radiogroup", { name: "Pathway type" }).evaluate((el) => ({ invalid: el.getAttribute("aria-invalid"), note: document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent ?? "" }));
+  ok("C11.17 fail: the Pathway type switch is marked invalid and described by its note", group.invalid === "true" && /Choose the Pathway type/.test(group.note), group);
   ok("C11.17 fail: a refused Pathway type shows under the Pathway type switch", r.status() === 400 && /Choose the Pathway type/.test(pt) && /under Pathway type\./.test(await generalAlert()) && names() === before, { pt, alert: await generalAlert() });
 
   before = names();
   await rewrite((b) => { b.decision = "sample"; });
   r = await sendAndWait();
   ok("C11.17 fail: a refusal with no field of its own keeps its words in the dialog's alert (never lost)", r.status() === 400 && /^Nothing was added\. Invalid option/.test(await generalAlert()) && (await dlg.locator("[data-field] [role=alert], [data-field-note]").count()) === 0 && names() === before, await generalAlert());
+
+  await rewrite((b) => { b.pathwayType = "SAMPLE"; });
+  await sendAndWait();
+  await dlg.getByRole("radio", { name: "Corporate and employers" }).click();
+  ok("C11.17 pass: switching the Pathway type (every level starts again) clears every message", (await dlg.locator("[data-field] [role=alert], [data-field-note]").count()) === 0 && !(await generalAlert()));
 
   ok("C11.17 data: no page error", W.errors.length === 0, W.errors);
   await W.close();

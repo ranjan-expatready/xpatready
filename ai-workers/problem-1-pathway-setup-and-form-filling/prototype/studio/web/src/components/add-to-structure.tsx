@@ -36,11 +36,13 @@ export const LOCS = [["inside_canada", "Inside"], ["outside_canada", "Outside"],
 export const locKey = (l: string[]) => (l.length === 2 ? "both" : l[0] ?? "both");
 export const locList = (k: string) => (k === "both" ? ["inside_canada", "outside_canada"] : [k]);
 export const LOC_TIP = "Where a case for it may be opened. Sample until the immigration expert confirms.";
-export function LocationPicker({ value, onChange, disabled, label }: { value: string[]; onChange: (l: string[]) => void; disabled?: boolean; label: string }) {
+export function LocationPicker({ value, onChange, disabled, label, note }: { value: string[]; onChange: (l: string[]) => void; disabled?: boolean; label: string;
+  /** The id of a refusal shown under it: the group is then invalid and described by it (review of #867). */
+  note?: string }) {
   const cur = locKey(value);
   return (
     <Tip tip={LOC_TIP}>
-      <div role="radiogroup" aria-label={label} className="inline-flex overflow-hidden rounded-lg border border-border-strong text-xs">
+      <div role="radiogroup" aria-label={label} aria-invalid={note ? true : undefined} aria-describedby={note} className="inline-flex overflow-hidden rounded-lg border border-border-strong text-xs">
         {LOCS.map(([k, w]) => (
           <button key={k} type="button" role="radio" aria-checked={cur === k} disabled={disabled} onClick={() => onChange(locList(k))}
             className={cn("px-2.5 py-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&+&]:border-l [&+&]:border-border", cur === k ? "bg-primary font-semibold text-primary-foreground" : "bg-surface-raised text-text hover:bg-surface", disabled && "cursor-not-allowed opacity-60")}>{w}</button>
@@ -166,11 +168,11 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   }, [open, type, text.pathway, text.program, text.category, text.subCategory, sel.pathway, sel.program, sel.category]);
 
   const typeIn = (lv: Level, v: string) => {
-    setProblem(null); setErrors((e) => ({ ...e, [lv]: "" }));
     const match = optionsFor(lv).find((n) => norm(n.label) === norm(v) && norm(v));
-    // A level changed: the levels under it start again.
-    const below = FIELDS.slice(FIELDS.indexOf(lv) + 1);
-    setText((t) => ({ ...t, [lv]: v, ...(sel[lv] !== (match?.key ?? null) ? Object.fromEntries(below.map((b) => [b, ""])) : {}) }));
+    // A level changed: the levels under it start again, and so do their messages (review of #867).
+    const below = FIELDS.slice(FIELDS.indexOf(lv) + 1), reset = sel[lv] !== (match?.key ?? null);
+    setProblem(null); setErrors((e) => ({ ...e, [lv]: "", ...(reset ? Object.fromEntries(below.map((b) => [b, ""])) : {}) }));
+    setText((t) => ({ ...t, [lv]: v, ...(reset ? Object.fromEntries(below.map((b) => [b, ""])) : {}) }));
     setSel((s) => ({ ...s, [lv]: match?.key ?? null, ...(s[lv] !== (match?.key ?? null) ? Object.fromEntries(below.map((b) => [b, null])) : {}) }));
     setKeep((k) => ({ ...k, [lv]: false }));
     if (lv === "category") { setNone(true); if (match?.allowedLocations.length) setLocs(match.allowedLocations); }
@@ -231,16 +233,16 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       footer={
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Tip tip="Adds, then keeps the levels above so you can type the next name."><span><Button variant="secondary" className={fresh.length && !blocked ? undefined : OFF} disabled={!fresh.length || !!blocked || busy} onClick={() => void send(true)} data-add-again>Add and add another</Button></span></Tip>
+          <Tip tip={blocked ? `Fix the ${WORD[blocked].toLowerCase()} first: see the note under it.` : "Adds, then keeps the levels above so you can type the next name."}><span><Button variant="secondary" className={fresh.length && !blocked ? undefined : OFF} disabled={!fresh.length || !!blocked || busy} onClick={() => void send(true)} data-add-again>Add and add another</Button></span></Tip>
           <Tip tip={blocked ? `Fix the ${WORD[blocked].toLowerCase()} first: see the note under it.` : fresh.length ? `Writes ${fresh.length === 1 ? "the new name" : `the ${fresh.length} new names`} in one go; all or nothing.` : exists ? "Everything you chose is already in the Program structure." : "Type or pick a name first."}><span><Button disabled={!fresh.length || !!blocked || busy} busy={busy} onClick={() => void send(false)} data-add-submit>{fresh.length ? verb : "Add"}</Button></span></Tip>
         </div>}>
       <div className="space-y-3" data-add-dialog>
         <div className="space-y-1">
           <span className="text-xs font-medium">Pathway type</span>
-          <div role="radiogroup" aria-label="Pathway type" className="flex w-fit gap-0.5 rounded-xl border border-border bg-surface p-0.5">
+          <div role="radiogroup" aria-label="Pathway type" aria-invalid={errors.pathwayType ? true : undefined} aria-describedby={errors.pathwayType ? "add-note-pathwayType" : undefined} className="flex w-fit gap-0.5 rounded-xl border border-border bg-surface p-0.5">
             {TYPES.map((t) => (
               <Tip key={t.value} tip={t.tip}>
-                <button type="button" role="radio" aria-checked={type === t.value} onClick={() => { if (type !== t.value) { setType(t.value); setErrors((e) => ({ ...e, pathwayType: "" })); setProblem(null); setText({ pathway: "", program: "", category: "", subCategory: "" }); setSel({ pathway: null, program: null, category: null, subCategory: null }); } }}
+                <button type="button" role="radio" aria-checked={type === t.value} onClick={() => { if (type !== t.value) { setType(t.value); setErrors({}); setProblem(null); setText({ pathway: "", program: "", category: "", subCategory: "" }); setSel({ pathway: null, program: null, category: null, subCategory: null }); } }}
                   className={cn("inline-flex h-8 items-center rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground" : "text-text-muted hover:text-text")}>{t.label}</button>
               </Tip>
             ))}
@@ -264,7 +266,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
         ))}
         {showLocs ? (
           <div className="space-y-1" data-field="allowedLocations">
-            <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-medium">Cases may be opened from</span><LocationPicker value={locs} onChange={(l) => { setLocs(l); setErrors((e) => ({ ...e, allowedLocations: "" })); setProblem(null); }} label="Cases may be opened from" /><span className="text-text-muted">Sample until the immigration expert confirms.</span></div>
+            <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-medium">Cases may be opened from</span><LocationPicker value={locs} onChange={(l) => { setLocs(l); setErrors((e) => ({ ...e, allowedLocations: "" })); setProblem(null); }} label="Cases may be opened from" note={errors.allowedLocations ? "add-note-allowedLocations" : undefined} /><span className="text-text-muted">Sample until the immigration expert confirms.</span></div>
             <FieldNote slot="allowedLocations" text={errors.allowedLocations} />
           </div>
         ) : null}
@@ -290,7 +292,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
 
 /** A refusal under a control that is not a name field (the Pathway type switch, "Cases may be opened from"). */
 function FieldNote({ slot, text }: { slot: string; text?: string }) {
-  return text ? <p role="alert" className="text-xs text-text-danger" data-field-note={slot}>{text}</p> : null;
+  return text ? <p role="alert" id={`add-note-${slot}`} className="text-xs text-text-danger" data-field-note={slot}>{text}</p> : null;
 }
 
 /** One level: pick a name under the field above, or type a new one (tagged New); checks show under it as you type. */
@@ -334,7 +336,11 @@ function NameField({ level, label, value, options, isNew, underNew, enabled, inp
               <li key={n.key} id={`${id}-o${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); choose(n); }}
                 className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5", i === active ? "bg-text/5" : "hover:bg-text/5")}>{n.label}{n.retired ? <span className="text-xs text-text-muted">(retired)</span> : null}</li>
             ))}
-            {typedNew ? (
+            {typedNew && error ? (
+              // The name breaks a rule: the list says so where "Add …" would be, so the note is never hidden (review of #867).
+              <li id={`${id}-o${shown.length}`} role="option" aria-selected={false} aria-disabled="true" onMouseDown={(e) => e.preventDefault()} data-add-refused
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-text-danger">{error}</li>
+            ) : typedNew ? (
               <li id={`${id}-o${shown.length}`} role="option" aria-selected={active === shown.length} onMouseDown={(e) => { e.preventDefault(); setShow(false); onNext(); }} data-add-new
                 className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-text-link", active === shown.length ? "bg-text/5" : "hover:bg-text/5")}>
                 Add “{value.trim()}” <span className="rounded bg-primary/10 px-1 text-[11px] font-semibold">New</span>
