@@ -45,9 +45,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // QA-206 (tech lead on #883): the sections the forms print no heading over stay waiting on To review, so the facts only
   // their boxes read are asked of nobody until a person names them: the honest block, each named.
   const held = sql(`select payload->>'label' from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' order by payload->>'label'`).split("\n").filter(Boolean);
-  // A box no accepted section names is placed in the nearest one on its own form (form-part-placements.ts), so the facts
-  // left asked of nobody are those read on a form whose sections wait for a name (IMM 5257 SCH1 prints no heading).
-  const heldFacts = new Set(sql(`select distinct m.canonical_field_key from form_field_map m join form_edition e on e.id = m.form_edition_id where m.canonical_field_key is not null and e.edition_label in (select form_edition from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true')`).split("\n").filter(Boolean));
+  // A form field no accepted section names is placed in the nearest one on its own form (form-part-placements.ts), so the
+  // only facts left asked of nobody are those read on a form with no accepted section at all, every one of its sections
+  // waiting for a name (IMM 5257 SCH1 prints no heading; review r8 M8: never a form with one held part among named ones).
+  const heldFacts = new Set(sql(`select distinct m.canonical_field_key from form_field_map m join form_edition e on e.id = m.form_edition_id where m.canonical_field_key is not null and e.edition_label in (select form_edition from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true') and not exists (select 1 from proposal_item q where q.kind = 'section' and q.form_edition = e.edition_label and q.status in ('accepted', 'edited', 'rejected'))`).split("\n").filter(Boolean));
   const allowed = (e: { item: string }) => e.item === "IRM 0002" || heldFacts.has(e.item);
   const released = (l.body.released as string[]).some((x) => /Visitor visa/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${vv}' order by version desc limit 1`) === "1|user-B|user-A";
   if (irm0002Map) ok("QA-144 pass: the configured checkpoint releases the Visitor visa (release 1, submitted by the author, approved by the Approver)", released, { released: l.body.released, row10: r("10").why?.slice(0, 300) });
