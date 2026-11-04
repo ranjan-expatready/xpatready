@@ -36,6 +36,7 @@ Every online line in A and B is filed through the **APR Portal** (P-98: the one 
 2. **Configured (the M2 gate, C10.1):** A and B released (A release 1 all PDF; A release 2 mixed), with the library they built, and the thin family case on release 1 with IMM 5257 filled (rows 1–12, 17).
 3. **Finished story (the M3 gate, C10.2):** the family case on both releases, online fill, the filing with portal sheet, filled PDFs and signed copies, documents listed (rows 13–16, 18).
 AI in every checkpoint is the saved answers (US$0, labelled "replay"); a live run happens only with the founder's go (a session on the Mac).
+Form roles (P-319): every sample load or sample import sets the roles in `samples/form-roles.json` (IMM 5707, IMM 5645: family information) on the forms that have none, so on the demo a role an author removed comes back with the next load or "Start With an LMIA" (demo only; in the product a role changes only through a second person).
 
 ## Rules for every lane
 * A feature is not DONE until its row above shows in the demo story (seeded or replayable), with a check in the demo suite.
