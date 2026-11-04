@@ -19,6 +19,8 @@ import { actorOf, Audit, Db, fail, need, readerOf, revise, SOLUTION, strip, type
 import { keyFor, sameName } from "./library-changes.ts";
 import { landField } from "./proposals.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
+import { printedQuestion, type Box } from "./own-yes-no.ts";
+export { printedQuestion } from "./own-yes-no.ts";
 
 const said = z.string().transform((x) => x.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim());
 export const OwnQuestion = z.object({
@@ -33,7 +35,6 @@ export const OwnQuestion = z.object({
 export const isWorkedOutYesNo = (transform: string | null | undefined) => !!recordedDerivation(transform) && /\byes_no_code\b/.test(transform ?? "");
 const YES_NO = new Set(["yes_no", "boolean"]);
 
-type Box = { data_path?: string; heading?: string | null; caption?: string | null; options?: [string, string][] };
 const readings = new Map<string, Map<string, Box>>();
 function readingOf(file: string | null): Map<string, Box> | null {
   if (!file) return null;
@@ -41,16 +42,6 @@ function readingOf(file: string | null): Map<string, Box> | null {
     try { readings.set(file, new Map(((JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fields?: Box[] }).fields ?? []).filter((x) => x.data_path).map((x) => [x.data_path!, x]))); } catch { return null; }
   }
   return readings.get(file)!;
-}
-/** The form's printed question for a Yes/No box (P-170: never words that are not its question): the reading's heading
- *  when it is a question (the caption of IMM 5257's US card box repeats the national identity question, so the heading
- *  comes first), else the caption's question without its number ("Question 8 A. During the past 5 years …?"; the
- *  heading there is a neighbour's, "* Date of birth"). Null when neither is a question: the box is then refused. */
-export function printedQuestion(b: Box | undefined): string | null {
-  const tidy = (t: string | null | undefined) => (t ?? "").replace(/\s+/g, " ").trim();
-  const asks = (t: string) => /\?$/.test(t);
-  const heading = tidy(b?.heading), caption = tidy(b?.caption).replace(/^(?:.*?\bSection\s+)?Question\s+\d+\s*[A-Za-z]?\.?\s+/i, "");
-  return asks(heading) ? heading : asks(caption) ? caption : null;
 }
 /** The page a form field is on, from its XFA data path (form1[0].Page2[0]…): null when the path does not say. */
 const pageOf = (dataPath: string) => /(?:^|\.)Page(\d+)\[/.exec(dataPath)?.[1] ?? null;

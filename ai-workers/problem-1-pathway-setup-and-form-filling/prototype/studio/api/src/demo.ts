@@ -30,6 +30,7 @@ import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { OwnQuestions } from "./own-question.ts";
+import { OWN_YES_NO, OWN_YES_NO_REASON, type OwnYesNo } from "./own-yes-no.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { FormLibrary } from "./form-library.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
@@ -112,25 +113,12 @@ export const REP_FACT = { fact: "case.uses_representative", rule: "IMM 5476", ci
 export const RELEASE_FACT = { fact: "case.authorizes_release_to_designated_individual", rule: "IMM 5475", cite: "IMM 5484 (05-2026) p. 1: \"Complete this form only if you authorize … (IRCC) and … (CBSA) to release information from your case file to someone other than yourself.\"", label: "Authorizes release of information to a designated individual", valueType: "yes_no",
   meaning: "Whether the applicant authorizes IRCC and the CBSA to release information from their case file to someone other than themselves (IMM 5484 p. 1; IMM 5475).", beside: ["case.service_language", "case.visa_type_requested"] };
 type RuleFact = typeof GENDER_FACT & { beside?: string[] };
-/** B52 (P-334 (5)): IMM 5257's three Yes/No form fields worked out from other answers, each asked as its own question
- *  (api/src/own-question.ts), so the shared placement step asks them and C4.11's conditions land on them. The words are
- *  the form's: IMM 5257 (09-2023) p. 1 Question 2 A "Have you ever used any other name such as a nickname, maiden name
- *  or alias?"; p. 2 "Do you have a national identity document?"; p. 2 "Are you a lawful Permanent Resident of the United
- *  States with a valid alien registration card (green card)?". The library field of the same name is used when there is
- *  one (IMM 0008's and IMM 1294's field maps name them so). Sample, Unconfirmed: expert. */
-export type OwnYesNo = { dataPath: string; label: string; meaning: string };
-export const IMM5257_YES_NO: OwnYesNo[] = [
-  { dataPath: "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", label: "Has used other name", meaning: "Whether the person has ever used any other name, such as a nickname, maiden name or alias (IMM 5257 p. 1, Question 2 A)." },
-  { dataPath: "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", label: "Has national ID", meaning: "Whether the person has a national identity document (IMM 5257 p. 2, National identity document, Question 1)." },
-  { dataPath: "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]", label: "US permanent resident", meaning: "Whether the person is a lawful permanent resident of the United States with a valid alien registration card (green card) (IMM 5257 p. 2, US PR card, Question 1)." },
-];
-export const OWN_YES_NO_REASON = "The form asks this Yes/No itself before its details: asked as its own question in the form's words (sample loader, B52; Sample)";
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, the facts only a rule reads (C3.6), and the application form's Yes/No form
  *  fields asked as their own questions (B52). No other form number is in the steps. */
 export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[] }> = {
-  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], ownYesNo: IMM5257_YES_NO, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
+  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], ownYesNo: OWN_YES_NO["vv.single"].boxes, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
   "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT],
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).

@@ -12,7 +12,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
-import { printedQuestion } from "../api/src/own-question.ts";
+import { printedQuestion } from "../api/src/own-yes-no.ts";
 
 const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_s9_yesno";
 const AUTHOR = "user-A", APPROVER = "user-B", OFFICER = "user-O", CLIENT = "user-P";
