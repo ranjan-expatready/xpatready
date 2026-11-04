@@ -258,3 +258,9 @@ Walk on the six at 1440 px: Demo › Start With an LMIA › "Load as a draft". T
 Closed: **QA-212, QA-214**. The remaining import shortcut (shared library items published at load) is disclosed in the dialog and ruled as its own BACKLOG row (Lead 4).
 
 **M2: 44/60 confirmed** (+C5.4). Thin slice 7/8 (+C6.1).
+
+## Records update ~15:10 IST: qa tester 2's M2 no-pack re-proof, first half (#903)
+* **10 Works confirmed** on main 4c3b16f0e. Each row's own checks ran on fresh copies, plus a walk on Reset to the six at 1440 px: C1.1, C1.2, C1.4, C1.8, C2.1, C2.2, C2.3, C3.1, C3.3, C3.7.
+* **C3.5 goes to Partial** (was Works), held by **QA-219** (Gap · Major). A merge and an alias work only through the API (`check_forms_channels.ts` 105/105). No screen lets a person start a merge or add an alias (`POST /api/library/merges` is called by no screen).
+* #875 is infra only.
+* **M2: 43/60 confirmed** (was 44; −C3.5).
