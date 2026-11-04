@@ -40,13 +40,25 @@ ok("a duplicate row id is protected once, and when any copy is a Works row (#857
 ok("a line that is not a capability row is skipped", rows(MD).every((r) => /^C\d/.test(r.id)) && rows("| QA-12 | Bug · Major | C9.1 | x |").length === 0);
 
 // Holds: a capability or one pack file; a line that cannot be read holds nothing and jams nothing (break M3).
-const h = held("# Regression set: held rows\n\nqa holds a pack here when it is red on main.\n\n- C3.2  red on main (run 41788362078), sent to qa\n- **C11.12-runtime.test.ts** red on main, needs the suites' fixture (QA-215)\nc11.13 lower case is fine, QA-12\n| C3.6 | #857 tracking, run 41788362078 |\n| Capability | Reason |\n|---|---|\n- C11.1\n- C11.13x reason QA-1\n- C11.12-bad.test.tsx why QA-1\n- C11.15_x.test.ts underscores QA-1\n");
-ok("held() reads list lines, table rows and bare lines, capabilities and pack files, any case; headings and prose are not holds", [...h.caps.keys()].join() === "C3.2,C11.13,C3.6" && [...h.packs.keys()].join() === "C11.12-runtime.test.ts" && h.caps.get("C3.6") === "#857 tracking, run 41788362078", h);
-ok("a hold line without a reason or with a bad id is reported, not thrown", h.bad.length === 4 && h.bad.includes("C11.1") && h.bad.includes("C11.13x reason QA-1"), h.bad);
+const h = held("# Regression set: held rows\n\nqa holds a pack here when it is red on main.\n\n- C3.2  red on main (run 41788362078), sent to qa\n- **C11.12-runtime.test.ts** red on main, needs the suites' fixture (QA-215)\nc11.13 lower case is red, QA-12\n| C3.6 | #857 red, run 41788362078 |\n| Capability | Reason |\n|---|---|\n- C11.1\n- C11.13x red QA-1\n- C11.12-bad.test.tsx red QA-1\n- C11.15_x.test.ts underscores red QA-1\n");
+ok("held() reads list lines, table rows and bare lines, capabilities and pack files, any case; headings and prose are not holds", [...h.caps.keys()].join() === "C3.2,C11.13,C3.6" && [...h.packs.keys()].join() === "C11.12-runtime.test.ts" && h.caps.get("C3.6") === "#857 red, run 41788362078", h);
+ok("a hold line without a reason or with a bad id is reported, not thrown", h.bad.length === 4 && h.bad.includes("C11.1") && h.bad.includes("C11.13x red QA-1"), h.bad);
 // #857 round 2 break N2: a history line, an example in code and a comment are never holds; a reason must name its run or bug.
 const h2 = held("- C4.7 red on main (run 41788362078)\n- C3.2 hold lifted 5 Nov, pack green again\n```\n- C11.13 red on main (run 41788362078)\n```\n    - C11.10 red (run 41788362078), an indented example\n<!--\n- C11.12-runtime.test.ts red (run 41788362078)\n-->\n- ~~C11.11 red (run 41788362078)~~ lifted\n- C11.12 -runtime.test.ts red QA-215\n");
 ok("only the one real hold holds: not a history line, a fenced or indented example, an HTML comment or struck text (break N2)", [...h2.caps.keys()].join() === "C4.7" && h2.packs.size === 0, { caps: [...h2.caps.keys()], packs: [...h2.packs.keys()], bad: h2.bad });
 ok("a history line without a run or bug, and a stray space before a pack name, are reported as not read", h2.bad.some((l) => l.startsWith("C3.2 hold lifted")) && h2.bad.some((l) => l.startsWith("C11.12 -runtime")), h2.bad);
+
+// #857 round 3 break M3 and m1: a lifted or not-red line with evidence is no hold; an unclosed comment and a fence closed
+// by another kind hide what follows; emphasis, a quote, a check box and "•" around a real hold are read.
+const h3 = held("- C3.2 hold lifted 5 Nov, green again in run 41799999999\n- C3.3 green in run 41799999999 (QA-215 closed)\n~~~\n- C11.13 red on main (run 41788362078)\n```\n- C11.14 red (run 41788362078)\n~~~\n````\n```\n- C11.15 red (run 41788362078)\n````\n");
+ok("a lifted or not-red line is not a hold, though it names a run or bug; a ~~~ fence is closed only by ~~~ and ```` only by ```` (round 3 M3)", h3.caps.size === 0 && h3.packs.size === 0 && h3.bad.length === 2, { caps: [...h3.caps.keys()], bad: h3.bad });
+const h4 = held("- C4.1 red (run 41788362078)\n<!-- an unclosed comment\n- C4.2 red (run 41788362078)\n");
+ok("an unclosed HTML comment runs to the end of the file (round 3 M3)", [...h4.caps.keys()].join() === "C4.1", [...h4.caps.keys()]);
+const h5 = held("- _C4.7_ red (run 41788362078)\n- __C3.6__ red (run 41788362078)\n> - C4.8 red (run 41788362078)\n- [ ] C4.9 red QA-215\n• C4.10 red QA-215\n- C11.15-a_b.test.ts red QA-1\n    ```\n- C4.11 red QA-215\n");
+ok("_emphasis_, a quote, a check box and \"•\" are read, an underscore inside a pack name is kept, a ``` indented as code is no fence (round 3 m1)", [...h5.caps.keys()].join() === "C4.7,C3.6,C4.8,C4.9,C4.10,C4.11" && [...h5.packs.keys()].join() === "C11.15-a_b.test.ts", { caps: [...h5.caps.keys()], packs: [...h5.packs.keys()], bad: h5.bad });
+// Round 3 M2: the columns are found by the header, a mark before Works counts, and no Works row at all is never an empty set.
+ok("an added column before Status still reads M and Status by the header", protectedSet("| # | Step | Capability | Owner | M | Status | x |\n|---|---|---|---|---|---|---|\n| C9.1 | x | y | qa | M2 | Works | a |").map((r) => r.id).join() === "C9.1");
+ok("\"✅ Works\" counts as Works", protectedSet("| C9.1 | x | y | M2 | ✅ Works | a | b |").map((r) => r.id).join() === "C9.1");
 
 const T = mkdtempSync(join(tmpdir(), "works-set-")), f = join(T, "CAPABILITIES.md"); writeFileSync(f, MD);
 const none = join(T, "none.txt"); writeFileSync(none, "");
@@ -56,11 +68,20 @@ let r = cli(["--json", "--file", f, "--held", none]);
 ok("--json lists the protected rows that have a pack, for the job matrix", r.code === 0 && JSON.stringify(JSON.parse(r.out)) === JSON.stringify(["C11.13", "C3.2", "C11.12"]), r);
 r = cli(["--list", "--file", f, "--held", none]);
 ok("--list names a Works row without a pack as not re-run", r.code === 0 && /C1\.1: no acceptance pack/.test(r.out) && /4 capabilities, 3 with an acceptance pack, 3 re-run/.test(r.out), r);
-const hf = join(T, "held.txt"); writeFileSync(hf, "# held\n- C3.2 red on main (run 1000001), sent to qa\n- C11.12-runtime.test.ts red on main (run 1000001)\n- C9.9 stale QA-9\n- C11.13-gone.test.ts stale QA-9\n- C11.1\n");
+const hf = join(T, "held.txt"); writeFileSync(hf, "# held\n- C3.2 red on main (run 1000001), sent to qa\n- C11.12-runtime.test.ts red on main (run 1000001)\n- C9.9 stale red QA-9\n- C11.13-gone.test.ts stale red QA-9\n- C11.1\n");
 r = cli(["--json", "--file", f, "--held", hf]);
 ok("a held capability leaves the matrix; a capability with one pack held stays (break M4)", r.code === 0 && JSON.stringify(JSON.parse(r.out.split("\n").filter((l) => l.startsWith("[")).join(""))) === JSON.stringify(["C11.13", "C11.12"]), r);
 r = cli(["--list", "--file", f, "--held", hf]);
 ok("--list names the holds with their reasons, the stale ones, and the unreadable line", /C3\.2: —; held, not re-run: C3\.2\.test\.ts \(red on main \(run 1000001\), sent to qa\)/.test(r.out) && /C11\.12: C11\.12\.test\.ts; held, not re-run: C11\.12-runtime\.test\.ts/.test(r.out) && /stale hold: C9\.9/.test(r.out) && /stale hold: C11\.13-gone\.test\.ts/.test(r.out) && /hold line not read .*"C11\.1"/.test(r.out), r);
+// Round 3 M1: in --json mode stdout is the array alone (CI writes it to GITHUB_OUTPUT); an unreadable hold line goes to stderr.
+{ const x = spawnSync(process.execPath, [join(HERE, "works-set.mjs"), "--json", "--file", f, "--held", hf], { encoding: "utf8", env: { ...process.env, ...CLEAN } });
+  ok("--json prints only the JSON array on stdout, the unreadable-line warning on stderr (round 3 M1)", x.status === 0 && /^\[[^\n]*\]\n?$/.test(x.stdout) && /hold line not read .*"C11\.1"/.test(x.stderr), { stdout: x.stdout, stderr: x.stderr }); }
+const noWorks = join(T, "noworks.md"); writeFileSync(noWorks, MD.replace(/\| Works/g, "| Partial").replace(/\| \*\*Works\*\*/g, "| Partial"));
+r = cli(["--json", "--file", noWorks, "--held", none]);
+ok("no M2 row that reads as Works (a format change) is \"could not run\" (exit 2), never an empty set (round 3 M2)", r.code === 2 && /no M2 row reads as Works/.test(r.out), r);
+const noPack = join(T, "nopack.md"); writeFileSync(noPack, "| C1.1 | 1 Setup | Author sees | M2 | Works | abc | x |\n");
+r = cli(["--json", "--file", noPack, "--held", none]);
+ok("Works rows of which none has a pack is \"could not run\" (exit 2; review m6)", r.code === 2 && /no protected row has an acceptance pack/.test(r.out), r);
 r = cli(["--json", "--file", join(T, "none.txt"), "--held", none]);
 ok("a CAPABILITIES file with no row the tool can read is \"could not run\" (exit 2), never an empty set", r.code === 2 && /no capability row/.test(r.out), r);
 // Read at the base: RANGE's base commit, not the working tree (a batch's PRs cannot change what is protected).
@@ -118,8 +139,8 @@ r = run("0", { QUEUE: "true", PR_TITLE: "merge queue: checking #1", PR_BODY: "Cl
 ok("a batch's QUEUE, PR_TITLE and PR_BODY never reach the gate (no batch mode, no claim)", r.code === 0 && /QUEUE=\[\] PR_TITLE=\[\]/.test(r.out) && /--title C11\.13 --kind code/.test(r.out), r.out.slice(0, 300));
 r = cli(["--run", "C11.13; rm -rf /", "--held", none], { WORKS_SET_GATE: fake });
 ok("--run takes only a capability id (exit 2 otherwise)", r.code === 2 && /not a capability id/.test(r.out), r);
-r = cli([]);
-ok("no option: exit 2", r.code === 2, r);
+r = cli(["--held", none]);
+ok("no option: exit 2, saying which to give (review m6)", r.code === 2 && /say --list, --json or --run/.test(r.out), r);
 rmSync(T, { recursive: true, force: true });
 
 // The real files today.
