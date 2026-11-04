@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, packVerdict, part1 } from "./gate-b.mjs";
+import { claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -126,6 +126,12 @@ ok("C6.9's remark after setup_vv_m3 is dropped", plan("C6.9.test.ts").every((s) 
 ok("an optional [argument] is dropped (C4.1 [wp.family])", plan("C4.1.test.ts").at(-1)?.args.join(" ") === "studio/acceptance/C4.1.test.ts {PORT} {DB}");
 ok("C11.12 finds both its packs", packsOf("C11.12").join() === "C11.12-runtime.test.ts,C11.12.test.ts");
 ok("a pack with setup steps is labelled \"fixture only\"; a pack alone runs on the six", /^fixture only/.test(whereOf(runPlan("C7.5.test.ts", readFileSync(join(ACC, "C7.5.test.ts"), "utf8")))) && whereOf(runPlan("C11.13.test.ts", readFileSync(join(ACC, "C11.13.test.ts"), "utf8"))) === "on the six");
+// P-294 (a): GATE_B_DATA picks the demo data a pack alone runs on; the default stays the six; a typo is refused.
+{ const alone = runPlan("C11.13.test.ts", readFileSync(join(ACC, "C11.13.test.ts"), "utf8")), setup = runPlan("C7.5.test.ts", readFileSync(join(ACC, "C7.5.test.ts"), "utf8"));
+  ok("GATE_B_DATA unset or \"six\": a pack alone runs on the six (the default)", dataOf({}) === "six" && dataOf({ GATE_B_DATA: "six" }) === "six" && whereOf(alone, dataOf({})) === "on the six");
+  ok("GATE_B_DATA=checkpoint: a pack alone runs on the checkpoint and says so; a pack with setup steps stays on its fixture", dataOf({ GATE_B_DATA: "checkpoint" }) === "checkpoint" && whereOf(alone, "checkpoint") === "on the checkpoint" && /^fixture only/.test(whereOf(setup, "checkpoint")));
+  let refused = ""; try { dataOf({ GATE_B_DATA: "checkpont" }); } catch (e) { refused = e.message; }
+  ok("GATE_B_DATA with any other value is refused in words, never run on the six by mistake", /GATE_B_DATA must be "six" or "checkpoint", not "checkpont"/.test(refused), refused); }
 ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.test.ts", "// nothing here\nimport x from 'y';").error));
 
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).
