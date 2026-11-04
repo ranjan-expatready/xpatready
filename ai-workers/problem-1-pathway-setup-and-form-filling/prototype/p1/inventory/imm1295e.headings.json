@@ -1,0 +1,80 @@
+{
+ "file": "official-sources/ircc/forms/imm1295e.pdf",
+ "sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.Header": {
+   "heading": "Application for work permit made outside of Canada",
+   "printed": "APPLICATION FOR WORK PERMIT MADE OUTSIDE OF CANADA",
+   "how": "banner"
+  },
+  "Page1.PersonalDetails": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page2.MaritalStatus": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner",
+   "continues": true
+  },
+  "Page2.natID": {
+   "heading": "National identity document",
+   "printed": "NATIONAL IDENTITY DOCUMENT",
+   "how": "banner"
+  },
+  "Page2.USCard": {
+   "heading": "US PR card",
+   "printed": "US PR CARD",
+   "how": "banner"
+  },
+  "Page2.ContactInformation": {
+   "heading": "Contact information",
+   "printed": "CONTACT INFORMATION",
+   "how": "banner"
+  },
+  "Page3.DetailsOfIntendedWork": {
+   "heading": "Details of intended work in Canada",
+   "printed": "DETAILS OF INTENDED WORK IN CANADA",
+   "how": "banner"
+  },
+  "Page3.LCP": {
+   "heading": "Live-in caregiver program",
+   "printed": "LIVE-IN CAREGIVER PROGRAM",
+   "how": "banner"
+  },
+  "Page3.PageWrapper": {
+   "heading": "Education",
+   "printed": "EDUCATION",
+   "how": "banner",
+   "sub": {
+    "Occupation": {
+     "heading": "Employment",
+     "printed": "EMPLOYMENT"
+    }
+   }
+  },
+  "Page4.BackgroundInfo_SectionHeader": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "banner"
+  },
+  "Page4.BackgroundInfo": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "carried",
+   "from": "Page4.BackgroundInfo_SectionHeader"
+  },
+  "Page4.Consent0": {
+   "heading": "Signature",
+   "printed": "SIGNATURE",
+   "how": "banner"
+  },
+  "Page4.Consent1": {
+   "heading": "Privacy notice",
+   "printed": "PRIVACY NOTICE",
+   "how": "banner"
+  }
+ }
+}
