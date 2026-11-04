@@ -2,7 +2,7 @@
 // through the case officer's own steps (Runtime.createCase, addPerson, CaseForms.generate), as a person opens one on
 // Cases. A new edition held later (row 17) then shows open cases staying on the release they started on. The people are
 // made up (Client A's family of expected/p5-case-c1.json, Sample); nobody answers anything, nothing is filed, no AI (US$0).
-import { RUNTIME_ACTORS } from "./core.ts";
+import { RUNTIME_ACTORS, type Db } from "./core.ts";
 import type { CaseForms } from "./fill-case.ts";
 import type { Runtime } from "./runtime.ts";
 
@@ -11,9 +11,13 @@ export const SAMPLE_CASE = { reference: "SAMPLE-VV-FAMILY-1", principal: "Client
 
 export type SampleCase = { caseId: string | null; release: number | null; people: number; copies: string[]; refused: string[] };
 
+/** How long one copy may take before the next is asked for (a fill takes about a second). */
+const COPY_WAIT_MS = 60_000;
+
 /** Opens the case, adds the family, and asks for a copy of every form the release files for each person (each copy is
- *  filled from the case's answers, none yet). Each refusal is kept in words; nothing is forced. */
-export async function openSampleFamilyCase(runtime: Runtime, forms: CaseForms, combinationId: string): Promise<SampleCase> {
+ *  filled from the case's answers, none yet), one at a time: a case holds at most 5 copies waiting or running (review M1),
+ *  so the next is asked for only when the last has finished. Each refusal is kept in words; nothing is forced. */
+export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: CaseForms, combinationId: string): Promise<SampleCase> {
   const officer = RUNTIME_ACTORS.find((a) => a.id === "user-O")!;
   const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [] };
   const said = (e: unknown) => String((e as { response?: { detail?: string; message?: string } }).response?.detail ?? (e as { response?: { message?: string } }).response?.message ?? (e as Error).message).slice(0, 200);
@@ -25,8 +29,14 @@ export async function openSampleFamilyCase(runtime: Runtime, forms: CaseForms, c
     try { await runtime.addPerson(officer, opened.id, { ...p, idempotencyKey: `sample-vv-family-1-${p.role}` }); out.people++; } catch (e) { out.refused.push(`${p.displayName}: ${said(e)}`); }
   }
   for (const f of (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing)) {
-    try { await forms.generate(officer, opened.id, f.form, f.subject_id, { idempotencyKey: `sample-vv-family-1-${f.form}-${f.subject_id}`.replace(/[^A-Za-z0-9-]/g, "-").slice(0, 80) }); out.copies.push(`${f.form} (${f.person})`); }
-    catch (e) { out.refused.push(`${f.form} for ${f.person}: ${said(e)}`); }
+    let copy: { id: string };
+    try { copy = await forms.generate(officer, opened.id, f.form, f.subject_id, { idempotencyKey: `sample-vv-family-1-${f.form}-${f.subject_id}`.replace(/[^A-Za-z0-9-]/g, "-").slice(0, 80) }); }
+    catch (e) { out.refused.push(`${f.form} for ${f.person}: ${said(e)}`); continue; }
+    const until = Date.now() + COPY_WAIT_MS;
+    let status = "QUEUED";
+    while (Date.now() < until && (status === "QUEUED" || status === "RUNNING")) { await new Promise((r) => setTimeout(r, 150)); status = (await db.formInstance.findUnique({ where: { id: copy.id }, select: { status: true } }))?.status ?? "FAILED"; }
+    if (status === "GENERATED") out.copies.push(`${f.form} (${f.person})`);
+    else out.refused.push(`${f.form} for ${f.person}: the copy ${status === "FAILED" ? "failed" : "did not finish within a minute"}.`);
   }
   return out;
 }

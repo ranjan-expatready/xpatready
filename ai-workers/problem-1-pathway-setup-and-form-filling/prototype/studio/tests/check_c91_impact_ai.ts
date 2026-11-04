@@ -54,19 +54,28 @@ for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.
   // is asked there (engine/snapshot.ts placements), so it is touched; a section neither chosen nor needed is not.
   const r2 = rowsOf({
     boxes: [{ canonicalFieldKey: "rep.name", edition: { id: "e1", govFormDefId: "F", channel: "PDF", editionLabel: "IMM 5476 (11-2021)" } }],
-    lines: [v({ combinationId: "VV", lineageKey: "IMM 5476", govFormDefId: "F", predicateJson: { op: "exists", field: "case.rep_action", subjectKind: "CASE" } })] as never,
-    questions: [v({ lineageKey: "q1", sectionKey: "personal", canonicalFieldKey: "rep.name", predicateJson: null }), v({ lineageKey: "q2", sectionKey: "appoint", canonicalFieldKey: "case.rep_action", predicateJson: null }), v({ lineageKey: "q3", sectionKey: "idle", canonicalFieldKey: "z.idle", predicateJson: cond("rep.name") })] as never,
+    lines: [v({ combinationId: "VV", lineageKey: "IMM 5476", govFormDefId: "F", predicateJson: { op: "exists", field: "case.rep_action", subjectKind: "CASE" } }),
+      v({ combinationId: "SP", lineageKey: "IMM 1294", govFormDefId: "G", predicateJson: { op: "exists", field: "case.other", subjectKind: "CASE" } })] as never,
+    checks: [v({ combinationId: "VV", checkKey: "only_check", predicateJson: cond("z.checked") })] as never,
+    questions: [v({ lineageKey: "q1", sectionKey: "personal", canonicalFieldKey: "rep.name", predicateJson: null }), v({ lineageKey: "q2", sectionKey: "appoint", canonicalFieldKey: "case.rep_action", predicateJson: null }), v({ lineageKey: "q3", sectionKey: "idle", canonicalFieldKey: "z.idle", predicateJson: cond("rep.name") }), v({ lineageKey: "q4", sectionKey: "checked", canonicalFieldKey: "z.checked", predicateJson: null })] as never,
   });
   const u2 = fieldComponents(r2, ["rep.name", "case.rep_action"], new Set(["VV"]));
   const has2 = (kind: string, key: string, field: string) => u2.some((u) => u.kind === kind && u.key === key && u.field === field && u.combinationId === "VV");
   ok("C9.1 P-32 pass (QA-231): a form's own rule that reads the field is a rule; a section not chosen but asked because a form or a form rule needs its fact is touched", has2("rule", formRuleKey("IMM 5476"), "case.rep_action") && has2("section", "personal", "rep.name") && has2("section", "appoint", "case.rep_action"), u2);
   ok("C9.1 P-32 fail (QA-231): a section neither chosen nor needed by a form (its question only reads the field in a condition) is not touched, and nothing on a combination that does not file the form", !u2.some((u) => u.key === "idle") && fieldComponents(r2, ["rep.name"], new Set(["SP"])).length === 0, u2.map((u) => u.key));
+  // Review m4: SP files another form whose own rule reads another field: no rule of SP is listed for these fields; m1: a
+  // fact only a check reads places no question, so its section is not touched.
+  const u3 = fieldComponents(r2, ["rep.name", "case.rep_action", "z.checked"], new Set(["VV", "SP"]));
+  ok("C9.1 P-32 fail (review m4, m1): a form rule that reads another field (SP's IMM 1294) is not listed, and a section whose fact only a check reads is not touched", !u3.some((u) => u.combinationId === "SP") && !u3.some((u) => u.kind === "section" && u.key === "checked") && u3.some((u) => u.kind === "rule" && u.key === formRuleKey("IMM 5476")), u3.map((u) => `${u.kind}:${u.key}:${u.combinationId}`));
   const rew = rows.find((x) => x.change === "reworded")!;
   const view = componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "Has a representative" }], [{ ...rew, field: "rep.name" }], new Map([["rep.name", "Representative's name"]]), new Map([["VV", "Visitor visa"]]), "11-2025");
   ok("C9.1 P-32 pass: each component says why in words (which box changed, its old and new caption, the field) and in which combination", view.rules.length === 1 && view.rules[0].combination === "Visitor visa" && view.rules[0].why.includes("reworded in 11-2025") && view.rules[0].why.includes("Representative's name") && view.rules[0].why.length > 10, view.rules[0]);
   const bare = { ...rew, field: "rep.name", caption: rew.dataPath };
   const w = componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "Has a representative" }], [bare], new Map([["rep.name", "Representative's name"]]), new Map([["VV", "Visitor visa"]]), "11-2025").rules[0]?.why ?? "";
   ok("C9.1 P-32 (QA-231): a reworded form field with no caption of its own is said so in words, never by its PDF path", w.includes("with no caption of its own") && !w.includes(rew.dataPath), w);
+  const gone = { ...rew, change: "removed" as const, field: "rep.name", caption: rew.dataPath };
+  const w2 = componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "Has a representative" }], [gone], new Map([["rep.name", "Representative's name"]]), new Map([["VV", "Visitor visa"]]), "11-2025").rules[0]?.why ?? "";
+  ok("C9.1 P-32 (review m3): a removed form field with no caption of its own is said so in words, never by its PDF path", w2.includes("The form field with no caption of its own (removed in 11-2025) fills") && !w2.includes(rew.dataPath), w2);
   ok("C9.1 P-32 fail: a use whose field no removed or reworded box fills is left out (nothing to explain)", componentsView([{ ...uses.find((u) => u.kind === "rule")!, label: "x" }], [{ ...rew, field: "other.field" }], new Map(), new Map(), "11-2025").rules.length === 0);
 
   // ── P-121: the part holds the changed boxes only and the guard admits it; a tampered part is refused ──

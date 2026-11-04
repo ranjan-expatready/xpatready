@@ -4,7 +4,8 @@
 // impact preview. Other screens still read some uses themselves (lists of rules and checks, the reuse marks); they move
 // here when they change. New features call it and never copy it (P-258).
 import type { Prisma } from "@prisma/client";
-import { byItem, current, fieldComponents, fieldUses, filingCombinations, formLineByCombination, formRuleKey, releaseUses } from "../../engine/where-used.ts";
+import { conditionWords } from "../../engine/eligibility-gates.ts";
+import { byItem, current, fieldComponents, fieldsOf, fieldUses, filingCombinations, formLineByCombination, formRuleKey, releaseUses } from "../../engine/where-used.ts";
 import type { Db } from "./core.ts";
 import { fullTrail, trailWords } from "../../engine/structure.ts";
 
@@ -114,8 +115,11 @@ export async function fieldComponentsOf(db: Client, workspaceId: string, fields:
   const rows = await fieldUseRows(db, workspaceId);
   const uses = fieldComponents(rows, fields, new Set(combinationIds));
   const keys = (k: string) => [...new Set(uses.filter((u) => u.kind === k).map((u) => u.key))];
-  const [sections, types] = await Promise.all([
+  // A form's own rule is named by its condition in words, each shared field by its label (review m2).
+  const lines = current(rows.lines, (l) => `${l.combinationId}|${l.lineageKey}`).filter((l) => uses.some((u) => u.kind === "rule" && u.key === formRuleKey(l.lineageKey) && u.combinationId === l.combinationId));
+  const [sections, ruleFields, types] = await Promise.all([
     db.logicalSection.findMany({ where: { workspaceId, sectionKey: { in: keys("section") } }, orderBy: { version: "desc" }, distinct: ["sectionKey"], select: { sectionKey: true, title: true } }),
+    db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: [...new Set(lines.flatMap((l) => fieldsOf(l.predicateJson)))] } }, orderBy: { version: "desc" }, distinct: ["canonicalFieldKey"], select: { canonicalFieldKey: true, label: true } }),
     db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: keys("document_type") } }, orderBy: { version: "desc" }, distinct: ["documentTypeKey"], select: { documentTypeKey: true, name: true } }),
   ]);
   const names = new Map<string, string>([
@@ -123,7 +127,7 @@ export async function fieldComponentsOf(db: Client, workspaceId: string, fields:
     ...types.map((t) => [`document_type|${t.documentTypeKey}`, t.name] as [string, string]),
     ...current(rows.rules, (x) => `${x.combinationId}|${x.predicateKey}`).map((x) => [`rule|${x.predicateKey}|${x.combinationId}`, x.thenPlain] as [string, string]),
     ...current(rows.checks, (k) => `${k.combinationId}|${k.checkKey}`).map((k) => [`check|${k.checkKey}|${k.combinationId}`, k.message ?? k.checkKey] as [string, string]),
-    ...current(rows.lines, (l) => `${l.combinationId}|${l.lineageKey}`).map((l) => [`rule|${formRuleKey(l.lineageKey)}|${l.combinationId}`, `${l.lineageKey} is filed only when ${l.conditionPlain?.trim() || "its condition holds"}`] as [string, string]),
+    ...lines.map((l) => [`rule|${formRuleKey(l.lineageKey)}|${l.combinationId}`, `${l.lineageKey} is filed only when ${l.conditionPlain?.trim() || ruleFields.reduce((w, f) => w.split(f.canonicalFieldKey).join(f.label ?? f.canonicalFieldKey), conditionWords(l.predicateJson)) || "its condition holds"}`] as [string, string]),
   ]);
   return uses.map((u) => ({ ...u, label: names.get(`${u.kind}|${u.key}`) ?? names.get(`${u.kind}|${u.key}|${u.combinationId}`) ?? u.key }));
 }

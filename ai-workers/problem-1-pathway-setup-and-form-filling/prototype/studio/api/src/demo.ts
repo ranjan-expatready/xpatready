@@ -692,10 +692,10 @@ export class Demo {
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     // Row 11 (QA-231, P-67): a Sample family case opens on the Visitor visa's release 1 through the case officer's own
     // steps, before row 17 holds the new edition, so the case is seen staying on its release (api/src/sample-case.ts).
-    const fam = visitor && vvId ? await timed("sample family case (row 11)", () => openSampleFamilyCase(this.runtime, this.caseForms, vvId)) : null;
+    const fam = visitor && vvId ? await timed("sample family case (row 11)", () => openSampleFamilyCase(this.db, this.runtime, this.caseForms, vvId)) : null;
     // Partial, never done: DEMO.md row 11 also wants each person answering once (the family of four, C10.1 part B).
     row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : "partial",
-      shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} (Sample, ${fam.people} people) on release ${fam.release}: ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} asked for (${fam.copies.join(", ")})` : "The case area is built (Demo › Open the case area)",
+      shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} (Sample, ${fam.people} people) on release ${fam.release}: ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made (${fam.copies.join(", ")})` : "The case area is built (Demo › Open the case area)",
       why: !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, "Nobody has answered yet: each person answers once on the case (C10.1 part B, a family of four)."].join(" · ") });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:

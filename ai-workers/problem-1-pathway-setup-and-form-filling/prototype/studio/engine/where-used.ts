@@ -103,10 +103,11 @@ export function fieldComponents(r: ComponentRows, fields: string[], combinations
   const add = (u: ComponentUse) => { if (combinations.has(u.combinationId)) out.set(`${u.kind}|${u.key}|${u.field}|${u.combinationId}`, out.get(`${u.kind}|${u.key}|${u.field}|${u.combinationId}`) ?? u); };
   const want = new Set(fields);
   const picksOf = new Map<string, string[]>(); for (const p of r.picks) picksOf.set(p.sectionKey, [...(picksOf.get(p.sectionKey) ?? []), p.combinationId]);
-  // QA-231: a combination asks a question when it chooses the question's section, or when its forms, form rules, rules,
-  // checklist lines or checks read the question's fact: the snapshot then asks it after the chosen sections
-  // (engine/snapshot.ts placements). Both count: the section is touched where the question is asked.
-  const read = new Set(fieldUses({ ...r, questions: [], picks: [] }).map(([f, c]) => `${f}|${c}`));
+  // QA-231: a combination asks a question when it chooses the question's section, or when its forms (a PDF edition's
+  // form fields), form rules, rules or checklist lines read the question's fact: the snapshot then asks it after the
+  // chosen sections (engine/snapshot.ts placements; a check never places a question, review m1). Both count: the
+  // section is touched where the question is asked.
+  const read = new Set(fieldUses({ ...r, boxes: r.boxes.filter((b) => b.edition.channel !== "ONLINE"), checks: [], questions: [], picks: [] }).map(([f, c]) => `${f}|${c}`));
   for (const q of current(r.questions, (q) => q.lineageKey)) {
     const reads = new Set([...(want.has(q.canonicalFieldKey) ? [q.canonicalFieldKey] : []), ...fieldsOf(q.predicateJson).filter((f) => want.has(f))]);
     const asking = new Set([...(picksOf.get(q.sectionKey) ?? []), ...[...combinations].filter((c) => read.has(`${q.canonicalFieldKey}|${c}`))]);
