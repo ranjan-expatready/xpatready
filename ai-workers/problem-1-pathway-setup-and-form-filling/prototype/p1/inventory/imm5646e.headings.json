@@ -1,0 +1,27 @@
+{
+ "file": "official-sources/ircc/forms/imm5646e.pdf",
+ "sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.subStudentInfo": {
+   "heading": "Student information",
+   "printed": "STUDENT INFORMATION",
+   "how": "banner"
+  },
+  "Page1.subParent": {
+   "heading": "Parents/guardians information",
+   "printed": "PARENTS/GUARDIANS INFORMATION",
+   "how": "banner"
+  },
+  "Page2.subStudentInfo": {
+   "heading": "Student information",
+   "printed": "STUDENT INFORMATION",
+   "how": "banner"
+  },
+  "Page2.subParent": {
+   "heading": "Parents/guardians information",
+   "printed": "PARENTS/GUARDIANS INFORMATION",
+   "how": "banner"
+  }
+ }
+}

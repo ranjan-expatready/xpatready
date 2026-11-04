@@ -69,7 +69,10 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 5 fail: no library item is approved by the person who proposed it", n(`select count(*) from library_change where decided_by = proposed_by`) === 0);
   ok("C10.1 rows 6 and 8: Reset and the Smart questionnaire (SQR) and Preview tabs are named as built", r("6").status === "done" && r("8").status === "done");
   // QA-144 slice 1: row 7 is the C3.4 rules pass and the shared placement step on the Visitor visa (tests/check_qa144_vv_release.ts).
-  ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7").shows);
+  // QA-206 (tech lead on #883): sections the forms print no heading over wait on To review for a person to name, so the
+  // row is partial exactly while any waits, and names them.
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver; partial exactly while sections wait for a name (QA-206)", r("7").status === (heldNow ? "partial" : "done") && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows) && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")), r("7").shows);
   // Row 17 (QA-207): IMM 5476 2021 in the library and 11-2025 held as the new edition, once the 2021 edition's saved field
   // map is recorded (p2/runs, the paid runner's); until then the row waits for it, in words, and the library keeps 11-2025.
   // The same reading as the loader's gate (demo.ts ROW17): a completed, contract-valid run of the 2021 edition's field map
@@ -98,8 +101,14 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
   // QA-144 slice 1: the Visitor visa is released; the combinations not set up yet stay drafts with the validator's words.
-  // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the Visitor visa is released (review m2).
-  ok("C10.1 row 10: the Visitor visa is released (QA-144 slice 1)", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows), r("10").shows);
+  // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the Visitor visa is released (review m2), unless
+  // sections wait for a name (QA-206; tech lead on #883): then its release check names the blocks (check_qa144_vv_release.ts
+  // checks each is a fact of a form whose sections all wait for a name).
+  // Only a form with no accepted section at all leaves its facts asked of nobody (form-part-placements.ts places the rest).
+  const unplacedForm = n(`select count(distinct p.form_edition) from proposal_item p where p.kind = 'section' and p.status = 'waiting' and p.work->>'unnamed' = 'true' and not exists (select 1 from proposal_item q where q.kind = 'section' and q.form_edition = p.form_edition and q.status in ('accepted', 'edited', 'rejected'))`);
+  ok(unplacedForm ? "C10.1 row 10 (QA-206): while a form's sections all wait for a name, the Visitor visa stays a draft and its row names the blocks" : "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)",
+    unplacedForm ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 0 && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? "")
+      : n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows), unplacedForm ? r("10").why?.slice(0, 200) : r("10").shows);
   ok("C10.1 row 10: the Study permit (outside Canada) is released, release 1 approved by the Approver (QA-144 slice 3)", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'sp.outside' and r.approver_id = 'user-B'`) === 1 && /Study permit › Outside Canada/.test(r("10").shows), r("10").shows);
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
