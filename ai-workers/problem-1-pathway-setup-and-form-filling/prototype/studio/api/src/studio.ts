@@ -11,7 +11,7 @@ import { buildSnapshot, effective, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type M
 import { backgroundPathsOf } from "./background-questions.ts";
 import { backgroundWords, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, readingMissingWords } from "../../engine/form-completeness.ts";
 import { slug } from "../../engine/import.ts";
-import { FORM_LINE_WORDS, formLineProblem, isFormLine } from "../../engine/programs.ts";
+import { FORM_LINE_WORDS, formLineProblem, isFormLine, releaseLineProblems } from "../../engine/programs.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems } from "../../engine/validate.ts";
@@ -107,8 +107,8 @@ function retiredPeople(c: { label: string; retiredAt: Date | null }) {
 export const EMPTY_WORDS = "Nothing to release yet: no form is set up on this combination and it has no documents. Set up the forms it files (Find forms, add one from the Form library, or finish one attached) before sending it for review.";
 export const emptyProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
   s.forms.length || (s.document_requirements ?? []).length ? [] : [{ level: "error" as const, where: "Release", item: "", message: EMPTY_WORDS }];
-/** What a release needs on it before anything else is judged: F8 (something) and G5 (a form line). */
-export const contentProblems = (s: Pick<Snapshot, "forms" | "document_requirements">) => [...emptyProblem(s), ...formLineProblem(s)];
+/** What a release needs on it before anything else is judged: F8 (something), then G5 (P-248: a form line and a document line). */
+export const contentProblems = (s: Pick<Snapshot, "forms" | "document_requirements">) => [...emptyProblem(s), ...releaseLineProblems(s)];
 export { FORM_LINE_WORDS, formLineProblem, isFormLine }; // G5: the rule itself is engine/programs.ts (pure, for the C5.1 pack)
 
 @Injectable()

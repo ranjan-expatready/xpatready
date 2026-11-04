@@ -178,6 +178,18 @@ export function formLineProblem(s: Pick<Snapshot, "forms" | "document_requiremen
   if (!forms.length && !(s.document_requirements ?? []).length) return [];
   return forms.some(isFormLine) ? [] : [{ level: "error", where: "Release", item: "", message: FORM_LINE_WORDS, code: NO_FORM_LINE }];
 }
+/** G5, P-248's other half (tech lead's ruling on #868, 4 Nov 17:12 IST, after qa's gate A): a release needs at least one
+ *  document line too. A combination with forms and no document requirement collects nothing from the applicant, so it
+ *  is refused in the same places and the same way as a missing form line, with its own words and code. One with no line
+ *  at all is F8's own line (never this one too). */
+export const NO_DOCUMENT_LINE = "no_document_line";
+export const DOCUMENT_LINE_WORDS = "No document line yet: a case on this combination would collect no document (it has forms but no document requirement). Add at least one document the applicant provides before sending it for review (Documents tab, from the program's document checklist).";
+export function documentLineProblem(s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] {
+  if (!s.forms.length || (s.document_requirements ?? []).length) return [];
+  return [{ level: "error", where: "Release", item: "", message: DOCUMENT_LINE_WORDS, code: NO_DOCUMENT_LINE }];
+}
+/** G5 (P-248, the whole rule): what a release needs on it, a form line and a document line, each said in its own words. */
+export const releaseLineProblems = (s: Pick<Snapshot, "forms" | "document_requirements">): Problem[] => [...formLineProblem(s), ...documentLineProblem(s)];
 /** QA-180 (BR-8, P-297 (3)): the one rule Review and release (engine/validate.ts) and Open a case (missingItems, through
  *  api/src/programs.ts startableMissing) both read. A data form can be filled on a case only when its edition in use
  *  (pdfMapInUse, P-32: the newest PDF edition, the one a case fills) has form fields mapped; an Online line is read from

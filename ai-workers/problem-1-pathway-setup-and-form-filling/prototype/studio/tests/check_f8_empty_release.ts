@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { contentProblems, emptyProblem, EMPTY_WORDS, FORM_LINE_WORDS } from "../api/src/studio.ts";
+import { DOCUMENT_LINE_WORDS } from "../engine/programs.ts";
 import { problemWords } from "../contracts/programs.ts";
 
 const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_screens_f8";
@@ -38,6 +39,8 @@ const EMPTY = /Nothing to release yet: no form is set up on this combination and
   ok("G5 fail (rule, P-248): one document line and no form now holds the release, in the form-line words only", all([], 1).length === 1 && all([], 1)[0].level === "error" && all([], 1)[0].message === FORM_LINE_WORDS);
   ok("G5 pass (rule): nothing at all is F8's one line, never the form-line line as well", all([], 0).length === 1 && all([], 0)[0].message === EMPTY_WORDS);
   ok("G5 pass (rule): one form line and one document line hold nothing", all([{ form_kind: "data_form" }], 1).length === 0);
+  // G5, P-248's other half (tech lead's ruling on #868): forms and no document line hold the release too, in its own words.
+  ok("G5 fail (rule, P-248): one form line and no document line holds the release, in the document-line words only", all([{ form_kind: "data_form" }], 0).length === 1 && all([{ form_kind: "data_form" }], 0)[0].message === DOCUMENT_LINE_WORDS);
   ok("F8 (words): the error is said without an item prefix", problemWords({ level: "error", where: "Forms", item: "", message: "Nothing to release yet: x" }) === "Nothing to release yet: x" && problemWords({ level: "error", where: "Forms", item: "IMM 1", message: "y" }) === "IMM 1: y");
 
   // ---------------------------------------------------------------- through the API

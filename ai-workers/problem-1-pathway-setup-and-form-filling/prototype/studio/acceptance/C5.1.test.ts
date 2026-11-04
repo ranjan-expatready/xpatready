@@ -1,9 +1,10 @@
 // C5.1 acceptance (qa/CAPABILITIES.md C5.1; P-248, amending P-207; F8, X1a; SA-1B-90; row G5): "Author submits; expert
 // ticks; a different person approves and releases; a combination is refused unless it has at least one document line
 // and one form line (a PDF, a portal-screen edition or an online-only form), with a warning while it is configured."
-// Written 4 Nov (G5): C5.1 had no pack. Part A is P-248's form line; part B is C5.1's own rule (submit, the expert's
-// tick, a different person releases). P-248's document-line half is not in this pack: none of the six has a document
-// line yet, so refusing forms-only would refuse all of them (Q1 to the tech lead on the G5 PR; its own row).
+// Written 4 Nov (G5): C5.1 had no pack. Part A is P-248: the form line (A1–A24) and the document line (A25–A32, added on
+// the tech lead's ruling on #868 after qa's gate A); part B is C5.1's own rule (submit, the expert's tick, a different
+// person releases). A combination with forms and no document line is refused the same way, in its own words ("No
+// document line yet", Add a document): on the checkpoint the Visitor visa as loaded, on the fixture Super visa.
 // As a person: on a combination with documents and no form, its Review and release tab shows "No form line yet: this
 // combination cannot be released" with Add a form, Submit for review is greyed, and the shared Release page lists the
 // row "Held back: No form line yet: …". Underneath: Submit is refused (400) and Approve (409), and so is the Release
@@ -12,7 +13,7 @@
 // itself (no screen makes one today: online capture is parked); a checklist or a line marked Not needed does not (Not
 // needed is the rule's and the property's: neither data set has an account record that allows it, so its live step
 // prints NOTE). An approver who changed the draft is refused release (BR-14) in tests/check_s5_slice1.ts.
-// Steps: A1–A24 are P-248 (both data sets; A22 paper and A23 Not needed run only where the account accepts that channel,
+// Steps: A1–A32 are P-248 (both data sets; A22 paper and A23 Not needed run only where the account accepts that channel,
 // and A23 runs on neither today), B1–B10 C5.1's own rule: B4 is red on the checkpoint until QA-144, and B5–B10 run only
 // where B4 is green (today the fixture). Gate B reads the PR's named steps (gate-b.mjs).
 // Data (P-322, release is a later step): by default Demo › Load the configured checkpoint (loaded here when the copy
@@ -26,7 +27,7 @@
 import { mkdirSync } from "node:fs";
 import fc from "fast-check";
 import { join } from "node:path";
-import { FORM_LINE_WORDS, formLineProblem, isFormLine } from "../engine/programs.ts";
+import { DOCUMENT_LINE_WORDS, documentLineProblem, FORM_LINE_WORDS, formLineProblem, isFormLine, releaseLineProblems } from "../engine/programs.ts";
 import { sourceEveryNumber } from "../tests/fixtures/source-every-number.cjs";
 import { APPROVER, AUTHOR, REVIEWER, pack2, run } from "./lib/pack2.ts";
 import { walker } from "./lib/browser.ts";
@@ -36,7 +37,7 @@ const { call, sql, ok, words } = T;
 const FIXTURE = process.argv[4] === "wp.family";
 const DATA = FIXTURE ? "fixture" : "checkpoint";
 const SHOT = join(import.meta.dirname, "..", "var", "acceptance");
-const NO_FORM = /^No form line yet: /;
+const NO_FORM = /^No form line yet: /, NO_DOC = /^No document line yet: /;
 const errorsOf = async (id: string) => ((await call("GET", `/combinations/${id}`)).body?.draft?.problems ?? []).filter((p: any) => p.level === "error") as any[];
 const formLineErr = (ps: any[]) => ps.filter((p) => NO_FORM.test(String(p.message)));
 const released = (id: string) => Number(sql(`select count(*) from config_release where combination_id='${id}'`) || 0);
@@ -148,6 +149,40 @@ run(async () => {
   r = await call("DELETE", `/combinations/${A}/forms/${encodeURIComponent(formA)}`, { version: lineVersion(A, formA) }, AUTHOR);
   errs = await errorsOf(A);
   ok("C5.1-A24 P-248 fail: with the form removed again, the error is back (documents only never release)", r.status < 300 && formLineErr(errs).length === 1, [r.status, words(r).slice(0, 120)]);
+  ok("C5.1: no model call (US$0)", T.spent() === spent0);
+
+  // ---------------------------------------------------------------- A, second half: a document line (tech lead's ruling on #868)
+  // P-248 is one rule: a release needs its form line and its document line. The combination here has forms and no
+  // document line: on the checkpoint the Visitor visa as loaded (its forms, 0 documents, the case qa found); on the
+  // fixture Super visa, given IMM 5257 through the Forms route (it starts empty, and Super visa files IMM 5257).
+  const D = T.combo(FIXTURE ? "sv.super_visa" : "vv.single");
+  if (FIXTURE) { r = await call("POST", `/combinations/${D}/forms`, { formKey: "IMM 5257" }, AUTHOR); if (r.status >= 300) console.log(`NOTE  setup: IMM 5257 was not added to Super visa (${r.status} ${words(r).slice(0, 100)})`); }
+  ok(`setup (${DATA}): ${FIXTURE ? "Super visa" : "Visitor visa"} has form lines and no document line`, !!D && Number(sql(`select count(*) from combination_form where combination_id='${D}' and status<>'RETIRED'`)) > 0 && sql(`select count(*) from document_requirement where combination_id='${D}'`) === "0", D);
+  const docRule = (forms: object[], docs: number) => documentLineProblem({ forms, document_requirements: Array(docs).fill({}) } as any);
+  ok("C5.1-A25 P-248 fail (rule): forms and no document line hold the release with one error in the document-line words; with a document line, or with nothing at all (F8), none", docRule([{ form_kind: "data_form" }], 0).length === 1 && docRule([{ form_kind: "data_form" }], 0)[0].message === DOCUMENT_LINE_WORDS && docRule([{ form_kind: "data_form" }], 1).length === 0 && docRule([], 0).length === 0 && releaseLineProblems({ forms: [{ form_kind: "checklist" }], document_requirements: [] } as any).length === 2);
+  ok("C5.1-A26 P-248 (words): the document-line words say what to add and where (a document the applicant provides, the Documents tab)", /^No document line yet: /.test(DOCUMENT_LINE_WORDS) && /Add at least one document/.test(DOCUMENT_LINE_WORDS) && /Documents tab/.test(DOCUMENT_LINE_WORDS));
+  const docErr = (ps: any[]) => ps.filter((p) => NO_DOC.test(String(p.message)));
+  errs = await errorsOf(D);
+  ok("C5.1-A27 P-248 fail: its draft lists one release-blocking 'No document line yet' error, and no 'No form line yet'", docErr(errs).length === 1 && docErr(errs)[0].where === "Release" && formLineErr(errs).length === 0, errs.map((p) => p.message.slice(0, 80)).slice(0, 4));
+  const rowD = ((await draft())?.rows ?? []).find((x: any) => x.combinationId === D);
+  ok("C5.1-A28 P-248: the shared Release page holds it back in the same words, first", !!rowD && rowD.held === true && NO_DOC.test(String(rowD.why)), rowD ?? null);
+  r = await call("POST", `/combinations/${D}/submit`, {}, AUTHOR);
+  ok("C5.1-A29 P-248 fail: Submit is refused (400) and its list names the missing document line in words", r.status === 400 && (r.body?.errors ?? []).some((e: any) => NO_DOC.test(String(e.message))), [r.status, words(r).slice(0, 140)]);
+  r = await call("POST", `/combinations/${D}/approve`, {}, APPROVER);
+  ok("C5.1-A30 P-248 fail: Approve and release is refused (409, 'Release refused') and its list names it", r.status === 409 && /^Release refused/.test(words(r)) && (r.body?.errors ?? []).some((e: any) => NO_DOC.test(String(e.message))) && released(D) === 0, [r.status, words(r).slice(0, 140)]);
+  const W2 = await walker(`http://localhost:${T.PORT}`);
+  try {
+    const p = await W2.open(AUTHOR);
+    await p.goto(`/c/${D}/review`); await W2.settle(p, "Review and release (document line)");
+    const box = p.locator("[data-no-document-line]");
+    await box.waitFor({ timeout: 15_000 });
+    const boxText = await box.innerText();
+    ok("C5.1-A31 P-248 (screen): the Review and release tab shows 'No document line yet: this combination cannot be released' with Add a document, said once", /No document line yet: this combination cannot be released/.test(boxText) && (await box.getByRole("link", { name: "Add a document" }).count()) === 1 && !(await p.locator("[data-problem]").allInnerTexts()).some((t) => /No document line yet/.test(t)) && !W2.errors.length, boxText.slice(0, 200));
+    await p.screenshot({ path: join(SHOT, `C5.1-${DATA}-review-no-document-1440.png`), fullPage: false });
+  } finally { await W2.close(); }
+  r = await call("POST", `/combinations/${D}/requirements`, { ...line, documentTypeKey: typeKey }, AUTHOR);
+  errs = await errorsOf(D);
+  ok("C5.1-A32 P-248 pass: once a document line is added the 'No document line yet' error is gone", r.status === 201 && docErr(errs).length === 0 && formLineErr(errs).length === 0, [r.status, words(r).slice(0, 120)]);
   ok("C5.1: no model call (US$0)", T.spent() === spent0);
 
   // ---------------------------------------------------------------- B. C5.1: submit, the expert's tick, a different person releases

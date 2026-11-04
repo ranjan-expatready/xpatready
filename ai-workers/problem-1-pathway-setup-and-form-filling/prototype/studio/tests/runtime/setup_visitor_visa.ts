@@ -254,6 +254,17 @@ async function main() {
     const ff = (await call("GET", `/jobs/${j.id}/form-fields`)).body;
     for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, (f as { background?: boolean }).background ? { dataPath: f.dataPath, decision: "by_hand", reason: "A Background question: recorded by hand in the thin slice (Sample; C3.8, IRCC-F08)." } : { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
   }
+  // G5 (C5.1, P-248; tech lead's ruling on #868): a release needs a document line beside its forms. One line through the
+  // Documents route as the author would: a passport copy from each applicant (Sample until the immigration expert
+  // confirms it; IMM 5484, the Visitor visa document checklist, asks for the passport). A new type waits for a second
+  // person, who accepts it on To review; its library ADD is approved with the others just below.
+  const docLine = { attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client", sourceQuote: "Sample: a copy of the passport (IMM 5484, Visitor visa document checklist)." };
+  r = await call("POST", `/combinations/${vv}/requirements`, { ...docLine, documentTypeName: "Passport copy (Sample)" }, AUTHOR);
+  if (r.status === 202) {
+    const typeKey = (await call("POST", "/review/proposals/decide", { ids: [r.body?.proposalId], action: "accept" }, APPROVER)).body?.items?.[0]?.landedAs;
+    r = await call("POST", `/combinations/${vv}/requirements`, { ...docLine, documentTypeKey: typeKey }, AUTHOR);
+  }
+  ok("4.5a one document line (a passport copy from each applicant, Sample): a release needs one (P-248)", r.status === 201 && sql(`select count(*) from document_requirement where combination_id='${vv}'`) !== "0", r.status === 201 ? undefined : r.body);
   for (const c of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
   const o = (await call("GET", `/combinations/${vv}`)).body;
   const problems = o.draft.problems as { level: string; item: string; message: string }[];

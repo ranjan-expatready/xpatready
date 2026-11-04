@@ -12,7 +12,7 @@ import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { questionCounts } from "../../engine/runtime/questionnaires.ts";
-import { checkedOf, comparePaths, formsWithoutFieldMap, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, formsWithoutFieldMap, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, releaseLineProblems, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf } from "../../engine/structure.ts";
 import { forViewer, progressOf, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
@@ -28,7 +28,7 @@ import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
 import { changeView, itemsOf, nearOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
-import { emptyProblem, formLineProblem, Studio } from "./studio.ts";
+import { emptyProblem, Studio } from "./studio.ts";
 import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
@@ -272,9 +272,9 @@ export class Programs {
       const firstError = unsourced && unsourced === errors.length ? `${unsourced} number${unsourced === 1 ? " has" : "s have"} no source entry: fix on Review and release.` : first ? `${first.where === "Tests" ? (first as { label?: string }).label || first.item : first.item}: ${first.message}` : null;
       // Opus review M1 (V3 B1): the Release page holds a row on every draft error and names it. When only forms with no
       // field map hold it, the reason names them all (they are left out of `errors`, which counts work for the checklist).
-      // G5 (C5.1, P-248): a draft with no form line is held on the Release page in its own words, first (its next step is
-      // to add a form, before any other fix); Submit and Approve refuse it through studio.problems.
-      const noFormLine = formLineProblem(snapshot);
+      // G5 (C5.1, P-248): a draft with no form line or no document line is held on the Release page in its own words,
+      // first (its next step is to add one, before any other fix); Submit and Approve refuse it through studio.problems.
+      const noFormLine = releaseLineProblems(snapshot);
       const holding = [...noFormLine, ...draftProblems.filter((x) => x.level === "error")];
       const unmappedHolds = holding.filter((x) => waitsForMap(x)).map((x) => x.item);
       const firstHold = noFormLine.length ? noFormLine[0].message : errors.length ? firstError : unmappedHolds.length ? `No form fields mapped yet for ${unmappedHolds.join(", ")}: map ${unmappedHolds.length === 1 ? "its" : "their"} form fields (Draft setup), or remove ${unmappedHolds.length === 1 ? "it" : "them"} from this combination.` : null;
