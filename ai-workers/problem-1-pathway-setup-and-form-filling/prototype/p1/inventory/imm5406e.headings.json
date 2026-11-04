@@ -1,0 +1,27 @@
+{
+ "file": "official-sources/ircc/forms/imm5406e.pdf",
+ "sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "page1.SectionA": {
+   "heading": "Section A",
+   "printed": "SECTION A",
+   "how": "banner"
+  },
+  "page1.SectionB": {
+   "heading": "Section B",
+   "printed": "SECTION B",
+   "how": "banner"
+  },
+  "page1.SectionC": {
+   "heading": "Section C",
+   "printed": "SECTION C",
+   "how": "banner"
+  },
+  "page1.SectionD": {
+   "heading": "Section D - certification",
+   "printed": "SECTION D - CERTIFICATION",
+   "how": "banner"
+  }
+ }
+}
