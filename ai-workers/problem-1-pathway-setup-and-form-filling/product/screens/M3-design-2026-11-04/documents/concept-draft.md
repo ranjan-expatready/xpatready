@@ -104,7 +104,7 @@ All documents, names and values are **Sample**; identity documents are synthetic
   * `checks/:id/resolve {keep: document|client|other, value?, reason}`;
   * new staff-only `GET /runtime/documents/:id/file`;
   * new staff-only `GET /runtime/cases/:id/document-reviews/counts` (corrected and reviewed, per mode).
-* New types go in the **new** `studio/contracts/document-reads.ts`. Never edit `studio/contracts/documents.ts` or `runtime.ts` (M2-hot).
+* New types are exported from `api/src/case-documents.ts`. They do not go in a new `studio/contracts/` file, where every later edit would be hot. Never edit `studio/contracts/documents.ts` or `runtime.ts` (M2-hot).
 * The tests change in the same PR, and its first line says so (`acceptance/README.md`).
 
 **Tests, one pass and one fail per rule:**

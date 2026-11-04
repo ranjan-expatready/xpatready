@@ -1,6 +1,6 @@
 # M3 design: the open rows, ready to build (4 Nov 2026)
 
-**Status:** all 11 rows written (five parts each), plus dependencies for 4; concept challenges running. Design only: no product code, live AI off, US$0.
+**Status:** all 11 rows are written, five parts each, plus the dependencies of the 4 rows that wait for C7.6. All four concept drafts had a fresh challenge and are revised (r2) to answer every Blocker and Major. Waiting for the tech lead's approval and the Opus review of the records (P-303). Design only: no product code, live AI off, US$0.
 **Base:** `main` 9caa043b (4 Nov). #798 (QA-144 slice 1) was read at its head ba0bd37f. It has not merged.
 
 **Read for every row:**
@@ -14,7 +14,11 @@ Nothing was run. Every finding comes from reading files.
 
 **Two facts that set the file sorting below.**
 
-1. **What the guard checks.** `tools/m3-guard.sh` matches only files a pull request *modifies or deletes* against the hot list. A **new** file never collides, so a new route file, a new `features/<name>.ts` registration, a new test or a new contract file is M3-only, even under `contracts/`. Modifying any of these is **M2-hot**:
+1. **What the guard checks.** `tools/m3-guard.sh` matches only files a pull request *modifies or deletes* against the hot list. A **new** file never collides, so a new route file, a new `features/<name>.ts` registration or a new test is M3-only.
+   * A new file *under* `contracts/` or `studio/contracts/` passes once. Every later edit to it then matches the hot prefix and needs the tech lead's approval line (fee-table challenge m4).
+   * So M3 types live next to their code (`api/src/<file>.ts`, `engine/runtime/`), not in a new contracts file. The tech lead may instead exempt M3-owned contract files in the hot list.
+
+   Modifying any of these is **M2-hot**:
    * `engine/{validate,snapshot,render,library-index,field-map-rounds}.ts`;
    * `api/src/{proposals,review-proposals,studio,demo,demo-reset-to-six,forms-demo,fact-sources,sources,form-library,form-masters,field-map-check,guide-sources}.ts`;
    * `api/src/library-*` and `api/src/field-drafts*`;
@@ -91,7 +95,8 @@ So a C7.3 or C7.7 PR either fixes QA-153 or QA-152 itself and names it, or waits
   * Request, Upload (judged by the file itself, 20 MB) and Not applicable with a reason;
   * its history.
 
-  The client sees no staff actions. Checked at 1440, 1024 and 400 px, axe clean. Test: new `acceptance/C6.4-screen.test.ts` C6.4-31 onward (continuing after the pack's 30), plus journey J7 3.1–3.3.
+  The panel also shows "May be needed: answer … first" lines and kept lines.
+  The panel is **staff only**: the client's checklist read, Request and Not applicable answer 403, while the client's own upload stays allowed (documents challenge M4, M5). Checked at 1440, 1024 and 400 px, axe clean. Test: new `acceptance/C6.4-screen.test.ts` C6.4-31 onward (continuing after the pack's 30), plus journey J7 3.1–3.3.
 * **(b) Permanent residence, after the Visitor visa gate:**
   * a non-accompanying member 18+ gets a police line the officer may waive with a reason;
   * on Express Entry, the principal's, spouse's and dependents 18+'s police and medical lines cannot be marked Not applicable (409), and a missing one blocks Ready to file (P-172, the one hard stop, P-315 (2)).
@@ -170,10 +175,11 @@ Tests:
 **3. Files: all M3-only, no M2-hot file needed**
 * **New:**
   * `api/src/case-documents.ts`, `api/src/features/case-documents.ts`;
-  * `studio/contracts/document-reads.ts` (a new file under contracts/ is allowed);
+  * the types exported from `api/src/case-documents.ts` (not a new `studio/contracts/` file: later edits there would be hot);
   * a migration adding `read_value`, `document_review` and `answer_check`;
   * `web/src/runtime/documents-drawer.tsx`;
   * `acceptance/C6.5-screen.test.ts`.
+* **New (documents challenge M7):** a staff-only `GET /runtime/documents/:id/file`, so the officer can see the passport while checking names.
 * **Modified:**
   * `prisma/schema.prisma`;
   * `api/src/runtime.ts` (answer source `document_read`; Confirm section 409 on an open check);
@@ -193,7 +199,13 @@ Tests:
   * P-316.
   * Still held: SA1B-D77 bulk accept, so there is no Confirm & use across documents.
 * **Q1 (tech lead). What counts as a correction?** *Recommend:* a staff edit of a proposed value before Confirm & use, plus any later staff change to a value that came from a document, counted by review mode.
-* **Q2 (founder). Does Confirm & use write "verified"?** SA1B-D89 and D107 ("staff entries count as verified") are still held, and Confirm section already writes VERIFIED (`runtime.ts`). *Recommend:* Confirm & use writes the same status as Confirm section does today. "Checked against the document" (C6.5-17) stays the separate evidence step. No new SA-01B ruling is needed.
+* **Q2 (founder). What status does a corrected value get?** SA1B-D89 and D107 ("staff entries count as verified") are still held. *Recommend* (documents challenge M3):
+  * an unchanged document value is written VERIFIED, as C6.5-11 needs;
+  * a value the officer corrected before Confirm & use is written like the officer's own typing today, so it waits for Confirm section;
+  * "Checked against the document" (C6.5-17) records its own `checked_against` evidence.
+
+  This leaves D107 undecided.
+* **Also from the challenge (documents B1):** Confirm & use is never disabled by a difference. It writes the values that agree or are new, and opens one check per difference, keeping the typed value (pack C6.5-10, -12).
 * **Q3 (tech lead). Split off part 3?** *Recommend:* yes. Part 3 is the AI-vision letter reader plus one recorded read (FQ-10), a paid run approved by the tech lead under P-309 with its cost stated first. It comes after part 2.
 
 **5. Size and order**
@@ -307,7 +319,7 @@ Tests:
   * `p2/prompts/form-review.v1.md`, `form-review-check.v1.md`, `form-review-output.v1.schema.json`;
   * `p2/jobs/studio-form-review-imm-5257-….json`;
   * `web/src/runtime/review.tsx`;
-  * a new contract file `studio/contracts/review-runs.ts`.
+  * the types exported from `api/src/review-runs.ts` (not a new `studio/contracts/` file).
 * **Modified, M3-only:**
   * `api/src/findings.ts`, `api/src/runtime.ts`;
   * `web/src/runtime/findings.tsx`, `web/src/runtime/cases.tsx`;
@@ -363,27 +375,35 @@ The tab "Prepare application" on the case reads `/runtime/cases/:id/prepare` and
 * Download PDF copy on an Online line, never filed;
 * the Paper steps.
 
-The forms panel is removed. Keyboard-only and axe clean at 1440 and 1024 px.
+The forms panel is **absorbed**, not dropped (prepare-tab challenge B1):
+* its copy block (Generate, Download, Send the validated copy back, Lock) moves into the form row's detail;
+* the panel stays only where `/prepare` says `derived: false`.
+
+Rows show only the API's seven states (To do · In progress · Ready · Done · Out of date · Cannot start yet · Not needed) and the API's reasons. Channels outside `accepts` are shown disabled with IRCC's line. Keyboard only; axe clean at 1440 and 1024 px. The full rules are in `prepare-tab/concept-draft.md` r2.
 
 Tests:
 * new `acceptance/C7.7-screen.test.ts` C7.7-27 onward (the pack has 26);
 * `C7.7.test.ts` stays as the API regression check;
-* one fail step per state (a blocked item names why).
+* one fail step per state (a blocked item names why);
+* `check_runtime_r1c.cjs`, `check_s5_slice2_browser.cjs` and `check_qa_s01_channels.cjs` are changed in the same PR and named in it.
 
 **3. Files: all M3-only**
 * **New:** `web/src/runtime/prepare.tsx` and `acceptance/C7.7-screen.test.ts`.
 * **Modified:**
-  * `web/src/runtime/cases.tsx` (tabs);
-  * `web/src/runtime/forms.tsx` (retired into the tab);
-  * `web/src/App.tsx` (a route line).
+  * `web/src/runtime/cases.tsx` (tabs; the `/cases/*` routes live there, so `App.tsx` needs no line);
+  * `web/src/runtime/forms.tsx` (its copy block moves into the row detail).
 
-  None is on the hot list, but M2 rows changed `App.tsx` (C5.4) and `cases.tsx` (K13) on 2–3 Nov. Keep each change small and merge `origin/main` before review.
-* **Not needed:** an API change.
+  `cases.tsx` is not on the hot list, but M2's K13 changed it on 2–3 Nov. Keep the change small and merge `origin/main` before review.
+* **Two small API changes in `api/src/case-prepare.ts` (M3-only)** (prepare-tab challenge B2), each with its own API test in `tests/check_vv_prepare_api.ts`:
+  * (a) a PDF-upload barcode line gets `validated{}` and In progress or Out of date from `readBackOf`;
+  * (b) a document item takes its state from its `checklist_line`.
+* **Types** go in `prepare.tsx`, never in `studio/contracts/runtime.ts` (hot).
 
 **4. Decisions and questions**
 * **Decisions:** P-62 §6, P-122, P-137 (portal fixed, read-only), P-145, P-171 (1), P-272 (tab name), P-237, P-316 (3).
 * **Q1 (founder). Waits and online-only copies.** They need permanent-residence combinations. *Recommend:* they move out of C7.7's Works as breadth, named.
-* **Q2 (tech lead). Retire the forms panel in the same PR?** *Recommend:* yes, per challenge M7, so there is one place and one set of words.
+* **Q2 (tech lead). The PDF-upload line's state, change (a).** *Recommend:* yes, about 20 lines reusing `readBackOf`. Otherwise the main Visitor visa form still reads To do after its read-back.
+* **Q3 (founder). The History tab.** *Recommend:* left out until a case history exists (P-33).
 
 **5. Size and order**
 * **Size:** L for the tab. It is the screen C6.12-25, C11.6, C7.3, C7.6, C8.1 and C8.2 all show on.
@@ -425,7 +445,7 @@ Tests:
 * **(a), M3-only:** `web/src/runtime/prepare.tsx` (the C7.7 file).
 * **(b):**
   * M3-only: `engine/runtime/answer-sheet.ts`, `engine/channels.ts`, the samples JSON (the account key fix);
-  * M2-hot: `studio/contracts/pdf-sections.json`. *Recommend:* put the new section lists in a **new** file `studio/contracts/pdf-sections-pr.json`, read after the first.
+  * M2-hot: `studio/contracts/pdf-sections.json`. *Recommend:* put the new section lists in a data file outside the hot prefix (for example `samples/pdf-sections-pr.json`), read after the first, or ask the tech lead for the hot-file line.
 
 **4. Decisions and questions**
 * **Decisions:** P-122, P-137, P-143, P-113, P-152 (1), P-171 (3).
@@ -495,12 +515,18 @@ Tests:
 
 **3. Files**
 * **M3-only:**
-  * modified: `engine/runtime/filings.ts`, `api/src/case-prepare.ts`, `api/src/case-filings.ts`, `samples/fee-table.json`, `samples/wave1.json` (a child role on a student or worker Sample), `prisma/schema.prisma` and a migration (`fee_table` with `as_of`, and `fee_table_id` on `filing`), `tests/check_r2_fee_table.ts`, `tests/runtime/check_vv_filings.ts`;
-  * new: `api/src/fee-table.ts` and `features/fee-table.ts` (`PUT`/`GET /library/fees`). **Not** named `library-fees.ts`: a new file passes the guard, but every later edit would match the hot `library-` prefix;
-  * new: `acceptance/lib/setup_fs_m3.ts`, `setup_sp_m3.ts`;
-  * new: `web/src/pages/fees.tsx` (the studio fee table, per the concept).
+  * modified:
+    * `engine/runtime/filings.ts`, `api/src/case-prepare.ts`, `api/src/case-filings.ts`, `api/src/case-checklist.ts`, `api/src/workspace.ts`, `api/src/source-register.ts`: every reader of `samples/fee-table.json` uses one loader (fee-table challenge B1). Synchronous readers read a cache, so `studio.ts` (hot) is never touched;
+    * `samples/fee-table.json` (version 0);
+    * `samples/wave1.json` (a child role on a student or worker Sample);
+    * `prisma/schema.prisma` and a migration: `fee_table` (id, `as_of` = in force from, lines, status, created_by, reason), and **`fee_table_id` on `submission_group`**, not on `filing` (the family maximum is per group, challenge M1);
+    * `tests/check_r2_fee_table.ts`, `tests/runtime/check_vv_filings.ts`;
+    * `acceptance/lib/setup_vv_m3.ts` (S7a gets a reason and full IRCC sources);
+  * new: `api/src/fee-table.ts` and `features/fee-table.ts` (`GET /library/fees`; `PUT` answers 202 and waits as a `library_change` for a **second person**, approved through the existing route, P-253 step 6, challenge B2). **Not** named `library-fees.ts`: a new file passes the guard, but every later edit would match the hot `library-` prefix. If approval needs a new handler in `library-changes.ts` (hot), the builder asks the tech lead first;
+  * new: `acceptance/lib/setup_fs_m3.ts`, `setup_sp_m3.ts`, `tests/check_fee_table.ts`;
+  * PR 2: new `web/src/pages/fees.tsx`, a minimal read-only list (challenge M6).
 * **M2-hot, avoid:**
-  * `studio/contracts/runtime.ts` (the CaseFiling and FeeLine types): put new types in a **new** `studio/contracts/fees.ts`;
+  * `studio/contracts/runtime.ts` (the CaseFiling and FeeLine types): export the new types from `api/src/fee-table.ts`, not from a new `studio/contracts/` file;
   * freezing the fee table into the release (`engine/snapshot.ts`, `api/src/studio.ts`): see Q2;
   * a conditional filing written on the participant line: `studio.ts` `checkParticipants` drops unknown keys. See Q3.
 
@@ -513,14 +539,11 @@ Tests:
   * P-253 (one guarded change for every reusable item);
   * P-319 (no hard-coding).
 * **Q1 (tech lead). -22 checks a fee line starting `pr_`.** The cited CAD 1,260 already bundles processing and the right of permanent residence fee, and `pr_adult` (CAD 1,590) is the economic class, so charging it would overcharge. *Recommend:* amend -22 to check two filings, each fee on a named filing, the bundle once. Its first PR line says so.
-* **Q2 (founder). Freeze fees with the release, or stamp the table version on each filing?** Freezing is M2-hot. *Recommend:* the stamp now (M3-only); the freeze after M2 at 55. A changed table never reprices a filing already made.
-* **Q3 (founder). Editing the fee table:** a direct `PUT` (as S7a assumes) or P-253's guarded change (proposals, M2-hot)? *Recommend:*
-  * M3 ships the route, used by setup and the demo, plus a **read-only** studio page with each line's basis, amount, quote and date;
-  * editing in the studio through the guarded change comes after M2 at 55;
-  * the conditional study-permit rule lives in the same dated data file, and the question is released configuration.
+* **Q2 (founder). Which version prices a filing?** *Recommend:* keep P-151 (1). The version is stamped on the submission group when its filings are first worked out, and a newer version never reprices them. The team is told this differs from SA-1B-52 rule 2 ("the version in force on the date the authority receives the application"). Freezing into the release (M2-hot) is not needed.
+* **Q3 (founder). A second person on the fee route?** *Recommend:* yes, as P-253 step 6 asks. The `PUT` waits as a library change and a different person approves it through the existing route. It is M3-only, and S8's loop in setup already approves waiting changes. The conditional study-permit rule lives in the same dated data, and the question is released configuration.
 
 **5. Size and order**
-* **Size:** L in total: S7a and the read-only page M; -22 M–L; -23 M; -25 S (inside C7.7).
+* **Size:** L in total: S7a (version 0, loader, second person, group stamp) M; the read-only list S (PR 2); -22 M–L; -23 M; -25 S (inside C7.7).
 * **Depends on:**
   * the C7.7 tab (-25);
   * Q1 to Q3;
@@ -528,8 +551,6 @@ Tests:
 * **Unblocks:** C8.2's numbers per filing, C11.6 (b) (the `fs.spouse` release), and P-151 fee currency.
 
 ---
-
-<!-- ROWS -->
 
 ## C1.3 + C11.5: the employer pre-fill (one capability, P-316 (2))
 
@@ -623,43 +644,52 @@ Test: a new `acceptance/C11.5.test.ts` (the merged id), steps C11.5-1 to -9, one
   * the library's choice of the four scopes;
   * refusing a scope change on a published field.
 * **Hold:** lifted by P-316 (2), "Build as specified". `BACKLOG.md` line 76 and the code comment still say held; the tech lead updates both.
-* **Concept:** none. A **short concept** is needed: the library's scope choice and the household subject. It is not a new case screen. It is written next to this file (see "Screens" at the end).
+* **Concept:** none existed. `field-scope/concept-draft.md` (r2, after its fresh challenge) is written next to this file. It is not a new case screen.
 * **Acceptance test:** none.
 
-**2. Done when**
-These follow L-SA4 (`BACKLOG.md` L-SA4) and SA-1B-130 and SA-1B-134, in a new `acceptance/C3.16.test.ts`:
-* C3.16-1: the four scopes are shown and set in the library.
-* C3.16-2: changing the scope of a published field is refused: "A published field's scope cannot change. Create a new field."
-* C3.16-3: a Household fact (Sample: the date of marriage) is asked once on a two-adult case and is read-only for the other adult.
-* C3.16-4: a Filing fact is asked again on a second filing.
-* C3.16-5: an Organisation fact resolves from the organisation subject, never from a person.
-* C3.16-6: a list entry keeps its id across a correction and a removal.
+**2. Done when** (after the fresh challenge, `field-scope/challenge.md`; concept r2)
+These go in a new `acceptance/C3.16.test.ts`. **C3.16 scores Works only after part b**: until then no product step can create a Household field (P-322).
+* C3.16-1 (b): the four scopes are shown and set in the library.
+* C3.16-2 (b): changing the scope of a published field, or of a new draft version of a published key, is refused: "A published field's scope cannot change. Create a new field."
+* C3.16-3 (a):
+  * a Household field (Sample, set by SQL in the test's own release: named scaffolding) is asked once in "For the household", and both adults' boxes fill;
+  * a save on the spouse's subject answers 422;
+  * a Visitor visa family gets no extra person, form or fee.
+* C3.16-4 (a): a Filing field placed per person is asked once on the case and stored on the case subject; a Person field is still asked per person.
+* C3.16-6 (a): RT-9 (`tests/runtime/check_runtime_r1a.ts`) is cited, plus "a correction keeps `rowKey`".
+* **Organisation (-5) is C11.5's**, in `acceptance/C11.5.test.ts`.
+* `tests/check_sh3_resolver.ts` R5 passes unchanged.
 
 **3. Files: split in two**
-* **C3.16a, runtime resolution (M3-only):**
-  * a migration with `ALTER TYPE "FieldScope" ADD VALUE 'HOUSEHOLD'`, `'ORGANISATION'` and a backfill of `organisation.%`. CLIENT_LEVEL and CASE_LEVEL are kept for Person and Filing: renaming them would break `proposals.ts` (hot) and the raw SQL in M2's `acceptance/C3.13` and `C3.15`;
-  * `engine/resolver.ts` reads the pinned snapshot's scope, falling back to the prefix;
-  * `engine/runtime/case.ts`, `api/src/case-checklist.ts`;
-  * `api/src/runtime.ts` (a household `AnswerSubject`; `subjectKind` is a plain string, so no column change);
-  * new `acceptance/C3.16.test.ts` with steps -3 to -6.
-* **C3.16b, library choice and refusal (M2-hot; waits for M2 at 55 or a hot-file approval):**
-  * `contracts/resolver.ts` (`BUILT_SCOPES`, asserted by `tests/check_sh3_resolver.ts`);
-  * `api/src/library-changes.ts` (the published-field refusal);
-  * `api/src/proposals.ts` (the default scope);
+* **C3.16a, runtime (M3-only):**
+  * a migration with only `ADD VALUE IF NOT EXISTS 'HOUSEHOLD'` and `'ORGANISATION'`:
+    * **no backfill** (Postgres refuses a new enum value before it commits, and published fields never change scope);
+    * CLIENT_LEVEL and CASE_LEVEL are kept and mapped (founder Q1);
+  * a new additive table `case_household`;
+  * a new `engine/field-scope.ts` (the one reader: CASE_LEVEL → filing, HOUSEHOLD, ORGANISATION, CLIENT_LEVEL → today's R5);
+  * `engine/resolver.ts`;
+  * `engine/runtime/case.ts` (`caseView` folds the household questions; `knownOf` copies the value to each member, as `hasChildrenOf` does);
+  * `api/src/runtime.ts` (the 422; the household subject on the principal's party, **never a case participant**);
+  * `acceptance/C3.16.test.ts`.
+  * **`engine/render.ts` (hot) is not touched.**
+* **C3.16b, library choice and refusal (M2-hot; waits for M2 at 55):**
+  * `studio/contracts/resolver.ts` (`BUILT_SCOPES`);
+  * `api/src/library-changes.ts`, `api/src/proposals.ts`;
   * `engine/render.ts` (Preview);
-  * `web/src/pages/library.tsx` is not on the list, but M2's C3.15 is changing it now, so treat it as hot.
+  * `web/src/pages/library.tsx` (M2's C3.15 is changing it).
 
 **4. Decisions and questions**
-* **Decisions:** P-239, P-316 (2) (supersedes P-251's hold for this row), SH4 (pin per filing, P-246 (2)).
-* **Q1. Filing scope needs filing ids.** Today `FILING = "case"` ("No question takes a filing id yet"); per-filing ids are SH4. *Recommend:* C3.16a proves -4 across two cases and names the gap. True once-per-filing lands with SH4.
-* **Q2. SA-1B-134 rules 2–4** (identity fields, entries supplied by a document). *Recommend:* out of C3.16. It proves rules 1 and 5 on the existing `rowKey`. The rest goes with C6.5's follow-up, where documents supply entries.
-* **Q3 (tech lead). Lane.** The row is in forms, but part a is runtime code. *Recommend:* runtime takes C3.16a; forms takes C3.16b after M2 at 55.
+* **Decisions:** P-239, P-316 (2) (supersedes P-251's hold for this row), P-246 (2) (SH4), SA1B-D65 (household asked once, read-only for the other adult).
+* **Q1 (founder):** keep CLIENT_LEVEL and CASE_LEVEL, mapped in one reader, and record it as a change to SA-1B-130 rule 6? *Recommend:* yes. Releases keep the old names for good, and a rename touches hot files and about 15 tests for no change in behaviour.
+* **Q2 (founder):** build Household at runtime now (part a), on a Sample field? *Recommend:* yes, in the narrow form of concept r2. The alternative is to wait for the first real household field.
+* **Q3 (tech lead):** lanes and SA-1B-134 rules 2–4. *Recommend:* runtime takes a now; forms takes b after M2 at 55; rules 2–4 go with C6.5's follow-up.
 
 **5. Size and order**
 * **Size:** L overall (a: M; b: S–M).
-* **Depends on:** M2 at 55 (for b); SH4 (true per-filing scope).
+* **Depends on:** M2 at 55 (b); SH4 (true per-filing scope); founder Q1 and Q2.
 * **Not needed for the Visitor visa story.**
-* **Unblocks:** the employer pre-fill moving from the prefix to the stored scope, and L-SA5 (M4).
+* **Unblocks:** L-SA5 (M4).
+* **Order:** a is low in the order, because it does not score Works without b.
 
 ---
 
@@ -801,7 +831,7 @@ Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading
 |---|---|---|---|---|---|---|
 | 1 | **C6.4 (a)** Documents panel | screens | S | M3-only (UI only; API built) | QA-149 closed; the `documents/` concept approved | C6.5 2b, DEMO row 15, C7.7's document items |
 | 2 | **C7.7** Prepare application tab | screens | L | M3-only (`cases.tsx`, `forms.tsx`, `App.tsx` one line: merge main first) | QA-152; #709 re-score; the `prepare-tab/` concept approved | C11.6 (a), C6.12-25, C7.3 screen, the C7.6/C8.1/C8.2 screens, C10.2 |
-| 3 | **C6.12 S7a** fee route + table stamp per filing + read-only page | runtime | M | M3-only (new `fee-table.ts`, migration) | the `fee-table/` concept approved; Q1 to Q3 | `setup_vv_m3` S7a green, C6.12-22 |
+| 3 | **C6.12 S7a** one fee loader (version 0), the route with a second person, the stamp per submission group (read-only list in PR 2) | runtime | M | M3-only (new `fee-table.ts`, migration) | the `fee-table/` concept approved; Q1 to Q3 | `setup_vv_m3` S7a green, C6.12-22 |
 | 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b |
 | 5 | **C7.5 part 2, PR 1** review runs, prompt, job, stub pass, Review page (US$0) | runtime | M | M3-only (new `review-runs.ts`; never edit `studio/contracts/findings.ts`) | — | PR 2 |
 | 6 | **C11.6 (a)** channel select on the row | screens | S | M3-only (`prepare.tsx`) | 2 | C10.2 |
@@ -809,14 +839,14 @@ Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading
 | 8 | **C6.12-25** fees in the tab | screens | S | M3-only | 2, 3 | C10.2 |
 | 9 | **C6.5 2b** the drawer | screens | S–M | M3-only | 1, 4 | C4.5 (P-256), J7 3.3 to 3.8 |
 | 10 | **C11.5 (+C1.3)** employer pre-fill on a Sample employer record | runtime | M | M3-only (new `case-employer.ts`, migration) | Q1 (M3 or M4) | C9.2's employer step, SI-10 |
-| 11 | **C3.16a** scope resolution at runtime | runtime | M | M3-only (additive enum migration) | — | the employer link moving to the stored scope |
+| 11 | **C3.16a** the stored scope read in one place, Household asked once (no Works until b) | runtime | M | M3-only (two `ADD VALUE` lines, `case_household`; `render.ts` untouched) | founder C3.16 Q1 and Q2 | C3.16b after M2 at 55 |
 | 12 | **C6.12-22, -23** sponsorship and the child's study filing (Sample releases through setup files) | runtime | M–L, M | M3-only | 3; C6.12 Q1 | C11.6 (b), C8.2 numbers |
 | 13 | **C7.5 part 2, PR 2** the recorded result (one paid run, about US$1.11 measured, tech lead's approval, P-309) | paid runner | S | — | 5 | C7.5 Works (with C7.6 for -9) |
 | 14 | **C10.2** the finished story | runtime | L | M3-only if the status stays out of `demo.ts` (Q3) | C7.6, C10.1 part B (M2), #798, QA-153; rows 2, 6, 7, 8, 1 | the M3 gate (DEMO checkpoint 3) |
 
 **Wait for M2 at 55** (they need M2-hot files):
 * C3.16b (library choice and refusal);
-* the fee freeze into the release (C6.12 Q2);
+* fee editing on screen, if ever wanted beyond the route (the guarded change's other steps);
 * fee editing through the guarded change (C6.12 Q3).
 
 **Breadth, after the Visitor visa gate** (named, outside the Visitor visa Works):
@@ -838,10 +868,22 @@ Rows 1, 3, 4 and 5 can start the same day. None touches an M2-hot file.
 ## Questions for the founder (one at a time, through the tech lead; each recommended answer first)
 1. **C11.5 Q1. Employer pre-fill: M3 or M4?** P-239 puts the link in M4 (L-SA5). *Recommend:* M3 links to a Sample employer record; M4 adds the Corporate case.
 2. **C10.2 Q1. Release 2's channels** (pack and FQ-2, against DEMO row 9 and #798). *Recommend:* the pack's: IMM 5257 PDF upload validated, IMM 5707 Online, IMM 5476 signed scan.
-3. **C6.12 Q2 and Q3. Fees** are stamped on each filing now, frozen into the release after M2 at 55, and edited only through the guarded change after M2. *Recommend:* yes to all three.
+3. **C6.12 Q2 and Q3. Fees.**
+   * A fee version is stamped on the submission group when its filings are first worked out, and never reprices them. This keeps P-151 (1) and differs from the team's SA-1B-52 rule 2.
+   * A new version waits for a second person (P-253 step 6).
+   * *Recommend:* yes to both.
 4. **C6.4 Q1 and C7.7 Q1.** Permanent-residence parts are scored as named breadth, outside the Visitor visa Works. *Recommend:* yes.
-5. **C7.3 Q3. Works with PDF-twin order** until W6 (M4, P-245). *Recommend:* yes, with the label shown.
-6. **C7.5 Q3. One recorded AI review run, IMM 5257 only, now.** *Recommend:* yes.
+5. **C3.16 Q1 and Q2.**
+   * Keep CLIENT_LEVEL and CASE_LEVEL, mapped to Person and Filing, as a change to SA-1B-130 rule 6.
+   * Build Household at runtime now, on a Sample field.
+   * *Recommend:* yes to both.
+6. **Documents Q1 and Q2.**
+   * A value the officer corrects before Confirm & use waits for Confirm section (SA1B-D107 stays held).
+   * One value that differs opens a check and the rest still fill.
+   * *Recommend:* yes to both.
+7. **Prepare tab Q1.** The History tab is left out until a case history exists. *Recommend:* yes.
+8. **C7.3 Q3. Works with PDF-twin order** until W6 (M4, P-245). *Recommend:* yes, with the label shown.
+9. **C7.5 Q3. One recorded AI review run, IMM 5257 only, now.** *Recommend:* yes.
 
 All the other questions in the rows are the tech lead's own rulings.
 
