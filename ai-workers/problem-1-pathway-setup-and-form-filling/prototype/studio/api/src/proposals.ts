@@ -13,7 +13,7 @@ import { Prisma, type ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
-import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
+import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, SOLUTION, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
@@ -25,7 +25,6 @@ import { nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
 import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
 import { canonical } from "../../../contracts/rules.ts";
-import { effective } from "../../engine/snapshot.ts";
 import { fieldsOf, renamed } from "../../engine/masters-ai.ts";
 
 type Tx = Prisma.TransactionClient;
@@ -374,15 +373,16 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
 /** QA-196 (P-149 (1) one door, P-120): an accepted AI check becomes a DRAFT check where checks live, on a combination
  *  (Library › Checks lists it, used in each), under the section-check writer's rules (studio.ts saveCheck): a condition in
  *  the condition language, never the same check twice in a draft. A guide's check lands on its own combination (a check
- *  over two answers or more is a cross-answer check: it only warns). A form edition's check reads the form's own fields:
+ *  over two answers or more is a cross-answer check). A form edition's check reads the form's own fields:
  *  each is read as the shared field the edition's field map maps it to, and the check lands on every combination whose
- *  draft files that form, under one key. Its examples stay unconfirmed until the expert confirms (P-149 (5)). */
+ *  draft files that form, under one key. A landed check warns, whatever the AI read (P-136: only two things block "Ready
+ *  to file"; the AI's reading stays on the item). Its examples stay unconfirmed until the expert confirms (P-149 (5)). */
 async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
   need(l.actor, "author"); // draft edits of a combination are the author duty (studio.ts saveCheck)
   const parsed = ProposalPayload.safeParse(p);
   if (!parsed.success || (parsed.data.kind !== "form_check" && parsed.data.kind !== "cross_check")) fail(`This check is incomplete (${parsed.success ? "not a check" : plainIssues(parsed.error)}): reject it.`);
   const c = parsed.data as Extract<ProposalPayload, { kind: "form_check" | "cross_check" }>;
-  const work = (r.work ?? {}) as { group?: unknown; severity?: unknown };
+  const work = (r.work ?? {}) as { group?: unknown };
   let tree = c.tree;
   let combos: { id: string; label: string }[];
   if (r.combinationId) {
@@ -420,7 +420,6 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
   if (errs.length) fail(`Its condition does not fit the condition language (${errs[0]}): reject it, or edit its condition.`);
   const cross = c.kind === "cross_check";
   const group = cross ? "cross_record" : typeof work.group === "string" && /^[a-z_]{3,40}$/.test(work.group) ? work.group : "official_rule";
-  const severity = cross ? "warn" : r.combinationId && ["block", "warn", "advise"].includes(String(work.severity)) ? String(work.severity) : "warn";
   const appliesTo = fieldsOf(tree)[0] ?? null;
   const message = c.sentence.trim().slice(0, 500);
   const quote = ((r.source as { quote?: string } | null)?.quote ?? "").trim();
@@ -428,7 +427,7 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
   for (const k of combos) {
     const same = (await tx.check.findMany({ where: { combinationId: k.id, status: "DRAFT", checkGroup: group, appliesTo, message }, select: { predicateJson: true } })).some((x) => canonical(x.predicateJson as never) === canonical(tree as never));
     if (same) fail(`"${message}" is already in ${k.label}'s draft: reject this one.`, HttpStatus.CONFLICT);
-    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: tree as Prisma.InputJsonValue, severity, message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: tree as Prisma.InputJsonValue, severity: "warn", message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
   }
   return key;
 }
@@ -757,7 +756,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey, r.combinationId)) !== landedStamp)
-        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: ${r.kind === "requirement_line" ? "change or remove the line on the combination's Documents instead" : "retire or delete it in the shared library instead"}.`, HttpStatus.CONFLICT);
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: ${r.kind === "requirement_line" ? "change or remove the line on the combination's Documents instead" : r.kind === "form_check" || r.kind === "cross_check" ? "change the check on its combination's draft instead" : "retire or delete it in the shared library instead"}.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
@@ -773,9 +772,9 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     const lists = await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: adds.filter((c) => c.kind === "field").map((c) => c.key) }, status: "DRAFT", version: 1 }, select: { answerListKey: true } });
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
     // C2.6: the draft document lines a checklist item wrote (unchanged since, checked above) go with it.
-    // QA-196: the draft checks an accepted check wrote (unchanged since, checked above) go with it.
-    for (const r of rows) if ((r.kind === "form_check" || r.kind === "cross_check") && r.decidedKey) await tx.check.deleteMany({ where: { workspaceId, checkKey: r.decidedKey, version: 1, status: "DRAFT" } });
     for (const r of rows) if (r.kind === "requirement_line" && r.decidedKey && r.combinationId) await tx.documentRequirement.deleteMany({ where: { combinationId: r.combinationId, lineageKey: { in: r.decidedKey.split(",") }, version: 1, status: "DRAFT" } });
+    // QA-196: the draft checks an accepted check wrote, on each combination (unchanged since, checked above), go with it.
+    for (const r of rows) if ((r.kind === "form_check" || r.kind === "cross_check") && r.decidedKey) await tx.check.deleteMany({ where: { workspaceId, checkKey: r.decidedKey, version: 1, status: "DRAFT" } });
     for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {

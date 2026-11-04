@@ -2,8 +2,8 @@
 // undone on To review like every other kind. Before: Accept answered 409 "A form check proposal is accepted with its own
 // step, not yet on this queue" (LANDERS had no form_check or cross_check). After, at US$0 with no model call, on Demo ›
 // Reset to the six with Saved runs recorded from the committed jobs' stub passes (as check_forms_c34_ai.ts):
-//   guide 5256's check over one answer lands as a DRAFT check of Visitor visa (its group and block, its sentence and
-//   quote, made by AI) and is listed on Library › Checks after a reload; its check over two answers lands as a
+//   guide 5256's check over one answer lands as a DRAFT check of Visitor visa (its group, warning as every check does
+//   (P-136) though the AI read block, its sentence and quote, made by AI) and is listed on Library › Checks after a reload; its check over two answers lands as a
 //   cross-answer check that only warns; an edit lands the edited sentence; a reject writes nothing; Undo takes a landed
 //   check back; a reviewer without the author duty is refused;
 //   IMM 5257's form check reads the form's own fields: refused in plain words while they are not mapped to shared fields
@@ -90,9 +90,9 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   const k1 = r.body?.items?.[0]?.landedAs as string | undefined;
   ok("QA-196 pass: accepting guide 5256's check is no longer refused (was 409 \"accepted with its own step\")", r.status === 201 && !!k1, { status: r.status, said: said(r) });
   const row1 = k1 ? sql(`select check_group || '|' || severity || '|' || status || '|' || origin || '|' || message || '|' || applies_to || '|' || illustrative || '|' || (source_quote is not null) from check_def where combination_id='${vv}' and check_key='${k1}'`) : "";
-  ok("QA-196 pass: it lands as a DRAFT check of Visitor visa: an official rule that stops (block), its sentence, the answer it reads, the guide's quote, made by AI", row1 === `official_rule|block|DRAFT|AI_PROPOSAL|${guideCheck.sentence}|passport_number|false|true`, row1);
+  ok("QA-196 pass: it lands as a DRAFT check of Visitor visa: an official rule that warns (P-136, though the AI read block), its sentence, the answer it reads, the guide's quote, made by AI", row1 === `official_rule|warn|DRAFT|AI_PROPOSAL|${guideCheck.sentence}|passport_number|false|true`, row1);
   const l1 = k1 ? await listed(k1) : null;
-  ok("QA-196 pass: after a reload, Library › Checks lists it, used in Visitor visa, made by AI, stopping", !!l1 && l1.used_in?.length === 1 && l1.used_in[0].id === vv && l1.serious === true && /AI/i.test(String(l1.origin)), l1 && { used_in: l1.used_in, serious: l1.serious, origin: l1.origin });
+  ok("QA-196 pass: after a reload, Library › Checks lists it, used in Visitor visa, made by AI, warning", !!l1 && l1.used_in?.length === 1 && l1.used_in[0].id === vv && l1.serious === false && /AI/i.test(String(l1.origin)), l1 && { used_in: l1.used_in, serious: l1.serious, origin: l1.origin });
   r = await call("POST", `/review/proposals/undo/${r.body?.batchId}`, {});
   ok("QA-196 pass: Undo takes the landed check back and the proposal waits again", r.status === 201 && checksOn(vv) === "" && sql(`select status from proposal_item where id='${one?.id}'`) === "waiting", { status: r.status, said: said(r), left: checksOn(vv) });
 
