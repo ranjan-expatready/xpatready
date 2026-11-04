@@ -89,7 +89,7 @@ export function personSteps(fields: Box[], written: Record<string, string>, grou
     const filedNA = written[pathOf(sw)] === "1" || na.length > 0;
     // Name the question by its telephone caption ("Question 3 Telephone number"), not the first box's ("No.").
     const question = fields.find((f) => pathOf(f).startsWith(`${block}.`) && /telephone|phone|fax/i.test(f.caption ?? ""))?.caption ?? "this telephone number";
-    if (filedNA) steps.push({ finding: "F1", kind: "tick_canada_us", boxes: [pathOf(sw), ...na], say: `${question}: after the form's first Validate, tick "Canada/US" again. The number is already written and the switch is written ticked, but Validate clears the switch while the number boxes are hidden; the click shows them with the number in place.` });
+    if (filedNA) steps.push({ finding: "F1", kind: "tick_canada_us", boxes: [pathOf(sw), ...na], say: `${question}: after the form's first Validate, tick "Canada/US" again. The number is already written and the switch is written ticked, but Validate clears the switch while the number form fields are hidden; the click shows them with the number in place.` });
   }
   // F2: every required signature box: the person types their own name, then validates. A form that marks nothing
   // required (the static IMM 5409 and IMM 5476) still has signatures: each one is listed, signed by the person on the
@@ -108,7 +108,7 @@ export function personSteps(fields: Box[], written: Record<string, string>, grou
     const block = parent(parent(pathOf(btn)));
     if (startsEmpty.has(block)) continue;
     const inside = fields.filter((f) => pathOf(f).startsWith(`${block}.`) && f.ui !== "button");
-    if (inside.some((f) => f.required) && !paths.some((p) => p.startsWith(`${block}.`))) steps.push({ finding: "F4", kind: "remove_empty_block", boxes: [pathOf(btn)], say: `Remove the empty block ${last(block)} with the form's own "${btn.caption}" button (and confirm) before Validate: the form shows it by default, its boxes are mandatory, and nothing in this application goes there.` });
+    if (inside.some((f) => f.required) && !paths.some((p) => p.startsWith(`${block}.`))) steps.push({ finding: "F4", kind: "remove_empty_block", boxes: [pathOf(btn)], say: `Remove the empty block ${last(block)} with the form's own "${btn.caption}" button (and confirm) before Validate: the form shows it by default, its form fields are mandatory, and nothing in this application goes there.` });
   }
   // F6: the oath block, whatever was mapped to it: the person who administers the declaration completes it at the oath.
   const oath = oathBoxes(fields);

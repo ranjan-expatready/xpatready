@@ -41,7 +41,7 @@ export function DraftFields({ code, canAuthor }: { code: string; canAuthor: bool
                 <Button size="sm" variant="secondary" disabled><Sparkles aria-hidden />Draft fields with AI ({p.cost.words})</Button>
               </span></Tip>}
           {p.state === "no_saved" ? <p id="fd-draft-why" className="text-xs text-text-muted" data-draft-fields-live>{p.live.why}</p> : null}
-          <p className="text-xs text-text-muted">{p.boxes} boxes on {p.edition} · drafted once for the edition and reused by every combination that files it · Sample until the immigration expert confirms.</p>
+          <p className="text-xs text-text-muted">{p.boxes} form field{p.boxes === 1 ? "" : "s"} on {p.edition} · drafted once for the edition and reused by every combination that files it · Sample until the immigration expert confirms.</p>
         </> : null}
     </section>
   );
