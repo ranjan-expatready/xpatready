@@ -1,0 +1,24 @@
+PASS  C3.3 step 29 (1440): the run reads "Done with problems" and spent US$0.00
+PASS  C3.3 step 29 (1440): IMM 5707's step says what went wrong in plain words (no code, path or stack)
+PASS  C3.3 step 29 (1440): IMM 5257's draft is kept and offered for review
+PASS  C3.3 step 29 (1440): the next step is offered: Retry the 1 failed step only
+PASS  C3.3 (1440): the page fits without sideways scroll
+PASS  C3.3 axe: the failed run has no WCAG 2.2 A/AA violation
+PASS  C3.3 step 29 (1024): the run reads "Done with problems" and spent US$0.00
+PASS  C3.3 step 29 (1024): IMM 5707's step says what went wrong in plain words (no code, path or stack)
+PASS  C3.3 step 29 (1024): IMM 5257's draft is kept and offered for review
+PASS  C3.3 step 29 (1024): the next step is offered: Retry the 1 failed step only
+PASS  C3.3 (1024): the page fits without sideways scroll
+PASS  C3.3 step 29: the kept IMM 5257 draft opens with every proposal of its answer, ready to decide
+PASS  C3.3 step 30 refusal: the Content reviewer is offered no Retry (the author's duty); nothing runs again
+PASS  C3.3 step 30: Retry ran only IMM 5707 (attempts 2 and 3); IMM 5257's kept draft never ran again
+PASS  C3.3 step 30 refusal: after three attempts no fourth is offered; the page says it needs a person and what to do (P-110); no step is added
+PASS  C3.3 plan: asked for live AI on IMM 1344, the plan first uses its saved AI answer (no model call, US$0)
+PASS  C3.3 plan refusal: drafting IMM 1344 again live, with the same form, prompt and settings as an answer that failed our own check, is refused in words before anything starts
+PASS  C3.3 plan refusal: no priced Start is offered for that repeat (the row has no price; Start is off)
+PASS  C3.3 axe: the plan with a refused paid repeat has no WCAG 2.2 A/AA violation
+PASS  C3.3: nothing was queued by the refused plan
+PASS  C3.3: no page error in the whole walk
+PASS  C3.3: the whole walk spent nothing: no live call reached the launcher, the ledger is unchanged
+
+22 passed, 0 failed (C3.3 failed run, as a person; US$0)
