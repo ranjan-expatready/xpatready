@@ -1,18 +1,50 @@
 // C6.5 Uploaded documents read into facts a person confirms (M3-C; r5c BR-4–BR-7; P-133, P-134, P-142, P-169).
 // Visitor visa part, US$0: the passport is read by rules on the coded lines (no AI, no OCR: a synthetic PDF with a
 // text layer, lib/fixtures.ts); values are proposals with provenance and confidence, never answers; nothing happens on
-// upload; names, date of birth, passport number and expiry are confirmed field by field; a bad check digit is flagged
-// unreadable, never guessed; typed versus document opens one check that blocks Confirm section; only staff mark a value
-// checked against the document. Letters (letter of invitation) are read by AI vision on synthetic documents, here only
-// replayed at US$0; a live read is refused without the founder's Go.
+// upload; a bad check digit is flagged unreadable, never guessed; typed versus document opens one check that blocks
+// Confirm section; only staff mark a value checked against the document.
+// Review per P-242 and P-243 (they amend P-142 D5 and P-72; tech lead's ruling under P-294, 3 Nov): a document's values
+// stay proposals until one "Confirm & use" on that document (P-242: "a value read by AI or rules from a document is a
+// proposal until staff click Confirm & use, one review per document"); passport number, date of birth and expiry show
+// collapsed only when the coded lines' check digits passed, names and anything without a passed check stay expanded
+// (P-243); a client's own typed answer is Declared and fills at once (P-242). Before this, steps 9–11 expected
+// field-by-field acceptance (P-142 D5).
+// Engine steps (C6.5-E*, the reader engine/runtime/mrz.ts and resolver rule R11; no database, no server):
+//   tsx studio/acceptance/C6.5.test.ts --engine
+// Letters (letter of invitation) are read by AI vision on synthetic documents, here only replayed at US$0; a live read is refused without the founder's Go.
 // Breadth, after Visitor visa: printed-text and table reading (Textract, STANDARDS §1 gate), foreign civil records.
 //   tsx studio/acceptance/C6.5.test.ts 4440 xr_studio_accept
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
-import { letterPdf, passportPdf, upload } from "./lib/fixtures.ts";
+import { letterPdf, mrz, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
+import { readPassport } from "../engine/runtime/mrz.ts";
+import { documentFacts } from "../engine/sources.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
 
-type Proposal = { id: string; fact: string; value: unknown; source: { document: string; page: number; reader: string }; confidence: number; state: string; field_by_field?: boolean; replayed?: boolean };
+type Proposal = { id: string; fact: string; value: unknown; source: { document: string; page: number; reader: string }; confidence: number; state: string; review?: "collapsed" | "expanded"; replayed?: boolean };
+type Review = { document: string; confirm: string; collapsed: string[]; expanded: string[] };
+const IDENTITY = ["person.date_of_birth", "person.passport_number", "person.passport_expiry_date"];
+const NAMES = ["person.family_name", "person.given_names"];
 
 await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, US$0)", async () => {
+  // Engine steps: the rules reader and whom a document's facts are about, on Sample documents (no database).
+  const sample = { surname: "SAMPLED", given: "CLIENT A", number: "SAMPLEP12", nationality: "IND", dob: FIXED.dob, sex: "X" as const, expiry: FIXED.expiry };
+  const e = readPassport("sample-doc", passportPdf(sample));
+  const val = (f: string) => e.proposals.find((x) => x.fact === f);
+  ok("C6.5-E1 pass: the reader reads a synthetic passport's coded lines into proposals about its holder, reader \"mrz\", page 1, with a confidence", val("person.family_name")?.value === "SAMPLED" && val("person.passport_number")?.value === "SAMPLEP12" && val("person.date_of_birth")?.value === FIXED.dob && val("person.passport_expiry_date")?.value === FIXED.expiry && e.proposals.every((x) => x.about === "holder" && x.source.reader === "mrz" && x.source.page === 1 && x.source.document === "sample-doc" && x.state === "proposed" && typeof x.confidence === "number"));
+  ok("C6.5-E2 pass (P-243): number, date of birth and expiry, backed by passed check digits, are collapsed; names stay expanded; one review for the document (P-242)", JSON.stringify(e.review.collapsed) === JSON.stringify(IDENTITY) && NAMES.every((f) => e.review.expanded.includes(f)) && e.review.confirm === "one_per_document");
+  ok("C6.5-E3 pass: place of birth is not proposed (not on the coded lines)", !val("person.place_of_birth_city"));
+  const eb = readPassport("sample-bad", passportPdf(sample, true));
+  ok("C6.5-E4 fail: a bad check digit: no passport number is proposed, it is listed unreadable, and nothing is collapsed (P-243)", !eb.proposals.some((x) => x.fact === "person.passport_number") && eb.unreadable.some((x) => x.fact === "person.passport_number") && eb.review.collapsed.length === 0);
+  const e2 = readPassport("sample-two", textPdf([...mrz(sample), ...mrz({ ...sample, surname: "SAMPLES", given: "SPOUSE A", number: "SAMPLES34" })]));
+  ok("C6.5-E5 fail: two people's passports on one document: nothing is proposed for either, every fact unreadable (never attributed by guess)", e2.people === 2 && e2.proposals.length === 0 && e2.unreadable.length > 0);
+  const two = { combination: { key: "t", participants: [] }, document_types: [{ key: "marriage_certificate", name: "Marriage certificate (Sample)", supplies_facts: ["relationship.start_date", "person.family_name_at_birth"], supplies_about: { "person.family_name_at_birth": "holder.spouse" } }],
+    document_requirements: [{ document_type_key: "marriage_certificate", document_type: "Marriage certificate (Sample)", who: "principal_applicant", base_or_conditional: "base" }] } as unknown as Snapshot;
+  const fam = [{ id: "A", role: "principal", label: "A", applies: true }, { id: "B", role: "spouse_or_partner", label: "B", applies: true }];
+  const d = documentFacts(two, fam);
+  ok("C6.5-E6 pass (resolver R11): a two-person document on the principal's line supplies each fact to the person it is about (the spouse's to the spouse)", d.get("A")?.has("relationship.start_date") === true && d.get("B")?.has("person.family_name_at_birth") === true && !d.get("A")?.has("person.family_name_at_birth"));
+  ok("C6.5-E7 fail (resolver R11): with no spouse on the case, the spouse's fact goes to nobody, never to the holder", ![...documentFacts(two, fam.slice(0, 1)).values()].some((m) => m.has("person.family_name_at_birth")));
+  if (process.argv.includes("--engine")) return;
+
   const vv = needVisitorVisa();
   const c = await openCase(vv, FAMILY);
   const P = c.subjects["Sample Client A"];
@@ -39,19 +71,22 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   ok("C6.5-7 pass: proposals are not answers: the answers are unchanged until a person accepts", props.length > 0 && answered() === "0");
   ok("C6.5-8 fail: a client cannot run Fill this from documents for the officer's view (403)", (await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: P }, CLIENT)).status === 403);
 
-  // P-142 D5: names, date of birth, passport number and expiry are always accepted one by one.
-  r = await call("POST", `/runtime/cases/${c.id}/proposals/accept`, { subjectId: P, all: true }, OFFICER);
-  const after = (await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}`, undefined, OFFICER)).body?.proposals as Proposal[] | undefined;
-  ok("C6.5-9 pass (P-142 D5): Accept all leaves names, date of birth, passport number and expiry waiting, field by field", ["person.family_name", "person.given_names", "person.date_of_birth", "person.passport_number", "person.passport_expiry_date"].every((f) => after?.find((x) => x.fact === f)?.state === "proposed"));
-  r = await call("POST", `/runtime/proposals/${pv("person.passport_number")?.id}/accept`, {}, OFFICER);
-  ok("C6.5-10 pass: accepting one proposal writes the answer with its provenance (document_read, document, page)", r.status === 200 && /document_read/.test(sql(`select source_json::text from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.passport_number' and superseded_by_id is null`) ?? ""));
-  ok("C6.5-11 pass (P-72): the accepted value is Proposed, not confirmed, until Confirm section", (await agent(c.id))?.sections?.flatMap((s: { questions: { subjectId: string; fact: string; answer: { confirmed: boolean } | null }[] }) => s.questions).find((q: { subjectId: string; fact: string }) => q.subjectId === P && q.fact === "person.passport_number")?.answer?.confirmed === false);
-
-  // BR-7: typed versus document.
+  // P-242 and P-243 (amend P-142 D5 and P-72): one review per document, identity values collapsed only on passed check digits.
+  const listed = (await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}`, undefined, OFFICER)).body;
+  const review = (listed?.reviews as Review[] | undefined)?.find((x) => x.document === docId);
+  ok("C6.5-9 pass (P-242, P-243): the passport is one review with one \"Confirm & use\"; number, date of birth and expiry are collapsed (check digits passed), names expanded", review?.confirm === "one_per_document" && JSON.stringify([...(review?.collapsed ?? [])].sort()) === JSON.stringify([...IDENTITY].sort()) && NAMES.every((f) => review?.expanded.includes(f)) && (listed?.proposals as Proposal[] | undefined)?.find((x) => x.fact === "person.family_name")?.review === "expanded", review);
+  // BR-7 set-up: the client's own answer, typed before the review.
   await answer(c.id, P, "person.family_name", "SAMPLEDE", CLIENT);
-  r = await call("POST", `/runtime/proposals/${pv("person.family_name")?.id}/accept`, {}, OFFICER);
+  ok("C6.5-9b pass (P-242): the client's own typed answer is Declared and is the current answer at once", sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "DECLARED|SAMPLEDE");
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P }, CLIENT);
+  ok("C6.5-9c fail (P-242): a client cannot Confirm & use a document's values (403; staff only)", r.status === 403, r.status);
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P }, OFFICER);
+  ok("C6.5-10 pass (P-242): one Confirm & use writes the document's values with their provenance (document_read, document, page) and records who and when", r.status === 200 && /document_read/.test(sql(`select source_json::text from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.passport_number' and superseded_by_id is null`) ?? "") && new RegExp(OFFICER).test(JSON.stringify(r.body?.confirmed ?? r.body)) && !!(r.body?.confirmed?.at ?? r.body?.at), r.body);
+  ok("C6.5-11 pass (P-242, amends P-72): a value used by Confirm & use fills at once: the passport number is the current answer, not waiting for Confirm section", sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.passport_number' and superseded_by_id is null`) === "SAMPLEP12" && (await agent(c.id))?.sections?.flatMap((s: { questions: { subjectId: string; fact: string; answer: { confirmed: boolean } | null }[] }) => s.questions).find((q: { subjectId: string; fact: string }) => q.subjectId === P && q.fact === "person.passport_number")?.answer?.confirmed === true);
+
+  // BR-7: typed versus document: never settled silently (P-242).
   const checks = (await call("GET", `/runtime/cases/${c.id}/checks?subject=${P}`, undefined, OFFICER)).body?.checks ?? [];
-  ok("C6.5-12 pass (BR-7): the client typed SAMPLEDE, the passport reads SAMPLED: one open check for this person and fact", checks.filter((x: { fact: string; state: string }) => x.fact === "person.family_name" && x.state === "open").length === 1, checks);
+  ok("C6.5-12 pass (BR-7, P-242): the client typed SAMPLEDE, the passport reads SAMPLED: one open check for this person and fact, and the client's answer is not overwritten", checks.filter((x: { fact: string; state: string }) => x.fact === "person.family_name" && x.state === "open").length === 1 && sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "SAMPLEDE", checks);
   const seen = (await agent(c.id))?.sections?.find((s: { section: string; subjectId: string }) => s.section === section && s.subjectId === P)?.questions?.map((q: { answer: { id: string } | null }) => q.answer?.id).filter(Boolean) ?? [];
   r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/confirm`, { subjectId: P, seen }, OFFICER);
   ok("C6.5-13 fail (BR-6): Confirm section is refused while a check is open (409 open_checks)", r.status === 409 && /open_checks|check/i.test(JSON.stringify(r.body)), r.status);
@@ -71,6 +106,7 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   await upload(PORT, `/runtime/checklist-lines/${sLine}/documents`, passportPdf({ ...doc, surname: "SAMPLES", number: "SAMPLES34", dob: FAMILY[1].dob! }, true), "sample-passport-bad.pdf", OFFICER);
   r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: S }, OFFICER);
   ok("C6.5-18 fail: a coded line whose check digit fails proposes no passport number; the field is flagged unreadable", r.status === 200 && !(r.body?.proposals ?? []).some((x: Proposal) => x.fact === "person.passport_number") && (r.body?.unreadable ?? []).some((x: { fact: string }) => x.fact === "person.passport_number"), r.body);
+  ok("C6.5-18b fail (P-243): with a failed check digit nothing is collapsed: date of birth and expiry stay expanded", r.status === 200 && ["person.date_of_birth", "person.passport_expiry_date"].every((f) => (r.body?.proposals ?? []).find((x: Proposal) => x.fact === f)?.review === "expanded"), r.body);
 
   // Letters: AI vision, replay only (US$0, P-133, P-164 (2)); live is refused here.
   // The synthetic letter's bytes are fixed (lib/fixtures.ts letterPdf), so its saved read replays by checksum.
