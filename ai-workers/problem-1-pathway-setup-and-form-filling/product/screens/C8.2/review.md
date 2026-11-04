@@ -73,7 +73,7 @@ Journeys walked as the case officer, scripted in Playwright plus probes: (1) rec
 **Verdict: Block.** To fix on this PR, each with a fail test: **M1** (keep a recorded group's filings and membership fixed when the case is derived again or people change) and **M2** (refuse a duplicate number inside the group on Correct a number, and warn across cases). Fix m1–m7 or list them in the PR.
 
 ## Re-review (round 2) of 75c0a1a2
-**Verdict: Approve** for 75c0a1a2. This was a diff-only review of `git diff 7100f9de..75c0a1a2` (2fef037b + 75c0a1a2). No Blocker or Major is open. The later head 60095003 changes only the 8 C7.5 screenshots, back to main's bytes (the branch diff against base now has no C7.5 file). I checked that and nothing else in it.
+**Superseded by round 3 below; do not label on 75c0a1a2.** This round missed the breaker's R2-B1: UCI lines reached another firm's activity feed, with the full UCIs in `detail`. My probes checked audit summaries and application numbers only. It also missed R2-M1 (the race between recording and "not travelling") and R2-M2 (an answer left unconfirmed at filing read as changed). Round 2 was a diff-only review of `git diff 7100f9de..75c0a1a2` (2fef037b + 75c0a1a2). No Blocker or Major is open. The later head 60095003 changes only the 8 C7.5 screenshots, back to main's bytes (the branch diff against base now has no C7.5 file). I checked that and nothing else in it.
 
 **Runs** (fresh `rev_c82` on :4439, the edited migration applied; US$0):
 * `check_c82_record_api` 51/51.
@@ -106,4 +106,39 @@ Journeys walked as the case officer, scripted in Playwright plus probes: (1) rec
 
 **Could not check:** the merged #861 tree running myself; a screen reader; an intended user's walk (D17, D20).
 
-**Verdict: Approve** (75c0a1a2).
+Round 2 verdict on 75c0a1a2, withdrawn: Approve. R2-B1 was open, so it should have been Block.
+
+## Re-review (round 3) of d40fdab6
+**Verdict: Approve** for d40fdab6 (the diff `7100f9de..d40fdab6`; new since round 2: 60095003 and d40fdab6). No Blocker or Major is open.
+
+**Runs** (fresh `rev_c82` on :4439; US$0):
+* `check_c82_record_api` 54/54. `check_c82_record_browser` 33/33. I put the C8.2 screenshots back to the committed bytes afterwards.
+* `acceptance/C8.2.test.ts` on this branch alone: -1 passes, and -2 still needs C7.6.
+* `git merge-tree d40fdab6 origin/claude/loving-ride-hhtdgi` merges with no conflicts.
+* `m3-guard` with the PR's title: M3-only. The branch diff against base has no C7.5 file (60095003 put them back).
+* `api.log`: no 500s, and no number or UCI.
+
+**Breaker's round 2, re-tried:**
+* **R2-B1 fixed.** I recorded a UCI, corrected one and added one. user-S (the other firm) then sees 0 of the case's lines and 0 UCIs in `/activity`. The case's own firm and configuration people see "…'s UCI on a recorded filing (reason given)" with no value. 0 audit rows hold a UCI in `summary` or `detail` (`api/src/submission.ts:186-189`: entity `person`, `detail {field, subject}`).
+* **R2-M1 fixed.**
+  * The record now re-checks the case's people under the row lock (`submission.ts:112,117`), and "not travelling" checks for a record under the same lock (`runtime.ts:232-237`).
+  * Probe: I sent the record and "not travelling" at once on 6 fresh cases. Every run had exactly one winner: people 200, record 409 or 400, 0 records. Never both.
+  * I could not force the record to win the race. By the code, the people change would then find the record under the lock and answer 409.
+* **R2-M2 fixed.** Filed values are now read as `currentValues` (`submission.ts:108`). I recorded with an answer left unconfirmed: right after recording there were 0 tasks and the forms read `to_do`. A real change after that still opens 5 tasks and marks the forms `out_of_date`.
+
+**Round 1 and 2 fixes, still holding:**
+* Adding a person after recording: 409. Correcting to the sibling's number: 400. A UCI with a newline: 400.
+* Tomorrow's date: 400. A date 30 days before the case was opened: 200 (R2-m3, a case taken over).
+* 60 parallel Prepare reads: all 200.
+
+**Still open (Minor, listed in the PR):**
+* m2': readiness and filed values are read before the lock, and answer writes take no case lock.
+* m4': Reviewed by should come from C7.6's `filing_review` once #861 is on main.
+* n2: the tech lead may want the contract row to name the `uci` form of a correction.
+* Outside this PR (the coordinator's note, not re-checked by me): C8.1's sign-step and signed-scan audit lines reach other firms' feeds on main (`studio.ts` CASE_ENTITIES, an M2-hot file). That is for the tech lead.
+
+**Process note:** another agent's uncommitted edits (the round-3 fixes) appeared in the shared tree at 12:07 UTC, during my round 2. Every run was on a server started before them or on a fresh copy of the named commit.
+
+**Journey score (round 3): 9/10** (speed ½, not timed against §9). **Could not check:** the merged #861 tree running myself; a screen reader; an intended user's walk (D17, D20).
+
+**Verdict: Approve** (d40fdab6).
