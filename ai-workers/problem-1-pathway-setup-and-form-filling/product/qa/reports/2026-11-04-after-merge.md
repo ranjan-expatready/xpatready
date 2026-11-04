@@ -316,3 +316,8 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 * **New QA-221 (Bug · Major, C4.1, C10.1):** on the checkpoint, a child aged 0–4 is asked 24 facts only IMM 5257 Schedule 1 needs. The form says "dependent children aged 18 years or older … must complete their own copy", but the checkpoint files SCH1 "each applicant" with no age rule.
 * **New QA-222 (UX · Minor, C10.1):** the checkpoint's result row 10 cuts each problem list in the middle of a word.
 * M2: 40/60 (unchanged).
+
+## Ruling ~16:50 IST (Lead 5, P-322 as written)
+* Setup rows count on the six. The checkpoint counts only for later steps built by the product's steps. **C4.7 stays Partial** until it passes on the six; this needs no founder question.
+* Owners: QA-144 part 1 (the placement step on the six) is Builder S1. Part 2 (IRM 0002 applied by the checkpoint) is Builder 8, #891. Part 3 (QA-206) is the cloud lane, #883. QA-219 is Builder S2. QA-218 has no owner yet.
+* qa re-scores the nine QA-144 rows as soon as S1's PR or #891 merges.
