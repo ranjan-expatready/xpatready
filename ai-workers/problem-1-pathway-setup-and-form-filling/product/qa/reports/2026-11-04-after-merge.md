@@ -207,3 +207,17 @@ QA-180 and QA-200 (Critical), and QA-192 (with C11.13) are in `history/qa-bugs-c
 This is the first re-test run on GitHub's machines (#804 merged). The Mac copy was used only for the walk: on the six at 1440 px, 14 setup pages and IMM 5409's AI proposals page show no "box" or "boxes" ("form field" 23 times on that page), with no sideways scroll. QA-182 closed. #838 (an infra guard) changes no capability.
 
 **M2: 46/60 confirmed** (+C3.10). Thin slice 6/8.
+
+## Records update ~13:00 IST: red packs on M2 Works rows (Lead 4, GitHub re-test run 41788362078, #857)
+| Row | Pack on the six | qa's verdict |
+|---|---|---|
+| C4.7 PQR picks | exit 2: "STOP setup missing: this combination has no questions yet (on the six it needs J3 / C4.11 first)" | **Partial** (was Works), held by QA-144 under P-322 |
+| C3.6 Add the fact a rule needs | exit 2: "STOP setup missing: the combination has no rule yet (Visitor visa needs C4.11 first)" | **Partial** (was Works), held by QA-144 under P-322 |
+| C11.12 Who can be in this application | `C11.12.test.ts` exit 0 · 20/20; `C11.12-runtime.test.ts` exit 1 (no released combination on the six; the pack crashes) | **Partial** (was Works). The runtime side waits for a release on the checkpoint (QA-144) |
+| C11.3 | exit 1 · 26/27; only AT-5 red, the held AI "did you mean" (P-284) | **Works** (unchanged, held part excluded) |
+
+qa ran the three red packs itself on one Mac copy of the six to see the messages gate B does not print (copy stopped). Why the three move: under P-322 a setup capability counts on Reset to the six. C4.7 and C3.6 were Works on the Visitor visa set up by `setup_visitor_visa.ts` (sections written by SQL) or on the suites' fixture, which P-322 does not count. On the six, a person cannot reach them until QA-144 gives the Visitor visa questions and rules. C11.12's runtime side needs a release, and the checkpoint releases nothing yet. This follows the tech lead's ruling on C6.1 and C5.4 (12:30 IST).
+
+New: **QA-215** (Minor, test tooling): `C11.12-runtime.test.ts` crashes instead of exiting 2 "setup missing", and C11.3's held AT-5 is a plain FAIL, so gate B refuses C11.3.
+
+**M2: 43/60 confirmed** (was 46; −C4.7, −C3.6, −C11.12). Thin slice 6/8. All three come back when QA-144's slices land.
