@@ -37,3 +37,11 @@
 | C9.1 (M2) | **Works** (was Partial, 14/17) | `C9.1.test.ts` on the checkpoint 0 · 17/17 on main's head (run 41919519444); gate A on #978; added to `REGRESSION-DATA.md` (checkpoint) |
 
 **Closed:** QA-231. **New:** QA-232 (UX · Minor, #1005's supplies panel, from qa's gate A). **M2: 55/60 confirmed** (+C3.6 in batch 16, +C9.1).
+
+## Batch 18 — #868 (G5, C5.1), #1005 (C4.5) · main 8fcfc7888 · ~04:15–04:35 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C5.1 (M2) | **Works** (was Partial) | `C5.1.test.ts` six 0 · 49/49 (run 41928294080), checkpoint 0 · 49/49 (run 41928312919); gate A on #868 |
+| C4.5 (M2) | **Works** (was Partial) | `C4.5.test.ts` six 0 · 26/26 (run 41928954066); gate A on #1005 |
+
+**M2: 57/60 confirmed** (55 after #1016; +C5.1, +C4.5). Thin slice 7/8. M3 1/17.
