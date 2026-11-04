@@ -110,6 +110,17 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
               <p className="mt-1 text-xs text-text-muted">Not asked while the document is on the checklist; if it is missing or cannot be read, the question is asked instead.</p>
             </div>
           ) : null}
+          {p.sets.sqr.missing.length ? (
+            // C4.5 (P-130): try a document as missing or unreadable; its answers are asked instead. Preview only: at a case
+            // this comes with the document reader (M3).
+            <fieldset className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-try-missing>
+              <legend className="px-1 text-xs font-medium">Try it missing (Preview only)</legend>
+              {p.sets.sqr.missing.map((m) => (
+                <label key={m.key} className="flex items-center gap-2"><input type="checkbox" checked={m.marked} onChange={(e) => setTweak(m.key, e.target.checked ? true : null)} data-missing-toggle={m.key} /><span>{m.document} is missing or cannot be read</span></label>
+              ))}
+              {p.sets.sqr.missing.some((m) => m.marked) ? <p className="mt-1 text-xs text-text-muted" data-missing-note>Tried as missing: its answers are asked instead. At a case this comes with the document reader (M3); until then a case asks them.</p> : null}
+            </fieldset>
+          ) : null}
           <div className="rounded-[1.75rem] border-8 border-text/80 bg-surface p-3"><PreviewQuestions view={p.questionnaire} person={who.subjectId} /></div>
         </section>
         <section aria-labelledby="pv-agent" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "agent" && "hidden xl:block")} data-set="agent">
