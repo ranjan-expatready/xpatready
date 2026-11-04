@@ -55,7 +55,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await dialog().getByRole("button", { name: "Load sample" }).click();
   await p.getByText("Sample starting point loaded").first().waitFor({ timeout: 400000 });
   const count = async (k) => Number(await p.locator(`[data-count="${k}"]`).innerText());
-  step("C11.7: the result shows six combinations and the AI proposals waiting for review", await count("Combinations") === 6 && await count("AI proposals waiting for review") === Number(sql(`select count(*) from proposal_item where status='waiting'`)) && await count("AI proposals waiting for review") > 0);
+  step("C11.7: the result shows six combinations and the AI proposals waiting for review", await count("Combinations") === 6 && await count("AI proposals waiting for review") === Number(sql(`select count(*) from proposal_item where status='waiting' and origin='ai'`)) && await count("AI proposals waiting for review") > 0);
   const miss = await p.locator("[data-load-missing]").innerText();
   step("C11.7: every file without a saved copy is listed as Not found · Upload PDF with its reason (EMP5626 on the LMIA)", /EMP5626 on Labour market impact assessment › High-wage position/.test(miss), miss.slice(0, 200));
   await shoot("03-sample-loaded");
