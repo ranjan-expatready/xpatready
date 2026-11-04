@@ -50,6 +50,10 @@ export type QueueProposal = {
   near: string[]; near_reason: string | null; basis: "SAMPLE" | "EXPERT";
   /** null when it can be accepted with others; else why not, in words. */
   bulk_why: string | null;
+  /** QA-192 (P-120): accepting it needs a person's one-line reason why it is not the same as the near library item. */
+  near_reason_needed?: boolean;
+  /** QA-192 (Devin r2): the same, for accepting the checker's reading (an edit to that reading's name). */
+  near_reason_needed_check?: boolean;
   /** Where it is decided instead (the field-map step's form-field page), or null when it is decided here. */
   decide_on: string | null;
   created_at: string;

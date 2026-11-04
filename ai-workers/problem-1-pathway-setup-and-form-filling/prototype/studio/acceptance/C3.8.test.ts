@@ -22,6 +22,9 @@
 // tuberculosis Background question of IMM 5257 is accepted as "not a fact" and nothing blocks) and AT-8 first check
 // (IMM 5707 attached from the package but missing from the forms gives no problem) because those rules are not built;
 // NOTE: AT-5 per channel is not testable on this sample.
+// QA-199 (4 Nov 2026): AT-3 picked its question by "BackgroundInfo" in the path, as the product did, so it passed while
+// IMM 5257's Q6 (ill-treatment) was accepted as "not a fact". It now names IMM 5257's nine Background questions from the
+// form's own field list: on main debbf3fc8 10 pass, 2 fail (AT-3 both); with the QA-199 fix 12 pass, 1 NOTE.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { validate, type Problem } from "../engine/validate.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -66,7 +69,12 @@ const setupMissing = stop;
   const ed = sql("select id from form_edition where edition_label='IMM 5257 (09-2023)'");
   const problems = async () => (await call("GET", `/combinations/${vv}/review`)).body?.draft?.problems as Problem[];
   const k1 = (ps: Problem[]) => ps.find((p) => p.level === "error" && p.where === "Forms" && /no decision in this draft/.test(p.message));
-  const fields = async () => (await call("GET", `/editions/${ed}/form-fields`)).body?.fields as { dataPath: string; caption: string; outcome: string }[];
+  const fields = async () => (await call("GET", `/editions/${ed}/form-fields`)).body?.fields as { dataPath: string; caption: string; outcome: string; background?: boolean }[];
+  // IMM 5257's Background information questions, Q1 to Q6 with their parts, as the form's own field list numbers them
+  // (p1/inventory/imm5257e.inventory.json; QA-199: Q4 military, Q5 political party and Q6 ill-treatment sit outside any
+  // `BackgroundInfo` node, so the pack names them from the form, never by a word in the path).
+  const BG = ["BackgroundInfo[0].Choice[0]", "BackgroundInfo[0].Choice[1]", "BackgroundInfo2[0].VisaChoice1[0]", "BackgroundInfo2[0].VisaChoice2[0]", "BackgroundInfo2[0].Details[0].VisaChoice3[0]",
+    "PageWrapper[0].BackgroundInfo3[0].Choice[0]", "PageWrapper[0].Military[0].Choice[0]", "PageWrapper[0].Occupation[0].Choice[0]", "PageWrapper[0].GovPosition[0].Choice[0]"].map((x) => `form1[0].Page3[0].${x}`);
 
   // ── AT-1 [IRCC-F08] every form field mapped or "not a fact": undecided ones block submission
   let ps = await problems();
@@ -77,7 +85,7 @@ const setupMissing = stop;
   ok("C3.8 AT-1 refusal: submitting with undecided form fields is refused in plain words and nothing is submitted", r.status >= 400 && /Fix \d+ problem/.test(words(r)) && sql(`select count(*) from review_submission where combination_id='${vv}'`) === statusBefore, words(r).slice(0, 200));
 
   // ── AT-2 deciding a form field: who, and with a reason
-  const plain = open.find((f) => !/BackgroundInfo/.test(f.dataPath))!;
+  const plain = open.find((f) => !BG.includes(f.dataPath))!;
   r = await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: plain.dataPath, decision: "not_a_fact", reason: "no" });
   const r2 = await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: plain.dataPath, decision: "not_a_fact", reason: "Not a fact this product fills" }, "user-P");
   const mapped = (await fields()).find((f) => f.outcome === "mapped")!;
@@ -86,16 +94,20 @@ const setupMissing = stop;
     r.status === 400 && /Say why/.test(JSON.stringify(r.body)) && r2.status === 403 && r3.status === 409 && (await fields()).filter((f) => f.outcome === "unresolved").length === open.length, [r.status, r2.status, r3.status]);
 
   // ── AT-3 [IRCC-F08] a Background information question cannot be left as "not a fact"
-  const bg = open.find((f) => /BackgroundInfo\d?\[0\]\.(Choice|VisaChoice)/.test(f.dataPath));
-  if (!bg) ok("C3.8 AT-3 [IRCC-F08] a Background information question decided \"not a fact\" is refused or blocks submission", false, "no undecided Background information question in this replay (setup)");
-  else {
+  const all = await fields();
+  ok("C3.8 AT-3 [IRCC-F08] Form fields marks all nine Background information questions of IMM 5257 (Q1 to Q6, military, political party and ill-treatment included) and no other form field",
+    BG.every((p) => all.find((f) => f.dataPath === p)?.background === true) && all.filter((f) => f.background).length === BG.length, { missing: BG.filter((p) => all.find((f) => f.dataPath === p)?.background !== true), marked: all.filter((f) => f.background).length });
+  const openBg = open.filter((f) => BG.includes(f.dataPath));
+  const tried: { q: string; status: number; flagged: boolean }[] = [];
+  for (const bg of openBg) {
     r = await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: bg.dataPath, decision: "not_a_fact", reason: "Not a fact this product fills (acceptance check)" });
     ps = await problems();
-    const flagged = ps.some((p) => p.level === "error" && (p.item === bg.dataPath || p.message.includes(bg.caption ?? "\u0000")) && /background/i.test(p.message));
-    ok("C3.8 AT-3 [IRCC-F08] a Background information question decided \"not a fact\" is refused, or is an error that blocks submission (IRCC returns an application with one unanswered)", r.status >= 400 || flagged, { decision: r.status, caption: bg.caption, flagged });
+    tried.push({ q: bg.caption?.slice(0, 50) ?? bg.dataPath, status: r.status, flagged: ps.some((p) => p.level === "error" && p.message.includes(bg.caption ?? "\u0000") && /background/i.test(p.message)) });
   }
+  ok("C3.8 AT-3 [IRCC-F08] every undecided Background information question decided \"not a fact\" is refused, or is an error that blocks submission (IRCC returns an application with one unanswered)",
+    openBg.length > 0 && tried.every((t) => t.status >= 400 || t.flagged), openBg.length ? tried : "no undecided Background information question in this replay (setup)");
   // ── AT-4 pass: every other form field decided → the K1 error counts only what is still undecided
-  for (const f of open.filter((x) => x.dataPath !== bg?.dataPath)) await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not a fact this product fills (acceptance check)" });
+  for (const f of open.filter((x) => !BG.includes(x.dataPath))) await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not a fact this product fills (acceptance check)" });
   ps = await problems();
   const left = (await fields()).filter((f) => f.outcome === "unresolved").length;
   ok("C3.8 AT-4 every form field decided (mapped or \"not a fact\" with a reason): the undecided-form-fields error is gone, or names exactly the ones left", left === 0 ? !k1(ps) : !!k1(ps)?.message.startsWith(`${left} form field`), { left, k1: k1(ps)?.message });

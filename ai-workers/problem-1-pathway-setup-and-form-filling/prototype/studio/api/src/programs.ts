@@ -12,10 +12,10 @@ import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { questionCounts } from "../../engine/runtime/questionnaires.ts";
-import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, formsWithoutFieldMap, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
-import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
-import { forViewer, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
+import { filedOf } from "../../engine/structure.ts";
+import { forViewer, progressOf, setupChecklistOf, waitsForMap, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
 import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
 import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
@@ -184,9 +184,10 @@ export class Programs {
       const noteOf = (aiProposals: number, next: string | undefined, held: { edition: string }[] = []) => [n.linkLabel, aiProposals && next !== "review_proposals" ? `${aiProposals} AI proposal${aiProposals === 1 ? "" : "s"} to review` : null,
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
+        const nsSetup = setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`);
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, holds: 0, firstHold: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
-          setup: setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`) });
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: progressOf(nsSetup), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
+          setup: nsSetup });
         continue;
       }
       const { snapshot, sha256 } = snaps.get(c.id)! as { snapshot: Snapshot; sha256: string };
@@ -234,7 +235,6 @@ export class Programs {
       const held = heldItems.filter((x) => x.combinationId === c.id || (x.code && codes.has(x.code))).map((x) => ({ code: x.code ?? "", edition: x.editionLabel ?? x.code ?? "" }))
         .filter((x, i, all) => all.findIndex((y) => y.edition === x.edition) === i);
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
-      const progress = progressFollows(setupProgress({ forms: snapForms.length, allDrafted: forms.every((f) => f.drafted), reviewed: changes === 0 ? !!rel : !!gates.get(c.id)?.ok, aiProposals, live: isLive({ status }), changes }), nextAction, missing);
       // W1 setup checklist (slice A): the same data, read once into one input (concept §8).
       const proposalsOf: Partial<Record<ProposalKind, number>> = {};
       for (const g of byKind) if (g.combinationId === c.id || (!g.combinationId && g.formEdition && (codes.has(g.formEdition) || codes.has(g.formEdition.split(" (")[0])))) proposalsOf[g.kind as ProposalKind] = (proposalsOf[g.kind as ProposalKind] ?? 0) + g._count;
@@ -245,7 +245,7 @@ export class Programs {
       const applicantRoles = roles.filter((p) => p.role !== "representative" && p.applies !== false);
       const docLines = snapshot.document_requirements as { who?: unknown }[];
       const covers = (d: { who?: unknown }, role: string) => !Array.isArray(d.who) || !d.who.length || d.who.includes(role);
-      const unmapped = snapForms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(snapshot.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).length;
+      const unmapped = formsWithoutFieldMap(snapshot).length; // QA-180: the rule release and Open a case read
       const by = c.participantsBy;
       const input: SetupInput = {
         combinationId: c.id, retired,
@@ -264,6 +264,7 @@ export class Programs {
         changes,
         review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
       };
+      const checklist = setupChecklistOf(input, `${c.id}|${key}`);
       // G1 §4: a row held back only by numbers without a source says so with its count (the Release page's held reason);
       // otherwise its first own problem (G2: a test line names its key's label).
       const unsourced = errors.filter((x) => (x as { gate?: string }).gate === "no-source").length;
@@ -278,9 +279,9 @@ export class Programs {
       const blocking = [...errors, ...emptyProblem(snapshot)];
       const said = (p: { item: string; message: string }) => `${p.item ? `${p.item}: ` : ""}${p.message.split(":")[0]}`;
       rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: blocking.length > errors.length },
-        setup: setupChecklistOf(input, `${c.id}|${key}`),
+        setup: checklist,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: !retired && needsWork({ status, nextAction }), needsYou: !retired && waitsForPerson({ status, nextAction, aiProposals, held: held.length }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }

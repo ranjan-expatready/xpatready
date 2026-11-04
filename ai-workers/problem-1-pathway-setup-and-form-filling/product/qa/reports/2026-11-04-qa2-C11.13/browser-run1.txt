@@ -1,0 +1,21 @@
+PASS  setup: sample inputs loaded — 201,
+PASS  setup: a combination with a rule to name — {"combo":"5f726e84-c7c7-46f1-8912-7541fb6e0b13","rule":"R-01"}
+PASS  setup: an author proposes it with its reason; a person accepts it on To review — 201,,201
+PASS  C11.13 P-120 (1440): Review and release lists it under "Library changes waiting for a second person" — 1
+PASS  C11.13 P-120 pass (1440): its row says what it is close to (name and key) and why it is not the same — Close to the library's "Family Name" (person.family_name). Why it is not the same: The name given at birth, which can differ from the family name used now.
+PASS  C11.13 fail (1440): it reads "Waiting for a second person", never "Will be released"
+PASS  C11.13 (1440): the reason is said once (not again in the change's own words)
+PASS  layout (1440): no horizontal page scroll
+PASS  axe: Review and release with a waiting near duplicate has no WCAG A/AA violation — 
+PASS  C11.13 P-120 (400): Review and release lists it under "Library changes waiting for a second person" — 1
+PASS  C11.13 P-120 pass (400): its row says what it is close to (name and key) and why it is not the same — Close to the library's "Family Name" (person.family_name). Why it is not the same: The name given at birth, which can differ from the family name used now.
+PASS  C11.13 fail (400): it reads "Waiting for a second person", never "Will be released"
+PASS  C11.13 (400): the reason is said once (not again in the change's own words)
+PASS  layout (400): no horizontal page scroll
+PASS  C11.13 P-120 pass: the decision page the Approver approves shows the same near line — Close to the library's "Family Name" (person.family_name). Why it is not the same: The name given at birth, which can differ from the family name used now.
+PASS  axe: the decision page with a near duplicate has no WCAG A/AA violation — 
+PASS  C11.13 P-120 pass: once approved, Review and release lists it as Will be released, still with the near line and reason — Add shared field "Family Name at birth" Added for a rule, with a meaning a person wrote; not meaning-checked (P-95): a second person checks the name and meaning. Close to the library's "Family Name" (person.family_name). Why it is not the same: The name given 
+PASS  C11.13 fail: once approved it is no longer under waiting
+PASS  no page error — 
+
+19/19 passed
