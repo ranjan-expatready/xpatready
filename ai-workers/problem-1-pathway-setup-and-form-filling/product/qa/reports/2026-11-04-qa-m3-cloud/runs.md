@@ -47,3 +47,7 @@ Two cases were opened on the fixture: a family of four left blank, and one princ
 * **Not on the page:** the filings and their submission group, the fees (the API gives Visitor visa CAD 100 and biometrics CAD 85 with IRCC's source), the document checklist, the answer sheet, the "Download PDF copy" action, the filing's Ready to file with blocks and warnings, and the warning pass with a reason.
 * Solo case, everything answered and confirmed: IMM 5257 shows "Validate before filing" with "Marked mandatory on IRCC's form, still empty (14)". This is the RCIC walk's 13–14 count (#782) and QA-165's open half. IMM 5476 shows "Checked copy, not for filing" and "Ready to file" side by side, with no word about its hand signature. IMM 5707 shows "Copy, not for filing" and "Ready to file" with 7 of 40 fields, while its answer sheet still waits for the parent facts (QA-153).
 * The IMM 5707 Online line says "a PDF copy, not for filing, is listed with the forms below", but that copy is the row **above** it.
+## Smoke re-run on main d4146dbd (4 Nov ~08:10 UTC; after #848, #714, #833 (P-319 family-form role migration), #802, #851, #853, #850, #859)
+Gate B twice on fresh copies (qam3d4r1_, qam3d4r2_), same result both times and the same as on 9caa043b:
+C6.12 0 · 24/24 · C6.12-breadth 1 · 1/4 · C6.4 0 · 30/30 · C7.6 1 · 4/23 · C7.7 0 · 26/26 · C7.3 0 · 13/13; setup_vv_m3 1 · 44/46.
+No M3 verdict changes. (The container restarted between rounds: the database was started again with cloud-setup.sh.)
