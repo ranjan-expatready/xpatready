@@ -27,6 +27,7 @@ import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, r
 import { render, type Role } from "../../engine/render.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
+import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { CaseForms, formPassed } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
@@ -234,10 +235,13 @@ export class CasePrepare {
     // against what the officer saw.
     const version = versionOf(stored.filings, stored.items);
     const peopleView = people.filter((p) => p.role !== "case").map((p) => { const f = filings.find((x) => x.applicants.some((a) => a.subject === p.subjectId) || x.owner?.subject === p.subjectId); const nf = done.not_filing.find((x) => x.subject === p.subjectId); return { subject: p.subjectId, label: p.label, role: p.role, applies: p.applies, age: ages.get(p.subjectId) ?? null, filing: f?.id ?? null, why: nf?.why ?? null }; });
+    // C8.2 (BR-12, BR-15): a recorded filing reads "submitted" with its record; a form filed with a fact changed since reads
+    // "Filed with an earlier value" and opens its task (api/src/submission-record.ts).
+    const tasks = await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label, factsOf: (form, subject) => formCoverage(s, people, answers, rows, form, subject)?.facts ?? [] });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
-      people: peopleView, filings, groups, items, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version };
+      people: peopleView, filings, groups, items, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
@@ -248,6 +252,7 @@ export class CasePrepare {
     if (!g) fail("No such submission group.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, g!.caseId, "officer");
     const b = parse(SplitBody, body);
+    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { submissionGroupId: g!.id }, select: { id: true } })).map((f) => f.id).concat(UUID.test(String(b.filing)) ? [b.filing] : []), "the submission group"); // C8.2-9
     const now = await this.build(actor, c);
     const group = now.groups.find((x) => x.id === g!.id);
     if (!b.reason) {
@@ -260,6 +265,7 @@ export class CasePrepare {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
       const members = await tx.filing.findMany({ where: { submissionGroupId: g!.id, active: true }, select: { id: true, subjectId: true, mode: true } });
+      await refuseIfRecorded(tx, members.map((m) => m.id), "the submission group"); // C8.2-9, under the case's row lock
       const f = members.find((x) => x.id === b.filing);
       if (!f) return "not_in_group" as const;
       // C11.12 BR-4: a sponsorship is sent with the principal's application; neither is split from the other (break m5:
@@ -310,6 +316,7 @@ export class CasePrepare {
    *  out-of-date one freezes the new answers and keeps the old tick as history (review M1). */
   async entered(actor: Actor, itemId: string, key: string, body: unknown) {
     const { c, item } = await this.onlineItem(actor, itemId);
+    await refuseIfRecorded(this.db, [item.filingId], `"Entered in the portal" for ${item.itemKey}`); // C8.2-9
     const now = await this.sheet(actor, itemId);
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
@@ -318,6 +325,7 @@ export class CasePrepare {
     if (b.version !== sec!.version) throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: `The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then tick again.` }, HttpStatus.CONFLICT);
     const made = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await refuseIfRecorded(tx, [item.filingId], `"Entered in the portal" for ${item.itemKey}`); // C8.2-9, under the lock
       const was = await tx.enteredSection.findFirst({ where: { itemId: item.id, sectionKey: key, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
       if (was && was.snapshot.inputHash === sec!.version) return { row: was, created: false };
       if (was) await tx.enteredSection.update({ where: { id: was.id }, data: { supersededAt: new Date() } });
@@ -350,6 +358,7 @@ export class CasePrepare {
     const item = await this.db.filingItem.findUnique({ where: { id: idOf(itemId, "item") } });
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, item!.caseId, "officer");
+    await refuseIfRecorded(this.db, [item!.filingId], `how ${item!.itemKey} is filed`); // C8.2-9: even a change IRCC accepts
     const b = parse(ChannelBody, body);
     if (item!.kind !== "form" || !item!.active) refuse(422, "channel", "Only a form on this application has a channel.");
     const accepts = await acceptsOf(this.db, c.workspaceId);
@@ -364,6 +373,7 @@ export class CasePrepare {
       if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
       const row = await tx.filingItem.findUnique({ where: { id: item!.id } });
       if (!row || !row.active) return "stale" as const;
+      await refuseIfRecorded(tx, [row.filingId], `how ${row.itemKey} is filed`); // C8.2-9, under the case's row lock
       if ((row.channel ?? before) === to) return "same" as const;
       await tx.filingItem.update({ where: { id: row.id }, data: { channel: to, channelReason: b.reason || null, channelBy: actor.id, channelAt: new Date(), version: row.version + 1 } });
       // Devin on #617: signing steps done for the old channel never count for the new one (they are kept as history).
@@ -394,7 +404,7 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
  *  checks it under the case's row lock exactly as the view computed it. */
-async function storedVersion(tx: Tx | Db, caseId: string) {
+export async function storedVersion(tx: Tx | Db, caseId: string) {
   const [filings, items] = await Promise.all([
     tx.filing.findMany({ where: { caseId, active: true }, select: { id: true, submissionGroupId: true } }),
     tx.filingItem.findMany({ where: { caseId, active: true }, select: { id: true, channel: true, version: true } }),
