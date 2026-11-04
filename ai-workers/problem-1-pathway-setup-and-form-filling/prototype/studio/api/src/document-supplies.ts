@@ -10,7 +10,7 @@
 import { Body, Controller, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { Prisma, type LibraryChange } from "@prisma/client";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { ABOUT_WORDS, SUPPLIES_ACTION, SUPPLIES_KIND, SuppliesBody, type SupplyCite, type SuppliesView } from "../../contracts/document-supplies.ts";
+import { ABOUT_WORDS, SUPPLIES_ACTION, SUPPLIES_KIND, SuppliesBody, type SupplyCite, type SuppliesView, type SuppliesWarning } from "../../contracts/document-supplies.ts";
 import { actorOf, Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { refuseRetired } from "./library-items.ts";
 
@@ -59,7 +59,7 @@ export class DocumentSupplies {
     if (merged.length) throw problem(409, "Merged", `"${nameOfField(merged[0])}" was merged into another shared field: choose that one.`);
     await refuseRetired(this.db, workspaceId, "field", facts);
     const label = new Map(facts.map((f) => [f, nameOfField(fields.find((x) => x.canonicalFieldKey === f)!)]));
-    const cites: SupplyCite[] = parsed.data.facts.map((f) => ({ fact: f.fact, label: label.get(f.fact)!, about: f.about, source: f.source, quote: f.quote }));
+    const cites: SupplyCite[] = parsed.data.facts.map((f) => ({ fact: f.fact, label: label.get(f.fact)!, about: f.about, source: f.source, quote: f.quote, readOn: f.readOn }));
     const before = { facts: current.suppliesFacts, about: (current.suppliesAbout ?? {}) as Record<string, string> }, after = { facts, about: aboutOf(cites) };
     if (same(before, after)) throw problem(409, "Nothing changes", `"${current.name}" already supplies exactly these facts in the library.`);
     const uses = (await this.db.documentRequirement.findMany({ where: { workspaceId, documentTypeKey: key, status: { not: "RETIRED" } }, distinct: ["combinationId"], select: { combinationId: true } })).length;
@@ -71,7 +71,10 @@ export class DocumentSupplies {
         matches: { document: current.name, before: before.facts, beforeAbout: before.about, after: after.facts, afterAbout: after.about, cites, uses } as unknown as Prisma.InputJsonValue } });
     });
     await this.audit.log(workspaceId, actor.id, "proposed", "document type", key, `${actor.name} proposed that "${current.name}" ${words} for every combination (used by ${uses}); waits for a second person. Why: ${parsed.data.reason}`);
-    return { id: c.id, status: c.status, label: c.label, supplies: suppliesView(c) };
+    // Challenge m6: a supplied fact with no question placed cannot be asked when the document is missing (P-130); said, not refused.
+    const placed = new Set((await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts }, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((q) => q.canonicalFieldKey));
+    const warnings: SuppliesWarning[] = facts.filter((f) => !placed.has(f)).map((f) => ({ fact: f, label: label.get(f)!, why: `No question asks "${label.get(f)}" yet, so it cannot be asked when the document is missing or unreadable. Place it in a section.` }));
+    return { id: c.id, status: c.status, label: c.label, supplies: suppliesView(c), warnings };
   }
 }
 
@@ -86,7 +89,7 @@ export function suppliesView(c: Pick<LibraryChange, "matches" | "reason">): Supp
 export function suppliesWords(v: SuppliesView) {
   const list = (x: string[]) => (x.length ? `${x.length} fact${x.length === 1 ? "" : "s"}` : "no fact");
   const about = v.cites.filter((c) => c.about !== "holder").map((c) => `${c.label} (about ${ABOUT_WORDS[c.about]})`);
-  return `Facts it supplies, for every combination: ${list(v.before)} → ${list(v.after)}${v.added.length ? `; adds ${v.added.join(", ")}` : ""}${v.removed.length ? `; removes ${v.removed.join(", ")}` : ""}${about.length ? `; ${about.join(", ")}` : ""} (used by ${v.uses} combination${v.uses === 1 ? "" : "s"}; goes out with the next release; Sample until the immigration expert confirms). Reason: ${v.reason}`;
+  return `Facts it supplies, for every combination: ${list(v.before)} → ${list(v.after)}${v.added.length ? `; adds ${v.added.join(", ")}` : ""}${v.removed.length ? `; removes ${v.removed.join(", ")}` : ""}${about.length ? `; ${about.join(", ")}` : ""}${v.cites.length ? `. Official words: ${[...new Set(v.cites.map((c) => `${c.source} (read ${c.readOn})`))].join("; ")}` : ""} (used by ${v.uses} combination${v.uses === 1 ? "" : "s"}: at approval it changes each one's draft and Preview, and goes out with each one's next release; Sample until the immigration expert confirms). Reason: ${v.reason}`;
 }
 
 /** At approval (lifecycle afterApprove): the document type gets a draft version with the facts, checked again first; it
@@ -100,7 +103,7 @@ export async function applySupplies(db: Db, audit: Audit, actor: Actor, c: Libra
   if (!same({ facts: current.suppliesFacts, about: (current.suppliesAbout ?? {}) as Record<string, string> }, { facts: m.before ?? [], about: m.beforeAbout ?? {} }))
     throw problem(409, "Changed since", "The facts this document supplies changed after it was proposed, so nothing was changed. Return it; the author proposes it again.");
   await revise(db.documentType, rows, { suppliesFacts: m.after, suppliesAbout: m.afterAbout && Object.keys(m.afterAbout).length ? (m.afterAbout as Prisma.InputJsonValue) : Prisma.DbNull }, actor.id, copyType);
-  await audit.log(c.workspaceId, actor.id, "approved", "document type", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the document type goes out with the next release.`);
+  await audit.log(c.workspaceId, actor.id, "approved", "document type", c.key, `${actor.name} approved: ${c.label ?? c.key}. Every combination that names it has it in its draft now; it goes out with each one's next release.`);
 }
 
 /** At a release (publishLibraryChanges): an approved change whose document type draft this release published is released. */
@@ -108,6 +111,11 @@ export async function releaseSupplies(tx: Prisma.TransactionClient, workspaceId:
   const out: { kind: string; key: string; label: string; action: string }[] = [];
   for (const c of await tx.libraryChange.findMany({ where: { workspaceId, kind: SUPPLIES_KIND, status: "APPROVED" } })) {
     if (await tx.documentType.count({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" } })) continue;
+    // Challenge m3, m4: released only when the published type carries the approved facts (a release between approval and
+    // its draft, or a type never published, leaves the change approved, never "released" with nothing applied).
+    const m = c.matches as { after?: string[]; afterAbout?: Record<string, string> };
+    const pub = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "PUBLISHED" }, orderBy: { version: "desc" }, take: 1 }))[0];
+    if (!pub || !same({ facts: pub.suppliesFacts, about: (pub.suppliesAbout ?? {}) as Record<string, string> }, { facts: m.after ?? [], about: m.afterAbout ?? {} })) continue;
     await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", releasedIn: pack } });
     out.push({ kind: c.kind, key: c.key, label: c.label ?? c.key, action: c.action });
   }

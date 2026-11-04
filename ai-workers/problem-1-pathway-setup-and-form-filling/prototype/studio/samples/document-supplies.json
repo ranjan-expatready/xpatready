@@ -8,15 +8,60 @@
       "checklist": "IMM 5484",
       "reason": "IMM 5484 lists what the passport's information page includes, and IMM 5257 asks the names as shown on the passport (Sample, Unconfirmed: expert).",
       "facts": [
-        { "fact": "person.passport_number", "source": "IMM 5484 (05-2026), page 1", "quote": "The passport number;" },
-        { "fact": "person.passport_issue_date", "source": "IMM 5484 (05-2026), page 1", "quote": "The issuance and expiry dates;" },
-        { "fact": "person.passport_expiry_date", "source": "IMM 5484 (05-2026), page 1", "quote": "The issuance and expiry dates;" },
-        { "fact": "person.family_name", "source": "IMM 5257 (09-2023), page 1, Personal details", "quote": "Family name (as shown on your passport or travel document)" },
-        { "fact": "person.given_names", "source": "IMM 5257 (09-2023), page 1, Personal details", "quote": "Given name(s) (as shown on your passport or travel document)" },
-        { "fact": "person.date_of_birth", "source": "IMM 5484 (05-2026), page 1", "quote": "Your photo, name, date and place of birth." },
-        { "fact": "person.birth_city", "source": "IMM 5484 (05-2026), page 1", "quote": "Your photo, name, date and place of birth." },
-        { "fact": "person.birth_country", "source": "IMM 5484 (05-2026), page 1", "quote": "Your photo, name, date and place of birth." },
-        { "fact": "person.citizenship", "source": "IMM 5484 (05-2026), page 1", "quote": "the country of citizenship listed on your passport" }
+        {
+          "fact": "person.passport_number",
+          "source": "IMM 5484 (05-2026), page 1",
+          "quote": "The passport number;",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.passport_issue_date",
+          "source": "IMM 5484 (05-2026), page 1",
+          "quote": "The issuance and expiry dates;",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.passport_expiry_date",
+          "source": "IMM 5484 (05-2026), page 1",
+          "quote": "The issuance and expiry dates;",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.family_name",
+          "source": "IMM 5257 (09-2023), page 1, Personal details",
+          "quote": "Family name (as shown on your passport or travel document)",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.given_names",
+          "source": "IMM 5257 (09-2023), page 1, Personal details",
+          "quote": "Given name(s) (as shown on your passport or travel document)",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.date_of_birth",
+          "source": "IMM 5484 (05-2026), page 1",
+          "quote": "Your photo, name, date and place of birth.",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.birth_city",
+          "source": "IMM 5484 (05-2026), page 1",
+          "quote": "Your photo, name, date and place of birth.",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.birth_country",
+          "source": "IMM 5484 (05-2026), page 1",
+          "quote": "Your photo, name, date and place of birth.",
+          "readOn": "2026-11-05"
+        },
+        {
+          "fact": "person.citizenship",
+          "source": "IMM 5484 (05-2026), page 1, proof of legal status line",
+          "quote": "the country of citizenship listed on your passport",
+          "readOn": "2026-11-05"
+        }
       ]
     }
   ]

@@ -263,10 +263,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   if (ca && canonical(ca.participants ?? []) !== canonical(cb.participants ?? [])) out.push({ kind: "People on this row", key: cb.key, change: "changed", needs_sme: true, label: `who this row covers: ${(cb.participants ?? []).map((p: any) => `${p.label} (${p.min}–${p.max})`).join(", ")}` });
   if (ca) { const meta = (x: any) => canonical({ key: x.key, label: x.label, program: x.program, pathway: x.pathway, source_basis: x.source_basis, basis_note: x.basis_note, path: x.path ?? null, client_type: x.client_type ?? null, allowed_locations: x.allowed_locations ?? null, portal: x.portal ?? null }); // the portal decides how lines are filed (break round 2 M1)
     if (meta(ca) !== meta(cb)) out.push({ kind: "Row details", key: cb.key, change: "changed", needs_sme: canonical(ca.allowed_locations ?? null) !== canonical(cb.allowed_locations ?? null) || ca.source_basis !== cb.source_basis, label: "name, path, portal, source basis or allowed locations (no line changed)" }); }
+  // C4.5 (challenge m2): the facts a document type supplies by name on the release line the expert signs, never keys.
+  const factName = (f: string) => { const d = ((next.canonical_fields as any[]) ?? []).find((x) => x.id === f); return String(d?.meaning ?? d?.label ?? f).trim().replace(/\.$/, ""); };
   for (const [k, id, label, behaviour] of [["document_types", (x: any) => x.key, "Document type", true], ["derived_fields", (x: any) => x.id, "Derived definition", true]] as const) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
-      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).join(", ") || "no facts"}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
+      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
   }
   // W1-15 slice 1 (challenge M5): each choice over the rules' source and each Pre-qualification tick is named on Review,

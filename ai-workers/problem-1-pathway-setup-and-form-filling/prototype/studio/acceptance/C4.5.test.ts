@@ -35,12 +35,16 @@ run(async () => {
   const route = `/library/document-types/${PASSPORT}/supplies`;
   let r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, APPROVER);
   ok("C4.5-2 fail: only an author proposes the facts a document supplies (approver 403)", r.status === 403, r.status);
-  r = await call("POST", route, { facts: [{ fact: "person.no_such_fact", source: "IMM 5484 (05-2026), page 1", quote: "The passport number;" }], reason: sample.reason }, AUTHOR);
+  r = await call("POST", route, { facts: [{ fact: "person.no_such_fact", source: "IMM 5484 (05-2026), page 1", quote: "The passport number;", readOn: sample.facts[0].readOn }], reason: sample.reason }, AUTHOR);
   ok("C4.5-3 fail: a fact that is not a shared field is refused (400, in words)", r.status === 400 && /not in the shared library/.test(words(r)), words(r));
-  r = await call("POST", route, { facts: [{ fact: "person.passport_number", source: "IMM 5484 (05-2026), page 1" }], reason: sample.reason }, AUTHOR);
+  r = await call("POST", route, { facts: [{ fact: "person.passport_number", source: "IMM 5484 (05-2026), page 1", readOn: sample.facts[0].readOn }], reason: sample.reason }, AUTHOR);
   ok("C4.5-4 fail: a fact without the official words that say the document shows it is refused (400, P-170)", r.status === 400 && /quote/i.test(words(r)), words(r));
   r = await call("POST", `/library/document-types/no_such_document/supplies`, { facts: sample.facts, reason: sample.reason }, AUTHOR);
   ok("C4.5-5 fail: a document type not in the library is refused (404)", r.status === 404, r.status);
+  r = await call("POST", route, { facts: [sample.facts[0], sample.facts[0]], reason: sample.reason }, AUTHOR);
+  ok("C4.5-21 fail: a fact listed twice is refused (400, in words)", r.status === 400 && /listed once/.test(words(r)), words(r));
+  r = await call("POST", route, { facts: [{ ...sample.facts[0], readOn: "2999-01-01" }], reason: sample.reason }, AUTHOR);
+  ok("C4.5-22 fail (P-170): a date read in the future, or none, is refused (400)", r.status === 400 && (await call("POST", route, { facts: [{ ...sample.facts[0], readOn: undefined }], reason: sample.reason }, AUTHOR)).status === 400, words(r));
 
   // ---------------------------------------------------------------- proposed: nothing changes yet
   r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, AUTHOR);
@@ -75,12 +79,32 @@ run(async () => {
   const choice = (P0?.sets?.sqr?.missing ?? []).find((m: any) => m.key.endsWith(`|${PASSPORT}`));
   const P1 = choice ? await preview({ [choice.key]: true }) : null;
   const back = supplied.filter((f: string) => asked(P1).has(f));
-  ok("C4.5-16 pass: marked missing or unreadable, the passport's facts come back to the client questionnaire (asked instead)", !!choice && !!P1 && back.length > 0 && !(P1.sets.sqr.fromDocuments ?? []).some((d: any) => /passport/i.test(d.document)) && P1.sets.sqr.asked > P0.sets.sqr.asked && P1.sets.sqr.missing.find((m: any) => m.key === choice.key)?.marked === true, { choice: choice?.key, back: back.length, asked: [P0?.sets?.sqr?.asked, P1?.sets?.sqr?.asked] });
+  ok("C4.5-16 pass: marked missing or unreadable, every one of the passport's facts comes back to the client questionnaire (asked instead)", !!choice && !!P1 && back.length === supplied.length && supplied.length > 0 && !(P1.sets.sqr.fromDocuments ?? []).some((d: any) => /passport/i.test(d.document)) && P1.sets.sqr.asked > P0.sets.sqr.asked && P1.sets.sqr.missing.find((m: any) => m.key === choice.key)?.marked === true, { choice: choice?.key, back: back.length, asked: [P0?.sets?.sqr?.asked, P1?.sets?.sqr?.asked] });
   const P2 = await preview({ "missing:nobody|x": true, ...(choice ? { [choice.key]: false } : {}) });
   ok("C4.5-17 fail-guard: a missing mark for someone not in the family, or switched off, changes nothing", JSON.stringify([...asked(P2)].sort()) === JSON.stringify([...asked(P0)].sort()), P2?.sets?.sqr?.asked);
 
+  // ---------------------------------------------------------------- the same set again, a change since, withdraw
+  r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, AUTHOR);
+  ok("C4.5-23 fail: proposing exactly the facts it supplies now is refused (409 Nothing changes)", r.status === 409 && /already supplies exactly/.test(words(r)), words(r));
+  r = await call("POST", route, { facts: sample.facts.slice(0, 8), reason: "Test: drop citizenship while the approved change waits (C4.5 pack)." }, AUTHOR);
+  ok("C4.5-26 fail (BR-5): while the approved change waits for its release, another change of the same type is refused (409)", r.status === 409 && /already waits/.test(words(r)), words(r));
+  // Test-only change on another type of the six (withdrawn below): the photos line supplies nothing.
+  const OTHER = "visa_application_photos", other = `/library/document-types/${OTHER}/supplies`;
+  r = await call("POST", other, { facts: [{ fact: "person.date_of_birth", source: "Test words, page 1", quote: "Test: checks the Changed-since refusal", readOn: sample.facts[0].readOn }], reason: "Test only, withdrawn by the C4.5 pack." }, AUTHOR);
+  const second = r.body?.id, otherRow = sql(`select id from document_type where document_type_key='${OTHER}' order by version desc limit 1`);
+  // Test-only: the type changes under the waiting change (as a merge of fields would, forms.ts), so approval must refuse.
+  sql(`update document_type set supplies_facts = array['person.passport_number'] where id='${otherRow}'`);
+  r = await call("POST", `/library/changes/${second}/approve`, { note: "C4.5 pack" }, APPROVER);
+  const waits = sql(`select status from library_change where id='${second}'`);
+  sql(`update document_type set supplies_facts = '{}' where id='${otherRow}'`);
+  ok("C4.5-24 fail (BR-5): a change approved after the type changed under it is refused (409 Changed since) and still waits", !!second && r.status === 409 && /changed after it was proposed/.test(words(r)) && waits === "WAITING", { status: r.status, waits, words: words(r).slice(0, 120) });
+  r = await call("POST", `/library/changes/${second}/withdraw`, { note: "Withdrawn by the C4.5 pack." }, APPROVER);
+  const notMine = r.status;
+  r = await call("POST", `/library/changes/${second}/withdraw`, { note: "Withdrawn by the C4.5 pack." }, AUTHOR);
+  ok("C4.5-25 pass: only its proposer withdraws a waiting change; nothing in the library changes", notMine === 403 && r.status < 300 && sql(`select status from library_change where id='${second}'`) === "WITHDRAWN" && sql(`select array_length(supplies_facts, 1) is null from document_type where id='${otherRow}'`) === "t", { notMine, status: r.status, words: words(r).slice(0, 120) });
+
   // ---------------------------------------------------------------- data and money
-  ok("C4.5-18 data: every fact's quote is the official words of IMM 5484 or IMM 5257 (committed text), labelled Sample", sample.facts.every((f: any) => official.includes(f.quote)) && /Sample/.test(sql(`select coalesce(reason,'') || ' ' || coalesce(label,'') from library_change where id='${change}'`) + JSON.stringify(item?.what ?? "")), sample.facts.filter((f: any) => !official.includes(f.quote)).map((f: any) => f.fact));
+  ok("C4.5-18 data: every fact's quote is the official words of IMM 5484 or IMM 5257 (committed text), labelled Sample, with its page and the date read", sample.facts.every((f: any) => official.includes(f.quote) && /page \d/.test(f.source) && /^\d{4}-\d{2}-\d{2}$/.test(f.readOn)) && /Sample/.test(sql(`select coalesce(reason,'') || ' ' || coalesce(label,'') from library_change where id='${change}'`) + JSON.stringify(item?.what ?? "")), sample.facts.filter((f: any) => !official.includes(f.quote)).map((f: any) => f.fact));
   r = await call("POST", `/library/document-types/${PASSPORT}/supplies`, { facts: sample.facts, reason: sample.reason }, REVIEWER);
   ok("C4.5-19 fail: a reviewer (no author duty) cannot propose either (403)", r.status === 403, r.status);
   ok("C4.5-20 pass: the whole pack spent US$0", T.spent() === before);
