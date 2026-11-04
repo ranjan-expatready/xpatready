@@ -80,11 +80,16 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
   // QA-144 slice 1: the Visitor visa is released; the combinations not set up yet stay drafts with the validator's words.
-  // Until IRM 0002's saved field map lands (tech lead on #798), its "no form fields mapped" is the one named block.
+  // Until IRM 0002's saved field map lands (tech lead on #798), its "no form fields mapped" is a named block; since G5
+  // (P-248, #868: a release needs a document line) so is "No document line yet", until row 7 drafts the Visitor visa's
+  // document lines from IMM 5484. Nothing else blocks it.
   const irm0002Map = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0;
-  ok(irm0002Map ? "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)" : "C10.1 row 10: the Visitor visa's one block is IRM 0002's missing field map, named (QA-144 slice 1; its saved map is the paid runner's)",
-    irm0002Map ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows)
-      : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
+  const vvDocs = n(`select count(*) from document_requirement d join combination c on c.id = d.combination_id where c.combination_key = 'vv.single'`) > 0;
+  const vvWhy = /Visitors › Visitor visa: .*?(?= · [^·]* › [^·]*: Fix |$)/.exec(r("10").why ?? "")?.[0] ?? "";
+  const vvBlocks = (irm0002Map ? 0 : 1) + (vvDocs ? 0 : 1);
+  ok(!vvBlocks ? "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)" : "C10.1 row 10: the Visitor visa's named blocks are IRM 0002's missing field map (its saved map is the paid runner's) and, since G5, its missing document line (row 7)",
+    !vvBlocks ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows)
+      : new RegExp(`Fix ${vvBlocks} problems? before submitting`).test(vvWhy) && (irm0002Map || /IRM 0002: No form fields mapped yet/.test(vvWhy)) && (vvDocs || /No document line yet/.test(vvWhy)), vvWhy.slice(0, 240));
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // Slice 2 moves this example to Express Entry, a combination no slice sets up yet.

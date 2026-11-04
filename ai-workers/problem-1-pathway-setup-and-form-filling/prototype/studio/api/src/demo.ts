@@ -75,9 +75,9 @@ export const LMIA_FORM_RULES: FormRule[] = [
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT }> = {
+export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT; documentsFromReviewedRelease?: boolean }> = {
   "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
-  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES,
+  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, documentsFromReviewedRelease: true,
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
 };
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
@@ -211,6 +211,49 @@ export class Demo {
     await this.db.configRelease.create({ data: { workspaceId, combinationId, version: 1, status: "RELEASED", snapshot: snapshot as any, sha256, packVersionId: pack.id, summary: { imported_from: "p3/releases/c1-v3", c1_v3_sha256: rel.configuration_sha256, drafting_runs: rel.drafting_run_ids, counts }, authorId: rel.author.user_id, submitterId: rel.submitter.user_id, approverId: rel.approver.user_id, basis: "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed." } });
     for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
     return counts;
+  }
+
+  /** G5 (C5.1, P-248; tech lead's ruling on #868, option 1): the configured checkpoint's With an LMIA gets its document
+   *  lines from the reviewed work-permit release (p3/releases/c1-v3), the lines Demo › "Start With an LMIA from its
+   *  reviewed release" loads: every line the release did not dismiss, less the QA-115 lines an LMIA job cannot have
+   *  (samples/programs.json, wp.family's drop_documents, each with its why). Each goes in through the Documents route as
+   *  the author, with the release's own condition and source quote; a type the library lacks waits as a proposal that
+   *  the content reviewer accepts (C3.6), and the Approver approves its library ADD with the others (BR-7). Sample, as
+   *  the release is. Returns how many lines went in and the conditional ones left waiting for their facts (named in the
+   *  load's log); a refused line is named in `refused`, never dropped silently. */
+  private async reviewedDocumentLines(author: Actor, reviewer: Actor, workspaceId: string, combinationId: string, refused: string[], say: (e: unknown) => string) {
+    type Line = { document_type: string; status: string; who: string; provided_by?: string | null; condition?: unknown; condition_plain?: string | null; source_quote?: string | null };
+    const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as { document_requirements: Line[] };
+    const dropOf = (x: unknown): { document_type: string }[] | null => {
+      if (Array.isArray(x)) { for (const v of x) { const r = dropOf(v); if (r) return r; } return null; }
+      if (x && typeof x === "object") { const o = x as Record<string, unknown>; if (o.key === "wp.family" && Array.isArray(o.drop_documents)) return o.drop_documents as { document_type: string }[]; for (const v of Object.values(o)) { const r = dropOf(v); if (r) return r; } }
+      return null;
+    };
+    const drop = new Set((dropOf(JSON.parse(readFileSync(SAMPLES, "utf8"))) ?? []).map((d) => d.document_type));
+    // A condition reads facts; a line comes over only when each fact it reads is in this library and asked in a section
+    // (else the release would hold on "not in the library" or "asked of nobody"). The others are left out and named:
+    // they wait for their facts (checkpoint row 7 and the questionnaire work), never written half-working.
+    const factsOf = (x: unknown, out = new Set<string>()): Set<string> => { if (Array.isArray(x)) x.forEach((v) => factsOf(v, out)); else if (x && typeof x === "object") for (const [k, v] of Object.entries(x)) { if (k === "field" && typeof v === "string") out.add(v); else factsOf(v, out); } return out; };
+    const asked = new Set((await this.db.sectionQuestion.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((q) => q.canonicalFieldKey));
+    const inLibrary = new Set((await this.db.canonicalField.findMany({ where: { workspaceId, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey));
+    let n = 0;
+    const waiting: string[] = [];
+    for (const d of config.document_requirements.filter((x) => x.status !== "dismissed" && !drop.has(x.document_type))) {
+      const missing = [...factsOf(d.condition)].filter((f) => !inLibrary.has(f) || !asked.has(f));
+      if (missing.length) { waiting.push(`${d.document_type} (its condition reads ${missing.join(", ")})`); continue; }
+      const line = { attachMode: (d.condition ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY") as "ANSWER_CONDITIONAL" | "COMBINATION_MANDATORY", appliesToRoles: d.who, providedBy: d.provided_by ?? "client",
+        ...(d.source_quote ? { sourceQuote: d.source_quote } : {}), ...(d.condition ? { condition: d.condition, conditionPlain: d.condition_plain ?? undefined } : {}) };
+      try {
+        const r = (await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeName: d.document_type } as Parameters<Studio["saveRequirement"]>[3])) as { proposalId?: string } | null;
+        if (r && r.proposalId) {
+          const key = ((await decide(this.db, this.audit, reviewer, workspaceId, [r.proposalId], { action: "accept", reason: "Accepted by the sample loader: a document line of the reviewed work-permit release c1-v3 (Sample)." })).items[0] as { landedAs?: string } | undefined)?.landedAs;
+          if (!key) { refused.push(`${d.document_type}: its document type was not accepted`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: key } as Parameters<Studio["saveRequirement"]>[3]);
+        }
+        n++;
+      } catch (e) { refused.push(`${d.document_type}: ${say(e)}`); }
+    }
+    return { n, waiting };
   }
 
   /** C5.4 on the six (F6, 3 Nov; re-test of 1a79dbf9: the release with its sources was reachable only on the suites'
@@ -534,7 +577,7 @@ export class Demo {
     // shared rules step), each form field no saved answer proposed filled by hand (ruling 2), each form line set by IRCC's
     // words (ruling 3). All as the author, through the screens' own services.
     const placedFacts: string[] = [], setUpRefused: string[] = [], unchosen: string[] = [];
-    let byHand = 0, lines = 0;
+    let byHand = 0, lines = 0, documentLines = 0;
     await timed("questions, form fields and form rules (rules)", async () => {
       for (const c of fromForms) {
         // The form lines first: a form whose rule is in words only is not read by the coverage check, so its facts would
@@ -565,6 +608,13 @@ export class Demo {
             const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType });
             await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` });
           } catch (e) { setUpRefused.push(`${rf.label}: ${said(e)}`); }
+          // G5 (C5.1, P-248; tech lead's ruling on #868, option 1): a release needs a document line, so With an LMIA's
+          // document lines come from the reviewed work-permit release p3/releases/c1-v3, the same lines Demo › "Start With
+          // an LMIA from its reviewed release" loads, less the ones it dismissed and the QA-115 lines an LMIA job cannot
+          // have (samples/programs.json, wp.family's drop_documents). Through the Documents route as the author; a type
+          // the library lacks waits as a proposal that the content reviewer accepts, and the Approver approves its ADD
+          // just below. Sample, as the release is (its source quotes kept).
+          if (setup.documentsFromReviewedRelease) { const d = await this.reviewedDocumentLines(author, sme, workspaceId, c.id, setUpRefused, said); documentLines += d.n; log.push(`  ${keyOf.get(c.id)}: ${d.n} document lines from the reviewed work-permit release c1-v3 (Sample; P-248); ${d.waiting.length} conditional lines wait for the facts their condition reads: ${d.waiting.join("; ")}`); }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }

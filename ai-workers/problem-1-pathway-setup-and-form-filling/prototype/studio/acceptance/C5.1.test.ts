@@ -14,15 +14,15 @@
 // needed is the rule's and the property's: neither data set has an account record that allows it, so its live step
 // prints NOTE). An approver who changed the draft is refused release (BR-14) in tests/check_s5_slice1.ts.
 // Steps: A1–A32 are P-248 (both data sets; A22 paper and A23 Not needed run only where the account accepts that channel,
-// and A23 runs on neither today), B1–B10 C5.1's own rule: B4 is red on the checkpoint until QA-144, and B5–B10 run only
-// where B4 is green (today the fixture). Gate B reads the PR's named steps (gate-b.mjs).
+// and A23 runs on neither today), B1–B11 C5.1's own rule (B11, the checkpoint only: its release 1 was made by a
+// different person). Gate B reads the PR's named steps (gate-b.mjs).
 // Data (P-322, release is a later step): by default Demo › Load the configured checkpoint (loaded here when the copy
-// holds anything else), part A on With a high wage LMIA, which the checkpoint leaves empty. Its part B needs a
-// combination whose draft has no problem, which the checkpoint has none of until QA-144: then B4 is FAIL (exit 1),
-// and it releases the first clean one as soon as one exists. A fixture key as 4th argument (wp.family) loads the suites'
+// holds anything else), part A on With a high wage LMIA, which the checkpoint leaves empty; part B on the combination
+// the checkpoint released through the product's steps (With an LMIA, QA-144 slice 2): a draft change, submit, the
+// expert's tick, a different person releases version 2. A fixture key as 4th argument (wp.family) loads the suites'
 // fixture instead: part A on Visitor visa, part B releases the work permit's next version.
 // Screenshots go to studio/var/acceptance/C5.1-*-1440.png (the PR's: product/screens/G5-release-form-line/screenshots/).
-// No model call (US$0). Exit 0 = all pass, 1 = a failure (on the checkpoint today: B4 only), 2 = setup missing.
+// No model call (US$0). Exit 0 = all pass, 1 = a failure, 2 = setup missing.
 //   zsh studio/tools/isolated.sh accept 4446 start && tsx studio/acceptance/C5.1.test.ts 4446 xr_studio_accept
 import { mkdirSync } from "node:fs";
 import fc from "fast-check";
@@ -196,25 +196,25 @@ run(async () => {
   // The combination part B releases: the work permit on the fixture, after one draft change; on the checkpoint the first
   // with a clean draft (none until QA-144).
   let B = "";
-  if (FIXTURE) {
-    B = T.combo("wp.family");
-    // A type the library has released (the new one above still waits for its second person, which would hold B).
-    const usedKey = sql(`select document_type_key from document_requirement where combination_id='${B}' limit 1`);
-    const libKey = sql(`select document_type_key from document_type where status='PUBLISHED' and document_type_key<>'${usedKey}' order by document_type_key limit 1`);
-    r = await call("POST", `/combinations/${B}/requirements`, { ...line, documentTypeKey: libKey, appliesToRoles: "principal_applicant" }, AUTHOR);
-    ok("setup: the author changes the work permit's draft (adds a document line with a library type)", r.status === 201, [r.status, words(r), libKey]);
-    await sourceEveryNumber(T.PORT, B, { actor: AUTHOR });
-  } else {
-    // Only a draft whose one remaining problem is unsourced numbers gets its numbers answered (as the author would).
-    for (const c of sql("select id from combination where retired_at is null order by combination_key").split("\n").filter(Boolean)) {
-      if (!(await errorsOf(c)).every((p) => p.gate === "no-source")) continue;
-      await sourceEveryNumber(T.PORT, c, { actor: AUTHOR });
-      if (!(await errorsOf(c)).length) { B = c; break; }
-    }
+  // The combination part B releases again: on the fixture the work permit; on the checkpoint the one it released through
+  // the product's own steps (With an LMIA, QA-144 slice 2), checked first for its release 1 by a different person. The
+  // author then changes its draft (a document line with a type the library has released; the new one above still waits
+  // for its second person, which would hold B), and it goes round again.
+  if (FIXTURE) B = T.combo("wp.family");
+  else B = sql("select c.id from combination c where c.retired_at is null and exists (select 1 from config_release r where r.combination_id = c.id) order by c.combination_key limit 1");
+  if (B && !FIXTURE) {
+    const rel1 = sql(`select version || '|' || submitter_id || '|' || approver_id from config_release where combination_id='${B}' order by version limit 1`);
+    ok("C5.1-B11 pass (checkpoint): its release 1 was made by the product's steps: submitted by the author, approved by a different person (the Approver)", rel1 === `1|${AUTHOR}|${APPROVER}`, rel1);
   }
-  // Gate B counts a pack green in part only by named steps, never on exit 2: so on the checkpoint this is an honest FAIL
-  // (red until QA-144 gives a checkpoint combination a clean draft), and the PR names the steps that run there.
-  ok("C5.1-B4 pass: a combination is ready to submit and release (a form line, a document line, no other problem)", !!B, B ? undefined : "red until QA-144: no combination on the configured checkpoint has a draft without problems yet");
+  if (B) {
+    // A released type that is not yet this combination's line for the principal applicant (a new line, not a duplicate).
+    const libKey = sql(`select t.document_type_key from document_type t where t.status='PUBLISHED' and not exists (select 1 from document_requirement d where d.combination_id='${B}' and d.document_type_key=t.document_type_key and d.applies_to_roles='principal_applicant') order by t.document_type_key limit 1`);
+    r = await call("POST", `/combinations/${B}/requirements`, { ...line, documentTypeKey: libKey, appliesToRoles: "principal_applicant" }, AUTHOR);
+    ok("setup: the author changes its draft (adds a document line with a library type)", r.status === 201, [r.status, words(r), libKey]);
+    await sourceEveryNumber(T.PORT, B, { actor: AUTHOR });
+    if ((await errorsOf(B)).length) B = "";
+  }
+  ok("C5.1-B4 pass: a combination is ready to submit and release (a form line, a document line, no other problem)", !!B, B ? undefined : "no combination with a release and a draft without problems on this data");
   if (!B) { T.done(); return; }
   const before = released(B);
   r = await call("POST", `/combinations/${B}/submit`, { note: "C5.1 acceptance" }, AUTHOR);
