@@ -335,6 +335,200 @@ Tests:
 
 ---
 
+## C7.7: Prepare application, the two-stage deliverables list (the case tab)
+
+**1. Missing now**
+* **API: works.**
+  * Part 1 (#357) and part 2 (#709, Paper lines: barcode page, validate · print · sign in pen · mail) both merged. #709 merged as b18bfe6a on 3 Nov, after qa's last score (762dbae6), so **qa has not re-scored it** (reviewer and builder 26/26, `screens/C7.7/review-part2.md`).
+  * The CAPABILITIES note "the pack stops (exit 2)" means the setup scripts were not run first (`acceptance/lib/m3.ts`), not a product failure. Re-run through `acceptance/lib/run_pack4.sh`.
+* **Not built:**
+  * **the Prepare application tab** (P-272). The case page has no tabs, and the heading "Prepare application" sits on the R1 forms panel (`web/src/runtime/forms.tsx`), which reads `/runtime/cases/:id/forms`, not `/prepare`;
+  * "Cannot start yet" filings (waits);
+  * an our-format PDF copy for an online-only form (P-145);
+  * biometrics' exemption is read from the hard-coded `vv.single` (`api/src/case-prepare.ts`), a no-hard-coding item.
+* **Open Major:** QA-152 (C6.11, C7.7: IMM 5476's firm name asked per applicant under employer words). Gate B applies.
+* **Concept:**
+  * `M3-prepare-application/concept-draft.md` (23 Oct, predates P-122) and its challenge M1–M7. M7: the tab absorbs the forms panel.
+  * Board `design/draft-prepare-application-v3.html`: two stages, rows, channel select, "not for filing". It has no fees.
+  * `M3-agent-view` r5c §4 chose a split view with tabs Overview · Prepare application · Eligibility · Review · History.
+  * J7 steps 2.3, 5.1, 5.2, 5.5.
+  * Designed, never consolidated since P-122, P-145, P-171, P-237 and P-272, so a **concept addendum with a fresh challenge** is written next to this file (see "Screens").
+
+**2. Done when**
+The tab "Prepare application" on the case reads `/runtime/cases/:id/prepare` and shows:
+* stage 1 (facts to confirm per filing);
+* stage 2, one row per item with exactly one state;
+* the channel select (C11.6);
+* fees per filing (C6.12-25);
+* Download PDF copy on an Online line, never filed;
+* the Paper steps.
+
+The forms panel is removed. Keyboard-only and axe clean at 1440 and 1024 px.
+
+Tests:
+* new `acceptance/C7.7-screen.test.ts` C7.7-27 onward (the pack has 26);
+* `C7.7.test.ts` stays as the API regression check;
+* one fail step per state (a blocked item names why).
+
+**3. Files: all M3-only**
+* **New:** `web/src/runtime/prepare.tsx` and `acceptance/C7.7-screen.test.ts`.
+* **Modified:**
+  * `web/src/runtime/cases.tsx` (tabs);
+  * `web/src/runtime/forms.tsx` (retired into the tab);
+  * `web/src/App.tsx` (a route line).
+
+  None is on the hot list, but M2 rows changed `App.tsx` (C5.4) and `cases.tsx` (K13) on 2–3 Nov. Keep each change small and merge `origin/main` before review.
+* **Not needed:** an API change.
+
+**4. Decisions and questions**
+* **Decisions:** P-62 §6, P-122, P-137 (portal fixed, read-only), P-145, P-171 (1), P-272 (tab name), P-237, P-316 (3).
+* **Q1 (founder). Waits and online-only copies.** They need permanent-residence combinations. *Recommend:* they move out of C7.7's Works as breadth, named.
+* **Q2 (tech lead). Retire the forms panel in the same PR?** *Recommend:* yes, per challenge M7, so there is one place and one set of words.
+
+**5. Size and order**
+* **Size:** L for the tab. It is the screen C6.12-25, C11.6, C7.3, C7.6, C8.1 and C8.2 all show on.
+* **Depends on:**
+  * QA-152 (gate B);
+  * a qa re-score of #709;
+  * the concept addendum's challenge.
+* **Place:** the first screen built. It unblocks the most rows.
+
+---
+
+## C11.6: channel per form inside what IRCC accepts
+
+**1. Missing now**
+* **API: works.** `C11.6.test.ts` 14/14: an item starts on its line's channel; a choice outside `accepts` gets 422 with IRCC's line; Paper needs a reason; audited.
+* **Not built:**
+  * **the row control on the case screen.** `PATCH /runtime/items/:id/channel` exists (`case-prepare.ts`). Concept: the v2 and v3 boards' "Filing channel" select per row, agent-view BR-8 ("changed on the row, refused with the reason") and J7 5.2;
+  * **answer sheets for portal-only permanent-residence forms (P-113):**
+    * the section lists cover only IMM 5257, 1295, 5707 and 5476 (`studio/contracts/pdf-sections.json`);
+    * `case-prepare.ts` refuses a form without one;
+    * no permanent-residence combination is released.
+* **Data found while reading:**
+  * The PR Portal account is keyed to `fs.outside` in `samples/form-library-sample.json`, but the six use `fs.spouse`, so the finder never sets PR_PORTAL there.
+  * What IRCC accepts for IMM 5669 and 5406 is recorded only for IRCC_SECURE_ACCOUNT.
+* **New screen:** no. It is a row control inside the C7.7 tab.
+
+**2. Done when**
+* **(a) Screen, now.** Each form row in Prepare application offers only the channels IRCC accepts for it. A refused choice shows IRCC's line in words, and Paper asks for a reason. The combination's line never changes.
+* **(b) Permanent residence, breadth.** On a released `fs.spouse` case:
+  * IMM 0008, 5669 and 5406 are Online with an answer sheet in section order;
+  * a form the portal does not take reads "Not needed" (P-137).
+
+Tests:
+* (a): steps in `C7.7-screen.test.ts`;
+* (b): new `acceptance/C11.6-breadth.test.ts` C11.6-15 onward;
+* `C11.6.test.ts` stays green (it is in `tests/check_vv_prepare_api.ts`).
+
+**3. Files**
+* **(a), M3-only:** `web/src/runtime/prepare.tsx` (the C7.7 file).
+* **(b):**
+  * M3-only: `engine/runtime/answer-sheet.ts`, `engine/channels.ts`, the samples JSON (the account key fix);
+  * M2-hot: `studio/contracts/pdf-sections.json`. *Recommend:* put the new section lists in a **new** file `studio/contracts/pdf-sections-pr.json`, read after the first.
+
+**4. Decisions and questions**
+* **Decisions:** P-122, P-137, P-143, P-113, P-152 (1), P-171 (3).
+* **Q1 (founder). Does an Online IMM 5669 or 5406 offer "Download PDF copy"?** P-171 (3) says "answer sheet, no PDF", while P-145 offers a copy where IRCC publishes one. *Recommend:* our-format copy only, labelled "copy, not for filing".
+* **Q2 (tech lead). Which permanent-residence combination hosts (b)?** *Recommend:* `fs.spouse`, shared with C6.12-22, with its release set up in a new `acceptance/lib/setup_fs_m3.ts` through the configuration routes (Sample).
+
+**5. Size and order**
+* **Size:** (a) S, inside C7.7; (b) M–L.
+* **Depends on:**
+  * (a): C7.7's tab;
+  * (b): a released `fs.spouse` (the C6.12 setup file) and the account key fix.
+
+---
+
+## C6.12: filings and fees derived from the case
+
+**1. Missing now**
+* **Works (Visitor visa):** `C6.12.test.ts` 24/24, `check_r2_fee_table.ts` 81/81. `C6.12-breadth.test.ts` 1/4: -24 passes; **-22, -23 and -25 are red.**
+* **-22, spouse sponsorship.**
+  * The engine already makes the two filings in one group that cannot be split (`tests/runtime/check_vv_filings.ts`).
+  * No fee is charged when a sponsor co-files:
+    * the fee table refuses `co_files` modes (`engine/runtime/filings.ts`);
+    * a co-filed case charges no line;
+    * `samples/fee-table.json` has a combination entry for `vv.single` only;
+    * `fs.spouse` is never released on the acceptance copy.
+  * Concept: agent-view BR-1, BR-16, BR-18 and board frame 7b ("Spouse sponsorship · 2 filings · 1 group … bundled fee on Client B's filing", Expert Q4).
+* **-23, a child of a student or worker.**
+  * Nothing is built, and the six cannot carry it: `sp.outside` has only a principal; `wp.lmia_inside` has no child.
+  * No concept covers a filing that depends on an answer.
+  * P-171 (5) is the founder's rule "where IRCC is silent" (no age rule). It is **Sample**.
+* **-25, the screen.** The case page never reads `/prepare`. Covered by the C7.7 tab.
+* **Setup step S7a**, `PUT /library/fees` (`acceptance/lib/setup_vv_m3.ts`), has **no route**. Today the table is `samples/fee-table.json`.
+  * No concept covers a fee-table screen in the studio; W1-shared-library lists "fee table" as Not built; STATE "Next" 4 says "fees and roles library tables + S7a screens (M3, design first)".
+  * **New screen, no concept**: a short concept and its challenge are written next to this file (see "Screens").
+* **Fee values already cited in the repo:**
+  * **Visitor visa** CAD 100 per person, CAD 500 for 5 or more.
+    * Page: https://ircc.canada.ca/english/information/fees/fees.asp (page date 2026-09-21; read 2026-11-02).
+    * Quote: "maximum fee for a family of 5 or more people applying at the same time and place".
+    * Recorded in `samples/fee-table.json`, `compliance-trace.md` VV-R13 and research row 1a.
+  * **Biometrics** CAD 85 per person, CAD 170 for 2 or more.
+    * Same page. Quote: "Maximum fee for a family of 2 or more people applying at the same time" (VV-R14, research row 1b).
+    * Exemption: under 14 and over 79 (`…/biometrics/when-to-give-temporary-residence.html`, 2026-03-30).
+    * `fee-table.json`'s biometrics quote is labelled "summary of the Lead-checked record", not IRCC's words. Replace it with the fees.asp quote above.
+  * **Spouse sponsorship** CAD 1,260 (sponsorship, processing and right of permanent residence fee).
+    * Same page. Quote: "Sponsor your spouse or partner $1,260.00" (research row 1c).
+    * **To confirm:** the dependent child of a sponsored spouse is CAD 180 in `fee-table.json` (`spouse_dependent_child`), but the quote it carries, "Include a dependent child $270.00", is the economic class's line. The immigration expert confirms; until then it is Sample.
+  * **Study permit** CAD 150, **work permit** CAD 155, **open work permit holder** CAD 100, **visitor extension** CAD 100: qa re-read the fee list (page date 2026-09-21) and all four match word for word (CAPABILITIES C6.12).
+
+**2. Done when**
+* **-22:**
+  * a released `fs.spouse` case gives a sponsorship filing and a permanent-residence filing in one group, each with its own application-number box;
+  * the bundled CAD 1,260 is one fee line on the sponsored person's filing, with its basis and source;
+  * a sponsorship filing alone is never charged twice.
+* **-23:**
+  * a released student or worker combination with an accompanying child asks the case officer "Will this child study 6 months or more?" (Sample);
+  * Yes adds a study-permit filing (CAD 150, no family maximum) at the same time; No adds none.
+* **-25** (inside the C7.7 tab): filings and fees per filing; Visitor visa CAD 100 each, biometrics CAD 170 for the family.
+* **S7a:**
+  * the fee table is a dated, cited configuration item with a route;
+  * the setup step passes;
+  * each case's filings carry the fee-table version they were priced on.
+
+Tests:
+* `C6.12-breadth.test.ts` 4/4, with -22 amended (Q1) and -25 opening the tab by clicking;
+* new `acceptance/lib/setup_fs_m3.ts` and `setup_sp_m3.ts` releasing the two combinations through the configuration routes (Sample);
+* `setup_vv_m3.ts` S7a green.
+
+**3. Files**
+* **M3-only:**
+  * modified: `engine/runtime/filings.ts`, `api/src/case-prepare.ts`, `api/src/case-filings.ts`, `samples/fee-table.json`, `samples/wave1.json` (a child role on a student or worker Sample), `prisma/schema.prisma` and a migration (`fee_table` with `as_of`, and `fee_table_id` on `filing`), `tests/check_r2_fee_table.ts`, `tests/runtime/check_vv_filings.ts`;
+  * new: `api/src/fee-table.ts` and `features/fee-table.ts` (`PUT`/`GET /library/fees`). **Not** named `library-fees.ts`: a new file passes the guard, but every later edit would match the hot `library-` prefix;
+  * new: `acceptance/lib/setup_fs_m3.ts`, `setup_sp_m3.ts`;
+  * new: `web/src/pages/fees.tsx` (the studio fee table, per the concept).
+* **M2-hot, avoid:**
+  * `studio/contracts/runtime.ts` (the CaseFiling and FeeLine types): put new types in a **new** `studio/contracts/fees.ts`;
+  * freezing the fee table into the release (`engine/snapshot.ts`, `api/src/studio.ts`): see Q2;
+  * a conditional filing written on the participant line: `studio.ts` `checkParticipants` drops unknown keys. See Q3.
+
+**4. Decisions and questions**
+* **Decisions:**
+  * P-171 (4) and (5);
+  * P-247 ("every fee line carries a basis"; family maximum);
+  * P-135, P-151 (2), P-230 (7);
+  * P-246 (2) (pin per filing when ADOPT is built; SI-11);
+  * P-253 (one guarded change for every reusable item);
+  * P-319 (no hard-coding).
+* **Q1 (tech lead). -22 checks a fee line starting `pr_`.** The cited CAD 1,260 already bundles processing and the right of permanent residence fee, and `pr_adult` (CAD 1,590) is the economic class, so charging it would overcharge. *Recommend:* amend -22 to check two filings, each fee on a named filing, the bundle once. Its first PR line says so.
+* **Q2 (founder). Freeze fees with the release, or stamp the table version on each filing?** Freezing is M2-hot. *Recommend:* the stamp now (M3-only); the freeze after M2 at 55. A changed table never reprices a filing already made.
+* **Q3 (founder). Editing the fee table:** a direct `PUT` (as S7a assumes) or P-253's guarded change (proposals, M2-hot)? *Recommend:*
+  * M3 ships the route, used by setup and the demo, plus a **read-only** studio page with each line's basis, amount, quote and date;
+  * editing in the studio through the guarded change comes after M2 at 55;
+  * the conditional study-permit rule lives in the same dated data file, and the question is released configuration.
+
+**5. Size and order**
+* **Size:** L in total: S7a and the read-only page M; -22 M–L; -23 M; -25 S (inside C7.7).
+* **Depends on:**
+  * the C7.7 tab (-25);
+  * Q1 to Q3;
+  * the expert's confirmation of the child line (Sample until then).
+* **Unblocks:** C8.2's numbers per filing, C11.6 (b) (the `fs.spouse` release), and P-151 fee currency.
+
+---
+
 <!-- ROWS -->
 
 ## C1.3 + C11.5: the employer pre-fill (one capability, P-316 (2))
