@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normLabel } from "../../engine/twin.ts";
 import { client, recorder } from "./api.ts";
-import { seedAnswerList, seedField, seedSection } from "../seed_library.cjs";
+import { seedAnswerList, seedSection } from "../seed_library.cjs";
 
 const PORT = Number(process.argv[2] ?? 4430), DB = process.argv[3] ?? "xr_studio_runtime_r1";
 const { call, sql, until } = client(PORT, DB);
@@ -54,9 +54,9 @@ const VISIT = "your_visit", PREVIOUS = "previous_countries_of_residence";
  *  details are required only after a Yes; a confirmed No writes the form's Yes/No as No (engine/runtime/forms.ts gateOf).
  *  The two new library fields come from the form itself; the US one is the library's own. Sample until the expert checks. */
 const GATES = [
-  { key: "person.used_other_name", section: "personal_details", meaning: "Whether the person has ever used any other name, such as a nickname, maiden name or alias", q: "Have you ever used any other name such as a nickname, maiden name or alias?", details: ["person.other_family_name", "person.other_given_names"], seed: true },
-  { key: "person.has_national_id", section: "travel_document", meaning: "Whether the person has a national identity document", q: "Do you have a national identity document?", details: ["person.national_id_number"], seed: true },
-  { key: "person.us_lawful_permanent_resident", section: "travel_document", meaning: "", q: "Are you a lawful permanent resident of the United States with a valid alien registration card (green card)?", details: ["person.us_green_card_number"], seed: false },
+  { key: "person.used_other_name", box: "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", label: "Used other name", section: "personal_details", meaning: "Whether the person has ever used any other name, such as a nickname, maiden name or alias", q: "Have you ever used any other name such as a nickname, maiden name or alias?", details: ["person.other_family_name", "person.other_given_names"], seed: true },
+  { key: "person.has_national_id", box: "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", label: "Has national ID", section: "travel_document", meaning: "Whether the person has a national identity document", q: "Do you have a national identity document?", details: ["person.national_id_number"], seed: true },
+  { key: "person.us_lawful_permanent_resident", box: "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]", label: "", section: "travel_document", meaning: "", q: "Are you a lawful permanent resident of the United States with a valid alien registration card (green card)?", details: ["person.us_green_card_number"], seed: false },
 ];
 const GATED = new Map(GATES.flatMap((g) => g.details.map((d) => [d, g.key] as const)));
 
@@ -214,8 +214,15 @@ async function main() {
 
   // 4.5b sections and questions for every fact nobody is asked for; conditions as data
   for (const s of NEW_SECTIONS) seedSection(sql, { ...s, actor: AUTHOR }); // P-158: sections come from the forms' parts, not a free add
-  // QA-165: the two Yes/No facts IMM 5257 asks that the library lacks, from the form itself (a second person approves them below).
-  for (const g of GATES.filter((x) => x.seed && sql(`select count(*) from canonical_field where canonical_field_key='${x.key}'`) === "0")) seedField(sql, { key: g.key, meaning: g.meaning, valueType: "yes_no", source: `IMM 5257 (09-2023): "${g.q}"`, actor: AUTHOR });
+  // QA-165, B52: IMM 5257's three Yes/No form fields asked as their own questions through To review › Form fields
+  // (api/src/own-question.ts): the two the library lacks are named from the form's words (a second person approves them
+  // below), the US one is the library's own. No SQL writes them.
+  let asked = 0;
+  for (const g of GATES) {
+    const x = await call("POST", `/editions/${ed5257}/form-fields/own-question`, { dataPath: g.box, reason: "The form asks this Yes/No itself before its details (QA-165 fixture)", ...(g.seed ? { label: g.label, meaning: g.meaning } : { field: g.key }) }, AUTHOR);
+    if (x.status < 300 && x.body.field === g.key) asked++; else ok(`4.5 ${g.key} asked as its own question`, false, x.body);
+  }
+  ok("4.5 IMM 5257's three Yes/No form fields are asked as their own questions (B52, no SQL)", asked === GATES.length, { asked });
   const valueKey = (field: string, label: string) => lists.get(LIST_NAMES[fieldList.get(field) ?? ""]?.key ?? "")?.find((v) => v.label.toLowerCase() === label)?.key;
   let placed = 0;
   for (const p of PLACES) {

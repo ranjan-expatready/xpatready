@@ -9,6 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
+import { FORM_SETUP } from "../../api/src/demo.ts"; // B52: the application form's Yes/No form fields, in its words
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
 
 export const AUTHOR = "user-A", APPROVER = "user-B", REVIEWER = "user-C";
@@ -66,7 +67,7 @@ export function pack2(id: string) {
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
   async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
-    const out = { accepted: 0, applied: 0, sections: 0, reused: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
+    const out = { accepted: 0, applied: 0, ownYesNo: 0, sections: 0, reused: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     // Review m6: only what the author's own steps put on To review, never another person's waiting change.
@@ -78,6 +79,17 @@ export function pack2(id: string) {
       let applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR);
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
+    }
+    // B52: on To review › Form fields the author asks the application form's Yes/No form fields worked out from other
+    // answers as their own questions, in the form's words (api/src/demo.ts FORM_SETUP), the library's field of the same
+    // name when it has one.
+    const setup = FORM_SETUP[sql(`select combination_key from combination where id='${comboId}'`)];
+    const ed = setup?.ownYesNo?.length ? sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${setup.application}' and e.channel='PDF' order by e.edition_label desc limit 1`) : "";
+    const asked = new Set<string>(ed ? ((await call("GET", `/editions/${ed}/form-fields/own-questions`, undefined, AUTHOR)).body?.fields ?? []).filter((f: { asked: boolean }) => f.asked).map((f: { dataPath: string }) => f.dataPath) : []);
+    for (const y of (setup?.ownYesNo ?? []).filter((x) => ed && !asked.has(x.dataPath))) {
+      const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
+      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning }) }, AUTHOR))) out.ownYesNo++;
     }
     await approveAll();
     for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Form' order by created_at`)) say("sections from the form's parts", await call("POST", `/attachments/${a}/draft-masters`, { mode: "rules" }, AUTHOR));

@@ -28,6 +28,7 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // with the problem as the reason, and readiness lists the fact as "needs a fix".
   // QA-165 (Devin on #715): a "recorded" Yes/No box whose facts are asked under their own Yes/No question (gateOf).
   const placements = s.placements as (GatePlacement & { question_text?: string | null })[];
+  const present = (x: unknown) => !(x === undefined || x === null || x === "" || x === false || (Array.isArray(x) && !x.length));
   const gatesOf = (b: BoxRow) => { const d = recordedDerivation(b.transform); return d && b.fact ? [...new Set([b.fact, ...d.facts].map((f) => gateOf(placements, f)).filter((x): x is string => !!x))] : []; };
   const confirmedAt = (about: string, fact: string) => { const v = known.get(kkey(about.split("/")[0], fact)); return v?.status === "confirmed" ? v : undefined; };
   const words = (fact: string) => placements.find((p) => p.fact === fact)?.question_text || (s.canonical_fields as { id: string; meaning?: string }[]).find((f) => f.id === fact)?.meaning || fact;
@@ -35,13 +36,15 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
     const problems = checkValue(s, b.fact, b.value, today);
     if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` };
-    // A confirmed No to the gate with a detail still recorded contradicts itself: never written as Yes (nor No).
-    const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false) : undefined;
-    return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(b.fact)}" is recorded: correct one of them, then confirm, before this is written` } : b;
+    // A confirmed No to the gate with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
+    // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
+    const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && present(confirmedAt(b.about!, f)?.value));
+    const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false && recorded(g)) : undefined;
+    return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them, then confirm, before this is written` } : b;
   });
   // The gates' confirmed answers decide these boxes, so a copy keeps them with its facts: a gate changed after the copy
   // (No to Yes, or a No confirmed) makes the copy out of date, as a changed fact does.
-  const gateFacts: FormFact[] = cov.boxes.flatMap((b) => (b.about ? gatesOf(b) : []).flatMap((g) => { const v = confirmedAt(b.about!, g); return v ? [{ box: `${b.box}#gate:${g}`, fact: g, about: b.about!, row: null, value: v.value }] : []; }));
+  const gateFacts: FormFact[] = cov.boxes.flatMap((b) => (b.about ? gatesOf(b).filter((g) => g !== b.fact) : []).flatMap((g) => { const v = confirmedAt(b.about!, g); return v ? [{ box: `${b.box}#gate:${g}`, fact: g, about: b.about!, row: null, value: v.value }] : []; }));
   return { ...cov, boxes, facts: [...factsOf(boxes), ...gateFacts].sort((x, y) => x.box.localeCompare(y.box)) };
 }
 

@@ -29,6 +29,8 @@ import { Forms } from "./forms.ts";
 import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.ts";
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
+import { OwnQuestions } from "./own-question.ts";
+import { normalizeLabel } from "../../contracts/programs.ts";
 import { FormLibrary } from "./form-library.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
@@ -36,13 +38,19 @@ const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"])
 /** QA-144 slice 1 (ruling 3): the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
  *  expert" (AGENTS rule 4). IMM 5484 (05-2026) is official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; Guide
  *  5256 is official-sources/ircc/instructions/guide-5256.html, modified 2026-03-31, saved 19 Oct 2026. */
+/** QA-227 (Major): IMM 5476's and IMM 5475's rules read "exists" on the form's own choice (appointing, updating, cancelling
+ *  a representative; authorizing or withdrawing a release), which only IMM 5476 or IMM 5475 itself asks: unanswered,
+ *  "exists" is plainly false, so the form never applies and nobody is asked. Each rule now reads a Yes/No question in
+ *  IRCC's words (REP_FACT, RELEASE_FACT), added through C3.6's door for its rule and asked of the application. */
+const REPRESENTED = { subjectKind: "CASE", op: "eq", field: "case.uses_representative", value: true };
+const RELEASES = { subjectKind: "CASE", op: "eq", field: "case.authorizes_release_to_designated_individual", value: true };
 type FormRule = { form: string; condition?: object; minAge?: number; retire?: true; cite: string };
 export const VV_FORM_RULES: FormRule[] = [
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
-  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
+  { form: "IMM 5476", condition: REPRESENTED,
     cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"" },
-  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
+  { form: "IMM 5475", condition: RELEASES,
     cite: "IMM 5484 p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
   // Guide 5256, Question 3 note: the form for a person whose gender identifier differs from their documents.
   { form: "IRM 0002", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.gender_identifier_differs_from_documents", value: true },
@@ -67,9 +75,9 @@ export const GENDER_FACT = { fact: "person.gender_identifier_differs_from_docume
 export const LMIA_FORM_RULES: FormRule[] = [
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5553, \"Completing the forms\": \"The following are the forms that must be filled out and submitted: … Statutory Declaration of Common-law Union [IMM 5409] (opens in a new tab), if applicable\"; IMM 5556 (03-2024), its forms list: \"Statutory Declaration of Common-law Union (IMM 5409), if applicable\"" },
-  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
+  { form: "IMM 5476", condition: REPRESENTED,
     cite: "IMM 5556 (03-2024), its forms list: \"Use of a Representative (IMM 5476) Note: Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5553, \"Use of a Representative (IMM 5476)\": \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative's appointment.\"" },
-  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
+  { form: "IMM 5475", condition: RELEASES,
     cite: "IMM 5556 (03-2024), its forms list: \"Authority to Release Personal Information to a Designated Individual (IMM 5475) Note: Complete this form only if you authorize IRCC and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
 ];
 /** QA-144 slice 3 (brief on #798): the study permit's form lines (outside Canada) as IRCC's own words set them, each
@@ -83,9 +91,9 @@ export const SP_FORM_RULES: FormRule[] = [
     cite: "Guide 5269, Custodians: \"Children 17 years of age or less coming to Canada to study without an accompanying parent or a legal guardian must still be in the care of a responsible adult in Canada. [...] The parents or legal guardians in the country or territory of origin and the custodian in Canada must complete a notarized Custodianship Declaration (IMM 5646)\"; IMM 5483 (08-2025) p. 1: \"Must be completed if the minor studying in Canada is less than 17 years old.\"" },
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5269, Step 2: \"Statutory Declaration of Common-law Union (IMM 5409) [...], if applicable\"" },
-  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
+  { form: "IMM 5476", condition: REPRESENTED,
     cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5269: \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative’s appointment.\"" },
-  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
+  { form: "IMM 5475", condition: RELEASES,
     cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
 ];
 /** QA-144 slice 3: IMM 5646's rule reads a fact no form asks (no age is worked out in this workspace), added through
@@ -95,15 +103,38 @@ export const SP_FORM_RULES: FormRule[] = [
 export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", cite: "Guide 5269, Custodians", label: "Minor studying without a parent or guardian", valueType: "yes_no",
   meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
   beside: ["person.date_of_birth"] };
+/** QA-227: the two Yes/No questions IMM 5476's and IMM 5475's rules read, in the checklists' words (IMM 5484 (05-2026),
+ *  official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; IMM 5556 (03-2024) for With an LMIA). Asked once
+ *  for the application, beside its language of service (the application form's first case question). Sample,
+ *  Unconfirmed: expert. A case with a representative of record could answer the first by itself (runtime, question on the PR). */
+export const REP_FACT = { fact: "case.uses_representative", rule: "IMM 5476", cite: "IMM 5484 (05-2026) p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"", label: "Uses a representative", valueType: "yes_no",
+  meaning: "Whether the applicant uses the services of a representative, or is appointing, updating or cancelling a representative's appointment (IMM 5484 p. 1; IMM 5476).", beside: ["case.service_language", "case.visa_type_requested"] };
+export const RELEASE_FACT = { fact: "case.authorizes_release_to_designated_individual", rule: "IMM 5475", cite: "IMM 5484 (05-2026) p. 1: \"Complete this form only if you authorize … (IRCC) and … (CBSA) to release information from your case file to someone other than yourself.\"", label: "Authorizes release of information to a designated individual", valueType: "yes_no",
+  meaning: "Whether the applicant authorizes IRCC and the CBSA to release information from their case file to someone other than themselves (IMM 5484 p. 1; IMM 5475).", beside: ["case.service_language", "case.visa_type_requested"] };
+type RuleFact = typeof GENDER_FACT & { beside?: string[] };
+/** B52 (P-334 (5)): IMM 5257's three Yes/No form fields worked out from other answers, each asked as its own question
+ *  (api/src/own-question.ts), so the shared placement step asks them and C4.11's conditions land on them. The words are
+ *  the form's: IMM 5257 (09-2023) p. 1 Question 2 A "Have you ever used any other name such as a nickname, maiden name
+ *  or alias?"; p. 2 "Do you have a national identity document?"; p. 2 "Are you a lawful Permanent Resident of the United
+ *  States with a valid alien registration card (green card)?". The library field of the same name is used when there is
+ *  one (IMM 0008's and IMM 1294's field maps name them so). Sample, Unconfirmed: expert. */
+export type OwnYesNo = { dataPath: string; label: string; meaning: string };
+export const IMM5257_YES_NO: OwnYesNo[] = [
+  { dataPath: "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", label: "Has used other name", meaning: "Whether the person has ever used any other name, such as a nickname, maiden name or alias (IMM 5257 p. 1, Question 2 A)." },
+  { dataPath: "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", label: "Has national ID", meaning: "Whether the person has a national identity document (IMM 5257 p. 2, National identity document, Question 1)." },
+  { dataPath: "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]", label: "US permanent resident", meaning: "Whether the person is a lawful permanent resident of the United States with a valid alien registration card (green card) (IMM 5257 p. 2, US PR card, Question 1)." },
+];
+export const OWN_YES_NO_REASON = "The form asks this Yes/No itself before its details: asked as its own question in the form's words (sample loader, B52; Sample)";
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
- *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] } }> = {
-  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
-  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES,
+ *  fills the family information form there, the facts only a rule reads (C3.6), and the application form's Yes/No form
+ *  fields asked as their own questions (B52). No other form number is in the steps. */
+export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[] }> = {
+  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], ownYesNo: IMM5257_YES_NO, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
+  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT],
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
-  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT,
+  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFacts: [MINOR_FACT, REP_FACT, RELEASE_FACT],
     family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
 };
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
@@ -154,6 +185,8 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 @Injectable()
 export class Demo {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary) {}
+  /** B52: the form-field step a person takes on To review › Form fields, as the same service (no extra provider). */
+  private get ownQuestions() { return new OwnQuestions(this.db, this.audit); }
 
   /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
   private async familyForm(combinationId: string, key: string | undefined) {
@@ -621,12 +654,22 @@ export class Demo {
           for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const) {
             try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
-          // A fact only a rule reads (IRM 0002's), added for its rule (C3.6), accepted by the author; the Approver approves it below.
-          const rf = setup.ruleFact;
-          if (rf) try {
-            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType });
-            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` });
-          } catch (e) { setUpRefused.push(`${rf.label}: ${said(e)}`); }
+          // Each fact only a rule reads (IRM 0002's, IMM 5476's, …), added for its rule (C3.6), accepted by the author; the
+          // Approver approves it below. One another combination added already is read as it is.
+          for (const rf of setup.ruleFacts ?? []) {
+            if (await this.db.canonicalField.count({ where: { workspaceId, canonicalFieldKey: rf.fact, status: { in: ["DRAFT", "PUBLISHED"] } } })) continue;
+            try {
+              const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType });
+              await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` });
+            } catch (e) { setUpRefused.push(`${rf.label}: ${said(e)}`); }
+          }
+          // B52: the application form's Yes/No form fields worked out from other answers, each asked as its own question in
+          // the form's words (To review › Form fields), with the library's field of the same name when it has one.
+          for (const y of setup.ownYesNo ?? []) {
+            const ed = await this.db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true } });
+            const same = (await this.db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, valueType: "yes_no", groupKey: "person" }, select: { canonicalFieldKey: true, label: true } })).find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(y.label));
+            try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await this.ownQuestions.ask(author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning }) }); } catch (e) { setUpRefused.push(`${y.label}: ${said(e)}`); }
+          }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }
@@ -635,13 +678,14 @@ export class Demo {
         placedFacts.push(...p.placed.map((x) => x.fact));
         // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's sex or gender as
         // the forms read it, else their date of birth; IMM 5646's, beside the date of birth).
-        const rf = FORM_SETUP[keyOf.get(c.id) ?? ""]?.ruleFact;
-        if (rf) {
+        for (const rf of FORM_SETUP[keyOf.get(c.id) ?? ""]?.ruleFacts ?? []) {
+          // QA-227: a fact another combination asked already keeps its one placement (the library's questions are shared).
+          if (await this.db.sectionQuestion.count({ where: { workspaceId, canonicalFieldKey: rf.fact, status: { not: "RETIRED" } } })) continue;
           const at = rf.beside ?? ["person.sex", "person.gender", "person.date_of_birth"];
           const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: at } }, select: { canonicalFieldKey: true, sectionKey: true } });
           const beside = at.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
           // R2-m1 after it too (review R1-m4): its section may be a chosen one, and only a conditional form reads the fact.
-          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(rf.fact); await keepChosenEveryones(this.db, this.studio, author, c.id, new Set([beside.sectionKey]), p); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
+          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: rf.fact.startsWith("case.") ? "once_per_case" : "per_person", tier: "case" }); placedFacts.push(rf.fact); await keepChosenEveryones(this.db, this.studio, author, c.id, new Set([beside.sectionKey]), p); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
           else setUpRefused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a form field that reads it`));
