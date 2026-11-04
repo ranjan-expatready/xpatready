@@ -1,0 +1,40 @@
+=== /review (To review)
+To review ⏎ Everything that waits for a person: problems that block a combination's release, AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides. ⏎ Needs you · 18 ⏎ Waiting for others · 1 ⏎ Running · 0 ⏎ All · 19 ⏎ Kind ⏎ All ⏎ Setup step (1) ⏎ AI proposals (18) ⏎ Item	What and why	Status	AI cost	Next step ⏎ AI proposals ⏎ Temporary residence › Visitors › Visitor visa ⏎ Configuration author · today at 8:58 p.m. ⏎ 	IMM 5257: 242 form fields, 161 mapped. 84 shared fields proposed: 0 reuse, 84 new, 0 ambiguous, 0 conflicting. 84 proposals still to decide.	Needs you	US$0.00	Review 84 AI proposals ⏎ AI proposals ⏎ Temporary residence › Visitors › Visitor visa ⏎ Configuration author · today at 8:58 p.m. ⏎ 	IMM 5257 SCH1: 57 form fields, 40 mapped. 29 shared fields proposed: 0 reuse, 29 new, 0 ambiguous, 0 conflicting. 29 proposals still to decide.	Needs you	US$0.00	Review 29 AI proposals ⏎ AI proposals ⏎ Temporary residence › Visitors › Visitor visa ⏎ Configuration author · today at 8:58 p.m. ⏎ 	IMM 5707: 50 form fields, 39 mapped. 9 shared fields proposed: 0 reuse, 9 new, 0 ambiguous, 0 conflicting. 9 proposals still to decide.	Needs you	US$0.00	Review 9 AI proposals ⏎ AI proposals ⏎ Temporary residence › Visitors › Visitor visa ⏎ Configuration author · today at 8:58 p.m. ⏎ 	IMM 5409: 32 form fields, 16 mapped. 11 shared fields proposed: 0 reuse, 11 new, 0 ambiguous, 0 conflicting. 11 proposals sti
+
+=== Proposals groups (18)
+IMM 5257 (09-2023) ⏎ Form edition · 84 proposals ⏎ Ready to accept 30 ⏎ Check 9 ⏎ Decide 45
+IMM 5257 SCH1 (09-2023) ⏎ Form edition · 29 proposals ⏎ Ready to accept 7 ⏎ Check 9 ⏎ Decide 13
+IMM 5707 (01-2023) ⏎ Form edition · 9 proposals ⏎ Ready to accept 2 ⏎ Check 5 ⏎ Decide 2
+IMM 5409 (01-2023) ⏎ Form edition · 11 proposals ⏎ Ready to accept 4 ⏎ Check 1 ⏎ Decide 6
+IMM 5645 (01-2021) ⏎ Form edition · 9 proposals ⏎ Ready to accept 1 ⏎ Check 6 ⏎ Decide 2
+IMM 5476 (11-2025) ⏎ Form edition · 24 proposals ⏎ Ready to accept 3 ⏎ Check 5 ⏎ Decide 16
+IMM 5475 (05-2021) ⏎ Form edition · 18 proposals ⏎ Ready to accept 4 ⏎ Check 6 ⏎ Decide 8
+IMM 1294 (06-2026) ⏎ Form edition · 95 proposals ⏎ Ready to accept 17 ⏎ Check 36 ⏎ Decide 42
+IMM 5646 (01-2023) ⏎ Form edition · 12 proposals ⏎ Ready to accept 2 ⏎ Check 6 ⏎ Decide 4
+IMM 5710 (09-2023) ⏎ Form edition · 95 proposals ⏎ Ready to accept 10 ⏎ Check 47 ⏎ Decide 38
+IMM 0008 (05-2026) ⏎ Form edition · 93 proposals ⏎ Ready to accept 29 ⏎ Check 30 ⏎ Decide 34
+IMM 5669 (05-2021) ⏎ Form edition · 50 proposals ⏎ Ready to accept 4 ⏎ Check 9 ⏎ Decide 37
+IMM 5406 (05-2026) ⏎ Form edition · 10 proposals ⏎ Check 8 ⏎ Decide 2
+IMM 0008 DEP (10-2024) ⏎ Form edition · 51 proposals ⏎ Ready to accept 5 ⏎ Check 39 ⏎ Decide 7
+IMM 5562 (07-2024) ⏎ Form edition · 8 proposals ⏎ Ready to accept 2 ⏎ Check 1 ⏎ Decide 5
+IMM 1344 (09-2024) ⏎ Form edition · 48 proposals ⏎ Ready to accept 12 ⏎ Check 15 ⏎ Decide 21
+IMM 5532 (02-2021) ⏎ Form edition · 22 proposals ⏎ Ready to accept 3 ⏎ Check 6 ⏎ Decide 13
+IMM 5604 (02-2023) ⏎ Form edition · 2 proposals ⏎ Check 1 ⏎ Decide 1
+
+url http://localhost:4480/review/proposals?group=edition%3AIMM+5257+%2809-2023%29
+=== IMM 5257 group (head)
+IMM 5257 (09-2023) ⏎ Form edition: drafted once, reused by every combination that files it · oldest today at 8:58 p.m. ⏎ Ready to accept ⏎ 30 ⏎ Choose ⏎ 	Proposal	Kind	Adds or reuses	Reading	 ⏎ —	person.education_field_of_study ⏎ Field of study of a post-secondary education period ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its form-field page ⏎ —	person.given_names ⏎ Given name(s) as shown on passport or travel document ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its form-field page ⏎ —	person.immigration_history_details ⏎ Free-text details of overstay, refusal, removal or previous Canadian applications ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its form-field page ⏎ —	person.marital_status ⏎ Current marital status ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its form-field page ⏎ —	person.national_id_country_of_issue ⏎ Country that issued the national identity document ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its form-field page ⏎ —	person.national_id_expiry_date ⏎ National identity document expiry date ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its fo
+
+band ready: rows 30, Choose all buttons 0; head: Ready to accept ⏎ 30 ⏎ Choose ⏎ 	Proposal	Kind	Adds or reuses	Reading	 ⏎ —	person.education_field_of_study ⏎ Field of study of a post-secondary education period ⏎ 	Shared fieldAI	New library item	Both readings agree	Decide on its form-field page ⏎ —	person.given_names ⏎ Given name(s) as shown on pas
+band check: rows 9, Choose all buttons 0; head: Check ⏎ 9 ⏎ 	Proposal	Kind	Adds or reuses	Why a person looks	 ⏎ 	person.military_service_details ⏎ Dates and countries of military or security service ⏎ 	Shared fieldAI	New library item	Close to person.military_service: one name holds the other	Decide on its form-field page ⏎ 	person.previous_reside
+band decide: rows 45, Choose all buttons 0; head: Decide ⏎ 45 ⏎ 	Proposal	Kind	Adds or reuses	Why a person looks	 ⏎ 	person.fax_number ⏎ Fax number including country code ⏎ 	Shared fieldAI	New library item	The two AI rounds read it differently: the draft fills 8 form fields with it and the checker 7 form fields (1 only in the draft, 0 only in the c
+Ready rows with "Cannot be ticked with others": 30; checkboxes in Ready: 0
+tooltip: A new shared field is decided on its own (only High reuse matches are accepted together): open it on its form-field page.
+=== ready item panel
+(no panel)
+
+=== decide item panel
+(no panel)
+
+sideways scroll: false
+page/console errors: 0 
