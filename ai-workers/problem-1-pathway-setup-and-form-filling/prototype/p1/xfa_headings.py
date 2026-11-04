@@ -18,7 +18,7 @@ out by position top to bottom, a flowing part in its own order):
    SCH1's "Military Service", "Government Positions", "Previous Travel" (tech lead on #883, option C);
 5. form title: when no part of the form has any heading above, every part that holds fields takes the form's own
    printed title (its largest bold all-capital text, 10 pt or more, not a note in brackets), as one section: IRM
-   0002's "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER";
+   0002's "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER". A part under an office notice never takes it;
 4. carried: else, the banner of a heading-only part printed just before it on the same page (a part with a banner and
    no box a person fills, like "SectionHeader_DetailsOfVisit"), passed on while the parts after it go on printing
    questions (a question number, or a lettered item "a) ..."). A part with no question of its own (a consent, a
@@ -292,7 +292,10 @@ def read(fname):
                     continue
                 pname = page.get("name") or f"#{page.tag.replace(ns, '')}"
                 for part in page:
-                    if part.tag.replace(ns, "") in PARTS and fills(part, ns):
+                    # A part under an office notice ("FOR OFFICE USE ONLY") holds the office's fields, not the
+                    # client's: it never takes the form's title, and stays held (review r10 M9: IMM 5604's file no.).
+                    first = next((t for t, _, _ in texts(part, ns) if lettered(t)), "")
+                    if part.tag.replace(ns, "") in PARTS and fills(part, ns) and not OFFICE.search(first):
                         out.setdefault(f"{pname}.{part.get('name') or '#' + part.tag.replace(ns, '')}", {"heading": sentence_case(ft, seen), "printed": ft, "how": "form_title", "from": "#form.title"})
     full = json.loads((inv.OUT / (fname.replace(".pdf", "") + ".inventory.json")).read_text())
     return {

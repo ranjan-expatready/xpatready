@@ -3,12 +3,6 @@
  "sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
  "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
  "parts": {
-  "Page1.forCICUseOnly": {
-   "heading": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
-   "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
-   "how": "form_title",
-   "from": "#form.title"
-  },
   "Page1.signature": {
    "heading": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
    "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",

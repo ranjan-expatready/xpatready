@@ -64,6 +64,9 @@ run(async () => {
   // A form that prints no heading over any part: its fields sit under the form's own printed title, as one section.
   const irm = drafted("irm0002e");
   ok("QA-206 pass (form title): IRM 0002, a statement form with no part headings, is one section under its printed title", irm.length === 1 && irm[0].label === "Request for a change of sex or gender identifier" && irm[0].quote === "REQUEST FOR A CHANGE OF SEX OR GENDER IDENTIFIER", irm.map((x) => [x.part, x.label, x.fieldKeys.length]));
+  // Review r10 M9: a part under "FOR OFFICE USE ONLY" never takes the form's title (IMM 5604's file no. is the office's).
+  const minor = drafted("imm5604e");
+  ok("QA-206 fail (review r10 M9): no named IMM 5604 section holds an office-use field (forCICUseOnly stays held)", minor.every((x) => x.unnamed || x.fieldKeys.every((k) => !/forCICUseOnly/.test(k))) && minor.some((x) => x.unnamed && x.fieldKeys.some((k) => /forCICUseOnly/.test(k))), minor.map((x) => [x.part, x.label, x.fieldKeys.length]));
   const fam6 = drafted("imm5406e");
   ok("QA-206 fail (review r3 M5): no IMM 5406 section named \"Applicant\" holds the spouse's or a parent's boxes", fam6.every((s) => s.label !== "Applicant" || s.fieldKeys.every((k) => !/Spouse|Parent/.test(k))) && fam6.some((s) => s.fieldKeys.some((k) => /Spouse/.test(k))), fam6.map((s) => [s.label, s.fieldKeys.length]));
   ok("QA-206 fail (review r2 M4): IMM 1295's page 4 wrapper with background questions 3 to 6 is held unnamed, not put under page 3's heading", wp.some((s) => s.part === "PageWrapper" && s.unnamed && s.fieldKeys.some((k) => /Page4\[0\]/.test(k))), wp.map((s) => [s.part, s.label]));
