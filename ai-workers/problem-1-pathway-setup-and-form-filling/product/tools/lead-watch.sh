@@ -57,4 +57,30 @@ alive=$(git for-each-ref --sort=-committerdate --format='%(committerdate:unix) %
   | awk -v t="$(date -u -v-90M +%s)" '$1>=t {print $2}' | grep -v -e 'origin/main' -e 'mergify/' -e 'origin/HEAD' -e '^origin$' | sed 's#origin/##')
 say "lanes pushed in 90 min: $(echo "$alive" | grep -c .)"; [ -n "$alive" ] && echo "$alive" | head -12 | sed 's/^/      /'
 
+# 5. The founder's five changes, kept (founder 4 Nov ~10:50 IST "Go, start now"; "Yes, two standby"): builders in the
+# cloud, machine testing on GitHub, the Mac copy cap, and four numbers every check. A rule nobody measures drifts (the
+# cloud-only rule of 1 Nov, P-224, was not followed for three days), so each is read from the machine, never from prose.
+# Mac builders allowed: MAC_BUILDERS_OK (default: Builder 1, the infra lane, and Builder 8, QA-144) plus the two standby
+# builders, whose copies are made only when a Lead hands them a row (wt-* folders outside .claude/worktrees).
+# A builder works in its session's copy (.claude/worktrees/builder-N-xxxxxx) and in copies under that session's scratchpad
+# (…claude-worktrees-builder-N-xxxxxx/…/wt-*): it counts as working when any of them changed its git index in 90 minutes.
+ok=" ${MAC_BUILDERS_OK:-builder-1 builder-8} "; now=$(date +%s); busy=""
+while read -r wt; do
+  name=$(echo "$wt" | grep -oE 'builder-[0-9]+' | head -1); [ -n "$name" ] || continue
+  t=$(stat -f %m "$(git -C "$wt" rev-parse --absolute-git-dir 2>/dev/null)/index" 2>/dev/null || echo 0)
+  [ $((now - t)) -le 5400 ] && busy="$busy $name"
+done < <(git worktree list --porcelain | sed -n 's/^worktree //p')
+busy=$(echo "$busy" | tr ' ' '\n' | grep . | sort -u); macb=$(echo "$busy" | grep -c .)
+for name in $busy; do case "$ok" in *" $name "*) ;; *) ACT "Mac builder still working: $name (finish its PR, then stop; new rows go to cloud builders)";; esac; done
+copies=$(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk '$9 ~ /:44[3-9][0-9]$/ {print $9}' | sort -u | grep -c .)
+suites=$(pgrep -f 'tools/run-suites.sh' 2>/dev/null | grep -c .)
+say "mac   builders working ${macb} · test copies ${copies} on 4430–4499 + ${suites} suite runs (cap 3) · load $(sysctl -n vm.loadavg | awk '{print $2}')"
+[ $((copies + suites)) -gt 3 ] && ACT "Mac copy cap: $((copies + suites)) copies or suite runs (cap 3, qa first): the newest builder copy waits"
+# The four numbers (founder target: 10 capabilities confirmed a day, quality never lowered).
+m2=$(git show origin/main:ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md 2>/dev/null | grep -cE '^\| C[0-9]+\.[0-9]+ .*\| M2 \| Works \|')
+day="$STATE_DIR/m2-$(TZ=Asia/Kolkata date +%Y%m%d).txt"; [ -f "$day" ] || echo "$m2" > "$day"
+hour=$(gh pr list --state merged --search "merged:>=$(date -u -v-60M '+%Y-%m-%dT%H:%M:%SZ')" --json number -q 'length' 2>/dev/null)
+back=$(grep -cE '^ACT   #[0-9]+ (dequeued|red after approval)' "$STATE_DIR/q.txt")
+say "four  M2 confirmed ${m2}/60 (+$((m2 - $(cat "$day"))) today, target +10) · merged last hour ${hour:-?} · Mac builders ${macb} · approved then red or dequeued ${back}"
+
 exit "$act"
