@@ -50,3 +50,15 @@ Row: QA-218 (Gap · Major, C3.4). No screen offered the saved AI masters run (#7
   install": it launches Chromium without this machine's browser path). The file and the code it covers are not touched.
 * Reviewer's round-2 Minors, left as follow-ups: the drafted line always says "Saved, US$0", even for a Live draft (only
   on a copy with the live switch on), and `readings` does one job lookup per source (at most 9 on the six, one request).
+
+## Round 3 (4f3610c49): Block on one Major (fixed)
+* **M1, fixed:** in the Library dialog, focus after Saved raced React's render: a frame queued before the link existed,
+  while the dialog's focus trap took focus to its container, so the check's focus step failed in 4 of 6 runs.
+  Focus now moves in an effect after the commit that draws "Open Proposals" (`ai-launch.tsx`, `focusOn`). After the fix
+  on fresh copies: the QA-218 check **6 of 6 green** (22/22, exit 0), `check_forms_c34_masters_browser.cjs` 9/9.
+* **Minor 2, in part:** the Library dialog's panel heading now reads "This form: sections, answer lists, checks and
+  document types" (it said "Forms and guide" for one form). The menu item's words and a link straight to the form
+  stay with m6 for the forms concept.
+* **Not run here:** `check_qa184_live_state_browser.cjs`. This repo's Playwright needs Chromium build 1248, and this
+  cloud machine has 1243 (`/opt/pw-browsers`); installing browsers is not allowed here. GitHub CI runs it (tech lead,
+  Lead 7, 19:15 IST).

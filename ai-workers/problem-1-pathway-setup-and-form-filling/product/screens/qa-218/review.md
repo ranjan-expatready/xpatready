@@ -117,3 +117,42 @@ New, both Minor (Should, not blocking):
 Round 2 journey score: 9 / 10 (next step obvious stays ½: placement m6; feedback and state and accessibility now 1).
 
 **Verdict: Approve** (no open Blocker or Major; Minors 5–8 for the builder or the tech lead).
+
+## Round 3 (4f3610c49)
+Diff-only: `git diff 048bc1cfe..4f3610c49` (`FormMasters guidesOnly`, `forms.tsx` passes it, the check rewritten for two doors,
+notes.md). Own copy `rev218` :4486 at 4f3610c49, reset to the six, stopped after. Live off; no priced button.
+
+**Done-when: holds with the two doors.** Walked as the author: Visitor visa › Forms shows only "Guide: checks drafted by AI"
+(IMM 5257 (09-2023) listed once on the tab, S5 fix 1) with Saved · US$0 on Guide 5256 → 13 proposals in the combination's group.
+The panel's "Form library" link → Library › Forms › IMM 5257 ⋯ › "Re-read with AI (shared fields and form fields)" → the dialog's
+panel shows Saved · US$0 beside the rules button → 47 proposals, Open Proposals → `/review/proposals?group=edition:IMM 5257
+(09-2023)`. One REPLAY job each, US$0, no LIVE job. The dialog's own Start reads "Start 0 steps, US$0". Each form with a saved run
+(only IMM 5257 on the six) and each guide with one (only Guide 5256) is offered Saved on a screen, so the row is closed; a form's
+run being per edition makes the Library its natural door. `check_s5_slice2_browser.cjs` 63/63 (run from a scratch copy that
+writes its screenshots outside the repo), `check_forms_c34_masters_browser.cjs` 9/9.
+
+**But the QA-218 check is flaky, and the m3 fix does not hold in the dialog.**
+9. **Major — flaky check in the merge flow (as QA-208/209), from a real focus race.** `tests/check_forms_qa218_saved_masters_browser.cjs`
+   failed 4 of 6 runs on fresh resets on a quiet machine (load ≈ 1.4), always at line 69 "QA-218 fail→pass (review m3): after
+   Saved, focus is on the row's Open Proposals". A debug copy of the check shows the focused element stays the dialog's content
+   `DIV` ("AI configuration …") for at least 1 s in failing runs, and is "Open Proposals" in passing ones. Cause:
+   `web/src/components/ai-launch.tsx:170` focuses the link in a `requestAnimationFrame` queued before React has rendered it; in
+   the Library dialog (now the only door for a form) the Saved button is disabled while busy, the dialog's focus trap takes focus
+   to its container, and when the frame fires before the link exists nothing moves it. (On the Forms tab, no trap, it held in my
+   traces; the rules button, which answers fast, held 8/8 in the dialog.) Failure: a suite run or CI fails this check about half
+   the time on correct code and throws away a merge batch; a keyboard user who starts Saved in the dialog is left on the dialog
+   container. Fix: move focus after the commit (e.g. a `useEffect` on `done` that focuses `[data-masters-open=<id>]`, or a ref
+   callback on the link), or keep the busy button focusable (`aria-disabled` instead of `disabled`); then run the check ≥ 5 times.
+
+New, Minor (Should, not blocking):
+10. **Minor — the form door is hard to find.** The Forms tab link goes to the whole Form library, not to the form, and the menu
+    item reads "Re-read with AI (shared fields and form fields)" (`web/src/pages/library-forms.tsx:342`), which does not hint at
+    checks or document types; inside, the dialog's heading still says "Forms and guide: …" for one form and no guide
+    (`ai-launch.tsx:187`), under the dialog's note "Questions, sections and rules are not AI-drafted here" (pre-existing). Failure:
+    a person looking for IMM 5257's saved checks must already know that path. Record with m6 for the forms concept.
+
+Round 3 journey score: 8.5 / 10 (accessibility back to ½: focus race in the dialog; next step obvious ½: issue 10).
+
+**Verdict: Block** (one open Major). To fix:
+1. Issue 9: focus the row's Open Proposals after React has rendered it (or keep the busy button focusable), so the check passes
+   every time; show five consecutive green runs of the QA-218 check on fresh copies.

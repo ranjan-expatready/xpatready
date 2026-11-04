@@ -161,13 +161,17 @@ export function FormMasters({ combinationId, source, guidesOnly = false }: { com
   const readings = useQuery<MastersReading[]>({ queryKey: readKey, queryFn: () => api(combinationId ? `/combinations/${combinationId}/masters-readings` : `/attachments/${source!.id}/masters-reading`), retry: false });
   const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<Record<string, { text: string; group: string }>>({});
   const box = React.useRef<HTMLElement>(null);
+  // Review m3, round 3 M1: after a click the busy button is disabled and loses focus (in a dialog its trap takes focus to
+  // the container), so focus moves to the row's Open Proposals once React has drawn it: an effect after the commit, never
+  // a frame queued before the link exists.
+  const [focusOn, setFocusOn] = React.useState<{ id: string; n: number } | null>(null);
+  React.useEffect(() => { if (focusOn) box.current?.querySelector<HTMLElement>(`[data-masters-open="${focusOn.id}"]`)?.focus(); }, [focusOn]);
   const readingOf = (id: string) => (readings.data ?? []).find((r) => r.attachmentId === id);
   const isForm = (a: Att) => /\.pdf$/i.test(a.fileName);
   // A form is a recognised PDF that is not a checklist; the combination's guide page is shown when the reading names it.
   const rows = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist" && (!guidesOnly || !isForm(a)) && (isForm(a) || readingOf(a.id)?.kind === "guide"));
   if (!rows.length) return null;
-  // Review m3: after a click the busy button is disabled and loses focus, so focus moves to the row's Open Proposals.
-  const say = (a: Att, text: string, group: string) => { setDone((d) => ({ ...d, [a.id]: { text, group } })); requestAnimationFrame(() => box.current?.querySelector<HTMLElement>(`[data-masters-open="${a.id}"]`)?.focus()); };
+  const say = (a: Att, text: string, group: string) => { setDone((d) => ({ ...d, [a.id]: { text, group } })); setFocusOn((f) => ({ id: a.id, n: (f?.n ?? 0) + 1 })); };
   const run = async (a: Att) => {
     setBusy(`${a.id}:rules`); setErr(null);
     try { const j = await api<{ proposals: number; message: string; group: string }>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "rules" } }); say(a, j.proposals ? `${j.proposals} proposals wait on To review.` : `Already drafted for this edition: ${j.message}`, j.group); }
@@ -184,7 +188,7 @@ export function FormMasters({ combinationId, source, guidesOnly = false }: { com
   };
   return (
     <section ref={box} aria-labelledby="fm-h" className="space-y-2 rounded-lg border border-border p-3" data-form-masters>
-      <h3 id="fm-h" className="text-sm font-semibold">{guidesOnly ? "Guide: checks drafted by AI" : "Forms and guide: sections, answer lists and checks"}</h3>
+      <h3 id="fm-h" className="text-sm font-semibold">{guidesOnly ? "Guide: checks drafted by AI" : source ? "This form: sections, answer lists, checks and document types" : "Forms and guide: sections, answer lists and checks"}</h3>
       {guidesOnly ? <p className="text-xs text-text-muted">Where AI has drafted the checks this combination's guide states, its Saved draft is used at US$0 with no model call. A person checks each item on To review and a second person approves it. A Live AI draft waits for the founder's OK on its cost. Each form's sections, answer lists and checks are drafted from the <Link className="text-text-link underline" to="/library/forms">Form library</Link> (its ⋯ › Re-read with AI).</p>
       : <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). Where AI has drafted a form's checks and document types, or a guide's checks, before, its Saved draft is used at US$0 with no model call. A person checks each item on To review and a second person approves it. A Live AI draft waits for the founder's OK on its cost.</p>}
       <ul className="space-y-1 text-sm">{rows.map((a) => { const r = readingOf(a.id), d = done[a.id], saved = r?.saved === true && !r.drafted; return (
