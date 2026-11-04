@@ -19,6 +19,8 @@ out by position top to bottom, a flowing part in its own order):
    declaration, a signature) is not given it, and ends the carry. Never across a page; never the form's first banner,
    which is its title.
 A banner printed "(CONTINUED)" is marked "continues": its boxes are one section with the part of that heading before it.
+A child part whose first text is its own bold banner is listed under "sub" with that heading: its boxes are a section
+of their own (IMM 1295 prints "EMPLOYMENT" inside the wrapper that starts with "EDUCATION").
 Anything else has no printed heading: the rules pass then says the name must be changed before Accept.
 
 A banner is put in sentence case by the form's own spelling of each word: a word the form prints in small letters
@@ -199,6 +201,19 @@ def read(fname):
                 entry = {"heading": sentence_case(carry[0], seen), "printed": carry[0], "how": "carried", "from": carry[1]}
             else:
                 entry, carry = None, None
+            # A child part that prints its own bold banner first (IMM 1295's "EMPLOYMENT" inside the wrapper that starts
+            # with "EDUCATION"; IMM 5257's "PASSPORT" inside page 2's personal details) is a section of its own: its
+            # boxes sit under that banner, not under the part's first one.
+            sub = {}
+            for c in part:
+                if c.tag.replace(ns, "") not in PARTS:
+                    continue
+                cw = [x for x in texts(c, ns) if lettered(x[0]) and not OFFICE.search(x[0]) and (x[1] or len(x[0].split()) > 4)]
+                cb = banner_of(cw[0][0]) if cw and cw[0][1] else None
+                if cb and cb != b and (c.get("name") or "") and c.get("name") not in sub:
+                    sub[c.get("name")] = {"heading": sentence_case(cb, seen), "printed": cb}
+            if sub:
+                entry = {**(entry or {"heading": None, "how": "none"}), "sub": sub}
             if entry and key not in out:
                 out[key] = entry
     full = json.loads((inv.OUT / (fname.replace(".pdf", "") + ".inventory.json")).read_text())

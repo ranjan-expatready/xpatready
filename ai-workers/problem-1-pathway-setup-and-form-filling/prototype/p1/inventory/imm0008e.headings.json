@@ -57,13 +57,45 @@
    "heading": "Dependant(s)",
    "printed": "DEPENDANT(S)",
    "how": "carried",
-   "from": "Page1.depInfoHeader"
+   "from": "Page1.depInfoHeader",
+   "sub": {
+    "natID": {
+     "heading": "National identity document",
+     "printed": "NATIONAL IDENTITY DOCUMENT"
+    },
+    "educationOccupation": {
+     "heading": "Education/occupation detail",
+     "printed": "EDUCATION/OCCUPATION DETAIL"
+    },
+    "languageDetails": {
+     "heading": "Language detail",
+     "printed": "LANGUAGE DETAIL"
+    }
+   }
   },
   "Page1.dependants": {
    "heading": "Dependant(s)",
    "printed": "DEPENDANT(S)",
    "how": "carried",
-   "from": "Page1.depInfoHeader"
+   "from": "Page1.depInfoHeader",
+   "sub": {
+    "Passport": {
+     "heading": "Passport",
+     "printed": "PASSPORT"
+    },
+    "natID": {
+     "heading": "National identity document",
+     "printed": "NATIONAL IDENTITY DOCUMENT"
+    },
+    "educationOccupation": {
+     "heading": "Education/occupation detail",
+     "printed": "EDUCATION/OCCUPATION DETAIL"
+    },
+    "languageDetails": {
+     "heading": "Language detail",
+     "printed": "LANGUAGE DETAIL"
+    }
+   }
   },
   "Page1.depHeader": {
    "heading": "Add dependant(s)",

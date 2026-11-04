@@ -80,11 +80,13 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
   // Parts are one section when their heading comes from one place on the form: the same part on two pages, the parts a
   // heading-only part's banner carries to ("from"), and a banner printed "(CONTINUED)" with the part of that heading
   // before it. Two different parts that each print the same heading are not merged.
-  const keyOf = (k: string) => Object.keys(headings ?? {}).find((x) => x.split(".")[1] === k.split(".")[1] && x !== k);
+  // Another page's heading is taken only when it is printed "(CONTINUED)" (IMM 5257's marital status, page 1 and 2): a
+  // part name reused on another page ("PageWrapper") is not the same part (review r2 M4).
+  const keyOf = (k: string) => Object.keys(headings ?? {}).find((x) => x.split(".")[1] === k.split(".")[1] && x !== k && headings![x].continues);
   const anchors = new Map<string, string>();
   const anchorOf = (key: string): { anchor: string; h: PartHeadings[string] | undefined } => {
     const own = headings?.[key], h = own ?? (keyOf(key) ? headings![keyOf(key)!] : undefined);
-    if (!h?.heading?.trim()) return { anchor: `p:${key.split(".")[1]}`, h: undefined };
+    if (!h?.heading?.trim()) return { anchor: `p:${key.split(".")[1]}`, h: undefined }; // none, or only its child parts named
     const at = own ? key : keyOf(key)!;
     let anchor = (h.how === "carried" && h.from ? h.from : at).split(".")[1]; // a part's name: the same part on every page
     const label = h.heading.trim().toLowerCase();
@@ -99,7 +101,10 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
     if (part.length < 2 || MACHINE_PART.test(part[1].replace(/\[\d+\]$/, ""))) continue;
     // A page's part with no heading of its own takes the one printed over the part of the same name on another page
     // (IMM 5257's marital status continues under "PERSONAL DETAILS (CONTINUED)" on page 2).
-    const { anchor, h } = anchorOf(part.join("."));
+    // A child part with its own printed banner is a section of its own (review r2 M4: IMM 1295's "EMPLOYMENT" inside the
+    // wrapper that starts with "EDUCATION"); the same child name on another page is the same section.
+    const child = f.section.split(".")[2], own = headings?.[part.join(".")], subH = child ? own?.sub?.[child] : undefined;
+    const { anchor, h } = subH ? { anchor: `s:${part[1]}.${child}`, h: { heading: subH.heading, printed: subH.printed } } : anchorOf(part.join("."));
     const s = sections.get(anchor) ?? { label: h ? h.heading.trim().slice(0, 120) : null, part: part[1], printed: h ? (h.printed ?? h.heading).slice(0, 300) : null, fieldKeys: [], captions: [], quote: caption(f) };
     if (s.fieldKeys.length < 400) s.fieldKeys.push(f.data_path.slice(0, 120));
     if (caption(f) && s.captions.length < 3 && !s.captions.includes(caption(f).slice(0, 80))) s.captions.push(caption(f).slice(0, 80));
@@ -124,7 +129,7 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
  *  the headings file beside its inventory ("…/imm5257e.inventory.json" → "…/imm5257e.headings.json"), only when it was
  *  read from exactly the same file (its checksum). Null when not read (no such file, or read from another file): every
  *  section of that form is then proposed unnamed, and says its headings were not read (not that the form has none). */
-export type PartHeadings = Record<string, { heading: string; printed?: string; how?: string; from?: string; continues?: boolean }>;
+export type PartHeadings = Record<string, { heading: string; printed?: string; how?: string; from?: string; continues?: boolean; sub?: Record<string, { heading: string; printed: string }> }>;
 export function headingsFor(inventoryFile: string | null | undefined, sha256: string | null | undefined): PartHeadings | null {
   if (!inventoryFile || !sha256 || !/\.inventory\.json$/.test(inventoryFile)) return null;
   try {

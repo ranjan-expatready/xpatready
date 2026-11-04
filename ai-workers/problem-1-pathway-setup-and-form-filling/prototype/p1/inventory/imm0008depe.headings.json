@@ -16,7 +16,21 @@
   "Page1.AddDependant": {
    "heading": "Personal details",
    "printed": "PERSONAL DETAILS",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "natID": {
+     "heading": "National identity document",
+     "printed": "NATIONAL IDENTITY DOCUMENT"
+    },
+    "educationOccupation": {
+     "heading": "Education/occupation detail",
+     "printed": "EDUCATION/OCCUPATION DETAIL"
+    },
+    "languageDetails": {
+     "heading": "Language detail",
+     "printed": "LANGUAGE DETAIL"
+    }
+   }
   },
   "Page1.declaration": {
    "heading": "Consent and declaration of applicant",

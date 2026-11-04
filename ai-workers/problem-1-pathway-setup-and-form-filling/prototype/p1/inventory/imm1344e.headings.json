@@ -6,7 +6,13 @@
   "Part1.SponsorDetails": {
    "heading": "Part 1: application to sponsor and undertaking",
    "printed": "PART 1: APPLICATION TO SPONSOR AND UNDERTAKING",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "SectionHeader": {
+     "heading": "Sponsor personal details",
+     "printed": "SPONSOR PERSONAL DETAILS"
+    }
+   }
   },
   "Part1.SponsorContactInfo": {
    "heading": "Sponsor contact information",
@@ -26,7 +32,21 @@
   "Part1.CoSigner": {
    "heading": "Co-signer personal details",
    "printed": "CO-SIGNER PERSONAL DETAILS",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "CosignContactInfo": {
+     "heading": "Co-signer contact information",
+     "printed": "CO-SIGNER CONTACT INFORMATION"
+    },
+    "CosignResidency": {
+     "heading": "Co-signer residency declaration",
+     "printed": "CO-SIGNER RESIDENCY DECLARATION"
+    },
+    "CosignEA": {
+     "heading": "Co-signer eligibility assessment",
+     "printed": "CO-SIGNER ELIGIBILITY ASSESSMENT"
+    }
+   }
   },
   "Part1.Undertaking": {
    "heading": "Undertaking by sponsor and co-signer, if applicable",
@@ -61,7 +81,13 @@
   "Part2.Signatures": {
    "heading": "Signatures",
    "printed": "SIGNATURES",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "Disclosure": {
+     "heading": "Disclosure",
+     "printed": "DISCLOSURE"
+    }
+   }
   }
  }
 }

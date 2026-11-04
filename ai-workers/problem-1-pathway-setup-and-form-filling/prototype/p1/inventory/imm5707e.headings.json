@@ -6,7 +6,25 @@
   "page1.SectionA": {
    "heading": "Section A",
    "printed": "SECTION A",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "Applicant": {
+     "heading": "Applicant",
+     "printed": "APPLICANT"
+    },
+    "Spouse": {
+     "heading": "Your spouse, common-law partner or conjugal partner",
+     "printed": "YOUR SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER"
+    },
+    "Parent1": {
+     "heading": "Your parent 1 (mother or father)",
+     "printed": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    },
+    "Parent2": {
+     "heading": "Your parent 2 (mother or father)",
+     "printed": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   }
   },
   "page1.SectionB": {
    "heading": "Section B - children",

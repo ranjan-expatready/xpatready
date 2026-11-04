@@ -47,7 +47,13 @@
   "Page3.PageWrapper": {
    "heading": "Education",
    "printed": "EDUCATION",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "Occupation": {
+     "heading": "Employment",
+     "printed": "EMPLOYMENT"
+    }
+   }
   },
   "Page4.BackgroundInfo_SectionHeader": {
    "heading": "Background information",

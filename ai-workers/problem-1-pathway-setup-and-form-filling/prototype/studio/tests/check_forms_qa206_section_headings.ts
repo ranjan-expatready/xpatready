@@ -50,6 +50,14 @@ run(async () => {
   const applicant = gen.find((s) => s.label === "Personal details");
   ok("QA-206 fail (review M3): IMM 0008's applicant \"Personal details\" holds no dependant's boxes (they are under \"Dependant(s)\")", !!applicant && applicant.fieldKeys.every((k) => !/dep/i.test(k)) && gen.some((s) => s.label === "Dependant(s)" && s.fieldKeys.some((k) => /dependants/i.test(k))), gen.map((s) => [s.label, s.fieldKeys.length]));
   ok("QA-206 pass: IMM 5646's two pages give one \"Student information\" section, not two", cust.filter((s) => s.label === "Student information").length === 1);
+  // Review r2 M4: a part name reused on another page ("PageWrapper") is not the same part, so it never takes that page's
+  // heading; and a child part that prints its own banner (IMM 1295's "EMPLOYMENT" inside the wrapper that starts with
+  // "EDUCATION") is a section of its own.
+  const wp = drafted("imm1295e");
+  const edu = wp.find((s) => s.label === "Education"), emp = wp.find((s) => s.label === "Employment");
+  ok("QA-206 fail (review r2 M4): IMM 1295's \"Education\" holds no page 4 background question and no employment box", !!edu && edu.fieldKeys.every((k) => !/Page4\[0\]/.test(k) && !/Occupation/.test(k)), edu?.fieldKeys.filter((k) => /Page4\[0\]|Occupation/.test(k)).slice(0, 5));
+  ok("QA-206 pass (review r2 M4): IMM 1295's employment boxes are under its printed \"EMPLOYMENT\"", !!emp && emp.quote === "EMPLOYMENT" && emp.fieldKeys.length > 10 && emp.fieldKeys.every((k) => /Occupation/.test(k)), emp?.fieldKeys.slice(0, 3));
+  ok("QA-206 fail (review r2 M4): IMM 1295's page 4 wrapper with background questions 3 to 6 is held unnamed, not put under page 3's heading", wp.some((s) => s.part === "PageWrapper" && s.unnamed && s.fieldKeys.some((k) => /Page4\[0\]/.test(k))), wp.map((s) => [s.part, s.label]));
   const twice = draftFromInventory([{ data_path: "a", section: "Page1.Applicant.A", caption: "Name" }, { data_path: "b", section: "Page1.Spouse.A", caption: "Name" }], { "Page1.Applicant": { heading: "Personal details", printed: "PERSONAL DETAILS", how: "banner" }, "Page1.Spouse": { heading: "Personal details", printed: "PERSONAL DETAILS", how: "banner" } });
   ok("QA-206 fail (review M3): a second part printing the same heading is held unnamed, saying the form prints that heading over another part too", twice.sections.length === 2 && twice.sections.filter((s) => s.label === "Personal details").length === 1 && twice.sections.some((s) => s.unnamed && /prints "PERSONAL DETAILS" over another part too/.test(s.why ?? "")), twice.sections);
   const mrd = drafted("imm5475e");
