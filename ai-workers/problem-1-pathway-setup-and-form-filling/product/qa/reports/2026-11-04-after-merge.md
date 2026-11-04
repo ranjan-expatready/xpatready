@@ -374,3 +374,22 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 * Every M3 row stays Partial. C6.12's Visitor visa part counts on the checkpoint (24/24). C7.6's API reaches Ready to file there, but no screen shows it.
 * New: **QA-226** (Gap · Major, C6.4 and C7.7): the configured Visitor visa release has no document lines. **QA-227** (Bug · Major, C7.7, C6.11 and C7.6): IMM 5476 never applies to a represented case. **QA-228** (Gap · Minor): no signer rule on the checkpoint's lines. **QA-229** (UX · Major, C7.6 and C7.7): the screen says "Ready to file" while the server holds a CRITICAL warning.
 * **C6.11 goes to Partial** (was Works), held by QA-227. **M3: 1/17 Works.**
+
+## Batch 12 — #936 (QA-144 part 1), #879 (slice 3), #924 (C8.2), #885 (QA-207 path) · main ceabd1a85 · ~20:15–20:55 IST (P-337: only rows a merged PR names or a closed blocker frees)
+| Row | Verdict | Evidence |
+|---|---|---|
+| C4.7 (M2) | **Works** (was Partial) | `C4.7.test.ts` on the six: 0 · 17/17 (GitHub run 41851647362, and on qa's copy) |
+| C4.9 (M2) | **Works** (was Partial) | Walk on the six: change who fills Service language; an empty reason is refused on its field; the change waits on the Approver's To review; user-B approves it |
+| C4.3 (M2) | **Works** (was Partial) | Walk on the six: Preview by family shows 130 / 113 / 114 / 113 / 21 questions per person |
+| C4.2 (M2) | **Works** (was Partial) | Pack 10/10 (fixture), and on the six the PQR tick shows on Preview's PQR list |
+| C4.5 (M2) | Partial | Documents added on the six (8 lines), but "0 from documents": no step records which facts a document supplies (C4.11 / QA-162) |
+| C4.1, C3.6, C11.12 | Partial | 14/17 (QA-206, QA-221) · exit 2 · runtime pack needs the fixture's `wp.family` |
+| C10.1 | Partial | 18/24 on the checkpoint after #879 (was 16/23) |
+| C8.2 (M3) | Partial | 12/12, fixture only |
+| C9.1 | Partial | 8/17 on the checkpoint after #885: row 17 waits for a paid IMM 5476 (11-2021) saved map |
+
+**QA-144 closed.** Part 1 is #936, part 2 is #891, and slices 2–3 are #878 and #879. Part 3, the section titles, stays as QA-206. QA-162's capability column is narrowed to C4.11, as its own severity note says the C4.7 part was fixed on 2 Nov. QA-210: the fix merged in #936 (60 s room for Apply); a qa retest under load is still pending.
+
+**Method:** one Mac copy (qa_q144p1, stopped). The prerequisites (accepting and applying the saved field maps, drafting sections) ran through the screens' own routes in C4.7's pack setup, as a person would do them on the Forms tab, before the walks. The checklist documents came from the saved IMM 5484 reading (US$0; the ledger was 261,123 bytes before and after).
+
+**M2: 49/60 confirmed** (was 45; +C4.7, +C4.9, +C4.3, +C4.2). Thin slice 6/8. M3 1/17.
