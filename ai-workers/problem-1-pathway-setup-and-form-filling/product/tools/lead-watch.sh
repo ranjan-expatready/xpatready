@@ -161,6 +161,10 @@ jq -r 'select(.conclusion=="failure" and (.name|startswith("shard"))) | "\(.id) 
 done
 find "$ST/suites" -type f -mtime +2 -delete 2>/dev/null
 
+# Connections (Lead 4, 4 Nov: 20 cloud lanes were dead up to ~13 h while claude.ai's GitHub link was off, and GitHub-only
+# checks could not see it): gh's own login here; Mergify and the nightly are judged from the data above.
+gh auth status >/dev/null 2>&1 && fact GH_AUTH ok || fact GH_AUTH "$(gh auth status 2>&1 | grep -m1 -iE 'not logged|error|token' | tr -d '\t' | cut -c1-80)"
+
 # ---- 2. The records the check reads, from origin/main (never a copy's own edits) ----
 git show "origin/main:$P/qa/CAPABILITIES.md" > "$T/caps-now.md" 2>/dev/null || fact ERR_CAPS 1
 c0=$(git rev-list -1 --first-parent --before="$day0" origin/main 2>/dev/null)
@@ -262,9 +266,21 @@ branches=[(int(l.split()[0]),l.split()[1]) for l in rd(T+'/branches.txt').splitl
 def last_push(prefix):
     t=[u for u,b in branches if prefix and prefix!='-' and b.startswith(prefix) and b!='main']
     return max(t) if t else None
-def owner_of(ref):
+def row_ids(r): return set(re.findall(r'C\d+\.\d+|QA-\d+',r['row']))
+def caps_line(body):
+    m=re.search(r'(?im)^\W*Capabilities:\s*(.+)$',body or ''); return m.group(1) if m else ''
+# A session's PRs (Lead 4, 4 Nov): its branch or prefix; else a PR whose title starts with the session's row text, or whose
+# title or "Capabilities:" line names one of the row's capability or bug ids (briefs say: a draft PR within 20 minutes).
+def session_match(r,ref,title,body):
+    if r['branch'] not in ('-','') and ref.startswith(r['branch']): return True
+    row=r['row'].strip()
+    if row not in ('-','') and title.lower().startswith(row.lower()): return True
+    if title.lower().startswith('qa') and r['kind']!='qa': return False
+    ids=row_ids(r)
+    return bool(ids and ids & set(re.findall(r'C\d+\.\d+|QA-\d+',title+' '+caps_line(body))))
+def owner_of(ref,title='',body=''):
     for r in roster:
-        if r['branch'] not in ('-','') and ref.startswith(r['branch']): return r['name']
+        if session_match(r,ref,title,body): return r['name']
     return None
 
 # ---- open PRs: step, wait, blocker ----
@@ -355,7 +371,7 @@ for p in nodes:
     else: step,since='in review (reviewer, breaker) or owner',pushed
     prs.append(dict(n=p['number'],title=title,ref=p['headRefName'],L=L,draft=p['isDraft'],pushed=pushed,ci=ci,red_since=red_since,
         fail=[x['name'] for x in fail],lab=lab,q_open=q_open,qt=qt,head_ok=head_ok,caps=caps_named,qas=qas,m3=m3,kind=kind,files=files,
-        body=p.get('body') or '',approved=approved,step=step,since=since or now,owner=owner_of(p['headRefName']) or p['headRefName'],
+        body=p.get('body') or '',approved=approved,step=step,since=since or now,owner=owner_of(p['headRefName'],p['title'],p.get('body') or '') or p['headRefName'],mergify=any((x.get('name') or '').startswith('Mergify') for x in ((c.get('statusCheckRollup') or {}).get('contexts') or {}).get('nodes',[])),
         parked=str(p['number']) in parked))
 byn={p['n']:p for p in prs}
 prev={r[0]:r[1:] for r in tsv('acts.tsv') if len(r)>1 and r[1].isdigit()}
@@ -400,14 +416,19 @@ for x,ns in rows.items():
     if len(ns)>1: ACT('duprow-'+x,'%s is held by two sessions: %s'%(x,', '.join(ns)))
 
 # Sessions: a working session shows itself only by pushes (lead skill); waiting on a merge or the Lead is not idle.
+def session_prs(r):
+    mine=[p for p in prs if session_match(r,p['ref'],p['title'],p['body'])]
+    return mine,(max([x for x in [last_push(r['branch'])]+[p['pushed'] for p in mine] if x] or [0]) or None)
 for r in roster:
     k=r['kind']; nm=r['name']
     if k in ('standby','lead-standby'): continue
-    lp=last_push(r['branch']); mine=[p for p in prs if r['branch'] not in ('-','') and p['ref'].startswith(r['branch'])]
+    mine,lp=session_prs(r)
     waiting=any(p['approved'] or p['q_open'] for p in mine)
-    if r['branch'] in ('-',''):
-        a=age(int(r['since'])) if r['since'].isdigit() else 0
-        if a>90: ACT('nobranch-'+nm,'%s has no branch %s after its start or row: a cloud session may still be pending (3 Nov); check it, else replace'%(nm,dur(a)),a-90)
+    a0=age(int(r['since'])) if r['since'].isdigit() else 0
+    # Running only after its first push or draft PR (Lead 4, 4 Nov): a cloud lane gets 25 minutes, any other session 90.
+    lim=25 if k=='cloud' else 90
+    if not mine and not (r['branch'] not in ('-','') and lp):
+        if a0>lim: ACT('nobranch-'+nm,'%s (%s) started or given its row %s ago, no branch or draft PR: not running (4 Nov: 20 cloud lanes dead up to ~13 h, claude.ai GitHub not connected); check the claude.ai Code list, else replace'%(nm,k,dur(a0)),a0-lim)
     elif not waiting:
         a=age(max(lp or 0,int(r['since']) if r['since'].isdigit() else 0))
         if a>90: ACT('idle-'+nm,'%s (%s, %s) no push %s: message "continue" plus its next step; a cloud session silent after that → replace'%(nm,k,r['row'],dur(a)),a-90)
@@ -565,8 +586,8 @@ def flow(m3flag,label):
         tag=' '.join(p['caps']+p['qas'])[:24]
         say('   #%-4d %-36s %6s  %-14s %s%s'%(p['n'],p['step'][:36],dur(age(p['since'])),p['owner'][:14],tag,'  parked: '+parked[str(p['n'])][:40] if p['parked'] else ''))
     for r in rs:
-        lp=last_push(r['branch'])
-        say('   ◦ %-12s %-12s %-14s last commit %-6s next: %s'%(r['name'][:12],r['kind'][:12],r['row'][:14],dur(age(lp)) if lp else '-',r['next'][:60]))
+        mine,lp=session_prs(r)
+        say('   ◦ %-12s %-12s %-14s %-12s last commit %-6s next: %s'%(r['name'][:12],r['kind'][:12],r['row'][:14],' '.join('#%d'%p['n'] for p in mine)[:12] or 'no PR',dur(age(lp)) if lp else '-',r['next'][:60]))
 flow(False,'M2'); flow(True,'M3')
 
 # Links between M2 and M3: the Lead's map (lead-watch-links.txt), each state read now.
@@ -627,6 +648,18 @@ for x in cp[:1]:
         why=('red on '+', '.join(p['fail'][:2])) if p['ci']=='red' else p['step'] if p['step'].startswith('dequeued') else ('its question waits %s'%dur(age(p['qt']))) if p['q_open'] else ''
         if why: RISK(90,'the critical path %s #%s is stuck: %s'%(x[0],x[1],why),'make it this half hour\'s first act: its owner, its question, its red check')
 
+# Connections: gh's login here, Mergify present on the newest labelled PR, the newest nightly run (any trigger).
+lab_prs=[p for p in prs if p['approved'] and p['lab'].get('review: approved')]
+newest=max(lab_prs,key=lambda p:p['lab']['review: approved']) if lab_prs else None
+nn=sorted([r for r in runs if r['name']=='nightly'],key=lambda r:r['created_at'])[-1:] or night[:1]
+cline='── connections  gh %s · Mergify on newest labelled PR: %s · newest nightly run: %s'%(
+    'logged in' if E.get('GH_AUTH')=='ok' else 'NOT OK ('+E.get('GH_AUTH','?')+')',
+    ('#%d %s'%(newest['n'],'yes' if newest['mergify'] else 'NO CHECK')) if newest else 'no labelled PR open',
+    ('%s %s (%s)'%(hm(ts(nn[0]['created_at'])),nn[0].get('conclusion') or nn[0]['status'],nn[0]['event'])) if nn else '?')
+if E.get('GH_AUTH')!='ok': ACT('ghauth','gh is not logged in on this Mac (%s): every GitHub number above is unknown; fix the login first'%E.get('GH_AUTH','?'))
+if newest and not newest['mergify'] and age(newest['lab']['review: approved'])>5:
+    ACT('mergify#%d'%newest['n'],'#%d labelled %s ago and Mergify has posted no check: the Mergify app may be disconnected; check the repository\'s installed apps'%(newest['n'],dur(age(newest['lab']['review: approved']))))
+say(cline)
 say('── capacity')
 say('   github  runs %d running, %d waiting%s · jobs %d of 40 (+%d waiting) · open batches %d · 6 h: batches %d passed, %d failed (%d%%), %d cancelled'%(
     len(inprog),len(queued),' (oldest %s)'%dur(oldest_q) if queued else '',jobs_busy,jobs_wait,len(batches_open),bok,len(bfail),rate,bcan))
