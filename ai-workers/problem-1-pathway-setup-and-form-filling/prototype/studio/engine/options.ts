@@ -23,12 +23,13 @@ export function draftOptionMap(values: ListValue[], options: FormOption[]): { op
     if (code !== null && code !== undefined && !taken.has(code)) { map[v.key] = code; taken.add(code); }
   }
   // QA-144 slice 2: a form that prints a shorter label ends the value's own (IMM 5710 "Separated" for the list's "Legally
-  // Separated"). Only after every exact match is taken, and only when exactly one free option is that ending.
-  for (const v of values) {
-    if (v.key in map) continue;
-    const tail = opts.filter((o) => !taken.has(o.code) && n(o.label).length > 3 && n(v.label).endsWith(` ${n(o.label)}`));
-    if (tail.length === 1) { map[v.key] = tail[0].code; taken.add(tail[0].code); }
-  }
+  // Separated"). Only after every exact match is taken, and only one to one: the value has exactly one free option that
+  // is its ending, and no other unmatched value ends with that option (review R1-M1: "Simplified Chinese" and
+  // "Traditional Chinese" against one "Chinese" stay with a person).
+  const ends = (v: ListValue, o: FormOption) => !taken.has(o.code) && n(o.label).length > 3 && n(v.label).endsWith(` ${n(o.label)}`);
+  const open = values.filter((v) => !(v.key in map));
+  const pairs = open.map((v) => [v, opts.filter((o) => ends(v, o))] as const).filter(([, t]) => t.length === 1);
+  for (const [v, [o]] of pairs) if (open.filter((w) => ends(w, o)).length === 1) { map[v.key] = o.code; taken.add(o.code); }
   const codes = opts.map((o) => o.code);
   return { optionMap: { map, unused: codes.filter((c) => !taken.has(c)), codes }, unmatched: values.filter((v) => !(v.key in map)).map((v) => v.key) };
 }

@@ -26,7 +26,7 @@ import { Studio } from "./studio.ts";
 import { seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
-import { placeFromFormParts } from "./form-part-placements.ts";
+import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.ts";
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { FormLibrary } from "./form-library.ts";
@@ -513,7 +513,7 @@ export class Demo {
     // QA-144 slice 1, after the second person's approval: each needed fact placed in the section of its form box (the
     // shared rules step), each form field no saved answer proposed filled by hand (ruling 2), each form line set by IRCC's
     // words (ruling 3). All as the author, through the screens' own services.
-    const placedFacts: string[] = [], setUpRefused: string[] = [];
+    const placedFacts: string[] = [], setUpRefused: string[] = [], unchosen: string[] = [];
     let byHand = 0, lines = 0;
     await timed("questions, form fields and form rules (rules)", async () => {
       for (const c of fromForms) {
@@ -557,10 +557,12 @@ export class Demo {
         if (rf) {
           const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: ["person.sex", "person.gender", "person.date_of_birth"] } }, select: { canonicalFieldKey: true, sectionKey: true } });
           const beside = ["person.sex", "person.gender", "person.date_of_birth"].map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
-          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(rf.fact); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
+          // R2-m1 after it too (review R1-m4): its section may be a chosen one, and only a conditional form reads the fact.
+          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(rf.fact); await keepChosenEveryones(this.db, this.studio, author, c.id, new Set([beside.sectionKey]), p); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
           else setUpRefused.push(`${rf.fact}: neither the person's sex, gender nor date of birth is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a box that reads it`));
+        unchosen.push(...p.unselected.map((x) => x.includes(" (on ") ? x : `${x} (on ${c.label})`));
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
@@ -572,7 +574,7 @@ export class Demo {
       }
     });
     row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length ? "partial" : "done",
-      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form box; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)`,
+      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form box; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
       why: [...sectionsRefused, ...setUpRefused].slice(0, 6).join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 

@@ -91,12 +91,21 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   // R2-m1 (QA-144 slice 2): the library's sections are shared, so a placement here can put a question into a section
   // another combination (or this one, earlier) has chosen. Every section chosen on this combination, and on any other
   // combination that chose a section placed into now, is checked again, and one that no longer qualifies is unchosen.
-  const live = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } });
-  const touched = new Set(out.placed.map((x) => x.section));
-  const others = await db.sqrSectionSelection.findMany({ where: { sectionKey: { in: [...touched] }, workspaceId: c.workspaceId, combinationId: { not: combinationId }, combination: { retiredAt: null } }, select: { combinationId: true, combination: { select: { label: true } } } });
+  await keepChosenEveryones(db, studio, author, combinationId, new Set(out.placed.map((x) => x.section)), out);
+  return out;
+}
+
+/** R2-m1: checks again every section chosen on a combination, and on any other combination that chose one of the sections
+ *  just placed into (`touched`), and unchooses one that no longer qualifies (everyoneAnswers); on this combination it
+ *  also chooses a touched section that now does. Exported for a placement made outside placeFromFormParts (the
+ *  checkpoint's fact only a rule reads, review R1-m4). */
+export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor, combinationId: string, touched: Set<string>, out: Pick<PlacedFromParts, "refused" | "selected" | "unselected">) {
+  const { workspaceId } = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
+  const live = await db.sectionQuestion.findMany({ where: { workspaceId: workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } });
+  const others = await db.sqrSectionSelection.findMany({ where: { sectionKey: { in: [...touched] }, workspaceId: workspaceId, combinationId: { not: combinationId }, combination: { retiredAt: null } }, select: { combinationId: true, combination: { select: { label: true } } } });
   const nameOf = new Map(others.map((x) => [x.combinationId, x.combination.label]));
   for (const id of [combinationId, ...new Set(others.map((x) => x.combinationId))]) {
-    const qualifies = await everyoneAnswers(db, c.workspaceId, id, live);
+    const qualifies = await everyoneAnswers(db, workspaceId, id, live);
     const chosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId: id }, select: { sectionKey: true } })).map((x) => x.sectionKey));
     for (const sec of id === combinationId ? chosen : [...chosen].filter((s) => touched.has(s))) {
       if (qualifies(sec)) continue;
@@ -108,7 +117,6 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
       try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
     }
   }
-  return out;
 }
 
 /** Whether every applying person of a combination answers all of a section anyway (review M2, R2-M1): every question in
