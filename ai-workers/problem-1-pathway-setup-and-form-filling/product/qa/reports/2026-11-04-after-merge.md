@@ -288,3 +288,25 @@ All three Partials have one root: on the six, no step places a form's facts into
 * **QA-195 closed.** `check_forms_c34_ai.ts` 0 · 87/87 twice on fresh Mac copies (load 1.6). Its 14 QA-195 cases all pass: identity documents are decided by name, and every door refuses an AI-read Passport in plain words. `C3.4.test.ts` on the six on GitHub: 0 · 20/20 (run 41810052972). US$0; ledger unchanged across the runs.
 * **C3.4 stays Partial**, held by QA-218, QA-206, QA-144 and the flaky checks QA-208/209.
 * **M2: 40/60 confirmed** (unchanged).
+
+## Batch 9 — #798 (QA-144 slice 1) · main 830b32062 · ~16:10–16:35 IST
+The GitHub re-test ran the packs of the rows QA-144 holds, on both data sets (checkpoint run 41815696194, six run 41815706129):
+
+| Pack | On the six | On the checkpoint |
+|---|---|---|
+| C4.7 | exit 2 (setup missing) | **0 · 17/17** |
+| C4.1 | exit 2 | 1 · 14/17 (section titles, QA-206) |
+| C4.8 | exit 2 | 1 · 6/11 (Submit refused: IRM 0002 not mapped) |
+| C3.6 | exit 2 | exit 2 (no rule) |
+| C10.1 | 1 · 13/23 | 1 · 13/23 (nothing released) |
+| C4.11 | 1 · 4/23 | 1 · 14/23 (QA-162) |
+| C11.12 / -runtime | 0 · 20/20 / crash (QA-215) | the same |
+
+Walk on the checkpoint at 1440 px (one Mac copy, stopped): the Visitor visa has 123, 112, 112 and 108 questions per person, "Every fact has one source", and Preview by family shows them. Its sections read "Consent1", "Ill treat section", "Sub no1", "Five", "Seven" (QA-206 on screen). Documents shows "No documents yet". Its one release block is IRM 0002's field map.
+
+**No status changes.** Under P-322 the setup rows count on Reset to the six, and there no screen runs the placement step yet. The code says "A screen button calls the same step later (its own row); the configured checkpoint calls it now". QA-144 stays open with three parts left: (1) the screen step on the six, (2) IRM 0002 applied so the Visitor visa releases, (3) section titles (QA-206).
+
+**M2: 40/60 confirmed** (unchanged).
+
+### Question for the tech lead
+C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #798 body says "Works on the checkpoint, not on the six" is the founder's call (P-304 (2)), and P-322 says setup rows count on the six. qa keeps C4.7 Partial until the screen step exists. If the founder's call is that the checkpoint counts for setup rows that a person cannot yet reach on the six, C4.7 becomes Works.
