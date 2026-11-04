@@ -93,3 +93,36 @@ Same breaker, 5 Nov 2026 (IST). Scope `git diff ec43f2a89..462fda78e`: the panel
 * **Repeats and races:** 5 withdraws at once → one 201; a later withdraw → 409. Withdraw racing a release (0, 150, 400, 1500 ms) always ends consistent: either the release is refused and the change is WITHDRAWN, or the change is RELEASED with a 9-fact snapshot and the withdraw gets 409. Send or a suggestion double-clicked → one POST or one chip.
 * **Keyboard and returned path:** Approve by keyboard on the change page; Preview's toggle with Space, kept in the URL after a reload. Returned: user-C reads "Only Configuration author can … withdraw it"; user-A gets "Propose it again" and Withdraw, then lands on /review.
 * **Long text and parameters:** a 399-character quote wraps in the panel and on the change page at 1024 and 512 px. `combination` with SQL, upper case, a zero UUID or an array is ignored or gives no prefill.
+
+## Round 3 (ff34719e3, re-check)
+Same breaker, 5 Nov 2026 (IST). Scope `git diff 462fda78e..ff34719e3`. Copy `isolated.sh c45b3 4454` + `setup_c45_walk.ts` (the six), then `demo/reset` + `demo/load {}` (wp.family) for releases; Playwright (chrome) at 1024 and 512 px; live AI off, US$0; copy stopped. The PR's listed open Minors are not re-reported.
+### Round 2 re-run
+* **R2-M1 fixed.** Same steps (marriage certificate, family name + birth country about the spouse, approve, merge birth country into citizenship) → withdraw 201, draft back to no fact, re-propose 201. Chain A→B→C after approval → withdraw 201 (forms.ts:367 re-points A to C). Fixture: approve passport + 1 fact, merge it (the reviewer approves the merge, BR-14), release wp.family → change RELEASED, snapshot 11 facts; merged into a fact already listed → RELEASED; merge, withdraw, release → change WITHDRAWN, snapshot the original 10.
+* **R2-M2 fixed.** At 1024 and 512 px: after withdrawing an approved change the panel shows 1 empty line, 0 chips, Send disabled, Escape asks nothing; after Send it shows "Waiting" with the sent fact; withdrawing that resets it the same way. Dialog never wider than the viewport.
+* **R2-M3 fixed (API).** One `withdrawn` audit line with the why (Activity shows it); `decided_by` stays the approver; the note reads "Approved: … Withdrawn by Configuration author: …".
+* **Minors:** Cancel asks (fixed); words with no fact refused in words (fixed); a page is required (fixed, see m-c); "ﬁrst m² １２" stored as written (fixed); U+3164, U+1160, U+115F, U+FFA0, U+2800 and U+00AD fillers refused (fixed); merged fields not offered (fixed); race losers partly fixed (m-b); "Cannot withdraw" wording fixed for a released change.
+### Major
+None.
+### Minor
+* **m-a · A withdrawn change's page says "Released" and shows no withdraw note.**
+  * Steps: approve, then withdraw, then open `/review/change/:id` (a second session reloading, or a kept link).
+  * Actual: the chip reads "Released"; the decision note is never shown, so who withdrew it and why are not on the page (only in Activity).
+  * Cause: `web/src/pages/review-items.tsx:70` maps every status other than WAITING, RETURNED and APPROVED to "Released"; `:112` shows the note only when RETURNED.
+  * Screenshot (scratch, not committed): `/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready--claude-worktrees-qa2-2026-11-04-e3ae2d/6271d9b3-d4c0-46cf-9d0f-38427010f3e6/scratchpad/r3/shots/withdrawn-change-0.png`.
+* **m-b · Race losers still read the wrong words.** 5 withdraws at once → 1 × 201, 2 × "already withdrawn" (fixed path), 2 × "Cannot withdraw … or a change of the facts a document supplies that is not released yet, is withdrawn" (`library-changes.ts:224`). A loser that reads the change after the winner commits skips the new lock; for an unreleased withdrawn change those words say it *can* be withdrawn.
+* **m-c · Withdraw and a new proposal at once file a proposal on stale facts.** Both return 201. The new change's before and removed list "Given name(s)" although the type now supplies nothing, and approving it gives 409 "changed after it was proposed … Return it". `propose` reads `current` before taking the lock (`document-supplies.ts:90` vs `:110`). It is caught at approval, but it ends as a dead change.
+* **m-d · The approver's note can push the withdraw reason off the change.** A 290-character approval note, then a withdraw: the stored note ends inside the approver's words, so "Withdrawn by …" and the why are cut (`.slice(0, 300)`, `document-supplies.ts:169`). History keeps the why.
+* **m-e · After a merge the panel drops the official words of the moved fact.** Approve passport + X, merge X into Y, release: the panel lists Y with no source or quote (an empty line), so changing it again means retyping words that were approved. `view` matches cites by the old key (`document-supplies.ts:70`), not through merges.
+* **m-f · The page rule refuses real sources.** These are refused: "IMM 5257 (03-2026), pages 1-2", "pp. 3", "page one", and a canada.ca web page (no page). "abc page 1" passes. The regex is `/\b(page|p\.)\s*\d/i` (`contracts/document-supplies.ts:23`).
+* **m-g · Control characters.**
+  * A U+0000 in a source or quote → 500 "Something went wrong" (Postgres 22P05 in the log); in the reason → 404 "Not found".
+  * A U+0007 is stored inside the official words.
+  * `clean` strips `\p{Cf}` and fillers but not `\p{Cc}` (`contracts/document-supplies.ts:14`).
+### Held
+* **Withdraw raced against a release** (wp.family, delays 0, 100, 150, 190–250, 500 and 1500 ms). Every run ends consistent:
+  * either the release is refused and the change is WITHDRAWN with one audit line and the draft back to 10 facts;
+  * or the release goes out (9 facts), the change is RELEASED and the withdraw gets 409.
+* **Roles:** only the proposer withdraws (unchanged since round 2).
+* **Words:** "名前を書く" and NFC "é" are stored as written.
+
+**Open: no Blocker or Major.** Minors m-a to m-g are open.

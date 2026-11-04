@@ -169,3 +169,61 @@ Reviewer agent, Opus, did not build it; 5 Nov 2026, 02:25 IST. Scope: `git diff 
 * Not tested: a real screen reader; an intended user's unaided walk (D17 and D20 simulated only); GitHub CI on this commit.
 
 **Verdict: Block**: fix R2-M1, then a diff-only re-check of that fix and its browser step. The minors are at the builder's judgment.
+
+## Round 3 (ff34719e3, diff-only, fresh reviewer)
+Reviewer agent, Opus. I did not build this and did not review rounds 1 or 2. 5 Nov 2026, 02:40 IST. Scope (tech lead, P-293 (3)): `git diff 462fda78e..ff34719e3` only, meaning the fixes for reviewer R2-M1, breaker R2-M1 to M3 and the round-2 minors. Setup: one isolated copy `c45r3` on port 4453, started fresh before each run. Live AI off, US$0. Screenshots restored with `git checkout`, copy stopped, tree clean.
+
+### Builder's results, re-run
+| What | Result |
+|---|---|
+| `setup_c45_walk.ts` + `check_c45_supplies_browser.cjs` | 29/29, exit 0 (27 s), including "withdrawn after approval … no fact, nothing to send" and "SQR tab reads 0 again" |
+| `acceptance/C4.5.test.ts` | 26/26, exit 0 (fresh copy) |
+| `tests/check_c45_supplies_release.ts` | 10/10, exit 0 (fresh copy), including the real merge followed by a withdraw |
+| Types, graph | web `tsc --noEmit` exit 0; no api error in this diff's files; `graph.mjs --check` exit 0 |
+
+### Each fix
+* **(a) Reading facts through merges: right for withdraw.**
+  * Probe on the release-check copy: an approved change, then `passport_country_of_issue` merged into `citizenship`, then two withdraws at once. Result: one 201 and one 409. The draft went back to `before` read through the merge (sex restored, the merged key gone), with one audit line per withdraw.
+  * Would the test fail without the fix? Yes. The test's `after` holds the merged key and the draft does not, so the old comparison gives 409 and the step fails.
+  * Release side: the code is right (published facts compared with `after` read through merges). I could not release in my probe, because the fixture's submit then needs an IMM 1295 answer-key test. No test covers this path (r3-m1).
+* **(b) History line and the approver's decision: right.** One `withdrawn` audit event names the change and gives the reason. `decided_by` stays the approver. The note reads "Approved: Checked against IMM 5484 page 1. Withdrawn by Configuration author: …". The release check asserts both. The advisory lock with a re-read status gives the race's loser "already withdrawn", not "changed since".
+* **(c) Panel rebuilt from the reload: right.**
+  * My walk at 1024 px, keyboard Enter on Withdraw: within 30 ms the panel shows 0 chips, the prefilled first line and a disabled Send. Close asks nothing. axe 0. Shot (scratch, not committed): `/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready--claude-worktrees-qa2-2026-11-04-e3ae2d/6271d9b3-d4c0-46cf-9d0f-38427010f3e6/scratchpad/r3/after-withdraw-1024.png`.
+  * Would the browser step fail without the fix? Yes, by reasoning. Round 2 saw 9 stale chips stay for 3 s, and the step counts chips as soon as line 1 appears.
+* **(d) Minors.**
+  * Cancel with edits asks first: dismissing keeps the edits, accepting closes, and Cancel with no edits closes without asking.
+  * A line with words but no fact gets "An official line has words but no fact…" and no POST is sent.
+  * A source with no page is refused by the server, and the panel shows the reason in words.
+  * Official words are kept as typed (NFC): "ﬁrst", "m²" and a combining "é" are stored as typed, U+3164 is stripped, and the stored quote equals its NFC form.
+  * The GET view no longer offers merged fields (162 fields offered; both merged keys absent).
+  * The returned note no longer doubles the full stop.
+  * The withdraw wording in `library-changes.ts` is right for a released or withdrawn change.
+  * Pack step 22 fails on the old code: under NFKC, U+3164 becomes U+1160, which counts as a letter, and a source with no page was accepted.
+* **Nothing that worked before is broken.**
+  * Withdraw now compares facts only, not whom each fact is about, even when nothing merged. That is safe: only one change can be open at a time, so nothing else writes `suppliesAbout` between approval and withdraw.
+  * Waiting and returned withdraws, the BR-5 "Changed since" check and the release race all still pass.
+
+### Minor (should, at the builder's judgment)
+* **r3-m1** · Nothing fails if `releaseSupplies` stops reading through merges (`api/src/document-supplies.ts:193–195`). Fix: one release-check step that releases after a merge.
+* **r3-m2** · `throughMerges` follows one merge only (`:185–189`). If A is merged into B and then B into C, both before release, the change is stuck again. Fix: follow the merge chain to its end.
+* **r3-m3** · After a withdraw, the panel turns back into the editor without saying what happened. Focus lands on the dialog (same cause as open m-b).
+* **r3-m4** · The page rule `/\b(page|p\.)\s*\d/i` (`contracts/document-supplies.ts:139`) refuses "pages 2–3" and "pp. 2".
+* **r3-m5** · The change's note is cut at 300 characters (`:178`). A long approver note plus a long reason cuts the withdraw reason on the change. History keeps 600 characters.
+* **Outside this diff, for the tech lead:** a merge rewrites `suppliesFacts` but not `suppliesAbout` (`api/src/forms.ts:391`, unchanged here). A spouse's merged fact becomes the holder's. The breaker raised this in R2-M1; this diff only stops it from leaving changes stuck.
+
+### Scores that change (others as in round 2)
+| # | R2 → R3 | Evidence |
+|---|---|---|
+| D5 | 3 → 4 | A withdraw after a merge works, and the panel reloads correctly |
+| D6 | 5 → 5 | Withdraw is in History; the approver's decision is kept |
+| D11 | 3 → 4 | No stale editor; Cancel asks; r3-m3 |
+| D16 | 4 → 4 | New steps fail on the old code; r3-m1 |
+| D18 | 5 → 5 | Official words kept as written (NFC); a page is required |
+
+**Journey score (reviewer, round 3): 9/10, pass, no 0.**
+* 1 each: task completed, next step obvious, plain words, correct data, error recovery, speed, visual, trust and sources.
+* ½ each: feedback and state (r3-m3), accessibility (focus, m-b).
+* Not tested: a real screen reader, an intended user's unaided walk (D17 and D20 simulated only), a release after a merge (fixture), GitHub CI on this commit.
+* The tech lead asked for this section only, so there is no separate journey-test report this round.
+
+**Verdict: Approve.** No open Blocker or Major in this diff. The Minors r3-m1 to r3-m5 are at the builder's judgment.

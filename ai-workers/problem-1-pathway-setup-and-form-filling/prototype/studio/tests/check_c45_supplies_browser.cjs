@@ -5,12 +5,22 @@
 // change page and approves; the SQR tab then reads "from documents"; Preview's "Try it missing" asks them again; Library ›
 // Document types opens the same panel. Screenshots at 1440 and 1024 px in product/screens/C4.5-document-supplies/
 // screenshots/, axe (WCAG 2.2 AA) on each state. No model call (US$0).
-//   zsh studio/tools/isolated.sh screens_c45b 4447 start && tsx studio/tests/setup_c45_walk.ts 4447 xr_studio_screens_c45b && node studio/tests/check_c45_supplies_browser.cjs 4447 <combination id it printed>
-const path = require("node:path"); const fs = require("node:fs");
+// Its setup (tests/setup_c45_walk.ts: Visitor visa's questions and document lines through the people's steps) runs first,
+// on the same copy, unless a combination id already set up is given as a third argument.
+//   zsh studio/tools/isolated.sh screens_c45b 4447 start && node studio/tests/check_c45_supplies_browser.cjs 4447 xr_studio_screens_c45b
+const path = require("node:path"); const fs = require("node:fs"); const { spawnSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 
-const PORT = Number(process.argv[2] ?? 4447), VV = process.argv[3], BASE = `http://localhost:${PORT}`;
+const PORT = Number(process.argv[2] ?? 4447), DB = process.argv[3] ?? "xr_studio_screens_c45b", BASE = `http://localhost:${PORT}`;
+/** The combination: given, or set up now on this copy by tests/setup_c45_walk.ts (exit 2 when its setup is missing). */
+const VV = process.argv[4] ?? (() => {
+  const studio = path.join(__dirname, "..");
+  const r = spawnSync(path.join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", path.join(studio, "api", "tsconfig.json"), path.join(__dirname, "setup_c45_walk.ts"), String(PORT), DB], { encoding: "utf8", timeout: 900000 });
+  const id = /COMBINATION (\S+)/.exec(r.stdout ?? "")?.[1];
+  if (!id) { console.error(`STOP  the setup did not finish (exit ${r.status}): ${String(r.stderr || r.stdout).slice(-400)}`); process.exit(2); }
+  return id;
+})();
 const ROOT = path.join(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "C4.5-document-supplies", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
 const SAMPLE = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "samples", "document-supplies.json"), "utf8")).document_types[0];
@@ -20,7 +30,6 @@ const ok = (name, c, detail) => { c ? pass++ : fail++; console.log(`${c ? "PASS"
 const LINES = [...SAMPLE.facts.reduce((m, f) => { const k = `${f.source}|${f.quote}`; m.set(k, { source: f.source, quote: f.quote, facts: [...(m.get(k)?.facts ?? []), f.fact] }); return m; }, new Map()).values()];
 
 (async () => {
-  if (!VV) { console.error("STOP  pass the combination id tests/setup_c45_walk.ts printed"); process.exit(2); }
   const b = await chromium.launch({ channel: "chrome", headless: true });
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
   const p = await ctx.newPage();
