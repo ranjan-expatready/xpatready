@@ -192,10 +192,14 @@ for (const k of [1, 2]) {
   await fixtureReady(rc.id);
   const rp = (await prepare(rc.id, officer)).p;
   const fs = rp?.filings.map((x) => x.id) ?? [];
-  const [rec, move] = await Promise.all([
+  const [rec, move, put] = await Promise.all([
     call("PATCH", `/runtime/groups/${rp?.groups[0]?.id}/record`, { filings: fs.map((id, i) => line(id, `V30000${k}20${i}`, `SAMPLE-R${k}-${i}`)), ucis: [], version: rp?.version }, officer),
     call("PATCH", `/runtime/cases/${rc.id}/people/${rS}`, { applies: false }, officer),
+    // Devin on #924: slice 1's PUT application-number at the same moment never leaves the filing and its record apart.
+    call("PUT", `/runtime/filings/${fs[0]}/application-number`, { value: `V30000${k}299`, before: null }, officer),
   ]);
+  ok(`fail (Devin on #924, run ${k}): a record and the old number route at once never leave a filing's number and its record apart`,
+    sql(`select count(*) from filing f join filing_record r on r.filing_id = f.id where f.case_id='${rc.id}' and f.application_number <> r.application_number`) === "0", { record: rec.status, put: put.status });
   const active = sql(`select count(*) from filing where case_id='${rc.id}' and active`), records = sql(`select count(*) from filing_record where case_id='${rc.id}'`);
   ok(`fail (break R2-M1, run ${k}): a record and "not travelling" at once never both pass; a recorded filing never goes inactive`, !(rec.status === 200 && move.status === 200) && (records === "0" || active === records), { record: rec.status, move: move.status, active, records });
   if (rec.status === 200) {

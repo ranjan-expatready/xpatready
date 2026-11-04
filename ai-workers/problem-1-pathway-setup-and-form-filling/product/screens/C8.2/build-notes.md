@@ -22,4 +22,4 @@ On a case page, the case officer opens **Submission to IRCC**. Each submission g
 * `acceptance/C8.2.test.ts` on main: -1 passes; -2 to -12 need C7.6's `readyToFile` routes (#861).
 
 ## Not built (follow-ups)
-Breadth after Visitor visa (the sponsorship + PR pair, citizenship envelopes); a "Done" action on tasks; locks on C8.1 and C7.6 routes; `filing_review` as Reviewed by; the C7.7 Prepare application tab hosting this panel.
+After filing, a row added or a "none apply" choice that changes no form box is not compared (Devin on #924; C9.2: store `groupFacts`, compare with `changedGroups`). Breadth after Visitor visa (the sponsorship + PR pair, citizenship envelopes); a "Done" action on tasks; locks on C8.1 and C7.6 routes; `filing_review` as Reviewed by; the C7.7 Prepare application tab hosting this panel.

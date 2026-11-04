@@ -59,6 +59,8 @@ export class FilingRecord {
       await this.db.$transaction(async (tx) => {
         // The old value is the lock: a change made meanwhile leaves nothing updated (409), never overwritten.
         // C8.2-9: once the submission is recorded, the number changes only through "Correct a number" (kept with its reason).
+        // Devin on #924: under the case's row lock, as recording takes it, so a record committed meanwhile is always seen.
+        await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
         await refuseIfRecorded(tx as unknown as Db, [f!.id], "the application number (use Correct a number)");
         const n = await tx.filing.updateMany({ where: { id: f!.id, applicationNumber: f!.applicationNumber }, data: { applicationNumber: value } });
         if (n.count !== 1) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
