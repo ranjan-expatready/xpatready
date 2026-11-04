@@ -118,3 +118,29 @@ Runs on :4447 (fresh copy, US$0, stopped afterwards):
 - No new Blocker, Major or Minor.
 
 **Verdict (round 2): Approve** for 816e8e7c (no open Blocker or Major).
+
+## Round 3: diff-only re-review at f25503a2 (`git diff 816e8e7c..f25503a2`)
+Runs on :4447 (fresh copy, US$0, stopped afterwards): I ran the pack file at f25503a2 on the checkpoint once.
+- **Result:** 29/30, exit 1. The only FAIL is C5.1-B4, with the detail "red until QA-144". A23 prints NOTE.
+- **Gate B on that log** (`tools/gate-b.mjs` `packVerdict`):
+  - The PR's steps (A1–A22, A24, B1–B3) give null, so they pass.
+  - Adding B4 gives "named steps not green: C5.1-B4". Adding A23 gives the same refusal for A23.
+  - Exit 2 is refused.
+- **WAIT to FAIL is honest.**
+  - B4 is a real red step, not a skip. The run exits 1, not 0, and the detail names QA-144.
+  - Gate B refuses any claim that includes B4, and the PR body claims only the steps that are green on both data sets. B5–B10 (the release itself) are not claimed, and no Works line is given.
+  - Nothing is hidden. The plain run is now red rather than "waiting", which is the accurate state of C5.1 on the checkpoint.
+- **The step ids match their checks.**
+  - The ids are unique, A1–A24 and B1–B10, in run order.
+  - The gate's pattern ends with `(?![0-9A-Za-z])`, so A1 never matches A10–A19.
+  - A22 (paper) is green on both data sets. A23 (Not needed) runs on neither, and is rightly left out of the claim.
+- **Comment at `engine/programs.ts:161-165`:** now matches `libraryType`. The round-2 nit is closed.
+- **m6, Minor (Should): the two US$0 checks ("C5.1: no model call") and the two "setup:" checks have no id.**
+  - A named-steps verdict accepts exit 1, so a red US$0 step would pass gate B unseen. The setup steps are covered, because their dependent named steps go red with them.
+  - Fix: give the US$0 checks ids (for example A25 and B11) and claim A25.
+- **m7, Minor (Should): on the fixture, B4 is true by construction.**
+  - `B = T.combo("wp.family")` is set without checking the "no other problem" its words claim. B5's 201 proves it in effect.
+  - Fix: assert `errorsOf(B)` is empty after `sourceEveryNumber`, or word B4 per data set.
+- No Blocker or Major.
+
+**Verdict (round 3): Approve** for f25503a2 (no open Blocker or Major). m6 and m7 can be follow-ups.
