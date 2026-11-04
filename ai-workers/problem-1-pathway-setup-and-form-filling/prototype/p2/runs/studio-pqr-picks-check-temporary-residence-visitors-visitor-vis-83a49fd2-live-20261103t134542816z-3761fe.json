@@ -1,0 +1,128 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-pqr-picks-check-temporary-residence-visitors-visitor-vis-83a49fd2-live-20261103t134542816z-3761fe",
+  "idempotency_key": "75dd6f44138be1f6b32e1cf90ec95198f7f2859dd155b67ec36945f88b7ee757",
+  "contract_version": "drafting-run/v0",
+  "kind": "pqr_picks",
+  "output_sha256": "094a803092d328592f049f98cbf66175de08227d5db50b485cf7bc5c21bb0493",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    },
+    {
+     "file": "prototype/p2/question-lists/vv.single-a4e1504e5594.questions.json",
+     "sha256": "a4e1504e5594df13a0f17674b2e3731e030afe95e9b5b4a2a9413af7c677af87"
+    }
+   ],
+   "configuration_version": "c47-pqr-picks"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 4000,
+   "prompt_version": "pqr-picks-check.v2.md",
+   "prompt_sha256": "38c675652c07144cc3227f2cdafa46d9f145f94604979fd4baa5f3766cc9c67b"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 23830,
+    "output_tokens": 1002,
+    "duration_ms": 9000
+   }
+  ],
+  "usage": {
+   "input_tokens": 23830,
+   "output_tokens": 1002,
+   "cost_usd": 0.11536,
+   "duration_ms": 9000
+  },
+  "started_at": "2026-11-03T13:45:42.817Z",
+  "ended_at": "2026-11-03T13:45:52.081Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "3d6c35a047c02ec74196fe88b77aa51de048f8b5362a155de99e946a851d85be",
+  "template_sha256": "77d9c041f43846a6055e0073ef1267796028b58cea9103209297318f72e21b54",
+  "schema_file": "pqr-picks-output.v2.schema.json",
+  "schema_sha256": "2796b5c56c300b931084b23d5c8c981729f9d7ca452a5e5ea3f0f0d929e49f5a",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "094a803092d328592f049f98cbf66175de08227d5db50b485cf7bc5c21bb0493",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "7bdddc7d945ebb9f17d1ac626c53555d982a39e339a2c4133a120c2cbf291b46",
+  "request_bytes": 80324,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 64.13995599999998
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p2/question-lists/vv.single-a4e1504e5594.questions.json",
+    "sha256": "a4e1504e5594df13a0f17674b2e3731e030afe95e9b5b4a2a9413af7c677af87",
+    "kind": "question_list"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "1bac90046e9a82585e8312438e86c061a1b4f2dc7aa9d8a942504676cb3a1036",
+   "digest_made_at": "2026-11-03T13:45:42.817Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "f7de8c43b3598daee12bd1a8e4e56e1e",
+   "ticket_expires_at": "2026-11-03T13:47:42.817Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"picks\":[{\"role\":\"case\",\"asks\":\"case.funds_available_cad\",\"quote\":\"show that you have enough money to maintain yourself and your family members in Canada and to return home,\",\"why\":\"Sufficient funds for the stay and return is a stated requirement for the visa.\"},{\"role\":\"case\",\"asks\":\"case.visit_purpose\",\"quote\":\"not intend to work or study in Canada unless authorized to do so,\",\"why\":\"The purpose of the trip shows whether the person intends unauthorized work or study.\"},{\"role\":\"case\",\"asks\":\"case.intended_stay_to\",\"quote\":\"You must show the officer that you meet the requirements of the Immigration and Refugee Protection Act (IRPA) and the Immigration and Refugee Protection Regulations and that you will be in Canada for a temporary stay.\",\"why\":\"The planned end of the stay shows whether the stay is temporary.\"},{\"role\":\"principal\",\"asks\":\"person.criminal_history\",\"quote\":\"be law abiding and have no record of criminal activity,\",\"why\":\"A criminal record bears directly on whether the person meets the visa requirements.\"},{\"role\":\"spouse_or_partner\",\"asks\":\"person.criminal_history\",\"quote\":\"Your spouse or common-law partner and children must meet all of the requirements for temporary residence in Canada.\",\"why\":\"Accompanying family members must also have no record of criminal activity.\"},{\"role\":\"child\",\"asks\":\"person.criminal_history\",\"quote\":\"Your spouse or common-law partner and children must meet all of the requirements for temporary residence in Canada.\",\"why\":\"Accompanying children must also meet the requirements, including having no criminal record.\"},{\"role\":\"principal\",\"asks\":\"person.violent_organisation_association\",\"quote\":\"not be a risk to the security of Canada,\",\"why\":\"Ties to violent groups bear on whether the person is a security risk.\"},{\"role\":\"principal\",\"asks\":\"person.disorder_requiring_services\",\"quote\":\"be in good health (complete a medical examination if required).\",\"why\":\"Good health is a stated requirement for the visa.\"}],\"unresolved\":[{\"passage\":\"If you have ever been granted permanent residence or landed immigrant status in Canada, you may still be a permanent resident. We cannot issue you a TRV if you are a permanent resident.\",\"reason\":\"No question in the list asks about past Canadian permanent resident status.\"},{\"passage\":\"satisfy an officer that you will leave Canada at the end of your stay,\",\"reason\":\"Ties to the home country are judged by the officer and do not map to one question; using the planned end of the stay is the narrower reading.\"},{\"passage\":\"Persons who are not Canadian citizens or permanent residents of Canada may require a visa to enter Canada.\",\"reason\":\"Whether a visa is needed depends on citizenship, but the guide does not frame this as an officer eligibility test. Asking for citizenship is plausible but left for a person to decide.\"},{\"passage\":\"have lived temporarily for six or more months in a row: in any of these countries or territories\",\"reason\":\"This is a medical-exam trigger rather than an eligibility test, and the list of countries is not in the guide.\"}]}"
+}

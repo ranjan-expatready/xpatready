@@ -54,6 +54,12 @@ async function main() {
   ok("C2.6 P-134: a passport is proposed as an identity document read by its coded lines", pp.identityDocument === true && pp.readerKind === "coded_lines" && pp.name === "Passport information page copy", pp);
   const ls = docTypeOf(lineOf("proof_of_legal_status_in_country_of_residence", "If your country of residence differs from the country of citizenship listed on your passport"), "IMM 5484");
   ok("C2.6 P-134 fail: a document whose quote only mentions a passport is not an identity document", ls.identityDocument === false && ls.readerKind === "letter_or_record", ls);
+  // QA-195 (break B2): the checklist reads the same identity list as the masters step; only a passport or travel document
+  // is read by its coded lines, any other identity document by a person, never by AI; a passport-size photo by a person.
+  const byName = ["copy_of_passports", "national_identity_card", "birth_certificate", "permanent_resident_card", "citizenship_certificate", "drivers_licence", "proof_of_identity"].map((t) => ({ t, d: docTypeOf(lineOf(t, "As the checklist asks"), "IMM 5484") }));
+  ok("QA-195 C2.6 fail: identity documents by the shared list (plural passports, identity card, birth certificate, PR card, licence…) are never AI-read", byName.every((x) => x.d.identityDocument === true && x.d.readerKind !== "letter_or_record"), byName.map((x) => `${x.t}: ${x.d.readerKind}/${x.d.identityDocument}`));
+  const photos = ["passport_size_photo", "passport_photos"].map((t) => docTypeOf(lineOf(t, "Two photos"), "IMM 5484"));
+  ok("QA-195 C2.6 pass (break B7): a passport-size photo is a photo a person looks at, not an identity document read by coded lines", photos.every((d) => d.readerKind === "person_only" && d.identityDocument === false), photos.map((d) => `${d.name}: ${d.readerKind}/${d.identityDocument}`));
   ok("C2.6 R5: a saved condition becomes a condition-language root (subject kind on the root; branch keys args and arg, as p2 assemble)", tree?.subjectKind === "EACH_APPLICANT" && tree.arg?.op === "and" && tree.arg.args?.[0]?.field === "person.a" && !("condition" in tree), tree);
   ok("C2.6 R5 fail: a condition whose text does not parse, or no condition, gives no tree", treeOf({ tree_json: "{not json" }) === null && treeOf(null) === null && treeOf({ tree_json: "[1]" }) === null);
 

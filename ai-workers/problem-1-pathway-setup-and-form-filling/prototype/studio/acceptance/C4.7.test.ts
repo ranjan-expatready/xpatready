@@ -35,9 +35,11 @@ run(async () => {
     ok(S1, true);
     r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "replay", planSha256: sp.body?.plan_sha256 }, AUTHOR);
     ok("setup: the Saved draft ran at US$0", r.status === 201 && r.body?.usd === 0, r.status >= 300 ? words(r) : r.body?.note);
-    // QA-194: 7 → 6 proposed, 10 → 13 left out: "Purpose of visit" (both readings) and "Criminal record" each fit two
-    // questions, so they are left out naming both, never guessed.
-    ok("C4.7 pass (QA-162): every saved pick left out is listed with its reason, none dropped silently", r.status === 201 && (r.body?.dropped ?? []).every((d: any) => String(d.why ?? "").length > 20) && r.body.proposed >= 6 && (r.body.dropped ?? []).length > 0 && (r.body.dropped ?? []).length <= 13, { proposed: r.body?.proposed, dropped: (r.body?.dropped ?? []).length });
+    // QA-194: with #530's v1 pair (guide only) 7 → 6 proposed, 10 → 13 left out: "Purpose of visit" (both readings) and
+    // "Criminal record" each fit two questions, so they are left out naming both, never guessed. With the v2 pair (#764: the
+    // rounds name the question list's keys) all 9 are proposed and none is left out, so "none dropped silently" is that every
+    // pick left out has its reason, not that one is left out.
+    ok("C4.7 pass (QA-162): every saved pick left out is listed with its reason, none dropped silently", r.status === 201 && (r.body?.dropped ?? []).every((d: any) => String(d.why ?? "").length > 20) && r.body.proposed >= 6 && (r.body.dropped ?? []).length <= 13, { proposed: r.body?.proposed, dropped: (r.body?.dropped ?? []).length });
   } else {
     if (sp.status === 200) { const on = `Track A's Saved PQR-picks result (${sp.body?.saved?.why ?? "none yet"})`; T.wait(S1, on); T.wait(S2, on); }
     else ok(S1, false, words(sp));
@@ -76,8 +78,9 @@ run(async () => {
   ok("C4.7 data: the pick producer never proposes a fact the case officer gives", picks.length > 0 && !picks.some((x: any) => `${key(x).role}|${key(x).factKey}` === officer), officer);
   // Accepting goes through the same refusals as a hand tick: once the fact is set by hand to come from the case officer,
   // its waiting pick cannot be accepted (422 in words) and ticks nothing.
-  // QA-194: the saved picks no longer include the purpose of the visit, so the third pick is the first later one (offered
-  // first) whose fact may be set to come from the case officer; a declaration (client only) is refused that and skipped.
+  // The third pick is the first later one (offered first) whose fact may be set to come from the case officer; a
+  // declaration (client only) is refused that and skipped. (With #530's v1 pair QA-194 left the purpose of the visit out;
+  // with the v2 pair, #764, it is a Ready pick, and the loop below takes whichever later pick qualifies.)
   let c: (typeof picks)[number] | null = null;
   r = { status: 0, body: null };
   for (const x of [...picks.slice(2).filter(offered), ...picks.slice(2).filter((y) => !offered(y))]) {
