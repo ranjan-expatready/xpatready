@@ -73,3 +73,12 @@ Each box's count adds to 10 against the headline's 8: the radio list shows "2 on
 
 ### Demo data (P-304 (2))
 After Reset to the six, IMM 5476 is held at 11-2025 (`form_edition` SAMPLE) and only Visitor visa carries it. So no new edition is held on the six: the C9.1 journey on the demo needs the configured checkpoint (pack part 2).
+
+## Bugs from Builder 8's QA-144 work (#798), through the tech lead (~08:45 IST) · checked on main 0932558ff
+
+* **QA-205** (Bug · Major, C6.1, C7.2). `engine/snapshot.ts:165` silently drops an attached edition with an empty field map. qa loaded the configured checkpoint on qa_conf :4495 (79 s, US$0). It holds one IMM 5475 edition: 05-2021, sha 938af318…, 27 mapped boxes. The "12-2022" Builder 8 saw is the official-sources manifest's label for the same bytes, a disagreement known since 21 Oct, for the expert to settle. So the drop is latent on main, not seen. It overlaps QA-180 (#794); retest with #794. The message named C3.11, but C3.11 is the signed-scan line, so qa filed it under C6.1 and C7.2.
+* **QA-206** (Gap · Major, C3.4, C4.1). Confirmed in code: the rules pass names sections after the PDF's part names (`form-masters.ts` `words()`, with "Five" and "Seven" kept for a person to rename). Not yet walked: the checkpoint on main does not call the rules pass.
+* No count change: C6.1, C7.2, C3.4 and C4.1 are already Partial.
+
+### Question for the tech lead
+QA-200 (Critical, open) names C2.4, yet C2.4 is Works (25cefb67, 1 Nov). Under P-305 (3) that is inconsistent. qa's reading: C2.4's own behaviour (same file "already in the library"; a newer edition is held for impact review) is met, and QA-200's fault is in the snapshot and the fill (C7.2, C6.x). Recommendation: re-tag QA-200 to C7.2 and C6.1 and keep C2.4 Works. The other choice is C2.4 Partial, which makes M2 42/60. qa changes nothing until you rule.
