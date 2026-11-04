@@ -1,0 +1,872 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-check-imm-5476-11-2025-be6a7735-live-20261103t073430287z-387aa7",
+  "idempotency_key": "91fe78c5f9fd34b9d13061241ec4cfcbe79c8544d065a33defc643f43fad2a5c",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "97109d43bfe779e1f1d74407418ec353fbf2572df6a1847b3792eeb93363f888",
+  "inputs": {
+   "combination": "edition:IMM 5476:11-2025",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5476e.inventory.json",
+     "sha256": "745f80b44a025dfcf028aa47d25912ff7863cc162e26c503d05a122a680abaec"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 1.71,
+   "max_output_tokens": 32000,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 14306,
+    "output_tokens": 12477,
+    "duration_ms": 93462
+   }
+  ],
+  "usage": {
+   "input_tokens": 14306,
+   "output_tokens": 12477,
+   "cost_usd": 0.306764,
+   "duration_ms": 93462
+  },
+  "started_at": "2026-11-03T07:34:30.289Z",
+  "ended_at": "2026-11-03T07:36:03.968Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].RadioButtonList[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "none",
+    "fact": "case.representative_form_action",
+    "transform": "code_list:imm5476.RadioButtonList (1=appoint, 2=update contact, 3=cancel, 4=cancel and appoint new, 5=withdraw)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "appointing a representative. Complete Sections A, B and E."
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].familyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Family name (Surname) (as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].givenName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Given name(s) (as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "2. Your date of birth (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].office[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Box has no caption in the inventory; it is probably the applicant's email address (the next box says 'If you do not have an email address'), but this cannot be confirmed from the inventory.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "SECTION A: APPLICANT INFORMATION"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].office[1]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when the applicant has no email address",
+    "unresolved_reason": "Box takes either the applicant's telephone number or address as an alternative to email; which fact goes in it is a choice a person must make.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "If you do not have an email address, provide either your telephone number or your address"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].office[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.application_type",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Type of application (permanent residence, extension of study permit, etc.)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].application[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "case.application_number",
+    "transform": "as_is",
+    "condition": "If known",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Application number (if known)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionA[0].UCI[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.uci",
+    "transform": "as_is",
+    "condition": "If known",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "4. Your Client Identification (ID) or Unique Client Identifier (UCI) number identification number (if known)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].familyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "condition": "Section B applies when RadioButtonList is 1, 2 or 4 (form instruction; no presence script)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "SECTION B: APPOINTMENT OF REPRESENTATIVE"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].givenName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "condition": "Section B applies when RadioButtonList is 1, 2 or 4 (form instruction; no presence script)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "SECTION B: APPOINTMENT OF REPRESENTATIVE"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "representative",
+    "fact": "representative.membership_id",
+    "transform": "as_is",
+    "condition": "Representative is unpaid and uncompensated = 2 (CICC member); body inferred from box order, verify",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Membership ID number"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].province2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.law_society_province",
+    "transform": "as_is",
+    "condition": "Representative is unpaid and uncompensated = 4 (law society member or student-at-law)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Which Province/Territory?"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.membership_id",
+    "transform": "as_is",
+    "condition": "Representative is unpaid and uncompensated = 4 (law society member or student-at-law), if applicable",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Membership ID number (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].uncompensated[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.unpaid_category",
+    "transform": "code_list:imm5476.uncompensated (1=Friend or family member, 2=CICC member, 3=Other, 4=law society or student-at-law, 5=Chambre des notaires du Québec)",
+    "condition": "Only when the representative is unpaid",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "(i) is UNPAID and is a"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].otherRep[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.category_other_text",
+    "transform": "as_is",
+    "condition": "Representative is unpaid and uncompensated = 3 (Other)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "other (please specify)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[1]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "representative",
+    "fact": "representative.membership_id",
+    "transform": "as_is",
+    "condition": "Representative is unpaid and uncompensated = 5 (Chambre des notaires du Québec); body inferred from box order, verify",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Membership ID number"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].compensated[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.paid_regulatory_body",
+    "transform": "code_list:imm5476.compensated (1=CICC, 2=law society or student-at-law, 3=Chambre des notaires du Québec)",
+    "condition": "Only when the representative is paid (box sits in questionII/compensated; inventory heading text says UNPAID, likely a heading capture artefact)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "(i) is UNPAID and is a"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].ICCRCMember[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.membership_id",
+    "transform": "as_is",
+    "condition": "Representative is paid and compensated = 1 (CICC)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Membership ID number"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.law_society_province",
+    "transform": "as_is",
+    "condition": "Representative is paid and compensated = 2 (law society or student-at-law)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Which Province/Territory?"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].membership[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.membership_id",
+    "transform": "as_is",
+    "condition": "Representative is paid and compensated = 2 (law society or student-at-law), if applicable",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Membership ID number (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].quebecLaw[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "representative.membership_id",
+    "transform": "as_is",
+    "condition": "Representative is paid and compensated = 3 (Chambre des notaires du Québec)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Membership ID number"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].organization[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "organisation.name",
+    "transform": "as_is",
+    "condition": "If applicable",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Name of firm or organization (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].lawyer[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "representative.supervising_lawyer_name",
+    "transform": "as_is",
+    "condition": "Only if the representative is a student-at-law",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "If student-at-law, write the name of the supervising lawyer"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].membershipID[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "representative.supervising_lawyer_membership_id",
+    "transform": "as_is",
+    "condition": "Only if the representative is a student-at-law",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Supervising lawyer membership ID"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_apt_unit",
+    "transform": "as_is (max 10 chars)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Apt/Unit"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].streetNo[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_street_number",
+    "transform": "as_is (max 10 chars)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Street no."
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].streetName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_street_name",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Street name"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].city[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_city",
+    "transform": "as_is (max 30 chars)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "City/Town"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].province[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_province_state",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Province/State/Territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].country[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_country",
+    "transform": "country_name_text (max 255 chars)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Country or territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].postalcode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.address_postal_code",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Postal code/ZIP"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneCountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.telephone_country_code",
+    "transform": "as_is (numeric)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneNumber[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.telephone_number",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Area Code and Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxCountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.fax_country_code",
+    "transform": "as_is (numeric)",
+    "condition": "If the representative has a fax number",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.fax_number",
+    "transform": "as_is",
+    "condition": "If the representative has a fax number",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Area Code and Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question7[0].email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "representative",
+    "fact": "person.email_address",
+    "transform": "as_is",
+    "condition": "If applicable",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "E-mail address (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Signature signed by hand by the representative.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Signature of representative"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Date of the representative's signature is only known when they sign; not a stored case fact.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "If the representative is a student-at-law",
+    "unresolved_reason": "Signature signed by hand by the supervising lawyer.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "(if applicable) Signature of supervising lawyer"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[1]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "If the representative is a student-at-law",
+    "unresolved_reason": "Date of the supervising lawyer's signature is only known when they sign; not a stored case fact.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionC[0].familyName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Section C applies when RadioButtonList is 3 or 4",
+    "unresolved_reason": "Names the representative being cancelled; when option 4 is chosen this is a different person from the newly appointed representative in Section B, and the person list has only one representative role.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "SECTION C: CANCEL THE APPOINTMENT OF A REPRESENTATIVE"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionC[0].givenName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Section C applies when RadioButtonList is 3 or 4",
+    "unresolved_reason": "Names the representative being cancelled; when option 4 is chosen this is a different person from the newly appointed representative in Section B, and the person list has only one representative role.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "SECTION C: CANCEL THE APPOINTMENT OF A REPRESENTATIVE"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionC[0].organization[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Section C applies when RadioButtonList is 3 or 4",
+    "unresolved_reason": "Firm of the representative being cancelled, who may differ from the newly appointed representative; only one representative role exists.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Name of firm or organization (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionD[0].familyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "condition": "Section D applies when RadioButtonList is 5 (representative withdrawing)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Family name (Surname)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionD[0].givenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "condition": "Section D applies when RadioButtonList is 5 (representative withdrawing)",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Given name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionD[0].organization[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "organisation.name",
+    "transform": "as_is",
+    "condition": "Section D applies when RadioButtonList is 5 (representative withdrawing); if applicable",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Name of firm or organization (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionD[0].signatrureApplicant[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Section D applies when RadioButtonList is 5",
+    "unresolved_reason": "Signature signed by hand by the withdrawing representative.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Signature of representative"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionD[0].dateApplicantSigned[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Section D applies when RadioButtonList is 5",
+    "unresolved_reason": "Date of the representative's signature is only known when they sign; not a stored case fact.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Signature signed by hand by the applicant or parent/legal guardian.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Signature of applicant or Parent/Legal Guardian for a person under 18 years of age"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionE[0].dateApplicantSigned[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Date of the applicant's signature is only known when they sign; not a stored case fact.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[1]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Only for a sponsorship application",
+    "unresolved_reason": "Signature signed by hand by the spouse or common-law partner.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "If a sponsorship application: Signature of spouse or common-law partner"
+    }
+   },
+   {
+    "form_edition": "IMM 5476 (11-2025)",
+    "form_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+    "data_path": "IMM_5476[0].Page1[0].sectionE[0].dateSpouseSigned[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only for a sponsorship application",
+    "unresolved_reason": "Date of the spouse's signature is only known when they sign; not a stored case fact.",
+    "evidence": {
+     "file_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "75b766825c1d4c8488f4061e886394ae4f849f706e85e6f6f8453f613d424db8",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5476 (11-2025)"
+  },
+  "screened": true,
+  "output_sha256": "97109d43bfe779e1f1d74407418ec353fbf2572df6a1847b3792eeb93363f888",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "acd160b4bd5aa43726451e77bb950ea6baa7581d906e9c88e16da10751574396",
+  "request_bytes": 32740,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 51.49949999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5476e.inventory.json",
+    "sha256": "745f80b44a025dfcf028aa47d25912ff7863cc162e26c503d05a122a680abaec",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "615eac380a966c35fcaa435e95ddf63a48487ab52c0de384f179b77adac938a0",
+   "digest_made_at": "2026-11-03T07:34:30.288Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "4d723ef1ccda6bc262ab5835c9200660",
+   "ticket_expires_at": "2026-11-03T07:36:30.288Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5476 (11-2025)\",\"canonical_fields\":[{\"id\":\"case.representative_form_action\",\"meaning\":\"What this use-of-representative request does: appoint, update contact details, cancel, cancel and replace, or withdraw\",\"value_type\":\"code\"},{\"id\":\"person.family_name\",\"meaning\":\"Family name (surname) of a person\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"Given name(s) of a person\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"Date of birth of a person\",\"value_type\":\"date\"},{\"id\":\"case.application_type\",\"meaning\":\"Type of immigration application the representation concerns (e.g. permanent residence, study permit extension)\",\"value_type\":\"text\"},{\"id\":\"case.application_number\",\"meaning\":\"IRCC application number of the application\",\"value_type\":\"text\"},{\"id\":\"person.uci\",\"meaning\":\"IRCC Client ID or Unique Client Identifier of a person\",\"value_type\":\"text\"},{\"id\":\"representative.membership_id\",\"meaning\":\"Membership ID number of the representative with their regulatory body (CICC, law society or Chambre des notaires du Québec)\",\"value_type\":\"text\"},{\"id\":\"representative.law_society_province\",\"meaning\":\"Canadian province or territory of the law society the representative belongs to\",\"value_type\":\"text\"},{\"id\":\"representative.unpaid_category\",\"meaning\":\"Category of an unpaid representative (friend or family, regulated member, or other)\",\"value_type\":\"code\"},{\"id\":\"representative.paid_regulatory_body\",\"meaning\":\"Regulatory body of which a paid representative is a member\",\"value_type\":\"code\"},{\"id\":\"representative.category_other_text\",\"meaning\":\"Free-text description of an unpaid representative's category when 'Other' is chosen\",\"value_type\":\"text\"},{\"id\":\"organisation.name\",\"meaning\":\"Name of a firm or organization\",\"value_type\":\"text\"},{\"id\":\"representative.supervising_lawyer_name\",\"meaning\":\"Full name of the lawyer supervising a student-at-law representative\",\"value_type\":\"text\"},{\"id\":\"representative.supervising_lawyer_membership_id\",\"meaning\":\"Membership ID of the lawyer supervising a student-at-law representative\",\"value_type\":\"text\"},{\"id\":\"person.address_apt_unit\",\"meaning\":\"Apartment or unit of a mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_street_number\",\"meaning\":\"Street number of a mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_street_name\",\"meaning\":\"Street name of a mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_city\",\"meaning\":\"City or town of a mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_province_state\",\"meaning\":\"Province, state or territory of a mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_country\",\"meaning\":\"Country or territory of a mailing address\",\"value_type\":\"country\"},{\"id\":\"person.address_postal_code\",\"meaning\":\"Postal code or ZIP of a mailing address\",\"value_type\":\"text\"},{\"id\":\"person.telephone_country_code\",\"meaning\":\"International dialling country code of a telephone number\",\"value_type\":\"number\"},{\"id\":\"person.telephone_number\",\"meaning\":\"Telephone number including area code\",\"value_type\":\"text\"},{\"id\":\"person.fax_country_code\",\"meaning\":\"International dialling country code of a fax number\",\"value_type\":\"number\"},{\"id\":\"person.fax_number\",\"meaning\":\"Fax number including area code\",\"value_type\":\"text\"},{\"id\":\"person.email_address\",\"meaning\":\"Email address of a person\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5476[0].Page1[0].RadioButtonList[0]\",\"outcome\":\"mapped\",\"person\":\"none\",\"row\":null,\"fact\":\"case.representative_form_action\",\"transform\":\"code_list:imm5476.RadioButtonList (1=appoint, 2=update contact, 3=cancel, 4=cancel and appoint new, 5=withdraw)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"appointing a representative. Complete Sections A, B and E.\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].familyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (Surname) (as shown on your passport or travel document)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].givenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on your passport or travel document)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"2. Your date of birth (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].office[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Box has no caption in the inventory; it is probably the applicant's email address (the next box says 'If you do not have an email address'), but this cannot be confirmed from the inventory.\",\"evidence_quote\":\"SECTION A: APPLICANT INFORMATION\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].office[1]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when the applicant has no email address\",\"confidence\":\"medium\",\"unresolved_reason\":\"Box takes either the applicant's telephone number or address as an alternative to email; which fact goes in it is a choice a person must make.\",\"evidence_quote\":\"If you do not have an email address, provide either your telephone number or your address\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].office[2]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.application_type\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Type of application (permanent residence, extension of study permit, etc.)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].application[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.application_number\",\"transform\":\"as_is\",\"condition\":\"If known\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Application number (if known)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].UCI[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.uci\",\"transform\":\"as_is\",\"condition\":\"If known\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"4. Your Client Identification (ID) or Unique Client Identifier (UCI) number identification number (if known)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].familyName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Section B applies when RadioButtonList is 1, 2 or 4 (form instruction; no presence script)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"SECTION B: APPOINTMENT OF REPRESENTATIVE\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].givenName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Section B applies when RadioButtonList is 1, 2 or 4 (form instruction; no presence script)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"SECTION B: APPOINTMENT OF REPRESENTATIVE\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.membership_id\",\"transform\":\"as_is\",\"condition\":\"Representative is unpaid and uncompensated = 2 (CICC member); body inferred from box order, verify\",\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"Membership ID number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].province2[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.law_society_province\",\"transform\":\"as_is\",\"condition\":\"Representative is unpaid and uncompensated = 4 (law society member or student-at-law)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Which Province/Territory?\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership2[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.membership_id\",\"transform\":\"as_is\",\"condition\":\"Representative is unpaid and uncompensated = 4 (law society member or student-at-law), if applicable\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Membership ID number (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].uncompensated[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.unpaid_category\",\"transform\":\"code_list:imm5476.uncompensated (1=Friend or family member, 2=CICC member, 3=Other, 4=law society or student-at-law, 5=Chambre des notaires du Québec)\",\"condition\":\"Only when the representative is unpaid\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(i) is UNPAID and is a\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].otherRep[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.category_other_text\",\"transform\":\"as_is\",\"condition\":\"Representative is unpaid and uncompensated = 3 (Other)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"other (please specify)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[1]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.membership_id\",\"transform\":\"as_is\",\"condition\":\"Representative is unpaid and uncompensated = 5 (Chambre des notaires du Québec); body inferred from box order, verify\",\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"Membership ID number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].compensated[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.paid_regulatory_body\",\"transform\":\"code_list:imm5476.compensated (1=CICC, 2=law society or student-at-law, 3=Chambre des notaires du Québec)\",\"condition\":\"Only when the representative is paid (box sits in questionII/compensated; inventory heading text says UNPAID, likely a heading capture artefact)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"(i) is UNPAID and is a\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].ICCRCMember[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.membership_id\",\"transform\":\"as_is\",\"condition\":\"Representative is paid and compensated = 1 (CICC)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Membership ID number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.law_society_province\",\"transform\":\"as_is\",\"condition\":\"Representative is paid and compensated = 2 (law society or student-at-law)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Which Province/Territory?\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].membership[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.membership_id\",\"transform\":\"as_is\",\"condition\":\"Representative is paid and compensated = 2 (law society or student-at-law), if applicable\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Membership ID number (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].quebecLaw[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.membership_id\",\"transform\":\"as_is\",\"condition\":\"Representative is paid and compensated = 3 (Chambre des notaires du Québec)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Membership ID number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].organization[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"organisation.name\",\"transform\":\"as_is\",\"condition\":\"If applicable\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of firm or organization (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].lawyer[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.supervising_lawyer_name\",\"transform\":\"as_is\",\"condition\":\"Only if the representative is a student-at-law\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"If student-at-law, write the name of the supervising lawyer\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].membershipID[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"representative.supervising_lawyer_membership_id\",\"transform\":\"as_is\",\"condition\":\"Only if the representative is a student-at-law\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Supervising lawyer membership ID\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_apt_unit\",\"transform\":\"as_is (max 10 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Apt/Unit\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].streetNo[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_street_number\",\"transform\":\"as_is (max 10 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Street no.\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].streetName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_street_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Street name\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].city[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_city\",\"transform\":\"as_is (max 30 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"City/Town\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].province[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_province_state\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Province/State/Territory\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].country[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_country\",\"transform\":\"country_name_text (max 255 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].postalcode[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_postal_code\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Postal code/ZIP\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneCountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.telephone_country_code\",\"transform\":\"as_is (numeric)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country Code\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneNumber[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Area Code and Telephone number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].faxCountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.fax_country_code\",\"transform\":\"as_is (numeric)\",\"condition\":\"If the representative has a fax number\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country Code\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"as_is\",\"condition\":\"If the representative has a fax number\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Area Code and Telephone number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question7[0].email[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.email_address\",\"transform\":\"as_is\",\"condition\":\"If applicable\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"E-mail address (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]\",\"outcome\":\"never_filled\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Signature signed by hand by the representative.\",\"evidence_quote\":\"Signature of representative\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[0]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the representative's signature is only known when they sign; not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"If the representative is a student-at-law\",\"confidence\":\"high\",\"unresolved_reason\":\"Signature signed by hand by the supervising lawyer.\",\"evidence_quote\":\"(if applicable) Signature of supervising lawyer\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"If the representative is a student-at-law\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the supervising lawyer's signature is only known when they sign; not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionC[0].familyName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section C applies when RadioButtonList is 3 or 4\",\"confidence\":\"medium\",\"unresolved_reason\":\"Names the representative being cancelled; when option 4 is chosen this is a different person from the newly appointed representative in Section B, and the person list has only one representative role.\",\"evidence_quote\":\"SECTION C: CANCEL THE APPOINTMENT OF A REPRESENTATIVE\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionC[0].givenName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section C applies when RadioButtonList is 3 or 4\",\"confidence\":\"medium\",\"unresolved_reason\":\"Names the representative being cancelled; when option 4 is chosen this is a different person from the newly appointed representative in Section B, and the person list has only one representative role.\",\"evidence_quote\":\"SECTION C: CANCEL THE APPOINTMENT OF A REPRESENTATIVE\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionC[0].organization[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section C applies when RadioButtonList is 3 or 4\",\"confidence\":\"medium\",\"unresolved_reason\":\"Firm of the representative being cancelled, who may differ from the newly appointed representative; only one representative role exists.\",\"evidence_quote\":\"Name of firm or organization (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].familyName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Section D applies when RadioButtonList is 5 (representative withdrawing)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (Surname)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].givenName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Section D applies when RadioButtonList is 5 (representative withdrawing)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].organization[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"organisation.name\",\"transform\":\"as_is\",\"condition\":\"Section D applies when RadioButtonList is 5 (representative withdrawing); if applicable\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of firm or organization (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].signatrureApplicant[0]\",\"outcome\":\"never_filled\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section D applies when RadioButtonList is 5\",\"confidence\":\"high\",\"unresolved_reason\":\"Signature signed by hand by the withdrawing representative.\",\"evidence_quote\":\"Signature of representative\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].dateApplicantSigned[0]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section D applies when RadioButtonList is 5\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the representative's signature is only known when they sign; not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Signature signed by hand by the applicant or parent/legal guardian.\",\"evidence_quote\":\"Signature of applicant or Parent/Legal Guardian for a person under 18 years of age\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].dateApplicantSigned[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the applicant's signature is only known when they sign; not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[1]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only for a sponsorship application\",\"confidence\":\"high\",\"unresolved_reason\":\"Signature signed by hand by the spouse or common-law partner.\",\"evidence_quote\":\"If a sponsorship application: Signature of spouse or common-law partner\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].dateSpouseSigned[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only for a sponsorship application\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the spouse's signature is only known when they sign; not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}
