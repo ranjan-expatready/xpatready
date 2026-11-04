@@ -1,0 +1,49 @@
+{
+  "note": "IRCC form numbers and sample combination keys in live code (api/src, engine; comments, tests, fixtures and samples not counted), by tools/no-hard-coding.mjs (P-319). Lower it as the cleanup moves them into configuration; never raise it.",
+  "total": {
+    "forms": 71,
+    "keys": 8
+  },
+  "files": {
+    "api/src/answer-keys.ts": {
+      "forms": 1,
+      "keys": 0
+    },
+    "api/src/case-prepare.ts": {
+      "forms": 0,
+      "keys": 1
+    },
+    "api/src/demo.ts": {
+      "forms": 49,
+      "keys": 6
+    },
+    "api/src/form-progress.ts": {
+      "forms": 1,
+      "keys": 0
+    },
+    "api/src/form-redo.ts": {
+      "forms": 1,
+      "keys": 0
+    },
+    "api/src/forms-demo.ts": {
+      "forms": 7,
+      "keys": 0
+    },
+    "api/src/sources.ts": {
+      "forms": 7,
+      "keys": 0
+    },
+    "api/src/team.ts": {
+      "forms": 4,
+      "keys": 0
+    },
+    "engine/filing-modes.ts": {
+      "forms": 0,
+      "keys": 1
+    },
+    "engine/runtime/team.ts": {
+      "forms": 1,
+      "keys": 0
+    }
+  }
+}
