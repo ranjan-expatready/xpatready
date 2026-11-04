@@ -12,6 +12,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, pqrView, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
+import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
 import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
@@ -202,6 +203,7 @@ export class Runtime {
     let subjectId: string | null;
     try { subjectId = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+      await refuseIfCaseRecorded(tx, caseId, "nobody is added"); // C8.2 review M1, under the case's row lock
       const same = key ? await tx.caseParticipant.findFirst({ where: { caseId, idempotencyKey: key } }) : null;
       if (same) return null; // the first press won while this one waited for the lock: answered below
       const now = await tx.caseParticipant.findMany({ where: { caseId } });
@@ -227,7 +229,12 @@ export class Runtime {
     // C11.12 BR-6: a co-filing role (the sponsor) is not travelling or not: its application always goes with the principal's.
     const line = ((this.snapshotOf(c).combination.participants ?? []) as { role: string; filingMode?: string; label?: string }[]).find((x) => x.role === p!.role);
     if (line?.filingMode === "co_files") fail(`The ${(line.label ?? "sponsor").toLowerCase()}'s application is always sent with the principal's.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    await this.db.caseParticipant.update({ where: { id: p!.id }, data: { applies: b.applies } });
+    // C8.2 review M1: under the case's row lock, so a record and this change never pass each other.
+    await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR NO KEY UPDATE`;
+      await refuseIfCaseRecorded(tx, caseId, `nobody is marked ${b.applies ? "travelling" : "not travelling"}`);
+      await tx.caseParticipant.update({ where: { id: p!.id }, data: { applies: b.applies } });
+    });
     await this.audit.log(c.workspaceId, actor.id, "changed", "person", caseId, `${actor.name} marked a ${p!.role.replace(/_/g, " ")} on case ${short(caseId)} as ${b.applies ? "travelling" : "not travelling"}`);
     return { subject_id: subjectId, applies: b.applies };
   }
