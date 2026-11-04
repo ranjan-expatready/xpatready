@@ -3,31 +3,35 @@
 # way the best pipeline lead would watch it: each open item's owner, step, wait and blocker; M2 and M3 as separate blocks
 # with the links between them and the critical path; GitHub's machines and the Mac; a pre-mortem; and the escalation rung
 # of every ACT line. Every number is read from git, GitHub, the Mac or get_usage, never from a session's own words
-# (P-228 (9); a builder's "labelled" on #792 was false on 4 Nov). Read-only on GitHub and on the Mac; US$0.
-# Exit code = number of ACT lines (0 = nothing to act on). Skill: .claude/skills/lead-watch (reference.md: the why and
-# the misses each check comes from).
+# (P-228 (9); a builder's "labelled" on #792 was false on 4 Nov). Read-only on GitHub and on the Mac (it writes only its
+# state folder, and `git fetch` updates the clone's remote refs); US$0.
+# Exit code = number of ACT lines (0 = nothing to act on; a crash prints what it had plus one ACT line and exits 1).
+# Skill: .claude/skills/lead-watch (reference.md: the why and the misses each check comes from).
 #
-# Usage (from any copy of the repository):
-#   bash product/tools/lead-watch.sh [minutes since last check, default 30] [weekly=N five=N context=N]   the check;
+# Usage, from the repository root of any copy (W = ai-workers/problem-1-pathway-setup-and-form-filling/product/tools):
+#   bash $W/lead-watch.sh [minutes since last check, default 30] [weekly=N five=N context=N]   the check;
 #        weekly/five/context are get_usage's percentages (weekly plan, 5-hour limit, the Lead's own context)
-#   bash product/tools/lead-watch.sh verify <PR>      labelled / pushed / green / merged, read from GitHub (no assumptions)
-#   bash product/tools/lead-watch.sh handover         the check plus the hand-over checklist, for STATE.md and the notes file
-#   bash product/tools/lead-watch.sh roster           the sessions the Lead runs; change it only when a session starts, gets
-#        a row or ends:  roster add <name> <session id> <kind> <M2|M3|-> <row> <branch or prefix|-> [next step…]
-#                        roster set <name> <row|branch|next|kind|milestone|session> <value…>  ·  roster done <name>
+#   bash $W/lead-watch.sh verify <PR> [<sha a session claims>]   labelled / pushed / green / merged, read from GitHub
+#   bash $W/lead-watch.sh handover         the check plus the hand-over checklist, for STATE.md and the notes file
+#   bash $W/lead-watch.sh roster           the sessions the Lead runs; change it only when a session starts, gets a row or
+#        ends:  roster add <name> <session id> <kind> <M2|M3|-> <row> <branch or prefix|-> [next step…]
+#               roster set <name> <row|branch|next|kind|milestone|session> <value…>  ·  roster done <name>
 #        kind: cloud, mac, qa, paid, design, standby (a builder waiting for a row), lead-standby
-#   bash product/tools/lead-watch.sh ask "<question for the founder>" · answered <n> · park <PR> "<why>" · unpark <PR>
-#   bash product/tools/lead-watch.sh lesson "<one line>" · cron "<the check's cron prompt>" · cap <US$ today> [<US$ code cap>]
-# State (roster, asks, ladder ages, trends) lives in <git common dir>/lead-watch: shared by every copy of this clone on the
-# Mac, kept across restarts and Leads, never committed. The links between M2 and M3 are the Lead's map in
+#   bash $W/lead-watch.sh ask "<question for the founder>" · answered <n> · park <PR> "<why>" · unpark <PR>
+#   bash $W/lead-watch.sh ack <ACT key> "<why>" [hours, default 4]   an ACT known and handled: shown, not counted, until then
+#   bash $W/lead-watch.sh lesson "<one line>" · cron "<the check's cron prompt>" · cap <US$ today> [<US$ code cap>]
+# State (roster, asks, acks, ladder, trends) lives in <git common dir>/lead-watch: shared by every copy of this clone on
+# the Mac, kept across restarts and Leads, never committed. The links between M2 and M3 are the Lead's map in
 # lead-watch-links.txt beside this script; their states are read live.
 set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel)" || exit 99; cd "$ROOT" || exit 99
 A=ai-workers/problem-1-pathway-setup-and-form-filling; P=$A/product
 ST="${LEAD_WATCH_DIR:-$(git rev-parse --path-format=absolute --git-common-dir)/lead-watch}"; mkdir -p "$ST"
 REPO=$(git remote get-url origin | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
-touch "$ST/roster.tsv" "$ST/asks.tsv" "$ST/parked.tsv" "$ST/lessons.tsv" "$ST/acts.tsv" "$ST/usage.tsv" "$ST/disk.tsv"
+touch "$ST/roster.tsv" "$ST/asks.tsv" "$ST/parked.tsv" "$ST/lessons.tsv" "$ST/acts.tsv" "$ST/usage.tsv" "$ST/disk.tsv" "$ST/acks.tsv"
 now=$(date +%s); tab=$'\t'
+# Free text goes into tab-separated files: a tab or a line break in it would shift the columns.
+clean() { printf '%s' "$*" | tr '\t\n\r' '   '; }
 
 # ---- small subcommands: they change only the Lead's own state files ----
 case "${1:-}" in
@@ -35,12 +39,12 @@ case "${1:-}" in
     shift; sub="${1:-list}"; shift 2>/dev/null
     case "$sub" in
       add) [ $# -ge 6 ] || { echo "roster add <name> <session> <kind> <M2|M3|-> <row> <branch|-> [next…]"; exit 2; }
-           grep -q "^$1$tab" "$ST/roster.tsv" && { echo "$1 is already on the roster (use roster set)"; exit 2; }
-           n="$1" s="$2" k="$3" m="$4" r="$5" b="$6"; shift 6
-           printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$n" "$s" "$k" "$m" "$r" "$b" "${*:--}" "$now" >> "$ST/roster.tsv";;
+           grep -q "^$(clean "$1")$tab" "$ST/roster.tsv" && { echo "$1 is already on the roster (use roster set)"; exit 2; }
+           n=$(clean "$1") s=$(clean "$2") k=$(clean "$3") m=$(clean "$4") r=$(clean "$5") b=$(clean "$6"); shift 6
+           x=$(clean "$*"); printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$n" "$s" "$k" "$m" "$r" "$b" "${x:--}" "$now" >> "$ST/roster.tsv";;
       set) [ $# -ge 3 ] || { echo "roster set <name> <field> <value…>"; exit 2; }
            n="$1" f="$2"; shift 2
-           python3 -I - "$ST/roster.tsv" "$n" "$f" "$*" "$now" <<'PY' || exit 2
+           python3 -I - "$ST/roster.tsv" "$n" "$f" "$(clean "$*")" "$now" <<'PY' || exit 2
 import sys
 path,name,field,val,now=sys.argv[1:]
 cols=['name','session','kind','milestone','row','branch','next','since']
@@ -51,37 +55,50 @@ if not hit: sys.exit(name+' is not on the roster')
 for r in hit:
     r[cols.index(field)]=val
     if field in ('row','branch'): r[7]=now
-open(path,'w').write(''.join('\t'.join(r)+'\n' for r in rows))
+open(path+'.tmp','w').write(''.join('\t'.join(r)+'\n' for r in rows)); import os; os.replace(path+'.tmp',path)
 PY
            ;;
       done) grep -v "^$1$tab" "$ST/roster.tsv" > "$ST/roster.tmp"; grep "^$1$tab" "$ST/roster.tsv" | sed "s/\$/$tab$now/" >> "$ST/roster-done.tsv"
             mv "$ST/roster.tmp" "$ST/roster.tsv";;
       list|*) column -t -s "$tab" "$ST/roster.tsv" 2>/dev/null || cat "$ST/roster.tsv";;
     esac; exit 0;;
-  ask) n=$(( $(wc -l < "$ST/asks.tsv") + 1 )); printf '%s\t%s\t%s\t-\n' "$n" "$now" "$2" >> "$ST/asks.tsv"; echo "founder ask $n"; exit 0;;
+  ask) n=$(( $(wc -l < "$ST/asks.tsv") + 1 )); printf '%s\t%s\t%s\t-\n' "$n" "$now" "$(clean "${2:?ask \"<question>\"}")" >> "$ST/asks.tsv"; echo "founder ask $n"; exit 0;;
   answered) awk -F'\t' -v OFS='\t' -v n="$2" -v t="$now" '$1==n {$4=t} {print}' "$ST/asks.tsv" > "$ST/asks.tmp" && mv "$ST/asks.tmp" "$ST/asks.tsv"; exit 0;;
-  park) printf '%s\t%s\t%s\n' "$2" "$now" "$3" >> "$ST/parked.tsv"; exit 0;;
+  park) [[ "${2:-}" =~ ^[0-9]+$ ]] || { echo "park <PR number> \"<why>\""; exit 2; }
+        printf '%s\t%s\t%s\n' "$2" "$now" "$(clean "${3:--}")" >> "$ST/parked.tsv"; exit 0;;
   unpark) grep -v "^$2$tab" "$ST/parked.tsv" > "$ST/parked.tmp"; mv "$ST/parked.tmp" "$ST/parked.tsv"; exit 0;;
-  lesson) printf '%s\t%s\n' "$(TZ=Asia/Kolkata date +%Y-%m-%d)" "$2" >> "$ST/lessons.tsv"; exit 0;;
+  ack) [ -n "${2:-}" ] || { echo "ack <ACT key, as printed in {…}> \"<why>\" [hours]"; exit 2; }
+       h="${4:-4}"; [[ "$h" =~ ^[0-9]+$ ]] || { echo "hours must be a whole number"; exit 2; }
+       printf '%s\t%s\t%s\n' "$(clean "$2")" "$((now + h*3600))" "$(clean "${3:--}")" >> "$ST/acks.tsv"; exit 0;;
+  lesson) printf '%s\t%s\n' "$(TZ=Asia/Kolkata date +%Y-%m-%d)" "$(clean "$2")" >> "$ST/lessons.tsv"; exit 0;;
   cron) printf '%s\n' "$2" > "$ST/cron-prompt.txt"; exit 0;;
-  cap) printf '%s\t%s\t%s\n' "$(TZ=Asia/Kolkata date +%Y-%m-%d)" "$2" "${3:--}" > "$ST/paid-cap.tsv"; exit 0;;
+  cap) c="${2#US\$}"; c="${c#\$}"; t2="${3:--}"; t2="${t2#US\$}"; t2="${t2#\$}"
+       [[ "$c" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [[ "$t2" =~ ^(-|[0-9]+(\.[0-9]+)?)$ ]] || { echo "cap <US\$ today, a number> [<US\$ code cap>]"; exit 2; }
+       printf '%s\t%s\t%s\n' "$(TZ=Asia/Kolkata date +%Y-%m-%d)" "$c" "$t2" > "$ST/paid-cap.tsv"; exit 0;;
   verify)
-    # "labelled", "pushed", "green", "merged" are facts only when GitHub says so (two false claims this week).
-    n="${2:?verify <PR>}"
-    gh pr view "$n" --json number,state,isDraft,mergedAt,mergedBy,headRefName,headRefOid,labels,statusCheckRollup > "$ST/verify.json" || exit 2
-    gh api "repos/$REPO/issues/$n/events?per_page=100" --jq '[.[]|select(.event=="labeled" or .event=="unlabeled")|{e:.event,l:.label.name,t:.created_at,by:.actor.login}]' > "$ST/verify-ev.json" 2>/dev/null || echo '[]' > "$ST/verify-ev.json"
-    git fetch -q origin 2>/dev/null
-    python3 -I - "$ST/verify.json" "$ST/verify-ev.json" "$(git rev-parse -q --verify "origin/$(jq -r .headRefName "$ST/verify.json")" 2>/dev/null)" <<'PY'
+    # "labelled", "pushed", "green", "merged" are facts only when GitHub says so (two false claims this week). Give the sha
+    # a session claims it pushed, and verify compares it with the PR's head on GitHub.
+    n="${2:?verify <PR> [<sha>]}"; V=$(mktemp -d "${TMPDIR:-/tmp}/lead-verify.XXXXXX"); trap 'rm -rf "$V"' EXIT
+    gh pr view "$n" --json number,state,isDraft,mergedAt,mergedBy,headRefName,headRefOid,labels,statusCheckRollup > "$V/pr.json" || exit 2
+    gh api "repos/$REPO/issues/$n/events?per_page=100" --paginate --jq '.[]|select(.event=="labeled" or .event=="unlabeled")|{e:.event,l:.label.name,t:.created_at,by:.actor.login}' > "$V/ev.ndjson" 2>/dev/null || : > "$V/ev.ndjson"
+    python3 -I - "$V/pr.json" "$V/ev.ndjson" "${3:-}" <<'PY'
 import json,sys
 from datetime import datetime,timezone,timedelta
 IST=timezone(timedelta(hours=5,minutes=30))
-p=json.load(open(sys.argv[1])); ev=json.load(open(sys.argv[2])); local=sys.argv[3]
+p=json.load(open(sys.argv[1])); ev=[json.loads(l) for l in open(sys.argv[2]) if l.strip()]; claim=sys.argv[3].lower()
 t=lambda s: datetime.fromisoformat(s.replace('Z','+00:00')).astimezone(IST).strftime('%d %b %H:%M IST') if s else '-'
 ch=[c for c in p['statusCheckRollup'] if c.get('name') and not c['name'].startswith('Mergify') and c['name']!='Configuration changed']
 red=[c['name'] for c in ch if c.get('conclusion') in ('FAILURE','TIMED_OUT','STARTUP_FAILURE')]
 run=[c['name'] for c in ch if c.get('status')!='COMPLETED']
-ci='red: '+', '.join(red) if red else 'running: %d of %d checks'%(len(run),len(ch)) if run else 'green: %d checks'%len(ch) if ch else 'no checks'
-print('#%d %s%s · head %s (origin/%s %s)'%(p['number'],p['state'],' draft' if p['isDraft'] else '',p['headRefOid'][:9],p['headRefName'],'matches' if local.startswith(p['headRefOid']) else 'differs: '+local[:9]))
+gate=[c for c in ch if c['name']=='ci']
+if red: ci='red: '+', '.join(red)
+elif run: ci='running: %d of %d checks'%(len(run),len(ch))
+elif not ch: ci='no checks ran on this head'
+elif gate and gate[0].get('conclusion')=='SUCCESS': ci='green (ci passed, %d checks)'%len(ch)
+else: ci='NOT green: ci %s'%((gate[0].get('conclusion') or '?').lower() if gate else 'did not run')
+head=p['headRefOid']
+print('#%d %s%s · head %s on %s%s'%(p['number'],p['state'],' draft' if p['isDraft'] else '',head[:9],p['headRefName'],
+    '' if not claim else (' · claimed %s: %s'%(claim[:9],'matches the head' if head.startswith(claim) else 'NOT the head'))))
 print('labels now: %s'%(', '.join(l['name'] for l in p['labels']) or 'none'))
 for e in ev[-6:]: print('  %s %s at %s by %s'%(e['e'],e['l'],t(e['t']),e['by']))
 print('CI on head: '+ci)
@@ -105,7 +122,7 @@ query($o:String!,$n:String!){ repository(owner:$o,name:$n){ pullRequests(states:
  labels(first:10){nodes{name}}
  files(first:80){nodes{path}}
  commits(last:1){nodes{commit{committedDate statusCheckRollup{state contexts(first:40){nodes{__typename ... on CheckRun{name status conclusion startedAt completedAt}}}}}}}
- timelineItems(last:30,itemTypes:[LABELED_EVENT,UNLABELED_EVENT,ISSUE_COMMENT]){nodes{__typename
+ timelineItems(last:100,itemTypes:[LABELED_EVENT,UNLABELED_EVENT,ISSUE_COMMENT]){nodes{__typename
   ... on LabeledEvent{createdAt label{name}} ... on UnlabeledEvent{createdAt label{name}}
   ... on IssueComment{createdAt body}}}
 }}}}
@@ -131,9 +148,12 @@ for l in open(sys.argv[1]):
   | xargs -P 8 -I{} gh api "repos/$REPO/actions/runs/{}/jobs?per_page=100" --jq '.jobs[]|{id,run_id,name,status,conclusion}' > "$T/jobs.ndjson" 2>/dev/null
 # Suite names come from the failed job's log ("::group::<suite> failed (exit n)", run-suites.sh); each log is read once.
 mkdir -p "$ST/suites"
-jq -r 'select(.conclusion=="failure" and (.name|startswith("shard"))) | "\(.id) \(.run_id)"' "$T/jobs.ndjson" 2>/dev/null | head -6 | while read -r j r; do
-  [ -f "$ST/suites/$j" ] && continue
-  gh api "repos/$REPO/actions/jobs/$j/logs" 2>/dev/null | grep -oE '[^ ]+\.(c?js|ts|mjs) failed \(exit [0-9]+\)' | sed 's/ failed.*//; s#.*/##' | sort -u > "$ST/suites/$j.tmp" && printf 'run=%s\n' "$r" >> "$ST/suites/$j.tmp" && mv "$ST/suites/$j.tmp" "$ST/suites/$j"
+# A job whose log names no suite (a failed step outside the suites) is cached empty, so no log is downloaded twice.
+jq -r 'select(.conclusion=="failure" and (.name|startswith("shard"))) | "\(.id) \(.run_id)"' "$T/jobs.ndjson" 2>/dev/null \
+  | while read -r j r; do [ -f "$ST/suites/$j" ] || echo "$j $r"; done | head -6 | while read -r j r; do
+  { gh api "repos/$REPO/actions/jobs/$j/logs" 2>/dev/null | grep -oE '[^ ]+\.(c?js|ts|mjs) failed \(exit [0-9]+\)' \
+      | sed 's/ failed.*//; s#.*/##; s/^##\[group\]//; s/^::group:://' | sort -u; printf 'run=%s\n' "$r"; } > "$ST/suites/$j.tmp"
+  mv "$ST/suites/$j.tmp" "$ST/suites/$j"
 done
 find "$ST/suites" -type f -mtime +2 -delete 2>/dev/null
 
@@ -151,25 +171,31 @@ git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/
 free=$(df -k / | awk 'NR==2 {printf "%.1f", $4/1048576}'); fact DISK "$free"; printf '%s\t%s\n' "$now" "$free" >> "$ST/disk.tsv"
 fact LOAD "$(sysctl -n vm.loadavg | awk '{print $3}')"; fact NCPU "$(sysctl -n hw.ncpu)"
 fact MEMFREE "$(memory_pressure -Q 2>/dev/null | grep -oE '[0-9]+%' | tr -d %)"
-pg="psql -h 127.0.0.1 -p 54329 -U xr_studio -d postgres -Atc"
+pg="psql -w -h 127.0.0.1 -p 54329 -U xr_studio -d postgres -Atc"
 idle=$($pg "select datname from pg_database d where datname like 'xr_studio_%' and datname not like '%demo%' and not exists (select 1 from pg_stat_activity a where a.datname=d.datname)" 2>/dev/null | sort)
 fact DBS "$($pg "select count(*)||' ('||pg_size_pretty(coalesce(sum(pg_database_size(datname)),0))||')' from pg_database where datname like 'xr_studio_%'" 2>/dev/null)"
 # A database is safe to drop only when it was idle at the previous check too (file times are copied from the template).
-both=0; [ -f "$ST/idle-dbs.txt" ] && both=$(comm -12 "$ST/idle-dbs.txt" <(echo "$idle") | grep -c .); echo "$idle" > "$ST/idle-dbs.txt"; fact IDLE2 "$both"
+# "Two checks" means readings at least 20 minutes apart: a run a minute after the last one keeps the older reading.
+both=0; prevt=$(stat -f %m "$ST/idle-dbs.txt" 2>/dev/null || echo 0)
+[ -s "$ST/idle-dbs.txt" ] && [ $((now - prevt)) -ge 1200 ] && both=$(comm -12 "$ST/idle-dbs.txt" <(echo "$idle") | grep -c .)
+{ [ $((now - prevt)) -ge 1200 ] || [ ! -s "$ST/idle-dbs.txt" ]; } && echo "$idle" > "$ST/idle-dbs.txt"; fact IDLE2 "$both"
 # Copies: listening isolated copies on 4430–4499 plus suite runs (their ports are ~33xxx, outside that range: 4 Nov gap).
 fact COPIES "$(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk '$9 ~ /:44[3-9][0-9]$/ {print $9}' | sort -u | grep -c .)"
-fact SUITES "$(pgrep -f 'tools/run-suites.sh' 2>/dev/null | grep -c .)"
+# One suite run = one top-level run-suites.sh process (its forked subshells match the same pattern and are not counted).
+sp=" $(pgrep -f 'tools/run-suites.sh' 2>/dev/null | tr '\n' ' ') "; sn=0
+for p in $sp; do case "$sp" in *" $(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ') "*) ;; *) sn=$((sn+1));; esac; done; fact SUITES "$sn"
 fact WORKTREES "$(git worktree list | grep -c .)"
 # Paid AI: the shared ledger in the main copy (reserve and settle lines); the total is read, never estimated (4 Nov: a
 # Lead's "night ~US$20.86" was US$70.48 in the ledger).
 fact LEDGER "${LEDGER:-$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.tools/p2-ledger/spend.jsonl}"
 # Mac builders (founder 4 Nov ~10:50 IST: builders in the cloud). Allowed: MAC_BUILDERS_OK (default Builder 1, the infra
 # lane, and Builder 8, QA-144). A builder works in .claude/worktrees/builder-N-xxxxxx and in copies under that session's
-# scratchpad (…builder-N-xxxxxx/…/wt-*): it counts as working when any of them changed its git index in 90 minutes.
+# scratchpad (…builder-N-xxxxxx/…/wt-*): it counts as working when any of them moved HEAD (commit, merge, checkout) in
+# 90 minutes. The index is not used: any `git status`, the app's diff view included, rewrites it (review of v2).
 busy=""
 while read -r wt; do
   name=$(echo "$wt" | grep -oE 'builder-[0-9a-z]+' | head -1); [ -n "$name" ] || continue
-  t=$(stat -f %m "$(git -C "$wt" rev-parse --absolute-git-dir 2>/dev/null)/index" 2>/dev/null || echo 0)
+  t=$(stat -f %m "$(git -C "$wt" rev-parse --absolute-git-dir 2>/dev/null)/logs/HEAD" 2>/dev/null || echo 0)
   [ $((now - t)) -le 5400 ] && busy="$busy $name"
 done < <(git worktree list --porcelain | sed -n 's/^worktree //p')
 fact MACB "$(echo "$busy" | tr ' ' '\n' | grep . | sort -u | tr '\n' ' ')"; fact MACB_OK "${MAC_BUILDERS_OK:-builder-1 builder-8}"
@@ -193,6 +219,16 @@ def age(t): return int((now-t)//60) if t else 0
 def dur(m): return '%dm'%m if m<120 else '%.1fh'%(m/60)
 def tsv(name): return [l.rstrip('\n').split('\t') for l in rd(ST+'/'+name).splitlines() if l.strip()]
 out=[]; say=out.append
+def fnum(x):
+    try: return float(x)
+    except (TypeError,ValueError): return None
+# A crash must not lose the report or break "exit = ACT lines": print what was read, one ACT line, exit 1.
+def _crash(t,e,tb):
+    import traceback
+    line=traceback.extract_tb(tb)[-1].lineno if tb else '?'
+    print('\n'.join(out)); print('ACT  [1 fix it yourself · 0m] lead-watch failed (%s: %s, script line %s): the lines above are all it read {crash}'%(t.__name__,e,line))
+    sys.stdout.flush(); os._exit(1)
+sys.excepthook=_crash
 acts=[]                       # (key, text, minutes past its limit or None)
 def ACT(key,text,over=None): acts.append((key,text,over))
 risks=[]                      # pre-mortem candidates: (score 0-100, what will fail next, what to do)
@@ -229,77 +265,106 @@ def owner_of(ref):
 # ---- open PRs: step, wait, blocker ----
 try: nodes=json.load(open(T+'/prs.json'))['data']['repository']['pullRequests']['nodes']
 except Exception: nodes=[]
-RULING=re.compile(r"(tech lead'?s? (ruling|answer|go)\b|\bruled\b|\bruling \((lead|tech)|lead \d+'?s? (ruling|answer|go)\b|the go is lead|answer from the tech lead)",re.I)
-APPROVE=re.compile(r'\bApprove[ds]?\b[^\n]{0,40}?\b(?:for|at|on)\s+`?([0-9a-f]{7,40})',re.I)
-VERDICT=re.compile(r'\b(Approve|Block)[ds]?\b[^\n]{0,40}?\b(?:for|at|on)\s+`?([0-9a-f]{7,40})',re.I)
+# A ruling answers a question only when the comment opens with it ("Tech lead ruling (Lead 4 …)", "The tech lead's rulings",
+# "Lead 3's Go"): reviewers quote rulings mid-line ("scoped check per the tech lead's ruling"), and a quote is no answer.
+RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b|^\W*ruled\b",re.I)
+QUESTION=re.compile(r'question for the tech lead',re.I)
+# A reviewer's verdict: "review", "reviewer" or "Opus" plus Approve / Block / Changes needed near the top (the team writes
+# it many ways: "Approve for a7335f0f9", "Head da77b7ab2 has the Opus diff-only Approve", "**Approve**, no Blocker").
+REVIEWISH=re.compile(r'\b(review|reviewer|opus)\b',re.I); VWORD=re.compile(r'\b(Approve[ds]?|Block(?:ed|s)?|Changes needed)\b',re.I)
+SHA=re.compile(r'\b[0-9a-f]{7,40}\b')
 CAPRE=re.compile(r'\bC\d{1,2}\.\d{1,2}\b'); QARE=re.compile(r'\bQA-\d+\b')
 hot=[h.strip() for h in rd(T+'/hot.txt').splitlines() if h.strip() and not h.startswith('#')]
 PROTO=A+'/prototype/'
 prs=[]; batches_open=[]
 for p in nodes:
-    if p['headRefName'].startswith('mergify/'): batches_open.append(p); continue
+    if (p.get('headRefName') or '').startswith('mergify/'): batches_open.append(p); continue
     L=[l['name'] for l in p['labels']['nodes']]
     c=p['commits']['nodes'][0]['commit'] if p['commits']['nodes'] else {}
     pushed=ts(c.get('committedDate'))
     ch=[x for x in ((c.get('statusCheckRollup') or {}).get('contexts') or {}).get('nodes',[]) if x.get('name') and not x['name'].startswith('Mergify') and x['name']!='Configuration changed']
     fail=[x for x in ch if x.get('conclusion') in ('FAILURE','TIMED_OUT','STARTUP_FAILURE')]
     pend=[x for x in ch if x.get('status')!='COMPLETED']
-    ci='red' if fail else 'running' if pend or not ch else 'green'
+    gate=[x for x in ch if x['name']=='ci']
+    # Green means the "ci" check (Mergify's merge condition) passed; a cancelled or skipped run is not green.
+    if fail: ci='red'
+    elif pend: ci='running'
+    elif not ch: ci='no checks'
+    elif (gate and gate[0].get('conclusion')=='SUCCESS') or (not gate and all(x.get('conclusion') in ('SUCCESS','SKIPPED','NEUTRAL') for x in ch)): ci='green'
+    else: ci='cancelled'
     red_since=min([ts(x['completedAt']) for x in fail if x.get('completedAt')] or [now]) if fail else None
     lab={}; comments=[]
     for it in p['timelineItems']['nodes']:
         if it['__typename']=='LabeledEvent': lab[it['label']['name']]=ts(it['createdAt'])
         elif it['__typename']=='UnlabeledEvent': lab.pop(it['label']['name'],None)
         elif it['__typename']=='IssueComment': comments.append((ts(it['createdAt']),it['body'] or ''))
-    q=[t for t,b in comments if 'Question for the tech lead' in b[:400]]
+    rul=[t for t,b in comments if RULING.search(b[:300])]
+    q=[t for t,b in comments if QUESTION.search(b[:400]) and not RULING.search(b[:300])]
     qt=max(q) if q else None
-    q_open=qt is not None and not any(t>qt and RULING.search(b[:600]) for t,b in comments)
-    verdicts=[(t,m.group(1).lower(),m.group(2)) for t,b in comments for m in [VERDICT.search(b[:800])] if m]
-    v=max(verdicts) if verdicts else None
-    head_ok=bool(v and v[1].startswith('approve') and p['headRefOid'].startswith(v[2].lower()))
+    q_open=qt is not None and not any(t>qt for t in rul)
+    verdicts=[]
+    for t,b in comments:
+        top=b[:300]; m=VWORD.search(top)
+        if m and REVIEWISH.search(top) and not QUESTION.search(top):
+            verdicts.append((t,'approve' if m.group(1).lower().startswith('approve') else 'block',SHA.findall(b[:800])))
+    v=max(verdicts,key=lambda x:x[0]) if verdicts else None
+    head=p['headRefOid']
+    head_ok=bool(v and v[1]=='approve' and (any(head.startswith(x) for x in v[2]) or v[0]>(pushed or 0)))
     deq=''
     for t,b in comments:
         m=re.search(r'"state": "dequeued".*?"label": "([^"]+)"',b,re.S)
         if m: deq=m.group(1)
-    caps_named=sorted(set(CAPRE.findall(p['title'])),key=ckey); qas=sorted(set(QARE.findall(p['title'])))
     title=p['title']
+    caps_named=sorted(set(CAPRE.findall(title)),key=ckey); qas=sorted(set(QARE.findall(title)))
     m3=title.upper().startswith('M3') or any(MS.get(x)=='M3' for x in caps_named)
     kind=(title.split(':')[0].strip().lower() if ':' in title[:12] else 'product')
     files=[f['path'] for f in p['files']['nodes']]
     approved='review: approved' in L
+    # The approval time: the label event in the timeline; if it fell out of the window, the first check that saw the label.
+    if approved and 'review: approved' not in lab: lab['review: approved']=None
     if p['isDraft']: step,since='draft, owner building',pushed
-    elif 'dequeued' in L: step,since='dequeued: '+(deq or 'reason in the PR'),lab.get('dequeued',pushed)
+    elif 'dequeued' in L: step,since='dequeued: '+(deq or 'reason in the PR'),lab.get('dequeued') or pushed
     elif approved and ci=='red': step,since='red after approval',red_since
-    elif approved and 'queued' in L: step,since='in the merge queue',lab.get('queued',lab.get('review: approved',pushed))
+    elif approved and 'queued' in L: step,since='in the merge queue',lab.get('queued') or lab.get('review: approved') or pushed
     elif approved and ci=='running': step,since='approved, CI running',pushed
-    elif approved: step,since='approved, green, not queued',lab.get('review: approved',pushed)
+    elif approved and ci!='green': step,since='approved, CI %s'%ci,pushed
+    elif approved: step,since='approved, green, not queued',lab.get('review: approved') or pushed
     elif q_open: step,since='waiting for the tech lead',qt
     elif ci=='red': step,since='red',red_since
     elif ci=='running': step,since='CI running',pushed
+    elif ci in ('cancelled','no checks'): step,since='CI '+ci+': owner pushes or re-runs',pushed
     elif head_ok: step,since='reviewer Approve on head, no label',v[0]
-    elif v and v[0]>pushed: step,since='reviewer %s, owner fixing'%v[1],v[0]
+    elif v and v[0]>(pushed or 0): step,since='reviewer %s, owner fixing'%v[1],v[0]
     else: step,since='in review (reviewer, breaker) or owner',pushed
     prs.append(dict(n=p['number'],title=title,ref=p['headRefName'],L=L,draft=p['isDraft'],pushed=pushed,ci=ci,red_since=red_since,
         fail=[x['name'] for x in fail],lab=lab,q_open=q_open,qt=qt,head_ok=head_ok,caps=caps_named,qas=qas,m3=m3,kind=kind,files=files,
         body=p.get('body') or '',approved=approved,step=step,since=since or now,owner=owner_of(p['headRefName']) or p['headRefName'],
         parked=str(p['number']) in parked))
 byn={p['n']:p for p in prs}
+prev={r[0]:r[1:] for r in tsv('acts.tsv') if len(r)>1 and r[1].isdigit()}
 
-# ---- flow limits (founder 4 Nov): each crossing is an ACT with its minutes past the limit ----
+# ---- flow limits (founder 4 Nov): one ACT per PR, its most urgent limit first, the others as "also" ----
 for p in prs:
     n=p['n']; w=age(p['since']); o=p['owner']
     if p['parked']: continue
-    if p['approved'] and 'review: approved' in p['lab']:
-        wm=age(p['lab']['review: approved'])
-        if wm>60: ACT('merge#%d'%n,'#%d approved %s ago, not merged (%s; %s): find what holds it'%(n,dur(wm),p['step'],o),wm-60)
-    if p['step'].startswith('dequeued'): ACT('deq#%d'%n,'#%d %s (%s): owner merges main or fixes; a batch failure not its own → re-label'%(n,p['step'],o),w)
+    hits=[]                   # (priority, text, minutes past the limit)
+    if p['step'].startswith('dequeued'): hits.append((1,'%s (%s): owner merges main or fixes; a batch failure not its own → re-label'%(p['step'],o),w))
     if p['ci']=='red' and age(p['red_since'])>30:
-        ACT('red#%d'%n,'#%d red %s on %s (%s)%s'%(n,dur(age(p['red_since'])),', '.join(p['fail'][:3]),o,'' if not p['approved'] else ', approved'),age(p['red_since'])-30)
-    if p['q_open'] and age(p['qt'])>30: ACT('q#%d'%n,'#%d question for the tech lead unanswered %s: rule on the PR (not by message; the 10-message cap)'%(n,dur(age(p['qt']))),age(p['qt'])-30)
+        hits.append((2,'red %s on %s (%s)%s'%(dur(age(p['red_since'])),', '.join(p['fail'][:3]),o,', approved' if p['approved'] else ''),age(p['red_since'])-30))
+    if p['approved']:
+        la=p['lab'].get('review: approved')
+        if la is None:   # label time unknown: count from the first check that saw this PR approved
+            la=int(prev.get('seen#%d'%n,[now])[0])
+        wm=age(la)
+        if wm>60: hits.append((3,'approved %s ago, not merged (%s; %s): find what holds it'%(dur(wm),p['step'],o),wm-60))
+    if p['q_open'] and age(p['qt'])>30: hits.append((4,'question for the tech lead unanswered %s: rule on the PR, first line "Tech lead ruling (Lead N …)" (not by message: 10 per founder turn)'%dur(age(p['qt'])),age(p['qt'])-30))
     if p['step'].startswith('reviewer Approve on head') and w>30:
-        ACT('label#%d'%n,'#%d reviewer Approve on head, green, no label %s (%s): owner labels; refused → founder names the PR'%(n,dur(w),o),w-30)
+        hits.append((5,'reviewer Approve on head, green, no label %s (%s): owner labels; refused → founder names the PR'%(dur(w),o),w-30))
     if not p['draft'] and not p['approved'] and not p['q_open'] and p['pushed'] and age(p['pushed'])>90:
-        ACT('push#%d'%n,'#%d no push %s, step "%s" (%s): message the owner its next step, or park it'%(n,dur(age(p['pushed'])),p['step'],o),age(p['pushed'])-90)
+        hits.append((6,'last commit %s ago, step "%s" (%s): message the owner its next step, or park it'%(dur(age(p['pushed'])),p['step'],o),age(p['pushed'])-90))
+    if hits:
+        hits.sort(); top=hits[0]
+        ACT('pr#%d'%n,'#%d %s%s'%(n,top[1],''.join(' · also: '+h[1].split(' (')[0] for h in hits[1:])),max(h[2] for h in hits))
 
 # Never two sessions on one row: product PRs naming the same capability or bug from different branches; roster rows.
 seen={}
@@ -331,6 +396,7 @@ for r in roster:
 
 # ---- batches, machines, flaky suites, nightly, main ----
 runs=[json.loads(l) for l in rd(T+'/runs.ndjson').splitlines() if l.strip()]
+for r in runs: r['head_branch']=r.get('head_branch') or ''; r['display_title']=r.get('display_title') or ''; r['name']=r.get('name') or ''
 jobs=[json.loads(l) for l in rd(T+'/jobs.ndjson').splitlines() if l.strip()]
 live=[r for r in runs if r['status']!='completed']
 inprog=[r for r in live if r['status']=='in_progress']; queued=[r for r in live if r['status'] in ('queued','waiting','pending','requested')]
@@ -379,7 +445,7 @@ for k,r in mainruns.items():
 # ---- the Mac ----
 disk=float(E.get('DISK') or 0); load=float(E.get('LOAD') or 0); ncpu=int(E.get('NCPU') or 8)
 copies=int(E.get('COPIES') or 0); srun=int(E.get('SUITES') or 0)
-dk=[(int(a),float(b)) for a,b in tsv('disk.tsv') if a.isdigit()]
+dk=[(int(r[0]),fnum(r[1])) for r in tsv('disk.tsv') if len(r)>1 and r[0].isdigit() and fnum(r[1]) is not None]
 old=[x for x in dk if 60*60*1.5>=now-x[0]>=25*60]
 trend=(disk-old[0][1])/((now-old[0][0])/1800) if old else 0
 eta=''
@@ -403,7 +469,7 @@ for kv in E.get('USAGE','').split():
 uline='usage  not given (pass weekly=N five=N context=N from get_usage)'
 if U:
     with open(ST+'/usage.tsv','a') as f: f.write('%d\t%s\t%s\t%s\n'%(now,U.get('weekly','-'),U.get('five','-'),U.get('context','-')))
-    hist=[(int(r[0]),float(r[1])) for r in tsv('usage.tsv') if r[0].isdigit() and r[1] not in ('-','')]
+    hist=[(int(r[0]),fnum(r[1])) for r in tsv('usage.tsv') if len(r)>1 and r[0].isdigit() and fnum(r[1]) is not None]
     base=[h for h in hist if 3*3600>=now-h[0]>=20*60]
     w=U.get('weekly'); fc=''
     if w is not None and base:
@@ -433,9 +499,9 @@ if os.path.exists(E.get('LEDGER','')):
             if (ts(j.get('at')) or 0)>=int(E['DAY0']): day+=a
     inflight=sum(w for k,w in res.items() if k not in done)
     cap=[r for r in tsv('paid-cap.tsv') if r[0]==datetime.now(IST).strftime('%Y-%m-%d')]
-    capd=float(cap[0][1]) if cap else None
+    capd=fnum(cap[0][1]) if cap and len(cap[0])>1 else None
     pline='paid    today US$%.2f%s · unsettled reservations (worst) US$%.2f · all time US$%.2f%s'%(day,' of US$%g cap'%capd if capd is not None else ' (no cap set today: lead-watch.sh cap <US$>)',inflight,tot,
-        ' of US$%s code cap'%cap[0][2] if cap and cap[0][2]!='-' else '')
+        ' of US$%s code cap'%cap[0][2] if cap and len(cap[0])>2 and cap[0][2]!='-' else '')
     if capd is not None and day+inflight>capd: ACT('paidcap','paid AI today US$%.2f + in flight US$%.2f is over the day\'s US$%g cap: stop new paid runs, ask the founder'%(day,inflight,capd))
 
 # ---- M2 and M3, outcome ----
@@ -478,7 +544,7 @@ def flow(m3flag,label):
         say('   #%-4d %-36s %6s  %-14s %s%s'%(p['n'],p['step'][:36],dur(age(p['since'])),p['owner'][:14],tag,'  parked: '+parked[str(p['n'])][:40] if p['parked'] else ''))
     for r in rs:
         lp=last_push(r['branch'])
-        say('   ◦ %-12s %-12s %-14s pushed %-6s next: %s'%(r['name'][:12],r['kind'][:12],r['row'][:14],dur(age(lp)) if lp else '-',r['next'][:60]))
+        say('   ◦ %-12s %-12s %-14s last commit %-6s next: %s'%(r['name'][:12],r['kind'][:12],r['row'][:14],dur(age(lp)) if lp else '-',r['next'][:60]))
 flow(False,'M2'); flow(True,'M3')
 
 # Links between M2 and M3: the Lead's map (lead-watch-links.txt), each state read now.
@@ -532,7 +598,7 @@ qa=[r for r in roster if r['kind']=='qa']
 say('   qa: sessions M2 %d · M3 %d · re-scores due M2 %s · M3 %s'%(sum(1 for r in qa if r['milestone']!='M3'),sum(1 for r in qa if r['milestone']=='M3'),
     ' '.join(sorted(due['M2'],key=ckey)) or '-',' '.join(sorted(due['M3'],key=ckey)) or '-'))
 cp=sorted([x for x in links if x[5]],key=lambda x:-x[6])
-say('   critical path: '+(' → '.join('%s%s (%s)'%(x[0],' #'+x[1] if x[1].isdigit() else '',x[4][:32]) for x in cp[:4]) if cp else 'no open link'))
+say('   critical path (open links, most open capabilities held first): '+(' → '.join('%s%s (%s)'%(x[0],' #'+x[1] if x[1].isdigit() else '',x[4][:32]) for x in cp[:4]) if cp else 'no open link'))
 for x in cp[:1]:
     if x[1].isdigit() and int(x[1]) in byn:
         p=byn[int(x[1])]
@@ -568,14 +634,28 @@ risks.sort(key=lambda r:-r[0])
 say('── pre-mortem  next likely failure: '+(risks[0][1]+' → do: '+risks[0][2] if risks else 'see the ACT lines: the oldest one fails next if left'))
 for r in risks[1:3]: say('   then: %s → %s'%(r[1],r[2]))
 
-# Escalation ladder: an ACT's age (minutes past its limit, else since first seen) gives its rung.
-prev={r[0]:int(r[1]) for r in tsv('acts.tsv') if len(r)>1 and r[1].isdigit()}
-rung=lambda m:(1,'fix it yourself') if m<30 else (2,'message the owner') if m<60 else (3,'replace the session') if m<120 else (4,'ask the founder: one question, recommendation first')
-keep=[]
+# Escalation ladder: an ACT's age (minutes past its limit, else since first seen) gives its rung, but it climbs at most one
+# rung per check and a new item enters at rung 2 at most, so each step is tried before the founder is asked. An ACT the Lead
+# acknowledged (`ack <key>`) is shown with its reason and not counted until the ack ends.
+RUNGS={1:'fix it yourself',2:'message the owner',3:'replace the session',4:'ask the founder: one question, recommendation first'}
+rung=lambda m:1 if m<30 else 2 if m<60 else 3 if m<120 else 4
+acks={}
+for r in tsv('acks.tsv'):
+    if len(r)>1 and r[1].isdigit() and int(r[1])>now: acks[r[0]]=(int(r[1]),r[2] if len(r)>2 else '')
+keep=[]; shown=0; acked=[]
 for key,text,over in acts:
-    first=prev.get(key,int(now)); m=max(over or 0,age(first)); keep.append('%s\t%d'%(key,first))
-    k,w=rung(m); say('ACT  [%d %s · %s] %s'%(k,w,dur(m),text))
-open(ST+'/acts.tsv','w').write(''.join(x+'\n' for x in keep))
+    p0=prev.get(key); first=int(p0[0]) if p0 else int(now)
+    last=int(p0[1]) if p0 and len(p0)>1 and p0[1].isdigit() else None
+    m=max(over or 0,age(first)); k=rung(m)
+    k=min(k,last+1) if last else min(k,2)
+    keep.append('%s\t%d\t%d'%(key,first,k))
+    if key in acks: acked.append((key,text,acks[key])); continue
+    say('ACT  [%d %s · %s] %s {%s}'%(k,RUNGS[k],dur(m),text,key)); shown+=1
+for p in prs:
+    if p['approved'] and p['lab'].get('review: approved') is None:
+        keep.append('seen#%d\t%d\t0'%(p['n'],int(prev.get('seen#%d'%p['n'],[now])[0])))
+for key,text,(until,why) in acked: say('acked {%s} until %s IST: %s — %s'%(key,hm(until),why,text[:90]))
+open(ST+'/acts.tsv.tmp','w').write(''.join(x+'\n' for x in keep)); os.replace(ST+'/acts.tsv.tmp',ST+'/acts.tsv')
 
 if E['MODE']=='handover':
     say('══ hand-over checklist (into STATE.md and the notes file before "take over now")')
@@ -589,5 +669,5 @@ if E['MODE']=='handover':
     say('   '+(rd(ST+'/cron-prompt.txt').strip() or 'NOT SAVED: run lead-watch.sh cron "<prompt>" first'))
     say('7. lessons today: '+(' · '.join(les) or 'none'))
 print('\n'.join(out))
-sys.exit(min(len(acts),125))
+sys.exit(min(shown,125))
 PY
