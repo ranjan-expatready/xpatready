@@ -348,3 +348,5 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 2. My first #785 runs used main's pack copied over #785's own pack, which drops #785's AT-1 and AT-2 changes. The 14/14 run is #785's own pack plus the AT-4 change only.
 
 **M2: 42/60 confirmed** (was 40; +C11.17, +C1.6).
+
+**Note on qa PR #939 (gate B):** its first title named the capabilities it re-scored. Gate B then ran the C11.14 and C11.7 packs, which are red on main by design until #785 and #881 merge, and refused (CI run 41826732671). A qa records PR claims no capability, so the title no longer names one. Gate B's checks of the product PRs themselves are unaffected.
