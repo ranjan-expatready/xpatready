@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-337**, 4 Nov 20:15 IST; the section "Added 4 Nov" below wins over older lines here)
+# Rules in force — one page (the tech lead keeps it; as of **P-340**, 4 Nov 23:00 IST; the section "Added 4 Nov" below wins over older lines here)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
@@ -60,6 +60,8 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 * **Immigration wording:** each form's own official words decide who fills it and what it asks (AGENTS.md rule 4; QA-221 ruling, 4 Nov).
 * **No multi-tenant work in the reference app** (P-335): the team's platform owns tenant isolation (P-249); our two-firm checks stay as the spec.
 * **Records once a day, plus each hand-over** (P-336, amends P-314); rulings live as PR comments and are summed up in that day's row.
+* **ETA board (P-338):** every report names the next 3–6 capabilities to reach Works with an IST time, the step each waits on, and on time or late by N minutes and why.
+* **App view and prompt answers (P-339):** each check reads the claude.ai Code list and the archived list; the Lead answers a lane's prompt only inside its brief and the rules; blocks go to the founder at once ("go" resets the Lead's 10-message cap). qa marks Works only after the pack is green on main's head on GitHub's runners; a row red on main is held by qa and re-scored.
 
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.
