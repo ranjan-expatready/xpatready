@@ -321,3 +321,30 @@ C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #7
 * Setup rows count on the six. The checkpoint counts only for later steps built by the product's steps. **C4.7 stays Partial** until it passes on the six; this needs no founder question.
 * Owners: QA-144 part 1 (the placement step on the six) is Builder S1. Part 2 (IRM 0002 applied by the checkpoint) is Builder 8, #891. Part 3 (QA-206) is the cloud lane, #883. QA-219 is Builder S2. QA-218 has no owner yet.
 * qa re-scores the nine QA-144 rows as soon as S1's PR or #891 merges.
+
+## Batch 10 — gate A (Lead 5) and after-merge for #867, #870, #878 · main 03ea24052 · ~16:55–17:40 IST
+### Gate A (each PR's own head; its pack on GitHub on the six; a 1440 px walk on its own copy)
+| PR | Verdict | Pack | Walk |
+|---|---|---|---|
+| #867 C11.17 | **PASS** | 24/24 (run 41818523697) | A 130-character Category shows "Keep the name under 120 characters." under its own field |
+| #870 C1.6 | **PASS**, with Minor QA-224 | 31/31 (run 41818535054) | The card and List read "Mixed · Online · IRCC secure account: IMM 5645"; the Forms tab's summary lags until a reload |
+| #868 G5/C5.1 | **FAIL** | 29/30 (B4 waits for QA-144) | P-248's document-line half is not built: on the six the Visitor visa (7 forms, 0 documents) is not refused for it. The tech lead ruled: build it in #868, then qa re-runs gate A |
+| #872 C11.8 | **PASS** | 34/34 (run 41825318927) | IMM 5645 offers "Use Saved (US$0)" for its 4 parts; IMM 5406, being mapped elsewhere, starts nothing (Saved disabled) |
+
+### After-merge on main 03ea24052
+| Row | Verdict | Exit codes |
+|---|---|---|
+| C11.17 (M2) | **Works** (was Partial) | `C11.17.test.ts` on the six: 0 · 24/24 (run 41825099237). QA-183 closed |
+| C1.6 (M2) | **Works** (was Partial) | `C1.6.test.ts` on the six: 0 · 31/31 (run 41825147241). Open Minors only (QA-224, QA-185) |
+| C10.1 after #878 | Partial (unchanged) | 1 · 15/23 on the checkpoint (was 13/23, run 41825187356) |
+| C4.7, C4.8, C11.12 on the checkpoint | unchanged | 17/17 · 6/11 · 20/20 (runtime crash, QA-215) |
+
+### qa's own packs (P-318: only qa changes its packs)
+* **C11.14 AT-4** (Lead 5's triage): it was the pack's wording. After Reset to the six the library is empty, so the first edition's Ready mappings are all new shared fields and none can be a reuse match. AT-4 demanded at least one tickable reuse. It now checks two things: every Ready new field says it "is decided on its own", and a Ready reuse is tickable unless it needs a near reason (P-318 (4)). On #785's head, its own pack with only this change gives exit 0, 14/14. On main, AT-2, AT-3 and AT-4 stay red until #785's checker rounds merge (0 Ready items there).
+* **C11.7 case 2** (#881's question; approved by Lead 5): after the load, the provincial nomination certificate waits as one library proposal, and the load writes no document type itself. Once a second person accepts it, the author adds it as a required line (P-149, P-108). It is re-scored after #881 merges.
+
+### Disclosures
+1. The PR copies shared this copy's `node_modules`. #872's schema is older than main's (#833's form role), so the Prisma client was generated from the branch's schema for its walk, then back from main's. An earlier stale client gave a 500 on Reset to the six in a C11.14 run on main. It was regenerated and re-run, and was not a product fault.
+2. My first #785 runs used main's pack copied over #785's own pack, which drops #785's AT-1 and AT-2 changes. The 14/14 run is #785's own pack plus the AT-4 change only.
+
+**M2: 42/60 confirmed** (was 40; +C11.17, +C1.6).
