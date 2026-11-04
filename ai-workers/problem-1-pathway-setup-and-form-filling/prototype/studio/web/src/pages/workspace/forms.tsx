@@ -173,8 +173,8 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
       {!canAuthor ? <p className="text-xs text-text-muted" data-approver-copies>{APPROVER_WORDS}</p> : null}
       <FormsProblems id={id} filing={problems} />
       <SourcesLine d={combo} lineCodes={codes} />
-      {/* QA-218 (C3.4, P-138): each form's and the guide's library drafting, with Saved (US$0) where a saved AI run exists. */}
-      {canAuthor ? <FormMasters combinationId={id} /> : null}
+      {/* QA-218 (C3.4, P-138): the guide's checks, Saved (US$0) where a saved AI run exists; forms are listed once (S5 fix 1). */}
+      {canAuthor ? <FormMasters combinationId={id} guidesOnly /> : null}
       {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} onRemoved={onRemoved} /> : null}
       {removing ? <RemoveDialog id={id} l={removing} onClose={() => setRemoving(null)} onRemoved={onRemoved} /> : null}
       {picker}{rail}{toast.node}{bulk.node}

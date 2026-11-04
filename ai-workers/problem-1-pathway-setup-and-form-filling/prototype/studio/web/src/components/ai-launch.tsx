@@ -152,7 +152,9 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
 type Att = { id: string; recognised: boolean; kind: string; edition: string | null; fileName: string };
 type MastersReading = { attachmentId: string; kind: "form" | "guide"; title: string; saved: boolean; drafted: boolean; group: string };
 type MastersDone = { status?: string; message?: string; proposals: number; group: string; already?: boolean };
-export function FormMasters({ combinationId, source }: { combinationId?: string; source?: Att }) {
+/** `guidesOnly` (the combination's Forms tab): the tab lists each form once (S5 early-look fix 1), so there it shows only
+ *  the guide, whose AI run belongs to the combination; a form's masters are per edition, from Library › Forms › Re-read. */
+export function FormMasters({ combinationId, source, guidesOnly = false }: { combinationId?: string; source?: Att; guidesOnly?: boolean }) {
   const qc = useQueryClient();
   const list = useQuery<Att[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`), enabled: !!combinationId, initialData: source ? [source] : undefined });
   const readKey = ["masters-readings", combinationId ?? `source:${source?.id}`];
@@ -162,7 +164,7 @@ export function FormMasters({ combinationId, source }: { combinationId?: string;
   const readingOf = (id: string) => (readings.data ?? []).find((r) => r.attachmentId === id);
   const isForm = (a: Att) => /\.pdf$/i.test(a.fileName);
   // A form is a recognised PDF that is not a checklist; the combination's guide page is shown when the reading names it.
-  const rows = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist" && (isForm(a) || readingOf(a.id)?.kind === "guide"));
+  const rows = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist" && (!guidesOnly || !isForm(a)) && (isForm(a) || readingOf(a.id)?.kind === "guide"));
   if (!rows.length) return null;
   // Review m3: after a click the busy button is disabled and loses focus, so focus moves to the row's Open Proposals.
   const say = (a: Att, text: string, group: string) => { setDone((d) => ({ ...d, [a.id]: { text, group } })); requestAnimationFrame(() => box.current?.querySelector<HTMLElement>(`[data-masters-open="${a.id}"]`)?.focus()); };
@@ -182,8 +184,9 @@ export function FormMasters({ combinationId, source }: { combinationId?: string;
   };
   return (
     <section ref={box} aria-labelledby="fm-h" className="space-y-2 rounded-lg border border-border p-3" data-form-masters>
-      <h3 id="fm-h" className="text-sm font-semibold">Forms and guide: sections, answer lists and checks</h3>
-      <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). Where AI has drafted a form's checks and document types, or a guide's checks, before, its Saved draft is used at US$0 with no model call. A person checks each item on To review and a second person approves it. A Live AI draft waits for the founder's OK on its cost.</p>
+      <h3 id="fm-h" className="text-sm font-semibold">{guidesOnly ? "Guide: checks drafted by AI" : "Forms and guide: sections, answer lists and checks"}</h3>
+      {guidesOnly ? <p className="text-xs text-text-muted">Where AI has drafted the checks this combination's guide states, its Saved draft is used at US$0 with no model call. A person checks each item on To review and a second person approves it. A Live AI draft waits for the founder's OK on its cost. Each form's sections, answer lists and checks are drafted from the <Link className="text-text-link underline" to="/library/forms">Form library</Link> (its ⋯ › Re-read with AI).</p>
+      : <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). Where AI has drafted a form's checks and document types, or a guide's checks, before, its Saved draft is used at US$0 with no model call. A person checks each item on To review and a second person approves it. A Live AI draft waits for the founder's OK on its cost.</p>}
       <ul className="space-y-1 text-sm">{rows.map((a) => { const r = readingOf(a.id), d = done[a.id], saved = r?.saved === true && !r.drafted; return (
         <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-form-masters-row={a.edition ?? a.fileName} data-masters-saved={readings.isFetching && !r ? "asking" : r?.drafted ? "drafted" : saved ? "yes" : "no"}><span className="min-w-0 break-words">{a.edition ?? a.fileName}{isForm(a) ? null : <span className="ml-2 text-xs text-text-muted">Guide</span>}
           {d ? <span className="block text-xs" role="status">{d.text} <Link data-masters-open={a.id} className="text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(d.group)}`}>Open Proposals</Link></span>

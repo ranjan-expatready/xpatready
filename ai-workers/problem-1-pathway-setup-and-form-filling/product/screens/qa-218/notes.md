@@ -36,3 +36,17 @@ Row: QA-218 (Gap · Major, C3.4). No screen offered the saved AI masters run (#7
   last block of a long tab, and the step card does not point to it. The tab now also shows the rules buttons for every
   form. Recommendation: keep for QA-218, and let the forms concept place it (or point the step card at it) when the
   Forms tab's next concept is drawn.
+
+## After the reviewer's Approve of 048bc1cfe: the suites found one break (fixed)
+* `check_s5_slice2_browser.cjs` failed "fix 1: each form appears once (no second list of the same forms) — 2": the panel
+  on the Forms tab listed the forms a second time, against the S5 early-look fix 1. Fixed: on the Forms tab the panel
+  shows **only the guide** (`FormMasters guidesOnly`), whose AI run belongs to the combination. A form's masters are per
+  edition, so its door stays Library › Forms › its ⋯ › Re-read with AI (one form, already there). This also settles
+  m6's "the tab now shows the rules buttons for every form". On a combination with no AI-drafted guide (With an LMIA),
+  the tab shows no panel.
+* After the fix, on fresh copies: the QA-218 check 22/22 twice (exit 0), `check_s5_slice2_browser.cjs` 63/63 (exit 0),
+  `check_forms_c34_masters_browser.cjs` 9/9 (exit 0).
+* Not this change: `check_qa184_live_state_browser.cjs` stops in 1 s on this cloud machine ("Please run npx playwright
+  install": it launches Chromium without this machine's browser path). The file and the code it covers are not touched.
+* Reviewer's round-2 Minors, left as follow-ups: the drafted line always says "Saved, US$0", even for a Live draft (only
+  on a copy with the live switch on), and `readings` does one job lookup per source (at most 9 on the six, one request).
