@@ -1,0 +1,16 @@
+PASS  C11.14 AT-1 Load sample (the six) puts the saved proposals on To review through the same door, and no AI proposal is Ready without a checker round agreeing (QA-176, US$0)
+PASS  C11.14 AT-2 every field-mapping proposal has a draft round, the form edition has an independent checker round, and a field the checker did not name is differ → Decide
+PASS  C11.14 AT-3 [IRCC-F07] a proposal is High (Ready) only when the rules check ran and passed and both rounds agree
+PASS  C11.14 AT-4 the field-mapping proposals are on To review in their bands; every Ready new shared field says it is decided on its own (P-296 (1)), and a Ready reuse match is tickable in bulk unless it needs a near reason (P-318 (4))
+PASS  C11.14 AT-5 Select all within a filter: the group answers every item of each band (Ready, Check, Decide) with whether it may be ticked in bulk and why not (a Ready reuse match may; a Ready new shared field may not, P-299)
+PASS  C11.14 AT-6 a disagreement between the rounds is Decide (Low) and shows both readings
+PASS  C11.14 AT-7 refusal: a bulk accept with a Check or a Decide item is refused (409, says why) and nothing is accepted
+PASS  C11.14 AT-7 refusal (P-299): a bulk accept with a High new shared field of an edition draft is refused (409, says it is decided on its own) and nothing is accepted
+PASS  C11.14 AT-7 refusal: a client (403) or nobody (401) cannot accept; nothing changes
+PASS  C11.14 AT-8 two High reuse matches are accepted together as one batch; each records the library field it reuses and adds nothing to the library (P-120)
+PASS  C11.14 AT-9 refusal: only the person who decided can Undo the batch: another reviewer (the configuration author, who holds the review duty) is refused (403); it stays accepted
+PASS  C11.14 AT-9 one Undo puts the whole batch back on the queue as proposed, and the library is as it was; the same Undo again is refused (404 or 409, in words)
+PASS  C11.14 AT-10 each item in a bulk accept is checked again by the rules at approval: one that reuses a field not in the library refuses the batch in words, nothing of it is accepted
+PASS  C11.14 AT-11 the whole check spent nothing (ledger unchanged)
+
+14 passed, 0 failed

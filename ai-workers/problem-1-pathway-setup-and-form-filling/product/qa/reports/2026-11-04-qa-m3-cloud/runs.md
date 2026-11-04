@@ -51,3 +51,12 @@ Two cases were opened on the fixture: a family of four left blank, and one princ
 Gate B twice on fresh copies (qam3d4r1_, qam3d4r2_), same result both times and the same as on 9caa043b:
 C6.12 0 · 24/24 · C6.12-breadth 1 · 1/4 · C6.4 0 · 30/30 · C7.6 1 · 4/23 · C7.7 0 · 26/26 · C7.3 0 · 13/13; setup_vv_m3 1 · 44/46.
 No M3 verdict changes. (The container restarted between rounds: the database was started again with cloud-setup.sh.)
+
+## Checkpoint on main f957321c (~17:45 IST, after #878): Visitor visa still blocked; With an LMIA released
+
+## After #861 and #891, main 1d0be4aa3 (~18:45–19:05 IST)
+**Gate B, twice, fixture:** C7.6 0 · 25/25 · C8.1 0 · 14/14 · C7.7 0 · 26/26 · C7.3 0 · 13/13 · C6.12 0 · 24/24 · C6.12-breadth 1 · 1/4 · C6.4 0 · 30/30 · setup_vv_m3 44/46.
+
+**qa probes `probe-c76.mts`:** 16/16 twice on the fixture, and 16/16 twice on the checkpoint.
+
+**Checkpoint** (52 s, US$0, Visitor visa and With an LMIA released), packs run directly on it, twice: C6.12 24/24 · C6.4 6/30 · C7.7 12/26 · C7.3 2/13 · C7.6 16/25 · C8.1 0/14.
