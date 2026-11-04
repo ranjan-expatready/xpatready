@@ -1,0 +1,18 @@
+##[group]Run [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+[36;1m[ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }[0m
+[36;1mecho "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"[0m
+[36;1mnode "$S/tools/gate-b.mjs" --title "$CAP" --kind code[0m
+shell: /usr/bin/bash -e {0}
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+  CAP: C3.4
+  GATE_B_JOBS: 1
+  KIND: code
+  GATE_B_DATA: six
+##[endgroup]
+Gate B: the PR names C3.4; claims Works for none (no bug check).
+  packs: C3.4.test.ts
+    C3.4.test.ts on the six: exit 0, 20/20 passed (24 s: copy 5, Reset to the six 18, run 1)
+  packs took 24 s in all
+Gate B: passed.
