@@ -70,7 +70,7 @@ export const OFF_LIST_COPY = { official: "previous-editions/imm5257e-pre-2023.pd
  *  canada.ca "Use of a Representative Form (IMM 5476)" (official-sources/ircc/web-pages/page-imm5476.html, modified
  *  2025-12-12, saved 19 Oct 2026): "A new version of this form is available (11-2025). Make sure you are using the most
  *  recent version." The 2021 file is IRCC's own, from the web archive (manifest: imm5476e-2021.pdf). */
-export const ROW17 = { previous: "imm5476e-2021.pdf", current: "imm5476e.pdf", previousLabel: "IMM 5476 (11-2021)", currentLabel: "IMM 5476 (11-2025)" };
+export const ROW17 = { previous: "imm5476e-2021.pdf", previousInventory: "prototype/p1/inventory/imm5476e-2021.inventory.json", current: "imm5476e.pdf", previousLabel: "IMM 5476 (11-2021)", currentLabel: "IMM 5476 (11-2025)" };
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 /** C10.1: one DEMO.md row of the configured checkpoint, as the Demo menu shows it. */
@@ -394,7 +394,10 @@ export class Demo {
 
   private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     // Row 17 (QA-207): IMM 5476 2021 in the library only when its saved field map is recorded (see ROW17).
-    const row17 = this.sources.savedRuns(this.sources.jobIdFor(ROW17.previous)).some((r) => r.valid);
+    // The same reading as the six's replay (ai.ts plan: the job id and the inventory's checksum), so a map recorded for
+    // an older reading of the 2021 file never swaps the edition in (review m1).
+    const inv2021 = join(SOLUTION, ROW17.previousInventory);
+    const row17 = existsSync(inv2021) && this.sources.savedRuns(this.sources.jobIdFor(ROW17.previous), createHash("sha256").update(readFileSync(inv2021)).digest("hex")).some((r) => r.valid);
     const six = await this.loadSix(actor, workspaceId, t0, log, row17 ? { swap: { [ROW17.current]: ROW17.previous } } : {});
     const person = (id: string) => ACTORS.find((a) => a.id === id)!;
     const author = person("user-A"), sme = person("user-C"), approver = person("user-B");
@@ -577,17 +580,20 @@ export class Demo {
     row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
-    // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781).
+    // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The
+    // Visitor visa's form finder may already have held it (its replay attaches the page's forms): then this send answers
+    // "already waiting", and the row reads the one held item either way (review m4).
     let held17: string | null = null, why17: string | null = null;
     if (row17) {
       const item = (JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items as { file: string; path: string }[]).find((i) => i.file === ROW17.current);
       const r = item ? (await timed("new edition held (row 17)", () => this.intake.intake(author, [{ originalname: item.file, buffer: readFileSync(join(OFFICIAL, item.path)) }], undefined, "SAMPLE"))).results[0] : null;
-      if (r?.outcome === "new_edition_held") held17 = r.edition ?? ROW17.currentLabel; else why17 = `${ROW17.currentLabel} was not held as a new edition: ${r?.message ?? "its official file is not in the manifest"}`;
+      const heldNow = await this.db.intakeItem.findFirst({ where: { workspaceId, outcome: "new_edition_held", status: "HELD", code: "IMM 5476" }, select: { editionLabel: true } });
+      if (heldNow) held17 = heldNow.editionLabel ?? ROW17.currentLabel; else why17 = `${ROW17.currentLabel} was not held as a new edition: ${r?.message ?? "its official file is not in the manifest"}`;
     }
     const users = row17 ? (await this.db.combinationForm.findMany({ where: { workspaceId, lineageKey: "IMM 5476", status: { not: "RETIRED" } }, select: { combinationId: true }, distinct: ["combinationId"] })).length : 0;
     row({ row: "17", title: "New edition: IMM 5476 2021 → 11-2025 comparison and impact", status: !row17 ? "waiting" : held17 ? "done" : "partial",
       shows: held17 ? `${held17} held as a new edition over the library's ${ROW17.previousLabel}, which ${users} combination${users === 1 ? " files" : "s file"}: its comparison and impact are on To review (saved AI comparison, US$0); canada.ca names 11-2025 the current edition` : "The comparison and impact are built (C9.1, its saved AI comparison #781)",
-      why: !row17 ? `Waits for a saved field map of ${ROW17.previousLabel} (the paid runner's, tech lead on QA-207): the library then files the 2021 edition and holds 11-2025 as the new one.` : why17 });
+      why: !row17 ? `Waits for a saved field map of ${ROW17.previousLabel} (the paid runner's; tech lead, 4 Nov): the library then files the 2021 edition and holds 11-2025 as the new one.` : why17 });
     rows.sort((a, b) => Number(a.row) - Number(b.row));
     const count = (s: CheckpointRow["status"]) => rows.filter((r) => r.status === s).length;
     await this.audit.log(workspaceId, actor.id, "loaded", "configured checkpoint", null, `${actor.name} loaded the configured checkpoint in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${count("done")} rows done, ${count("partial")} partly, ${count("waiting")} waiting, ${count("not built yet")} not built yet`);

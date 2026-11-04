@@ -5,6 +5,7 @@
 // in plain words, no form waits for a paid run (IMM 5645 replays from its saved parts), no live AI call, Reset returns to blank. US$0.
 //   zsh studio/tools/isolated.sh runtime_c101 4431 start && tsx studio/tests/check_c10_1_configured.ts 4431 xr_studio_runtime_c101
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
@@ -70,9 +71,17 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7").shows);
   // Row 17 (QA-207): IMM 5476 2021 in the library and 11-2025 held as the new edition, once the 2021 edition's saved field
   // map is recorded (p2/runs, the paid runner's); until then the row waits for it, in words, and the library keeps 11-2025.
-  const map2021 = existsSync(join(import.meta.dirname, "..", "..", "p2", "runs")) && readdirSync(join(import.meta.dirname, "..", "..", "p2", "runs")).some((f) => f.startsWith("studio-fieldmap-imm5476e-2021-live-") && !f.includes(".reconverted"));
+  // The same reading as the loader's gate (demo.ts ROW17): a completed, contract-valid run of the 2021 edition's field map
+  // on the committed inventory's checksum (review m2), never only a file name.
+  const RUNS = join(import.meta.dirname, "..", "..", "p2", "runs"), inv2021 = join(import.meta.dirname, "..", "..", "p1", "inventory", "imm5476e-2021.inventory.json");
+  const invSha = existsSync(inv2021) ? createHash("sha256").update(readFileSync(inv2021)).digest("hex") : "";
+  const map2021 = !!invSha && existsSync(RUNS) && readdirSync(RUNS).filter((f) => f.startsWith("studio-fieldmap-imm5476e-2021-live-") && f.endsWith(".json") && !f.includes(".reconverted")).some((f) => {
+    const r = JSON.parse(readFileSync(join(RUNS, existsSync(join(RUNS, f.replace(/\.json$/, ".reconverted.json"))) ? f.replace(/\.json$/, ".reconverted.json") : f), "utf8"));
+    return r.contract_valid === true && !!r.raw_output && !r.output_errors && /^completed/.test(r.drafting_run?.status ?? "") && r.drafting_run?.inputs?.official_files?.[0]?.sha256 === invSha; });
   if (map2021) ok("C10.1 row 17 (QA-207): IMM 5476 (11-2025) is held as a new edition over the library's IMM 5476 (11-2021), which the combinations file", r("17").status === "done" && /held as a new edition over the library's IMM 5476 \(11-2021\)/.test(r("17").shows)
-    && n(`select count(*) from intake_item where outcome = 'new_edition_held' and status = 'HELD' and code = 'IMM 5476'`) === 1 && n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 1, r("17"));
+    && n(`select count(*) from intake_item where outcome = 'new_edition_held' and status = 'HELD' and code = 'IMM 5476'`) === 1 && n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 1
+    // review m3: 11-2025 stays out of the library until a person accepts it, and the 2021 edition is mapped (its saved map applied)
+    && n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2025)'`) === 0 && n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5476 (11-2021)' and m.outcome = 'mapped'`) > 0, r("17"));
   else ok("C10.1 row 17 (QA-207): waits, in words, for IMM 5476 (11-2021)'s saved field map; the library keeps IMM 5476 (11-2025)", r("17").status === "waiting" && /^Waits for a saved field map of IMM 5476 \(11-2021\)/.test(r("17").why ?? "")
     && n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 0, r("17"));
   // Row 10: release through submit, SME sign-off and a different person; the validator's refusals said, empty never released.
