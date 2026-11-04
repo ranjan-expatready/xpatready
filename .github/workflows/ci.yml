@@ -42,11 +42,12 @@ jobs:
         with: { fetch-depth: 0, filter: "blob:none" }
       - id: k
         name: what does this change? (notes, records or code; tools/change-kind.sh)
-        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}", SHARDS_VAR: "${{ vars.SHARDS }}" }
+        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}", SHARDS_VAR: "${{ vars.SHARDS }}", PR_AUTHOR: "${{ github.event.pull_request.user.login }}" }
         run: |
           range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
           kind=$(bash "$P/tools/change-kind.sh" "$range") || { echo "change-kind.sh failed"; exit 1; }
-          queue=false; [[ "$HEAD_REF" == mergify/* ]] && queue=true
+          # A batch only when Mergify opened it (gate B break M2): a builder's branch named mergify/* stays a pull request.
+          queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
           n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
           { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
@@ -62,7 +63,7 @@ jobs:
     if: ${{ needs.kind.outputs.kind != 'notes' && (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    permissions: { contents: read }
+    permissions: { contents: read, pull-requests: read }
     concurrency: { group: "shard-${{ github.event.pull_request.number }}-${{ matrix.shard }}", cancel-in-progress: true }
     strategy:
       fail-fast: true   # one red part fails the run: stop the others and save their minutes
@@ -100,9 +101,17 @@ jobs:
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
           bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
+          node "$S/tools/check-gate-b.mjs"
       - name: Playwright's own Chromium
         if: env.KIND == 'code'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: gate B, the claimed capabilities' open bugs and acceptance packs (part 1 only; studio/tools/gate-b.mjs)
+        # P-214, founder 4 Nov: a code PR's "Claims Works: C<n.n>" capabilities have no open Major or worse in qa/BUGS.md
+        # unless it names the bug it fixes; the named capabilities' acceptance packs pass (on the six where the pack's
+        # run allows, else "fixture only"). Title and body come in as environment values, never pasted into the script.
+        if: matrix.shard == 1 && env.KIND == 'code'
+        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
+        run: node "$S/tools/gate-b.mjs"
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
