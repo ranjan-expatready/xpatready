@@ -11,7 +11,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { formMastersFromRounds, formShapeOk, guideMastersFromRounds, guideShapeOk, MASTERS_FORM_STEP, MASTERS_GUIDE_STEP, type FormAnswer, type GuideAnswer, type MRound } from "../../engine/masters-ai.ts";
 import { editionContextKey, PRINTED_EDITION, replayPattern } from "../../engine/rounds.ts";
@@ -178,6 +178,26 @@ export class FormMasters {
     const { d, k } = await this.savedRounds(t);
     return d.ok && k?.ok ? { available: true, why: null, files: [d.runFile, k.runFile] } : { available: false, why: (!d.ok ? d.reason : null) ?? t.step.words.noSaved, files: [] };
   }
+  /** The one AI draft's key: per form edition, or per combination's guide (P-138). */
+  private aiContext(t: Target) { return t.kind === "form" ? t.contextKey : `guide:${t.combination.id}:${t.code}`; }
+  private usableDone(context: string) { return [{ detail: { path: ["ai"], equals: true } }, { detail: { path: ["context"], equals: context } }, { detail: { path: ["usable"], equals: true } }]; }
+  /** QA-218 (review M1, STANDARDS §5: one request per screen view): what each form and guide of a combination, or one
+   *  source, offers for its library masters: a Saved AI run (US$0) or not, and whether its one AI draft is done, with the
+   *  queue group it waits in. A source that is not a form or the combination's guide is left out (never a refusal). It
+   *  names no run file and no cost, so anyone who sees the combination may read it, like checklist-readings. */
+  async readings(where: { combinationId: string } | { attachmentId: string }) {
+    const list = "attachmentId" in where ? [await this.attachment(where.attachmentId)] : await this.db.sourceAttachment.findMany({ where: { combinationId: where.combinationId, recognised: true }, orderBy: { createdAt: "asc" } });
+    const out: { attachmentId: string; kind: "form" | "guide"; title: string; saved: boolean; drafted: boolean; group: string }[] = [];
+    for (const a of list) {
+      if (!a.recognised || a.kind === "Document checklist") continue;
+      const t = await this.target(a).catch(() => null);
+      if (!t) continue;
+      const saved = await this.saved(t).catch(() => ({ available: false }));
+      const done = await this.db.draftingJob.findFirst({ where: { workspaceId: a.workspaceId, kind: MASTERS_STEP, status: "COMPLETED", AND: this.usableDone(this.aiContext(t)) }, select: { id: true } });
+      out.push({ attachmentId: a.id, kind: t.kind, title: t.kind === "form" ? t.edition : t.code, saved: saved.available, drafted: !!done, group: t.group });
+    }
+    return out;
+  }
   /** The most the two Live rounds can reserve (the launcher's own per-round budgets). */
   worstUsd(t: Target) { return round2(roundBudgetUsd(t.step, false, [t.input], t.chars) + roundBudgetUsd(t.step, true, [t.input], t.chars)); }
 
@@ -269,9 +289,9 @@ export class FormMasters {
       if (plan.totals.worst_usd > plan.totals.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `Not started: the worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.totals.remaining_usd.toFixed(2)}). Nothing was started.`);
     }
     const ws = t.a.workspaceId, combinationId = t.kind === "guide" ? t.combination.id : t.a.combinationId;
-    const once = t.kind === "form" ? { context: t.contextKey } : { context: `guide:${t.combination.id}:${t.code}` };
+    const once = { context: this.aiContext(t) };
     const isAi = [{ detail: { path: ["ai"], equals: true } }, { detail: { path: ["context"], equals: once.context } }];
-    const usableDone = [...isAi, { detail: { path: ["usable"], equals: true } }];
+    const usableDone = this.usableDone(once.context);
     // One AI draft per edition (or per combination's guide), looked up and started under one lock: a second click returns
     // the one draft; one running now refuses a second (never two paid runs side by side).
     const started = await this.db.$transaction(async (tx) => {
@@ -372,5 +392,7 @@ export class FormMastersController {
   constructor(@Inject(FormMasters) private readonly m: FormMasters) {}
   // Break minor: the plan names source files, run files and the AI cap, so only those who may draft read it.
   @Post("attachments/:id/draft-masters/plan") @HttpCode(200) plan(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { need(actorOf(a), "author"); return this.m.plan(id, (b ?? {}) as { mode?: unknown }); }
+  @Get("combinations/:id/masters-readings") readings(@Param("id") id: string) { return this.m.readings({ combinationId: id }); }
+  @Get("attachments/:id/masters-reading") reading(@Param("id") id: string) { return this.m.readings({ attachmentId: id }); }
   @Post("attachments/:id/draft-masters") draft(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { return this.m.draft(actorOf(a), id, (b ?? {}) as { mode?: unknown; planSha256?: unknown }); }
 }
