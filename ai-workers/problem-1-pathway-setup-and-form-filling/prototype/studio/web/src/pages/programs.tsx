@@ -28,6 +28,7 @@ import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { StartSetupButton } from "@/components/start-setup";
 import { STATE_WORDS, STATUS_WORDS } from "../../../contracts/status-words";
+import { channelGroups } from "../../../contracts/forms";
 
 /** Where Back on a combination page returns to: this page's URL (with the opened combination) and its scroll position. */
 export const CATALOGUE_URL_KEY = "xr-catalogue-url";
@@ -523,6 +524,7 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: C
       <p className="truncate text-xs text-text-muted" title={trail} data-trail>{trail}</p>
       <Tip tip={BAR_TIP}><p className="mt-1.5 w-fit text-[13px]">{<Progress r={r} />}</p></Tip>
       {r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <FilingTag filing={r.filing} /> : null}
+      <FormChannels r={r} />
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
       <div className="mt-auto pt-2.5" data-card-act><CardButton r={r} canAuthor={canAuthor} onOpen={onOpen} onResume={onResume} /></div>
       <StepBar r={r} />
@@ -538,6 +540,25 @@ export const FILING_KINDS = ["PDF only", "Online only", "Paper only", "Mixed"];
 export const FILING_TAG = (filing: string) => (filing.startsWith("Mixed") ? "Mixed" : filing);
 function FilingTag({ filing }: { filing: string }) {
   return <p className="w-fit"><span className="rounded border border-border px-1.5 py-px text-xs text-text-muted" title={`Filing: ${filing}`} data-filing-tag={FILING_TAG(filing)}><span className="sr-only">Filing: {filing}</span><span aria-hidden>{FILING_TAG(filing)}</span></span></p>;
+}
+
+/** C1.6 (P-61, P-143): each form's channel on the Programs row, grouped by channel, an Online group with its portal (the
+ *  combination's IRCC account): "PDF upload: IMM 5257, IMM 5409". Never cut: the label stays whole and the forms wrap
+ *  (break M1, m3; review m5). Nothing on a retired row, nor while there are no filed lines; on a released row whose draft
+ *  files differently, the lines are said to be the next release's (break M2). */
+const rowChannels = (r: CatalogueLeaf) => (r.retired ? [] : channelGroups(r.forms, r.account));
+export const channelsWords = (r: CatalogueLeaf) => { const g = rowChannels(r); return g.length ? `${r.channelsChanged ? "next release: " : ""}${g.map((x) => `${x.words}: ${x.forms.join(", ")}`).join("; ")}` : ""; };
+function FormChannels({ r, className }: { r: CatalogueLeaf; className?: string }) {
+  const groups = rowChannels(r);
+  if (!groups.length) return null;
+  return (
+    <div className={cn("min-w-0 text-xs text-text-muted", className)} data-form-channels-box>
+      {r.channelsChanged ? <p className="font-medium text-text-warn" data-channels-next>In the draft for the next release:</p> : null}
+      <ul className="space-y-px" aria-label={r.channelsChanged ? "Each form's channel in the draft for the next release" : "Each form's channel"} data-form-channels>
+        {groups.map((g) => <li key={g.channel} className="[overflow-wrap:anywhere]" data-channel={g.channel}><span className="whitespace-nowrap font-medium text-text">{g.words}</span>: {g.forms.join(", ")}</li>)}
+      </ul>
+    </div>
+  );
 }
 
 function CorporateCallout() {
@@ -622,7 +643,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
                   const active = current?.nodeKey === r.nodeKey, lit = highlight === r.nodeKey, ti = active ? 0 : -1;
                   const trail = trailOf(r), above = trail.slice(0, -1).join(" › ");
                   return (
-                    <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} aria-label={`${trail.join(" › ")}, ${progressWords(r)}${needsYouOf(r) ? ", needs you" : ""}`}
+                    <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} data-state={chipOf(r)} aria-label={`${trail.join(" › ")}, ${progressWords(r)}${needsYouOf(r) ? ", needs you" : ""}${r.filing && !r.retired && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? `, filing: ${r.filing}` : ""}${channelsWords(r) ? `, ${channelsWords(r)}` : ""}`}
                       ref={(el) => { if (el) refs.current.set(r.nodeKey, el); else refs.current.delete(r.nodeKey); }}
                       onKeyDown={(e) => onKey(e, r)} onFocus={(e) => { if (e.target === e.currentTarget) setFocus(r.nodeKey); }} onClick={() => onOpen(r)}
                       className={cn(GRID, "min-h-11 cursor-pointer border-b border-border px-4 py-1.5 outline-none last:border-b-0 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/60", lit ? "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]" : "hover:bg-text/[0.03]")}>
@@ -634,6 +655,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
                       <div role="gridcell" className="col-start-1 row-start-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm sm:col-start-auto sm:row-start-auto"><StepBar r={r} mini /><Progress r={r} mini /></div>
                       <div role="gridcell" className="col-start-2 row-start-1 justify-self-end sm:col-start-auto sm:row-start-auto sm:justify-self-start"><NeedsYouMark r={r} tabIndex={ti} /></div>
                       <div role="gridcell" className="col-start-2 row-span-2 row-start-2 justify-self-end sm:col-start-auto sm:row-span-1 sm:row-start-auto sm:justify-self-start" data-step-cell><CardButton r={r} canAuthor={canAuthor} tabIndex={ti} onOpen={() => onOpen(r)} onResume={() => onResume(r)} /></div>
+                      {rowChannels(r).length ? <div role="gridcell" className="col-span-2 row-start-4 flex min-w-0 items-start gap-2 pb-1 sm:col-span-5 sm:row-start-2" data-list-filing>{r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <FilingTag filing={r.filing} /> : null}<FormChannels r={r} className="flex-1" /></div> : null}
                     </div>
                   );
                 })}
