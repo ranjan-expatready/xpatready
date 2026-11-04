@@ -337,7 +337,10 @@ async function main(argv) {
   const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
   say(`Gate B: the PR names ${named || "nothing readable"}${cl.works.size ? `; claims Works for ${[...cl.works].join(", ")}` : "; claims Works for none (no bug check)"}${cl.fixes.size ? `; says it fixes ${[...cl.fixes].join(", ")}` : ""}.`);
   const reasons = part1(cl, bugs);
-  const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).map((f) => ({ id, f, st })));
+  // GATE_B_SKIP_PACKS: pack files left out by name (the protected regression set's held packs, works-set.mjs).
+  const skip = new Set((process.env.GATE_B_SKIP_PACKS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
+  const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
+  if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) { for (const r of runs) console.log(r.f, JSON.stringify(runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")))); return 0; }
   let infra = false;
