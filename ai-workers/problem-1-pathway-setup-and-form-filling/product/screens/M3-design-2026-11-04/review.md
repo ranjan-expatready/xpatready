@@ -152,3 +152,5 @@ No Blocker. Three Majors: a founder recommendation that contradicts a recorded r
 * **n1. C7.3's Works now needs release 2,** which C10.1 part B (M2, `demo.ts`, #798) builds. Add that to row 7's "Before Claims Works" cell (`rows.md:864`).
 * **n2. `acceptance/C10.1.test.ts:50` still expects "IMM 5707 PDF upload" on release 2.** The P-318 (6) follow-up should change it with DEMO row 9. Name it in C10.2 Q1 for the tech lead.
 * **n3. Say whether IMM 5645 is a barcode form.** If it is, P-144's one hard stop needs its validated copy read back on release 2 (the Sample step in Q2), and its field map is a #798 dependency. C10.2's Done when (`:740`) says only "filled as a PDF upload".
+
+Re-review 3 (a6c76fb1): Approve. n1 (`rows.md:864`), n2 (`:790`) and n3 (`:740`) are written in as asked; nothing else in `rows.md` changed.
