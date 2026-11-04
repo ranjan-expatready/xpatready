@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, GitMerge, Pencil, Plus, Save, Search, Undo2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
 import { ChangePreview, useChangeCheck } from "@/ChangePreview";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table, Textarea } from "@/components/ui/controls";
@@ -138,11 +139,12 @@ export function FieldPage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
       {/* UX-A part 4 (EXPERIENCE §5): the field's key is under Details, not under its name. */}
-      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{cur.mergedIntoKey ? <Pill>Merged</Pill> : retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
-          {retiredNow ? <Notice tone="warn" title="Retired">It takes no change or new use. Restore it on Fields (choose the Retired filter) first.</Notice> : null}
+          {/* QA-219 review m2: a merged field is never restored, so it does not say "Restore it". */}
+          {cur.mergedIntoKey ? <Notice tone="info" title="Merged">It takes no change: change the field it was merged into (below).</Notice> : retiredNow ? <Notice tone="warn" title="Retired">It takes no change or new use. Restore it on Fields (choose the Retired filter) first.</Notice> : null}
           <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Rename shows what it touches first. It applies now as a draft version, or waits for a second person when a released combination uses the field; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => setRenaming(true)} disabled={retiredNow || !name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
           <LastRename kind="field" itemKey={key} invalidate={[...inv, ["field-sources", key]]} />
           {renaming ? <RenameDialog kind="field" itemKey={key} current={shown} initial={name.trim()} label="Name" invalidate={[...inv, ["field-sources", key]]} onClose={() => setRenaming(false)} /> : null}
@@ -207,6 +209,8 @@ export function FieldPage() {
 /** GET /library/merges: one row per proposed merge (P-65); `mergeKey` goes away into `keepKey`. */
 type MergeRow = { id: string; keepKey: string; mergeKey: string; reason: string; status: "PROPOSED" | "APPLIED" | "REJECTED"; proposedBy: string; decidedBy: string | null; decidedAt: string | null };
 /** A merged field's own key, kept by the field that stays as a name that redirects (approveMerge); shown as the merge. */
+/** A field's group in words, for the merge picker (the key's first part). */
+const SUBJECT_WORD: Record<string, string> = { person: "about a person", case: "once per case", organisation: "about an organisation", relationship: "about a relationship", representative: "about the representative" };
 const isFieldKey = (a: string) => /^[a-z]+\.[a-z0-9_]+$/.test(a);
 
 /** QA-219 (C3.5, P-65, P-266): a field's other names and its merges, on its page. "Add another name" applies now and is
@@ -219,9 +223,15 @@ function OtherNames({ fieldKey, cur, shown, retiredNow, actors, invalidate }: { 
   const [alias, setAlias] = React.useState("");
   const [merging, setMerging] = React.useState(false);
   const add = useAction(() => api(`/library/fields/${encodeURIComponent(fieldKey)}/aliases`, { method: "POST", json: { alias: alias.trim() } }), { success: `"${alias.trim()}" now finds "${shown}"`, invalidate, onDone: () => setAlias("") });
+  const qc = useQueryClient();
+  // Break m8: a refusal may come from a merge made in another tab, so the page reads the field and its merges again.
+  React.useEffect(() => { if (add.error) for (const k of [["merges"], ...invalidate]) void qc.invalidateQueries({ queryKey: k }); }, [add.error]);
   const all = merges.data ?? [];
   const waiting = all.find((m) => m.status === "PROPOSED" && (m.mergeKey === fieldKey || m.keepKey === fieldKey));
-  const mergedIn = all.filter((m) => m.status === "APPLIED" && m.keepKey === fieldKey);
+  // Break M2: a merge into a field that was itself merged later counts for the field that stays now (followed to the end).
+  const into = new Map(all.filter((m) => m.status === "APPLIED").map((m) => [m.mergeKey, m.keepKey]));
+  const final = (k: string) => { for (let i = 0; i < 20 && into.has(k); i++) k = into.get(k)!; return k; };
+  const mergedIn = cur.mergedIntoKey ? [] : all.filter((m) => m.status === "APPLIED" && final(m.keepKey) === fieldKey);
   const names = cur.aliases.filter((a) => !isFieldKey(a));
   return (
     <section data-other-names className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
@@ -229,15 +239,15 @@ function OtherNames({ fieldKey, cur, shown, retiredNow, actors, invalidate }: { 
       {cur.mergedIntoKey ? <Notice tone="info" title="Merged">This field was merged into <Link className="underline" to={`/library/fields/${encodeURIComponent(cur.mergedIntoKey)}`}>{fields.name(cur.mergedIntoKey)}</Link>; its names, form fields and questions now point there.</Notice> : null}
       <div data-aliases>
         <p className="text-xs font-medium">Other names</p>
-        {names.length ? <div className="mt-1 flex flex-wrap gap-1">{names.map((a) => <Pill key={a}>{a}</Pill>)}</div> : <p className="mt-1 text-sm text-text-muted">None. Another name lets a form's wording ("Surname", "Last name") find this field; one name points to one field.</p>}
+        {names.length ? <div className="mt-1 flex flex-wrap gap-1">{names.map((a) => <Pill key={a} className="max-w-full whitespace-normal break-words">{a}</Pill>)}</div> : <p className="mt-1 text-sm text-text-muted">None. Another name lets a form's wording ("Surname", "Last name") find this field; one name points to one field.</p>}
       </div>
       {canAuthor && !retiredNow ? (
-        <div className="flex items-start gap-2">
+        <form className="flex items-start gap-2" onSubmit={(e) => { e.preventDefault(); if (alias.trim().length >= 2 && !add.isPending) add.mutate(undefined); }}>
           <Field label="Add another name" className="flex-1" hint="Applies now and is logged. A name another field already answers to is refused: merge the two fields instead." error={add.error?.message ?? null}>
             <Input value={alias} maxLength={200} onChange={(e) => { setAlias(e.target.value); if (add.error) add.reset(); }} placeholder="For example: Second phone number" />
           </Field>
-          <Button className="mt-6" variant="secondary" onClick={() => add.mutate(undefined)} busy={add.isPending} disabled={alias.trim().length < 2}><Plus /> Add name</Button>
-        </div>
+          <Button className="mt-6" type="submit" variant="secondary" busy={add.isPending} disabled={alias.trim().length < 2}><Plus /> Add name</Button>
+        </form>
       ) : null}
       <div data-merges className="space-y-2 border-t border-border pt-3">
         {mergedIn.map((m) => <p key={m.id} data-merged-in className="text-sm">Merged in: <span className="font-medium">{fields.name(m.mergeKey)}</span> <span className="text-xs text-text-muted">· approved by {nameOf(actors, m.decidedBy ?? "")} · {m.reason}</span></p>)}
@@ -246,7 +256,8 @@ function OtherNames({ fieldKey, cur, shown, retiredNow, actors, invalidate }: { 
             {waiting.mergeKey === fieldKey ? <>Merging this field into "{fields.name(waiting.keepKey)}"</> : <>Merging "{fields.name(waiting.mergeKey)}" into this field</>} was proposed by {nameOf(actors, waiting.proposedBy)}; nothing changes until another person approves it. <Link className="underline" to={`/review/merge/${waiting.id}`}>Open it on To review</Link>
           </Notice>
         ) : null}
-        {canAuthor && !retiredNow && !waiting ? <div className="flex items-center justify-between gap-2"><p className="text-xs text-text-muted">Two fields that mean the same: this one goes away into the one you choose, after a second person approves.</p><Button variant="secondary" onClick={() => setMerging(true)}><GitMerge /> Merge into…</Button></div> : null}
+        {merges.isError ? <Notice tone="danger" title="Merges could not be read">Refresh the page before merging: a merge may already be waiting.</Notice> : null}
+        {canAuthor && !retiredNow && merges.isSuccess && !waiting ? <div className="flex items-center justify-between gap-2"><p className="text-xs text-text-muted">Two fields that mean the same: this one goes away into the one you choose, after a second person approves.</p><Button variant="secondary" onClick={() => setMerging(true)}><GitMerge /> Merge into…</Button></div> : null}
       </div>
       {merging ? <MergeDialog fieldKey={fieldKey} shown={shown} valueType={cur.valueType} invalidate={invalidate} onClose={() => setMerging(false)} /> : null}
     </section>
@@ -259,20 +270,25 @@ function MergeDialog({ fieldKey, shown, valueType, invalidate, onClose }: { fiel
   const fields = useLibraryFields();
   const [into, setInto] = React.useState(""), [reason, setReason] = React.useState("");
   const [stale, setStale] = React.useState(false);
-  const options = fields.list.filter((f) => f.key !== fieldKey && f.value_type === valueType).map((f) => ({ key: f.key, name: f.name || fieldName(f.key) })).sort((a, b) => a.name.localeCompare(b.name));
+  // Review m6: two groups can hold the same name, so each option says whose it is.
+  const options = fields.list.filter((f) => f.key !== fieldKey && f.value_type === valueType).map((f) => ({ key: f.key, name: `${f.name || fieldName(f.key)} · ${SUBJECT_WORD[f.key.split(".")[0]] ?? f.key.split(".")[0]}` })).sort((a, b) => a.name.localeCompare(b.name));
   const check = useChangeCheck(into ? [{ action: "merge", kind: "field", key: fieldKey, into }] : [], !!into);
   const send = useAction(() => api(`/library/merges`, { method: "POST", json: { keep: into, merge: fieldKey, reason: reason.trim(), expected: check.data?.fingerprint } }), {
     success: `"${shown}" stays as it is until a second person approves the merge on To review`, invalidate: [...invalidate, ["merges"], ["review"]], onDone: onClose });
-  React.useEffect(() => { if (send.error instanceof ApiError && send.error.problem.title === "Look again") { setStale(true); void check.refetch(); } }, [send.error]);
-  const short = reason.trim().length > 0 && reason.trim().length < 10;
+  const qc = useQueryClient();
+  // Break m8: a refusal may come from a change made in another tab, so the page reads the merges and the field again.
+  React.useEffect(() => { if (send.error instanceof ApiError && send.error.problem.title === "Look again") { setStale(true); void check.refetch(); } else if (send.error) for (const k of [["merges"], ...invalidate]) void qc.invalidateQueries({ queryKey: k }); }, [send.error]);
+  // Break m10: counted as the server counts it, letters and digits only.
+  const said = reason.replace(/[^\p{L}\p{N}]/gu, "").length;
+  const short = reason.trim().length > 0 && said < 10;
   return (
     <Dialog open wide onOpenChange={(o) => !o && onClose()} title={`Merge "${shown}" into another field`} description="The field you choose stays; this one goes away, and its names, form fields, questions and conditions move to it. A second person approves it on To review first."
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => { setStale(false); send.mutate(undefined); }} busy={send.isPending} disabled={!into || reason.trim().length < 10 || check.isFetching || !check.data?.ok}>Send for approval</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => { setStale(false); send.mutate(undefined); }} busy={send.isPending} disabled={!into || said < 10 || check.isFetching || !check.data?.ok}>Send for approval</Button></>}>
       <div className="space-y-3">
         <Field label="Field that stays" hint={`Only fields with the same kind of answer (${TYPE_WORD[valueType] ?? valueType}) are offered.`} error={send.error && !(send.error instanceof ApiError && send.error.problem.title === "Look again") ? send.error.message : null}>
           <Select value={into} onChange={(e) => { setInto(e.target.value); if (send.error) send.reset(); }}><option value="">Choose a field</option>{options.map((o) => <option key={o.key} value={o.key}>{o.name}</option>)}</Select>
         </Field>
-        <Field label="Why the two mean the same" hint="At least 10 characters; the second person reads it before approving." error={short ? "At least 10 characters: say why the two fields mean the same." : null}>
+        <Field label="Why the two mean the same" hint="In words, at least 10 letters or digits; the second person reads it before approving." error={short ? "At least 10 letters or digits: say why the two fields mean the same." : null}>
           <Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} placeholder="For example: IMM 1294 and IMM 5257 both ask for the second phone number" />
         </Field>
         {into ? <ChangePreview check={check} stale={stale} /> : <p className="text-sm text-text-muted">Choose the field that stays to see what the merge touches.</p>}

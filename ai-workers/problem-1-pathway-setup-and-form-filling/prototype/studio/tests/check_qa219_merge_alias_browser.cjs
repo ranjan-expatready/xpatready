@@ -32,7 +32,7 @@ const field = (k) => `/library/fields/${encodeURIComponent(k)}`;
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data, timeout: init.timeout ?? 300000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const as = async (who) => { await p.goto(`${BASE}/`); await p.evaluate((x) => { try { localStorage.setItem("xr-actor", x); } catch { /* ignore */ } }, who); };
-  const open = async (pth, heading) => { await p.goto(`${BASE}${pth}`); await p.getByRole("heading", { level: 1, name: heading }).first().waitFor({ timeout: 60000 }); await p.waitForLoadState("networkidle").catch(() => {}); };
+  const open = async (pth, heading) => { await p.goto(`${BASE}${pth}`); await p.getByRole("heading", { level: 1, name: heading }).first().waitFor({ timeout: 60000 }); };
   const toast = (re) => p.getByText(re).first().waitFor({ timeout: 30000 }).then(() => true).catch(() => false);
   let n = 0;
   const state = async (name) => {
@@ -67,55 +67,74 @@ const field = (k) => `/library/fields/${encodeURIComponent(k)}`;
   if (have !== "3") stop("setup: the two forms did not give the duplicate pair and the phone number field", have);
   const merges0 = sql("select count(*) from field_merge");
 
+  // ── API: a field's confirmed name counts as taken (review M1): a rename gives person.fax_number the name "Facsimile",
+  // which its key's words do not say; that name is then refused as another field's alias, in the field's name.
+  const ren = await api(`/library/fields/${encodeURIComponent("person.fax_number")}/name`, { method: "PATCH", data: { name: "Facsimile" } });
+  if (ren.status !== 200) stop("setup: the rename of person.fax_number did not apply", ren.body);
+  const taken = await api(`/library/fields/${encodeURIComponent("person.email")}/aliases`, { method: "POST", data: { alias: "facsimile" } });
+  step("C3.5 alias fail: a name another field has as its confirmed name (not its key's words) is refused (409), in that field's name", taken.status === 409 && /names the field "Facsimile"/.test(taken.body?.detail ?? "") && !/person\./.test(taken.body?.detail ?? "") && aliasesOf("person.email") === "", [taken.status, taken.body?.detail]);
+  const free = await api(`/library/fields/${encodeURIComponent("person.email")}/aliases`, { method: "POST", data: { alias: "Electronic mail" } });
+  step("C3.5 alias pass: a name no field answers to is added at once (P-266)", free.status === 201 && aliasesOf("person.email") === "Electronic mail", [free.status, aliasesOf("person.email")]);
+  // Break M1: the same name sent to two fields at the same moment lands on one only (one names lock per workspace).
+  const race = await Promise.all(["person.uci", "person.passport_number"].map((k) => api(`/library/fields/${encodeURIComponent(k)}/aliases`, { method: "POST", data: { alias: "Race name one" } })));
+  step("C3.5 alias fail: one name sent to two fields at the same moment is kept on one field only (201 and 409)", race.map((r) => r.status).sort().join() === "201,409" && sql("select count(*) from canonical_field where 'Race name one' = any(aliases)") === "1", race.map((r) => r.status));
+  // Break m5: a field key is not a name.
+  const keyName = await api(`/library/fields/${encodeURIComponent("person.email")}/aliases`, { method: "POST", data: { alias: "person.phone_number" } });
+  step("C3.5 alias fail: a name shaped like a field key is refused in words (400)", keyName.status === 400 && /not a field key/.test(keyName.body?.detail ?? keyName.body?.message ?? ""), [keyName.status, keyName.body?.detail]);
+  // Break m10: the reason the second person reads is said in words.
+  const dots = await api("/library/merges", { method: "POST", data: { keep: "person.email", merge: "person.fax_number", reason: ".........." } });
+  step("C3.5 merge fail: a reason of punctuation only is refused (400), nothing proposed", dots.status === 400 && sql("select count(*) from field_merge") === merges0, [dots.status, dots.body?.detail]);
+
   try {
     // ── author: Add another name on the field that stays
     await as("user-A");
     await open(field(STAYS), /Alternate telephone number/i);
     const section = p.locator("[data-other-names]");
-    step("QA-219: the field's page has Other names and merges, with Add another name and Merge into…", await section.isVisible() && await section.getByLabel("Add another name").isVisible() && await section.getByRole("button", { name: /Merge into/ }).isVisible());
-    step("QA-219: no other name yet, said in words", /None\./.test(await section.locator("[data-aliases]").innerText()));
+    const offered = await section.getByRole("button", { name: /Merge into/ }).waitFor({ timeout: 30000 }).then(() => true, () => false);
+    step("C3.5: the field's page has Other names and merges, with Add another name and Merge into… (once its merges are read)", offered && await section.getByLabel("Add another name").isVisible());
+    step("C3.5: no other name yet, said in words", /None\./.test(await section.locator("[data-aliases]").innerText()));
     await state("field-page-before");
 
     // refusal: a name another field already answers to, on the control
     await section.getByLabel("Add another name").fill("Phone number");
     await section.getByRole("button", { name: "Add name" }).click();
     const refused = section.getByRole("alert").filter({ hasText: /already names the field/ });
-    step("QA-219 refusal: a name another field answers to is refused on the control, in the field's name (no key)", await refused.waitFor({ timeout: 15000 }).then(() => true).catch(() => false) && !/person\./.test(await refused.innerText()), await section.innerText().catch(() => ""));
-    step("QA-219 refusal: nothing was added", aliasesOf(STAYS) === "", aliasesOf(STAYS));
+    step("C3.5 refusal: a name another field answers to is refused on the control, in the field's name (no key)", await refused.waitFor({ timeout: 15000 }).then(() => true).catch(() => false) && !/person\./.test(await refused.innerText()), await section.innerText().catch(() => ""));
+    step("C3.5 refusal: nothing was added", aliasesOf(STAYS) === "", aliasesOf(STAYS));
     await state("alias-refused");
 
     // pass: another name applies now and is logged (P-266)
     await section.getByLabel("Add another name").fill("Second phone number");
-    step("QA-219: typing again clears the refusal", !(await refused.isVisible().catch(() => false)));
+    step("C3.5: typing again clears the refusal", !(await refused.isVisible().catch(() => false)));
     await section.getByRole("button", { name: "Add name" }).click();
     const added = await toast(/"Second phone number" now finds/);
     const shownNow = await section.locator("[data-aliases]").getByText("Second phone number").waitFor({ timeout: 15000 }).then(() => true, () => false);
-    step("QA-219: another name applies now (P-266: direct and logged) and shows on the page", added && shownNow && aliasesOf(STAYS) === "Second phone number", aliasesOf(STAYS));
-    step("QA-219: the new name is in the activity, with who added it", sql(`select count(*) from audit_event where entity_key = '${STAYS}' and summary like '%"Second phone number"%'`) !== "0");
+    step("C3.5: another name applies now (P-266: direct and logged) and shows on the page", added && shownNow && aliasesOf(STAYS) === "Second phone number", aliasesOf(STAYS));
+    step("C3.5: the new name is in the activity, with who added it", sql(`select count(*) from audit_event where entity_key = '${STAYS}' and summary like '%"Second phone number"%'`) !== "0");
 
     // ── author: Merge into… on the duplicate
     await open(field(GOES), /Alt phone number/i);
-    await p.locator("[data-other-names]").getByRole("button", { name: /Merge into/ }).click();
+    await p.locator("[data-other-names]").getByRole("button", { name: /Merge into/ }).click({ timeout: 30000 });
     const dlg = p.getByRole("dialog");
     await dlg.waitFor({ timeout: 15000 });
     const opts = await dlg.getByLabel("Field that stays").locator("option").evaluateAll((os) => os.map((o) => o.value).filter(Boolean));
-    step("QA-219: Merge into… offers only fields of the same kind of answer, never the field itself", opts.includes(STAYS) && !opts.includes(GOES) && !opts.includes("person.date_of_birth"), opts.length);
+    step("C3.5: Merge into… offers only fields of the same kind of answer, never the field itself", opts.includes(STAYS) && !opts.includes(GOES) && !opts.includes("person.date_of_birth"), opts.length);
     await dlg.getByLabel("Field that stays").selectOption(STAYS);
     await dlg.getByLabel("Why the two mean the same").fill("Same");
-    step("QA-219 refusal: a reason under 10 characters is refused on the control and Send stays off", await dlg.getByRole("alert").filter({ hasText: /At least 10 characters/ }).isVisible() && await dlg.getByRole("button", { name: "Send for approval" }).isDisabled());
+    step("C3.5 refusal: a reason under 10 characters is refused on the control and Send stays off", await dlg.getByRole("alert").filter({ hasText: /At least 10 letters or digits/ }).isVisible() && await dlg.getByRole("button", { name: "Send for approval" }).isDisabled());
     await dlg.getByLabel("Why the two mean the same").fill("IMM 1294 and IMM 5257 both ask for the applicant's second telephone number (Sample).");
     const canSend = await p.waitForFunction(() => { const d = document.querySelector("[role=dialog]"); const btn = d && [...d.querySelectorAll("button")].find((x) => x.textContent?.includes("Send for approval")); return btn && !btn.disabled; }, null, { timeout: 30000 }).then(() => true, () => false);
-    step("QA-219: with a reason, the rules check passes, Send for approval is on, and the dialog shows what the merge touches (IMM 1294)", canSend && /IMM 1294/.test(await dlg.innerText()), (await dlg.innerText()).slice(0, 200));
+    step("C3.5: with a reason, the rules check passes, Send for approval is on, and the dialog shows what the merge touches (IMM 1294)", canSend && /IMM 1294/.test(await dlg.innerText()), (await dlg.innerText()).slice(0, 200));
     await state("merge-dialog");
     await dlg.getByRole("button", { name: "Send for approval" }).click();
     const sent = await toast(/stays as it is until a second person approves the merge/);
     const mid = sql(`select id from field_merge where merge_key = '${GOES}' and keep_key = '${STAYS}' and status = 'PROPOSED'`);
-    step("QA-219: the merge is sent, waits for a second person, and changes nothing yet", sent && !!mid && sql(`select coalesce(merged_into_key, '') from canonical_field where canonical_field_key = '${GOES}' order by version desc limit 1`) === "" && sql(`select count(*) from change_set where field_merge_id = '${mid}' and status = 'waiting'`) === "1", mid);
+    step("C3.5: the merge is sent, waits for a second person, and changes nothing yet", sent && !!mid && sql(`select coalesce(merged_into_key, '') from canonical_field where canonical_field_key = '${GOES}' order by version desc limit 1`) === "" && sql(`select count(*) from change_set where field_merge_id = '${mid}' and status = 'waiting'`) === "1", mid);
     const wait = p.locator("[data-other-names]").getByText(/Waits for a second person/);
-    step("QA-219: the page says the merge waits, links to To review, and offers no second merge", await wait.waitFor({ timeout: 15000 }).then(() => true).catch(() => false) && await p.locator("[data-other-names]").getByRole("link", { name: /Open it on To review/ }).isVisible() && !(await p.locator("[data-other-names]").getByRole("button", { name: /Merge into/ }).isVisible()));
+    step("C3.5: the page says the merge waits, links to To review, and offers no second merge", await wait.waitFor({ timeout: 15000 }).then(() => true).catch(() => false) && await p.locator("[data-other-names]").getByRole("link", { name: /Open it on To review/ }).isVisible() && !(await p.locator("[data-other-names]").getByRole("button", { name: /Merge into/ }).isVisible()));
     await state("merge-waiting");
     const self = await api(`/library/merges/${mid}/approve`, { method: "POST", data: {} });
-    step("QA-219 refusal: the author who proposed it cannot approve it (403)", self.status === 403 && sql(`select status from field_merge where id = '${mid}'`) === "PROPOSED", self.status);
+    step("C3.5 refusal: the author who proposed it cannot approve it (403)", self.status === 403 && sql(`select status from field_merge where id = '${mid}'`) === "PROPOSED", self.status);
 
     // ── approver: To review › the merge › Approve
     await as("user-B");
@@ -123,28 +142,39 @@ const field = (k) => `/library/fields/${encodeURIComponent(k)}`;
     const panel = p.getByRole("dialog");
     await panel.getByText("Goes away").waitFor({ timeout: 60000 });
     const yes = panel.getByRole("button", { name: "Approve the merge" });
-    step("QA-219: the approver's panel offers Approve the merge once its check has run", await p.waitForFunction(() => { const btn = [...document.querySelectorAll("[role=dialog] button")].find((x) => x.textContent?.includes("Approve the merge")); return btn && !btn.disabled; }, null, { timeout: 30000 }).then(() => true, () => false));
+    step("C3.5: the approver's panel offers Approve the merge once its check has run", await p.waitForFunction(() => { const btn = [...document.querySelectorAll("[role=dialog] button")].find((x) => x.textContent?.includes("Approve the merge")); return btn && !btn.disabled; }, null, { timeout: 30000 }).then(() => true, () => false));
     await state("approver-panel");
     await yes.click();
     const confirmBtn = panel.getByRole("button", { name: /^(Confirm|Approve)$/ });
     if (await confirmBtn.isVisible().catch(() => false)) await confirmBtn.click();
     const merged = await toast(/Merged: the field that goes away now redirects/);
-    step("QA-219: the approver (a second person) approves the merge on To review", merged && sql(`select status || '|' || decided_by from field_merge where id = '${mid}'`) === "APPLIED|user-B", sql(`select status || '|' || coalesce(decided_by, '') from field_merge where id = '${mid}'`));
+    step("C3.5: the approver (a second person) approves the merge on To review", merged && sql(`select status || '|' || decided_by from field_merge where id = '${mid}'`) === "APPLIED|user-B", sql(`select status || '|' || coalesce(decided_by, '') from field_merge where id = '${mid}'`));
 
     // ── after: the page shows the merge and the other name; the field that went away says where it went
     await as("user-A");
     await open(field(STAYS), /Alternate telephone number/i);
     const listed = await p.locator("[data-merged-in]").first().waitFor({ timeout: 30000 }).then(() => true, () => false);
     const after = await p.locator("[data-other-names]").innerText();
-    step("QA-219: the field that stays lists the merge (its name, who approved) and its other name, with no raw key", listed && /Merged in: Alt phone number/i.test(after) && /approved by Approver/.test(after) && /Second phone number/.test(after) && !after.includes(GOES), after);
-    step("QA-219: the merged field's key is kept as a name that redirects (P-65)", aliasesOf(STAYS).split("|").includes(GOES), aliasesOf(STAYS));
+    step("C3.5: the field that stays lists the merge (its name, who approved) and its other name, with no raw key", listed && /Merged in: Alt phone number/i.test(after) && /approved by Approver/.test(after) && /Second phone number/.test(after) && !after.includes(GOES), after);
+    step("C3.5: the merged field's key is kept as a name that redirects (P-65)", aliasesOf(STAYS).split("|").includes(GOES), aliasesOf(STAYS));
     await state("field-page-after");
     await open(field(GOES), /Alt phone number/i);
     const goneSaid = await p.locator("[data-other-names]").getByText(/was merged into/).waitFor({ timeout: 30000 }).then(() => true, () => false);
     const goneTxt = await p.locator("[data-other-names]").innerText();
-    step("QA-219: the field that went away says it was merged, with a link to the field that stays, and offers no change", goneSaid && /merged into Alternate telephone number/i.test(goneTxt) && await p.locator("[data-other-names]").getByRole("link", { name: /Alternate telephone number/i }).isVisible() && !(await p.locator("[data-other-names]").getByLabel("Add another name").isVisible().catch(() => false)), goneTxt);
+    step("C3.5: the field that went away says it was merged, with a link to the field that stays, and offers no change", goneSaid && /merged into Alternate telephone number/i.test(goneTxt) && await p.locator("[data-other-names]").getByRole("link", { name: /Alternate telephone number/i }).isVisible() && !(await p.locator("[data-other-names]").getByLabel("Add another name").isVisible().catch(() => false)), goneTxt);
     await state("merged-away");
-    step("QA-219: one merge was written in all", sql("select count(*) from field_merge") === String(Number(merges0) + 1));
+    // Break M3: the name of the field that went away now names the field that stays, so it is not free for a third field.
+    const freed = await api(`/library/fields/${encodeURIComponent(OTHER)}/aliases`, { method: "POST", data: { alias: "Alt phone number" } });
+    step("C3.5 alias fail: after the merge, the merged field's name is refused for another field, naming the field that stays", freed.status === 409 && /Alternate telephone number/i.test(freed.body?.detail ?? ""), [freed.status, freed.body?.detail]);
+    // Break M2: a later merge of the field that stays moves the earlier redirect along (one hop, no chain).
+    const p2 = await api("/library/merges", { method: "POST", data: { keep: OTHER, merge: STAYS, reason: "Test only: the alternate and the main phone number, to check that redirects follow (Sample)." } });
+    const a2 = p2.body?.id ? await api(`/library/merges/${p2.body.id}/approve`, { method: "POST", data: {}, actor: "user-B" }) : p2;
+    step("C3.5 merge: after a second merge, the first merged field redirects straight to the field that stays now", a2.status < 300 && sql(`select merged_into_key from canonical_field where canonical_field_key = '${GOES}' order by version desc limit 1`) === OTHER && sql(`select count(*) from canonical_field where merged_into_key = '${STAYS}'`) === "0", [p2.status, a2.status, a2.body?.detail]);
+    await open(field(OTHER), /Phone number/i);
+    const both = await p.locator("[data-merged-in]").nth(1).waitFor({ timeout: 30000 }).then(() => true, () => false);
+    const otherTxt = await p.locator("[data-other-names]").innerText();
+    step("C3.5: the field that stays now lists both merges that came into it", both && /Merged in: Alt phone number/i.test(otherTxt) && /Merged in: Alternate telephone number/i.test(otherTxt), otherTxt);
+    step("C3.5: two merges were written in all", sql("select count(*) from field_merge") === String(Number(merges0) + 2));
     step("no page error", errs.length === 0, errs.join(" | "));
   } finally { await b.close(); }
   console.log(`\nC3.5 (QA-219): ${steps - fail}/${steps} passed`);
