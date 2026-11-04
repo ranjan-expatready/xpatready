@@ -63,3 +63,18 @@ Only that diff, on a fresh copy `rv_c92` at :4430 (never :4400), live AI off, US
 * **Scores that change:** D2 4, D5 4, D10 4, D11 4, D13 4, D16 4. Journey re-scored on the same journeys: feedback ½ → 1 (truthful label, focus kept), correct data ½ → 1, error recovery ½ → 1 (409 with Reload), accessibility ½ → 1 (axe clean, 400 px, focus). Plain words stays ½ (no keys now, but the long question text remains, S5). Total **9.5/10 (pass, no 0)**. Not tested: a real screen reader.
 
 **Verdict: Approve** for **7021bf80700b3fd330f3b736610a090f9affae0a**. There is no open Blocker or Major. m1, and -7's wording with the tech lead, are Should items.
+
+## Round 3 (bot findings, diff-only): 18c8c52a..1fd2b1b7, 4 Nov 2026
+Only `git diff 18c8c52a..1fd2b1b7`, on a fresh copy `rv_c92` at :4430. Live AI off, US$0.
+* **Runs:** setup 13/13 and 44/46 (same as main). `C9.2.test.ts` 10/10, -5 WAIT. `check_c92_out_of_date` 26/26. `check_c92_undo_api` 23/23 (the new step 2b passes: `[200, "SAMPLE"]`). `check_c92_out_of_date_browser` 19/19. Packs C7.3 13/13 and C7.7 26/26. The browser suite's rewritten `walk/*.png` were put back, so the tree is clean.
+* **(1) Two relatives with one fact: fixed and holds.** `factChanges` now keys and de-duplicates by the whole `about` (`<id>/parent_1` is distinct from `/parent_2`), and a person's own facts key as before. `relation` is set from the part after the "/". A relative's change gets no Undo (`undoable` checks `!x.relation`; the route would otherwise undo the person's own answer). It gets no date from the person's answer and no pending value, and it is named "Sample Client A's parent 1". The pure suite has a pass case (one parent changed, the other not) and a fail case (both unchanged). I could not drive a real relative change through the case page, so this is checked by the pure suite and by code reading.
+* **(2) Undo → Confirm section → Undo redid the change (my round 2 m1): fixed and holds.** `restoredFromOf` returns `restored.from`, else `from`, which is what Confirm section writes (`runtime.ts:445`). So the walk passes through a confirmation as it does through a restore. The chain only steps onto rows of the same value (a confirmation) or a restore, and a `from` that is not an earlier answer's id ends the walk (`!back → break`), so other sources cannot misroute it. API step 2b proves this live.
+* **No regression from (2):** my round 1 and round 2 probes, re-run on this commit:
+  * SAMPLE → VONE → VTWO: the button reads "back to VONE", then "back to SAMPLE", and then the list is gone.
+  * Stale second tab: 409 "changed after you read it", and SAMPLE is still current.
+  * axe shows no violations at 1440 or 400 px. Nothing scrolls sideways at 400 or 1024 px.
+  * Focus lands on H2 "Prepare application" after a keyboard Undo. No console errors.
+* **The walk PNGs** are the builder suite's output: same names, a few KB smaller. No change in content to judge.
+* No new findings. The scores and the journey score (9.5/10) are unchanged.
+
+**Verdict: Approve** for **1fd2b1b78fd35c8cdd922c942da4665654a0c5ce**. No open Blocker, Major or Minor of mine. -7's wording stays with the tech lead.
