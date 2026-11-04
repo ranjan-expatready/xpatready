@@ -50,7 +50,7 @@ const PART_NAMES = /^(Page wrapper|Nat id|Us card|Contacts row2|Background info2
   await p.goto(`${BASE}/review/proposals?group=${encodeURIComponent(groups["IMM 5475"])}`);
   await rowOf("Your declaration").first().waitFor({ timeout: 30000 });
   const unnamed = p.locator("tr", { has: p.getByText(/^Unnamed section \d of IMM 5475$/) });
-  step("QA-206 pass: IMM 5475's part \"Seven\" shows as \"Your declaration\"; the two parts with no printed heading say so", (await unnamed.count()) === 2 && (await p.getByText(/^(Five|Seven)$/).count()) === 0 && /No printed heading was found above these boxes/.test(await unnamed.first().innerText()));
+  step("QA-206 pass: IMM 5475's part \"Seven\" shows as \"Your declaration\"; the two parts with no printed heading say so", (await unnamed.count()) === 2 && (await p.getByText(/^(Five|Seven)$/).count()) === 0 && /No printed heading was found above these form fields/.test(await unnamed.first().innerText()));
   await shot("2-imm5475-unnamed-say-so-1440");
   await unnamed.first().getByRole("button", { name: /^Open / }).click();
   const panel = p.getByRole("dialog");

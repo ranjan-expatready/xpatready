@@ -123,7 +123,7 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
     // so the sample loader can name it by print (tech lead on #883), never by a made-up name.
     return { label: named ? s.label : null, part: s.part, fieldKeys: s.fieldKeys, captions: s.captions, quote: named ? s.printed ?? s.quote : s.quote, unnamed: !named,
       heading: shared ? s.label : null, printed: shared ? s.printed : null,
-      why: named ? null : shared ? `The form prints "${s.printed}" over another part too.` : headings === null ? "The printed headings of this form have not been read here yet." : "No printed heading was found above these boxes on the form." };
+      why: named ? null : shared ? `The form prints "${s.printed}" over another part too.` : headings === null ? "The printed headings of this form have not been read here yet." : "No printed heading was found above these form fields on the form." };
   });
   return { lists: [...lists.values()], sections: [...out.filter((s) => !s.unnamed), ...out.filter((s) => s.unnamed)] };
 }
@@ -311,7 +311,7 @@ export class FormMasters {
       const twin = s.unnamed ? null : await sameInLibrary(tx, a.workspaceId, payload);
       items.push({ ...base, kind: "section", payload, rounds: rulesRead(s.unnamed ? `Rules read a part of the form with no printed heading: ${s.fieldKeys.length} form fields` : `Rules read the printed heading "${s.quote}": ${s.fieldKeys.length} form fields under it`, payload), source: source(s.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
         rules: [{ rule: "from_form_part", passed: true, why: null }, { rule: "printed_heading", passed: !s.unnamed, why: s.unnamed ? `${s.why} ${UNNAMED_WHY}`.slice(0, 300) : null }],
-        reason: (s.unnamed ? `${s.why} ${UNNAMED_WHY} A part of ${edition} grouping ${s.fieldKeys.length} form fields${s.captions.length ? `, starting with: ${s.captions.join("; ")}` : ""}.` : `The boxes of ${edition} under the printed heading "${s.quote}" (${s.fieldKeys.length} form fields).`).slice(0, 500),
+        reason: (s.unnamed ? `${s.why} ${UNNAMED_WHY} A part of ${edition} grouping ${s.fieldKeys.length} form fields${s.captions.length ? `, starting with: ${s.captions.join("; ")}` : ""}.` : `The ${s.fieldKeys.length} form fields of ${edition} under the printed heading "${s.quote}".`).slice(0, 500),
         identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: s.unnamed ? { unnamed: true, placeholder: label, ...(s.heading ? { heading: s.heading, printed: s.printed } : {}) } : {} });
     }
     return items;
