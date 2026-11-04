@@ -164,18 +164,24 @@ export class Demo {
       if (!c) fail("The six are not loaded: choose Demo › Reset to the six first.", HttpStatus.CONFLICT);
       if (c!.retiredAt) fail(`"${c!.label}" is retired: choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
       if (await this.db.configRelease.count({ where: { combinationId: c!.id } })) fail(`"${c!.label}" already has a release: choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
-      if (c!.basisNote === STARTED_FROM_RELEASE) fail(`"${c!.label}" already has the reviewed setup as its draft: answer its sources on Review and release, or choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
+      if (c!.basisNote === STARTED_FROM_RELEASE) fail(`"${c!.label}" already has the reviewed setup as its draft (or part of it, if loading stopped): carry on on Review and release, or choose Demo › Reset to the six to start again.`, HttpStatus.CONFLICT);
       const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as Record<string, unknown>;
       const rel = JSON.parse(readFileSync(join(RELEASE, "release.json"), "utf8")) as ReviewedRelease;
+      // The run-once mark first, so a load that stops part way is never loaded over (review m1): the guard above then
+      // sends the person to Reset to the six.
       await this.db.combination.update({ where: { id: c!.id }, data: { sourceBasis: "SOURCE_BACKED", basisNote: STARTED_FROM_RELEASE } });
-      // Its forms, documents, rules and checks as draft rows by the author, who submits them; the shared library rows
-      // and the numbers its own quotes state come in as the fixture's do (engine/import.ts).
-      const counts = await importConfiguration(this.db, workspaceId, c!.id, config, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256, combinationStatus: "DRAFT" });
+      // Its forms, documents, rules and checks as draft rows by the author, who submits them. The one shortcut (review
+      // M1, said in the dialog and the audit line): the shared library rows (fields, sections, placements, document
+      // types, the field maps) and the numbers its own quotes state come in as the reviewed release's, already in the
+      // library (engine/import.ts), so no paid AI drafting runs again.
+      const counts = await importConfiguration(this.db, workspaceId, c!.id, config, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256, combinationStatus: "DRAFT" })
+        // D1 (m1): the details go to the server log, the person reads plain words.
+        .catch((e) => { console.error(`[demo] loading the reviewed setup into "${c!.label}" stopped`, e); return fail(`Loading the reviewed setup into "${c!.label}" stopped part way (the details are in the server log): choose Demo › Reset to the six to start again.`, HttpStatus.INTERNAL_SERVER_ERROR); });
       for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId: c!.id, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
       const { snapshot } = await buildSnapshot(this.db, workspaceId, c!.id, "draft");
       const held = draftSourceProblems(snapshot, isDemoWorkspace()).length;
       const said = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ");
-      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} loaded the reviewed work-permit release into "${c!.label}" as a draft (${said}); ${held} number${held === 1 ? "" : "s"} wait for a source before it can be submitted`, { counts, held }, c!.id);
+      await this.audit.log(workspaceId, actor.id, "loaded", "reviewed release", c!.combinationKey, `${actor.name} loaded the reviewed work-permit release into "${c!.label}" as a draft (${said}); its shared library items came in as the reviewed release's, already in the library; ${held} number${held === 1 ? "" : "s"} wait for a source and each new field map for a signed answer-key test before it can be submitted`, { counts, held }, c!.id);
       return { combinationId: c!.id, label: c!.label, release: null, held, counts };
     } finally { this.loading = false; }
   }

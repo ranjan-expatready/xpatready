@@ -59,11 +59,12 @@ run(async () => {
   await start.waitFor({ timeout: 10_000 });
   const started = p.waitForResponse((r) => r.url().endsWith("/api/demo/release-with-sources"), { timeout: 120_000 });
   const says = await start.innerText();
-  ok("C5.4 pass (P-322): the dialog says plainly it loads a draft and its sources and answer-key tests must be answered to release it", /as a draft/i.test(says) && /answer its sources and its answer-key tests to release it/i.test(says) && /Nothing is approved or released here/.test(says), says.slice(0, 200));
+  ok("C5.4 pass (P-322): the dialog says plainly it loads a draft, names its one shortcut (shared library items already in the library) and that the release needs its sources and answer-key tests", /as a draft/i.test(says) && /answer its sources and its answer-key tests to release it/i.test(says) && /One shortcut: its shared library items .* already in the library/.test(says) && /approved and released only through those steps/.test(says), says.slice(0, 200));
+  const packsBefore = sql("select count(*) from pack_version");
   await start.getByRole("button", { name: /Load as a draft/ }).click();
   const sr = await started;
   ok("C5.4 pass: the Demo menu starts With an LMIA – inside Canada from its reviewed release (2xx)", sr.status() < 300, sr.status());
-  ok("C5.4 data (P-322): the control releases nothing; With an LMIA has no release and no submission yet", sql(`select count(*) from config_release where combination_id='${lmia}'`) === "0" && sql(`select count(*) from review_submission where combination_id='${lmia}'`) === "0");
+  ok("C5.4 data (P-322): the control releases nothing; With an LMIA has no release and no submission yet, and no new pack version", sql(`select count(*) from config_release where combination_id='${lmia}'`) === "0" && sql(`select count(*) from review_submission where combination_id='${lmia}'`) === "0" && sql("select count(*) from pack_version") === packsBefore, { packsBefore });
   await p.waitForURL(new RegExp(`/c/${lmia}/review$`), { timeout: 15_000 });
   const block = p.locator("[data-unsourced]");
   await block.waitFor({ timeout: 30_000 });

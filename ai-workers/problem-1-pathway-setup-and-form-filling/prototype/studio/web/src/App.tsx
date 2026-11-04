@@ -206,7 +206,7 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
   // Review and release tab shows the published numbers that need a source (G1, P-279). Opens that tab when done. Nothing
   // is released (P-322): Release 1 comes from its sources and answer-key tests, then submit, sign-off and approve.
   const [relOpen, setRelOpen] = React.useState(false);
-  const relSources = useAction(() => api<{ combinationId: string; label: string; held: number }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" has the reviewed setup as its draft: answer its ${r.held} source${r.held === 1 ? "" : "s"} and its answer-key tests to release it`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
+  const relSources = useAction(() => api<{ combinationId: string; label: string; held: number }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" has the reviewed setup as its draft: answer its ${r.held} number${r.held === 1 ? "" : "s"} without a source and its answer-key tests to release it`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
@@ -243,7 +243,7 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
           <li>Its Review and release tab lists every published number (fees, ages, dates) and whether it has a source; each one without a source has Add source</li>
           <li>Submit waits until every number has its official source or "None published – set by ExpatReady", and each new field map has an answer-key test the immigration expert signs (Tests); then the SME signs and a different person approves Release 1</li>
         </ul>
-        <p className="mt-3 text-sm text-text-muted">Once only after Reset to the six. Nothing is approved or released here: Release 1 comes only through those steps.</p>
+        <p className="mt-3 text-sm text-text-muted">Once only after Reset to the six. One shortcut: its shared library items (fields, sections, document types, field maps) come in as the reviewed release's, already in the library, so no paid AI drafting runs again. The combination itself is approved and released only through those steps.</p>
       </Dialog>
       <Dialog open={confOpen} onOpenChange={(o) => { if (!loadConf.isPending) setConfOpen(o); }} title="Load the configured checkpoint?" description="The sample starting point, then each demo row done through the same screens' rules by the people who hold each duty. US$0: no live AI call."
         footer={<><Button variant="ghost" disabled={loadConf.isPending} onClick={() => setConfOpen(false)}>Cancel</Button><Button busy={loadConf.isPending} onClick={() => loadConf.mutate(undefined)}><Upload /> Load the configured checkpoint</Button></>}>
