@@ -3,7 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { HttpStatus } from "@nestjs/common";
 import { Db, fail } from "./core.ts";
-import { WHO } from "./studio.ts";
+import { FORM_WHO } from "./studio.ts";
 import { canonicalFact } from "../../engine/resolver.ts";
 import { notFiledWords } from "../../engine/form-type.ts";
 
@@ -22,7 +22,7 @@ export async function resolveKey(db: Db, workspaceId: string, key: string) {
 export async function addFormLine(db: Pick<Db, "combinationForm" | "govFormDef" | "libraryChange">, l: { workspaceId: string; combinationId: string; govFormDefId: string; formKey: string; who?: string; origin: "HUMAN" | "AI_PROPOSAL" | "AI_FOUND"; by: string; sourceQuote: string;
   /** S4: the form finder's reading (always, or only if: its plain condition from the page) and its run. */
   attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; conditionPlain?: string | null; finderBatchId?: string }): Promise<"added" | "already"> {
-  if (l.who !== undefined && !WHO.includes(l.who)) fail("Choose whose form it is from the list.");
+  if (l.who !== undefined && !FORM_WHO.includes(l.who)) fail("Choose whose form it is from the list.");
   // S4 round 3 R3-1 (P-116): nothing new may use a retired form, or one whose retire or delete is open: every attach path
   // (by hand, upload for a row, "+ Add", the finder, an AI apply) comes through here.
   const def = await db.govFormDef.findUnique({ where: { id: l.govFormDefId }, select: { retiredAt: true, formKind: true, displayName: true } });

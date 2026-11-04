@@ -712,7 +712,7 @@ export class Demo {
             try { await this.formLibrary.attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           for (const r of setup.rules) {
-            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge };
+            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
             try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
           }
           // The shared field takes the list once (the first combination's), for every combination after it.
