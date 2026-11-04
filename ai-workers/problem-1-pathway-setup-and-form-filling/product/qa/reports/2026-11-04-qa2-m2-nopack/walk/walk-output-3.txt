@@ -1,0 +1,6 @@
+PASS  C2.3 To review lists a held file (any link to it) — "Everything that waits for a person: problems that block a combination's release, AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides."
+PASS  C2.3 the uploader is asked to record the IRCC page
+PASS  C2.3 after recording, the uploader waits for a second person and has no Approve — "Waiting for a second person"
+PASS  C2.3 the Approver sees the IRCC page to compare and an Approve button — "It was not read into the library, attached or sent to AI. A second person compares it with the IRCC page it came from; approved, its checksum joins the approved list and the file goes through the intake again."
+FAIL  C2.3 approving says what happened (added to the library, checksum approved) — "To review |  | Everything that waits for a person: problems that block a combination's release, AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a rel"
+4 passed, 1 failed · page errors 0

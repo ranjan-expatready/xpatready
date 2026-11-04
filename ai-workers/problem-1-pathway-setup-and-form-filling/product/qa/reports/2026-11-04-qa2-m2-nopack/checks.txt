@@ -1,0 +1,27 @@
+C1.1 check_screen01_smallfix.cjs START-FAILED
+C1.2 check_w1_programs_r3.cjs START-FAILED
+C1.4 check_setup_checklist.ts START-FAILED
+C1.8 check_c18_copies.ts START-FAILED
+C1.8 | check_c18_copies_browser.cjs | exit 1 | 
+C1.8 | check_c18_age_case.ts | exit 0 | 12/12 passed
+C2.1 | check_forms_pdf_hardening.ts | exit 1 | 
+C2.2-C2.3 | check_forms_p80_guard.ts | exit 1 | 
+C3.1 | check_forms_c31_formats.ts | exit 0 | PASS  C3.1 date_pattern fail: "30/06/2019" refused in words — ["Enter the date as year-month-day, for example 2019-06-
+C3.1 | check_forms_c31_acceptance.ts | exit 1 | 
+C3.3 check_forms_c33_acceptance.ts START-FAILED
+C3.3 | check_forms_c33_failed_run_browser.ts | exit 0 | 
+C3.5 | check_forms_channels.ts | exit 0 | 105/105 passed
+C3.7 | check_forms_s4_library_browser.cjs | exit 0 | 
+C3.7 | check_w1_structure.ts | exit 0 | 81/81 passed
+DONE
+--- re-run 13:50 IST, load 8.31 14.30 20.10
+C1.1 | check_screen01_smallfix.cjs | exit 0 | 
+C1.2 | check_w1_programs_r3.cjs | exit 0 | 
+C1.4 | check_setup_checklist.ts | exit 0 | 71/71 passed
+C1.8 | check_c18_copies.ts | exit 0 | 28/28 passed
+C1.8 | check_c18_copies_browser.cjs | exit 0 | 13/13 passed
+C2.1 | check_forms_pdf_hardening.ts | exit 0 | 
+C2.2-C2.3 | check_forms_p80_guard.ts | exit 0 | 
+C3.1 | check_forms_c31_acceptance.ts | exit 0 | 
+C3.3 | check_forms_c33_acceptance.ts | exit 0 | 
+DONE

@@ -1,0 +1,109 @@
+PASS  C3.5: labels compare as people read them
+PASS  C3.5: labels: curly apostrophes, full-width letters and invisible spaces compare as people read them
+PASS  C1.6: filing method: PDF only · Online only · mixed, worked out from the lines (a hand-signed PDF upload is a PDF upload)
+PASS  C1.6 C-7: filing method: Paper only · Online + paper forms · Not needed lines left out · nothing to file — ["Online + paper forms"]
+PASS  C1.6 C-7: filing kind: Paper only; Not needed is not filed; Online + PDF is mixed
+PASS  C1.6 C-2 pass: the signatures that fit: Paper in pen, PDF upload signed by hand and scanned, Online typed or none, Not needed none
+PASS  C1.6 C-2 fail: pen only on Paper, hand-scanned only on a PDF upload, Paper never unsigned, Not needed never signed
+PASS  C1.6 C-2 fail: at release a Paper line with no signature is an error in words — [{"level":"error","where":"Forms","item":"IMM 5257","message":"IMM 5257: \"No signature\" does not fit a line filed as Paper. A Paper line is signed in pen."}]
+PASS  C1.6 m6 fail: a signature it was changed from that is not one of the four is refused in words — "Say which signature you changed it from: typed name, signed by hand and scanned, signed in pen, or no signature."
+PASS  C1.6 m6 pass: a known signature it was changed from is accepted
+PASS  C11.18 m6 fail: a canada.ca line of 401 characters is refused in words — "Paste only IRCC's sentence (at most 400 characters), not the whole page."
+PASS  C11.18 m6 pass: a canada.ca line of 400 characters is accepted
+PASS  C1.6 m6 pass: the words read as sentences: "An Online line", "on paper, with no IRCC account", "paper filing (no IRCC account) asks it"
+PASS  C1.6 m6 fail: no sentence says "A Online" or "through the No account"
+PASS  C1.6 C-1 fail: the old spelling SIGNED_PDF_UPLOAD is refused with its new name
+PASS  C1.6 C-1 pass: each of the four channels and four signatures is a value
+PASS  C1.6 C-3 pass: the combination's account's own record wins; without one, the record for every account
+PASS  C1.6 C-3 fail: another account's record never applies, and no record offers Online, PDF upload and Paper (Sample), never Not needed
+PASS  C1.6 C-4 pass and fail: Not needed only from the account's own record
+PASS  C1.6 C-12 pass and fail: IMM 5669 through the IRCC secure account is Online only; a PDF upload line is refused at release in words — [{"level":"error","where":"Forms","item":"IMM 5669","message":"IMM 5669 is filed as PDF upload, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts.
+PASS  C1.6 C-4 fail: a Not needed line without its account's record is an error at release — [{"level":"error","where":"Forms","item":"IMM 5669","message":"IMM 5669 is marked Not needed, but no record says the APR Portal asks it itself. Record that in the Form library first (What IRCC accepts, for that account),
+PASS  C1.6 C-5 fail (review M1): the finder never proposes Not needed for every account (no one could approve it); it is listed with the reason — {"outcome":"listed","why":"AI read it as Not needed but named no IRCC account; Not needed is said for one account, so nothing was proposed.","readings":{"draft":{"value":"NOT_NEEDED","account":"ANY","quote":"The account 
+PASS  C1.6 C-5 pass: Not needed for one account, both rounds agreeing, is proposed (Ready) — {"outcome":"ready","channels":["NOT_NEEDED"],"account":"PR_PORTAL","quote":"The account asks these questions itself.","why":null,"readings":{"draft":{"value":"NOT_NEEDED","account":"PR_PORTAL","quote":"The account asks t
+PASS  C1.6 C-11 pass: at release a mapped oath box of IMM 5409 (where it is declared) is said to be completed by a person at the oath, never filled — [{"level":"warning","where":"Field map IMM 5409 (test)","item":"IMM_5409[0].Page1[0].Section5[0].City[0]","message":"IMM 5409: the form field \"City[0]\" is mapped to person.family_name, but it belongs to the oath. By a 
+PASS  C1.6 C-11 fail: a declarant's own box, an unmapped oath box, an Online map or a map with no form field list is not flagged
+PASS  C1.6 C-11 pass: the release's own validation (validate) carries it, reading the form field list from the map — [{"level":"warning","where":"Field map IMM 5409 (test)","item":"IMM_5409[0].Page1[0].Section5[0].Title[0]","message":"IMM 5409: the form field \"Title[0]\" is mapped to person.family_name, but it belongs to the oath. By 
+PASS  C1.6 C-8 pass: an older release's SIGNED_PDF_UPLOAD reads as PDF upload, signed by hand and scanned
+PASS  C1.6 C-8 pass: the same line in the new spelling is not a change since release (fingerprint and comparison)
+PASS  C1.6 C-8 fail: a real change (hand-scanned to typed name) is still a change
+PASS  C11.18 C-3 fail: Not needed for every account is refused (it is said for one account)
+PASS  C1.6: filing method: a channel only a conditional line adds is said with its condition
+PASS  C3.8: option map (PDF): the values take the PDF's codes; one the matcher cannot place is left for a person — {"map":{"female":"Female","male":"Male","unknown":"Unknown"},"unmatched":["another_gender"]}
+PASS  C3.8: option map fail: a value without a code is a problem (filling would refuse it)
+PASS  C3.8: fill: a shared value gives the PDF its own code; a value with no code is refused
+PASS  C3.8: fill fail: 'toString' or 'constructor' is not a code in an option map
+PASS  C3.8: PDF codes: a form field with no resolved options takes its codes from its field map's code list (the filler's own source) — [{"code":"1","label":"Common-law"},{"code":"2","label":"Single"},{"code":"3","label":"Divorced"},{"code":"4","label":"Annulled marriage"},{"code":"5","label":"Married"},{"code":"6","label":"Legally separated"},{"code":"7
+PASS  C1.6: P-107 a line filed Online is allowed: one warning that it needs the browser extension (later wave), never an error that blocks release — [{"level":"warning","where":"Forms","item":"IMM 5257","message":"IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."}]
+PASS  C1.6: P-107 fail case: a PDF line has no channel problem at all (no portal, no online version asked for)
+PASS  C3.1: setup: IMM 5257's PDF field map comes from the saved real AI draft (replayed, no model call) — {"applied":201,"mapped":161}
+PASS  C1.6: setup: the visitor visa row files IMM 5257 and IMM 5707, both PDF uploads (a new line is a PDF upload) — "IMM 5257:PDF_UPLOAD,IMM 5707:PDF_UPLOAD"
+PASS  C1.6: a configuration without channels keeps its fingerprint (draft equals its release) — {"wpRelease":"759d71cbee4571789b5652a6449b770bfd5563a1bbdd6c067bf349fb7614105e","wpDraft":"759d71cbee4571789b5652a6449b770bfd5563a1bbdd6c067bf349fb7614105e"}
+PASS  C2.1: P-102 a saved portal screen is refused: forms come in only as their official PDF; nothing attached — "This is a saved portal screen, not a form or a guide: forms come in only as their official PDF. Add the form's PDF from IRCC instead. Nothing was added or attached."
+PASS  C2.1: intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen) — ["guide","guide","guide","guide","guide","guide","guide","guide","guide","guide","guide","checklist","checklist","guide","guide","guide","guide"]
+PASS  C2.1: intake fail: a saved portal screen with one answered question is refused too, and not stored — "This is a saved portal screen, not a form or a guide: forms come in only as their official PDF. Add the form's PDF from IRCC instead. Nothing was added or attached."
+PASS  C1.6: P-102 capture, portal choice, online forms, online drafting, the extension's pairing and the capture template answer 404 (parked) — [404,404,404,404,404,404,404,404]
+PASS  C1.6: channel fail: an unknown channel is refused
+PASS  C1.6: P-107 Online stays selectable: the line is saved Online and says it needs the browser extension (later wave), a warning only — [{"level":"warning","where":"Forms","item":"IMM 5257","message":"IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."},{"le
+PASS  C1.6: filing method is derived: Online + PDF uploads; an Online line has no signature by default — "Online + PDF uploads"
+PASS  C1.6 C-2 pass: a PDF upload signed by hand and scanned is saved with its signature (the old 'signed PDF upload') — {"filing_method":"Online + PDF uploads","account":null,"lines":[{"form":"IMM 5257","title":"Application for visitor visa (temporary resident visa)","who":"each_applicant","status":"always","channel":"ONLINE","channel_wor
+PASS  C1.6: channel fail: a save from an out-of-date screen is refused (409), the line stays as it is — "IMM 5707 was changed to PDF upload while you were choosing. Your choice was not saved; check it and choose again."
+PASS  C1.6 C-1 fail: the old spelling is refused on the write route (400, in words), the line unchanged — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":400,"detail":"Signed PDF upload is now PDF upload, signed by hand and scanned: choose PDF upload and that signature.","me
+PASS  C1.6 C-2 fail: signed in pen on a PDF upload is refused in words, the line unchanged — {"type":"https://expatready.local/problems/400","title":"Request refused","status":400,"detail":"IMM 5707: \"Signed in pen\" does not fit a line filed as PDF upload. A PDF upload line is no signature or signed by hand an
+PASS  C1.6 C-2 pass: a line moved to Paper takes signed in pen (its default), the filing method says paper — "Online + paper forms"
+PASS  C1.6 C-4 fail: Not needed with no record that the account asks it itself is refused in words — {"type":"https://expatready.local/problems/400","title":"Request refused","status":400,"detail":"IMM 5707 is marked Not needed, but no record says this combination's IRCC account asks it itself. Record that in the Form l
+PASS  C1.6 Q1 fail: an unknown IRCC account is refused — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":400,"detail":"Choose one of: IRCC secure account, PR Portal, IRCC Portal, APR Portal, LMIA Online (ESDC), No account (pap
+PASS  C1.6 Q1 fail (break M3): an account save that does not say which account it changed is refused — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":400,"detail":"Say which IRCC account you changed it from (null when it was not set).","message":"Say which IRCC account y
+PASS  C1.6 Q1 fail (break M3): of two account saves at once one wins and one is refused; one history line says 'not set →' — {"statuses":[409,200],"hist":"1"}
+PASS  C1.6 Q1 pass: the account is set back to not set from the one saved — {"filing_method":"Online + paper forms","account":null,"lines":[{"form":"IMM 5257","title":"Application for visitor visa (temporary resident visa)","who":"each_applicant","status":"always","channel":"ONLINE","channel_wor
+PASS  C1.6 C-3 pass: once the account is the IRCC secure account, its record applies: the Paper line becomes an error in words (not changed silently) — [{"level":"warning","where":"Forms","item":"IMM 5257","message":"IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."},{"le
+PASS  C1.6 C-3 fail: a PDF upload the account does not accept is refused on save — {"type":"https://expatready.local/problems/400","title":"Request refused","status":400,"detail":"IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it through the IRCC secure account only as 
+PASS  C1.6 C-3 pass: Online, which the account accepts, is saved — {"filing_method":"Online only","account":"IRCC_SECURE_ACCOUNT","lines":[{"form":"IMM 5257","title":"Application for visitor visa (temporary resident visa)","who":"each_applicant","status":"always","channel":"ONLINE","cha
+PASS  C1.6 §5: the Forms tab offers each channel with its reason when refused, and the signatures that fit — {"line":"IMM 5707","code":"IMM 5707","title":"Family Information","document":false,"edition":"IMM 5707 (01-2023)","libraryEdition":"IMM 5707 (01-2023)","boxes":40,"who":"each_applicant","minAge":null,"copies":1,"onlyIf":
+PASS  C3.8: the review's validator runs the channel rules: the Online line is a warning there too, never an error — 151
+PASS  C1.6: the combination summary carries no portal and no online forms; IMM 5257 shows its PDF edition while filed Online — {"code":"IMM 5257","title":"Application for visitor visa (temporary resident visa)","document":false,"who":"each_applicant","when":"always","edition":"IMM 5257 (09-2023)","boxes":242,"channel":"ONLINE","channelWords":"On
+PASS  C3.12: Forms library: IMM 5257 shows its PDF editions only, no online version — ["PDF"]
+PASS  C1.6: default channel: a form added from the library starts as PDF upload — {"ok":true,"form":"IMM 5257"}
+PASS  C1.6 C-7 (review S1): Online + PDF upload + Paper names all three; Online + PDF stays as it was
+PASS  C1.6 C-3 (break M6): with no account (paper filing) only Paper is allowed, whatever every account accepts; another account keeps its record — {"channels":["PAPER"],"record":{"account":"PAPER","channels":["PAPER"],"basis":"PAPER_FILING","quote":null}}
+PASS  C1.6 C-3 (break M6): once filed with no account, a PDF upload line is an error in words (not changed silently) — [{"level":"error","where":"Forms","item":"IMM 5257","message":"IMM 5257 is filed as PDF upload, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account
+PASS  C1.6 C-3 fail (break M6): an Online line on a paper-filing combination is refused in words — {"type":"https://expatready.local/problems/400","title":"Request refused","status":400,"detail":"IMM 5707 is filed as Online, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose 
+PASS  C1.6 C-3 pass (break M6): Paper is saved on a paper-filing combination — {"filing_method":"PDF uploads + paper forms","account":"PAPER","lines":[{"form":"IMM 5257","title":"Application for visitor visa (temporary resident visa)","who":"each_applicant","status":"always","channel":"PDF_UPLOAD",
+PASS  set-up: IMM 5707 is put back as it was — {"filing_method":"PDF only","account":null,"lines":[{"form":"IMM 5257","title":"Application for visitor visa (temporary resident visa)","who":"each_applicant","status":"always","channel":"PDF_UPLOAD","channel_words":"PDF
+PASS  C11.18 fail (break M6): a record for no account (paper filing) that is not Paper is refused in words — {"type":"https://expatready.local/problems/check-the-request","title":"Check the request","status":400,"detail":"No account (paper filing) files only on paper: choose Paper, or choose the IRCC account that accepts it ano
+PASS  C11.18 (break M5): the approver sees which combinations the change breaks, each with why, before approving — [{"combination":"d2de8e39-40d2-470b-aceb-28947337ca7e","label":"Visitor visa","channel":"PDF_UPLOAD","words":"IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a wa
+PASS  C11.18 (break M5) fail-guard: a change that keeps every line allowed lists nothing — []
+PASS  C11.18 fail (break m5): approval for an edition that is no longer current is refused in words and the change still waits — "This was proposed for IMM 5707 (01-1999); the library's current edition is now IMM 5707 (01-2023). Return it with that reason, and propose what IRCC accepts for the new edition."
+PASS  C3.8 P-158 fail: an answer list is not typed in by hand (410), and nothing is written — 410
+PASS  C3.8: answer list: person.sex takes its values from it
+PASS  C3.8: option maps drafted without AI for the PDF: the list's values take the PDF's own codes — {"female":"Female","male":"Male","unknown":"Unknown"}
+PASS  C3.8: validator fail: a value with no code on the PDF blocks release, and says which — ["*Sex (person.sex): no code for \"another_gender\", \"unknown\" (filling would refuse them)."]
+PASS  C3.8: option map fail: a person cannot set a code the PDF field does not have
+PASS  C3.8: option map: a person maps 'Another gender' to the PDF's 'Unspecified'; no sex problem left — []
+PASS  C3.8: answer list fail: a free-text field is not turned into a choice field — "person.family_name holds free text; only a choice field (a code, a country, yes/no or multi choice) takes an answer list."
+PASS  C3.8: PDF option maps: IMM 5707's marital status form fields take their codes from their code lists (Married = 5), drafted without AI — [{"map":{"married":"5","single":"2","common_law":"1","divorced":"3","separated":"6","widowed":"7","annulled":"4","unknown":"8"},"unused":["9"],"codes":["1","2","3","4","5","6","7","9","8"]},{"map":{"married":"5","single"
+PASS  C3.8: fill (API): 'married' is written as IMM 1295's own code 01 from the option map; without 'married' in the map it goes to 'by hand' — ["written","01","by hand","\"married\" has no code in this form field's option map"]
+PASS  C1.6: fill fail: a line filed Online is not filled as a PDF, even though the library has the PDF — "IMM 1295 is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF."
+PASS  C3.8: answer list: a list linked by mistake can be taken off; no option-map problem is left for that field — []
+PASS  C3.5: setup: a second field with the same meaning comes from another source (the duplicate a merge removes)
+PASS  C3.5: merge fail: fields of different kinds (text vs date) are not merged
+PASS  C3.5: merge fail: the person who proposed it cannot approve it
+PASS  C3.5: merge: approved by a second person; the merged id becomes an alias that redirects — {"form fields":1}
+PASS  C3.5: merge: the published form field gets a new draft version reading the surviving id; its released version is untouched — "PUBLISHED:person.town_of_birth,DRAFT:person.place_of_birth_city"
+PASS  C3.5: merge: frozen releases are not changed
+PASS  C3.5: merge fail: a merge is applied once
+PASS  C3.5: merge fail: a merged-away field is not edited back to a draft and takes no new label (it only redirects) — ["The field \"Town of birth\" is retired: it takes no new use or change. Restore it in Shared library › Fields first, or choose another.","person.town_of_birth was merged into person.place_of_birth_city: add the label th
+PASS  C3.5: merge fail: a field already waiting in a merge cannot enter a second one (no chain, cycle or fork) — ["case.test_merge_y is already in a merge waiting for a second person (case.test_merge_x into case.test_merge_y): decide that one first.","case.test_merge_x is already in a merge waiting for a second person (case.test_me
+PASS  C3.5: merge fail: checked again when approved; a field retired since the proposal stops it and nothing moves — "case.test_merge_y was retired after this merge was proposed: nothing was changed; reject this merge."
+PASS  C3.5: merge fail: the same merge proposed twice at the same moment is stored once — [201,409]
+PASS  C3.5: alias fail: a curly-apostrophe twin of another field's label, and a label of punctuation only, are refused — ["\"Mother’s maiden name\" already names person.family_name: one label points to one shared field (a reviewed merge joins two fields).","An alias needs letters or digits."]
+PASS  C3.5: aliases added at the same moment are all kept — [201,201,201,201,201]
+PASS  C11.18 C-5 fail (review S5): two finds proposing for one form at the same moment: one waiting change, and neither find fails on the database refusal — {"raceForm":"IMM 1295","waiting":"1","both":["ready","kept"]}
+PASS  C11.18 C-5 pass (review S5): the other find says the change already waits (kept) — [{"code":"IMM 1295","outcome":"ready","why":null,"change_id":"2a79484b-fbd0-4fd9-b34a-6e8d53e81d2a"},{"code":"IMM 1295","outcome":"kept","why":"A change to what IRCC accepts already waits for a second person."}]
+PASS  C1.6 C-2 pass: a Paper line removed in a release and added back is Paper, signed in pen, as it was — {"added":"added","v3":"PAPER:PEN"}
+ERROR:  new row for relation "combination_form" violates check constraint "combination_form_signature_check"
+DETAIL:  Failing row contains (7d45c96e-92c2-4d4d-92b9-ae60dfa14e7a, 49c8bf51-e7bf-491c-8b26-b6457bd83a75, d2de8e39-40d2-470b-aceb-28947337ca7e, e87228e9-81a5-49c2-bb45-ace6bd33279e, IMM 1295, each_applicant, COMBINATION_MANDATORY, null, null, null, 3, DRAFT, 6c9b3a3f-8057-4772-a274-b8c0feee59b1, HUMAN, user-A, 2026-11-04 13:46:26.05+05:30, PAPER, null, null, null, NONE, 1).
+PASS  C1.6 C-2 fail: the database refuses the Paper line with no signature the old restore wrote
+PASS  C3.5: reset removes answer lists and merges with the workspace — 0
+
+105/105 passed
