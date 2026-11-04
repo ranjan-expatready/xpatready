@@ -99,7 +99,7 @@ function admitApproved(rel: string, abs: string, bytes: Buffer, h: string, opts:
     who = { uploaded_by: rec.uploaded_by, approved_by: rec.approved_by };
   }
   if (rec.sha256 !== sum) no("its approval record is for another checksum");
-  if (rec.kind !== "form" || typeof rec.edition !== "string" || !/^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(rec.edition)) no("the approval is not for a form with a printed edition");
+  if (rec.kind !== "form" || typeof rec.edition !== "string" || !/^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(rec.edition)) no("the approval is not for a form with a printed edition");
   const pdfName = `${sum}.pdf`;
   if (sha(plain(pdfName)) !== sum) no("the approved PDF no longer has the approved checksum");
   if (inv.summary.file !== relative(SOLUTION, join(dir, pdfName)).split(sep).join("/")) no("its inventory was not read from the approved PDF");

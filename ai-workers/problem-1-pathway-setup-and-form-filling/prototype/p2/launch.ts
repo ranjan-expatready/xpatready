@@ -32,7 +32,7 @@ export { pathCodeSha }; // re-exported for existing callers; defined in pathcode
 export function knownOk(known: Record<string, unknown>): boolean {
   const keys = Object.keys(known);
   if (keys.length !== 1) return false;
-  if (keys[0] === "form_edition") return /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(String(known.form_edition));
+  if (keys[0] === "form_edition") return /^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(String(known.form_edition));
   if (keys[0] === "combination_trail") return typeof known.combination_trail === "string" && /^[A-Za-z0-9][A-Za-z0-9 ,.()'\/&–-]{0,80}( › [A-Za-z0-9][A-Za-z0-9 ,.()'\/&–-]{0,80}){1,5}$/.test(known.combination_trail);
   return false;
 }
