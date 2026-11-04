@@ -1,0 +1,213 @@
+=== vv.single /questionnaires (http 200) url=http://localhost:4480/c/f47ee39c-58f5-4668-9a2f-a53920b5c390/questionnaires
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In progress
+Not released yet · 7 draft changes · cases opened outside Canada · filing: PDF only · people: Principal applicant (always); Spouse or partner (travelling) (optional); Child (travelling), 0–4 (optional); Representative (optional) · Sample
+Next step · Official pages
+Waiting for the immigration expert: Choose the checklist page (No page matches)
+See it on Forms
+Sample: IRCC's visitor visa application from outside Canada (guide 5256).
+Overview
+Forms 199 to do
+Smart questionnaire (SQR)
+Documents 1 to do
+Preview
+Tests
+Review and release 6 to fix
+Who can be in this application (Principal applicant (always) · Spouse or partner (travelling) (optional) · Child (travelling), 0–4 (optional) · Representative (optional)) is set before the forms. Change on Forms
+0
+Form facts, all people
+=
+0
+From documents
++
+0
+Client answers
++
+0
+Case officer enters
+0
+Prospect questionnaire (PQR)
+✓ Every fact has one source
+Sample until the immigration expert confirms.
+Questions for each person
+Draft questions and documents
+Close all sections
+Add a library section…
+Add section
+Principal applicant · 0 questions
+Spouse or partner (travelling) · 0 questions
+Child (travelling) · 0 questions
+Representative · 0 questions
+All sources
+Document 0
+Client 0
+Case officer 0
+Prospect questionnaire (PQR) 0
+Needs you · 0
+Principal applicant: 0 form facts · 0 from documents · 0 asked of the client · 0 entered by the case officer
+0 questions for Principal applicant, from the largest household the combination allows.
+Rules used here (0)
+Checks on these answers (0)
+--- buttons: Draft questions and documents | Close all sections | Add section | Principal applicant · 0 questions | Spouse or partner (travelling) · 0 questions | Child (travelling) · 0 questions | Representative · 0 questions | All sources | Document 0 | Client 0 | Case officer 0 | Prospect questionnaire (PQR) 0 | Needs you · 0
+=== vv.single /pqr (http 200) url=http://localhost:4480/c/f47ee39c-58f5-4668-9a2f-a53920b5c390/overview
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In progress
+Not released yet · 7 draft changes · cases opened outside Canada · filing: PDF only · people: Principal applicant (always); Spouse or partner (travelling) (optional); Child (travelling), 0–4 (optional); Representative (optional) · Sample
+Next step · Official pages
+Waiting for the immigration expert: Choose the checklist page (No page matches)
+See it on Forms
+Sample: IRCC's visitor visa application from outside Canada (guide 5256).
+Overview
+Forms 199 to do
+Smart questionnaire (SQR)
+Documents 1 to do
+Preview
+Tests
+Review and release 6 to fix
+Setup steps · 0 of 5 done
+Worked out from what is set up now · ✓ done · ● next · ◐ AI at work · ⧗ waiting for someone else
+⧗
+Step 1, Waiting for someone else:
+Official pages
+IRCC's apply page and document checklist; the forms, people and documents are read from them
+Proposed by the rules, not confirmed
+Waiting for the immigration expert: Choose the checklist page (No page matches)
+Choose the checklist page
+○
+Step 2, To do:
+Who can be in this application
+4 person roles, 3 applicant roles Sample
+Confirm who can apply
+After Official pages
+○
+Step 3, To do:
+Forms
+8 forms · 7 set up
+Map 7 forms · Review 184 proposals · Fix 6 form problems
+After Who can be in this application
+○
+Step 4, To do:
+Questions and documents
+documents first, then questions
+0 documents · 0 questions
+Draft questions and documents
+After Forms
+○
+Step 5, To do:
+Review and release
+Not released yet · 6 problems block release
+After Questions and documents
+Forms
+8
+7 set up · 0 form fields matched to shared fields · see them
+Questions
+0
+across all people: Principal applicant 0 · Spouse or partner (travelling) 0 · Child (travelling) 0 · Representative 0 · 0 sections
+Documents
+0
+asked always 
+--- buttons: 
+=== wp.lmia_inside /questionnaires (http 200) url=http://localhost:4480/c/5048ca3c-5fb6-4d9e-ad52-d1332c802601/questionnaires
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA – inside Canada
+With an LMIA – inside Canada
+In progress
+Not released yet · cases opened inside Canada · people: Worker (always); Spouse or partner (optional); Representative (optional) · Sample
+Next step · Official pages
+Waiting for the immigration expert: Choose the checklist page (No page matches)
+See it on Forms
+Sample: IRCC's employer-specific work permit with an LMIA, applied for inside Canada (guide 5553).
+Overview
+Forms 101 to do
+Smart questionnaire (SQR)
+Documents 1 to do
+Preview
+Tests
+Review and release 1 to fix
+Who can be in this application (Worker (always) · Spouse or partner (optional) · Representative (optional)) is set before the forms. Change on Forms
+No questions yet
+The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.
+Add a library section…
+Add section
+Rules used here (0)
+Checks on these answers (0)
+--- buttons: Add section
+=== wp.lmia_inside /pqr (http 200) url=http://localhost:4480/c/5048ca3c-5fb6-4d9e-ad52-d1332c802601/overview
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA – inside Canada
+With an LMIA – inside Canada
+In progress
+Not released yet · cases opened inside Canada · people: Worker (always); Spouse or partner (optional); Representative (optional) · Sample
+Next step · Official pages
+Waiting for the immigration expert: Choose the checklist page (No page matches)
+See it on Forms
+Sample: IRCC's employer-specific work permit with an LMIA, applied for inside Canada (guide 5553).
+Overview
+Forms 101 to do
+Smart questionnaire (SQR)
+Documents 1 to do
+Preview
+Tests
+Review and release 1 to fix
+Setup steps · 0 of 5 done
+Worked out from what is set up now · ✓ done · ● next · ◐ AI at work · ⧗ waiting for someone else
+⧗
+Step 1, Waiting for someone else:
+Official pages
+IRCC's apply page and document checklist; the forms, people and documents are read from them
+Proposed by the rules, not confirmed
+Waiting for the immigration expert: Choose the checklist page (No page matches)
+Choose the checklist page
+○
+Step 2, To do:
+Who can be in this application
+3 person roles, 2 applicant roles Sample
+Confirm who can apply
+After Official pages
+○
+Step 3, To do:
+Forms
+5 forms · 0 set up
+Map 4 forms · Review 95 proposals
+After Who can be in this application
+○
+Step 4, To do:
+Questions and documents
+documents first, then questions
+0 documents · 0 questions
+Draft questions and documents
+After Forms
+○
+Step 5, To do:
+Review and release
+Not released yet
+After Questions and documents
+Forms
+5
+0 set up · 0 form fields matched to shared fields · see them
+Questions
+0
+across all people (each person role counted) · 0 sections
+Documents
+0
+asked always or only if
+Rules and checks
+0 rules · 0 checks
+no rule or check problems
+Nothing released yet. Case work only ever uses a released v
+--- buttons: 
+console errors: 0 
