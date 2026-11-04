@@ -16,11 +16,15 @@ import { fieldComponents, type ComponentRows } from "../engine/where-used.ts";
 import { answersInside, changedBoxes, compareBoxes, componentsView, impactContext, impactCost, impactPart, impactStep, IMPACT_AI_WORDS, inventoryFields, previousAcceptedUntil, staleRun, writePart } from "../api/src/impact-ai.ts";
 import { RUNS, StepRunner } from "../api/src/rounds.ts";
 import { C91, c91Jobs } from "../tools/c91-impact-job.ts";
+import { putBackReal, setAsideReal } from "./fixtures/c91-saved-run.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 const PROTOTYPE = join(import.meta.dirname, "..", "..");
 const v = (o: object) => ({ version: 1, status: "PUBLISHED", ...o });
+// The committed real saved run of this comparison is set aside while the rules are proved with this check's own runs.
+setAsideReal(); process.on("exit", putBackReal);
+for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143]] as const) process.on(sig, () => process.exit(code));
 
 (async () => {
   // ── The comparison (BR-12, no AI): the boxes AI may read are exactly the new and reworded ones ──
@@ -112,7 +116,8 @@ const v = (o: object) => ({ version: 1, status: "PUBLISHED", ...o });
   // check_ai_launch_paths.ts does), so a run leaves the repository as it was. Its US$0 ledger lines stay (QA-90).
   const CANARY = join(PROTOTYPE, "p2", "screening", "canary-digest.json"), STUBS = join(RUNS, "stub-pass");
   const canary = existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null;
-  const stubsBefore = new Set(existsSync(STUBS) ? readdirSync(STUBS) : []);
+  // The paid run's own stub-pass records are committed (C9.1 result PR): their bytes are put back too, never rewritten.
+  const stubsBefore = new Map((existsSync(STUBS) ? readdirSync(STUBS) : []).map((f) => [f, readFileSync(join(STUBS, f))]));
   const runsBefore = new Set(readdirSync(RUNS));
   try {
   for (const { label, job } of jobs) {
@@ -125,7 +130,7 @@ const v = (o: object) => ({ version: 1, status: "PUBLISHED", ...o });
   }
   } finally {
     if (canary !== null) writeFileSync(CANARY, canary);
-    for (const f of existsSync(STUBS) ? readdirSync(STUBS) : []) if (!stubsBefore.has(f)) rmSync(join(STUBS, f), { force: true });
+    for (const f of existsSync(STUBS) ? readdirSync(STUBS) : []) { const was = stubsBefore.get(f); if (was === undefined) rmSync(join(STUBS, f), { force: true }); else writeFileSync(join(STUBS, f), was); }
   }
 
   console.log(`${pass}/${pass + fail} passed`);
