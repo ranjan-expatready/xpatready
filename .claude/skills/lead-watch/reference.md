@@ -8,7 +8,7 @@ The skill (`SKILL.md`) says what to do; this page keeps the reasons and the reco
 | Block | Read from | Notes |
 |---|---|---|
 | Flow per PR (step, wait, owner, blocker) | one GitHub GraphQL call: labels with their times, the last 30 timeline items, checks on the head, files | step order: draft · dequeued (Mergify's reason) · red after approval · in the queue · approved, CI running · approved, green, not queued · waiting for the tech lead · red · CI running · reviewer Approve on head, no label · reviewer verdict, owner fixing · in review. A reviewer or breaker sub-agent shows as "in review" since the last push until its verdict comment |
-| Question answered | a later PR comment that opens with the ruling: "Tech lead ruling (Lead 4 …)", "The tech lead's rulings", "Lead 3's Go" | a quote mid-line ("scoped check per the tech lead's ruling") is no answer; answers by message do not count, since the Lead's messages stop at 10 per founder turn (4 Nov) |
+| Question answered | a newer commit on the PR (the owner moved on), or a later PR comment that opens with the ruling (not "answer needed", "pending"): "Tech lead ruling (Lead 4 …)", "The tech lead's rulings", "Lead 3's Go" | a quote mid-line ("scoped check per the tech lead's ruling") is no answer; answers by message do not count, since the Lead's messages stop at 10 per founder turn (4 Nov) |
 | Sessions | the roster (`lead-watch.sh roster`) joined with branch push times after `git fetch` | a session is working only if it pushed; waiting on a merge or on the Lead is not idle |
 | M2, M3 | `qa/CAPABILITIES.md` on origin/main now and at the last main commit before 00:00 IST | qa is the one writer; promotions and demotions are the diff, never a session's count |
 | Links, critical path | `lead-watch-links.txt` + each PR's state; open links ordered by how many open capabilities they hold | also measured: M3 PRs that change an M2-hot file without the approval line, M2 and M3 PRs that change the same file, qa's due re-scores (capabilities named by today's product merges that are not Works) |
@@ -16,7 +16,7 @@ The skill (`SKILL.md`) says what to do; this page keeps the reasons and the reco
 | Mac | `df`, `vm.loadavg`, `memory_pressure`, listening ports 4430–4499 plus `run-suites.sh` processes, the test databases, git index times of builder copies | disk trend and the time to 4 GB from the last 25–90 min of checks |
 | Paid AI | `.tools/p2-ledger/spend.jsonl` in the main copy (settle lines = spent; reserves without a settle = unsettled worst case) | the day's cap is set with `lead-watch.sh cap` |
 | Plan and context | `get_usage`, passed as `weekly=N five=N context=N` | rate per hour from the last 20 min – 3 h of checks, forecast to 85% in IST |
-| Ladder | `acts.tsv` in the state folder: first time each ACT was seen and its last rung | rung from minutes past the item's limit, or since first seen; a new item enters at rung 2 at most and climbs one rung per check, so each step is tried before the founder is asked; one ACT per PR (its most urgent limit, the rest as "also"); `ack <key>` shows an ACT without counting it until the ack ends |
+| Ladder | `acts.tsv` in the state folder: first time each ACT was seen and its last rung | rung from minutes past the item's limit, or since first seen; a new item enters at rung 2 at most and climbs one rung per check, so each step is tried before the founder is asked; one ACT per PR (its most urgent limit, the rest as "also"), keyed by that limit (`pr#802:red`), so a new kind of problem on the same PR starts its own ladder and an ack covers only the kind it names; `ack <key>` shows an ACT without counting it until the ack ends |
 
 State folder: `<git common dir>/lead-watch` (the main copy's `.git/lead-watch`): shared by every copy on the Mac, kept across restarts and Leads, never committed.
 
@@ -48,7 +48,7 @@ Sources: `product/DECISIONS.md` P-276 – P-318, `product/STATE.md` and `history
 
 ## Known limits (from the Opus review of v2, 4 Nov)
 * "Last commit" is the commit time, not the push time: a commit pushed hours later reads as old until it is pushed again.
-* A reviewer's verdict is read from the comment's first 300 characters (review, reviewer or Opus, plus Approve, Block or Changes needed). One fixed line, `Verdict: Approve <sha>`, in every reviewer comment would make it exact; that is a change to the reviewer's brief, for the tech lead.
+* A reviewer's verdict is read from the comment's first 300 characters in the team's wordings ("Reviewer (Opus …): Approve for <sha>", "Head <sha> has the Opus … Approve", "**Approve**, … (Opus review)"), never after "until", "not", "no", "before", "once", "if" or "waiting"; a verdict naming a sha counts only for that head. One fixed line, `Verdict: Approve <sha>`, in every reviewer comment would make it exact; that is a change to the reviewer's brief, for the tech lead.
 * The number of messages the Lead has sent since the founder's last turn is not visible to any tool; the check sends rulings to the PR instead.
 * The links and their "blocks" lists are the Lead's map; only their states are measured.
 

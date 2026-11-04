@@ -78,7 +78,9 @@ PY
   verify)
     # "labelled", "pushed", "green", "merged" are facts only when GitHub says so (two false claims this week). Give the sha
     # a session claims it pushed, and verify compares it with the PR's head on GitHub.
-    n="${2:?verify <PR> [<sha>]}"; V=$(mktemp -d "${TMPDIR:-/tmp}/lead-verify.XXXXXX"); trap 'rm -rf "$V"' EXIT
+    n="${2:?verify <PR> [<sha>]}"; [[ "$n" =~ ^[0-9]+$ ]] || { echo "verify <PR number> [<sha>]"; exit 2; }
+    [ -z "${3:-}" ] || [[ "$3" =~ ^[0-9a-fA-F]{7,40}$ ]] || { echo "the claimed sha must be 7–40 hex characters"; exit 2; }
+    V=$(mktemp -d "${TMPDIR:-/tmp}/lead-verify.XXXXXX"); trap 'rm -rf "$V"' EXIT
     gh pr view "$n" --json number,state,isDraft,mergedAt,mergedBy,headRefName,headRefOid,labels,statusCheckRollup > "$V/pr.json" || exit 2
     gh api "repos/$REPO/issues/$n/events?per_page=100" --paginate --jq '.[]|select(.event=="labeled" or .event=="unlabeled")|{e:.event,l:.label.name,t:.created_at,by:.actor.login}' > "$V/ev.ndjson" 2>/dev/null || : > "$V/ev.ndjson"
     python3 -I - "$V/pr.json" "$V/ev.ndjson" "${3:-}" <<'PY'
@@ -151,9 +153,11 @@ mkdir -p "$ST/suites"
 # A job whose log names no suite (a failed step outside the suites) is cached empty, so no log is downloaded twice.
 jq -r 'select(.conclusion=="failure" and (.name|startswith("shard"))) | "\(.id) \(.run_id)"' "$T/jobs.ndjson" 2>/dev/null \
   | while read -r j r; do [ -f "$ST/suites/$j" ] || echo "$j $r"; done | head -6 | while read -r j r; do
-  { gh api "repos/$REPO/actions/jobs/$j/logs" 2>/dev/null | grep -oE '[^ ]+\.(c?js|ts|mjs) failed \(exit [0-9]+\)' \
+  # Cached only when the log was read (a failed or expired download is tried again at the next check).
+  gh api "repos/$REPO/actions/jobs/$j/logs" > "$ST/suites/$j.log" 2>/dev/null || { rm -f "$ST/suites/$j.log"; continue; }
+  { grep -oE '[^ ]+\.(c?js|ts|mjs) failed \(exit [0-9]+\)' "$ST/suites/$j.log" \
       | sed 's/ failed.*//; s#.*/##; s/^##\[group\]//; s/^::group:://' | sort -u; printf 'run=%s\n' "$r"; } > "$ST/suites/$j.tmp"
-  mv "$ST/suites/$j.tmp" "$ST/suites/$j"
+  rm -f "$ST/suites/$j.log"; mv "$ST/suites/$j.tmp" "$ST/suites/$j"
 done
 find "$ST/suites" -type f -mtime +2 -delete 2>/dev/null
 
@@ -205,6 +209,15 @@ python3 -I - "$T" <<'PY'
 import json,os,re,sys,time,subprocess
 from datetime import datetime,timezone,timedelta
 T=sys.argv[1]; IST=timezone(timedelta(hours=5,minutes=30)); now=time.time()
+out=[]; say=out.append
+# A crash must not lose the report or break "exit = ACT lines": print what was read plus one ACT line; the exit code
+# counts every ACT line printed, the crash line included.
+def _crash(t,e,tb):
+    import traceback
+    line=traceback.extract_tb(tb)[-1].lineno if tb else '?'
+    print('\n'.join(out)); print('ACT  [1 fix it yourself · 0m] lead-watch failed (%s: %s, script line %s): the lines above are all it read {crash}'%(t.__name__,e,line))
+    sys.stdout.flush(); os._exit(min(1+sum(1 for l in out if l.startswith('ACT')),125))
+sys.excepthook=_crash
 E={}
 for l in open(T+'/facts.env'):
     k,_,v=l.rstrip('\n').partition('='); E[k]=v
@@ -218,17 +231,9 @@ def hm(t):
 def age(t): return int((now-t)//60) if t else 0
 def dur(m): return '%dm'%m if m<120 else '%.1fh'%(m/60)
 def tsv(name): return [l.rstrip('\n').split('\t') for l in rd(ST+'/'+name).splitlines() if l.strip()]
-out=[]; say=out.append
 def fnum(x):
     try: return float(x)
     except (TypeError,ValueError): return None
-# A crash must not lose the report or break "exit = ACT lines": print what was read, one ACT line, exit 1.
-def _crash(t,e,tb):
-    import traceback
-    line=traceback.extract_tb(tb)[-1].lineno if tb else '?'
-    print('\n'.join(out)); print('ACT  [1 fix it yourself · 0m] lead-watch failed (%s: %s, script line %s): the lines above are all it read {crash}'%(t.__name__,e,line))
-    sys.stdout.flush(); os._exit(1)
-sys.excepthook=_crash
 acts=[]                       # (key, text, minutes past its limit or None)
 def ACT(key,text,over=None): acts.append((key,text,over))
 risks=[]                      # pre-mortem candidates: (score 0-100, what will fail next, what to do)
@@ -267,11 +272,25 @@ try: nodes=json.load(open(T+'/prs.json'))['data']['repository']['pullRequests'][
 except Exception: nodes=[]
 # A ruling answers a question only when the comment opens with it ("Tech lead ruling (Lead 4 …)", "The tech lead's rulings",
 # "Lead 3's Go"): reviewers quote rulings mid-line ("scoped check per the tech lead's ruling"), and a quote is no answer.
-RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b|^\W*ruled\b",re.I)
+RULING=re.compile(r"^\W*(the\s+)?(tech lead'?s?|lead \d+'?s?)\s*(\([^)]*\)\s*)?:?\s*(rulings?|ruled|answers?|go)\b(?![^\n]{0,20}\b(needed|pending|waiting|asked)\b)|^\W*ruled\b",re.I)
 QUESTION=re.compile(r'question for the tech lead',re.I)
-# A reviewer's verdict: "review", "reviewer" or "Opus" plus Approve / Block / Changes needed near the top (the team writes
-# it many ways: "Approve for a7335f0f9", "Head da77b7ab2 has the Opus diff-only Approve", "**Approve**, no Blocker").
-REVIEWISH=re.compile(r'\b(review|reviewer|opus)\b',re.I); VWORD=re.compile(r'\b(Approve[ds]?|Block(?:ed|s)?|Changes needed)\b',re.I)
+# A reviewer's verdict in the team's own wordings, near the top: "Reviewer (Opus …): Approve for a7335f0f9", "Head
+# da77b7ab2 has the Opus diff-only Approve", "**Approve**, no Blocker (Opus review)", "Review round 1 (Opus): Changes
+# needed". Not a verdict: "No label until it approves the head", "a second person approves it", the label "review: approved".
+VW=r'(Approve[ds]?|Block(?:ed|s)?|Changes needed)\b'
+VERDICT=[re.compile(r'\b(?:review|reviewer|opus)\b[^\n]{0,80}?(?::|\*\*|has the[^\n]{0,30}?)\s*\**\s*'+VW,re.I),
+         re.compile(r'\bhas the\b[^\n]{0,40}?\b(?:review|reviewer|opus)\b[^\n]{0,30}?\s'+VW,re.I),
+         re.compile(r'^\W*'+VW,re.I)]
+REVIEWISH=re.compile(r'\b(review|reviewer|opus)\b',re.I)
+NEG=re.compile(r'\b(until|not|no|before|once|if|waiting)\b',re.I)
+def verdict_of(b):
+    top=re.sub(r'review: approved','',b[:300],flags=re.I)
+    if QUESTION.search(top) or not REVIEWISH.search(top): return None
+    for rx in VERDICT:
+        m=rx.search(top)
+        if m and not NEG.search(top[max(0,m.start(1)-30):m.start(1)]):
+            return 'approve' if m.group(1).lower().startswith('approve') else 'block'
+    return None
 SHA=re.compile(r'\b[0-9a-f]{7,40}\b')
 CAPRE=re.compile(r'\bC\d{1,2}\.\d{1,2}\b'); QARE=re.compile(r'\bQA-\d+\b')
 hot=[h.strip() for h in rd(T+'/hot.txt').splitlines() if h.strip() and not h.startswith('#')]
@@ -301,15 +320,13 @@ for p in nodes:
     rul=[t for t,b in comments if RULING.search(b[:300])]
     q=[t for t,b in comments if QUESTION.search(b[:400]) and not RULING.search(b[:300])]
     qt=max(q) if q else None
-    q_open=qt is not None and not any(t>qt for t in rul)
-    verdicts=[]
-    for t,b in comments:
-        top=b[:300]; m=VWORD.search(top)
-        if m and REVIEWISH.search(top) and not QUESTION.search(top):
-            verdicts.append((t,'approve' if m.group(1).lower().startswith('approve') else 'block',SHA.findall(b[:800])))
+    # Answered by a ruling on the PR; a newer commit also closes it (the owner moved on, so it is not blocked on the Lead).
+    q_open=qt is not None and not any(t>qt for t in rul) and not ((pushed or 0)>qt)
+    verdicts=[(t,vk,SHA.findall(b[:800])) for t,b in comments for vk in [verdict_of(b)] if vk]
     v=max(verdicts,key=lambda x:x[0]) if verdicts else None
     head=p['headRefOid']
-    head_ok=bool(v and v[1]=='approve' and (any(head.startswith(x) for x in v[2]) or v[0]>(pushed or 0)))
+    # A verdict that names a sha counts for the head only if one of its shas is the head; one naming none, by its time.
+    head_ok=bool(v and v[1]=='approve' and (any(head.startswith(x) for x in v[2]) if v[2] else v[0]>(pushed or 0)))
     deq=''
     for t,b in comments:
         m=re.search(r'"state": "dequeued".*?"label": "([^"]+)"',b,re.S)
@@ -343,7 +360,9 @@ for p in nodes:
 byn={p['n']:p for p in prs}
 prev={r[0]:r[1:] for r in tsv('acts.tsv') if len(r)>1 and r[1].isdigit()}
 
-# ---- flow limits (founder 4 Nov): one ACT per PR, its most urgent limit first, the others as "also" ----
+# ---- flow limits (founder 4 Nov): one ACT per PR, its most urgent limit first, the others as "also". The key names the
+# limit (pr#802:red), so the ladder and an ack follow that problem: a new kind on the same PR starts again at rung 1–2.
+KIND={1:'dequeued',2:'red',3:'merge',4:'question',5:'label',6:'commit'}
 for p in prs:
     n=p['n']; w=age(p['since']); o=p['owner']
     if p['parked']: continue
@@ -364,7 +383,7 @@ for p in prs:
         hits.append((6,'last commit %s ago, step "%s" (%s): message the owner its next step, or park it'%(dur(age(p['pushed'])),p['step'],o),age(p['pushed'])-90))
     if hits:
         hits.sort(); top=hits[0]
-        ACT('pr#%d'%n,'#%d %s%s'%(n,top[1],''.join(' · also: '+h[1].split(' (')[0] for h in hits[1:])),max(h[2] for h in hits))
+        ACT('pr#%d:%s'%(n,KIND[top[0]]),'#%d %s%s'%(n,top[1],''.join(' · also: '+h[1].split(' (')[0] for h in hits[1:])),top[2])
 
 # Never two sessions on one row: product PRs naming the same capability or bug from different branches; roster rows.
 seen={}
@@ -408,7 +427,7 @@ bok=sum(1 for r in bdone if r['conclusion']=='success'); bfail=[r for r in bdone
 rate=100*len(bfail)/max(1,bok+len(bfail))
 suites={}
 for f in os.listdir(ST+'/suites') if os.path.isdir(ST+'/suites') else []:
-    if f.endswith('.tmp'): continue
+    if f.endswith(('.tmp','.log')): continue
     lines=rd(ST+'/suites/'+f).splitlines(); run=[l[4:] for l in lines if l.startswith('run=')]
     for s in lines:
         if s and not s.startswith('run='): suites.setdefault(s,set()).update(run)
