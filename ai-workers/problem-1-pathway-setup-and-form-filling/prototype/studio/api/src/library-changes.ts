@@ -16,7 +16,7 @@ import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
 import { dropFieldList, releaseFieldList } from "./answer-values.ts";
-import { releaseSupplies, suppliesView } from "./document-supplies.ts";
+import { releaseSupplies, suppliesView, withdrawApprovedSupplies } from "./document-supplies.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
@@ -212,6 +212,13 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   // DV-bb-9: only the person who proposed a change withdraws it, whatever its kind (as only they undo their own delete).
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   if (isLifecycleKind(c.kind) || isItemLifecycle(c)) return withdrawLifecycle(db, actor, c, note); // W1-03: remove, retire or restore (P-116); C11.9 fields and document types
+  // C4.5 (break M2): an approved change of a document's facts not released yet is withdrawn by its proposer; its draft
+  // goes back to the facts it had before.
+  if (c.kind === SUPPLIES_KIND && c.status === "APPROVED") {
+    const why = (note ?? "").trim();
+    if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
+    return db.$transaction(async (tx) => { await withdrawApprovedSupplies(tx, actor, c, why); return changeView((await tx.libraryChange.findUnique({ where: { id } }))!); });
+  }
   // P-319 (review of #833, M2): a waiting or returned role change is withdrawn like a rename: nothing was applied.
   const renaming = (c.action === "RENAME" || c.kind === "form_role" || c.kind === SUPPLIES_KIND) && ["WAITING", "RETURNED"].includes(c.status); // C4.5: nothing applied before approval
   if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field, a rename, a form's role change or a change of the facts a document supplies that is waiting or returned is withdrawn.");

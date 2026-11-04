@@ -10,21 +10,28 @@ export const SUPPLIES_KIND = "document_supplies", SUPPLIES_ACTION = "SET_SUPPLIE
  *  someone the document also shows. */
 export const ABOUT_WORDS: Record<(typeof DOCUMENT_ABOUTS)[number], string> = { holder: "the holder", "holder.spouse": "the holder's spouse or partner", "holder.parent": "the holder's parent" };
 
+/** Break m2: format characters (zero-width, right-to-left overrides) are removed, and words need letters or digits. */
+const clean = (s: string) => s.normalize("NFKC").replace(/\p{Cf}/gu, "").replace(/\s+/g, " ").trim();
+const words = (min: number, max: number, need: string, long: string) => z.string({ error: need }).transform(clean)
+  .refine((s) => s.replace(/[^\p{L}\p{N}]/gu, "").length >= min, need).refine((s) => s.length <= max, long);
+/** A real calendar day from 2000 to today (a day's room: IST is ahead of the server's UTC clock, P-302). */
+const realDay = (d: string) => { const t = Date.parse(`${d}T00:00:00Z`); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === d && d >= "2000-01-01"; };
 const Supply = z.object({
   fact: z.string({ error: "Choose a shared field." }).trim().min(1, "Choose a shared field.").max(120),
   about: z.enum(DOCUMENT_ABOUTS, { message: "Say whom it is about: the holder, the holder's spouse or partner, or parent." }).default("holder"),
-  source: z.string({ error: "Name the official words' source (form, edition and page)." }).trim().min(3, "Name the official words' source (form, edition and page).").max(120, "Keep the source under 120 characters."),
-  quote: z.string({ error: "Quote the official words that say the document shows it." }).trim().min(3, "Quote the official words that say the document shows it.").max(400, "Keep the quote under 400 characters."),
+  source: words(3, 120, "Name the official words' source (form, edition and page).", "Keep the source under 120 characters."),
+  quote: words(3, 400, "Quote the official words that say the document shows it.", "Keep the quote under 400 characters."),
   // P-170: page, quote and the date the words were read (never later than today).
   readOn: z.string({ error: "Say when the official words were read (YYYY-MM-DD)." }).regex(/^\d{4}-\d{2}-\d{2}$/, "Say when the official words were read (YYYY-MM-DD).")
     // A day's room: the date is the reader's own (IST is ahead of the server's UTC clock, P-302).
-    .refine((d) => !Number.isNaN(Date.parse(d)) && Date.parse(d) <= Date.now() + 86_400_000, "The date the words were read cannot be in the future."),
+    .refine(realDay, "Give the date the words were read as a real day (YYYY-MM-DD, 2000 or later).")
+    .refine((d) => Date.parse(`${d}T00:00:00Z`) <= Date.now() + 86_400_000, "The date the words were read cannot be in the future."),
 }).strict();
 
 /** POST /library/document-types/:key/supplies: the whole new set (an empty set: the document supplies no fact). */
 export const SuppliesBody = z.object({
   facts: z.array(Supply, { error: "List the facts this document supplies (or none)." }).max(100, "At most 100 facts per document."),
-  reason: z.string({ error: "Say why it changes for every combination." }).trim().min(5, "Write at least 5 characters: why it changes for every combination.").max(300, "Keep the reason under 300 characters."),
+  reason: words(5, 300, "Write at least 5 letters or digits: why it changes for every combination.", "Keep the reason under 300 characters."),
 }).strict();
 export type SuppliesInput = z.infer<typeof SuppliesBody>;
 export type SupplyCite = { fact: string; label: string; about: (typeof DOCUMENT_ABOUTS)[number]; source: string; quote: string; readOn: string };

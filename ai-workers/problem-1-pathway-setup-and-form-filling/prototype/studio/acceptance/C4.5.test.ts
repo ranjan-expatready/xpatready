@@ -33,7 +33,7 @@ run(async () => {
 
   // ---------------------------------------------------------------- the person's step: refusals first
   const route = `/library/document-types/${PASSPORT}/supplies`;
-  let r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, APPROVER);
+  let r = await call("POST", "/library/document-types/passport_information_page_copy/supplies", { facts: sample.facts, reason: sample.reason }, APPROVER);
   ok("C4.5-2 fail: only an author proposes the facts a document supplies (approver 403)", r.status === 403, r.status);
   r = await call("POST", route, { facts: [{ fact: "person.no_such_fact", source: "IMM 5484 (05-2026), page 1", quote: "The passport number;", readOn: sample.facts[0].readOn }], reason: sample.reason }, AUTHOR);
   ok("C4.5-3 fail: a fact that is not a shared field is refused (400, in words)", r.status === 400 && /not in the shared library/.test(words(r)), words(r));
@@ -44,7 +44,8 @@ run(async () => {
   r = await call("POST", route, { facts: [sample.facts[0], sample.facts[0]], reason: sample.reason }, AUTHOR);
   ok("C4.5-21 fail: a fact listed twice is refused (400, in words)", r.status === 400 && /listed once/.test(words(r)), words(r));
   r = await call("POST", route, { facts: [{ ...sample.facts[0], readOn: "2999-01-01" }], reason: sample.reason }, AUTHOR);
-  ok("C4.5-22 fail (P-170): a date read in the future, or none, is refused (400)", r.status === 400 && (await call("POST", route, { facts: [{ ...sample.facts[0], readOn: undefined }], reason: sample.reason }, AUTHOR)).status === 400, words(r));
+  const bad = await Promise.all([{ readOn: undefined }, { readOn: "2026-02-30" }, { readOn: "0001-01-01" }, { quote: "\u200b\u200b\u200b\u200b" }, { source: "\u202e\u200b" }].map((x) => call("POST", route, { facts: [{ ...sample.facts[0], ...x }], reason: sample.reason }, AUTHOR)));
+  ok("C4.5-22 fail (P-170, break m1, m2): a date read in the future, none, not a real day or before 2000, and words of only invisible characters are refused (400)", r.status === 400 && bad.every((x) => x.status === 400), [r.status, ...bad.map((x) => `${x.status} ${words(x).slice(0, 40)}`)]);
 
   // ---------------------------------------------------------------- proposed: nothing changes yet
   r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, AUTHOR);
@@ -86,8 +87,17 @@ run(async () => {
   // ---------------------------------------------------------------- the same set again, a change since, withdraw
   r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, AUTHOR);
   ok("C4.5-23 fail: proposing exactly the facts it supplies now is refused (409 Nothing changes)", r.status === 409 && /already supplies exactly/.test(words(r)), words(r));
-  r = await call("POST", route, { facts: sample.facts.slice(0, 8), reason: "Test: drop citizenship while the approved change waits (C4.5 pack)." }, AUTHOR);
-  ok("C4.5-26 fail (BR-5): while the approved change waits for its release, another change of the same type is refused (409)", r.status === 409 && /already waits/.test(words(r)), words(r));
+  // Break M2: an approved change no release has carried yet never locks the type for good: its proposer withdraws it
+  // (the facts go back to what they were), then the facts can be proposed again.
+  r = await call("POST", route, { facts: sample.facts.slice(0, 8), reason: "Test: change it again after the approval, before any release (C4.5 pack)." }, AUTHOR);
+  const locked = r;
+  const notMineW = await call("POST", `/library/changes/${change}/withdraw`, { note: "Not mine (C4.5 pack)." }, APPROVER);
+  const w = await call("POST", `/library/changes/${change}/withdraw`, { note: "Withdrawn after approval to change it again (C4.5 pack)." }, AUTHOR);
+  const restored = typeRow();
+  r = await call("POST", route, { facts: sample.facts, reason: sample.reason }, AUTHOR);
+  const again = r.body?.id ? await call("POST", `/library/changes/${r.body.id}/approve`, { note: "C4.5 pack" }, APPROVER) : r;
+  ok("C4.5-26 pass (break M2): approved but not released, a new change says to withdraw it first; its proposer withdraws it, the facts go back, and they can be proposed and approved again", locked.status === 409 && /withdraws it/.test(words(locked)) && notMineW.status === 403 && w.status < 300 && sql(`select status from library_change where id='${change}'`) === "WITHDRAWN" && restored.startsWith("|") && again.status < 300 && typeRow().split("|")[0].split(",").length === 9, { locked: `${locked.status} ${words(locked).slice(0, 80)}`, notMine: notMineW.status, withdraw: `${w.status} ${words(w).slice(0, 80)}`, restored, again: again.status });
+
   // Test-only change on another type of the six (withdrawn below): the photos line supplies nothing.
   const OTHER = "visa_application_photos", other = `/library/document-types/${OTHER}/supplies`;
   r = await call("POST", other, { facts: [{ fact: "person.date_of_birth", source: "Test words, page 1", quote: "Test: checks the Changed-since refusal", readOn: sample.facts[0].readOn }], reason: "Test only, withdrawn by the C4.5 pack." }, AUTHOR);

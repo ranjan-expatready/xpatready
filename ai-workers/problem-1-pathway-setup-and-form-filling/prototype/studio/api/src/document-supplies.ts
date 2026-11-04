@@ -35,9 +35,18 @@ const SUGGEST_STOP = new Set(["information", "document", "documents", "photocopy
 const copyType = (r: Record<string, unknown>) => { const x = strip(r); if (x.readerProfile === null) x.readerProfile = Prisma.DbNull; return x; };
 const nameOfField = (f: { canonicalFieldKey: string; meaning: string | null; label: string | null }) => (f.meaning ?? f.label ?? f.canonicalFieldKey).trim().replace(/\.$/, "").replace(/^./, (x) => x.toUpperCase());
 
-/** The waiting, returned or approved (not yet released) change of a document type's facts, if any. */
+/** The waiting, returned or approved (not yet released) change of a document type's facts, if any (one at a time: the
+ *  database keeps one waiting or approved change per item, library_change_one_open). */
 export async function openSuppliesChange(db: Pick<Db, "libraryChange">, workspaceId: string, key: string) {
   return db.libraryChange.findFirst({ where: { workspaceId, kind: SUPPLIES_KIND, key, status: { in: OPEN } }, orderBy: { proposedAt: "desc" } });
+}
+/** Break M1: a shared field is usable only while its newest version is neither merged into another nor retired (a merge
+ *  marks only its new version, forms.ts mergeFields). */
+async function refuseUnusable(db: Pick<Db, "canonicalField">, workspaceId: string, facts: string[]) {
+  const rows = await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, mergedIntoKey: true, meaning: true, label: true, status: true } });
+  const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.canonicalFieldKey)) newest.set(r.canonicalFieldKey, r);
+  const merged = [...newest.values()].find((r) => r.mergedIntoKey);
+  if (merged) throw problem(409, "Merged", `"${nameOfField(merged)}" was merged into another shared field (${merged.mergedIntoKey}): choose that one.`);
 }
 
 @Injectable()
@@ -83,10 +92,12 @@ export class DocumentSupplies {
     const fields = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts } }, orderBy: { version: "desc" } });
     const unknown = facts.filter((f) => !fields.some((x) => x.canonicalFieldKey === f));
     if (unknown.length) throw problem(400, "Not a shared field", `${unknown.length === 1 ? "This is" : "These are"} not in the shared library: ${unknown.slice(0, 5).join(", ")}. Choose shared fields only.`);
-    const merged = fields.filter((x) => x.mergedIntoKey && !fields.some((y) => y.canonicalFieldKey === x.canonicalFieldKey && !y.mergedIntoKey));
-    if (merged.length) throw problem(409, "Merged", `"${nameOfField(merged[0])}" was merged into another shared field: choose that one.`);
+    await refuseUnusable(this.db, workspaceId, facts);
     await refuseRetired(this.db, workspaceId, "field", facts);
     const label = new Map(facts.map((f) => [f, nameOfField(fields.find((x) => x.canonicalFieldKey === f)!)]));
+    // Break M3: the facts it supplies now are named too (the second person reads names, never keys).
+    const older = (await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: current.suppliesFacts } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true, label: true } }));
+    const names: Record<string, string> = {}; for (const f of older) names[f.canonicalFieldKey] ??= nameOfField(f); for (const [k, v] of label) names[k] = v;
     const cites: SupplyCite[] = parsed.data.facts.map((f) => ({ fact: f.fact, label: label.get(f.fact)!, about: f.about, source: f.source, quote: f.quote, readOn: f.readOn }));
     const before = { facts: current.suppliesFacts, about: (current.suppliesAbout ?? {}) as Record<string, string> }, after = { facts, about: aboutOf(cites) };
     if (same(before, after)) throw problem(409, "Nothing changes", `"${current.name}" already supplies exactly these facts in the library.`);
@@ -94,9 +105,10 @@ export class DocumentSupplies {
     const n = facts.length, words = n ? `supplies ${n} fact${n === 1 ? "" : "s"}` : "supplies no fact";
     const c = await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `${SUPPLIES_KIND}:${workspaceId}:${key}`);
-      if (await openSuppliesChange(tx, workspaceId, key)) throw problem(409, "Already waiting", `A change of the facts "${current.name}" supplies already waits on To review or for the next release.`);
+      const open = await openSuppliesChange(tx, workspaceId, key);
+      if (open) throw problem(409, "Already waiting", open.status === "APPROVED" ? `A change of the facts "${current.name}" supplies is approved and waits for the next release. To change it again first, its proposer withdraws it (the facts go back to what they were).` : `A change of the facts "${current.name}" supplies already waits on To review or for the next release.`);
       return tx.libraryChange.create({ data: { workspaceId, kind: SUPPLIES_KIND, key, label: `${current.name} · ${words}, for every combination`.slice(0, 300), action: SUPPLIES_ACTION, reason: parsed.data.reason, status: "WAITING", proposedBy: actor.id,
-        matches: { document: current.name, before: before.facts, beforeAbout: before.about, after: after.facts, afterAbout: after.about, cites, uses } as unknown as Prisma.InputJsonValue } });
+        matches: { document: current.name, before: before.facts, beforeAbout: before.about, after: after.facts, afterAbout: after.about, cites, names, uses } as unknown as Prisma.InputJsonValue } });
     });
     await this.audit.log(workspaceId, actor.id, "proposed", "document type", key, `${actor.name} proposed that "${current.name}" ${words} for every combination (used by ${uses}); waits for a second person. Why: ${parsed.data.reason}`);
     // Challenge m6: a supplied fact with no question placed cannot be asked when the document is missing (P-130); said, not refused.
@@ -108,9 +120,9 @@ export class DocumentSupplies {
 
 /** What the second person compares on To review: before → after by name, each new fact's official words, the reason. */
 export function suppliesView(c: Pick<LibraryChange, "matches" | "reason">): SuppliesView {
-  const m = (c.matches ?? {}) as { document?: string; before?: string[]; after?: string[]; cites?: SupplyCite[]; uses?: number };
+  const m = (c.matches ?? {}) as { document?: string; before?: string[]; after?: string[]; cites?: SupplyCite[]; names?: Record<string, string>; uses?: number };
   const before = m.before ?? [], after = m.after ?? [], cites = m.cites ?? [];
-  const name = (f: string) => cites.find((x) => x.fact === f)?.label ?? f;
+  const name = (f: string) => m.names?.[f] ?? cites.find((x) => x.fact === f)?.label ?? f;
   return { document: m.document ?? "", before: before.map(name), after: after.map(name), added: after.filter((f) => !before.includes(f)).map(name), removed: before.filter((f) => !after.includes(f)).map(name), cites, uses: m.uses ?? 0, reason: c.reason ?? "" };
 }
 /** The one line To review and History read ("none → 9 facts: Family name, …"). */
@@ -128,10 +140,25 @@ export async function applySupplies(db: Db, audit: Audit, actor: Actor, c: Libra
   if (!current || !m.after) throw problem(409, "Not in the library", "The document type is no longer in the library, so nothing was changed. Return the change.");
   await refuseRetired(db, c.workspaceId, "document_type", [c.key]);
   await refuseRetired(db, c.workspaceId, "field", m.after);
+  await refuseUnusable(db, c.workspaceId, m.after);
   if (!same({ facts: current.suppliesFacts, about: (current.suppliesAbout ?? {}) as Record<string, string> }, { facts: m.before ?? [], about: m.beforeAbout ?? {} }))
     throw problem(409, "Changed since", "The facts this document supplies changed after it was proposed, so nothing was changed. Return it; the author proposes it again.");
   await revise(db.documentType, rows, { suppliesFacts: m.after, suppliesAbout: m.afterAbout && Object.keys(m.afterAbout).length ? (m.afterAbout as Prisma.InputJsonValue) : Prisma.DbNull }, actor.id, copyType);
   await audit.log(c.workspaceId, actor.id, "approved", "document type", c.key, `${actor.name} approved: ${c.label ?? c.key}. Every combination that names it has it in its draft now; it goes out with each one's next release.`);
+}
+
+/** Break M2: an approved change no release has carried yet (a type no released combination names would otherwise keep
+ *  it for good) is withdrawn by its proposer: the document type's draft goes back to the facts it had before, checked
+ *  first (changed since: refused). Called by withdrawChange (library-changes.ts) in its transaction. */
+export async function withdrawApprovedSupplies(tx: Prisma.TransactionClient, actor: Actor, c: LibraryChange, why: string) {
+  const m = c.matches as { before?: string[]; beforeAbout?: Record<string, string>; after?: string[]; afterAbout?: Record<string, string> };
+  const rows = await tx.documentType.findMany({ where: { workspaceId: c.workspaceId, documentTypeKey: c.key }, orderBy: { version: "desc" } });
+  const draft = rows.find((r) => r.status === "DRAFT");
+  if (!draft || !same({ facts: draft.suppliesFacts, about: (draft.suppliesAbout ?? {}) as Record<string, string> }, { facts: m.after ?? [], about: m.afterAbout ?? {} }))
+    throw problem(409, "Changed since", "The document type's facts changed after this was approved, so nothing was withdrawn. Refresh to see them.");
+  await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: m.before ?? [], suppliesAbout: m.beforeAbout && Object.keys(m.beforeAbout).length ? (m.beforeAbout as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
+  const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "APPROVED" }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
+  if (!done.count) throw problem(409, "Changed meanwhile", "Someone released or withdrew this at the same moment. Refresh to see it.");
 }
 
 /** At a release (publishLibraryChanges): an approved change whose document type draft this release published is released. */

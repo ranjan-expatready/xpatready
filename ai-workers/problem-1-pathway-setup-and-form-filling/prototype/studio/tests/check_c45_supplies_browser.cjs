@@ -131,6 +131,19 @@ const LINES = [...SAMPLE.facts.reduce((m, f) => { const k = `${f.source}|${f.quo
   // The approver reads, never edits.
   await p.keyboard.press("Escape"); await as("user-B"); await p.goto(`${BASE}/library/documents`); await p.getByText("Passport information page copy").first().waitFor({ timeout: 60000 });
   ok("the approver sees no Change the facts button (author only)", (await p.locator("[data-type-supplies]").count()) === 0);
+  // A returned change (review M1): the author is told to propose it again and withdraws it; no dead "Send again".
+  const api = async (method, pth, data, actor) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
+  const prop = await api("POST", "/library/document-types/visa_application_photos/supplies", { facts: [{ fact: "person.date_of_birth", source: "IMM 5484 (05-2026), page 1", quote: "On the back of two photos, write your name and date of birth.", readOn: SAMPLE.facts[0].readOn }], reason: "Test: a change to return (C4.5 browser check)." }, "user-A");
+  const ret = prop.body?.id ? await api("POST", `/library/changes/${prop.body.id}/return`, { note: "The photos do not supply it: the client writes it on them." }, "user-B") : prop;
+  await as("user-A"); await p.goto(`${BASE}/review/change/${prop.body?.id}`);
+  await p.getByText("Propose it again").first().waitFor({ timeout: 60000 });
+  ok("returned: the author sees Propose it again (never Send again with a name and meaning)", ret.status < 300 && (await p.getByRole("button", { name: /Send again/ }).count()) === 0 && (await p.getByText(/withdraw it, then propose the facts again/).count()) === 1, { propose: prop.status, ret: ret.status });
+  await shot("19-returned"); await axe("the returned change");
+  await p.getByRole("button", { name: /Withdraw it instead/ }).click();
+  await p.locator("[data-withdraw] input").fill("Returned: the photos supply no fact.");
+  const [wr] = await Promise.all([p.waitForResponse((r) => /\/withdraw$/.test(r.url()), { timeout: 60000 }), p.getByRole("button", { name: "Withdraw it", exact: true }).click()]);
+  await p.getByText(/Withdrawn: nothing in the library changed/).first().waitFor({ timeout: 30000 }).catch(() => undefined);
+  ok("returned: the author withdraws it, and the toast says nothing changed (no undefined count)", wr.status() < 300 && (await p.getByText(/undefined/).count()) === 0 && (await p.getByText(/Withdrawn: nothing in the library changed/).count()) >= 1, wr.status());
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

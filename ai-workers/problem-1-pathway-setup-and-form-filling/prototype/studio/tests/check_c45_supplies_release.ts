@@ -35,14 +35,11 @@ const KEYS = /\b(person|case|representative)\.[a-z_]+\b/;
   // One dropped (the last), one about the holder's spouse (the first): BR-4's whom-it-is-about.
   const after = now.slice(0, -1), spouseFact = after[0];
   const route = `/library/document-types/${PASSPORT}/supplies`;
-  // A merged shared field is refused (BR-4): test-only, one of the passport's facts is marked merged for this call.
-  sql(`update canonical_field set merged_into_key='person.no_such_target' where canonical_field_key='${now.at(-1)}'`);
-  let r = await call("POST", route, { facts: [cite(now.at(-1)!)], reason: "Test: a merged field (C4.5)." });
-  sql(`update canonical_field set merged_into_key=null where canonical_field_key='${now.at(-1)}'`);
-  ok("C4.5 BR-4 fail: a shared field merged into another is refused (409, in words)", r.status === 409 && /merged into another/.test(words(r)), words(r));
-  r = await call("POST", route, { facts: after.map((f) => cite(f, f === spouseFact ? "holder.spouse" : "holder")), reason: "Test: drop one fact and say one is about the spouse (C4.5)." });
+  let r = await call("POST", route, { facts: after.map((f) => cite(f, f === spouseFact ? "holder.spouse" : "holder")), reason: "Test: drop one fact and say one is about the spouse (C4.5)." });
   const id = r.body?.id;
   ok("C4.5 pass: the author proposes the change; it waits", r.status < 300 && sql(`select status from library_change where id='${id}'`) === "WAITING", r.status >= 300 ? words(r) : r.body?.label);
+  const v = (await call("GET", `/library/changes/${id}`, undefined, "user-B")).body?.supplies;
+  ok("C4.5 pass (break M3): the second person reads the facts it supplies now and the one removed by name, never keys", v?.before?.length === now.length && v.removed?.length === 1 && ![...v.before, ...v.removed].some((x: string) => KEYS.test(x)), { before: v?.before?.slice(0, 3), removed: v?.removed });
   r = await call("POST", `/library/changes/${id}/approve`, { note: "Second person (C4.5 check)." }, "user-B");
   const draft = sql(`select array_to_string(supplies_facts, ',') || '|' || coalesce(supplies_about::text, '') || '|' || status from document_type where document_type_key='${PASSPORT}' order by version desc limit 1`);
   ok("C4.5 pass (BR-6): at approval a new draft version carries the facts and whom each is about; the change is approved, not released", r.status < 300 && draft.startsWith(`${after.join(",")}|`) && draft.includes(`"${spouseFact}": "holder.spouse"`) && draft.endsWith("|DRAFT") && sql(`select status from library_change where id='${id}'`) === "APPROVED", { status: r.status, draft });
@@ -61,6 +58,26 @@ const KEYS = /\b(person|case|representative)\.[a-z_]+\b/;
   const rel = (await call("GET", `/combinations/${wp}/config?mode=published`)).body?.snapshot;
   const t = (rel?.document_types ?? []).find((x: any) => x.key === PASSPORT);
   ok("C4.5 pass: the released snapshot carries the facts and whom they are about", JSON.stringify(t?.supplies_facts) === JSON.stringify(after) && t?.supplies_about?.[spouseFact] === "holder.spouse", t);
+  // Challenge m6: a supplied fact no question asks is accepted with a warning (it cannot be asked when the document is missing).
+  // Test-only: every fact of the fixture is placed, so one fact's placements are retired for this call, then restored.
+  const unplaced = "person.date_of_birth";
+  const placedRows = sql(`select id || ':' || status from section_question where canonical_field_key='${unplaced}' and status in ('DRAFT','PUBLISHED')`).split("\n").filter(Boolean);
+  sql(`update section_question set status='RETIRED' where id in (${placedRows.map((x) => `'${x.split(":")[0]}'`).join(",") || "null"})`);
+  const other = sql(`select document_type_key from document_type where workspace_id=(select workspace_id from combination where id='${wp}') and document_type_key <> '${PASSPORT}' and status='PUBLISHED' order by 1 limit 1`);
+  r = unplaced && other ? await call("POST", `/library/document-types/${other}/supplies`, { facts: [cite(unplaced)], reason: "Test: an unplaced fact (C4.5)." }) : { status: 0, body: null };
+  ok("C4.5 pass (challenge m6): a supplied fact no question asks is accepted with a warning that it cannot be asked when the document is missing", r.status < 300 && (r.body?.warnings ?? []).some((w: any) => w.fact === unplaced && /cannot be asked when the document is missing/.test(w.why)), { unplaced, other, status: r.status, warnings: r.body?.warnings });
+  if (r.body?.id) await call("POST", `/library/changes/${r.body.id}/withdraw`, { note: "Test only (C4.5)." });
+  for (const x of placedRows) { const [rid, st] = x.split(":"); sql(`update section_question set status='${st}' where id='${rid}'`); }
+  // Break M1: a field merged into another through the merge route (its newest version alone carries the mark) is refused.
+  const keep = "person.citizenship", gone = sql(`select canonical_field_key from canonical_field where canonical_field_key in ('person.country_of_birth','person.birth_country') and status <> 'RETIRED' order by 1 limit 1`);
+  let merged: { status: number; body: any } = { status: 0, body: null };
+  if (gone) {
+    const m = await call("POST", "/library/merges", { keep, merge: gone, reason: "Test: these two mean the same for this check only (C4.5)." });
+    if (m.status < 300) merged = await call("POST", `/library/merges/${m.body?.id ?? m.body?.merge?.id}/approve`, { note: "Second person (C4.5 check)." }, "user-B");
+    else merged = m;
+  }
+  r = await call("POST", route, { facts: [cite(gone || "person.country_of_birth")], reason: "Test: a merged field (C4.5)." });
+  ok("C4.5 BR-4 fail (break M1): a field merged into another through the merge route is refused (409, in words)", merged.status < 300 && r.status === 409 && /merged into another/.test(words(r)), { merge: merged.status, mergeWords: words(merged).slice(0, 120), status: r.status, words: words(r).slice(0, 120) });
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });
