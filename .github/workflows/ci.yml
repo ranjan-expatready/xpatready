@@ -108,6 +108,7 @@ jobs:
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
           bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
           node "$S/tools/check-gate-b.mjs"
+          node "$S/tools/check-works-set.mjs"
       - name: Playwright's own Chromium
         if: env.KIND == 'code'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
@@ -158,10 +159,59 @@ jobs:
         run: bash "$P/tools/check-typecheck.sh"
       - name: type check, api and web (typecheck.mjs; only errors not in typecheck-known.txt fail)
         run: node "$P/tools/typecheck.mjs" | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}
+  regression-plan:
+    # P-320 (b): a merge-queue batch re-runs every M2 Works capability's acceptance pack (qa/CAPABILITIES.md at the base).
+    needs: kind
+    if: ${{ needs.kind.outputs.queue == 'true' && needs.kind.outputs.kind == 'code' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: { contents: read }
+    outputs: { caps: "${{ steps.p.outputs.caps }}" }
+    env:
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      RANGE: "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, filter: "blob:none" }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc }
+      - id: p
+        name: the protected set (M2 Works rows with a pack, read at the base)
+        run: |
+          node "$S/tools/works-set.mjs" --list
+          echo "caps=$(node "$S/tools/works-set.mjs" --json)" >> "$GITHUB_OUTPUT"
+  regression:
+    needs: regression-plan
+    if: ${{ needs.regression-plan.outputs.caps != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions: { contents: read }
+    concurrency: { group: "regression-${{ github.event.pull_request.number }}-${{ matrix.cap }}", cancel-in-progress: true }
+    strategy:
+      fail-fast: false   # every protected row reports, one red never hides another
+      matrix:
+        cap: ${{ fromJSON(needs.regression-plan.outputs.caps) }}
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser packs need)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: ${{ matrix.cap }} pack, retried once if red (works-set.mjs --run; US$0)
+        run: node "$S/tools/works-set.mjs" --run "${{ matrix.cap }}"
   ci:
     # The one check Mergify reads. Notes: the two notes checks here, on a GitHub machine. Records and code on GitHub's
     # machines: only reports the parts' result. On the Mac (BATCH_RUNNER / PR_RUNNER = mac): the checks run here.
-    needs: [kind, shard, types]
+    needs: [kind, shard, types, regression-plan, regression]
     if: ${{ !cancelled() }}
     runs-on: ${{ fromJSON((needs.kind.outputs.kind == 'notes' || (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
@@ -199,6 +249,12 @@ jobs:
         if: env.KIND != 'notes' && env.SHARDED == 'true'
         run: |
           echo "parts: ${{ needs.shard.result }}"; [ "${{ needs.shard.result }}" = success ]
+      - name: the protected regression set's result (merge-queue batches of code, P-320 (b))
+        if: needs.kind.outputs.queue == 'true' && env.KIND == 'code'
+        run: |
+          echo "plan: ${{ needs.regression-plan.result }} · packs: ${{ needs.regression.result }} · set: ${{ needs.regression-plan.outputs.caps }}"
+          [ "${{ needs.regression-plan.result }}" = success ] || exit 1
+          [ "${{ needs.regression.result }}" = success ] || { [ "${{ needs.regression.result }}" = skipped ] && [ '${{ needs.regression-plan.outputs.caps }}' = '[]' ]; }
       # ---- records and code on the founder's Mac (BATCH_RUNNER / PR_RUNNER = mac), as before I1
       - uses: actions/checkout@v4
         if: env.KIND != 'notes' && env.SHARDED != 'true'
