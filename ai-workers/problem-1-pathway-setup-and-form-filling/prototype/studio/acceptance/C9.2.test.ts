@@ -44,12 +44,11 @@ await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)
   // read) is still the one of the bytes served before the change.
   const validatedSha = sql(`select sha256 from validated_copy where form_instance_id='${copy}' order by read_at desc limit 1`);
   ok("C9.2-4 pass: the validated copy itself is never changed (same bytes); the signed scan keeps its checksum", copyFile.length > 0 && !!scanSha && validatedSha === before && sql(`select count(*) from validated_copy where form_instance_id='${copy}'`) === "1" && sql(`select sha256 from signed_scan where item_id='${i5476?.id}'`) === scanSha, { validatedSha, before });
-  // Waits for C7.6 (#861, Ready to file): while the Prepare view says readiness is not built (`built: false`), this step
-  // prints WAIT and does not count; once C7.6 fills readiness it runs as written (under P-237 the "blocks" wording may
-  // become a CRITICAL warning there, as L-SA3's done-when says: C7.6's PR adjusts this line).
-  const ready5 = readinessOf(p, filingOf(p, P)?.id) as { built?: boolean; blocks?: { code: string; words: string }[] } | null;
-  if (ready5?.built === false) console.log("WAIT  C9.2-5 fail (P-136, P-168): an out-of-date uploaded or signed item blocks Ready to file — waits for C7.6 (#861): readiness is not built yet");
-  else ok("C9.2-5 fail (P-136, P-168): an out-of-date uploaded or signed item blocks Ready to file", (ready5?.blocks ?? []).some((b) => b.code === "out_of_date" && /IMM 5257/.test(b.words)));
+  // Builder (C9.2 PR, after C7.6 #861 merged): under P-237 the former block is a CRITICAL warning (C7.6 puts
+  // "out_of_date" in `warns` with severity "critical"; design row C9.2: "the pack's 'blocks' wording becomes a CRITICAL
+  // warning"), and the filing is not Ready to file while it is open. The rule (P-136: it stops Ready to file) is kept.
+  const ready5 = readinessOf(p, filingOf(p, P)?.id) as { ready?: boolean; built?: boolean; blocks?: { code: string; words: string }[]; warns?: { code: string; words: string; severity?: string }[] } | null;
+  ok("C9.2-5 fail (P-136, P-168, P-237): an out-of-date uploaded or signed item is a CRITICAL warning that stops Ready to file", ready5?.ready === false && [...(ready5?.blocks ?? []), ...(ready5?.warns ?? []).filter((w) => w.severity === "critical")].some((b) => b.code === "out_of_date" && /IMM 5257/.test(b.words)), (ready5?.warns ?? []).filter((w) => w.code === "out_of_date").map((w) => w.words));
   ok("C9.2-6 pass: the signed IMM 5476 that prints the family name is Out of date too", itemsOf(p, P, "IMM 5476")[0]?.state === "out_of_date");
   ok("C9.2-7 pass (scope): the spouse's own IMM 5257 does not use the principal's family name and stays as it was", itemsOf(p, S, "IMM 5257").length === 1 && itemsOf(p, S, "IMM 5257")[0]?.state !== "out_of_date" && itemsOf(p, S, "IMM 5476").length === 1 && itemsOf(p, S, "IMM 5476")[0]?.state === "ready", itemsOf(p, S).filter((i) => i.kind === "form").map((i) => [i.form, i.state]));
   const r = await call("POST", `/runtime/cases/${c.id}/changes/undo`, { subjectId: P, fact: "person.family_name" }, officer);

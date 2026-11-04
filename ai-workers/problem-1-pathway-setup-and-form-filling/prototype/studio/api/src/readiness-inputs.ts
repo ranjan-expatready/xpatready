@@ -15,7 +15,9 @@ const SIGNER: Record<string, string> = { person: "the person", parent: "a parent
 
 /** What the prepare view already worked out for one form item (case-prepare.ts), as readiness reads it. */
 export type PreparedForm = { id: string; filing: string; subject: string; person: string; form: string; channel: Channel; signature: Signature; signed_by: string | null; signers?: string[]; state: string;
-  reason?: string; steps?: { key: string; done: boolean | null }[] };
+  reason?: string; steps?: { key: string; done: boolean | null }[];
+  /** C9.2 (BR-12, P-136): a validated, signed or uploaded copy of it is out of date: the first fact changed and when. */
+  outOfDate?: { fact: string; since: string } | null };
 // Review B1 on #861: `signers` may be missing on a line (`signers?` in its type), so readiness never assumes it.
 export type ReadinessInputs = {
   workspaceId: string; caseId: string; filings: string[];
@@ -85,7 +87,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
         signerOwes: who.length && who.every((s) => s === "representative") ? "representative" : "client",
         // An accepted-until date is set only on an edition IRCC has replaced (P-151 (1)): it is superseded until then.
         edition: label ? { label, superseded: until !== null, acceptedUntil: until } : null,
-        enteredOutOfDate: x.enteredStale.get(f.id) ?? [] } satisfies FormItem;
+        enteredOutOfDate: x.enteredStale.get(f.id) ?? [], outOfDate: f.outOfDate ?? null } satisfies FormItem;
     });
     const documents: DocumentItem[] = x.documents.filter((d) => d.filing === filing).map((d) => {
       const st = lineState.get(`${d.subject}|${d.document_type}`);

@@ -329,9 +329,18 @@ export class CasePrepare {
     const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
     const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
     // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
-    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
+    // C9.2 (BR-12, P-136, P-237): an out-of-date validated, signed or uploaded item is a CRITICAL "out of date" line on its
+    // filing (an Online section entered before a change warns, enteredStale). A signed scan's own out-of-date record is
+    // not a form of its own: its mark goes on its item, which asks for a new signed copy.
+    const records = new Map(items.flatMap((i) => ("record" in i && i.record === "signed_scan" && "item" in i ? [[i.item as string, i]] : [])));
+    const markOf = (i: (typeof items)[number] | undefined) => {
+      if (!i || i.state !== "out_of_date" || ("channel" in i && i.channel === "ONLINE")) return null;
+      const first = ((i as { changes?: ChangeRow[] }).changes ?? [])[0];
+      return { fact: first?.label ?? "a fact it reads", since: first?.at ?? today.toISOString() };
+    };
+    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form && !("record" in i) ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
       channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
-      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined }] : []);
+      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined, outOfDate: markOf(i) ?? markOf(records.get(i.id)) }] : []);
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
