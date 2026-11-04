@@ -3,7 +3,7 @@
 // factsOf, kkey), engine/sources.ts (spouseOf, roleOf), engine/people.ts (the roles a "who" names) and
 // api/src/form-lines.ts (the merge chain). Pure: no database or vendor call, no country value (P-249 lift-ready); the
 // one store read (R9) comes in as a function. Contract tests: tests/check_sh3_resolver.ts.
-import { FILING, MERGE_HOPS, ROLE, WHO_ROLES, factKey, type Known, type ParticipantLine, type PersonOnFiling, type Resolver, type Role, type Scope, type Subject, type Who } from "../contracts/resolver.ts";
+import { FILING, MERGE_HOPS, ROLE, type DocumentAbout, WHO_ROLES, factKey, type Known, type ParticipantLine, type PersonOnFiling, type Resolver, type Role, type Scope, type Subject, type Who } from "../contracts/resolver.ts";
 
 export type { Known, PersonOnFiling as Person, Role } from "../contracts/resolver.ts";
 /** R8 (kept under its old name for its many callers). */
@@ -151,8 +151,23 @@ export async function canonicalFact(key: string, mergedInto: (key: string) => Pr
 /** R10 */
 export const rolesNamedBy = (who: string): Role[] => WHO_ROLES[who as Who] ?? [];
 
+/** R11: the about-keys a document's fact is about, for one holder (moved from engine/sources.ts documentFacts). */
+export function documentSubjects(people: PersonOnFiling[], holder: string, about: DocumentAbout | string): string[] {
+  if (about === "holder") return [holder];
+  if (holder === FILING) return [];
+  if (about === "holder.spouse") { const p = partnerOf(people, holder); return p ? [p] : []; }
+  return [`${holder}/parent_1`, `${holder}/parent_2`];
+}
+/** R11 per role (moved from engine/sources.ts checklist's other()): parents are relatives, so they have no role here. */
+export function documentRole(people: PersonOnFiling[], holder: string, about: DocumentAbout | string): string | null {
+  if (about === "holder") return roleOf(people, holder);
+  if (about !== "holder.spouse") return null;
+  const p = documentSubjects(people, holder, about)[0];
+  return p ? roleOf(people, p) : null;
+}
+
 /** The contract, satisfied by the functions above (one object for callers that take a resolver). */
 export const resolver: Resolver = {
   people: peopleFor, holders: subjectsFor, conditionSubjects, boxOwner: aboutOf, scopeOf, subjectOf, roleOf, partnerOf,
-  factsFor: factsOf, valueHolder, signers: formSigners, canonicalFact, rolesNamedBy,
+  factsFor: factsOf, valueHolder, signers: formSigners, canonicalFact, rolesNamedBy, documentSubjects, documentRole,
 };
