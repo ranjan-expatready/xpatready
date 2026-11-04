@@ -1,0 +1,4 @@
+{
+  "about": "P-319 (founder, 4 Nov: no combination is hard-coded): the demo's form roles, which an author sets per form in the library (POST /api/library/forms/:code/role). [IRCC-F09] Guide 5256: 'You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country' (read 19 Oct 2026); P-230 (6): either one fills the family information line. Sample until the immigration expert confirms.",
+  "roles": { "IMM 5707": "family_information", "IMM 5645": "family_information" }
+}
