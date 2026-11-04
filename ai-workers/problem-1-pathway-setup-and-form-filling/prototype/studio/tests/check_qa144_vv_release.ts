@@ -50,7 +50,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   ok("QA-144 row 7: done, said in plain words (sections, questions, form fields, form lines)", r("7").status === "done" && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows), r("7"));
   ok("QA-144 rules pass: every Visitor visa form it files had its sections drafted by rules (no AI, US$0; not IMM 5645, which the paper channel takes off)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form' and coalesce(edition, '') not like 'IMM 5645 (%'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
-  // Approved by the Approver; once the Visitor visa is released (IRM 0002's map, #891), the release marks them RELEASED.
+  // Slice 2 (#878): With an LMIA is released by the same load, so items its release uses read RELEASED too.
   // Approved by the Approver; a section the Visitor visa's release carries is RELEASED with it, one it does not use stays
   // APPROVED (review m3: once released, the release's own sections must be RELEASED).
   const approved = "status in ('APPROVED', 'RELEASED')";
@@ -114,7 +114,9 @@ type Row = { row: string; status: string; shows: string; why: string | null };
     && n(`select count(*) from answer_list_value v join answer_list l on l.id = v.answer_list_id join canonical_field f on f.answer_list_key = l.answer_list_key where f.canonical_field_key = 'person.marital_status' and v.value_key = 'common_law'`) > 0);
 
   // The rest of the M2 gate keeps its words: the other combinations are still refused with their own reasons.
-  ok("QA-144 scope: only the Visitor visa is set up from its forms in this slice (no other combination has a rules pass)", n(`select count(*) from drafting_job where kind = 'masters_edition' and combination_id <> '${vv}'`) === 0);
+  // Slice 2 (tests/check_qa144_lmia_release.ts) adds With an LMIA; R2-m1 keeps the Visitor visa's chosen sections ones
+  // its people all answer (the toddler and never-married checks above run after With an LMIA's placements).
+  ok("QA-144 scope: only the Visitor visa and With an LMIA are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside')`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();
