@@ -51,6 +51,9 @@ ok("C9.2 reason: more than three changes are counted, not spelt out", /and 2 mor
 const cur = { id: "3", value: "SAMPLEDZ" };
 ok("C9.2 undo: the earlier value is the newest earlier answer that differs (a confirmation of the same value is skipped)", undoTarget(cur, [{ id: "2b", value: "SAMPLEDZ" }, { id: "2", value: "SAMPLE" }, { id: "1", value: "FIRST" }])?.id === "2");
 ok("C9.2 undo (fail): an answer never changed has nothing to undo", undoTarget(cur, [{ id: "2", value: "SAMPLEDZ" }]) === null && undoTarget(cur, []) === null);
+const hist = [{ id: "u1", value: "SAMPLE", restoredFrom: "2" }, { id: "3", value: "SAMPLEDZ" }, { id: "2", value: "SAMPLE" }, { id: "1", value: "FIRST" }];
+ok("C9.2 undo: a second Undo goes further back from the answer the first one restored (never a redo)", undoTarget(hist[0], hist.slice(1))?.id === "1");
+ok("C9.2 undo (fail): a second Undo with nothing further back has nothing to undo (it never puts the change back)", undoTarget({ id: "u1", value: "FIRST", restoredFrom: "1" }, [{ id: "2", value: "SAMPLE" }, { id: "1", value: "FIRST" }]) === null);
 ok("C9.2 undo: values compare by content (an address object)", undoTarget({ id: "2", value: { city: "B" } }, [{ id: "1b", value: { city: "B" } }, { id: "1", value: { city: "A" } }])?.id === "1");
 
 process.exitCode = summary() ? 1 : 0;

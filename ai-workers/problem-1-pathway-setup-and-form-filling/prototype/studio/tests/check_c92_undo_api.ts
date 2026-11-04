@@ -53,8 +53,7 @@ const q = (await agent(c.id))?.sections?.flatMap((s: { questions: { subjectId: s
 ok("C9.2 undo: the restored value keeps its earlier confirmation (it counts for the forms again)", q?.answer?.confirmed === true, q?.answer);
 ok("C9.2 undo: the audit names the undo (never the values)", Number(sql(`select count(*) from audit_event where entity='case fact' and summary like '%undid the last change to ${FN}%'`)) >= 1);
 const u2 = await undo({ subjectId: P, fact: FN });
-ok("C9.2 undo: a second Undo puts the change back (the earlier value of the restored one)", u2.status === 200 && current() === "SAMPLEUZ", u2.body);
-await undo({ subjectId: P, fact: FN });
+ok("C9.2 undo (fail): a second Undo never puts the change back: with nothing further back, 409 and nothing written", u2.status === 409 && current() === before && rowsOf() === n1 + 1, [u2.status, current()]);
 
 // (3) A signed IMM 5476 out of date, signed again.
 let p = (await prepare(c.id, officer)).p;
@@ -67,6 +66,8 @@ p = (await prepare(c.id, officer)).p;
 const both = itemsOf(p, P, "IMM 5476") as { id: string; state: string; item?: string; record?: string; reason?: string; changes?: { fact: string; undo: boolean }[] }[];
 const old = both.find((x) => x.state === "out_of_date"), fresh = both.find((x) => x.state === "to_do");
 ok("C9.2 signed: the signed one is listed Out of date (its scan's own id, the item named), with the change to undo", !!old && old.record === "signed_scan" && old.item === item?.id && old.id !== item?.id && /family name/i.test(old.reason ?? "") && !!old.changes?.some((x) => x.fact === FN && x.undo), old);
+const ch = old?.changes?.find((x) => x.fact === FN) as { expected_id?: string; restores?: unknown } | undefined;
+ok("C9.2 changes (review M1, M2): a change says what Undo puts back and the answer it was read from", ch?.restores === "SAMPLE" && ch?.expected_id === sql(`select id from client_canonical_answer where subject_id='${P}' and canonical_field_key='${FN}' and superseded_by_id is null`), ch);
 ok("C9.2 signed: the item asks for a new signed one (To do), keeping its own id", fresh?.id === item?.id && /A new signed IMM 5476 is needed/.test(fresh?.reason ?? ""), fresh);
 const reprint = await call("POST", `/runtime/items/${item?.id}/sign-steps/print`, { copy: await generateCopy(c.id, "IMM 5476", P) }, officer);
 const steps = reprint.body?.sign_steps as { key: string; done: unknown }[] | undefined;

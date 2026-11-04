@@ -22,7 +22,7 @@ import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom 
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
-import { factChanges, outOfDateReason, representativeWords, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
+import { factChanges, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
@@ -53,6 +53,8 @@ const EnteredBody = z.object({ version: z.string({ error: "Send the section's ve
 const DOB = "person.date_of_birth";
 
 type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
+/** C9.2: one changed fact on an out-of-date item, as the screen reads it (Undo: what it restores, the answer seen). */
+type ChangeRow = { subject: string; fact: string; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null; undo: boolean; expected_id: string | null; restores: unknown };
 
 @Injectable()
 export class CasePrepare {
@@ -206,7 +208,8 @@ export class CasePrepare {
       .map((x) => [x.id, (x.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] }]));
     const scans = await this.db.signedScan.findMany({ where: { caseId: c.id }, orderBy: [{ uploadedAt: "desc" }, { id: "asc" }], select: { id: true, itemId: true, uploadedAt: true } });
     const questionWords = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
-    const placementWords = new Map((s.placements as { fact: string; question_text?: string | null }[]).map((p) => [p.fact, p.question_text ?? ""]));
+    const placementWords = new Map<string, string>();
+    for (const p of s.placements as { fact: string; question_text?: string | null }[]) if (p.question_text?.trim() && !placementWords.has(p.fact)) placementWords.set(p.fact, p.question_text.trim());
     const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? ""]));
     const words: ChangeWords = {
       label: (fact) => questionWords.get(fact) || placementWords.get(fact) || meaning.get(fact) || fact,
@@ -221,7 +224,12 @@ export class CasePrepare {
       return { changes: factChanges(then.facts ?? [], nowFacts(form, subject), words), groups: changedGroups(then.groups, groupFacts(view, form, subject)) };
     };
     // The structured list the screen reads for "Undo this change" (one per person and fact; never the firm record's).
-    const changeList = (cs: FactChange[]) => cs.map((x) => ({ subject: x.about, fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: x.about !== REPRESENTATIVE }));
+    // Review S1: never offered for the firm record's facts, a list entry or a declaration (the route refuses them).
+    const placeOf = new Map((s.placements as { fact: string; repeats: string }[]).map((p) => [p.fact, p.repeats]));
+    const typeOf = new Map((s.canonical_fields as { id: string; value_type?: string }[]).map((f) => [f.id, f.value_type ?? ""]));
+    const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
+    // `undo`, `expected_id` and `restores` are filled once every item is worked out (one read of the answers' history).
+    const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: x.about, fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
     const items = stored.items.flatMap((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -281,6 +289,18 @@ export class CasePrepare {
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
     });
+    // C9.2 review M1, M2: what Undo would put back for each change (the same rule as the route: the newest earlier value
+    // that differs, undoTarget) and the answer the officer saw, so the screen names the real value and a stale tab gets 409.
+    const rowsOfChanges = items.flatMap((x) => ((x as { changes?: ChangeRow[] }).changes ?? []).filter((y) => y.undo));
+    if (rowsOfChanges.length) {
+      const pairs = [...new Map(rowsOfChanges.map((y) => [`${y.subject}|${y.fact}`, { subjectId: y.subject, canonicalFieldKey: y.fact, rowKey: null }])).values()];
+      const hist = await this.db.clientCanonicalAnswer.findMany({ where: { OR: pairs }, orderBy: [{ effectiveAt: "desc" }, { id: "desc" }], select: { id: true, subjectId: true, canonicalFieldKey: true, valueJson: true, supersededById: true, sourceJson: true } });
+      for (const y of rowsOfChanges) {
+        const mine = hist.filter((h) => h.subjectId === y.subject && h.canonicalFieldKey === y.fact).map((h) => ({ ...h, value: h.valueJson, restoredFrom: restoredFromOf(h.sourceJson) }));
+        const cur = mine.find((h) => !h.supersededById), target = cur ? undoTarget(cur, mine.filter((h) => h.id !== cur.id)) : null;
+        y.expected_id = cur?.id ?? null; y.restores = target ? target.value : null; y.undo = !!target;
+      }
+    }
     // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (M3-A3) fills this from engine/runtime/readiness.ts; until then each filing is not ready and says why.

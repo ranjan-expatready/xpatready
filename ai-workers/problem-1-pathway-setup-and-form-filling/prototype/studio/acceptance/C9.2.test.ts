@@ -27,6 +27,10 @@ await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)
   const copy = await validateRoundTrip(c.id, "IMM 5257", P);
   const i5476 = itemsOf(p, P, "IMM 5476")[0];
   await signByHand(c.id, i5476?.id, "IMM 5476", P); // print → signed → scan, in order (C8.1-3)
+  // Builder (C9.2 PR, review S4): the spouse's IMM 5476 signed too, so -7's scope has a finished item that does not read
+  // the principal's family name (the spouse's IMM 5257 is never finished here, and it does read the principal's name).
+  const s5476 = itemsOf(p, S, "IMM 5476")[0];
+  await signByHand(c.id, s5476?.id, "IMM 5476", S);
   const copyFile = await copyBytes(copy ?? "", officer), before = sha(copyFile), scanSha = sql(`select sha256 from signed_scan where item_id='${i5476?.id}'`);
   ok("C9.2-2 pass: IMM 5257 validated and read back, IMM 5476 signed scan in (setup)", !!copy && !!scanSha);
 
@@ -47,7 +51,7 @@ await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)
   if (ready5?.built === false) console.log("WAIT  C9.2-5 fail (P-136, P-168): an out-of-date uploaded or signed item blocks Ready to file — waits for C7.6 (#861): readiness is not built yet");
   else ok("C9.2-5 fail (P-136, P-168): an out-of-date uploaded or signed item blocks Ready to file", (ready5?.blocks ?? []).some((b) => b.code === "out_of_date" && /IMM 5257/.test(b.words)));
   ok("C9.2-6 pass: the signed IMM 5476 that prints the family name is Out of date too", itemsOf(p, P, "IMM 5476")[0]?.state === "out_of_date");
-  ok("C9.2-7 pass (scope): the spouse's own IMM 5257 does not use the principal's family name and stays as it was", itemsOf(p, S, "IMM 5257").length === 1 && itemsOf(p, S, "IMM 5257")[0]?.state !== "out_of_date");
+  ok("C9.2-7 pass (scope): the spouse's own IMM 5257 does not use the principal's family name and stays as it was", itemsOf(p, S, "IMM 5257").length === 1 && itemsOf(p, S, "IMM 5257")[0]?.state !== "out_of_date" && itemsOf(p, S, "IMM 5476").length === 1 && itemsOf(p, S, "IMM 5476")[0]?.state === "ready", itemsOf(p, S).filter((i) => i.kind === "form").map((i) => [i.form, i.state]));
   const r = await call("POST", `/runtime/cases/${c.id}/changes/undo`, { subjectId: P, fact: "person.family_name" }, officer);
   p = (await prepare(c.id, officer)).p;
   ok("C9.2-8 pass: Undo of the change restores the earlier value; the items are no longer out of date", r.status === 200 && itemsOf(p, P, "IMM 5257")[0]?.state !== "out_of_date" && itemsOf(p, P, "IMM 5476")[0]?.state !== "out_of_date", r.status);

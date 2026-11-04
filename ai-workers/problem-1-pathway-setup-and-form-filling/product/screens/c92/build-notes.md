@@ -24,3 +24,20 @@ Contract (fixed): `POST /runtime/cases/:id/changes/undo {subjectId, fact}`; an i
 * **C9.2-5** (an out-of-date item stops "Ready to file") waits for C7.6 (#861): readiness is C7.6's. Under P-237 the
   pack's "blocks" wording becomes a CRITICAL warning there, as L-SA3's done-when says.
 * **"Submitted" items** ("Filed with an earlier value", BR-12 after filing) wait for C8.2's record (another lane).
+
+## Response to the review of 53686fb5 (`review.md`, Block)
+* **M1 fixed:** each change on an out-of-date item carries `restores` (the value Undo really puts back, worked out by the
+  route's own rule) and the button names it. Undo also never redoes: a second Undo walks back from the answer the first
+  one restored (`undoTarget`, `restoredFrom`), so SAMPLE → A → B undoes to A, then to SAMPLE.
+* **M2 fixed:** each change carries `expected_id` (the answer the screen read); the screen sends it, so a second tab
+  that read before a change gets 409 and nothing is undone.
+* **M3 fixed:** the button's accessible name starts with its visible words; axe runs on every state.
+* **M4 fixed:** messages use the question's words (the first placement with words, else the fact's meaning), never a key.
+* **S1 fixed:** no Undo for the firm record's facts, list entries or declarations. **S2 fixed:** the button wraps at
+  400 px. **S3 fixed:** after Undo the focus goes to the list's heading, or the panel's when the list is gone.
+* **S4 done:** -7 also signs the spouse's IMM 5476 and checks it stays Ready (the spouse's IMM 5257 is never finished
+  in the pack, and it does read the principal's name, so it could not fail). Asked of the tech lead on the PR.
+* **S5 kept:** the words are the question's own (configuration data); a short name per fact does not exist as data.
+* **(d):** the server checks the stored validated file against its checksum on every read (`checkedFile`); the test
+  compares that checksum and that no second validated copy was written.
+* New browser suite `tests/check_c92_out_of_date_browser.ts` (1440 and 400 px, axe, two tabs, keyboard, focus).

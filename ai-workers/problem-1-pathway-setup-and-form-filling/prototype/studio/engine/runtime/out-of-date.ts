@@ -91,7 +91,14 @@ export function representativeWords(earlier: string | null, now: string | null, 
 }
 
 /** The earlier value Undo restores (C9.2): walking back from the current answer, the newest earlier answer whose value
- *  differs from it (a confirmation of the same value is not a change). Null when there is nothing to undo. */
-export function undoTarget<T extends { id: string; value: unknown }>(current: T, earlier: T[]): T | null {
-  return earlier.find((x) => x.id !== current.id && !same(x.value, current.value)) ?? null;
+ *  differs from it (a confirmation of the same value is not a change). Undo never redoes (review of #926): when the
+ *  current answer is itself a restore (`restoredFrom`, the answer it put back), the walk starts below that answer, so a
+ *  second Undo goes further back. `earlier` is newest first. Null when there is nothing to undo. */
+export function undoTarget<T extends { id: string; value: unknown; restoredFrom?: string | null }>(current: T, earlier: T[]): T | null {
+  let anchor: T = current; const seen = new Set<string>();
+  while (anchor.restoredFrom && !seen.has(anchor.id)) { seen.add(anchor.id); const back = earlier.find((x) => x.id === anchor.restoredFrom); if (!back) break; anchor = back; }
+  const from = anchor === current ? earlier : earlier.slice(earlier.indexOf(anchor) + 1);
+  return from.find((x) => x.id !== current.id && !same(x.value, current.value)) ?? null;
 }
+/** The answer a restored answer put back (its source's `restored.from`), or null. */
+export const restoredFromOf = (source: unknown): string | null => ((source as { restored?: { from?: unknown } } | null)?.restored?.from as string | undefined) ?? null;

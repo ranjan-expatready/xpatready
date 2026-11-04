@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { undoTarget } from "../../engine/runtime/out-of-date.ts";
+import { restoredFromOf, undoTarget } from "../../engine/runtime/out-of-date.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
@@ -40,11 +40,13 @@ export class CaseChanges {
     const s = this.r.snapshotOf(c);
     const field = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === b.fact);
     const place = (s.placements as { fact: string; repeats: string; question_text?: string | null }[]).find((p) => p.fact === b.fact);
-    if (!field || !place) fail(`The release this case works from does not ask for ${b.fact}.`, HttpStatus.NOT_FOUND);
+    if (!field || !place) fail("The release this case works from does not ask that question, so there is nothing to undo.", HttpStatus.NOT_FOUND);
     // P-97, P-130: a declaration is always the client's own; the officer never makes it, so never restores one either.
     if (field!.value_type === "declaration") fail("Only the client makes this declaration, in their own questionnaire; the officer cannot undo it for them.", HttpStatus.FORBIDDEN);
     if (place!.repeats === "per_row") fail("Undo works on a single answer; an entry in a list is changed in its own row.", HttpStatus.UNPROCESSABLE_ENTITY);
-    const words = place!.question_text || b.fact;
+    // Review M4: the question's words (or the fact's meaning), never its key.
+    // A fact can be placed more than once; the first placement with words names it (as engine/render.ts labels questions).
+    const words = (s.placements as { fact: string; question_text?: string | null }[]).filter((p) => p.fact === b.fact).map((p) => p.question_text?.trim()).find(Boolean) || (field as { meaning?: string }).meaning || "This answer";
 
     const out = await this.db.$transaction(async (tx) => {
       // One undo at a time per case (the Prepare view's lock): two undos from one read never both restore.
@@ -53,7 +55,7 @@ export class CaseChanges {
       if (!current) return { nothing: `${words} has no answer for this person, so there is nothing to undo.` } as const;
       if (b.expectedId && b.expectedId !== current.id) conflict("This answer changed after you read it. Reload, then undo again if you still need to.");
       const earlier = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, canonicalFieldKey: b.fact, rowKey: null, id: { not: current.id } }, orderBy: [{ effectiveAt: "desc" }, { id: "desc" }] });
-      const target = undoTarget({ ...current, value: current.valueJson }, earlier.map((x) => ({ ...x, value: x.valueJson })));
+      const target = undoTarget({ ...current, value: current.valueJson, restoredFrom: restoredFromOf(current.sourceJson) }, earlier.map((x) => ({ ...x, value: x.valueJson, restoredFrom: restoredFromOf(x.sourceJson) })));
       if (!target) return { nothing: `${words} has no earlier value for this person, so there is nothing to undo.` } as const;
       const id = randomUUID(), at = new Date();
       const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: current.id, supersededById: null }, data: { supersededById: id } });
