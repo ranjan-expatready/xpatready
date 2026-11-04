@@ -1,140 +1,145 @@
-# Review: C8.2 filing record, slice 1 (runtime lane, M3-F), branch `claude/admiring-galileo-i2ece1`
+# Review: C8.2 Record the submission (runtime lane, M3-F), PR #924
 
-**Reviewed commit 22f3f2ab** (the head moved during the review). Delta from 3de54f44: Devin's #553 fixes (CASE_ENTITIES, the transaction, the contract moved to `contracts/`). 3de54f44 was code c8dfef53 plus a records-only SH3 append. Diff: `git diff origin/main...22f3f2ab`. The reviewer did not build this. 2 Nov. No UI, so code and tests are scored. Summary: **Block, 2 Major** (see the end).
+**Reviewed commit 7100f9de** (branch `claude/wonderful-einstein-i01w4m`, base 341d6d00, diff `git diff 341d6d00..7100f9de`). The reviewer did not build this. Date: 4 Nov. The head moved to 2fef037b during the review, and that commit was not reviewed. Slice 1's review (22f3f2ab) used to be in this file and is kept in git history (23b6c15c).
+**Verdict: Block** (skill scale: Ship after fixes). 2 Major, 7 Minor, no Blocker. Journey score **8/10** (pass, no 0).
 
-**What the row claims:** AG-7-95 (AG-07 v3.12). The application number on each filing (`Filing.applicationNumber`, no migration); the UCI read from the person's own `person.uci` answer; one case = one filing for now.
-**Out of scope, on purpose:** pack 4's `acceptance/C8.2.test.ts` (AG-7-31 submission per group; waits for L-SA3, held); UCI format (an open question).
+## Runs (own copy `rev_c82` on :4439; never :4400; live AI off; US$0)
+* I ran the files from 7100f9de, extracted to the scratchpad. The shared working tree had another agent's uncommitted edits to both checks while I worked. The server code was unchanged.
+* `check_c82_record_api.ts` **40/40**, exit 0. `check_c82_record_browser.ts` **31/31**, exit 0 (axe clean on 7 states, 1440/1024 px, keyboard). `acceptance/C8.2.test.ts`: -1 passes, then -2 crashes on the missing C7.6 routes, as expected on main.
+* `m3-guard.sh 341d6d00..7100f9de`: M3-only, no M2-hot file changed. This holds with the given title and with the PR's real title. `studio/contracts/submission-record.ts` is a new file, which is allowed.
+* `graph.mjs` (scratch copy): G1 0 · G2 0. The new routes are tested. G6 lists `features/submission-record.ts`, the same false positive as the other auto-loaded features.
+* `api.log`: 0 errors and 0 application numbers or UCIs.
+* My own probes (scratch scripts):
+  * **Race:** 12 parallel records gave one 200 and eleven 409s, 2 rows, 1 audit line. 6 parallel corrections gave one 200 and five 409s, 1 correction row.
+  * **Access:** client 403 (record, correct, Prepare). Another firm 404. Configuration person 403. No actor 401. `/activity` shows no number to anyone.
+  * **Layout:** at 400 px and at 200 % zoom of 1024 and 1440 there is no sideways scroll. Both dialogs open by keyboard, and focus returns to the opener on Esc.
+  * **Delete:** deleting a recorded case works. The `submission_group` RESTRICT key does not block cascades.
 
-## Runs (own copy `runtime_c82r` on :4439, fresh database each time; never :4400 or 4433; US$0)
-* `check_c82_filing_numbers.ts`: **7/7**.
-* `check_c82_filing_record_api.ts`: **18/18** on the first copy, **20/20** at 22f3f2ab on a fresh copy. The step count matches the committed check, not the uncommitted 21-step version (see "Could not check").
-* `graph.mjs`: G1 0 · G2 0. Both new routes are tested by `check_c82_filing_record_api.ts` (it names C8.2 and C6.11); no pages (no UI, by design).
+## Findings (ranked)
+**M1 Major: the read-only lock does not cover the case's derivation, so a recorded group still changes shape.**
+* *Child added after recording.* I recorded a family group, then added a child with `POST /runtime/cases/:id/people` (201). The child's new filing joined the recorded group: `["submitted","submitted","NOT_STARTED"]`. The panel says "Recorded · read-only" and hides the button (`web/src/runtime/submission.tsx:55,63`, `recorded = fs.some(...)`). The record route answers 409 "already recorded" because any record in the group counts (`api/src/submission.ts:75`), and split is refused (`case-prepare.ts` `refuseIfRecorded` on the group). The child's filing can never be recorded or split out.
+* *Spouse marked not travelling after recording.* `PATCH /runtime/cases/:id/people/:S {applies:false}` answered 200 (`api/src/runtime.ts:222`, no lock). The sync then set the spouse's recorded filing to `active=false` (DB `f|SUBMITTED`). Its record, with its IRCC number, disappeared from the Prepare view and the panel. Only the principal's filing still shows.
+* *Fix:* under the case's row lock, keep a recorded filing active and in its group when the case is derived again, and put a new person's filing in a new group. Or refuse these changes while the person's filing is recorded. Add a fail test for each.
 
-**Reviewer probes on 22f3f2ab (curl and psql):**
-* Access: GET by another firm (`user-S`) 404 · configuration author 403 · no person header 401 · representative 200 · PUT with a non-uuid or unknown id 404.
-* Bad input: missing `before` 400 · a number as `value` 400 · 50 characters 400 · en dash inside the number 422 · a tab or newline inside it is normalised and saved.
-* Race: 8 parallel PUTs with the same `before` gave one 200 and seven 409s, one stored value, one audit line.
-* Inactive filing (set by SQL): PUT 409 (even with a bad body); the filing is left out of GET.
-* Firm isolation: a case moved to `sample-solo` was not named in `sample-firm`'s duplicate warning, and the reverse held. Activity feed: `user-S` sees 0 application-number lines, `user-R` sees 6.
-* `api.log`: 0 matches for any `W\d{8,9}` number or the UCI. Speed: GET 17–28 ms, 4 queries, no per-row request.
+**M2 Major: "Correct a number" lets two filings of one submission share a number, with no refusal and no warning.**
+* The record route refuses this (`submission.ts:64`), but `correct()` checks only the pattern and the "same as now" case (`:116-118`).
+* Probe: I corrected the principal's number to the spouse's number. The answer was 200 and both `filing_record` rows read `V420000001`.
+* Slice 1's cross-case duplicate warning (AG-7-95 r4) is not returned on a correction either.
+* This misses EXPERIENCE [M] 8 ("duplicate check before save"). The correction is the only way to change a number after recording, so the record route's own rule stops holding.
+* *Fix:* refuse a number held by another filing of the same group (400 on `application_number`), return `duplicateWarning` for other cases, and add a test.
+
+**Minors (fix, or list them in the PR):**
+* m1 **"Not after today" accepts tomorrow for most of a Canadian working day.** The latest date allowed is today in UTC+14 (`engine/runtime/submission-record.ts:9`). At 11:39 UTC on 4 Nov (06:39 in Toronto) the server accepted `2026-11-05` (200). The UI's `max` is not enforced either, because `submit()` skips native validation (`submission.tsx:116,136`). Fix: send the browser's local today with the request (checked within ±1 day of the server's date), or use the firm's time zone.
+* m2 **Readiness and the filed facts are read before the lock.**
+  * The view (`submission.ts:53`) and the answers (`:82-83`) are read outside the transaction. Answer writes do not take the case lock, and `storedVersion` covers neither answers nor status. The only guard under the lock is `updateMany status=READY_TO_FILE` (`:92`).
+  * Once #861 lands, a fact that changes inside that window gets a no-longer-ready filing recorded. Its `filed_facts` would also hold the new value, so it is never marked "Filed with an earlier value".
+  * Fix: read the view again after the write and roll back if it is not ready, as #861's `ready()` does with `again`. Or build the facts and readiness inside the transaction.
+* m3 **An unconfirmed edit opens permanent tasks.** The facts compared are confirmed facts only (`formCoverage`). An officer's draft edit (status DECLARED) therefore counts as a change and opens 5 tasks for one name. No task ever closes (no Done action, which is the builder's listed follow-up). The panel can only grow. Decide whether a task waits for the new value to be confirmed.
+* m4 **Reviewed by is the representative at recording time, not the reviewer** (build decision 2). Once #861 lands, a representative changed between review and recording gives a wrong "Reviewed by". A solo firm shows "Name · Name", not BR-21's "Self-reviewed". This is a follow-up after #861; say so in the PR.
+* m5 **Toasts repeat the field errors and cover the dialog's "Record the submission" button at 1024 px** (screenshot `03-refused-on-the-field-1024.png`). The error on the field is enough. Drop the toast for field errors, or move the toasts clear of the dialog footer.
+* m6 **The PR's first line does not say the acceptance test changed.** `M3-CONTRACT.md` asks for that line; the test change itself is fair (see below). Also, 409 refusals carry `type .../problems/validation` (`submission.ts:30`). Use a conflict type.
+* m7 **A probable 500 under many parallel reads, fixed after the reviewed commit.** The builder's later commit 2fef037b says the Prepare view's record read (`recordedOverlay`, `db.$transaction([...])` on every read) gave one 500 in 120 parallel reads at 7100f9de. I did not reproduce or review the fix.
 
 ## Judged against the ask
-1. **AG-7-95 rules.** Each claimed rule has a passing and a failing test.
-   * **r1 holds:** upper-case, spaces and hyphens removed; refused (422) with the shape and an example; nothing saved (`engine/runtime/filing-record.ts:12-16`). The pattern is anchored `^…$` (the card has `\b…\b`): right for one normalised value; `\b` is the AG-10 matcher's.
-   * **r4 holds:** the warning names the case and the number is saved; the query is limited to the firm (`api/src/filing-record.ts:51`). The cross-firm case is untested (**M2**).
-   * **r7 holds:** set, change and clear; audit `detail` keeps before and after; number and audit line in one transaction (`:56-64`); the stale `before` gives 409 before the write and as the `updateMany` lock (race probe).
-   * **Safety holds in part:** no number in summary words, error words or `api.log`; no notifications in this slice. But a typed name decides which firm's feed shows the audit line (**M1**).
-2. **Permissions:** officer only (`reach(…,"officer")`). Client: 403 on PUT and GET (tested). Another firm: 404 on PUT (tested) and GET (probed). Stale `before`: 409 (tested). Inactive filing: 409 and left out of the record; the probes hold, but **untested (m1)**.
-3. **UCI:** read from the applicant's current `person.uci` answer (`supersededById` null, `rowKey` null, keyed by the filing's applicant subjects) and never written here. The checks show it on the spouse only, with one current answer row.
-4. **AGENTS rule 4:** `samples/filing-numbers.json` is labelled "Sample: the team's requirement … not an IRCC source; the immigration expert confirms", and the unit check pins that label. The same sentence is returned in the API (**m3**).
-5. **Silently wrong against AG-7-95:** mainly **M1**, plus m2 (wording) and m4 (a country key in code). Rules 2, 3, 5 and 6, and the UCI half of rule 4, are not in this slice, and the commit message names only the UCI read. The PR should list them as not built (**m6**).
+* **The acceptance test -12 change is a fair premise fix.** `person.family_name` is `collected_from: verified_document`, so the client's write was a 403 and the line tested nothing. The officer is the release's own path, and the expected rule (out_of_date "earlier value" plus a task) is unchanged. Note: the officer's entry is DECLARED, so -12 now passes because the fact is no longer confirmed, not because a confirmed value changed. BR-12 covers both.
+* **Stays correct once #861 lands (read, not run).** `git merge-tree 7100f9de origin/claude/loving-ride-hhtdgi` merges with no conflicts. In the merged `case-prepare.ts`, #861's reset of a stale Ready to file and its `f.status` from the stored status (lines 268-277) run before `recordedOverlay` (283). The overlay reads the stored status after the reset, so a reset filing never shows ready, and SUBMITTED reads `submitted` in both places. #861's own routes already refuse a SUBMITTED filing (its `readiness.ts:34`). Migration order: #861's `20261104120000` sorts before this PR's `20261104150000`; `migrate deploy` applies it on a fresh copy, but I did not run the merged tree.
+* **Migration:** additive (4 tables, triggers, a partial unique index, a rollback written out). One record per filing (unique `filing_id`). Corrections and UCIs are append-only.
+* **Audit:** summaries name no number or UCI (probe and `api.log`). The correction's `detail` keeps before and after, as slice 1 does, and `/activity` shows none of it.
+* **Sources:** the number pattern is labelled Sample (`samples/filing-numbers.json`), and the UI hint says "(Sample pattern)". Legal points carry "Unconfirmed: no counsel".
+* **Lock coverage:** channel, split, "Entered" and slice 1's number route answer 409 under the lock (tested). Not locking C8.1 signing is consistent with BR-12's own "Re-sign it". The gap is M1.
 
-## Findings
-**Major**
-* **M1. A person's name can move the audit line to another case in the activity feed** (security, C6.11; `api/src/filing-record.ts:63` with `api/src/studio.ts:1042`).
-  * The summary puts `${person}` (a typed participant label) before `(case <8 of id>, …)`, and the feed's filter takes the first `/\bcase ([0-9a-f]{8})\b/` match.
-  * A participant named "Sample case ffffffff" hides the line from the own firm. A name carrying another firm's case prefix shows that firm the line, with its `detail` before and after (both government numbers).
-  * Found by reading the code. The builder's uncommitted change (15:48) puts the marker first ("On case <8> (<ref>): …") and adds a check with that name. That is the right fix: commit it, then re-review that delta.
-* **M2. The firm filter in the duplicate warning has no failing test** (STANDARDS §3.10 and §7; `api/src/filing-record.ts:51`).
-  * Remove `case: { firmKey: c.firmKey }` and all 20 checks still pass: the r4 cases use two cases of one firm (`tests/check_c82_filing_record_api.ts:59`).
-  * Every demo firm shares one workspace, so that regression would name another firm's case reference to this firm.
-  * Fix: give a `sample-solo` case the same number and assert `warning === null` for each firm. The probe shows the code holds today.
+## D1–D20 (1–5)
+D1 4 BR-11/12/15 behave, except M1 · D2 2 M1, M2 · D3 4 reuses slice 1's rule and `formCoverage` · D4 4 n/a mostly; coverage reused · D5 3 race safe, but a recorded group can be stranded (M1) · D6 4 who/when/why kept on corrections · D7 n/a no AI · D8 4 panel on the case page (C7.7 tab later) · D9 4 disabled button says why in words · D10 4 plain words, no ids on the main path · D11 4 Recorded · read-only, toasts (m5) · D12 4 team look, quiet · D13 4 axe clean, 400 px and 200 % zoom, keyboard, focus return · D14 4 team controls · D15 3 not timed against §9; m7 · D16 4 each rule has a pass and a fail test; M1/M2 untested · D17 simulated only · D18 4 Prepared by · Reviewed by, portal, Sample label · D19 3 needs #861 for the real path · D20 simulated only.
 
-**Minor**
-* **m1.** The inactive-filing guard (`:44` and the `active: true` read) is untested. Add the 409 and the left-out check (SQL `active=false`, as in the probe).
-* **m2.** A duplicate on a sibling filing of the same case (inactive ones count, on purpose: rule 6, AG16-60) gives "Already on case <this case>.", which points the officer at the case they are in. For the same case, say "Already on another filing of this case (<person>)". The inactive count stays as the builder chose.
-* **m3.** `basis` is returned in the GET response (`:32`). Its words name the regulator ("IRCC") and a PR process step ("an ASSUMPTIONS row is proposed … in the C8.2 PR"): product text under AG-7-95 Rule 7. Return a product label (for example "Sample pattern; the immigration expert confirms") and keep the full basis in the file.
-* **m4.** The `person.uci` key is hard-coded (`:17`) and the response field is named `uci`: a country-specific key in code, while the pattern is data (STANDARDS §3.1; AG-7-95 §7 "pack-named"). Put the key in `samples/filing-numbers.json` next to the pattern.
-* **m5.** A missing `before` gives zod's default "Invalid input: expected string, received undefined" (`contracts/filing-record.ts:9`). Give it plain words, as `value` has.
-* **m6.** The PR body should list what this slice does not build (item 5 above).
-
-## D1–D20 (only what this slice moves)
-* **D1 4:** r1, r4 and r7 match the card; unbuilt rules not listed (m6) · **D2 4:** normalised; one race winner; one transaction with its audit line.
-* **D3 4:** UCI read, not copied; shared contract · **D5 5:** stale save gives 409 with recovery words; nothing half-written.
-* **D6 3:** audited before and after, but the feed placement can be spoofed (M1) · **D10 3:** m2, m3, m5 · **D15 5:** under 30 ms, fixed query count.
-* **D16 3:** the claimed rules pass and fail, but the firm filter (M2) and the inactive guard (m1) can be removed with all checks passing · **D18 4:** Sample labelled.
-* Not applicable (no UI, no AI): D7–D9, D11–D14, D19. D17 and D20: simulated only.
-
-## Journey score (reviewer, code and API; no UI): 8 / 10, pass by score
-Journeys: (1) the officer reads the record, then adds, changes and clears a number; (2) errors: a form code, a stale read; (3) wrong role: client, author, another firm; (4) recovery: re-read and save again, a double save race; (5) hand-off: the number ready for AG-10 and AG-7-31.
+## Journey test (reviewer role; one score for this check)
+Journeys walked as the case officer, scripted in Playwright plus probes: (1) record a ready family group; (2) refused on its field (missing number, future date); (3) not ready (button disabled, reason in words); (4) correct a number with and without a reason; (5) a fact changes after filing (tasks); (6) client and other firm by URL (403/404); (7) double submit and parallel saves; (8) a person added or marked not travelling after filing (M1).
 
 | Criterion | Score | Evidence |
 |---|---|---|
-| Task completed | 1 | Set, change and clear, with the record re-read |
-| Next step obvious | 1 | 409 and the empty record both say what to do next |
-| Plain words | ½ | m3, m5 |
-| Feedback and state | 1 | Warning returned; 422 shows the shape and an example |
-| Correct data | 1 | One value; one audit line per change; race-safe |
-| Error recovery | 1 | Stale save: nothing written, re-read works |
-| Accessibility and screen sizes | ½ | Not applicable, no screen |
-| Speed | 1 | 17–28 ms |
-| Visual quality | ½ | Not applicable, no screen |
-| Trust and sources | ½ | Sample labelled, but the audit line's firm can be spoofed (M1) |
+| Task completed | 1 | record and correct work end to end (31/31) |
+| Next step obvious | 1 | "Opens once every filing is Ready to file: …" |
+| Plain words | 1 | no ids; "Filed with an earlier value: …" |
+| Feedback and state | ½ | clear pill; toasts duplicate errors and hide the button (m5) |
+| Correct data | ½ | M2 duplicate number; M1 record vanishes |
+| Error recovery | ½ | field errors good; a child's filing stuck with no way out (M1) |
+| Accessibility and screen sizes | 1 | axe 0; 400/1024/200 % no scroll; keyboard; focus return |
+| Speed | ½ | not timed against §9; m7 |
+| Visual quality | 1 | screenshots 03, 07 |
+| Trust and sources | 1 | Sample pattern, Unconfirmed: no counsel, Prepared · Reviewed |
+| **Total** | **8/10** | pass |
 
-## Could not check
-* The uncommitted working-tree changes (another session, 15:48) are not reviewed.
-* `run-suites.sh` for the whole set: only the 2 C8.2 suites were run. The `studio.ts` CASE_ENTITIES change is additive, but the other activity checks were not rerun.
-* Pre-existing, not this PR's (for the tech lead to note): people with the configuration `review` duty read every case line, including number details (`main.ts:94`).
+**Could not check:** the merged #861 + #924 tree running (it would rebuild the shared Prisma client); a real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); commit 2fef037b.
 
-**Verdict: Block** (commit 22f3f2ab). Fix: **M1** (commit the marker-first summary and its check); **M2** (add the cross-firm duplicate-warning check). Recommended in the same push: m1–m6. Re-review only the delta.
+**Verdict: Block.** To fix on this PR, each with a fail test: **M1** (keep a recorded group's filings and membership fixed when the case is derived again or people change) and **M2** (refuse a duplicate number inside the group on Correct a number, and warn across cases). Fix m1–m7 or list them in the PR.
 
-## Round 2 (64f39903), 2 Nov
-**Scope:** `git diff 22f3f2ab 64f39903`: `api/src/filing-record.ts`, `api/src/studio.ts` (feed `detail`), `contracts/filing-record.ts`, `engine/runtime/filing-record.ts`, both C8.2 checks. The breaker's `break-report.md` was read alongside.
-**Runs (own copy `runtime_c82r` on :4439, fresh database; US$0):** `check_c82_filing_numbers.ts` **9/9** · `check_c82_filing_record_api.ts` **24/24**. Copy stopped afterwards.
+## Re-review (round 2) of 75c0a1a2
+**Superseded by round 3 below; do not label on 75c0a1a2.** This round missed the breaker's R2-B1: UCI lines reached another firm's activity feed, with the full UCIs in `detail`. My probes checked audit summaries and application numbers only. It also missed R2-M1 (the race between recording and "not travelling") and R2-M2 (an answer left unconfirmed at filing read as changed). Round 2 was a diff-only review of `git diff 7100f9de..75c0a1a2` (2fef037b + 75c0a1a2). No Blocker or Major is open. The later head 60095003 changes only the 8 C7.5 screenshots, back to main's bytes (the branch diff against base now has no C7.5 file). I checked that and nothing else in it.
 
-**Fixes**
-* **M1, closed.**
-  * The summary now starts with the marker: "On case <8> (<ref>): …" (`filing-record.ts:66`). The feed's first-match regex therefore always takes the case's own marker, even when a typed person name or case reference reads "case ffffffff".
-  * The new check (principal "Sample case ffffffff") fails with the old order.
-* **M2, closed.**
-  * A `sample-solo` case saves a number firm A already uses: warning null, and none of firm A's references in the body.
-  * Removing `case: { firmKey }` makes that check fail. Confirmed by reading the code: the solo firm would get "Already on case <A's ref>".
-* **Breaker M1, closed.** The feed returns `detail: null` for "application number" lines (`studio.ts:1047`).
-  * Probe: user-A, user-B, user-O and user-S get 6, 6, 5 and 1 lines; 0 with detail; 0 with a number in the summary.
-  * The audit row still keeps before and after (the check reads it in SQL).
-* **m1, closed:** the inactive filing gives 409 with nothing saved (tested, then restored).
-* **m2, closed:** a sibling on the same case gives "Already on another filing of this case." (probed). When the number is also on another case, that case's reference follows.
-* **m5, closed:** a missing `before` gives "Send "before": the number you read, or null when there was none."
-* **Breaker minors, closed:**
-  * `before` is normalised: `""` counts as none, and " w22-3456789 " matches W223456789 (probed, 200).
-  * The 200-character cap applies first; the 20-character limit is checked after spaces are removed, so a padded valid number saves (probed).
-  * "ſ123456789" is refused with 422 before upper-casing. The unit check covers ſ, ı, ﬀ and fullwidth letters.
-* `api.log`: 0 numbers.
+**Runs** (fresh `rev_c82` on :4439, the edited migration applied; US$0):
+* `check_c82_record_api` 51/51.
+* `check_c82_record_browser` 33/33, twice. I ran it from the tree, then put the C8.2 screenshots back to the committed bytes.
+* `acceptance/C8.2.test.ts` on this branch alone: -1 passes. -2 needs C7.6, and the steps after it fail with it. I did not run the merged tree. The builder's 12/12 on a local merge with #861 is their evidence, not mine.
+* `git merge-tree 75c0a1a2 origin/claude/loving-ride-hhtdgi` merges with no conflicts. `m3-guard` with the PR's real title: M3-only.
+* `api.log`: no 500s, and no number or UCI.
+* My probes:
+  * **M1 fixed.** After recording, adding a person answers 409 and marking the spouse not travelling answers 409. Both are checked under the case row lock (`api/src/runtime.ts:206,232-237`, `refuseIfCaseRecorded`). The group stays `[submitted, submitted]`. The only two writes to case people are now covered (I searched for other `caseParticipant` writes and found none).
+  * **M2 fixed.** Correcting to the sibling's number answers 400 on `application_number`. It is checked before and again under the lock (`api/src/submission.ts:141,146`). Two filings corrected to the same number at once gave 200 and 400, and the numbers stayed distinct. A number held by another case is saved with the warning "Already on case ACC-…".
+  * **m1.** A UTC "tomorrow" is refused at 12:07 UTC. The builder's choice of the UTC date is sound: it is never behind a Canadian date, and the pack's `inDays(0)` is UTC.
+  * **Other probes held.**
+    * Every field's problem comes back at once (4 fields in one 400).
+    * 6 parallel corrections gave one 200 and five 409s. 4 parallel UCI adds gave one 200 and three 409s ("Already exists"), with 1 row and no 500.
+    * A UCI for a person not on the filing gets 400. Sending both a number and a UCI gets 400. A client gets 403.
+    * An after-filing change opens 5 tasks; restoring the value closes all 5 and the items read `to_do` again (fixes m3).
+    * No spurious task right after recording.
+    * 60 parallel Prepare reads all answered 200 (fixes m7).
+    * Audit summaries carry 0 numbers or UCIs.
+* **The migration was edited in place.** That is acceptable because it is not on main yet. It still only adds tables. The new triggers allow in-place change only in `application_number` and `uci`. The `shape_check` and `IS DISTINCT FROM` constraints are correct for a UCI added later with no before value.
 
-**Still open (Minor, listed in the PR, accepted as follow-ups):**
-* m3: the `basis` words in GET name IRCC and a PR step.
-* m4: the `person.uci` key is hard-coded.
-* Breaker m6: the id-existence oracle. Another firm gets "No such case." for a real filing and "No such filing." for an absent one (probed); low risk with uuids.
-* Breaker m1 (inactive filings count as duplicates) is kept on purpose (rule 6, AG16-60). It is now worded clearly for the same case.
+**Still open (Minor, listed in the PR; not blocking):**
+* m2' **Readiness is still read before the lock** (`submission.ts:53` vs the transaction). The builder's answer covers a stale Ready to file seen at read time. It does not cover a fact saved between the view and the lock: answer writes take no case lock, and #861 resets the status only on a read. The window is narrow (one view build). Fix in a follow-up: re-read the view after the write and roll back if it is not ready, as #861's `ready()` does.
+* m4' **Reviewed by is still the representative of record**, now with "Self-reviewed" when that person also prepared it. The follow-up to read C7.6's `filing_review` once #861 lands still stands.
+* n1 **A new rule beyond the contract:** a date before the case was opened is refused (`beforeCaseProblem`, with a day's grace). It does not conflict with BR-11, because Ready to file needs the case first. A future "load a filed case" path (C10.2) would have to set dates on or after the case's creation.
+* n2 **`POST …/record/corrections` also takes `{uci:{subject, uci}, reason}`.** The contract names `application_number`, and adding a UCI field is fine (the breaker's M3). The tech lead may want the M3-CONTRACT row to name it.
+* n3 **Fixed since round 1:** m5 (no toast over the dialog; the field error shows, screenshot 03 at 1024 px) and m6 (409s are `problems/conflict`; the PR's first line now names the -12 premise change).
 
-**Scores moved:** D6 4 (feed placement no longer spoofable; numbers never in the feed) · D10 4 (m3 left) · D16 4 (firm filter and inactive guard now fail when removed). **Journey score: 9 / 10, pass.** Trust and sources rises to 1 (M1 fixed); plain words stays ½ (m3).
+**Journey score (round 2): 9/10.** Correct data and error recovery rise to 1. Speed stays ½: the 60 reads are fine, but the screen was not timed against §9.
 
-**Verdict: Approve** (commit 64f39903). No open Blocker or Major. Minors m3, m4 and breaker m6 stay listed in the PR as follow-ups.
+**Could not check:** the merged #861 tree running myself; a screen reader; an intended user's walk (D17, D20).
 
-## Round 3 (b343f016), 2 Nov
-**Scope:** `git diff 64f39903 b343f016`: `engine/runtime/filing-record.ts` (separators, cap removed), `api/src/filing-record.ts:51` (`before`), `tests/check_c82_filing_numbers.ts` (properties). The rest is records (this review, the break report).
-**Runs (own copy `runtime_c82r` on :4439, fresh database; US$0):** `check_c82_filing_numbers.ts` **13/13** · `check_c82_filing_record_api.ts` **24/24**. Copy stopped afterwards.
+Round 2 verdict on 75c0a1a2, withdrawn: Approve. R2-B1 was open, so it should have been Block.
 
-**Checked**
-* **STANDARDS §7 [M], properties when the engine changes: met.** Three fast-check properties, 500 to 1,000 runs each:
-  * any valid number, in any case and with any separators, is stored bare and upper-case;
-  * any non-ASCII character inside a number is refused;
-  * whatever is taken is upper-case ASCII that matches the pattern.
-  * The second property is a real failing case: its generator leaves out only separator characters.
-* **Breaker R2-m1: closed.**
-  * One `SEPARATORS` class (`\s`, `-`, U+2010–U+2015, U+2212, U+00AD) is used by both `normaliseNumber` and the non-ASCII guard, so a dash is removed before the guard runs.
-  * Probes:
-    * value "W12–345—6789" with `before` "—" is saved as W123456789;
-    * a `before` of "w12−345­6789" (minus sign and soft hyphen) matches the stored W123456789 and saves;
-    * a value of only "—" is refused with 422 (not a clear; null or blank clears, which is the safer side).
-* **Cap: removed, safely.**
-  * The contract bounds input at 200 characters (201 gives 400 with plain words). The pack pattern decides the shape (199 digits gives 422).
-  * The pattern is simple and anchored, so 200 characters cost nothing.
-* **Technology gate:** fast-check is not new. Three existing checks already import it (`check_screen01_rules.ts`, `runtime/check_vv_filings.ts`, `runtime/check_case_engine.ts`).
+## Re-review (round 3) of d40fdab6
+**Verdict: Approve** for d40fdab6 (the diff `7100f9de..d40fdab6`; new since round 2: 60095003 and d40fdab6). No Blocker or Major is open.
 
-**Minor (not this PR's; a follow-up for the tech lead):** fast-check reaches `studio/node_modules` only as a dependency of `effect` (`package-lock.json:3981`); it is not declared in `studio/package.json`. Declare it as a devDependency, so these four checks do not break if `effect` drops it.
-**Still open from round 2 (Minor, listed in the PR):** m3 (`basis` words), m4 (`person.uci` key in code), breaker m6 (id oracle).
+**Runs** (fresh `rev_c82` on :4439; US$0):
+* `check_c82_record_api` 54/54. `check_c82_record_browser` 33/33. I put the C8.2 screenshots back to the committed bytes afterwards.
+* `acceptance/C8.2.test.ts` on this branch alone: -1 passes, and -2 still needs C7.6.
+* `git merge-tree d40fdab6 origin/claude/loving-ride-hhtdgi` merges with no conflicts.
+* `m3-guard` with the PR's title: M3-only. The branch diff against base has no C7.5 file (60095003 put them back).
+* `api.log`: no 500s, and no number or UCI.
 
-**Scores:** D16 5 for the engine (examples plus properties, each rule failing when removed); otherwise as round 2. **Journey score: 9 / 10, pass** (unchanged).
+**Breaker's round 2, re-tried:**
+* **R2-B1 fixed.** I recorded a UCI, corrected one and added one. user-S (the other firm) then sees 0 of the case's lines and 0 UCIs in `/activity`. The case's own firm and configuration people see "…'s UCI on a recorded filing (reason given)" with no value. 0 audit rows hold a UCI in `summary` or `detail` (`api/src/submission.ts:186-189`: entity `person`, `detail {field, subject}`).
+* **R2-M1 fixed.**
+  * The record now re-checks the case's people under the row lock (`submission.ts:112,117`), and "not travelling" checks for a record under the same lock (`runtime.ts:232-237`).
+  * Probe: I sent the record and "not travelling" at once on 6 fresh cases. Every run had exactly one winner: people 200, record 409 or 400, 0 records. Never both.
+  * I could not force the record to win the race. By the code, the people change would then find the record under the lock and answer 409.
+* **R2-M2 fixed.** Filed values are now read as `currentValues` (`submission.ts:108`). I recorded with an answer left unconfirmed: right after recording there were 0 tasks and the forms read `to_do`. A real change after that still opens 5 tasks and marks the forms `out_of_date`.
 
-**Verdict: Approve** (commit b343f016). No open Blocker or Major.
+**Round 1 and 2 fixes, still holding:**
+* Adding a person after recording: 409. Correcting to the sibling's number: 400. A UCI with a newline: 400.
+* Tomorrow's date: 400. A date 30 days before the case was opened: 200 (R2-m3, a case taken over).
+* 60 parallel Prepare reads: all 200.
+
+**Still open (Minor, listed in the PR):**
+* m2': readiness and filed values are read before the lock, and answer writes take no case lock.
+* m4': Reviewed by should come from C7.6's `filing_review` once #861 is on main.
+* n2: the tech lead may want the contract row to name the `uci` form of a correction.
+* Outside this PR (the coordinator's note, not re-checked by me): C8.1's sign-step and signed-scan audit lines reach other firms' feeds on main (`studio.ts` CASE_ENTITIES, an M2-hot file). That is for the tech lead.
+
+**Process note:** another agent's uncommitted edits (the round-3 fixes) appeared in the shared tree at 12:07 UTC, during my round 2. Every run was on a server started before them or on a fresh copy of the named commit.
+
+**Journey score (round 3): 9/10** (speed ½, not timed against §9). **Could not check:** the merged #861 tree running myself; a screen reader; an intended user's walk (D17, D20).
+
+**Verdict: Approve** (d40fdab6).
+**The Approve stands for head ae84c347.** `git diff --stat d40fdab6..ae84c347` changes only this review.md (records only, no code), so the verdict for d40fdab6 carries over.
