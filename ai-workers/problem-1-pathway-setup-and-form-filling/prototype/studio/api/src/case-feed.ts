@@ -2,8 +2,10 @@
 // configuration lines. Before QA-225 the rule knew case lines only by a list of entities, and every case entity left off
 // it reached every firm (on main 4 Nov: "sign step" and "signed scan", C8.1; "case document", C6.4; "checklist line";
 // the eligibility "assessment" and "assessment_override"). Now it fails closed:
-//   * a line that names cases ("case <first 8 of the id>", any case of letters, or the "case" entity keyed by the case
-//     id) is read only when every case it names is the firm's own;
+//   * a line that names a case — the "case" entity keyed by the case id, else the first "case <first 8 of the id>" in its
+//     words (any case of letters, "case-" or a no-break space too) — is read only by that case's firm. The first marker
+//     wins, as decided on #553 (filing-record.ts writes it first, so a typed name such as "Sample case ffffffff" after it
+//     is never taken for it);
 //   * a line that names no case is read only when its entity is a known configuration entity; an entity on neither
 //     list (a new one, a typo) is read by no firm's staff until it is listed.
 // Configuration people (review duty) read every line; that is decided in studio.ts, not here.
@@ -28,22 +30,22 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "source entry", "source", "structure", "upload",
   "pathway", "program", "category", "sub-category" /* structure levels, structure.ts and studio.ts */,
 ]);
-/** A configuration entity: listed, or a library item's ("library field", "library document type", review-proposals.ts). */
+/** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;
+ *  review-proposals.ts, screen02.ts). */
 export const isConfigEntity = (entity: string) => !CASE_ENTITIES.has(entity) && (CONFIG_ENTITIES.has(entity) || entity.startsWith("library "));
 
 type Line = { entity: string; entityKey: string | null; summary: string };
-const NAMED = /\bcase[\s -]+([0-9a-f]{8})\b/gi;
+const NAMED = /\bcase[\s -]+([0-9a-f]{8})\b/i;
 
-/** Every case a line names (first 8 characters, lower case); none for a configuration line. */
-export function casesOf(e: Line): string[] {
-  const ids = [...e.summary.matchAll(NAMED)].map((m) => m[1].toLowerCase());
-  if (e.entity === "case" && e.entityKey) ids.push(e.entityKey.slice(0, 8).toLowerCase());
-  return [...new Set(ids)];
+/** The case a line belongs to (first 8 characters, lower case), or null when it names none. */
+export function caseOf(e: Line): string | null {
+  if (e.entity === "case" && e.entityKey) return e.entityKey.slice(0, 8).toLowerCase();
+  return NAMED.exec(e.summary)?.[1].toLowerCase() ?? null;
 }
 
 /** May staff of a firm whose cases start with `own` read this line? */
 export function firmMayRead(e: Line, own: ReadonlySet<string>): boolean {
-  const ids = casesOf(e);
-  if (ids.length) return ids.every((id) => own.has(id));   // a line that also names another firm's case is not read (break m2)
+  const id = caseOf(e);
+  if (id !== null) return own.has(id);
   return isConfigEntity(e.entity);   // no case named: only a known configuration line (break M1: never fail open)
 }
