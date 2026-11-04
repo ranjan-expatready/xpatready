@@ -264,3 +264,17 @@ Closed: **QA-212, QA-214**. The remaining import shortcut (shared library items 
 * **C3.5 goes to Partial** (was Works), held by **QA-219** (Gap · Major). A merge and an alias work only through the API (`check_forms_channels.ts` 105/105). No screen lets a person start a merge or add an alias (`POST /api/library/merges` is called by no screen).
 * #875 is infra only.
 * **M2: 43/60 confirmed** (was 44; −C3.5).
+
+## Records update ~15:20 IST: qa tester 3's M2 no-pack re-proof, second half (#892–#900)
+| Row | Verdict |
+|---|---|
+| C11.2 Form library one door, IRCC columns, same file refused | Works, confirmed (#900) |
+| C5.5 Answer-key gate | Works, confirmed (#897) |
+| C4.10 One source per fact | Works, confirmed (#895) |
+| C4.9 Who fills a question, set once in the library | **Partial** (was Works, #894): no question exists on the six |
+| C4.5 An upload is a checklist line; a document's facts leave the SQR | **Partial** (was Works, #893): 9 document requirements are proposed, but with 0 questions no fact can be seen leaving the SQR |
+| C4.3 Preview by person | **Partial** (was Works, #892): every person previews "0 questions · 0 documents" |
+
+All three Partials have one root: on the six, no step places a form's facts into questions (QA-144, #798 slice 1). The suites are green on the fixture (GitHub nightly run 41793569357, all 6 parts), which P-322 does not count for setup rows.
+
+**M2: 40/60 confirmed** (was 43; −C4.9, −C4.5, −C4.3). The QA-144 rows waiting to come back with #798: C4.1, C4.8, C10.1, C4.7, C3.6, C11.12, C4.9, C4.5, C4.3.
