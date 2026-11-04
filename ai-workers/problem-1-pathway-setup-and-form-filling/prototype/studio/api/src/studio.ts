@@ -1211,9 +1211,10 @@ export class Studio {
       demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot) })); // C5.5 BR-3: outside the demo workspace every release is real
   }
 
-  /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
-   *  case events (opened, team, people, answers, sections, form copies) are left out. Case lines name their case as
-   *  "case <first 8 of its id>". Configuration people read every line, as before. */
+  /** C6.11 review Major 1, QA-225: firm staff read the configuration lines and their own firm's case lines only; another
+   *  firm's case events (opened, team, people, answers, sections, form copies, signing and signed scans, documents,
+   *  checklist lines, eligibility checks) are left out, and a line of an entity on neither list is read by no firm's
+   *  staff (case-feed.ts). Configuration people read every line, as before. */
   async activity(limit = 200, firmKey: string | null = null) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: firmKey ? limit * 5 : limit });

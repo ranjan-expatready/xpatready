@@ -71,10 +71,11 @@ else {
   ok(`setup: ${it.form} printed, signed and its scan received`, JSON.stringify(await done()) === JSON.stringify(["print", "signed", "scan_received"]), await done());
   // #924 (P-278): the sign and scan lines reach this firm's staff only; user-S (the other firm) never reads them.
   type Ev = { entity: string; summary: string };
-  const feed = async (actor: string) => { const x = await call("GET", "/activity", undefined, actor); return (x.status === 200 ? x.body as Ev[] : []).filter((e) => (e.entity === "sign step" || e.entity === "signed scan") && e.summary.includes(c.id.slice(0, 8))); };
-  const mine = await feed(f.officer ?? OFFICER), theirs = await feed("user-S");
-  ok("pass (#924): the firm's own officer reads this case's sign and scan lines in the activity feed", mine.some((e) => e.entity === "sign step") && mine.some((e) => e.entity === "signed scan"), mine.map((e) => e.entity));
-  ok("fail (#924, security): another firm's staff (user-S) never read this case's sign or scan lines", theirs.length === 0, theirs.map((e) => e.summary));
+  // Each feed must be read (200): a refused read would otherwise pass "never reads" without testing anything (break m7).
+  const feed = async (actor: string) => { const x = await call("GET", "/activity", undefined, actor); return { status: x.status, lines: (x.status === 200 ? x.body as Ev[] : []).filter((e) => (e.entity === "sign step" || e.entity === "signed scan") && e.summary.includes(c.id.slice(0, 8))) }; };
+  const { status: sm, lines: mine } = await feed(f.officer ?? OFFICER), { status: st, lines: theirs } = await feed("user-S");
+  ok("pass (#924): the firm's own officer reads this case's sign and scan lines in the activity feed", sm === 200 && mine.some((e) => e.entity === "sign step") && mine.some((e) => e.entity === "signed scan"), { status: sm, entities: mine.map((e) => e.entity) });
+  ok("fail (#924, security): another firm's staff (user-S) never read this case's sign or scan lines", st === 200 && theirs.length === 0, { status: st, lines: theirs.map((e) => e.summary) });
   p = (await prepare(c.id)).p;
   const to = (it.accepts ?? []).find((x) => x !== it.channel)!;
   const ch = await call("PATCH", `/runtime/items/${it.id}/channel`, { channel: to, reason: "Sample: filed another way", version: (p as unknown as { version: string }).version }, OFFICER);
