@@ -6,7 +6,8 @@ import { RUNTIME_ACTORS } from "./core.ts";
 import type { CaseForms } from "./fill-case.ts";
 import type { Runtime } from "./runtime.ts";
 
-export const SAMPLE_CASE = { reference: "SAMPLE-VV-FAMILY-1", principal: "Client A (Sample)", family: [{ role: "spouse_or_partner", displayName: "Partner of Client A (Sample)" }, { role: "child", displayName: "Child of Client A (Sample)" }] };
+// The people of the one Sample family (engine/import.ts sampleFamilyFacts), each labelled Sample.
+export const SAMPLE_CASE = { reference: "SAMPLE-VV-FAMILY-1", principal: "Client A (Sample)", family: [{ role: "spouse_or_partner", displayName: "Partner (Sample)" }, { role: "child", displayName: "Child (Sample)" }] };
 
 export type SampleCase = { caseId: string | null; release: number | null; people: number; copies: string[]; refused: string[] };
 
