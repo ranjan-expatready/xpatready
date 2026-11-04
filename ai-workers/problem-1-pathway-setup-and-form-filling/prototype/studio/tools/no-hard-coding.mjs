@@ -17,7 +17,7 @@
 //   node studio/tools/no-hard-coding.mjs --list            every file with its counts
 //   node studio/tools/no-hard-coding.mjs --write           write the baseline from today's counts (refused on a rise)
 // Exit: 0 no rise · 1 a rise · 2 could not run (a missing folder, a file the parser cannot read, a bad baseline or ref).
-import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, lstatSync, writeFileSync, existsSync, realpathSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
@@ -25,12 +25,13 @@ let ts = null;
 try { ts = (await import("../node_modules/typescript/lib/typescript.js")).default; } catch { /* main() says could not run */ }
 
 export const AREAS = ["api/src", "engine", "contracts"];
-const CODE = /\.(ts|tsx|mts|cts|js|mjs|cjs)$/, JSONF = /\.json$/;
-/** Live code: a code or JSON file under AREAS. */
-export const isLive = (rel) => AREAS.some((a) => rel.startsWith(`${a}/`)) && (CODE.test(rel) || JSONF.test(rel));
-// IMM or IRM, at most two separators of any kind (space, no-break space, dashes, dot, slash, underscore), four digits;
-// no word boundary before it, so a name like formImm5257 counts.
-export const FORM = /(?:IMM|IRM)[\s ‐-―._/-]{0,2}(\d{4})/gi;
+const CODE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/, JSONF = /\.json$/, PLAIN = /\.(ya?ml|txt|html?|csv|xml)$/;   // PLAIN: read as plain text
+/** Live code: a code, JSON or data-text file under AREAS (notes in .md are not code). */
+export const isLive = (rel) => AREAS.some((a) => rel.startsWith(`${a}/`)) && (CODE.test(rel) || JSONF.test(rel) || PLAIN.test(rel));
+// IMM or IRM, at most two separators of any kind (space, no-break space, dashes, dot, slash, underscore), four digits.
+// Not after a letter, so "Law Firm 2024" and "confirm_2025" are not IRM numbers; a capital I after a lower-case letter,
+// a digit or "_" starts one, so names like formImm5257 and rowsForIMM5257 count (#945 round 2 m1).
+export const FORM = /(?:(?<![A-Za-z])[Ii](?:mm|MM|rm|RM)|(?<=[a-z0-9_$])I(?:mm|MM|rm|RM))[\s\u00a0\u2010-\u2015._/-]{0,2}(\d{4})/g;
 const formValue = (m) => `${m[0].slice(0, 3).toUpperCase()} ${m[1]}`;
 
 /** The samples' combination keys: every `setup.key` (a row that becomes a combination when the sample loads). */
@@ -54,13 +55,14 @@ export function count(file, text, keyRe) {
     for (const m of t.matchAll(FORM)) n.forms[formValue(m)] = (n.forms[formValue(m)] ?? 0) + 1;
     if (keyRe) for (const m of t.matchAll(keyRe)) { const k = m[0].toLowerCase(); n.keys[k] = (n.keys[k] ?? 0) + 1; }
   };
+  if (PLAIN.test(file)) { add(text); return n; }
   if (JSONF.test(file)) {
     let j; try { j = JSON.parse(text); } catch (e) { throw new Error(`${file} is not JSON the guard can read: ${e.message}`); }
     const walk = (v) => { if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) { add(k); walk(x); } else if (typeof v === "string") add(v); };
     walk(j);
     return n;
   }
-  const kind = /x$/.test(file) ? ts.ScriptKind.TSX : /\.[mc]?js$/.test(file) ? ts.ScriptKind.JS : ts.ScriptKind.TS;
+  const kind = /\.tsx$/.test(file) ? ts.ScriptKind.TSX : /\.jsx$/.test(file) ? ts.ScriptKind.JSX : /\.[mc]?js$/.test(file) ? ts.ScriptKind.JS : ts.ScriptKind.TS;
   const src = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, kind);
   // A file the parser cannot read (an unclosed comment hides the rest of it) is "could not run", never a pass.
   if (src.parseDiagnostics?.length) throw new Error(`${file} does not parse (${ts.flattenDiagnosticMessageText(src.parseDiagnostics[0].messageText, " ")}): the guard cannot read it`);
@@ -86,18 +88,23 @@ export function main(argv) {
   if (!ts) throw new Error("the TypeScript parser is missing (studio/node_modules/typescript): run the setup first");
   const at = argv.indexOf("--studio"), STUDIO = at >= 0 ? resolve(argv[at + 1]) : join(import.meta.dirname, "..");   // the self-check points this at a temporary tree
   const BASE = join(STUDIO, "tools", "no-hard-coding-baseline.json");
+  // Only the known options: a typo or "--against=<sha>" would otherwise fall back to the baseline a PR can edit (m6).
+  for (let i = 0; i < argv.length; i++) { if (argv[i] === "--against" || argv[i] === "--studio") i++; else if (argv[i] !== "--list" && argv[i] !== "--write") throw new Error(`unknown option ${argv[i]} (want --against <commit>, --list or --write)`); }
   const ref = argv.indexOf("--against"), commit = ref >= 0 ? argv[ref + 1] : null;
   if (ref >= 0 && !commit) throw new Error("--against wants a commit");
   if (argv.includes("--write") && ref >= 0) throw new Error("--write compares with the stored baseline only; drop --against");
   for (const a of AREAS) if (!existsSync(join(STUDIO, a))) throw new Error(`${a} is missing: the guard would check nothing there (moved?)`);
-  const files = (dir) => readdirSync(dir).flatMap((n) => { const p = join(dir, n); return statSync(p).isDirectory() ? files(p) : [p]; });
+  // A symbolic link is skipped here as at the base (git mode 120000): its text is a path, not code (round 2 m2).
+  const files = (dir) => readdirSync(dir).flatMap((n) => { const p = join(dir, n), st = lstatSync(p); return st.isSymbolicLink() ? [] : st.isDirectory() ? files(p) : [p]; });
   const samples = (dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".json")).map((n) => readFileSync(join(dir, n), "utf8")) : []);
   const git = (...a) => execFileSync("git", a, { cwd: STUDIO, encoding: "utf8", maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "pipe"] });
   const baseText = new Map();
   if (commit) {
     try { git("rev-parse", "--verify", "--quiet", `${commit}^{commit}`); } catch { throw new Error(`--against ${commit} is not a commit`); }
     const pre = git("rev-parse", "--show-prefix").trim();
-    const want = git("ls-tree", "-r", "--name-only", commit, "--", ...AREAS, "samples").split("\n").filter((f) => isLive(f) || (f.startsWith("samples/") && f.endsWith(".json")));
+    // -z: a name with non-ASCII letters comes back as it is, not C-quoted (round 2 m2); links (120000) are skipped.
+    const want = git("ls-tree", "-r", "-z", commit, "--", ...AREAS, "samples").split("\0").filter(Boolean).map((l) => { const tab = l.indexOf("\t"); return { mode: l.slice(0, 6), f: l.slice(tab + 1) }; })
+      .filter(({ mode, f }) => mode !== "120000" && (isLive(f) || (f.startsWith("samples/") && f.endsWith(".json")))).map(({ f }) => f);
     // Every file at the base in one git call (one `git show` per file grows with the tree).
     const r = spawnSync("git", ["cat-file", "--batch"], { cwd: STUDIO, input: want.map((f) => `${commit}:${pre}${f}\n`).join(""), maxBuffer: 1 << 29 });
     if (r.status !== 0) throw new Error(`cannot read the files at ${commit}: ${String(r.stderr).trim()}`);
@@ -130,8 +137,8 @@ export function main(argv) {
   } else if (!argv.includes("--write")) throw new Error(`no baseline ${relative(STUDIO, BASE)}: write it with --write`);
   else wasPer = per;   // the first --write
   const was = total(wasPer);
-  // No key at all while the code named some before: the samples moved or changed shape.
-  if (!keys.size && sumOf(was.keys)) throw new Error("no combination key read from samples/*.json (setup.key), yet the code named some before: could not run");
+  // No key at all: the samples moved or changed shape, and the key half of the guard would check nothing (round 2 m5).
+  if (!keys.size) throw new Error("no combination key read from samples/*.json (setup.key): could not run");
   const rise = [];
   for (const k of ["forms", "keys"]) for (const [v, x] of Object.entries(now[k])) if (x > (was[k][v] ?? 0)) rise.push(`${v} ${was[k][v] ?? 0} → ${x}`);
   const grew = Object.entries(per).filter(([f, c]) => ["forms", "keys"].some((k) => Object.entries(c[k]).some(([v, x]) => x > (wasPer[f]?.[k]?.[v] ?? 0)))).map(([f]) => f);
@@ -150,6 +157,8 @@ export function main(argv) {
   console.log(`no-hard-coding: ${line}.${grew.length ? ` Moved into: ${grew.join(", ")}.` : ""}${!commit && sumOf(now.forms) + sumOf(now.keys) < sumOf(was.forms) + sumOf(was.keys) ? " Lower the baseline: node studio/tools/no-hard-coding.mjs --write" : ""}`);
   return 0;
 }
-if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
+// Run as a command: compare real paths, so a path through a symbolic link (macOS /tmp) still runs it (round 2 M1).
+const real = (p) => { try { return realpathSync(p); } catch { return resolve(p); } };
+if (process.argv[1] && real(process.argv[1]) === real(import.meta.filename)) {
   try { process.exit(main(process.argv.slice(2))); } catch (e) { console.error(`no-hard-coding could not run: ${String(e?.message ?? e).split("\n")[0]}`); process.exit(2); }
 }

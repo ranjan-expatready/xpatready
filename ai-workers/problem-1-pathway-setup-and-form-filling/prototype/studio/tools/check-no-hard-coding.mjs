@@ -3,7 +3,7 @@
 // one passes, comments never count, and every way the review and the breaker found round it is closed. Works on a
 // temporary tree and git repository; reads no database and runs no server, US$0.
 //   node studio/tools/check-no-hard-coding.mjs
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, symlinkSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
@@ -18,11 +18,13 @@ ok("a form number in a string counts, in each spelling (IMM 5257, IRM-0002, imm5
   n(`const a = ["IMM 5257", "IRM-0002", "imm5257e.pdf", "IMM_5645", "IMM.5476", "IMM/1294", "IMM 5707", "IMM–5709", "IMM  5710"];`).forms === 9);
 ok("a form number in a template, a regular expression, a name (camelCase too), a private name or JSX counts",
   n("const t = `the ${x} IMM 5707`; const r = /IMM 5476/; const imm5645Rows = 1; const formImm5257 = 2; const _IMM5409 = 3; class A { #imm1294 = 1 }").forms === 6 && n("const e = <p>IMM 5257</p>;", "x.tsx").forms === 1);
+ok("words that are not form numbers never count (Law Firm 2024, confirm_2025, affirm 1999, firm/1234, swimm 1234; #945 round 2 m1)", n(`const a = ["Maple Law Firm 2024", "confirm_2025", "affirm 1999", "firm/1234", "swimm 1234", "Confirm-2027"]; const confirm2026 = 1;`).forms === 0 && n(`const rowsForIMM5257 = 1; const e = "eIMM 5669";`).forms === 2);
 ok("one form number in two spellings is one value (IMM 5257 and imm5257e)", JSON.stringify(n(`const a = ["IMM 5257", "imm5257e.pdf"];`).c.forms) === JSON.stringify({ "IMM 5257": 2 }));
 ok("a form number in a comment never counts (an IRCC citation, an explanation)", n("// IRCC-F09: IMM 5257 (05-2026)\n/* IMM 5707 and IMM 5645 */\nconst a = 1; /** IRM 0002 */").forms === 0);
 ok("a combination key in a string counts; a longer name or another dotted word does not", n(`const k = "vv.single"; const w = 'wp.family'; const n = "vv.singles"; const m = "x.vv.single"; const o = "sp.student";`).keys === 2);
 ok("a key in a comment never counts", n("// on vv.single and wp.family\nconst a = 1;").keys === 0);
 ok("JSON under the folders is read: every string, keys and values", n(`{"forms": ["IMM 5257"], "IMM 5645": {"combo": "vv.single"}}`, "api/src/x.json").forms === 2 && n(`{"a": "vv.single"}`, "api/src/x.json").keys === 1);
+ok(".jsx is read like .ts, and data text (.yaml, .txt, .html) is read whole", n(`export const A = () => <b>IMM 5257</b>;`, "api/src/x.jsx").forms === 1 && n(`form: IMM 5257\n# IMM 5645`, "api/src/x.yaml").forms === 2 && !isLive("api/src/notes.md"));
 ok(".js, .mjs and .tsx files are read like .ts", n(`export const a = "IMM 5257";`, "api/src/x.mjs").forms === 1 && n(`export const a = "IMM 5257";`, "engine/x.js").forms === 1 && n(`export const A = () => <b>{"IMM 5257"}</b>;`, "api/src/x.tsx").forms === 1);
 let threw = ""; try { count("x.ts", "const a = 1; /* never closed IMM 5257"); } catch (e) { threw = e.message; }
 ok("a file the parser cannot read (an unclosed comment) is could-not-run, never a pass", /does not parse/.test(threw), threw);
@@ -65,6 +67,10 @@ r = run();
 ok("an added form number fails against the baseline too", r.code === 1, r);
 r = run("--write");
 ok("--write refuses to raise the baseline", r.code === 2 && /refused/.test(r.out), r);
+reset(); put("engine/b.ts", `export const g = [];\n`);
+r = run("--write");
+ok("--write lowers the baseline when a mention is removed", r.code === 0 && /2 IRCC form numbers/.test(r.out) && JSON.parse(readFileSync(join(T, "tools/no-hard-coding-baseline.json"), "utf8")).total.forms === 2, r);
+reset();
 r = run("--write", "--against", base);
 ok("--write with --against is refused (it compares with the stored baseline only)", r.code === 2 && /drop --against/.test(r.out), r);
 reset(); put("engine/b.ts", `export const g = [];\n`); put("engine/d.ts", `export const x = "IMM 1294";\n`);
@@ -101,8 +107,20 @@ r = run("--against", base);
 ok("a missing folder (moved code): could not run (exit 2), never a pass on nothing", r.code === 2 && /contracts is missing/.test(r.out), r);
 reset();
 for (const bad of ["0000000", "HEAD:api"]) { r = run("--against", bad); ok(`--against ${bad}: could not run (exit 2)`, r.code === 2, r); }
+r = run("--against=" + base);
+ok("an unknown option (\"--against=<sha>\", a typo) is could-not-run (exit 2), never a fall-back to the baseline (round 2 m6)", r.code === 2 && /unknown option/.test(r.out), r);
+put("samples/programs.json", JSON.stringify({ programs: [{ combo: { key: "vv.single" } }] }));
+r = run();
+ok("no combination key read from the samples (none at the head, none at the base): could not run (exit 2; round 2 m5)", r.code === 2 && /no combination key/.test(r.out), r);
+reset();
 r = run("--against");
 ok("--against with no commit (an empty base sha in CI): could not run (exit 2)", r.code === 2, r);
+// Round 2 M1: run through a path with a symbolic link in it (macOS /tmp), the command still runs and still fails a rise.
+put("engine/d.ts", `export const x = "IMM 1294";\n`);
+const link = join(T, "tool-link"); mkdirSync(link); symlinkSync(join(import.meta.dirname, "no-hard-coding.mjs"), join(link, "no-hard-coding.mjs"));
+const viaLink = spawnSync(process.execPath, [join(link, "no-hard-coding.mjs"), "--studio", T, "--against", base], { encoding: "utf8" });
+ok("run through a symbolic link, the command still runs and fails a rise (exit 1, never a silent 0)", viaLink.status === 1 && /IMM 1294 0 → 1/.test(viaLink.stdout), { code: viaLink.status, out: viaLink.stdout + viaLink.stderr });
+reset();
 rmSync(T, { recursive: true, force: true });
 
 // The real tree today: never could-not-run; a rise against the stored baseline is a warning here (CI's gate is
