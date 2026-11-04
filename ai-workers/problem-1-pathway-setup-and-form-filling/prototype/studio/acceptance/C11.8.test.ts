@@ -8,9 +8,14 @@
 //   * Setups: the six (Demo › Load sample, P-148) and the suites' fixture (POST /demo/load {}), on which IMM 5645 is
 //     added to Visitor visa through the form intake and read, as a person does.
 //   * Sweep: every form on the setup that has a committed, completed live answer (whole, or every part of one split) is
-//     offered as Saved by its own dialog's options and by the plan, at US$0 (P-227).
+//     offered as Saved by its own dialog's options and by the plan, at US$0 (P-227). The exception, by name: the same
+//     form being mapped in another combination is never drafted again, Live or Saved (F3 D4, BR-7); for those the
+//     plan and the door say so (409, nothing queued), and the dialog closes Start with that reason and a link there
+//     (review Major 1: before, it offered a Saved that the click then refused).
 //   * IMM 5645: the dialog in a browser at 1440 px offers Saved, selected, "Use Saved (US$0)"; a Saved start replays its
-//     four parts, done at US$0, the launcher never asked; a Live start is refused (409) before anything is queued.
+//     four parts, done at US$0, the launcher never asked. A Live start is refused (409) while live AI is off when it
+//     would call the model (a part unsaved); with every part saved a Live start calls no model either (each part uses
+//     its saved answer, US$0), and how such a run is labelled is a question for the tech lead (challenge.md).
 //   * Fail: one part's saved answer missing (induced with STUDIO_HIDE_SAVED_RUNS, isolated copy only): Saved is closed,
 //     with the reason in words, in the dialog and at the door; never half-filled.
 //   * IMM 1344 (the other form saved in parts, 26 Oct): with its whole-form answers hidden, its five parts alone are
@@ -70,7 +75,9 @@ const completed = (f: string, invSha: string | null) => {
 /** What p2/runs holds for one form's field-map job, read from the files themselves (not from the server). */
 function committed(jobId: string, invSha: string | null) {
   const files = readdirSync(RUNS).filter((f) => f.endsWith(".json") && !f.includes(".reconverted"));
-  const whole = files.filter((f) => f.startsWith(`${jobId}-live-`) && completed(f, invSha));
+  // The names the server reads a form's whole answers under: the studio's, and the earlier c1 prototype's.
+  const stem = jobId.replace(/^studio-fieldmap-/, "").replace(/e$/, "");
+  const whole = files.filter((f) => (f.startsWith(`${jobId}-live-`) || f.startsWith(`c1-fieldmap-${stem}-live-`)) && completed(f, invSha));
   const split = new Map<number, Set<number>>();
   for (const f of files) {
     const m = new RegExp(`^${jobId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-p(\\d+)of(\\d+)-[0-9a-f]{12}-live-`).exec(f);
@@ -83,7 +90,7 @@ function committed(jobId: string, invSha: string | null) {
 /** Every form of this setup with a committed paid answer is offered as Saved by its dialog and by the plan (P-227). */
 async function sweep(setup: string) {
   const forms = sql(`select id || '|' || file_name || '|' || coalesce(inventory_file, '') from source_attachment where status in ('READ', 'DRAFTED') order by file_name, id`).split("\n").filter(Boolean).map((l) => { const [id, file, inv] = l.split("|"); return { id, file, inv }; });
-  const missed: string[] = [], seen: string[] = [];
+  const missed: string[] = [], seen: string[] = [], shared: { id: string; file: string; why: string }[] = [];
   for (const f of forms) {
     const o = (await call("GET", `/attachments/${f.id}/draft-options`)).body;
     if (!o?.job_id) continue;
@@ -94,13 +101,24 @@ async function sweep(setup: string) {
     const runs = (o.saved_runs ?? []) as { valid?: boolean; recheckable?: boolean }[];
     const dialog = runs.some((r) => r.valid || r.recheckable) || (o.saved_parts && o.saved_parts.parts > 0 && o.saved_parts.saved === o.saved_parts.parts);
     const t = (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [f.id] }, mode: "REPLAY", draftAgain: true })).body?.targets?.[0];
-    // A form shared with another combination and being mapped there is skipped by the plan with that reason (one
-    // mapping per form at a time); its own dialog still offers Saved.
-    const planOk = (t?.action === "reuse_saved_output" && (t?.worst_usd ?? 0) === 0) || (t?.action === "skip" && /^Being mapped in /.test(t?.why ?? ""));
+    // The same form being mapped in another combination: its own outcome, checked below (never counted as Saved).
+    if (t?.action === "skip" && t?.elsewhere) { shared.push({ id: f.id, file: f.file, why: t.why }); seen.pop(); continue; }
+    // A form whose edition's reviewed map is already in the library is added from there instead (no AI, US$0): better
+    // than Saved, and named as such by the plan.
+    const planOk = ["reuse_saved_output", "reuse_library"].includes(t?.action) && (t?.worst_usd ?? 0) === 0;
     if (!dialog || !planOk) missed.push(`${f.file}: dialog ${dialog ? "Saved" : "no Saved"}, plan ${t?.action} (${String(t?.why ?? "").slice(0, 80)})`);
   }
-  ok(`C11.8 pass (P-227, ${setup}): every form with a paid answer committed to p2/runs (whole, or every part) is offered as Saved by its dialog and the plan, US$0 (${seen.length} forms: ${[...new Set(seen)].join(", ")})`, seen.length > 0 && missed.length === 0, missed);
-  return seen;
+  const names = [...new Set(seen)];
+  ok(`C11.8 pass (P-227, ${setup}): every form with a paid answer committed to p2/runs (whole, or every part) is offered as Saved by its dialog and the plan, US$0 (${seen.length} rows, ${names.length} forms: ${names.join(", ")})`, seen.length > 0 && missed.length === 0, missed);
+  // Being mapped elsewhere: Saved is not offered as startable; the door refuses it in the plan's words, nothing queued.
+  const refused: string[] = [];
+  for (const f of shared) {
+    const q0 = n(`select count(*) from drafting_job`);
+    const r = await call("POST", `/attachments/${f.id}/draft`, { mode: "replay", idempotencyKey: `c118-shared-${f.id}-${Date.now()}` });
+    if (!(r.status === 409 && /^Being mapped in /.test(words(r)) && n(`select count(*) from drafting_job`) === q0)) refused.push(`${f.file}: ${r.status} ${words(r).slice(0, 80)}`);
+  }
+  if (shared.length) ok(`C11.8 (F3 D4, ${setup}): the ${shared.length} rows of forms being mapped in another combination (${[...new Set(shared.map((f) => f.file))].join(", ")}) are refused at the door in the plan's words (409), nothing queued`, refused.length === 0, refused);
+  return { seen: names, shared };
 }
 
 const att5645 = () => sql(`select id from source_attachment where file_name ilike 'imm5645%' order by id limit 1`);
@@ -108,20 +126,23 @@ const comboOf = (a: string) => sql(`select combination_id from source_attachment
 const proposals5645 = () => n(`select count(*) from proposal_item where form_edition like 'IMM 5645 (%' and origin='ai'`);
 
 /** The form's own Draft with AI dialog, as a person opens it (the button, or the ?draft= link a failed Live run gives). */
-async function dialog(page: Page, a: string, via: "button" | "link", shot: string) {
+async function dialog(page: Page, a: string, via: "button" | "link", shot: string, expectReplay = false) {
   const combo = comboOf(a);
   await page.goto(`/c/${combo}/forms${via === "link" ? `?draft=${a}` : ""}`);
   if (via === "button") {
-    const row = page.locator("tr, li, [data-attachment]").filter({ hasText: /IMM 5645/ }).first();
+    const code = sql(`select split_part(coalesce(edition, ''), ' (', 1) from source_attachment where id='${a}'`);
+    const row = page.locator("tr, li, [data-attachment]").filter({ hasText: new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first();
     await row.getByRole("button", { name: /Draft with AI/ }).click({ timeout: 30_000 });
   }
   const start = page.locator("[data-draft-start]");
   await start.waitFor({ timeout: 30_000 });
   await page.locator('[data-draft-start][data-options-loaded="true"]').waitFor({ timeout: 30_000 });
-  await page.waitForTimeout(300); // the mode settles to Saved once the options are in
+  // The mode settles to Saved once the options are in; a dialog that should offer Saved and never does fails here loudly.
+  if (expectReplay) await page.locator('[data-draft-start][data-mode="replay"][data-start-ready="true"]').waitFor({ timeout: 30_000 }).catch(() => { throw new Error(`${shot}: the dialog never settled on Saved, ready to start`); });
   const box = page.getByRole("dialog");
   const saved = box.locator("label").filter({ hasText: /^Saved/ }).locator('input[type="radio"]');
-  const r = { text: (await box.innerText()).replace(/\s+/g, " "), mode: await start.getAttribute("data-mode"), ready: await start.getAttribute("data-start-ready"), disabled: await start.isDisabled(), savedEnabled: await saved.isEnabled(), savedChecked: await saved.isChecked(), label: (await start.innerText()).trim() };
+  const liveRadio = box.locator("label").filter({ hasText: /^Live/ }).locator('input[type="radio"]');
+  const r = { text: (await box.innerText()).replace(/\s+/g, " "), mode: await start.getAttribute("data-mode"), ready: await start.getAttribute("data-start-ready"), disabled: await start.isDisabled(), savedEnabled: await saved.isEnabled(), savedChecked: await saved.isChecked(), liveEnabled: await liveRadio.isEnabled(), elsewhere: await box.locator("[data-draft-elsewhere]").count(), label: (await start.innerText()).trim() };
   if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, `${shot}.png`) }); }
   return r;
 }
@@ -134,7 +155,7 @@ async function imm5645(setup: string, via: "button" | "link") {
   const w = await walker(`http://localhost:${PORT}`);
   try {
     const page = await w.open("user-A", 1440);
-    const d = await dialog(page, A, via, `${setup}-imm5645-draft-with-ai-1440`);
+    const d = await dialog(page, A, via, `${setup}-imm5645-draft-with-ai-1440`, true);
     ok(`C11.8 pass (P-227, ${setup}, 1440 px): Forms › IMM 5645 › Draft with AI offers Saved, selected, "Use Saved (US$0)" enabled, and never "No saved AI answer"`, d.savedEnabled && d.savedChecked && d.mode === "replay" && !d.disabled && d.ready === "true" && /Use Saved \(US\$0\)/.test(d.label) && /each of its 4 parts/.test(d.text) && !/No saved AI answer for this form yet/.test(d.text), d);
     ok(`C11.8 (P-227, ${setup}): the dialog offers exactly Live and Saved (no third way, no priced Saved)`, /\bLive\b/.test(d.text) && /\bSaved\b/.test(d.text) && !/\bstub\b/i.test(d.text), d.text.slice(0, 300));
     ok(`C11.8 (${setup}): no page error in the walk`, w.errors.length === 0, w.errors);
@@ -150,7 +171,8 @@ async function imm5645(setup: string, via: "button" | "link") {
   const parts = JSON.parse(row.slice(2).join("|") || "[]") as { status: string; saved: boolean; cost_usd: number }[];
   ok(`C11.8 pass (P-227, ${setup}): Use Saved (US$0) replays IMM 5645's 4 parts, each from its saved answer, done at US$0`, s.status === 201 && end === "COMPLETED" && Number(row[0]) === 0 && parts.length === 4 && parts.every((p) => p.status === "done" && p.saved && p.cost_usd === 0) && /Saved AI answers of its 4 parts/.test(row[1]) && /US\$0/.test(row[1]), { status: s.status, m: words(s).slice(0, 120), end, row: row.slice(0, 2) });
   ok(`C11.8 (US$0, ${setup}): the launcher was never asked and the shared ledger is unchanged`, launcherCalls() === calls0 && sharedLedger() === shared0, { calls: launcherCalls() - calls0 });
-  ok(`C11.8 (${setup}): its answer reaches review as AI proposals, like any saved answer`, proposals5645() > 0, proposals5645());
+  const mine = J ? n(`select count(*) from proposal_item where run_id = '${J}'`) : 0;
+  ok(`C11.8 (${setup}): this Saved run's answer reaches review as AI proposals, like any saved answer`, mine > 0, mine);
 }
 
 /** One part's saved answer missing: Saved is closed with the reason, in the dialog and at the door; nothing half-filled. */
@@ -209,8 +231,20 @@ const loadFixture = async () => {
 
   // ── The six (P-148), as Demo › Load sample gives them: IMM 5645 already drafted from its saved parts.
   await loadSix();
-  const six = await sweep("the six");
+  const { seen: six, shared } = await sweep("the six");
   ok("C11.8 (the six): the sweep covers both forms saved in parts, IMM 5645 (#746) and IMM 1344", six.includes("imm5645e.pdf") && six.includes("imm1344e.pdf"), six);
+  // A form of the six being mapped in another combination (IMM 5406 on Spouse or common-law partner, mapped in Express
+  // Entry stream): its dialog does not offer a Saved the door refuses (review Major 1).
+  const sh = shared.find((f) => f.file === "imm5406e.pdf") ?? shared[0];
+  ok("C11.8 (F3 D4, the six): at least one form is being mapped in another combination (the six share IMM 0008, 5406 and 5669)", !!sh, shared.length);
+  if (sh) {
+    const w = await walker(`http://localhost:${PORT}`);
+    try {
+      const d = await dialog(await w.open("user-A", 1440), sh.id, "button", "six-shared-form-being-mapped-elsewhere-1440");
+      ok(`C11.8 fail (P-227, F3 D4, the six, 1440 px): ${sh.file}'s Draft with AI closes Start, Live and Saved, and says it is being mapped in another combination, with a link there`, d.disabled && d.ready === "false" && !d.savedEnabled && !d.liveEnabled && d.elsewhere === 1 && /Being mapped in /.test(d.text) && /Open that draft/.test(d.text), d);
+      ok("C11.8 (the six): no page error in that walk", w.errors.length === 0, w.errors);
+    } finally { await w.close(); }
+  }
   await imm5645("six", "link");
   // IMM 1344 is the other form committed in parts (26 Oct): its parts alone are usable as Saved.
   await restart("STUDIO_HIDE_SAVED_RUNS=imm1344e-live-");
@@ -223,7 +257,7 @@ const loadFixture = async () => {
 
   // ── The suites' fixture: IMM 5645 added to Visitor visa through the intake and read, then Draft with AI.
   await loadFixture();
-  const fx = await sweep("the fixture");
+  const { seen: fx } = await sweep("the fixture");
   ok("C11.8 (the fixture): the sweep covers IMM 5645", fx.includes("imm5645e.pdf"), fx);
   await imm5645("fixture", "button");
   await partMissing("fixture", "button", loadFixture);
