@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
-import { editionContextKey } from "../../engine/rounds.ts";
+import { editionContextKey, PRINTED_EDITION } from "../../engine/rounds.ts";
 import { OFFICIAL, PROTOTYPE, SOLUTION } from "./core.ts";
 import { MODEL, worstRoundUsd, type AiStep, type RoundOut, type StepRunner } from "./rounds.ts";
 
@@ -59,7 +59,7 @@ export const runnerBudgetUsd = (step: AiStep) => (step as AiStep & { budget_usd?
 /** One Sample form edition with the inventory read from its official file (p1/inventory, same checksum). */
 export type EditionSource = { code: string; edition: string; printed: string; inventory: string; inventorySha256: string; inventoryBytes: number; fields: number };
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
-const PRINTED = /^(IMM [0-9A-Z ]+?) \(([0-9]{2}-[0-9]{4})\)$/;
+const PRINTED = PRINTED_EDITION;
 
 /** The form editions of the official manifest that have a box inventory read from exactly that file: the Sample forms
  *  the recording pass drafts. Checklists and guides have no boxes to map and are left out. */
