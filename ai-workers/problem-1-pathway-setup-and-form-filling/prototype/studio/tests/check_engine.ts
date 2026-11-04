@@ -38,6 +38,12 @@ ok("previous occupation is never merged into the current occupation", by("person
 ok("same key with a clashing type is a conflict", by("person.marital_status")?.outcome === "CONFLICT");
 ok("a definition no box reads is not proposed", !by("person.unused"));
 ok("an unrelated meaning is new", by("person.visit_purpose")?.outcome === "NEW");
+// QA-193 order row (P-214): candidates with equal scores rank by key, so the top three never depend on the order the
+// library's rows came in (a re-compare in another row order reopened a kept decision and dropped its To review batch).
+const tieLib = ["person.country_d", "person.country_a", "person.country_c", "person.country_b", "person.country_e"].map((key) => ({ key, meaning: "Country", valueType: "code", status: "PUBLISHED" }));
+const tieOf = (l: typeof tieLib) => normalize([{ id: "person.education_country", meaning: "Country where the person studied", value_type: "code" }], [box("person.education_country")], l, new Map())[0]?.candidates ?? [];
+const tieA = tieOf(tieLib), tieB = tieOf([...tieLib].reverse());
+ok("equal-score candidates rank by key: the same top three in any library order (QA-193 order row)", tieA.length === 3 && new Set(tieA.map((c) => c.score)).size < 3 && JSON.stringify(tieA.map((c) => c.key)) === JSON.stringify(tieB.map((c) => c.key)) && JSON.stringify(tieA.map((c) => c.key)) === JSON.stringify(["person.country_a", "person.country_b", "person.country_c"]), { a: tieA.map((c) => `${c.key}:${c.score}`), b: tieB.map((c) => c.key) });
 ok("partOf only matches composite address fields", partOf("person.mailing_address_city", lib)?.part === "city" && partOf("person.occupation_city", lib) === null);
 
 // ---------------------------------------------------------------- draft/release resolution
