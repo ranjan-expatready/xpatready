@@ -3,19 +3,22 @@ itself (read only, no AI, US$0). Writes <form>.headings.json beside the inventor
 the words printed on the form ("PERSONAL DETAILS" -> "Personal details"), never by the PDF's internal part name
 ("PageWrapper", "Five") and never by a form number in code.
 
-A part (a page's subform) has a heading, in this order, all from the form's own text:
-1. banner: the first text printed in the part that is all capital letters (4 to 60 characters, at most 8 words, a
-   real word in it), a bold one first, with a trailing "(CONTINUED)" left out: "PERSONAL DETAILS", "US PR CARD". A
-   notice that the space is for an office ("FOR OFFICE USE ONLY") is not a heading, nor the form's title (printed
-   larger than the form's usual banner);
-2. numbered: else, when the part's first printed text is bold and numbered, at most 60 characters, and no other
-   numbered text is in the part ("7. Your declaration"), those words without the number: a part that holds
-   questions 5 and 6 is not named after question 5;
+A part (a page's subform) has a heading, in this order, all from the form's own text, read in reading order (a part laid
+out by position top to bottom, a flowing part in its own order):
+1. banner: the part's first text with words in it (an office notice and a box's small label, not bold and 4 words or
+   fewer, left out), when it is all capital letters (4 to 60 characters, at most 8
+   words), a trailing "(CONTINUED)" and a note in brackets ("(Include ALL sons and daughters ...)") left out:
+   "PERSONAL DETAILS", "US PR CARD", "SECTION B - CHILDREN". A notice that the space is for an office ("FOR OFFICE
+   USE ONLY") is not a heading, and a banner printed further down the part is not the heading of its boxes;
+2. numbered: else, when that first text is bold and numbered, at most 60 characters, and no other numbered text is
+   in the part ("7. Your declaration"), those words without the number: a part that holds questions 5 and 6 is not
+   named after question 5;
 3. carried: else, the banner of a heading-only part printed just before it on the same page (a part with a banner and
-   no box a person fills, like "SectionHeader_DetailsOfVisit"), passed on through the parts that carried it; never
-   the form's first banner, which is its title. A part
-   after a part with boxes of its own is never given that part's heading: the form may print its own banner where
-   this reader does not see it, and a wrong name is worse than none.
+   no box a person fills, like "SectionHeader_DetailsOfVisit"), passed on while the parts after it go on printing
+   questions (a question number, or a lettered item "a) ..."). A part with no question of its own (a consent, a
+   declaration, a signature) is not given it, and ends the carry. Never across a page; never the form's first banner,
+   which is its title.
+A banner printed "(CONTINUED)" is marked "continues": its boxes are one section with the part of that heading before it.
 Anything else has no printed heading: the rules pass then says the name must be changed before Accept.
 
 A banner is put in sentence case by the form's own spelling of each word: a word the form prints in small letters
@@ -48,17 +51,45 @@ WORD = re.compile(r"[A-Za-zÀ-ſ]+(?:['’][A-Za-z]+)?")
 DATE = re.compile(r"^(Y+|M+|D+)$", re.I)
 
 
+UNIT = {"mm": 72 / 25.4, "in": 72.0, "pt": 1.0, "cm": 72 / 2.54}
+
+
+def y_of(el):
+    m = re.match(r"\s*(-?[\d.]+)\s*(mm|in|pt|cm)?", el.get("y") or "0")
+    return float(m.group(1)) * UNIT[m.group(2) or "in"] if m else 0.0
+
+
 def texts(el, ns):
-    """The printed texts inside el, in document order, each with whether it is bold."""
+    """The printed texts inside el in reading order, each with whether it is bold and its size. A part laid out by
+    position (no flowing layout) is read top to bottom by each child's y; a flowing part in its own order. A picture
+    (an image value) is not text."""
     out = []
-    for d in el.iter(ns + "draw"):
-        t = inv.text_of(d.find(ns + "value"), ns)
+    kids = [c for c in el if c.tag.replace(ns, "") in ("draw",) + PARTS]
+    if (el.get("layout") or "position") == "position":
+        kids = sorted(kids, key=y_of)  # stable: same y keeps the form's order
+    for d in kids:
+        if d.tag.replace(ns, "") != "draw":
+            out.extend(texts(d, ns))
+            continue
+        v = d.find(ns + "value")
+        if v is None or v.find(ns + "image") is not None:
+            continue
+        t = inv.text_of(v, ns)
         if t:
             f = d.find(ns + "font")
             rich = ET.tostring(d, encoding="unicode").replace(" ", "")
             size = re.match(r"[\d.]+", (f.get("size") if f is not None else None) or "")
             out.append((t, (f is not None and f.get("weight") == "bold") or "font-weight:bold" in rich, float(size.group(0)) if size else None))
     return out
+
+
+def lettered(t):
+    """A text with words in it (4 letters or more), not a number, a box's letter or a date pattern."""
+    return sum(c.isalpha() for c in t) >= 4 and any(len(w) >= 3 and not DATE.match(w) for w in WORD.findall(t))
+
+
+# A question printed in a part: a bare question number ("2") or a lettered item ("a) Have you ...").
+QUESTION = re.compile(r"^\s*(\d{1,2}|[a-z]\))(\s|$)")
 
 
 def fills(part, ns):
@@ -77,7 +108,9 @@ def fills(part, ns):
 
 
 def banner_of(t):
-    t = CONTINUED.sub("", t).strip().rstrip(":-–").strip()
+    t = CONTINUED.sub("", t).strip()
+    # A note in brackets after the heading ("SECTION B - CHILDREN (Include ALL sons and daughters ...)") is not part of it.
+    t = re.sub(r"\s*\([^)]*[a-z][^)]*(\)|$).*$", "", t).strip().rstrip(":-–").strip()
     letters = [c for c in t if c.isalpha()]
     if len(letters) < 4 or any(c.islower() for c in letters) or len(t) > 60 or len(t.split()) > 8 or OFFICE.search(t):
         return None
@@ -105,7 +138,10 @@ def sentence_case(banner, seen):
         w = m.group(0)
         forms = seen.get(w.lower(), {})
         after = banner[m.end():].lstrip()[:1]
-        if len(w) == 1 and not first[0] and after in ("", ":", "-", "\u2013", ")"):
+        before = banner[:m.start()][-1:]
+        if len(w) == 1 and before == "(" and after == ")":
+            out = w.lower()  # "DEPENDANT(S)" -> "Dependant(s)"
+        elif len(w) == 1 and not first[0] and after in ("", ":", "-", "\u2013", ")"):
             out = w
         elif any(s == s.lower() for s in forms):
             out = w.lower()
@@ -142,21 +178,27 @@ def read(fname):
                 continue
             key = f"{pname}.{part.get('name') or '#' + tag}"
             ts = texts(part, ns)
-            bs = [(banner_of(t), bold) for t, bold, _ in ts if banner_of(t)]
-            b = next((x for x, bold in bs if bold), None) or next((x for x, _ in bs), None)  # a bold banner first
+            # Skipped: an office notice ("OFFICE USE ONLY") and a box's small label (not bold, 4 words or fewer).
+            words = [x for x in ts if lettered(x[0]) and not OFFICE.search(x[0]) and (x[1] or len(x[0].split()) > 4)]
+            # The heading the boxes sit under is the part's first text with words in it, in reading order: a banner
+            # printed further down (IMM 5645's "SECTION D - CERTIFICATION" at the foot of Section C) is not it.
+            b = banner_of(words[0][0]) if words else None
             # A numbered heading names one question: it names the part only when no other numbered text is in it.
-            n = NUMBERED.match(ts[0][0]) if ts and ts[0][1] and len(ts[0][0]) <= 60 and sum(bool(NUMBERED.match(t)) for t, _, _ in ts) == 1 else None
+            n = NUMBERED.match(words[0][0]) if words and words[0][1] and len(words[0][0]) <= 60 and sum(bool(NUMBERED.match(t)) for t, _, _ in ts) == 1 else None
+            asks = any(QUESTION.match(t) for t, _, _ in ts)
             title = title or b
             if b:
-                entry = {"heading": sentence_case(b, seen), "printed": b, "how": "banner"}
+                entry = {"heading": sentence_case(b, seen), "printed": b, "how": "banner", **({"continues": True} if CONTINUED.search(words[0][0]) else {})}
                 carry = None if fills(part, ns) or b == title else (b, key)
             elif n:
-                entry = {"heading": n.group(1)[0].upper() + n.group(1)[1:], "printed": ts[0][0], "how": "numbered"}
+                entry = {"heading": n.group(1)[0].upper() + n.group(1)[1:], "printed": words[0][0], "how": "numbered"}
                 carry = None
-            elif carry:
+            elif carry and asks:
+                # The questions printed under a heading-only part's banner go on in the parts after it; a part with no
+                # question of its own (a consent, a declaration, a signature) is not given it, and ends the carry.
                 entry = {"heading": sentence_case(carry[0], seen), "printed": carry[0], "how": "carried", "from": carry[1]}
             else:
-                entry = None
+                entry, carry = None, None
             if entry and key not in out:
                 out[key] = entry
     full = json.loads((inv.OUT / (fname.replace(".pdf", "") + ".inventory.json")).read_text())

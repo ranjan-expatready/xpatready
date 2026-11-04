@@ -32,15 +32,33 @@ run(async () => {
   const vv = drafted("imm5257e");
   const vvNames = vv.map((s) => s.label);
   ok("QA-206 pass: IMM 5257's sections are its printed headings (Personal details, Details of visit to Canada, Background information …)", ["Personal details", "Contact information", "Details of visit to Canada", "Education", "Employment", "Background information"].every((n) => vvNames.includes(n)), vvNames);
-  ok("QA-206 fail: every IMM 5257 section is named from its printed heading, none after an internal part (Page wrapper, Background info2, Us card, Contacts row2 …)", vv.length > 0 && vv.every((s) => fromPrint(s) && !INTERNAL.includes(s.label!.toLowerCase())), vv.map((s) => [s.label, s.quote]));
+  ok("QA-206 fail: every IMM 5257 section is named from its printed heading, none after an internal part (Page wrapper, Background info2, Us card, Contacts row2 …)", vv.length > 0 && vv.every((s) => (s.unnamed && s.label === null) || (fromPrint(s) && !INTERNAL.includes(s.label!.toLowerCase()))), vv.map((s) => [s.label, s.quote]));
   ok("QA-206 pass: each named section rests on its printed heading as the quote (\"DETAILS OF VISIT TO CANADA\")", vv.find((s) => s.label === "Details of visit to Canada")?.quote === "DETAILS OF VISIT TO CANADA", vv.map((s) => s.quote));
-  ok("QA-206 pass: the parts under one printed heading are one section (IMM 5257's four background parts)", vv.filter((s) => s.label === "Background information").length === 1 && (vv.find((s) => s.label === "Background information")?.fieldKeys.length ?? 0) > 10);
+  ok("QA-206 pass: the parts whose questions go on under one printed banner are one section (IMM 5257's background questions 1 to 6)", vv.filter((s) => s.label === "Background information").length === 1 && (vv.find((s) => s.label === "Background information")?.fieldKeys.length ?? 0) > 10);
+  // Review M2: the consent and signature part prints no question of its own, so the banner above it is not carried to it.
+  ok("QA-206 fail (review M2): IMM 5257's consent and signature part is not put under \"Background information\": it is held unnamed", vv.some((s) => s.part === "Consent1" && s.unnamed) && !vv.some((s) => s.label === "Background information" && s.fieldKeys.some((k) => /Consent1/.test(k))), vv.map((s) => [s.part, s.label]));
+  ok("QA-206 pass: \"PERSONAL DETAILS (CONTINUED)\" on page 2 is one section with page 1's Personal details", vv.filter((s) => s.label === "Personal details").length === 1 && (vv.find((s) => s.label === "Personal details")?.fieldKeys ?? []).some((k) => /Page2\[0\]\.MaritalStatus/.test(k)));
+  // Review M1: the heading is the first text printed above the boxes, its note in brackets left out; a banner printed
+  // lower in the part (IMM 5645 prints "SECTION D - CERTIFICATION" at the foot of Section C), or a box's caption
+  // (IMM 5646's "OFFICIAL SEAL OF NOTARY PUBLIC"), never names it.
+  const fam = drafted("imm5645e");
+  ok("QA-206 fail→pass (review M1): IMM 5645's Section C is \"Section C - brothers and sisters\", Section B \"Section B - children\", never \"Section D - certification\"", fam.some((s) => s.part === "SectionC" && s.label === "Section C - brothers and sisters") && fam.some((s) => s.part === "SectionB" && s.label === "Section B - children") && !fam.some((s) => /Section D/.test(s.label ?? "")), fam.map((s) => [s.part, s.label]));
+  const cust = drafted("imm5646e");
+  ok("QA-206 fail (review M1): IMM 5646's custodian declaration is held unnamed, never \"Official seal of notary public\"", cust.some((s) => s.part === "subDeclaration" && s.unnamed) && !cust.some((s) => /seal/i.test(s.label ?? "")), cust.map((s) => [s.part, s.label]));
+  // Review M3: two different parts are never merged because they print the same words; the same part on two pages is.
+  const gen = drafted("imm0008e");
+  const applicant = gen.find((s) => s.label === "Personal details");
+  ok("QA-206 fail (review M3): IMM 0008's applicant \"Personal details\" holds no dependant's boxes (they are under \"Dependant(s)\")", !!applicant && applicant.fieldKeys.every((k) => !/dep/i.test(k)) && gen.some((s) => s.label === "Dependant(s)" && s.fieldKeys.some((k) => /dependants/i.test(k))), gen.map((s) => [s.label, s.fieldKeys.length]));
+  ok("QA-206 pass: IMM 5646's two pages give one \"Student information\" section, not two", cust.filter((s) => s.label === "Student information").length === 1);
+  const twice = draftFromInventory([{ data_path: "a", section: "Page1.Applicant.A", caption: "Name" }, { data_path: "b", section: "Page1.Spouse.A", caption: "Name" }], { "Page1.Applicant": { heading: "Personal details", printed: "PERSONAL DETAILS", how: "banner" }, "Page1.Spouse": { heading: "Personal details", printed: "PERSONAL DETAILS", how: "banner" } });
+  ok("QA-206 fail (review M3): a second part printing the same heading is held unnamed, saying the form prints that heading over another part too", twice.sections.length === 2 && twice.sections.filter((s) => s.label === "Personal details").length === 1 && twice.sections.some((s) => s.unnamed && /prints "PERSONAL DETAILS" over another part too/.test(s.why ?? "")), twice.sections);
   const mrd = drafted("imm5475e");
   ok("QA-206 pass: IMM 5475's part \"Seven\" is proposed under its printed heading \"Your declaration\"", mrd.some((s) => s.label === "Your declaration" && s.part === "Seven" && s.quote === "7. Your declaration"), mrd.map((s) => [s.part, s.label]));
   ok("QA-206 fail: IMM 5475's parts with no printed heading of their own (AppDetails, Five) are held unnamed, never \"Five\"", mrd.filter((s) => s.unnamed).map((s) => s.part).sort().join() === "AppDetails,Five" && mrd.every((s) => !s.label || fromPrint(s)), mrd.map((s) => [s.part, s.label]));
-  ok("QA-206 fail: a headings file read from another file (checksum differs) is not used: every section is held unnamed", Object.keys(headingsFor("prototype/p1/inventory/imm5257e.inventory.json", "0".repeat(64))).length === 0 && Object.keys(headingsFor("prototype/p1/inventory/imm5257e.inventory.json", JSON.parse(readFileSync(join(SOLUTION, "prototype/p1/inventory/imm5257e.inventory.json"), "utf8")).summary.sha256)).length > 5);
+  ok("QA-206 fail: a headings file read from another file (checksum differs) is not used: every section is held unnamed", headingsFor("prototype/p1/inventory/imm5257e.inventory.json", "0".repeat(64)) === null && Object.keys(headingsFor("prototype/p1/inventory/imm5257e.inventory.json", JSON.parse(readFileSync(join(SOLUTION, "prototype/p1/inventory/imm5257e.inventory.json"), "utf8")).summary.sha256) ?? {}).length > 5);
   const none = draftFromInventory([{ data_path: "z1", section: "Page1.PageWrapper.A", caption: "Family name" }]);
-  ok("QA-206 fail: with no headings at all, a part is held unnamed (no internal name as its label)", none.sections.length === 1 && none.sections[0].unnamed && none.sections[0].label === null, none.sections);
+  ok("QA-206 fail (review m1): with no headings read, a part is held unnamed and says its headings were not read (not that the form has none)", none.sections.length === 1 && none.sections[0].unnamed && none.sections[0].label === null && /have not been read/.test(none.sections[0].why ?? ""), none.sections);
+  ok("QA-206 pass (review m4): IMM 5475's two unnamed parts can be told apart by their first boxes", new Set(mrd.filter((s) => s.unnamed).map((s) => s.captions.join("; "))).size === 2, mrd.map((s) => s.captions));
 
   // ─────────────────── on the copy: To review and Accept
   await T.ready();
@@ -61,7 +79,7 @@ run(async () => {
   const s5257 = await sectionsOf("IMM 5257"), s5475 = await sectionsOf("IMM 5475");
   const t5257 = s5257.map((x: any) => String(x.title));
   ok("QA-206 pass: To review shows IMM 5257's sections under their printed headings", t5257.includes("Personal details") && t5257.includes("Details of visit to Canada") && t5257.includes("Background information"), t5257);
-  ok("QA-206 fail: To review shows no IMM 5257 section under an internal part name", s5257.length > 0 && t5257.every((t: string) => !INTERNAL.includes(t.toLowerCase()) && vvNames.includes(t)), t5257);
+  ok("QA-206 fail: To review shows no IMM 5257 section under an internal part name", s5257.length > 0 && t5257.every((t: string) => !INTERNAL.includes(t.toLowerCase()) && (vvNames.includes(t) || /^Unnamed section \d+ of IMM 5257$/.test(t))), t5257);
   const unnamed = s5475.filter((x: any) => /^Unnamed section \d+ of IMM 5475$/.test(String(x.title)));
   ok("QA-206 pass: To review shows IMM 5475's \"Your declaration\" and two sections that say they must be named", s5475.some((x: any) => x.title === "Your declaration") && unnamed.length === 2, s5475.map((x: any) => x.title));
   ok("QA-206 pass: an unnamed section says in plain words that it must be named before Accept", unnamed.every((x: any) => String(x.reason ?? "").includes(UNNAMED_WHY)), unnamed.map((x: any) => x.reason));
@@ -72,11 +90,15 @@ run(async () => {
   ok("QA-206 fail: Accept of an unnamed section is refused (409) in plain words, and nothing lands", !!u && r.status === 409 && words(r).includes(UNNAMED_WHY) && waiting() === w0, words(r));
   const named = s5475.find((x: any) => x.title === "Your declaration");
   r = await call("POST", "/review/proposals/decide", { ids: [named?.id ?? NONE, u?.id ?? NONE], action: "accept" }, AUTHOR);
+  // Review m5: rules items are never accepted together (bulkWhy, P-121), so this refusal comes from that rule first; the
+  // guard's own bulk branch stays as a second lock.
   ok("QA-206 fail: an unnamed section accepted with others is refused too, and nothing lands", r.status === 409 && waiting() === w0, words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [u?.id ?? NONE], action: "edit", payload: { ...payload, label: ` ${String(payload?.label ?? "").toUpperCase()} ` } }, AUTHOR);
   ok("QA-206 fail: an edit that keeps the placeholder name is refused (409)", r.status === 409 && words(r).includes(UNNAMED_WHY) && waiting() === w0, words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [u?.id ?? NONE], action: "edit", payload: { ...payload, label: "Unnamed section of mine" } }, AUTHOR);
   ok("QA-206 fail: an edit to another \"Unnamed section …\" name is refused (409)", r.status === 409 && waiting() === w0, words(r));
+  r = await call("POST", "/review/proposals/decide", { ids: [u?.id ?? NONE], action: "edit", payload: { ...payload, label: "unnamed  Section of mine" } }, AUTHOR);
+  ok("QA-206 fail (review m2): spacing or case never gets a placeholder name past the check (409)", r.status === 409 && waiting() === w0, words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [u?.id ?? NONE], action: "edit", payload: { ...payload, label: "Applicant and application details" } }, AUTHOR);
   const title = sql(`select title from logical_section where title='Applicant and application details' and status='DRAFT' limit 1`);
   ok("QA-206 pass: once a person names it, the section is accepted under that name and waits for a second person", r.status < 300 && title === "Applicant and application details" && waiting() === w0 + 1, r.status >= 300 ? words(r) : title);

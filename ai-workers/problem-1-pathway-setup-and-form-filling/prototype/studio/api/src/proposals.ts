@@ -751,8 +751,9 @@ export const NEAR_BULK_WHY = "It is close to a library item: open it and say why
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
 /** QA-206 (P-158, PRODUCT §4): the words a section with no printed heading carries (form-masters.ts rules pass) until a
  *  person names it; it is never accepted under its placeholder, so a client never sees one as a questionnaire section. */
-export const UNNAMED_WHY = "No printed heading was found above these boxes on the form: give the section a name before it is accepted.";
-const UNNAMED_LABEL = /^\s*unnamed section\b/i;
+export const UNNAMED_WHY = "Give the section a name before it is accepted.";
+/** A placeholder name, however it is spaced or cased ("Unnamed  section 2 of IMM 5475"). */
+const isPlaceholder = (label: string) => normalizeLabel(label).startsWith("unnamedsection");
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is
  *  written; an accepted or edited library item runs its lander and is checked against the library again (identity at
@@ -799,7 +800,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // QA-206: a section the rules pass found no printed heading for is accepted only under a name a person gives it.
       if (d.action !== "reject" && r.kind === "section" && (r.work as { unnamed?: unknown } | null)?.unnamed === true) {
         const was = String((r.payload as { label?: unknown }).label ?? ""), now = String((payload as { label?: unknown }).label ?? "");
-        if (d.action === "accept" || normalizeLabel(now) === normalizeLabel(was) || UNNAMED_LABEL.test(now)) fail(`"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
+        if (d.action === "accept" || normalizeLabel(now) === normalizeLabel(was) || isPlaceholder(now)) fail(`"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;

@@ -8,9 +8,9 @@
    "printed": "STUDENT INFORMATION",
    "how": "banner"
   },
-  "Page1.subDeclaration": {
-   "heading": "Official seal of notary public",
-   "printed": "OFFICIAL SEAL OF NOTARY PUBLIC",
+  "Page1.subParent": {
+   "heading": "Parents/guardians information",
+   "printed": "PARENTS/GUARDIANS INFORMATION",
    "how": "banner"
   },
   "Page2.subStudentInfo": {
@@ -18,9 +18,9 @@
    "printed": "STUDENT INFORMATION",
    "how": "banner"
   },
-  "Page2.subDeclaration": {
-   "heading": "Official seal of notary public",
-   "printed": "OFFICIAL SEAL OF NOTARY PUBLIC",
+  "Page2.subParent": {
+   "heading": "Parents/guardians information",
+   "printed": "PARENTS/GUARDIANS INFORMATION",
    "how": "banner"
   }
  }

@@ -3,16 +3,6 @@
  "sha256": "22073379f73a0bd31b1b37cda266e797be0e67b4e8693efcf6cf92325f985672",
  "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
  "parts": {
-  "Page1.PersonalDetails": {
-   "heading": "Personal details",
-   "printed": "PERSONAL DETAILS",
-   "how": "banner"
-  },
-  "Page2.MaritalStatus": {
-   "heading": "Personal details",
-   "printed": "PERSONAL DETAILS",
-   "how": "banner"
-  },
   "Page2.natID": {
    "heading": "National identity document",
    "printed": "NATIONAL IDENTITY DOCUMENT",

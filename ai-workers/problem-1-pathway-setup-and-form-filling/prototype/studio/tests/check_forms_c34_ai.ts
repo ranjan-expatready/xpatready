@@ -22,8 +22,19 @@ const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, ".."), 
 const P2 = join(PROTOTYPE, "p2"), RUNS = join(P2, "runs");
 const log: unknown[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
+// QA-206 (cloud run, 4 Nov): record() below blocks this process for ~6 s (four spawnSync stub launches), longer than the
+// server's 5 s keep-alive, so the server closes the idle socket while this client cannot see it; the next request then
+// goes out on a closed socket and fails with "other side closed" before the server reads it (its HTTP debug log shows
+// the close, no request). Such a request never reached the server, so it is sent once more, on a new socket; any other
+// failure is not retried.
+const send = async (url: string, init: RequestInit) => {
+  try { return await fetch(url, init); } catch (e) {
+    if ((e as { cause?: { code?: string } }).cause?.code !== "UND_ERR_SOCKET") throw e;
+    return fetch(url, init);
+  }
+};
 const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: any = null; try { j = JSON.parse(t); } catch { j = t; }
   return { status: r.status, body: j };
 };

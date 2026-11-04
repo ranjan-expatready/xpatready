@@ -170,7 +170,8 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
   // here (an edit of its name); its placeholder name is never accepted (the API refuses it too).
   const unnamed = p.kind === "section" && p.rules.some((r) => r.rule === "printed_heading" && !r.passed);
   const [name, setName] = React.useState("");
-  const named = name.trim().length >= 2 && !/^unnamed section\b/i.test(name.trim()) && name.trim().toLowerCase() !== p.title.trim().toLowerCase();
+  const flat = (x: string) => x.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
+  const named = flat(name).length >= 2 && !flat(name).startsWith("unnamedsection") && flat(name) !== flat(p.title);
   const acceptFirst = () => (unnamed ? run.mutate({ action: "edit", payload: { ...(p.readings.draft?.payload as object), label: name.trim() } })
     : p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
   return (
@@ -189,7 +190,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
           <div>
             <label className="block text-sm font-medium" htmlFor="section-name">Section name (as a client will read it)</label>
             <Input id="section-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="mt-1" placeholder="For example: Your visit" aria-describedby="accept-needs-name" />
-            <p id="accept-needs-name" className="mt-1 text-xs text-text-muted">{named ? "It is accepted under this name." : "Accept stays off until you give the section a name: the form prints no heading above these boxes."}</p>
+            <p id="accept-needs-name" className="mt-1 text-xs text-text-muted">{named ? "It is accepted under this name." : "Accept stays off until you give the section a name (the reason above says why the form gives none)."}</p>
           </div>
         ) : null}
         {p.meaning ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it means</h3><p className="mt-1">{p.meaning}</p></section> : null}

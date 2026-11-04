@@ -16,7 +16,8 @@
   "Page2.MaritalStatus": {
    "heading": "Personal details",
    "printed": "PERSONAL DETAILS",
-   "how": "banner"
+   "how": "banner",
+   "continues": true
   },
   "Page2.natID": {
    "heading": "National identity document",
@@ -59,24 +60,6 @@
    "how": "carried",
    "from": "Page4.BackgroundInfo_SectionHeader"
   },
-  "Page4.Fragment1": {
-   "heading": "Background information",
-   "printed": "BACKGROUND INFORMATION",
-   "how": "carried",
-   "from": "Page4.BackgroundInfo_SectionHeader"
-  },
-  "Page4.BackgroundInfo2": {
-   "heading": "Background information",
-   "printed": "BACKGROUND INFORMATION",
-   "how": "carried",
-   "from": "Page4.BackgroundInfo_SectionHeader"
-  },
-  "Page4.PageWrapper": {
-   "heading": "Background information",
-   "printed": "BACKGROUND INFORMATION",
-   "how": "carried",
-   "from": "Page4.BackgroundInfo_SectionHeader"
-  },
   "Page4.Consent0": {
    "heading": "Signature",
    "printed": "SIGNATURE",
@@ -86,12 +69,6 @@
    "heading": "Privacy notice",
    "printed": "PRIVACY NOTICE",
    "how": "banner"
-  },
-  "Page4.ButtonsFooter": {
-   "heading": "Privacy notice",
-   "printed": "PRIVACY NOTICE",
-   "how": "carried",
-   "from": "Page4.Consent1"
   }
  }
 }

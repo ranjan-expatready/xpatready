@@ -16,7 +16,8 @@
   "Page2.MaritalStatus": {
    "heading": "Personal details",
    "printed": "PERSONAL DETAILS",
-   "how": "banner"
+   "how": "banner",
+   "continues": true
   },
   "Page2.natID": {
    "heading": "National identity document",
@@ -83,22 +84,10 @@
    "how": "carried",
    "from": "Page3.BackgroundInfo_SectionHeader"
   },
-  "Page3.Consent1": {
-   "heading": "Background information",
-   "printed": "BACKGROUND INFORMATION",
-   "how": "carried",
-   "from": "Page3.BackgroundInfo_SectionHeader"
-  },
   "Page3.Disclosure": {
    "heading": "Privacy notice",
    "printed": "PRIVACY NOTICE",
    "how": "banner"
-  },
-  "Page3.ButtonsFooter": {
-   "heading": "Privacy notice",
-   "printed": "PRIVACY NOTICE",
-   "how": "carried",
-   "from": "Page3.Disclosure"
   }
  }
 }

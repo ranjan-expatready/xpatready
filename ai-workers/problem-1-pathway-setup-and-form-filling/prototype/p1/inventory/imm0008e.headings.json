@@ -49,30 +49,26 @@
    "how": "banner"
   },
   "Page1.depInfoHeader": {
-   "heading": "Dependant(S)",
+   "heading": "Dependant(s)",
    "printed": "DEPENDANT(S)",
    "how": "banner"
   },
   "Page1.depPrime": {
-   "heading": "Personal details",
-   "printed": "PERSONAL DETAILS",
-   "how": "banner"
+   "heading": "Dependant(s)",
+   "printed": "DEPENDANT(S)",
+   "how": "carried",
+   "from": "Page1.depInfoHeader"
   },
   "Page1.dependants": {
-   "heading": "Personal details",
-   "printed": "PERSONAL DETAILS",
-   "how": "banner"
+   "heading": "Dependant(s)",
+   "printed": "DEPENDANT(S)",
+   "how": "carried",
+   "from": "Page1.depInfoHeader"
   },
   "Page1.depHeader": {
-   "heading": "Add dependant(S)",
+   "heading": "Add dependant(s)",
    "printed": "ADD DEPENDANT(S)",
    "how": "banner"
-  },
-  "Page1.ButtonsFooter": {
-   "heading": "Add dependant(S)",
-   "printed": "ADD DEPENDANT(S)",
-   "how": "carried",
-   "from": "Page1.depHeader"
   },
   "Page1.BC1": {
    "heading": "Generic application form for Canada",

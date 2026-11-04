@@ -28,6 +28,16 @@
    "printed": "CO-SIGNER PERSONAL DETAILS",
    "how": "banner"
   },
+  "Part1.Undertaking": {
+   "heading": "Undertaking by sponsor and co-signer, if applicable",
+   "printed": "UNDERTAKING BY SPONSOR AND CO-SIGNER, IF APPLICABLE",
+   "how": "banner"
+  },
+  "Part2.Header": {
+   "heading": "Part 2: sponsorship agreement",
+   "printed": "PART 2: SPONSORSHIP AGREEMENT",
+   "how": "banner"
+  },
   "Part2.Sponsored": {
    "heading": "Obligations of the person to be sponsored",
    "printed": "OBLIGATIONS OF THE PERSON TO BE SPONSORED",
