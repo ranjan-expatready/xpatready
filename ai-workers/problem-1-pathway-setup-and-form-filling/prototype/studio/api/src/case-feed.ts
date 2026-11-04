@@ -29,6 +29,7 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "masters draft", "new edition", "official page", "option map", "option maps", "pack", "people", "placement", "pre-qualification",
   "proposals", "questions and documents", "release", "reviewed release", "rule fact", "rule", "sample inputs", "section selection",
   "source entry", "source", "structure", "upload",
+  "form edition" /* C7.6 accepted-until date of an edition, readiness.ts (#861) */,
   "pathway", "program", "category", "sub-category" /* structure levels, structure.ts and studio.ts */,
 ]);
 /** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;
