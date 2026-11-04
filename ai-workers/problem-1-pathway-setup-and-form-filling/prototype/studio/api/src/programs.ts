@@ -66,6 +66,10 @@ export function cardSetup(c: SetupChecklist, actor: Actor): CardSetup {
 /** The List's Progress sort (card v4): most urgent first. */
 const CHIP_RANK: Record<ChipStatus, number> = { NOT_READY: 0, IN_PROGRESS: 1, NOT_STARTED: 2, LIVE: 3, RETIRED: 4 };
 /** A name with no combination yet: Not started (or retired before it was set up). */
+/** C1.6 (break M2): what the Programs row's channels describe, the IRCC account and each filed line's channel, so a Live
+ *  row whose draft files differently from its release can say the list is the next release's. */
+const channelKey = (snap: Snapshot) => JSON.stringify([(snap.combination as { portal?: string }).portal ?? null,
+  (snap.forms as SnapForm[]).filter((f) => (f.form_kind ?? "data_form") === "data_form").map((f) => `${f.form_number}=${f.channel ?? "PDF_UPLOAD"}`).sort()]);
 const notStartedInput = (retired: boolean): SetupInput => ({ combinationId: null, retired, release: null, pages: { state: "no_record" }, people: { roles: 0, applicants: 0, saved: false, tier: "expert" },
   forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 }, proposals: {}, problems: [], documents: { lines: 0, rolesWithout: 0 }, questions: 0, held: 0, running: null, changes: 0, review: { stage: "submit", submittedBy: null, authors: [] } });
 /** Where a release stands (the gate's words, studio.ts gateOf): submit, then the expert signs, then a second person releases. */
@@ -186,7 +190,7 @@ export class Programs {
       if (!c) {
         const nsSetup = setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`);
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, holds: 0, firstHold: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: progressOf(nsSetup), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, account: null, filed: "No forms yet", progress: progressOf(nsSetup), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
           setup: nsSetup });
         continue;
       }
@@ -284,7 +288,7 @@ export class Programs {
       rows.push({ pathway, changes, errors: errors.length, firstError, holds: holding.length, firstHold, hasContent, docNames, blockers: { n: blocking.length, first: blocking[0] ? said(blocking[0]) : null, empty: empty.length > 0 },
         setup: checklist,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, account: (snapshot.combination as { portal?: string }).portal ?? null, channelsChanged: !!relSnap && channelKey(relSnap) !== channelKey(snapshot), filed: filedOf(snapForms), progress: progressOf(checklist), counts, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: !retired && needsWork({ status, nextAction }), needsYou: !retired && waitsForPerson({ status, nextAction, aiProposals, held: held.length }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }

@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Board · Documents and Confirm & use</title><style>
+:root{--blue:#0862C5;--ink:#1b2430;--muted:#5b6675;--line:#dde3ea;--bg:#f6f8fa;--card:#fff;--ok:#1e7a46;--warn:#9a5b00;--bad:#b42318;--chip:#eef3fb}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,sans-serif;margin:0}h1{font-size:20px}h2{font-size:16px}h3{font-size:14px}
+.board{max-width:1440px;margin:0 auto;padding:16px}.note{background:#fff8e6;border:1px solid #f0d58a;padding:8px 12px;border-radius:6px;margin:8px 0;font-size:12px}
+.frame{background:var(--card);border:1px solid var(--line);border-radius:8px;margin:20px 0;overflow:hidden}.frame>.ft{background:#20293a;color:#fff;padding:6px 12px;font-size:12px}
+.hdr{padding:12px 16px;border-bottom:1px solid var(--line)}.crumbs{color:var(--muted);font-size:12px}.tabs{display:flex;gap:16px;padding:0 16px;border-bottom:1px solid var(--line)}
+.tabs a{padding:10px 0;color:var(--muted);text-decoration:none}.tabs a.on{color:var(--blue);border-bottom:2px solid var(--blue);font-weight:600}
+.cards{display:flex;gap:12px;padding:12px 16px}.card{flex:1;border:1px solid var(--line);border-radius:8px;padding:10px 12px}.card.on{border-color:var(--blue);background:var(--chip)}
+.split{display:flex;min-height:420px}.left{width:340px;border-right:1px solid var(--line)}.right{flex:1;padding:12px 16px}
+.grp{padding:6px 12px;font-size:12px;color:var(--muted);background:#fafbfc;border-bottom:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:6px 12px;border-bottom:1px solid var(--line)}.row.sel{background:var(--chip)}
+.row small{display:block;color:var(--muted);font-size:12px}.pill{font-size:12px;border-radius:10px;padding:1px 8px;border:1px solid var(--line);white-space:nowrap}
+.p-done{color:var(--ok);border-color:#b7dfc6}.p-todo{color:var(--muted)}.p-prog{color:var(--blue);border-color:#b8cff0}.p-ood{color:var(--warn);border-color:#f0d58a}.p-cant{color:var(--bad);border-color:#f3c0bb}.p-sample{background:#fff3cd;border-color:#f0d58a;color:#6b4e00}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--muted);font-weight:600}
+.btn{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:5px 12px;background:#fff;font:inherit}.btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}.btn[disabled]{opacity:.5}
+.panel{border-left:1px solid var(--line);width:420px;padding:12px 16px;background:#fff}.field{margin:8px 0}.field label{display:block;font-size:12px;color:var(--muted)}.err{color:var(--bad);font-size:12px}
+select,input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px}.muted{color:var(--muted)}.chip{background:var(--chip);border-radius:10px;padding:1px 8px;font-size:12px}
+.states{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}.st{border:1px dashed var(--line);border-radius:6px;padding:8px;font-size:12px}
+@media (max-width:1100px){.split{flex-direction:column}.left{width:auto;border-right:0}.panel{width:auto}.states{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="board">
+<h1>Board · Documents and Confirm & use</h1><div class="note">Board for the builder (P-42). Every name, value, channel and amount is <b>Sample</b> unless a citation is shown. Unconfirmed: no counsel. Concept: <code>../concept-draft.md</code>.</div>
+<div class="frame"><div class="ft">Frame 1 · Documents panel (card 1 "Get the information") · C6.4 (a) · staff only</div><div class="right">
+<p class="muted">Worked out from the release's document lines, each person's role and answers. <span class="chip">SI-14 · document storage is a stand-in</span></p>
+<h3>Client A · principal <span class="muted">1 of 2 received</span></h3>
+<table><tr><th>Document</th><th>State</th><th>Why it is here</th><th>Last change</th><th></th></tr>
+<tr><td>Passport</td><td><span class="pill p-done">Received</span></td><td class="muted">Every applicant</td><td>3 Nov · case officer</td><td>⋯</td></tr>
+<tr><td>Proof of funds</td><td><span class="pill p-prog">Requested</span></td><td class="muted">The principal applicant</td><td>2 Nov</td><td>⋯</td></tr></table>
+<h3 style="margin-top:12px">Child A · under 18 <span class="muted">0 of 2 received</span></h3>
+<table><tr><td>Passport</td><td><span class="pill p-todo">Not requested</span></td><td class="muted">Every applicant</td><td>—</td><td>⋯</td></tr>
+<tr><td>Letter of authorization</td><td><span class="pill p-prog">Requested</span> <small class="muted">Kept on the list</small></td><td class="muted">Answered "travels with": one parent</td><td>2 Nov</td><td>⋯</td></tr></table>
+<div class="grp">May be needed: answer "Who is the child travelling with?" for Child A first (no actions)</div>
+<p class="muted">⋯ menu: Request · Upload (hidden on Not applicable lines) · Not applicable… · History (file versions and the last change). Being checked, Approved and Rejected have no action here (AG-09). Every action sends the line's version: 409 → "Someone else changed this. Reload."</p></div></div>
+
+<div class="frame"><div class="ft">Frame 2 · Fill this from documents (right panel, 520 px) · C6.5 part 2b · one review per document</div><div class="split"><div class="left"><div class="row sel"><div>Personal details · Client A<small>Fill this from documents</small></div></div></div>
+<div class="panel" style="width:520px"><h3>Passport · Client A</h3><div class="muted">Page 1 · Passport machine-readable lines · rules · Check digits: passed · <a>Open the passport</a> · Sample synthetic document</div>
+<p><span class="pill p-done">Collapsed</span> Passport number, date of birth and expiry: checked by the passport's check digits. <a>Open to see them</a></p>
+<div class="field"><label>Family name · Personal details</label><input value="SAMPLEDOE"> <small class="muted">The name may be cut short: check it against the printed name.</small></div>
+<div class="field"><label>Given names · Personal details</label><input value="ALEX"></div>
+<div class="field"><label>Sex · Personal details</label><input value="X"></div>
+<div class="field"><label>Citizenship · Personal details</label><input value="Sample country"></div>
+<div class="field"><label>Country of issue · Travel documents</label><input value="Sample country"></div>
+<div class="field" style="background:#fff8e6;padding:6px"><label>Family name differs</label>The client typed <b>SAMPLEDE</b>; the passport says <b>SAMPLEDOE</b>. Confirm &amp; use opens a check and keeps the client's value until you choose.</div>
+<div class="grp">Not on this document: type it · Place of birth</div>
+<p><button class="btn pri">Confirm &amp; use</button></p><p class="muted">Writes these values to the case as confirmed by you now. 1 value differs from what the client typed: it opens a check and keeps the client's value until you choose.</p>
+<p class="muted">After use: "Mark checked against the passport" on each used value.</p></div></div></div>
+
+<div class="frame"><div class="ft">Frame 3 · Typed versus document (check panel)</div><div class="panel" style="width:auto"><h3>Family name · Client A</h3><p>The client typed <b>SAMPLEDE</b>; the passport says <b>SAMPLEDOE</b>. Which is right?</p>
+<label><input type="radio" checked> The passport's</label> <label><input type="radio"> The client's</label> <label><input type="radio"> Another: <input size="12"></label>
+<div class="field"><label>Reason</label><input><div class="err">Give a reason.</div></div><p class="muted">Confirm section is unavailable while this check is open.</p><button class="btn pri">Save</button></div></div>
+
+<div class="frame"><div class="ft">Frame 4 · States (staff views)</div><div class="states"><div class="st"><b>Nothing uploaded</b><br>Upload the passport first.</div><div class="st"><b>Reading</b><br>Reading the passport… (rules, US$0)</div><div class="st"><b>A value not read</b><br>Could not read the passport number: type it from the passport page.</div><div class="st"><b>No text layer</b><br>A scan or photo: type the values.</div><div class="st"><b>Two passports in one file</b><br>Upload each on its own line.</div><div class="st"><b>Nothing proposed</b><br>No Confirm &amp; use.</div><div class="st"><b>409</b><br>Someone else changed this. Reload.</div><div class="st"><b>Empty</b><br>This release has no document lines · Not worked out for this combination.</div><div class="st"><b>400 px</b><br>Tables become one card per line.</div></div></div>
+</div></body></html>

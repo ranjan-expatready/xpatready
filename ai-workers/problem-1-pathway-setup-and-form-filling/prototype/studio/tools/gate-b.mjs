@@ -27,17 +27,23 @@
 //   node studio/tools/gate-b.mjs --title "<t>" [--body-file <f>] [--kind code] [--bugs <BUGS.md>] [--no-packs] [--plan]
 //   --no-packs: only part 1 (and the packs it would run); --plan: print each named pack's run and stop. Off CI, packs
 //   run only with GATE_B_PORT (and GATE_B_NAME) set to the copy's own ports (WAY-OF-WORKING; never :4400).
+//   GATE_B_DATA=checkpoint (P-294 (a), tech lead 4 Nov): a pack alone runs on Demo › Load the configured checkpoint (a
+//   blank copy, then the checkpoint, as the author) instead of the six, and says "on the checkpoint"; unset or "six" is
+//   the six. A pack with setup steps stays on its own fixture either way.
 // Exit: 0 pass or skipped · 1 the gate refuses (the reasons are printed) · 2 the gate could not run.
 import { readFileSync, readdirSync, existsSync, appendFileSync, rmSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { request } from "node:http";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const S = resolve(HERE, ".."), PROTO = resolve(S, ".."), P = resolve(PROTO, "../product");
 const ID = /\b[Cc](\d{1,2})\.(\d{1,2})(?![\d.]*\d)\b/g, BUG = /\bQA-\d+\b/gi, GATING = new Set(["Blocker", "Critical", "Major"]);
 const ids = (s) => [...s.matchAll(ID)].map((m) => `C${m[1]}.${m[2]}`);
-const KEY = /\b(capabilit(?:y|ies)|claims?\s+works?)\b[^:|\n]{0,40}:/gi;
+// A key, an optional short note ("(after this PR)"), then its colon. The note never holds another key or a capability,
+// so "Claims Works on C11.13 · Capabilities: C11.10" is two claims, not one key over both (scoped check, 4 Nov).
+const KEY = /\b(capabilit(?:y|ies)|claims?\s+works?)\b(?:(?!capabilit|claims?\s+works?|[Cc]\d)[^:|\n]){0,40}:/gi;
 
 /** The text a person writes as prose: a fenced block (``` or ~~~) and an inline `code span` that holds a capability or
  *  a placeholder ("C7.5 (steps 1-4)", "C<n.n>") are examples, not claims (#804's own description quoted the syntax and
@@ -77,14 +83,19 @@ export function claims(title = "", body = "") {
   const add = (id, steps) => caps.set(id, steps ? [...new Set([...(caps.get(id) ?? []), ...steps])] : caps.has(id) ? caps.get(id) : null);
   for (const id of ids(title)) add(id, null);
   const raw = body.split(/\r?\n/), lines = raw.map(plain);
+  // The list under line i: its list items, after any blank lines (markdown renders both the same; #850 review M2).
+  const listUnder = (i) => { const out = []; let j = i + 1; while (j < lines.length && !raw[j].trim()) j++; for (; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) out.push(lines[j]); return out; };
   for (let i = 0; i < lines.length; i++) {
     // A key alone on its line ("## Claims Works", "**Claims Works**", "Capabilities") takes the list under it (R2-M3).
     const line = /^(capabilit(?:y|ies)|claims?\s+works?)\s*:?$/i.test(lines[i]) ? `${lines[i].replace(/:$/, "")}:` : lines[i], keys = [...line.matchAll(KEY)];
     for (const [k, m] of keys.entries()) {
-      let value = line.slice(m.index + m[0].length, keys[k + 1]?.index ?? line.length).split(/\s·\s/)[0];
+      let value = line.slice(m.index + m[0].length, keys[k + 1]?.index ?? line.length);
       const isWorks = /works?/i.test(m[1]);
+      if (!isWorks) value = value.split(/\s·\s/)[0];
       // A list under the key: the next lines that are list items (the raw line starts with a bullet or a number).
-      if (!ids(value).length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) value += " " + lines[j];
+      // A Works key always reads the list under it, also when its own value names an id ("Claims Works: C11.10" over
+      // "- C11.13"; #850 round 2 M4); a capabilities key only when its value names none.
+      if (isWorks || !ids(value).length) for (const t of listUnder(i)) value += " " + t;
       const named = ids(value);
       if (isWorks && !named.length && !/^\s*(none|nothing|no capability)\b/i.test(value)) unread.push(line.slice(0, 120));
       for (const id of named) if (isWorks) works.add(id);
@@ -94,11 +105,17 @@ export function claims(title = "", body = "") {
       }
     }
     // "Claims Works" said without a colon the gate can read ("## Claims Works (as built)", "This PR claims Works on",
-    // "Claims Works —"): the ids on the line and in the list under it ARE a Works claim (the bug check runs); a heading
-    // or a short label with none refuses as unread; a prose sentence that names nothing claims nothing (R3-M1).
-    if (!keys.some((m) => /works?/i.test(m[1])) && /\bclaims?\s+works?\b/i.test(line)) {
-      let named = ids(line);
-      if (!named.length) for (let j = i + 1; j < lines.length && /^\s*([-*+]|\d+[.)])\s/.test(raw[j]); j++) named = [...named, ...ids(lines[j])];
+    // "Claims Works —"), each time it is said outside a key: the ids after each phrase (up to the line's next key), else
+    // every id on the line ("C11.13 … claims Works on it"), and always the list under it, a blank line between allowed
+    // (r4-m1, #850 review M1, M2), ARE a Works claim, so the bug check runs; a heading or a short label with none
+    // refuses as unread; a prose sentence that names nothing claims nothing (R3-M1).
+    const inKey = (x) => keys.some((m) => x >= m.index && x < m.index + m[0].length);
+    const phrases = [...line.matchAll(/\bclaims?\s+works?\b/gi)].filter((p) => !inKey(p.index));
+    if (phrases.length) {
+      let named = [];
+      for (const phrase of phrases) { const from = phrase.index, to = keys.find((m) => m.index > from)?.index ?? line.length; named.push(...ids(line.slice(from, to))); }
+      if (!named.length) named = ids(line);
+      for (const t of listUnder(i)) named.push(...ids(t));
       for (const id of named) { works.add(id); add(id, null); }
       if (!named.length && (/^\s*#/.test(raw[i]) || line.split(/\s+/).length <= 6)) unread.push(line.slice(0, 120));
     }
@@ -229,8 +246,33 @@ async function resetToSix(port) {
   const body = await r.json().catch(() => ({}));
   return { ok: r.ok, status: r.status, detail: body?.detail ?? body?.message ?? "" };
 }
-/** Where a pack runs: on the six when its run is the pack alone, else on its own fixture (tech lead, 4 Nov). */
-export const whereOf = (plan) => (plan.steps.length === 1 ? "on the six" : "fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A)");
+/** The demo data a pack alone runs on (P-294 (a)): "six" (Demo › Reset to the six, the default) or "checkpoint"
+ *  (Demo › Load the configured checkpoint). Any other value is refused, so a typo never quietly runs on the six. */
+export function dataOf(env = process.env) {
+  const v = env.GATE_B_DATA ?? "six";
+  if (v !== "six" && v !== "checkpoint") throw new Error(`GATE_B_DATA must be "six" or "checkpoint", not "${v}"`);
+  return v;
+}
+/** Where a pack runs: on the six (or the checkpoint) when its run is the pack alone, else on its own fixture (tech lead, 4 Nov). */
+export const whereOf = (plan, data = "six") => (plan.steps.length === 1 ? (data === "checkpoint" ? "on the checkpoint" : "on the six") : "fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A)");
+/** Demo › Load the configured checkpoint on a fresh copy: Reset (blank), then the checkpoint, as the author. node:http,
+ *  not fetch: the load can outlast fetch's 300 s header wait on a busy machine; up to 20 minutes. */
+function post(port, path, body, ms) {
+  return new Promise((done) => {
+    const data = JSON.stringify(body);
+    const rq = request({ host: "127.0.0.1", port: Number(port), path, method: "POST", timeout: ms, headers: { "content-type": "application/json", "x-actor": "user-A", "content-length": Buffer.byteLength(data) } }, (r) => {
+      let t = ""; r.setEncoding("utf8"); r.on("data", (c) => (t += c));
+      r.on("end", () => { let b = {}; try { b = JSON.parse(t); } catch { /* not JSON */ } done({ ok: (r.statusCode ?? 0) < 300, status: r.statusCode ?? 0, detail: b?.detail ?? b?.message ?? "" }); });
+    });
+    rq.on("timeout", () => rq.destroy(new Error(`no answer in ${ms / 1000} s`)));
+    rq.on("error", (e) => done({ ok: false, status: 0, detail: e.message }));
+    rq.end(data);
+  });
+}
+async function loadCheckpoint(port) {
+  const blank = await post(port, "/api/demo/reset", { confirm: "RESET" }, 300_000);
+  return blank.ok ? post(port, "/api/demo/load", { sample: "configured" }, 1_200_000) : blank;
+}
 /** A child process as a promise, in its own process group, so a timeout stops the pack and its children (tsx starts
  *  the pack as a child node process). */
 function sh(bin, args, opts, ms) {
@@ -255,14 +297,15 @@ async function runPack(id, file, wanted, slot) {
   if (missing.length) return { log: [], why: `${file}: its run names a file that does not exist: ${missing.map((f) => relative(PROTO, f)).join(", ")}` };
   const name = `${process.env.GATE_B_NAME ?? "gateb"}${slot}`, port = String(Number(process.env.GATE_B_PORT ?? 4590) + slot), db = `xr_studio_${name}`, env = cleanEnv(), t0 = Date.now();
   if (port === "4400") return { log: [], why: `${file}: port 4400 is the demo; the gate never runs there`, infra: true };
-  const onSix = plan.steps.length === 1, where = whereOf(plan), log = [];
+  const data = dataOf(), onSix = plan.steps.length === 1, where = whereOf(plan, data), log = [];
+  const demo = data === "checkpoint" ? "Load the configured checkpoint" : "Reset to the six";
   const iso = (what) => sh("zsh", [join(S, "tools/isolated.sh"), name, port, what], { cwd: S, env }, 300_000);
   const up = await iso("start"), tUp = Date.now();
   try {
     if (up.status !== 0) return { log, why: `${file}: isolated copy ${name} did not start (exit ${up.status}): ${up.out.trim().split("\n").slice(-2).join(" ")}`, infra: true };
     if (onSix) {
-      const six = await resetToSix(port).catch((e) => ({ ok: false, status: 0, detail: e.message }));
-      if (!six.ok) return { log, why: `${file}: Demo › Reset to the six refused (${six.status}) ${six.detail}`, infra: true };
+      const six = await (data === "checkpoint" ? loadCheckpoint(port) : resetToSix(port)).catch((e) => ({ ok: false, status: 0, detail: e.message }));
+      if (!six.ok) return { log, why: `${file}: Demo › ${demo} refused (${six.status}) ${six.detail}`, infra: true };
     }
     const tSix = Date.now();
     let out = "", last = null, setupBad = "";
@@ -277,7 +320,7 @@ async function runPack(id, file, wanted, slot) {
     }
     const sec = (a, b) => Math.round((b - a) / 1000);
     if (setupBad) return { log, why: `${file}: ${setupBad}; the pack did not run` };
-    log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, Reset to the six ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
+    log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, ${demo} ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
     const why = packVerdict(id, wanted, last, out);
     return { log, why: why ? `${file} ${where}: ${why}${fails(out)}` : null };
   } finally {
@@ -344,6 +387,7 @@ async function main(argv) {
   if (opt.packs && runs.length) {
     if (!process.env.GITHUB_ACTIONS && !process.env.GATE_B_PORT) throw new Error("off CI, set GATE_B_PORT (and GATE_B_NAME) to this copy's own ports before running packs, or pass --no-packs");
     const jobs = Number(process.env.GATE_B_JOBS ?? 3);
+    dataOf(); // a wrong GATE_B_DATA stops the gate before any copy starts
     if (!Number.isInteger(jobs) || jobs < 1 || jobs > 9) throw new Error(`GATE_B_JOBS must be 1 to 9, not "${process.env.GATE_B_JOBS}"`);
     const results = new Array(runs.length), t0 = Date.now();
     let next = 0;   // one copy and port per slot: a slot runs its packs one after another
