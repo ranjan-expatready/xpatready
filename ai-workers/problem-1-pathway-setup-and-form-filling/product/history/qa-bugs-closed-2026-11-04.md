@@ -31,3 +31,34 @@ From `qa/BUGS.md`:
 From `qa/reports/bugs-open-detail.md`:
 
 | QA-129 | Ambiguity · Minor | C11.10 · P-157, P-161 | **63168762** (after-merge #210) | Steps: Load sample; open With an LMIA (Live, Release 1) › Overview. Seen: strip "Setup steps · 3 of 5 done · Live" with Official pages "● Next: Confirm the checklist page" and People "Confirm who can apply"; tab Forms carries badge 2; header "Next step: Nothing to do: firms can open cases on it" (`row.nextAction` null, status READY). Summary: `setup.current` = pages, `setup.next` = confirm_pages. Question: on a Live combination, are unconfirmed steps 1 and 2 open work (then the header should say so, as #216 makes it), or should they read done or "not confirmed" without a Next mark? | `reports/2026-11-01-after-merge-4/03-live-lmia-strip-next-1440.png`; `tests/qa/check_qa_am_1101c_walk.cjs` (QA-119 line lists it) | screens | Open |
+
+## QA-192 — closed 4 Nov 2026 (qa tester 2's C11.13 verdict, #822)
+
+Closed on main **66fc6ec48** (fixed by #726): its fail case (accepting a near duplicate with no person's reason → 400 naming the close field) and its pass case (the decider's line is kept and shown to the second person at release) each pass twice on fresh copies (`acceptance/C11.13.test.ts` 16/16, `check_c1113_near_release_browser.cjs` 19/19). Field-map near duplicates are left to their form-field page (question to the tech lead in the C11.13 row).
+
+From `qa/BUGS.md`:
+
+| QA-192 | Gap · Major | C11.13 · P-120 (a near duplicate needs a one-line reason), P-149 (2) | 762dbae6 (Opus re-review of #640) | A near duplicate is accepted and approved with no person's reason. `decide()` (`api/src/proposals.ts:515-581`) never asks for one; `withNearReason` (`:280`) only appends the rule's own words. #640's test asserts it (`tests/check_c1113_near_release.ts:43-48`: "Surname given at birth", near an existing field with no reason, is accepted). The page only warns "ask before approving". Expected: accepting a near item needs a one-line reason, refused (400) without one, and shown at release | forms (C11.13) | Open |
+
+
+## QA-180 — closed 4 Nov 2026 (after-merge batch 4)
+
+Closed by the qa lane on main **eb834a660** (fixed by #794; C6.1, C5.1). One rule, `formsWithoutFieldMap` on `pdfMapInUse` (engine/programs.ts), is read by release (`validate.ts`), Open a case (`missingItems`) and the setup count. `check_qa180_one_rule.ts` 0 · 26/26 twice; `tests/qa/check_qa180_two_gates.ts` 0 · 8/8 twice; in CI on main's tree (run 41771465056): `check_b1_release_unmapped` 14/14, `check_s4_startable` 10/10, `check_runtime_r1a` 99/99, `check_runtime_r1c` 132/132, `check_runtime_r1d` 96/96. Demo data at 1440 px (Reset to the six › Start With an LMIA, copy qa_walk4): the officer's Open a case offers only "With an LMIA – inside Canada · release 1", a short reference is refused on its field, and the case opens on release 1 at the first try (`qa/reports/2026-11-04-after-merge/c61-lmia-case-1440.png`).
+
+From `qa/BUGS.md`:
+
+| QA-180 | Bug · **Critical** (confirmed by the tech lead on #720) | C6.1, C5.1 (release gate) · BR-8, P-297 (3) (V3 B1) | 762dbae6 (after-merge 3 Nov; V3 on 877acf66) | The two gates disagree on a form with no field map: Review and release only **warns** "No field map yet: the form cannot be filled" (`engine/validate.ts:67`, level warning) and releases, while Open a case **blocks** on the same form (`form_without_edition`, `engine/programs.ts:66`): a released combination no firm can open (V3 step 4, 409). Second hole: a field map with 0 entries passes release with no word and still blocks the case. Third: the case check ignores a map whose channel is ONLINE (`programs.ts:66`), release accepts any map (`validate.ts:67`), so a form with only an online map releases and then blocks the case. `tests/qa/check_qa180_two_gates.ts` 5/8 (fails today on all three holes). Expected: one rule in both places (P-297 (3): release refuses and names the forms) | forms (F2) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-180 | Bug · **Critical** (confirmed by the tech lead on #720) | C6.1, C5.1 (release gate) · BR-8, P-297 (3) (V3 B1) | 762dbae6 (after-merge 3 Nov; V3 on 877acf66) | The two gates disagree on a form with no field map: Review and release only **warns** "No field map yet: the form cannot be filled" (`engine/validate.ts:67`, level warning) and releases, while Open a case **blocks** on the same form (`form_without_edition`, `engine/programs.ts:66`): a released combination no firm can open (V3 step 4, 409). Second hole: a field map with 0 entries passes release with no word and still blocks the case. Third: the case check ignores a map whose channel is ONLINE (`programs.ts:66`), release accepts any map (`validate.ts:67`), so a form with only an online map releases and then blocks the case. `tests/qa/check_qa180_two_gates.ts` 5/8 (fails today on all three holes). Expected: one rule in both places (P-297 (3): release refuses and names the forms) | `tests/qa/check_qa180_two_gates.ts` (5/8 today); V3 `reports/verify-2026-11-03/V3-one-system.md` step 4, `V3/04-open-case-refused.jpg` | forms (F2) | Open |
+
+
+## QA-200 — closed 4 Nov 2026 (after-merge batch 4)
+
+Closed by the qa lane on main **eb834a660**, fixed on main by 9afca2282 (3 Nov, "a case fills the edition in use … never the oldest"), never re-tested until now. All five paths QA-200 names read `pdfMapInUse` (the newest mapped PDF edition): `api/src/fill.ts:44` writeForm, `api/src/fill-case.ts:96` and `:111` (copies and trials), `engine/render.ts:119` (coverage) and `api/src/workspace.ts:72` (the Forms tab). `tests/check_edition_in_use.ts` 0 · 20/20 twice: it runs the real filler on IRCC's IMM 5476 11-2025 and 11-2021 files, with a pass and a fail case for each rule.
+
+From `qa/BUGS.md`:
+
+| QA-200 | Bug · Critical | C7.2, C6.1 (case fill; re-tagged from C2.4 by the tech lead on #801, 4 Nov 09:00 IST: C2.4's own behaviour is met) · P-32 (the newest printed edition is the one in use) | main 4d1973b8 (Opus re-review of #698; not caused by #698) | After a newer edition of a form is released next to its older map, a case fills the OLDEST edition. `engine/snapshot.ts:157` puts every mapped PDF edition into the snapshot, oldest first; `api/src/fill.ts:42` `writeForm` takes the first match, and `fill-case.ts:95`, `:110` and `engine/render.ts:108` read it the same way. The combination's Forms tab (`api/src/workspace.ts:71`) and the library show the newest. Scenario: IMM 5476 11-2025 accepted through impact review (its map copied as a draft, the 11-2021 map stays published) → release (`studio.ts:1149` retires no older map) → Forms tab says 11-2025, the case's PDF is 11-2021. Unconfirmed: whether a release gate refuses two mapped editions. Expected: fill, render and the Forms tab pick the same, newest edition, or the release retires the older map | runtime / forms | Open |
+
