@@ -1,10 +1,11 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-316**, 3 Nov 23:21 IST)
+# Rules in force — one page (the tech lead keeps it; as of **P-318**, 4 Nov 07:50 IST)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
 ## Goal and order
 * **M2 end to end first; its AI capabilities are the critical path** (P-301, P-309). Target 58–59/60 confirmed, 60 after the SA-01B ruling (P-309). M3 runs alongside only on files the M2 lanes do not touch (P-301, P-313).
 * **Quality first, never cut** (P-303, P-309): no lower bar to reach a number.
+* **Order (P-317):** QA-144 first, then the other M2 partials; no new M3 rows until M2 reaches 55 confirmed; approved M3 PRs still merge. A qa lane runs every day.
 
 ## When a capability counts as Works
 * Its acceptance pack is green on `main` **and** an independent re-run confirms it (P-290), on the demo data (Reset to the six), not only the test fixture (P-304 (2)).
@@ -15,6 +16,8 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 ## Builders
 * One row per session and per PR, on a fresh branch from `origin/main` (P-278, P-312, P-314). A standby Mac builder gets its next row by message.
 * **Before the label:** the row's acceptance pack passes on a fresh isolated copy built from the branch, plus a walk like a person at 1440 px; exit codes and screenshots in the PR; no open Major on that capability (P-312).
+* **Two gates (P-317):** CI fails a product PR that names a capability with an open Major or Critical, unless it names that bug as the one it fixes, and runs that capability's pack on the demo data (gate B). A PR that claims to make a capability Works is labelled only after the qa lane's PASS on its isolated copy (gate A).
+* A PR whose CI ran before a fix to the checks merges `origin/main` once; no new review if the merge touches none of its files, else a diff-only Opus check of the merge (P-318 (1)).
 * Reviewer agent, breaker, qa scoring and every judgment on **Opus**; Sonnet only for mechanical work (P-303). Breaker only for money, schema, permissions or a new screen (P-278).
 * Diff-only re-review; at most two review rounds, then the tech lead decides (P-293 (3)). After the label, push only a real fix (P-293 (1)).
 * Merge `main` in only on a conflict (P-270). Label `review: approved` after the reviewer's Approve of the current head; Mergify merges (P-189).
