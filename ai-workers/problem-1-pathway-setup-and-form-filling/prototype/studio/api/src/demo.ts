@@ -26,16 +26,19 @@ import { Studio } from "./studio.ts";
 import { seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
+import { FormLibrary } from "./form-library.ts";
 import { placeFromFormParts } from "./form-part-placements.ts";
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
-/** QA-144 slice 1 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
- *  The others follow, one slice each. */
-const SET_UP_FROM_FORMS = new Set(["vv.single"]);
-/** QA-144 slice 1 (ruling 3): the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
+/** One form line as IRCC's words set it (QA-144 ruling 3): a rule, a minimum age, or taken off the draft. */
+type FormRule = { form: string; condition?: object; minAge?: number; retire?: true; cite: string };
+/** A fact no form asks that a form line's rule reads, added through C3.6's door for that rule (a second person approves
+ *  it) and asked of each person beside the first of `beside` that a section asks. */
+type RuleFact = { fact: string; rule: string; label: string; valueType: string; meaning: string; beside: string[] };
+/** QA-144 ruling 3: the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
  *  expert" (AGENTS rule 4). IMM 5484 (05-2026) is official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; Guide
  *  5256 is official-sources/ircc/instructions/guide-5256.html, modified 2026-03-31, saved 19 Oct 2026. */
-export const VV_FORM_RULES: { form: string; condition?: object; minAge?: number; retire?: true; cite: string }[] = [
+export const VV_FORM_RULES: FormRule[] = [
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
   { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
@@ -55,8 +58,40 @@ export const FAMILY_FORM_BY_CHANNEL = {
 } as const;
 /** QA-144 slice 1 (tech lead, 4 Nov): IRM 0002's rule reads a fact no form asks, added through C3.6's door for its rule
  *  (a second person approves it) and asked of each person beside their gender. Sample, Unconfirmed: expert. */
-export const GENDER_FACT = { fact: "person.gender_identifier_differs_from_documents", rule: "IRM 0002", label: "Gender identifier differs from earlier documents", valueType: "yes_no",
-  meaning: "Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002)." };
+export const GENDER_FACT: RuleFact = { fact: "person.gender_identifier_differs_from_documents", rule: "IRM 0002", label: "Gender identifier differs from earlier documents", valueType: "yes_no",
+  meaning: "Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002).",
+  beside: ["person.sex", "person.gender", "person.date_of_birth"] };
+/** QA-144 slice 3: the study permit's form lines (outside Canada) as IRCC's own words set them, each Sample, "Unconfirmed:
+ *  expert" (AGENTS rule 4). Guide 5269 is official-sources/ircc/instructions/guide-5269.html (canada.ca, last modified
+ *  27 Oct 2026, saved 27 Oct 2026); IMM 5483 (08-2025) is official-sources/ircc/checklists/imm5483e.pdf (checked 21 Oct
+ *  2026). IMM 1294 stays on the draft as every student files it. The family information form follows the channel
+ *  (FAMILY_FORM_BY_CHANNEL), with IMM 5483's words in SP_FAMILY_CITE. */
+export const SP_FORM_RULES: FormRule[] = [
+  // Guide 5269 and IMM 5483 disagree on the age (17 or less, against less than 17): the guide's wider words are taken, for the expert to confirm.
+  { form: "IMM 5646", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.minor_studying_without_parent", value: true },
+    cite: "Guide 5269, Custodians: \"Children 17 years of age or less coming to Canada to study without an accompanying parent or a legal guardian must still be in the care of a responsible adult in Canada. [...] The parents or legal guardians in the country or territory of origin and the custodian in Canada must complete a notarized Custodianship Declaration (IMM 5646)\"; IMM 5483 (08-2025) p. 1: \"Must be completed if the minor studying in Canada is less than 17 years old.\"" },
+  { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
+    cite: "Guide 5269, Step 2: \"Statutory Declaration of Common-law Union (IMM 5409), if applicable\"" },
+  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
+    cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5269: \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative’s appointment.\"" },
+  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
+    cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
+];
+/** IMM 5483 (08-2025) p. 1 on the family information form: from age 18. "Or a minor travelling alone" needs an age rule
+ *  no line has yet (a line has a minimum age only): Unconfirmed: expert, said on the PR. */
+export const SP_FAMILY_CITE = "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"";
+/** QA-144 slice 3: IMM 5646's rule reads a fact no form asks (no age is worked out in this workspace), added through
+ *  C3.6's door for its rule and asked of each person beside their date of birth. Sample, Unconfirmed: expert. */
+export const MINOR_FACT: RuleFact = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", label: "Minor studying without a parent or guardian", valueType: "yes_no",
+  meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
+  beside: ["person.date_of_birth"] };
+/** QA-144 (tech lead on #798; P-319): the combinations the configured checkpoint sets up from their forms' own parts, one
+ *  slice each, and the one table of their form numbers: the main form (its channel picks the family information form),
+ *  the form lines' rules and the facts only a rule reads. */
+export const FROM_FORMS: Record<string, { main: string; rules: FormRule[]; facts: RuleFact[] }> = {
+  "vv.single": { main: "IMM 5257", rules: VV_FORM_RULES, facts: [GENDER_FACT] },
+  "sp.outside": { main: "IMM 1294", rules: SP_FORM_RULES, facts: [MINOR_FACT] },
+};
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
 /** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5476's 2021 edition, the file row 17
@@ -93,7 +128,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary) {}
 
   async status() {
     const workspaceId = await this.ws.id();
@@ -438,14 +473,16 @@ export class Demo {
     // Row 7 (QA-144 slice 1): sections from each form's own parts, by the C3.4 rules pass (no AI, US$0), accepted by the
     // author on To review; the approver approves them with the other new items below (row 5).
     const keyOf = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true } })).map((x) => [x.id, x.combinationKey]));
-    const fromForms = six.combinations.filter((c) => SET_UP_FROM_FORMS.has(keyOf.get(c.id) ?? ""));
+    const fromForms = six.combinations.filter((c) => FROM_FORMS[keyOf.get(c.id) ?? ""]);
+    const tableOf = (c: { id: string }) => FROM_FORMS[keyOf.get(c.id) ?? ""];
+    // The family information form follows how the combination's main form is filed (FAMILY_FORM_BY_CHANNEL).
+    const familyOf = async (c: { id: string }) => FAMILY_FORM_BY_CHANNEL[(await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: tableOf(c).main }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel === "ONLINE" ? "online" : "paper"];
     const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [];
     let maritalList: string | null = null;
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
         // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
-        const filedAs = (await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: "IMM 5257" }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
-        const notFiled = keyOf.get(c.id) === "vv.single" ? FAMILY_FORM_BY_CHANNEL[filedAs === "ONLINE" ? "online" : "paper"].other : null;
+        const notFiled = (await familyOf(c)).other;
         const forms = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
           .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
         for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
@@ -489,36 +526,44 @@ export class Demo {
       for (const c of fromForms) {
         // The form lines first: a form whose rule is in words only is not read by the coverage check, so its facts would
         // be missed by the placement step.
-        if (keyOf.get(c.id) === "vv.single") {
-          for (const r of VV_FORM_RULES) {
-            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge };
-            try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
-          }
-          if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
-          // The family information form by how IMM 5257 is filed (paper or PDF upload: IMM 5707; online: IMM 5645).
-          const filed = (await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: "IMM 5257" }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
-          const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
-          for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], [family.other, { retire: true }]] as const) {
-            try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
-          }
-          // IRM 0002's fact, added for its rule (C3.6), accepted by the author; the Approver approves it below.
+        const t = tableOf(c), family = await familyOf(c);
+        // QA-144 slice 3: a form the rules name that has a file but no line yet (the form finder has no saved answer for
+        // its guide's page) is added from the Form library first, as the Forms tab's "add one from the Form library" does.
+        const lineOn = async (form: string) => (await this.db.combinationForm.count({ where: { combinationId: c.id, lineageKey: form } })) > 0;
+        for (const form of [...t.rules.filter((r) => !r.retire).map((r) => r.form), family.form]) {
+          if (await lineOn(form)) continue;
+          try { await this.formLibrary.attach(author, c.id, { formKey: form }); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
+        }
+        for (const r of t.rules) {
+          const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge };
+          try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
+        }
+        if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); maritalList = null; } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
+        // The family information form by how the main form is filed (paper or PDF upload: IMM 5707; online: IMM 5645);
+        // the other one is taken off, when the combination has it.
+        for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], [family.other, { retire: true }]] as const) {
+          if ("retire" in body && !(await lineOn(form))) continue;
+          try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
+        }
+        // The facts only a rule reads, added for their rule (C3.6), accepted by the author; the Approver approves them below.
+        for (const f of t.facts) {
           try {
-            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: GENDER_FACT.fact, rule: GENDER_FACT.rule, label: GENDER_FACT.label, meaning: GENDER_FACT.meaning, valueType: GENDER_FACT.valueType });
-            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: "Accepted by the sample loader: the fact IRM 0002's rule reads (Guide 5256, Question 3; Sample)." });
-          } catch (e) { setUpRefused.push(`${GENDER_FACT.label}: ${said(e)}`); }
-          for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
-            try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
-          }
+            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: f.fact, rule: f.rule, label: f.label, meaning: f.meaning, valueType: f.valueType });
+            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${f.rule}'s rule reads (Sample).` });
+          } catch (e) { setUpRefused.push(`${f.label}: ${said(e)}`); }
+        }
+        for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
+          try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
         }
         const p = await placeFromFormParts(this.db, this.studio, author, c.id);
         placedFacts.push(...p.placed.map((x) => x.fact));
         // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's sex or gender as
-        // the forms read it, else their date of birth).
-        if (keyOf.get(c.id) === "vv.single") {
-          const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: ["person.sex", "person.gender", "person.date_of_birth"] } }, select: { canonicalFieldKey: true, sectionKey: true } });
-          const beside = ["person.sex", "person.gender", "person.date_of_birth"].map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
-          if (beside) { try { await this.studio.placeField(author, GENDER_FACT.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(GENDER_FACT.fact); } catch (e) { setUpRefused.push(`${GENDER_FACT.fact}: ${said(e)}`); } }
-          else setUpRefused.push(`${GENDER_FACT.fact}: neither the person's sex, gender nor date of birth is asked in a section`);
+        // the forms read it, else their date of birth; IMM 5646's, beside the date of birth).
+        for (const f of t.facts) {
+          const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: f.beside } }, select: { canonicalFieldKey: true, sectionKey: true } });
+          const beside = f.beside.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
+          if (beside) { try { await this.studio.placeField(author, f.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(f.fact); } catch (e) { setUpRefused.push(`${f.fact}: ${said(e)}`); } }
+          else setUpRefused.push(`${f.fact}: none of ${f.beside.join(", ")} is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a box that reads it`));
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
