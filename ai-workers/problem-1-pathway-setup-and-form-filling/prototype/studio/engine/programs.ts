@@ -158,10 +158,10 @@ export function pdfMapInUse<M extends { form_number: string; form_edition?: stri
   return best;
 }
 
-
 /** G5 (C5.1, P-248, amends P-207; SA-1B-90): a form line is a form a case files: a PDF form (filed as a PDF upload or on
  *  paper), a portal-screen edition (a line filed Online, P-245) or an online-only form drafted from help pages or saved
- *  screens (P-152 (2)). A checklist or a document form is not one, and nor is a line marked "Not needed" (the IRCC
+ *  screens (P-152 (2)). A checklist or a guide is not one (an old "document" row is one only when its title says it is a
+ *  form), and nor is a line marked "Not needed" (the IRCC
  *  account asks it itself, so nothing is filed on it; Q2 to the tech lead on the PR). */
 // The library's own rule says what is filed (engine/form-type.ts libraryType; review m2: an old "document" row titled as
 // a form, IMM 5802, is filed too).
