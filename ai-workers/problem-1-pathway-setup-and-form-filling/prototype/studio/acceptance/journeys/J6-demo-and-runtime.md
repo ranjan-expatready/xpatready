@@ -17,7 +17,7 @@ Set-up: an isolated copy with the suites' fixture loaded (`POST /api/demo/load {
 1. After Reset, author opens **Demo ▾ Load the configured checkpoint…**. **Expect:** a progress view, then a result dialog with one row per DEMO.md mechanism of the M2 gate (rows 1–12 and 17), each saying what it shows; any row not done says why in plain words.
 2. **Expect, as main gives it today (PR #113, merged):** rows 4, 5, 6 and 8 done; rows 1 and 3 partly done, each saying why; nothing released yet (row 10 gives the validator's words: the Visitor visa stops at its submit problems); row 2 Parked (P-102); rows 7 and 17 "Not built yet: …"; rows 9, 11 and 12 "Waiting: …" (the Visitor visa's release 1 and the paid IMM 5257 run). No live AI; US$0.
 3. **Expect, for the capability to be Works (DEMO.md "Checkpoints" 2):** every row done except the Parked row 2:
-   * Visitor visa (A) release 1 with every form line PDF upload, and release 2 mixed (IMM 5257 Online · IMM 5707 PDF upload · IMM 5476 PDF upload, signed by hand and scanned);
+   * Visitor visa (A) release 1 with every form line PDF upload, and release 2 mixed (IMM 5257 Online, so IMM 5645 as the family information form, tech lead on #798 · IMM 5476 PDF upload, signed by hand and scanned);
    * With an LMIA (B) released, reusing A's family facts (only its own new form newly mapped);
    * each release submitted by the author, signed off by the content reviewer (SME), released by the Approver; no library item approved by the person who proposed it;
    * the thin family case on A's release 1: Client A's family of four (applicant, travelling spouse, a child under 18 answered for by the principal, a child 18 or over), every name labelled Sample;
