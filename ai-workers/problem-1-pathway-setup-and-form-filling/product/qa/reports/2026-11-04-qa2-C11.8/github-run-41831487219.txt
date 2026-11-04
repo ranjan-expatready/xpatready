@@ -1,0 +1,5 @@
+packs (C11.8)	C11.8 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:51:30.7219311Z Gate B: the PR names C11.8; claims Works for none (no bug check).
+packs (C11.8)	C11.8 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:51:30.7224676Z   packs: C11.8.test.ts
+packs (C11.8)	C11.8 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:53:25.4556816Z     C11.8.test.ts on the six: exit 0, 34 passed, 0 failed (114 s: copy 5, Reset to the six 18, run 92)
+packs (C11.8)	C11.8 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:53:25.4559695Z   packs took 115 s in all
+packs (C11.8)	C11.8 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)	2026-11-04T12:53:25.4560170Z Gate B: passed.
