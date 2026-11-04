@@ -96,15 +96,30 @@ export const SP_FORM_RULES: FormRule[] = [
 export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", cite: "Guide 5269, Custodians", label: "Minor studying without a parent or guardian", valueType: "yes_no",
   meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
   beside: ["person.date_of_birth"] };
+/** G5 (C5.1, P-248; tech lead's ruling on #868, Lead 8, 20:5x IST): a document line the checkpoint sets from an official
+ *  checklist's own words, cited (P-170): the document type (an existing library name is reused), whose it is, and the
+ *  page and quote. Sample, Unconfirmed: expert (AGENTS rule 4). */
+export type CitedDocumentLine = { type: string; who: "principal_applicant" | "each_applicant"; quote: string };
+/** The Study permit (outside Canada)'s always-needed documents, from IMM 5483 (08-2025), the document checklist for a
+ *  study permit: official-sources/ircc/checklists/imm5483e.pdf (the PDF modified 2025-08-11, sha256 6f885da2…). */
+const IMM5483 = "IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11";
+export const SP_DOCUMENT_LINES: CitedDocumentLine[] = [
+  { type: "Proof of fee payment (processing fee and other applicable fees receipt)", who: "principal_applicant",
+    quote: `${IMM5483}, p. 1, documents list item 1: "Proof of payment showing the amount paid. You must pay your processing fees and any other applicable fees and include a copy of the payment receipt with your application." (Sample, Unconfirmed: expert)` },
+  { type: "Passport or travel document information page photocopy", who: "each_applicant",
+    quote: `${IMM5483}, p. 1, documents list item 2: "A Photocopy of the information page of your valid passport or travel document which includes: The passport number, The issuance and expiry dates, Your photo, name, date and place of birth." (Sample, Unconfirmed: expert)` },
+  { type: "Letter of acceptance", who: "principal_applicant",
+    quote: `${IMM5483}, p. 2, documents list: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert)` },
+];
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] }; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string }> = {
+export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] }; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] }> = {
   "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
   "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, documentsFromReviewedRelease: true,
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
-  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT,
+  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT, documentsCited: SP_DOCUMENT_LINES,
     family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
 };
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
@@ -247,6 +262,26 @@ export class Demo {
     await this.db.configRelease.create({ data: { workspaceId, combinationId, version: 1, status: "RELEASED", snapshot: snapshot as any, sha256, packVersionId: pack.id, summary: { imported_from: "p3/releases/c1-v3", c1_v3_sha256: rel.configuration_sha256, drafting_runs: rel.drafting_run_ids, counts }, authorId: rel.author.user_id, submitterId: rel.submitter.user_id, approverId: rel.approver.user_id, basis: "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed." } });
     for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
     return counts;
+  }
+
+  /** G5 (#868, Lead 8's option 1 for the Study permit): document lines from an official checklist's own words, each cited
+   *  with its page and quote (P-170), through the Documents route as the author. A type the library already names is
+   *  reused; a new one waits as a proposal the content reviewer accepts, and the Approver approves its ADD (BR-7). */
+  private async citedDocumentLines(author: Actor, reviewer: Actor, workspaceId: string, combinationId: string, lines: CitedDocumentLine[], refused: string[], say: (e: unknown) => string) {
+    let n = 0;
+    for (const l of lines) {
+      const line = { attachMode: "COMBINATION_MANDATORY" as const, appliesToRoles: l.who, providedBy: "client", sourceQuote: l.quote };
+      try {
+        const r = (await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeName: l.type } as Parameters<Studio["saveRequirement"]>[3])) as { proposalId?: string } | null;
+        if (r && r.proposalId) {
+          const key = ((await decide(this.db, this.audit, reviewer, workspaceId, [r.proposalId], { action: "accept", reason: "Accepted by the sample loader: a document the official checklist asks for, cited (Sample, Unconfirmed: expert)." })).items[0] as { landedAs?: string } | undefined)?.landedAs;
+          if (!key) { refused.push(`${l.type}: its document type was not accepted`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: key } as Parameters<Studio["saveRequirement"]>[3]);
+        }
+        n++;
+      } catch (e) { refused.push(`${l.type}: ${say(e)}`); }
+    }
+    return n;
   }
 
   /** G5 (C5.1, P-248; tech lead's ruling on #868, option 1 for the Visitor visa): a combination's document lines from its
@@ -736,6 +771,8 @@ export class Demo {
           // document checklist (IMM 5484), by the product's own steps: C2.6 replays the saved AI reading of that edition
           // (US$0), the author decides each proposed line on To review, and the Approver approves a new type below.
           if (setup.documentsFromChecklist) { const d = await this.checklistDocumentLines(author, workspaceId, c.id, setup.documentsFromChecklist, setUpRefused, said); documentLines += d.n; log.push(`  ${keyOf.get(c.id)}: ${d.n} document lines from ${setup.documentsFromChecklist}'s saved reading (Sample; P-248); ${d.rejected.length} rejected with their reason: ${d.rejected.join("; ")}`); }
+          // G5 (#868, Lead 8's option 1 for the Study permit): its always-needed lines from its checklist's own words, cited.
+          if (setup.documentsCited) { const d = await this.citedDocumentLines(author, sme, workspaceId, c.id, setup.documentsCited, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} document lines from its document checklist, cited with page and quote (Sample, Unconfirmed: expert; P-248)`); }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "document_type" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (G5, a document line's type)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }
