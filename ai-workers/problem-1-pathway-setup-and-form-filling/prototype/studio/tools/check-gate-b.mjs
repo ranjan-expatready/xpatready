@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -139,6 +139,7 @@ ok("whole pack: exit 0 with no FAIL passes; exit 0 with a FAIL line, exit 1, 2 o
 ok("named steps: exit 1 passes when they are green; exit 2, a crash or a timeout never does",
   packVerdict("C99.8", ["1"], 1, "PASS  C99.8-1 a\nFAIL  C99.8-2 b") === null && [2, 124, 137, 127].every((c) => packVerdict("C99.8", ["1"], c, "PASS  C99.8-1 a")));
 ok("a named step with a HELD line is not green, though another check of that step PASSes (QA-215 break 1)", stepsVerdict("C11.3", ["AT-5"], "PASS  C11.3 AT-5 refusal x\nHELD  C11.3 AT-5 the AI check — P-284\n").join() === "AT-5" && packVerdict("C11.3", null, 0, "PASS  C11.3 AT-5 x\nHELD  C11.3 AT-5 y\n26/26 passed, 1 held") === null);
+ok("tail() gives the last non-blank lines, trimmed and cut, so an exit-2 pack's reason reaches the report (P-214)", JSON.stringify(tail("PASS  a\n\nSTOP  setup missing: no combination wp.family on this copy   \n\n")) === JSON.stringify(["PASS  a", "STOP  setup missing: no combination wp.family on this copy"]) && tail("x\n".repeat(9)).length === 3 && tail("y".repeat(300))[0].length === 200 && tail("").length === 0);
 ok("labels with a space (C3.2 AT-1) work", stepsVerdict("C3.2", ["AT-1"], out).length === 0 && stepsVerdict("C3.2", ["AT-3"], out).join() === "AT-3");
 
 // Every pack's documented run can be read, so part 2 never skips a pack in silence.
