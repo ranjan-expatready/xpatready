@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { inSentence, LOCK_KINDS, notReady, ONLINE_LATER_WAVE, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
 import { openLines } from "../../../engine/runtime/open-lines";
+import { OutOfDate } from "./out-of-date";
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
@@ -28,6 +29,7 @@ export function FormsPanel({ caseId }: { caseId: string }) {
         <h2 id="forms-h" className="text-base font-semibold">Prepare application</h2>
         <p className="text-[13px] text-text-muted">The forms to file, filled from confirmed answers only. A new copy is made only when you ask; a locked copy never changes.</p>
       </header>
+      <OutOfDate caseId={caseId} />
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The forms could not be loaded">{(q.error as Error).message}</Notice></div>
         : !q.data!.forms.length && !q.data!.online?.length ? <p className="px-4 py-3 text-sm text-text-muted">No form applies to anyone on this case yet.</p>

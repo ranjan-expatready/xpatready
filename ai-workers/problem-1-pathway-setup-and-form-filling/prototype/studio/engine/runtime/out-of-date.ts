@@ -77,7 +77,7 @@ export function outOfDateReason(kind: FinishedKind, form: string, finishedAt: st
   const lines = [...extra, ...changes.slice(0, 3).map(changeWords)];
   const more = changes.length > 3 ? `, and ${changes.length - 3} more change${changes.length - 3 === 1 ? "" : "s"}` : "";
   const what = lines.length ? `: ${lines.join("; ")}${more}.` : ": a fact it reads changed since.";
-  return `Out of date. ${WHAT[kind](form, dayWords(finishedAt))}${what} ${NEXT[kind](form)}`;
+  return `${WHAT[kind](form, dayWords(finishedAt))}${what} ${NEXT[kind](form)}`;
 }
 
 /** BR-20: the representative of record changed since a signed IMM 5476 was printed (it names the earlier one). */
