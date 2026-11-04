@@ -11,6 +11,7 @@ import { SetApplicationNumber as SetNumber } from "../../contracts/filing-record
 import { checkApplicationNumber, duplicateWarning, normaliseNumber, type NumberRule } from "../../engine/runtime/filing-record.ts";
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
+import { refuseIfRecorded } from "./submission-record.ts";
 
 type H = string | undefined;
 const RULES = JSON.parse(readFileSync(join(STUDIO, "samples", "filing-numbers.json"), "utf8")) as { basis: string; applicationNumber: NumberRule };
@@ -57,6 +58,10 @@ export class FilingRecord {
       // The number and its audit line are one change (Devin on #553): both or neither.
       await this.db.$transaction(async (tx) => {
         // The old value is the lock: a change made meanwhile leaves nothing updated (409), never overwritten.
+        // C8.2-9: once the submission is recorded, the number changes only through "Correct a number" (kept with its reason).
+        // Devin on #924: under the case's row lock, as recording takes it, so a record committed meanwhile is always seen.
+        await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
+        await refuseIfRecorded(tx as unknown as Db, [f!.id], "the application number (use Correct a number)");
         const n = await tx.filing.updateMany({ where: { id: f!.id, applicationNumber: f!.applicationNumber }, data: { applicationNumber: value } });
         if (n.count !== 1) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
         // Government identifiers stay out of the summary line (AG-7-95 safety); the audit detail keeps before and after.

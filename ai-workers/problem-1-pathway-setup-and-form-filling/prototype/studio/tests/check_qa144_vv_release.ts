@@ -114,9 +114,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
     && n(`select count(*) from answer_list_value v join answer_list l on l.id = v.answer_list_id join canonical_field f on f.answer_list_key = l.answer_list_key where f.canonical_field_key = 'person.marital_status' and v.value_key = 'common_law'`) > 0);
 
   // The rest of the M2 gate keeps its words: the other combinations are still refused with their own reasons.
-  // Slice 2 (tests/check_qa144_lmia_release.ts) adds With an LMIA; R2-m1 keeps the Visitor visa's chosen sections ones
-  // its people all answer (the toddler and never-married checks above run after With an LMIA's placements).
-  ok("QA-144 scope: only the Visitor visa and With an LMIA are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside')`) === 0);
+  // Slices 2 and 3 add With an LMIA (check_qa144_lmia_release.ts) and the Study permit (check_qa144_sp_release.ts); R2-m1
+  // keeps the Visitor visa's chosen sections ones its people all answer (the toddler and never-married checks above run
+  // after their placements).
+  ok("QA-144 scope: only the Visitor visa, With an LMIA and the Study permit are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();
