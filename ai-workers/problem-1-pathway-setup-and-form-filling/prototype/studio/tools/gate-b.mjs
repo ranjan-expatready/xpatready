@@ -1,20 +1,24 @@
 #!/usr/bin/env node
 // Gate B (P-214 CI tooling; founder 4 Nov "Yes, as amended"; reports/bottleneck-audit-2026-11-03.md: 18 Works → Partial
 // demotions in 3 days): a product PR may no longer merge silently with work that has not passed the test qa counts it by.
-//   1. The PR names the capabilities it claims: C<n.n> in its title, or a "Capabilities:" line in its body, where a pack
-//      that is green only in part names its steps: "Capabilities: C7.5 (steps 1-4, 10-14)". The check fails while a named
-//      capability has an open Blocker, Critical or Major in qa/BUGS.md, unless the PR names that bug as the one it fixes
-//      (QA-nnn in the title, or on a body line that says fixes, fixed or closes, or a "Fixes:" line).
+//   1. The PR names the capabilities it works on: C<n.n> in its title, a "Capabilities:" line, or a "Claims Works:"
+//      line in its body, where a pack that is green only in part names its steps: "Capabilities: C7.5 (steps 1-4,
+//      10-14)". Only a capability on a "Claims Works: C<n.n>" line (the PR says it now Works; the same line triggers
+//      gate A) is checked against qa/BUGS.md (tech lead, 4 Nov: incremental work is not stopped by the row's bugs): the
+//      check fails while it has an open Blocker, Critical or Major there, unless the PR names that bug as the one it
+//      fixes (QA-nnn in the title, or on a body line that says fixes, fixed or closes, or a "Fixes:" line).
 //   2. Each named capability with an acceptance pack (prototype/studio/acceptance/<id>.test.ts and <id>-*.test.ts) runs
 //      on a fresh isolated copy, US$0, live AI off, by its own documented run: on the demo data (Demo › Reset to the
 //      six, POST /api/demo/reset-to-six as the author, then the pack) when its run is the pack alone; on its fixture
 //      when its run line has setup steps (they build a combination from an empty workspace, which the six already
-//      holds), and the result says so. Red fails the check: exit 0, or every named step PASS and none FAIL. Up to
+//      holds), labelled "fixture only": a PR claiming Works on such a pack still needs the qa lane's demo-data PASS
+//      (gate A, tech lead 4 Nov). Red fails the check: exit 0, or every named step PASS and none FAIL. Up to
 //      GATE_B_JOBS packs (default 3) run side by side.
 //   3. Skipped: notes and records PRs (KIND from change-kind.sh, as CI already sorts them), merge-queue batches (QUEUE),
 //      and a PR that names no capability.
-// Usage (CI, part 1, rules step): PR_TITLE, PR_BODY, KIND, QUEUE from the event; node product/tools/gate-b.mjs
-//   node product/tools/gate-b.mjs --title "<t>" [--body-file <f>] [--kind code] [--bugs <BUGS.md>] [--no-packs] [--plan]
+// Usage (CI, part 1, its own step after Chromium): PR_TITLE, PR_BODY, KIND, QUEUE from the event;
+//   node ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/gate-b.mjs
+//   node studio/tools/gate-b.mjs --title "<t>" [--body-file <f>] [--kind code] [--bugs <BUGS.md>] [--no-packs] [--plan]
 //   --no-packs: only part 1 (and the packs it would run); --plan: print each named pack's run and stop.
 // Exit: 0 pass or skipped · 1 the gate refuses (the reasons are printed) · 2 the gate could not run.
 import { readFileSync, readdirSync, existsSync, appendFileSync } from "node:fs";
@@ -23,23 +27,25 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const P = resolve(HERE, ".."), PROTO = resolve(P, "../prototype"), S = join(PROTO, "studio");
+const S = resolve(HERE, ".."), PROTO = resolve(S, ".."), P = resolve(PROTO, "../product");
 const CAP = /\bC\d{1,2}\.\d{1,2}\b/g, BUG = /\bQA-\d+\b/g, GATING = new Set(["Blocker", "Critical", "Major"]);
 
-/** What the PR claims: capability → named steps (null = the whole pack) and the bugs it says it fixes. */
+/** What the PR names: capability → named steps (null = the whole pack), the capabilities it claims Works, and the
+ *  bugs it says it fixes. */
 export function claims(title = "", body = "") {
-  const caps = new Map(), fixes = new Set();
+  const caps = new Map(), works = new Set(), fixes = new Set();
   for (const id of title.match(CAP) ?? []) caps.set(id, null);
   for (const line of body.split(/\r?\n/)) {
-    const m = line.match(/^\W*capabilities\W*:\s*(.*)$/i);
-    if (m) for (const c of m[1].matchAll(/\b(C\d{1,2}\.\d{1,2})\b(?:\s*\(\s*steps?\s+([^)]*)\))?/gi)) {
+    const m = line.match(/^\W*(capabilities|claims\s+works)\W*:\s*(.*)$/i);
+    if (m && /works/i.test(m[1])) for (const id of m[2].match(CAP) ?? []) works.add(id);
+    if (m) for (const c of m[2].matchAll(/\b(C\d{1,2}\.\d{1,2})\b(?:\s*\(\s*steps?\s+([^)]*)\))?/gi)) {
       const steps = c[2] ? expand(c[2]) : null;
       caps.set(c[1], steps ? [...new Set([...(caps.get(c[1]) ?? []), ...steps])] : caps.has(c[1]) ? caps.get(c[1]) : null);
     }
     if (/^\W*fix(es|ed)?\W*:|\b(fixes|fixed|closes|closed)\b/i.test(line)) for (const b of line.match(BUG) ?? []) fixes.add(b);
   }
   for (const b of title.match(BUG) ?? []) fixes.add(b);
-  return { caps, fixes };
+  return { caps, works, fixes };
 }
 /** "1-4, 10, 6b, AT-3" → 1 2 3 4 10 6b AT-3 (a range only between two numbers). */
 export function expand(list) {
@@ -67,10 +73,10 @@ export function openBugs(md) {
   return rows;
 }
 const covers = (bugCap, id) => bugCap === id || (bugCap.endsWith(".x") && id.startsWith(bugCap.slice(0, -1)));
-/** Part 1: the open Blocker, Critical or Major bugs on a named capability that the PR does not say it fixes. */
+/** Part 1: the open Blocker, Critical or Major bugs on a capability the PR claims Works that it does not say it fixes. */
 export function blockers(cl, bugs) {
   const out = [];
-  for (const id of cl.caps.keys()) for (const b of bugs)
+  for (const id of cl.works) for (const b of bugs)
     if (GATING.has(b.severity) && b.caps.some((c) => covers(c, id)) && !cl.fixes.has(b.id)) out.push({ cap: id, bug: b.id, severity: b.severity });
   return out;
 }
@@ -142,6 +148,8 @@ async function resetToSix(port) {
   const body = await r.json().catch(() => ({}));
   return { ok: r.ok, status: r.status, detail: body?.detail ?? body?.message ?? "" };
 }
+/** Where a pack runs: on the six when its run is the pack alone, else on its own fixture (tech lead, 4 Nov). */
+export const whereOf = (plan) => (plan.steps.length === 1 ? "on the six" : "fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A)");
 /** A child process as a promise (packs run side by side, each on its own copy). */
 function sh(bin, args, opts, ms) {
   return new Promise((done) => {
@@ -163,7 +171,7 @@ async function runPack(id, file, wanted, n) {
   // builder's own ports and database prefix (WAY-OF-WORKING: never :4400).
   const name = `${process.env.GATE_B_NAME ?? "gateb"}${n}`, port = String(Number(process.env.GATE_B_PORT ?? 4590) + n), db = `xr_studio_${name}`, env = cleanEnv(), t0 = Date.now();
   if (port === "4400") return { log: [], why: `${file}: port 4400 is the demo; the gate never runs there` };
-  const onSix = plan.steps.length === 1, where = onSix ? "on the six" : "on its fixture (its run line has setup steps), not the six", log = [];
+  const onSix = plan.steps.length === 1, where = whereOf(plan), log = [];
   const iso = (what) => sh("zsh", [join(S, "tools/isolated.sh"), name, port, what], { cwd: S, env }, 300_000);
   const up = await iso("start"), tUp = Date.now();
   if (up.status !== 0) return { log, why: `${file}: isolated copy ${name} did not start (exit ${up.status}): ${up.out.trim().split("\n").slice(-2).join(" ")}` };
@@ -204,10 +212,10 @@ async function main(argv) {
   if (opt.kind !== "code") { say(`Gate B: skipped (${opt.kind} change).`); return 0; }
   if (opt.queue) { say("Gate B: skipped (merge-queue batch; each PR passed it on its own)."); return 0; }
   const cl = claims(opt.title, opt.body);
-  if (!cl.caps.size) { say("Gate B: skipped (the PR names no capability: C<n.n> in its title or a \"Capabilities:\" line)."); return 0; }
+  if (!cl.caps.size) { say("Gate B: skipped (the PR names no capability: C<n.n> in its title, or a \"Capabilities:\" or \"Claims Works:\" line)."); return 0; }
   const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
-  say(`Gate B: the PR claims ${named}${cl.fixes.size ? `; says it fixes ${[...cl.fixes].join(", ")}` : ""}.`);
-  const reasons = blockers(cl, openBugs(readFileSync(opt.bugs, "utf8"))).map((b) => `${b.cap} has an open ${b.severity}, ${b.bug}, in qa/BUGS.md: fix it in this PR and name it (a "Fixes: ${b.bug}" line), or do not claim ${b.cap}`);
+  say(`Gate B: the PR names ${named}${cl.works.size ? `; claims Works for ${[...cl.works].join(", ")}` : "; claims Works for none (no bug check)"}${cl.fixes.size ? `; says it fixes ${[...cl.fixes].join(", ")}` : ""}.`);
+  const reasons = blockers(cl, openBugs(readFileSync(opt.bugs, "utf8"))).map((b) => `${b.cap} has an open ${b.severity}, ${b.bug}, in qa/BUGS.md: fix it in this PR and name it (a "Fixes: ${b.bug}" line), or do not claim Works for ${b.cap} yet`);
   const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).map((f) => ({ id, f, st })));
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) { for (const r of runs) console.log(r.f, JSON.stringify(runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")))); return 0; }

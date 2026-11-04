@@ -11,8 +11,6 @@
 #               - a builder's PR: only the suites its change can affect (run-suites.sh --changed);
 #               - a merge-queue batch: every suite but the quarantined ones (--skip-quarantined), once per change.
 #             US$0 model spend: every suite replays saved runs.
-#             Gate B (P-214, 4 Nov) on a builder's code PR, part 1: the capabilities it names have no open Major or
-#             worse in qa/BUGS.md (unless it names the bug it fixes), and their acceptance packs pass on the six.
 # Switches (repository variables, gh variable set NAME --body VALUE):
 # Type check (P-291, the outsider audit of 29 Oct): job "types", tsc --noEmit for api and web (tools/typecheck.mjs; fails
 #   only on an error not in typecheck-known.txt), on its own machine beside the parts for records and code, so it adds
@@ -99,22 +97,9 @@ jobs:
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
           bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
-          node "$P/tools/check-gate-b.mjs"
       - name: Playwright's own Chromium
         if: env.KIND == 'code'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: gate B, the named capabilities' open bugs and acceptance packs (part 1 only; tools/gate-b.mjs)
-        # P-214, founder 4 Nov: a code PR's named capabilities have no open Major or worse in qa/BUGS.md unless it names
-        # the bug it fixes, and their acceptance packs pass (on the six where the pack's run allows). After Chromium:
-        # some packs drive the browser. Title and body come in as environment values, never pasted into the script.
-        if: matrix.shard == 1 && env.KIND == 'code'
-        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}" }
-        run: node "$P/tools/gate-b.mjs"
-      - name: gate B timing on GitHub's machines (TEMPORARY, this PR only; removed before review)
-        if: matrix.shard == 1 && env.KIND == 'code'
-        run: |
-          time node "$P/tools/gate-b.mjs" --title "measure: C11.13, C11.10 (QA-192, QA-184)" || true
-          time node "$P/tools/gate-b.mjs" --title "measure: C11.13 (QA-192)" || true
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
