@@ -120,6 +120,3 @@ export type RowAction = { kind: LifecycleAction | "WITHDRAW"; why: string | null
   /** The author's own never-approved draft: deleted at once, with Undo (P-116 amended 28 Oct). */
   immediate: boolean };
 
-/** The four setup steps on a card (addendum A3, Lead 26 Oct), calculated from data the app already keeps. */
-export const SETUP_STEPS = ["Forms", "Draft", "Review", "Release"] as const;
-export type SetupProgress = { step: number; of: 4; label: string; done: boolean[]; live: boolean };

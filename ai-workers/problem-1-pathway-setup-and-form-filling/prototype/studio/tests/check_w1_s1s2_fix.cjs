@@ -3,7 +3,7 @@
 // (since P-128: prefilled from the filters, pick the category, untick None); QA-44 letters typed while a name saves are
 // kept; QA-46 the word is the same everywhere (since P-128: Delete, on the row, To review and the approval page); QA-49
 // Immigration programs follows the Structure's order, also after a reorder; QA-50 a double click on Start setup leaves
-// one history entry; review m1 the setup bar shows the stage of the next step; break m8 reads are denied by default.
+// one history entry; review m1 the setup bar shows the stage of the next step (QA-184: the checklist's five steps); break m8 reads are denied by default.
 // Sample inputs plus one saved AI replay (US$0) and one released-but-Not-ready combination. No model call.
 //   zsh studio/tools/isolated.sh screens_s1s2 4448 start && node studio/tests/check_w1_s1s2_fix.cjs 4448 xr_studio_screens_s1s2
 const { chromium } = require("../node_modules/playwright");
@@ -59,12 +59,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`break m8 pass: ${what} still answers every configuration person (author, content reviewer, approver)`, [author, sme, approver].every((x) => x.status < 300), [author.status, sme.status, approver.status].join(" "));
   }
 
-  // ======================================================== review m1: the bar shows the stage of the next step
-  step("review m1 pass: AI proposals to review → the bar is at Draft (step 2), beside 'Review N AI proposals'", svRow.nextAction.kind === "review_proposals" && svRow.progress.step === 2 && svRow.progress.done.join() === "true,false,false,false", `${svRow.nextAction.label} · ${svRow.progress.label}`);
-  step("review m1 pass: released but Not ready with something missing → the bar is at that stage, never 'Step 4 of 4 · Release'", ssRow.nextAction.kind === "see_missing" && ssRow.progress.step < 4 && !ssRow.progress.live, `${ssRow.nextAction.label} · ${ssRow.progress.label}`);
-  const live = cat.rows.find((x) => x.status === "READY" && !x.nextAction);
-  step("review m1 fail-guard: Live with no next step keeps all four steps done", !live || (live.progress.live && live.progress.step === 4 && live.progress.done.every(Boolean)), live?.progress.label);
-  step("review m1: every combination with setup has its bar at its next step's stage (none ahead of the button)", cat.rows.filter((x) => x.combinationId && x.nextAction && ["start", "add_forms", "add_from_library", "see_new_edition"].includes(x.nextAction.kind)).every((x) => x.progress.step === 1));
+  // ======================================================== review m1, QA-184: the progress is the checklist's next step
+  // QA-184 replaced the four-step count with the setup checklist's five steps: the progress sits on the step its next
+  // item is on and says the card's words, so it can never run ahead of the button or disagree with the Overview.
+  const at = (x) => (x.setup.next ? ["pages", "people", "forms", "questions_documents", "release"].indexOf(x.setup.next.step) + 1 : null);
+  step("review m1 pass (QA-184): AI proposals to review → the progress is at the step of the next item, in the card's words", svRow.progress.of === 5 && svRow.progress.step === at(svRow) && svRow.progress.label === svRow.setup.bar.text, `${svRow.setup.next?.line} · ${svRow.progress.label}`);
+  step("review m1 pass (QA-184): released but Not ready → never Live, at the step of its fix", !ssRow.progress.live && ssRow.progress.step === at(ssRow) && ssRow.setup.chip.status !== "LIVE", `${ssRow.setup.next?.line} · ${ssRow.progress.label}`);
+  const live = cat.rows.find((x) => x.setup?.chip?.status === "LIVE");
+  step("review m1 fail-guard (QA-184): a Live combination's progress says Live first, then its next release's line", !live || (live.progress.live && live.progress.label.startsWith("✓ Live") && (!live.setup.bar.next || live.progress.label.endsWith(live.setup.bar.next))), live?.progress.label);
+  step("review m1 (QA-184): every combination's progress is out of 5 and never says the older four steps", cat.rows.filter((x) => x.combinationId).every((x) => x.progress.of === 5 && !/of 4/.test(x.progress.label)));
   await p.goto(`${BASE}/`); await ready();
   const svCard = await p.locator(`article[data-node="${sv.nodeKey}"]`).innerText();
   // Card v4 (P-180): the card shows the checklist's "n of 5 steps" and one button; the proposals to review are its Needs you.

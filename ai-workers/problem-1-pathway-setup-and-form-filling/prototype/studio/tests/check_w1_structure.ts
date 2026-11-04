@@ -6,7 +6,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { closeWhy, editDistance, filedOf, setupProgress } from "../engine/structure.ts";
+import { closeWhy, editDistance, filedOf } from "../engine/structure.ts";
+import { progressOf } from "../engine/setup-checklist.ts";
+import type { SetupChecklist } from "../contracts/setup-checklist.ts";
 import { diff } from "../engine/validate.ts";
 
 const PORT = Number(process.argv[2] ?? 4442), DB = process.argv[3] ?? "xr_studio_screens_w1s1";
@@ -36,14 +38,19 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   ok("C11.3 BR-5 pass: singular and plural, and the same words in another order, are close", closeWhy("Work permit", "Work permits") !== null && closeWhy("Visa visitor", "Visitor visa") === "Same words in another order");
   ok("C11.3 BR-5 fail: an unrelated name is not close; an exact match is a twin, not 'close'", closeWhy("Study permit", "Visitor visa") === null && closeWhy("visitor  visa", "Visitor visa") === null);
   ok("C11.3 BR-5: short names allow one letter only ('LMIA' vs 'LMIB' close, 'PNP' vs 'PGP' close, 'PNP' vs 'SUV' not)", closeWhy("LMIA", "LMIB") !== null && closeWhy("PNP", "SUV") === null && editDistance("kitten", "sitting") === 3);
-  const p0 = setupProgress({ forms: 0, allDrafted: true, reviewed: false, aiProposals: 0, live: false, changes: 0 });
-  const p2 = setupProgress({ forms: 2, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 3 });
-  const p3 = setupProgress({ forms: 2, allDrafted: true, reviewed: true, aiProposals: 4, live: false, changes: 3 });
-  const p4 = setupProgress({ forms: 2, allDrafted: true, reviewed: true, aiProposals: 0, live: true, changes: 0 });
-  const pLiveChanged = setupProgress({ forms: 2, allDrafted: true, reviewed: false, aiProposals: 0, live: true, changes: 1 });
-  ok("C11.10 A3 pass: steps come from data: no forms = step 1, forms not mapped = step 2 (Draft), Live = all four", p0.step === 1 && p2.label === "Step 2 of 4: Draft" && p4.live && p4.done.every(Boolean), [p0.label, p2.label, p4.label]);
-  ok("C11.10 A3 fail: waiting AI proposals keep Review open; a Live combination with a new change shows step 3, not Live", p3.step === 3 && !pLiveChanged.live && pLiveChanged.step === 3, [p3.label, pLiveChanged.label]);
-  ok("C11.10 A3: a combination mapped by hand or from the library (no AI) reaches step 4 at US$0", setupProgress({ forms: 1, allDrafted: true, reviewed: true, aiProposals: 0, live: true, changes: 0 }).live);
+  // QA-184: the catalogue's progress is the setup checklist's five steps (P-157), in the card's words; the older four-step
+  // count ("Step 2 of 4: Draft") is gone.
+  const KEYS = ["pages", "people", "forms", "questions_documents", "release"] as const;
+  const list = (states: string[], status: string, next: number | null, bar: { done: number; text: string; next?: string | null }) =>
+    ({ chip: { status, release: status === "LIVE" ? 1 : null }, steps: KEYS.map((key, i) => ({ key, state: states[i] })), current: KEYS[states.indexOf("next")] ?? KEYS[states.findIndex((x) => x !== "done")] ?? null,
+      next: next === null ? null : { step: KEYS[next] }, bar: { of: 5, ...bar } }) as unknown as SetupChecklist;
+  const p0 = progressOf(list(["next", "todo", "todo", "todo", "todo"], "NOT_STARTED", 0, { done: 0, text: "0 of 5 steps" }));
+  const p2 = progressOf(list(["done", "done", "next", "todo", "todo"], "IN_PROGRESS", 2, { done: 2, text: "2 of 5 steps" }));
+  const pLive = progressOf(list(["next", "todo", "todo", "done", "done"], "LIVE", 0, { done: 2, text: "✓ Live", next: "Next release: 3 of 5 steps to do" }));
+  const pLiveDone = progressOf(list(["done", "done", "done", "done", "done"], "LIVE", null, { done: 5, text: "✓ Live", next: null }));
+  ok("C11.10 A3 pass (QA-184): progress is out of 5 steps, at the step of the next item, in the card's words", p0.of === 5 && p0.step === 1 && p0.label === "0 of 5 steps" && p2.step === 3 && p2.label === "2 of 5 steps" && p2.done.join() === "true,true,false,false,false", [p0, p2]);
+  ok("C11.10 A3 pass (QA-184): a Live combination says Live first, then what its next release needs; with nothing open, just Live", pLive.live && pLive.of === 5 && pLive.label === "✓ Live · Next release: 3 of 5 steps to do" && pLiveDone.live && pLiveDone.label === "✓ Live" && pLiveDone.step === 5, [pLive.label, pLiveDone.label]);
+  ok("C11.10 A3 fail (QA-184): never the older four-step words", ![p0, p2, pLive, pLiveDone].some((p) => /of 4|Step \d/.test(p.label) || (p.of as number) === 4));
   ok("C11.10 A4 pass: PDF lines say 'PDF'; one Online line says 'PDF + answer sheet (later wave)'", filedOf([{ channel: "PDF_UPLOAD" }]) === "PDF" && filedOf([{ channel: "PDF_UPLOAD" }, { channel: "ONLINE" }]) === "PDF + answer sheet (later wave)");
   ok("C11.10 A4 fail: no lines say 'No forms yet', never a promise of a sheet", filedOf([]) === "No forms yet" && filedOf([{ form_kind: "checklist" }]) === "Checklists only");
 
@@ -86,7 +93,7 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   ok("C11.3 M5 pass: a category without stated locations gets both (Sample)", r.status === 201 && JSON.stringify(r.body.allowedLocations) === JSON.stringify(["inside_canada", "outside_canada"]), r.body.allowedLocations);
   let leaf = leaves((await cat()).tree).find((l) => l.nodeKey === vv);
   ok("C11.10 BR-2 pass: a new last-level name is listed at once as a Not started combination with its five-part trail", leaf?.statusText === "Not started" && JSON.stringify(leaf?.trail) === JSON.stringify(["Retail", "Temporary residence", "Visitors", "Visitor visa", "No sub-category"]), leaf?.trail);
-  ok("C11.10 BR-7/A3/A4: a Not started card is at step 1 (Forms) and says 'No forms yet'", leaf?.progress?.label === "Step 1 of 4: Forms" && leaf?.filed === "No forms yet", [leaf?.progress?.label, leaf?.filed]);
+  ok("C11.10 BR-7/A3/A4 (QA-184): a Not started card is at step 1 of 5 (0 of 5 steps) and says 'No forms yet'", leaf?.progress?.step === 1 && leaf?.progress?.of === 5 && leaf?.progress?.label === "0 of 5 steps" && leaf?.filed === "No forms yet", [leaf?.progress?.label, leaf?.filed]);
   r = await node("INDIVIDUAL", "category", "Study permit", visitors, { allowedLocations: ["outside_canada"] });
   const sp = r.body.key;
   r = await node("INDIVIDUAL", "subCategory", "From a designated school", sp);
@@ -192,7 +199,7 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
 
   // ---------------------------------------------------------------- released combination: rename = one name-only change
   const live = (await cat("pathway=INDIVIDUAL&filter=live")).rows[0];
-  ok("C11.10 A3: the released sample is Live with all four steps done and files as PDF", live?.progress?.live === true && live.filed === "PDF" && live.trail.join(" › ") === "Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA", [live?.progress?.label, live?.filed, live?.trail]);
+  ok("C11.10 A3 (QA-184): the released sample is Live, its progress in the card's words, and files as PDF", live?.progress?.live === true && live.progress.of === 5 && live.progress.label.startsWith(live.setup.bar.text) && live.filed === "PDF" && live.trail.join(" › ") === "Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA", [live?.progress?.label, live?.filed, live?.trail]);
   const wp = "individual.work_permits";
   r = await call("PATCH", `/structure/nodes/${wp}`, { label: "Work permit programs", version: 1 });
   const rel = JSON.parse(sql(`select snapshot from config_release where combination_id='${live.combinationId}' order by version desc limit 1`));
