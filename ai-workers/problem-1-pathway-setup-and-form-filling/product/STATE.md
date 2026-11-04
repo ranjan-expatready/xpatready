@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-04 ~19:10 IST by **Lead 7 · 4 Nov 17:29 IST** (context 23%) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-318; read DECISIONS P-319–P-334 word for word) · earlier STATE: `history/STATE-2026-11-04-0925.md` (Lead 2), `history/STATE-2026-11-04-0058.md` · Lead hand-over notes of 4 Nov: side-session notes folder of Lead 1 (lead3-, lead4-, lead5-handover-2026-11-04.md, lead4-learnings-cloud-blindness-2026-11-04.md)
+updated: 2026-11-04 20:20 IST by **Lead 7 · 4 Nov 17:29 IST (ended)** at 39% of its context; **Lead 8 takes over** (P-286, P-314) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-337) · earlier STATE: `history/STATE-2026-11-04-0925.md` (Lead 2), `history/STATE-2026-11-04-0058.md` · Lead hand-over notes of 4 Nov: side-session notes folder of Lead 1 (lead3-, lead4-, lead5-handover-2026-11-04.md, lead4-learnings-cloud-blindness-2026-11-04.md)
 
 ## Where we are
 * **M2: 45/60 confirmed by qa** (19:12 IST, qa batch 11, notes PR #956): Works added C11.17, C1.6, C11.8, C4.8, C3.5; C6.1 Partial (QA-225 Major, thin slice); C4.2 Partial (added to QA-144's list). Thin slice 6/8. **M3: 2/17.** The checkpoint releases the Visitor visa and With an LMIA (#891); C10.1 16/23 there; C9.1 8/17 (QA-207 partly fixed until #886's 2021 map). Only qa's verdicts count (P-290).
@@ -33,7 +33,10 @@ P-331 (no extra usage, 90% hand-over), P-332 (no new M3 work; #924 and #926 fini
 Ports: B1 4430–4434, S1 4440–4444, S2 4445–4449, B8 4470–4479, qa-2 4480–4484, qa 4490–4499; demo 4400.
 
 ## Leads, in order (highest = current)
-**Lead 7 · 4 Nov 17:29 IST** (this one) · standbys: **Lead 8** `local_96177831-842a-4d2c-9c07-eafb51e452fe` (next), **Lead 9** `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` (was "Lead 6 · standby", skipped by mistake, renamed) · Leads 1–5 ended (Lead 4 archived). Hand over at about 400k tokens (P-314). The 30-minute check runs at minutes 13 and 43 (skill lead-watch, with cloud eyes, P-326).
+**Lead 8** `local_96177831-842a-4d2c-9c07-eafb51e452fe` (current from 20:2x IST; hand-over note lead7-handover-2026-11-04.md in Lead 5's side-session notes folder) · standby: **Lead 9** `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` (was "Lead 6 · standby", skipped by mistake, renamed) · Lead 7 ended 20:2x IST · Leads 1–5 ended (Lead 4 archived). At the founder's next typed turn start one more standby (Lead 10). Hand over at about 400k tokens (P-314). The 30-minute check runs at minutes 13 and 43 (skill lead-watch, with cloud eyes, P-326).
+
+## Since 19:10 IST
+P-335 (no multi-tenant work), P-336 (finish M2 to 60 then scale; trip-wire 6 Nov 23:00 IST), P-337 (Works frozen; lean crew; owners: QA-221 S2, C4.8 hand-fill Builder 8, QA-208/209 Builder 1, C4.11 paid quote after QA-144). New builder for B52 + QA-227: `local_3b435f0f-8eab-40da-8f3c-3cadc692d858` (waits for #936). #886 IMM 5476 2021 map done (US$0.52; today US$0.76). Weekly 47% at 20:14 IST; burn down to about 2%/h. M2 45/60 (qa), M3 1/17.
 
 ## Next (in order)
 1. Re-label #936 after S1's merge; #939 → #785, #881 → qa re-scores (C11.14, C11.7, C3.5, C4.7, C11.8).
