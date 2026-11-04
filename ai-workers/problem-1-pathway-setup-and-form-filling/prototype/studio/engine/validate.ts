@@ -214,6 +214,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
           if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
         }
+        // P-319 (Lead 4 on #833): a form's role to IRCC's rules is named in words and needs the immigration expert's sign-off.
+        if (k === "forms" && (was.form_role ?? null) !== (x.form_role ?? null)) {
+          const fam = (r: unknown) => r === FAMILY_INFORMATION;
+          out.push({ kind: "Family information form rule", key, change: "changed", origin: x.origin, needs_sme: true, label: fam(x.form_role) ? `${key} is now this combination's family information form ([IRCC-F09]: it fills the family information line)` : fam(was.form_role) ? `${key} is no longer a family information form ([IRCC-F09]: it no longer fills the family information line)` : `${key}'s role changed` });
+          if (bare({ ...was, form_role: null }) === bare({ ...x, form_role: null })) continue;
+        }
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });

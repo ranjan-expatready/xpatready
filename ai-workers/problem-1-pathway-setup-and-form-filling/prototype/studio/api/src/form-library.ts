@@ -17,7 +17,7 @@ import { INDEX_URL, libraryType } from "./finder.ts";
 import { notFiledWords } from "../../engine/form-type.ts";
 import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
-import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, FORM_ROLE_WORDS, FormRoleBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
+import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, FormRoleBody, roleWords, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
@@ -252,9 +252,10 @@ export class FormLibrary {
     return { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
   }
 
-  /** P-319 (founder, 4 Nov: "no combination is hard-coded"): an author sets what a form is to IRCC's rules ([IRCC-F09]
-   *  reads the family information role), with a reason, in Activity. It goes out with each combination's next release (its
-   *  snapshot carries the role); a release made before keeps its own. */
+  /** P-319 (founder, 4 Nov: "no combination is hard-coded"): an author proposes what a form is to IRCC's rules ([IRCC-F09]
+   *  reads the family information role), with a reason. Lead 4's ruling on #833 (P-149): never written directly; it waits on
+   *  To review for a second person, who applies it (lifecycle.ts applyRole), and each combination's next release names it
+   *  for the immigration expert (engine/validate.ts diff: SME sign-off). A release made before keeps its own role. */
   async setRole(actor: Actor, code: string, body: unknown) {
     need(actor, "author");
     const b = parse(FormRoleBody, body);
@@ -264,17 +265,20 @@ export class FormLibrary {
     if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it in the library before you change its role.`);
     // Breaker m3: a role is what a filed form is to IRCC's rules; a guide or a checklist is never filed.
     if (b.role && libraryType(def.formKind, def.displayName) !== "form") throw problem(409, "Not a form", `${code} is a ${libraryType(def.formKind, def.displayName)}, not a form a person files, so it takes no form role.`);
-    const word = (r: string | null) => (r ? FORM_ROLE_WORDS[r as keyof typeof FORM_ROLE_WORDS] ?? r : "no role");
-    if ((def.formRole ?? null) === b.role) return { code, role: def.formRole, changed: false };
-    // Breaker m1: changed only from the role this request read, so two changes at once never both say "changed".
-    // Review r2 M1: the role and its Activity line are written together, or neither is (a line that cannot be stored never
-    // leaves a changed role with nothing to show for it).
-    await this.db.$transaction(async (tx) => {
-      const moved = await tx.govFormDef.updateMany({ where: { id: def.id, formRole: def.formRole }, data: { formRole: b.role } });
-      if (!moved.count) throw problem(409, "Changed meanwhile", `${code}'s role was changed by someone else just now: reload and look again.`);
-      await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "updated", entity: "form", entityKey: code, summary: `${actor.name} set ${code} to ${word(b.role)} (was ${word(def.formRole)}): ${b.reason}`.slice(0, 600), detail: { from: def.formRole, to: b.role, reason: b.reason } } });
+    if ((def.formRole ?? null) === b.role) throw problem(409, "Nothing changes", `${code} is already ${roleWords(b.role)}.`);
+    const waiting = { workspaceId, kind: "form_role", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } };
+    if (await this.db.libraryChange.findFirst({ where: waiting })) throw problem(409, "Already waiting", `A change to ${code}'s role already waits for a second person on To review.`);
+    const label = `${code}: ${roleWords(b.role)} (was ${roleWords(def.formRole)})`;
+    // Breaker M3, review r2 M1: the proposal and its Activity line are written together, or neither is.
+    const c = await this.db.$transaction(async (tx) => {
+      const made = await tx.libraryChange.create({ data: { workspaceId, kind: "form_role", key: code, label, action: "SET_ROLE", reason: b.reason, matches: { from: def.formRole, to: b.role }, status: "WAITING", proposedBy: actor.id } });
+      await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "proposed", entity: "form", entityKey: code, summary: `${actor.name} proposed ${label}: ${b.reason}`.slice(0, 600), detail: { from: def.formRole, to: b.role, reason: b.reason, change: made.id } } });
+      return made;
     });
-    return { code, role: b.role, changed: true };
+    // Two people proposing at once both pass the check above: the earlier stays, the later is refused (form_accepts pattern).
+    const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_role", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
+    if (first && first.id !== c.id) { await this.db.$transaction([this.db.auditEvent.deleteMany({ where: { workspaceId, entity: "form", entityKey: code, action: "proposed", detail: { path: ["change"], equals: c.id } } }), this.db.libraryChange.delete({ where: { id: c.id } })]); throw problem(409, "Already waiting", `A change to ${code}'s role already waits for a second person on To review.`); }
+    return { id: c.id, status: c.status, label, waits: "A second person approves it on To review; it then goes out with each combination's next release, which the immigration expert signs off." };
   }
 
   /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the

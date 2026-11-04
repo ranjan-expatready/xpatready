@@ -19,16 +19,16 @@ import { dropFieldList, releaseFieldList } from "./answer-values.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", placement_fills: "a question", placement_condition: "when a question is asked", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", form_role: "a form's role", placement_fills: "a question", placement_condition: "when a question is asked", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", RENAME: "Rename" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_ROLE: "Change the role of", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", RENAME: "Rename" };
 export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
 /** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
 export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
 /** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
-const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "placement_fills" ? "change of who fills a question" : kind === "placement_condition" ? "change of when a question is asked" : KIND_NOUN[kind] ?? "change");
+const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "form_role" ? "change of a form's role" : kind === "placement_fills" ? "change of who fills a question" : kind === "placement_condition" ? "change of when a question is asked" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 

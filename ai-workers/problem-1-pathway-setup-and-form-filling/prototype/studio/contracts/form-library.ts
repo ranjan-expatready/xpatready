@@ -40,6 +40,8 @@ export const AttachBody = z.object({ formKey: code, who: z.string().optional() }
 export const FORM_ROLES = ["family_information"] as const;
 export type FormRole = (typeof FORM_ROLES)[number];
 export const FORM_ROLE_WORDS: Record<FormRole, string> = { family_information: "Family information form" };
+/** A role in words for a sentence: "a family information form", or "no role". */
+export const roleWords = (r: string | null | undefined) => (r ? `a ${(FORM_ROLE_WORDS[r as FormRole] ?? r.replace(/_/g, " ")).toLowerCase()}` : "no role");
 // Breaker M3 (as contracts/cost-check.ts): a control character cannot be stored with the Activity line, and a direction
 // mark (U+202A–U+202E, U+2066–U+2069) would make Activity read otherwise than it was written: both refused before anything.
 export const FormRoleBody = z.object({ role: z.enum(FORM_ROLES).nullable(), reason: z.string().trim().min(3, "Say why, in a few words.").max(300)

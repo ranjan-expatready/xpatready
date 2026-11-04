@@ -134,7 +134,7 @@ export class ReviewQueueService {
       }
     }
     const formsOfFields = (keys: string[]) => [...new Set(keys.flatMap((k) => [...(fieldUse.get(k) ?? [])]))].sort();
-    const formsOfChange = (c: (typeof changes)[number]) => (c.kind === "library_form" || c.kind === "form_accepts" ? [normaliseCode(c.key)] : FIELD_KINDS.has(c.kind) ? formsOfFields([c.key]) : c.kind === "combination" ? formsOfCombination(c.combinationId ?? c.key) : []);
+    const formsOfChange = (c: (typeof changes)[number]) => (c.kind === "library_form" || c.kind === "form_accepts" || c.kind === "form_role" ? [normaliseCode(c.key)] : FIELD_KINDS.has(c.kind) ? formsOfFields([c.key]) : c.kind === "combination" ? formsOfCombination(c.combinationId ?? c.key) : []);
 
     // AI proposals: the newest drafting step per source, as the Programs row counts them (programs.ts catalogue).
     const waitingCount = new Map(pending.map((p) => [p.runId, p._count]));
