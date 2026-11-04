@@ -66,6 +66,8 @@ for (const [label, body] of [["a list under the key", "Claims Works:\n- C11.13\n
 // Round 3's silent skips at 7a08bbe10 (review R3-M1): a "Claims Works" heading or phrase without a colon key.
 for (const head of ["## Claims Works (as built)", "## Claims Works (after this PR)", "## ✅ Claims Works", "## Claims Works for", "## Claims Works.", "Claims Works —", "This PR claims Works", "Claims Works on"])
   ok(`"${head}" with a list under it is a Works claim (the bug check runs)`, gate("forms: x", `${head}\n- C11.13`).join() === "QA-192", gate("forms: x", `${head}\n- C11.13`));
+ok("fail then pass (tech lead, 4 Nov): \"## Claims Works (as built)\" over C11.13 refuses on QA-192, and passes with \"Fixes: QA-192\"",
+  gate("forms: x", "## Claims Works (as built)\n- C11.13").join() === "QA-192" && gate("forms: x", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192").length === 0);
 ok("\"This PR claims Works on C11.13\" is a Works claim", gate("forms: x", "This PR claims Works on C11.13 once qa agrees.").join() === "QA-192");
 ok("a heading \"## Claims Works (as built)\" with nothing under it refuses as unread", part1(claims("forms: x", "## Claims Works (as built)\n\nText."), bugs).length === 1);
 ok("a prose sentence about the line that names nothing claims nothing", part1(claims("forms: x", "A line that says it claims Works but names nothing readable refuses."), bugs).length === 0);
@@ -130,6 +132,8 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
 const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13"]);
+const r3a = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13"]), r3b = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192"]);
+ok("command: \"## Claims Works (as built)\" over C11.13 exits 1 naming QA-192, then 0 with the Fixes line", r3a.code === 1 && /QA-192/.test(r3a.out) && r3b.code === 0, [r3a, r3b]);
 const r0 = r;
 ok("command: claiming Works for C11.13 with QA-192 open exits 1 and names the bug", r.code === 1 && /QA-192/.test(r.out), r);
 r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13\nFixes: QA-192"]);
