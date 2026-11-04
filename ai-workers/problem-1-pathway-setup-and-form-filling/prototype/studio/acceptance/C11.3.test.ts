@@ -24,8 +24,9 @@ const PORT = Number(process.argv[2] ?? 4563), DB = process.argv[3] ?? "xr_studio
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
 let heldN = 0;
-/** A step of a held part (P-284): PASS when green; red, it prints HELD with the decision that holds it and fails nothing. */
-const held = (name: string, why: string, c: unknown, detail?: unknown) => { if (c) return ok(name, c, detail); heldN++; console.log(`HELD  ${name} — ${why}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
+/** A step of a held part (P-284): PASS when green; red with the held answer (`still`), it prints HELD with the decision
+ *  that holds it and fails nothing; red for any other reason, it is a FAIL (QA-215 break 3). */
+const held = (name: string, why: string, still: boolean, c: unknown, detail?: unknown) => { if (c || !still) return ok(name, c, detail); heldN++; console.log(`HELD  ${name} — ${why}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 260)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses are read loosely, as in tests/check_*.ts
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
   try {
@@ -94,6 +95,7 @@ const FIVE = /^(Retail|Corporate and employers) › [^›]+ › [^›]+ › [^�
   // it is red and is not counted as a failure (QA-215); green, it passes as before. Released hold: back to ok().
   held("C11.3 AT-5 the AI 'did you mean' is built behind the same live switch as every AI step (P-175): it says AI is switched off on this copy, not that the check itself is off",
     "P-284: the AI meaning check is held for the SA-01B product owner (P-251)",
+    /meaning check is off/i.test(r.body?.detail ?? ""),
     /switched off on this copy/.test(r.body?.detail ?? "") && (await call("GET", "/structure?pathwayType=INDIVIDUAL")).body?.meaningCheck?.on !== false, { detail: r.body?.detail, footer: (await call("GET", "/structure?pathwayType=INDIVIDUAL")).body?.meaningCheck });
 
   // ------------------------------------------------ rename on the same page
