@@ -98,7 +98,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const lmSum = (await api(`/combinations/${lm}/summary`)).body;
   await openOverview(lm);
   const lmRows = await rows();
-  step("C11.10 X1 C3: a Live combination's heading says Live; done steps are ✓ and link 'See on …' their tab", /^Live · setup steps for the next release/.test((await p.locator("#ov-steps").innerText()).trim()) /* UX-A part 3 words */ && lmRows.filter((r) => r.mark === "done").length === lmSum.setup.steps.filter((s) => s.state === "done").length && /See on Forms/.test(lmRows[2].open) && /See on Review and release/.test(lmRows[4].open), lmRows.map((r) => `${r.key}:${r.mark}:${r.open}`));
+  step("C11.10 X1 C3: a Live combination's heading says Live; done steps are ✓ and link 'See on …' their tab", /^Live · Release \d+ · (Next release: \d of 5 steps? to do|nothing open for the next release)/.test((await p.locator("#ov-steps").innerText()).trim()) /* UX-A part 3, QA-184 words */ && lmRows.filter((r) => r.mark === "done").length === lmSum.setup.steps.filter((s) => s.state === "done").length && /See on Forms/.test(lmRows[2].open) && /See on Review and release/.test(lmRows[4].open), lmRows.map((r) => `${r.key}:${r.mark}:${r.open}`));
   const see = await p.locator('[data-step-row="forms"] a', { hasText: "See on Forms" }).getAttribute("href");
   step("C11.10 X1 C3 fail: a done step offers no open item (nothing to fix is never shown as work)", await p.locator('[data-step-row="forms"] [data-open-item]').count() === 0 && see === `/c/${lm}/forms`, see);
   await p.screenshot({ path: path.join(SHOTS, "03-overview-live-1440.png"), fullPage: true });

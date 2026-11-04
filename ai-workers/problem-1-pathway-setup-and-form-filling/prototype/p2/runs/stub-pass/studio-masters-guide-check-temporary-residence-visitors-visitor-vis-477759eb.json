@@ -1,6 +1,6 @@
 {
  "job_id": "studio-masters-guide-check-temporary-residence-visitors-visitor-vis-477759eb",
- "path_code_sha256": "7e0c33811d2f2a9c5ee5cc441036dba185fb0bea33a39de0d161fe006b6a90ce",
+ "path_code_sha256": "859d1958c6dab704a638bd20ca557e20b95bd1d9dba5ada7a8494bc6d253d902",
  "screening_sources": [
   {
    "file": "prototype/expected/slice-1-field-map.json",
@@ -19,8 +19,8 @@
    "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
   }
  ],
- "digest_sha256": "a475926f8120998dc4308e9de7dce70de47bf8659039efdf8deab1db8eb8e571",
- "run_id": "studio-masters-guide-check-temporary-residence-visitors-visitor-vis-477759eb-stub-20261102t181644070z-a5535d",
- "at": "2026-11-02T18:16:44.294Z",
+ "digest_sha256": "861b156e6c1243ed163b04153294cf55c31e312f30a5336eed787ccb1e8162f0",
+ "run_id": "studio-masters-guide-check-temporary-residence-visitors-visitor-vis-477759eb-stub-20261103t150621854z-145b13",
+ "at": "2026-11-03T15:06:22.100Z",
  "stub_calls": 1
 }

@@ -45,8 +45,12 @@ type Lib = { id: string; key: string; label: string; status: string; will_releas
   ok("setup: a person accepts it on To review (a draft field and its addition waiting for a second person)", r.status < 300, r.status >= 300 ? words(r) : undefined);
   const r2 = await call("POST", "/review/proposals/decide", { ids: [plain.body?.proposalId], action: "accept" }, ACCEPTER);
   ok("setup: the plain item is accepted too", plain.status === 201 && r2.status < 300, [plain.status, r2.status]);
-  const r3 = await call("POST", "/review/proposals/decide", { ids: [found.body?.proposalId], action: "accept" }, ACCEPTER);
-  ok("setup: the item the rules found close is accepted too", found.status === 201 && r3.status < 300, [found.status, words(found), r3.status, words(r3)]);
+  // QA-192 (P-120, P-149 (2)): the one door found it close and no person said why it is not the same, so the decider must.
+  const r3no = await call("POST", "/review/proposals/decide", { ids: [found.body?.proposalId], action: "accept" }, ACCEPTER);
+  ok("QA-192 fail: a near item with no person's reason is not accepted without one: 400, naming the close field; it stays waiting", found.status === 201 && r3no.status === 400 && words(r3no).includes(existingName) && /say in one line why it is not the same/.test(words(r3no)) && sql(`select status from proposal_item where id = '${found.body?.proposalId}'`) === "waiting", [found.status, r3no.status, words(r3no)]);
+  const FOUND_REASON = "Surname at birth is kept apart from the family name used now.";
+  const r3 = await call("POST", "/review/proposals/decide", { ids: [found.body?.proposalId], action: "accept", reason: FOUND_REASON }, ACCEPTER);
+  ok("QA-192 pass: with the decider's one-line reason it is accepted, and the reason is kept as a person's", r3.status < 300 && sql(`select identity->>'nearReason' || '|' || coalesce(identity->>'nearReasonBy', '-') from proposal_item where id = '${found.body?.proposalId}'`) === `${FOUND_REASON}|person`, [r3.status, words(r3)]);
   const foundKey = sql(`select key from library_change where proposal_item_id = '${found.body?.proposalId}' limit 1`);
   const key = sql(`select key from library_change where proposal_item_id = '${pid}' limit 1`);
   const plainKey = sql(`select key from library_change where proposal_item_id = '${plain.body?.proposalId}' limit 1`);
@@ -69,11 +73,15 @@ type Lib = { id: string; key: string; label: string; status: string; will_releas
   ok("C11.13 P-120 pass: a reason a person wrote is marked as given, by a person", row?.near?.given === true && (row?.near as { by?: string })?.by === "person", row?.near);
   // Review m1: an AI-drafted item's near reason is the AI's words: marked as the AI's, never as a person's.
   const aiItem = sql(`select proposal_item_id from library_change where key = '${foundKey}' limit 1`);
-  sql(`update proposal_item set origin = 'ai', identity = jsonb_set(identity::jsonb, '{nearReason}', '"An AI sentence: these differ."')::json where id = '${aiItem}'`);
+  sql(`update proposal_item set origin = 'ai', identity = (jsonb_set(identity::jsonb, '{nearReason}', '"An AI sentence: these differ."') - 'nearReasonBy')::json where id = '${aiItem}'`);
   const aiRow = ((await call("GET", "/draft", undefined, APPROVER)).body?.library ?? []).find((x: Lib) => x.key === foundKey) as (Lib & { near: { given: boolean; by: string } | null }) | undefined;
   ok("C11.13 P-120 fail (review m1): an AI-drafted near reason is marked as the AI's words, not a person's", aiRow?.near?.given === true && aiRow.near.by === "ai", aiRow?.near);
-  const foundRow = (d?.library ?? []).find((x: Lib & { near: { given?: boolean } | null }) => x.key === foundKey) as (Lib & { near: { given: boolean } | null }) | undefined;
-  ok("C11.13 P-120 fail: a match the rules found with no reason from a person is shown, and marked not given (never as a reason)", !!foundRow?.near && foundRow.near.given === false && foundRow.near.items.length > 0, foundRow?.near);
+  const foundRow = (d?.library ?? []).find((x: Lib & { near: { given?: boolean; by?: string } | null }) => x.key === foundKey) as (Lib & { near: { given: boolean; by: string; reason: string } | null }) | undefined;
+  ok("QA-192 pass: the decider's reason for a match the rules found reaches the second person at release, as given by a person", foundRow?.near?.reason === FOUND_REASON && foundRow.near.given === true && foundRow.near.by === "person", foundRow?.near);
+  // An item accepted before QA-192 carries only the rule's own words: still shown, and marked not given (never as a reason).
+  sql(`update proposal_item set origin = 'rules', identity = (jsonb_set(identity::jsonb, '{nearReason}', '"one name holds the other"') - 'nearReasonBy')::json where id = '${aiItem}'`);
+  const ruleRow = ((await call("GET", "/draft", undefined, APPROVER)).body?.library ?? []).find((x: Lib) => x.key === foundKey) as (Lib & { near: { given: boolean } | null }) | undefined;
+  ok("C11.13 P-120 fail: a match the rules found with only the rule's words is shown, and marked not given (never as a reason)", !!ruleRow?.near && ruleRow.near.given === false && ruleRow.near.items.length > 0, ruleRow?.near);
   const bar = (await call("GET", "/draft?summary=1", undefined, APPROVER)).body;
   ok("C11.13 fail: the draft bar (summary) counts and lists only what will be released", bar.changes === before.changes && !(bar.library ?? []).some((x: Lib) => x.status === "WAITING"), { changes: bar.changes, library: (bar.library ?? []).length });
 

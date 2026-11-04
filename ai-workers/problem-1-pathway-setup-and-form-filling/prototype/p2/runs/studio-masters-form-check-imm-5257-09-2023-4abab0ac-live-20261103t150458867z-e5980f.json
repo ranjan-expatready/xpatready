@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-masters-form-check-imm-5257-09-2023-4abab0ac-live-20261103t150458867z-e5980f",
+  "idempotency_key": "e481b15cf82f307e7c290b7eea51b5d1c7fbd07836dbee09a25f092dd6e76793",
+  "contract_version": "drafting-run/v0",
+  "kind": "masters_form",
+  "output_sha256": "c0b09285d8572518e0abaeecb9952a2de4c5ead7c7eb425f3d03f39c808cf62d",
+  "inputs": {
+   "combination": "edition:IMM 5257:09-2023",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5257e.inventory.json",
+     "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b"
+    }
+   ],
+   "configuration_version": "c34-masters-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 3.62,
+   "max_output_tokens": 16000,
+   "prompt_version": "masters-form-check.v2.md",
+   "prompt_sha256": "f49c3143bbe80dea61ffb943f2c0cbfc8bdf6c9f8e93ef6bfb460d7a00d7e09d"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 102586,
+    "output_tokens": 3788,
+    "duration_ms": 41532
+   }
+  ],
+  "usage": {
+   "input_tokens": 102586,
+   "output_tokens": 3788,
+   "cost_usd": 0.486104,
+   "duration_ms": 41532
+  },
+  "started_at": "2026-11-03T15:04:58.869Z",
+  "ended_at": "2026-11-03T15:05:40.754Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "fdd7114b803affea24861816c8b7f94e1b89f39577ebc16b7e69add1487f6fd9",
+  "template_sha256": "a51fd73648030c3a4ce6b66a507efd87124a229e7e9f5849c5d4b8b115efc0ad",
+  "schema_file": "masters-form-output.v1.schema.json",
+  "schema_sha256": "c9b745e2964bf57ee0885c866fa6909ef30429be688ad5515f737eb557451495",
+  "known": {
+   "form_edition": "IMM 5257 (09-2023)"
+  },
+  "screened": true,
+  "output_sha256": "c0b09285d8572518e0abaeecb9952a2de4c5ead7c7eb425f3d03f39c808cf62d",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "f93abd61f1354e4d5d65f7cc353ac4d9aec7ed6dc04572c175c1615e215ede81",
+  "request_bytes": 230665,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 65.25167199999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5257e.inventory.json",
+    "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "48d83dc2aeb392dae77bc255756541fca5d77a403fce811c42a8caff5261f745",
+   "digest_made_at": "2026-11-03T15:04:58.868Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "6e0d04fb1940266b7596984aaf9a9f3b",
+   "ticket_expires_at": "2026-11-03T15:06:58.868Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"checks\":[{\"sentence\":\"When current immigration status is Other, details of the status are given.\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\",\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\", \\\"value\\\": \\\"Other\\\"}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]\\\"}]}\",\"quote\":\"Question 7 C If your immigration status is other, please give details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\": \\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]\\\": \\\"Citizen\\\"}\",\"expected\":true}]},{\"sentence\":\"When the applicant has lived in another country in the past 5 years, the previous country of residence is given.\",\"reads\":[\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\",\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\", \\\"value\\\": \\\"* Yes\\\"}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]\\\"}]}\",\"quote\":\"If you replied Yes to question 8 A, please give your previous country or territory of residence.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\": \\\"* Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]\\\": \\\"* No\\\"}\",\"expected\":true}]},{\"sentence\":\"When the purpose of visit is Other, the other purpose is given.\",\"reads\":[\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\",\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\\\", \\\"value\\\": \\\"Other\\\"}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]\\\"}]}\",\"quote\":\"b) Other\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\\\": \\\"Other\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]\\\": \\\"Tourism\\\"}\",\"expected\":true}]},{\"sentence\":\"When a criminal offence is declared, details are given.\",\"reads\":[\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\",\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].details[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\\\", \\\"value\\\": \\\"Yes\\\"}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].details[0]\\\"}]}\",\"quote\":\"b) If you answered “yes” to question 3a) above, please provide details.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\\\": \\\"Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]\\\": \\\"No\\\"}\",\"expected\":true}]},{\"sentence\":\"When military service is declared, dates and countries of service are given.\",\"reads\":[\"form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]\",\"form1[0].Page3[0].PageWrapper[0].Military[0].militaryServiceDetails[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]\\\", \\\"value\\\": \\\"Yes\\\"}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"form1[0].Page3[0].PageWrapper[0].Military[0].militaryServiceDetails[0]\\\"}]}\",\"quote\":\"b) If you answered yes to question 4a), please provide dates of service and countries or territories where you served.\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]\\\": \\\"Yes\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]\\\": \\\"No\\\"}\",\"expected\":true}]},{\"sentence\":\"When tuberculosis or a disorder is declared, medical details are given.\",\"reads\":[\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\",\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\",\"form1[0].Page3[0].BackgroundInfo[0].Details[0].MedicalDetails[0]\"],\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"or\\\", \\\"args\\\": [{\\\"op\\\": \\\"and\\\", \\\"args\\\": [{\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\\\", \\\"value\\\": \\\"Yes\\\"}, {\\\"op\\\": \\\"neq\\\", \\\"field\\\": \\\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\\\", \\\"value\\\": \\\"Yes\\\"}]}, {\\\"op\\\": \\\"exists\\\", \\\"field\\\": \\\"form1[0].Page3[0].BackgroundInfo[0].Details[0].MedicalDetails[0]\\\"}]}\",\"quote\":\"c) If you answered \\\"yes\\\" to question 1a) or 1b), please provide details and the name of the family member (if applicable).\",\"examples\":[{\"facts_json\":\"{\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\\\": \\\"Yes\\\", \\\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\\\": \\\"No\\\"}\",\"expected\":false},{\"facts_json\":\"{\\\"form1[0].Page3[0].BackgroundInfo[0].Choice[0]\\\": \\\"No\\\", \\\"form1[0].Page3[0].BackgroundInfo[0].Choice[1]\\\": \\\"No\\\"}\",\"expected\":true}]}],\"document_types\":[{\"name\":\"Passport\",\"proves\":\"identity and travel document details\",\"category\":\"travel\",\"supplies\":[\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]\",\"form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]\",\"form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]\",\"form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]\"],\"reader\":\"coded_lines\",\"identity_document\":true,\"quote\":\"* Passport number\"},{\"name\":\"National identity document\",\"proves\":\"national identity\",\"category\":\"identity\",\"supplies\":[\"form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]\",\"form1[0].Page2[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]\",\"form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]\",\"form1[0].Page2[0].natID[0].natIDdocs[0].ExpiryDate[0]\"],\"reader\":\"printed_layout\",\"identity_document\":true,\"quote\":\"Do you have a national identity document?\"},{\"name\":\"US alien registration card (green card)\",\"proves\":\"US lawful permanent residence\",\"category\":\"identity\",\"supplies\":[\"form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]\",\"form1[0].Page2[0].USCard[0].usCarddocs[0].ExpiryDate[0]\"],\"reader\":\"printed_layout\",\"identity_document\":true,\"quote\":\"Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?\"}],\"unresolved\":[{\"passage\":\"d) If you answered “yes” to question 2a), 2b), or 2C please provide details.\",\"reason\":\"Box captions for 2a-2c are duplicated/misaligned; mapping uncertain.\"},{\"passage\":\"Previous marriage details (Question 11 A)\",\"reason\":\"Requires several boxes; caption text naming them is ambiguous.\"}]}"
+}

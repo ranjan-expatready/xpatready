@@ -1,4 +1,4 @@
-// SH3 resolver contract tests (P-258; runtime lane): contracts/resolver.ts rules R1–R10, each with a passing and a failing
+// SH3 resolver contract tests (P-258; runtime lane): contracts/resolver.ts rules R1–R11, each with a passing and a failing
 // (or "nobody") case, against engine/resolver.ts. They pin today's behaviour: SH3 moved the rules into one place and
 // changed none. Also: the C3.16 scope shape (person and filing built, household and organisation held, P-251), the
 // four places call the resolver, and the engine part stays lift-ready (P-249: no database, vendor or framework import).
@@ -191,6 +191,22 @@ ok("SH3 render (review r3-m1): an answered case.* deciding fact is kept on the f
 
 // ---- The four places call the resolver; the engine part is lift-ready
 const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+// ---- R11 whom a document's facts are about (C6.5 part 1; was "Not yet" (b))
+ok("SH3 R11: holder → the holder; holder.spouse → the partner (either way round); holder.parent → both parents (relatives)", same(R.documentSubjects(fam, "A", "holder"), ["A"]) && same(R.documentSubjects(fam, "A", "holder.spouse"), ["B"]) && same(R.documentSubjects(fam, "B", "holder.spouse"), ["A"]) && same(R.documentSubjects(fam, "child-1", "holder.parent"), ["child-1/parent_1", "child-1/parent_2"]));
+ok("SH3 R11 (fail): no partner, a child's spouse, or the filing as holder → nobody for spouse and parents; the filing keeps its own facts", same(R.documentSubjects(single, "A", "holder.spouse"), []) && same(R.documentSubjects(fam, "child-1", "holder.spouse"), []) && same(R.documentSubjects(fam, FILING, "holder.spouse"), []) && same(R.documentSubjects(fam, FILING, "holder.parent"), []) && same(R.documentSubjects(fam, FILING, "holder"), [FILING]));
+ok("SH3 R11 per role: the holder's role, the partner's role, nobody for parents or a missing partner", R.documentRole(fam, "A", "holder") === "principal" && R.documentRole(fam, "A", "holder.spouse") === "spouse_or_partner" && R.documentRole(fam, "B", "holder.spouse") === "principal" && R.documentRole(fam, "A", "holder.parent") === null && R.documentRole(single, "A", "holder.spouse") === null && R.documentRole(fam, FILING, "holder") === FILING);
+ok("SH3 R11: a two-person document (a marriage certificate, Sample) on the principal's line supplies the principal's and the spouse's facts, each to its own person", (() => {
+  const S = { combination: { key: "t", participants: [] }, document_types: [{ key: "marriage_certificate", name: "Marriage certificate (Sample)", supplies_facts: ["relationship.start_date", "person.family_name_at_birth"], supplies_about: { "person.family_name_at_birth": "holder.spouse" } }],
+    document_requirements: [{ document_type_key: "marriage_certificate", document_type: "Marriage certificate (Sample)", who: "principal_applicant", base_or_conditional: "base" }] } as unknown as Snapshot;
+  const d = documentFacts(S, fam);
+  return same([...(d.get("A")?.keys() ?? [])], ["relationship.start_date"]) && same([...(d.get("B")?.keys() ?? [])], ["person.family_name_at_birth"]) && !d.get("A")?.has("person.family_name_at_birth");
+})());
+ok("SH3 R11 (fail): the same document with no spouse on the case supplies nobody's spouse fact (never the holder's)", (() => {
+  const S = { combination: { key: "t", participants: [] }, document_types: [{ key: "m", name: "M", supplies_facts: ["person.family_name_at_birth"], supplies_about: { "person.family_name_at_birth": "holder.spouse" } }], document_requirements: [{ document_type_key: "m", document_type: "M", who: "principal_applicant", base_or_conditional: "base" }] } as unknown as Snapshot;
+  return documentFacts(S, single).size === 0;
+})());
+ok("SH3 R11: sources.ts keeps no copy of the rule (documentSubjects and documentRole, no inline parent_1/parent_2 or partnerOf)", /documentSubjects\(/.test(src("engine/sources.ts")) && /documentRole\(/.test(src("engine/sources.ts")) && !/parent_1/.test(src("engine/sources.ts")) && !/partnerOf\(/.test(src("engine/sources.ts")));
+
 ok("SH3: render.ts re-exports the resolver's functions (no copy left)", render.aboutOf === R.aboutOf && render.subjectsFor === R.subjectsFor && render.peopleFor === R.peopleFor && render.formSigners === R.formSigners && render.conditionSubjects === R.conditionSubjects && render.lineHolders === R.lineHolders && !/function (aboutOf|subjectsFor|peopleFor|formSigners|factsOf)\b/.test(src("engine/render.ts")));
 // M1 (P-291 (6)): render.ts keeps no inline copy of R2's each_applicant and no "case" literal for the filing (FILING).
 const copyInRender = (t: string) => /\.applies && \w+\.role !== "representative"/.test(t) || /"case"/.test(t);
@@ -208,6 +224,6 @@ ok("SH3 d1/d2: eligibility.ts, case-checklist.ts and programs.ts read R5/R6b fro
 ok("SH3 tidy-up: preview.ts, validate.ts, pqr-picks.ts and coverage.ts key choices with sourceKey and keep no role|fact template", ["engine/runtime/preview.ts", "engine/validate.ts", "engine/pqr-picks.ts", "engine/coverage.ts"].every((f) => /sourceKey\(/.test(src(f)) && !/\$\{[^}]*role[^}]*\}\|\$\{/.test(src(f))));
 ok("SH3 tidy-up (r4-m3): eligibility reads \"is answered\" from the resolver (R6b present) and keeps no copy", R.present("") === false && R.present(null) === false && R.present(undefined) === false && R.present(0) && R.present(false) && R.present(" ") && /import \{ present, valueHolder \} from "\.\.\/resolver\.ts"/.test(src("engine/runtime/eligibility.ts")) && !/const present =/.test(src("engine/runtime/eligibility.ts")));
 ok("SH3 tidy-up: coverage.ts names a gap's person by the resolver's roleOf (the filing in words, \"the application\")", /resolvedRole\(people, about\)/.test(src("engine/coverage.ts")) && /about === FILING \? "the application"/.test(src("engine/coverage.ts")));
-ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact);
+ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact && R.resolver.documentSubjects === R.documentSubjects && R.resolver.documentRole === R.documentRole);
 
 summary();
