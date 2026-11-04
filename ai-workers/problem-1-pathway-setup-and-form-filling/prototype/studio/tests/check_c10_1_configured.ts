@@ -100,6 +100,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // QA-144 slice 1: the Visitor visa is released; the combinations not set up yet stay drafts with the validator's words.
   // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the Visitor visa is released (review m2).
   ok("C10.1 row 10: the Visitor visa is released (QA-144 slice 1)", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows), r("10").shows);
+  ok("C10.1 row 10: the Study permit (outside Canada) is released, release 1 approved by the Approver (QA-144 slice 3)", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'sp.outside' and r.approver_id = 'user-B'`) === 1 && /Study permit › Outside Canada/.test(r("10").shows), r("10").shows);
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // Slice 2 moves this example to Express Entry, a combination no slice sets up yet.
