@@ -1,0 +1,28 @@
+PASS  setup: Sample inputs; Super visa has AI proposals waiting, so something needs you — 1 need you
+PASS  C11.10 P-128 (4): no Pathway cards and no '+ Add pathway'; one filter bar with Pathway chips, Program, Status chips and Needs you
+PASS  C11.10 R3-6: the chips' counts and need-you counts are the catalogue's — all:21:1 retail.temporary_residence:12:1 retail.permanent_residence:8:0 retail.citizenship:1:0 vs all:21:1 retail.temporary_residence:12:1 retail.permanent_residence:8:0 retail.citizenship:1:0
+PASS  C11.10 R3-6: Needs you shows how many wait on a person — Needs you 1
+PASS  axe: filter-bar has no WCAG A/AA violation — 
+PASS  1024 px: filter-bar has no sideways scroll
+PASS  C11.10 R3-6 pass: Needs you leaves only the combinations waiting on a person; it shows as a chip — 1
+PASS  C11.10 R3-6 fail-guard: off again, every combination is back
+PASS  C11.10 R3-6: a Pathway chip and a Program leave that Program's cards; both show as chips with Clear all — 7 cards · Temporary residence Work permits Clear all
+PASS  C11.10 P-115: the filters live in the address and survive a reload
+PASS  axe: filtered has no WCAG A/AA violation — 
+PASS  1024 px: filtered has no sideways scroll
+PASS  C11.3 P-128 (5): Add combination opens the Add to Program structure pop-up here, prefilled with the Pathway and Program filters — / · Temporary residence · Work permits
+PASS  C11.3 AD-8: it starts at the first empty level (Category)
+PASS  C11.3 R3-7 fail-guard: a Program filter alone prefills its Pathway too, so Category is open — Temporary residence · Work permits
+PASS  axe: add-combination-pop-up has no WCAG A/AA violation — 
+PASS  1024 px: add-combination-pop-up has no sideways scroll
+PASS  C11.3 P-128 (5) / AD-7 / P-180: the new card shows in place, Not started ("0 of 5 steps"); no setup started
+PASS  C11.3 S1-finish: what was added is said on the page, never in a toast — Added Retail › Temporary residence › Work permits › Temporary resident permit (test): listed here as Not started; no setup started.
+PASS  axe: after-add has no WCAG A/AA violation — 
+PASS  1024 px: after-add has no sideways scroll
+PASS  C11.3 board P2 'After Add': a Status filter that would hide the new card is cleared, so it shows in place — http://localhost:4480/
+PASS  C11.10 R3-6: Clear all brings back every combination of the tab — 23
+PASS  BR-15: for the approver Add combination is off, with the reason; no pop-up can open
+PASS  BR-15 server: the approver's add is refused (403)
+PASS  no page errors — none
+
+26 passed, 0 failed

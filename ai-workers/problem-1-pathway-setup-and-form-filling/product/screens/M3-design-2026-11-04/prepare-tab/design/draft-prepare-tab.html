@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Board · Prepare application tab</title><style>
+:root{--blue:#0862C5;--ink:#1b2430;--muted:#5b6675;--line:#dde3ea;--bg:#f6f8fa;--card:#fff;--ok:#1e7a46;--warn:#9a5b00;--bad:#b42318;--chip:#eef3fb}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,sans-serif;margin:0}h1{font-size:20px}h2{font-size:16px}h3{font-size:14px}
+.board{max-width:1440px;margin:0 auto;padding:16px}.note{background:#fff8e6;border:1px solid #f0d58a;padding:8px 12px;border-radius:6px;margin:8px 0;font-size:12px}
+.frame{background:var(--card);border:1px solid var(--line);border-radius:8px;margin:20px 0;overflow:hidden}.frame>.ft{background:#20293a;color:#fff;padding:6px 12px;font-size:12px}
+.hdr{padding:12px 16px;border-bottom:1px solid var(--line)}.crumbs{color:var(--muted);font-size:12px}.tabs{display:flex;gap:16px;padding:0 16px;border-bottom:1px solid var(--line)}
+.tabs a{padding:10px 0;color:var(--muted);text-decoration:none}.tabs a.on{color:var(--blue);border-bottom:2px solid var(--blue);font-weight:600}
+.cards{display:flex;gap:12px;padding:12px 16px}.card{flex:1;border:1px solid var(--line);border-radius:8px;padding:10px 12px}.card.on{border-color:var(--blue);background:var(--chip)}
+.split{display:flex;min-height:420px}.left{width:340px;border-right:1px solid var(--line)}.right{flex:1;padding:12px 16px}
+.grp{padding:6px 12px;font-size:12px;color:var(--muted);background:#fafbfc;border-bottom:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:6px 12px;border-bottom:1px solid var(--line)}.row.sel{background:var(--chip)}
+.row small{display:block;color:var(--muted);font-size:12px}.pill{font-size:12px;border-radius:10px;padding:1px 8px;border:1px solid var(--line);white-space:nowrap}
+.p-done{color:var(--ok);border-color:#b7dfc6}.p-todo{color:var(--muted)}.p-prog{color:var(--blue);border-color:#b8cff0}.p-ood{color:var(--warn);border-color:#f0d58a}.p-cant{color:var(--bad);border-color:#f3c0bb}.p-sample{background:#fff3cd;border-color:#f0d58a;color:#6b4e00}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--muted);font-weight:600}
+.btn{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:5px 12px;background:#fff;font:inherit}.btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}.btn[disabled]{opacity:.5}
+.panel{border-left:1px solid var(--line);width:420px;padding:12px 16px;background:#fff}.field{margin:8px 0}.field label{display:block;font-size:12px;color:var(--muted)}.err{color:var(--bad);font-size:12px}
+select,input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px}.muted{color:var(--muted)}.chip{background:var(--chip);border-radius:10px;padding:1px 8px;font-size:12px}
+.states{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}.st{border:1px dashed var(--line);border-radius:6px;padding:8px;font-size:12px}
+@media (max-width:1100px){.split{flex-direction:column}.left{width:auto;border-right:0}.panel{width:auto}.states{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="board">
+<h1>Board · Prepare application tab</h1><div class="note">Board for the builder (P-42). Every name, value, channel and amount is <b>Sample</b> unless a citation is shown. Unconfirmed: no counsel. Concept: <code>../concept-draft.md</code>.</div>
+<div class="note">r2 after the fresh challenge: only the states and words <code>/prepare</code> returns (with changes a and b in <code>case-prepare.ts</code>); FAMILY case of <code>C7.7.test.ts</code>.</div>
+<div class="frame"><div class="ft">Frame 1 · Prepare application · card 2 "Prepare the filing" · 1440 px</div>
+<div class="hdr"><div class="crumbs">Cases › Client A family (Sample) › Prepare application</div><h2>Client A family <span class="chip">Visitor visa · 4 filings · 1 group</span> <span class="chip">Release 2 · pinned</span></h2><div class="muted">Filed through the APR Portal (set by the combination, read-only)</div></div>
+<div class="tabs"><a>Overview</a><a class="on">Prepare application</a><a>Review</a></div>
+<div class="cards"><div class="card"><b>1 Get the information</b><div class="muted">6 of 8 sections confirmed</div><a>Next: Travel documents · Child A2</a></div><div class="card on"><b>2 Prepare the filing</b><div class="muted">3 of 15 items ready or done</div><a>Next: send IMM 5257's validated copy back · Spouse A</a></div><div class="card"><b>Everything</b><div class="muted">15 items and 8 sections</div></div></div>
+<div class="split"><div class="left">
+<div class="grp">Everyone ▾ · Filing · Client A (principal)</div>
+<div class="row sel"><div>IMM 5257 · Client A<small>Validated copy read back for today's facts</small></div><span class="pill p-prog">In progress</span></div>
+<div class="row"><div>IMM 5707 · Client A <span class="pill p-sample">C7.3 Sample fixture</span><small>Online · waits for 16 facts about the parents (on the demo's online release the family form is IMM 5645, P-318 (6))</small></div><span class="pill p-todo">To do</span></div>
+<div class="row"><div>IMM 5476 · Client A<small>Signed scan received</small></div><span class="pill p-done">Ready</span></div>
+<div class="row"><div>Passport · Client A<small>Received (from the checklist)</small></div><span class="pill p-prog">In progress</span></div>
+<div class="row"><div>Biometrics · Client A<small>After the filing is sent</small></div><span class="pill p-cant">Cannot start yet</span></div>
+<div class="grp">Filing · Spouse A</div>
+<div class="row"><div>IMM 5257 · Spouse A<small>A fact on IMM 5257 changed after its read-back: read it back again</small></div><span class="pill p-ood">Out of date</span></div>
+<div class="grp">Filing · Child A1 (10) · Filing · Child A2 (15)</div>
+<div class="row"><div>IMM 5257 · Child A1<small>Waiting for 2 facts to answer or confirm</small></div><span class="pill p-todo">To do</span></div>
+<div class="grp">Fees · group 1 (4 filings) · Sample until the immigration expert confirms, where the basis says so</div>
+<table><tr><th>Fee</th><th>On whose filing · who pays</th><th>Amount</th></tr>
+<tr><td>Visitor visa fee</td><td>each person's filing · paid by Client A</td><td>CAD 100 each</td></tr>
+<tr><td colspan="3" class="muted">4 × CAD 100 = CAD 400, not above the family maximum CAD 500 (5 or more at the same time and place)</td></tr>
+<tr><td>Biometrics fee</td><td>Family maximum CAD 170, paid on Client A's filing</td><td>CAD 170</td></tr>
+<tr><td colspan="3" class="muted">3 people pay: 3 × CAD 85 = CAD 255, above the family maximum CAD 170 for 2 or more at the same time. Child A1: no biometrics, under 14 (IRCC page dated 2026-03-30).</td></tr>
+<tr><td colspan="2"><b>Group total</b> <small class="muted">IRCC fee list, page date 2026-09-21</small></td><td><b>CAD 570</b></td></tr></table>
+</div><div class="right">
+<h3>IMM 5257 · Client A</h3><div class="muted">PDF upload · release 2 line: PDF upload</div>
+<div class="field"><label>Filed as</label><select><option>PDF upload</option><option disabled>Online — Not accepted on the APR Portal: IRCC's line (Sample on the board)</option><option>Paper</option></select><div class="muted">Only the ways IRCC accepts this form on the APR Portal.</div></div>
+<h3>Copy</h3><p>Copy of 4 Nov 10:02 · <a>Download</a> · <button class="btn">Send the validated copy back</button> <span class="pill p-done">Validated copy read back</span> · <button class="btn">Lock</button></p>
+<p class="muted">Upload to IRCC comes after Ready to file (C7.6, C8.1).</p>
+</div></div></div>
+
+<div class="frame"><div class="ft">Frame 2 · Online row → answer sheet (right panel, 520 px) · C7.3</div><div class="split"><div class="left"><div class="row sel"><div>IMM 5707 · Client A<small>Online</small></div><span class="pill p-todo">To do</span></div><p class="muted" style="padding:0 12px"><a>PDF copy, not for filing</a>: your own copy. IRCC gets the online answers.</p></div>
+<div class="panel" style="width:520px"><h3>Answer sheet · IMM 5707 · Client A</h3><div class="muted">PDF twin order (live portal order later)</div>
+<h3>Applicant, spouse and parents</h3><table><tr><th>Person</th><th>Answer</th><th></th><th>Source</th></tr>
+<tr><td>Client A</td><td>Family name: SAMPLEDOE</td><td><button class="btn">Copy</button></td><td class="muted">Document</td></tr>
+<tr><td>Spouse A</td><td>Date of birth: 1991-04-05</td><td><button class="btn">Copy</button></td><td class="muted">Client</td></tr></table>
+<p class="muted">Waits for: Parent 1 date of birth, Parent 1 family name (+14)</p>
+<p><button class="btn">Mark entered</button></p>
+<h3>Children</h3><p>Entered by the case officer on 4 Nov 10:12. <span class="pill p-ood">Out of date</span> A fact in this section changed after entry: check the portal again (warns only).</p></div></div></div>
+
+<div class="frame"><div class="ft">Frame 3 · Channel refused · Paper reason</div><div class="right"><div class="field"><label>Filed as · IMM 5476</label><select><option>PDF upload</option><option disabled>Online — Not accepted on the APR Portal: IRCC's line</option><option disabled>Paper — Not accepted: IRCC's line</option></select><div class="muted">IRCC's line comes from the item's <code>accepts_quote</code> (Sample text on the board).</div></div>
+<div class="field"><label>Why on paper? (for example, an accommodation)</label><input value=""><div class="err">Give a reason to file this form on paper.</div></div></div></div>
+
+<div class="frame"><div class="ft">Frame 4 · States</div><div class="states">
+<div class="st"><b>Loading</b><br>Skeleton rows · sr-only "Loading the items".</div><div class="st"><b>Could not load</b><br>We could not load this case's items. <button class="btn">Retry</button></div><div class="st"><b>Not derived</b><br>The API's why, then the forms list (FormsPanel) as today.</div><div class="st"><b>409</b><br>The problem's own detail, then <button class="btn">Reload</button></div>
+<div class="st"><b>PDF copy running</b><br>Making the copy… (a job; the row updates)</div><div class="st"><b>Cannot start yet</b><br>The API's reason, for example "After the filing is sent".</div><div class="st"><b>Long names</b><br>Wrap at two lines; the full name on hover and in the detail.</div><div class="st"><b>Not built (labelled, not tested)</b><br>Read-only after filing (C8.2) · Adopt a newer release (ADOPT, P-246 (2)).</div></div></div>
+
+<div class="frame"><div class="ft">Frame 5 · 1024 px: the list stacks above the detail; fees under the list; the sheet panel full width</div></div>
+</div></body></html>

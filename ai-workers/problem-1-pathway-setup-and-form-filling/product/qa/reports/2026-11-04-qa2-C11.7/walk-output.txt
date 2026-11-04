@@ -1,0 +1,10 @@
+programs: 5 combinations · 5 in progress
+AI work mentions 5669: false · 0008 DEP: false · 'Draft with AI' waiting: false
+IMM 0008 on PN forms: true
+IMM 0008 DEP on PN forms: true
+IMM 5669 on PN forms: true
+IMM 5406 on PN forms: true
+IMM 5476 on PN forms: true
+priced buttons on PN forms: 0 · 'Draft with AI (about' text: false
+no IMM 5669 job link on the PN forms tab
+console errors: 0
