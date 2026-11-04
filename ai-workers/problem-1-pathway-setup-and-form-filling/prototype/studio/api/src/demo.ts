@@ -14,7 +14,9 @@ import { applySampleFormRoles, importConfiguration, sampleFamilyFacts } from "..
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
-import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
+import { Runtime } from "./runtime.ts";
+import { CaseForms } from "./fill-case.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -87,7 +89,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals, @Inject(Runtime) private readonly runtime: Runtime, @Inject(CaseForms) private readonly caseForms: CaseForms) {}
 
   /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
   private async familyForm(combinationId: string, key: string | undefined) {
@@ -543,38 +545,43 @@ export class Demo {
     // sectionsHeld (QA-206): sections the forms print no heading over, left waiting on To review for a person to name.
     const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [], sectionsHeld: string[] = [];
     let maritalList: string | null = null;
+    // The sections of some of a combination's forms, drafted from their own parts by the rules pass and accepted one at a
+    // time (C10.1 row 9 runs it again for the family information form release 2 files).
+    const sectionsFrom = async (c: { id: string }, forms: { id: string; fileName: string; edition: string | null }[]) => {
+      for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
+      const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition" }, select: { id: true } })).map((j) => j.id);
+      // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
+      const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true, work: true, reason: true } }))
+        .filter((p) => p.kind === "section" || (p.payload as { label?: string }).label === "Marital status");
+      // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
+      for (const p of take) {
+        // QA-206 (tech lead on #883; AGENTS rule 4: Sample, never guessed): a section the rules pass holds for a name is
+        // named only by print, through the same naming edit a person uses: with the heading that edition prints over it
+        // (another part prints it too). With no printed heading it stays waiting on To review and is listed as refused.
+        const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
+        if (held?.unnamed && !held.heading) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
+        try {
+          const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], held?.unnamed
+            ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
+            : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
+          if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
+        } catch (e) {
+          // The card's own words: a section the library already holds is rejected here and that section reused (the
+          // placement step reads its boxes into it).
+          const same = /already in the library as (\S+?)[ )]/.exec(said(e))?.[1];
+          if (!same) { sectionsRefused.push(`${(p.payload as { label?: string }).label ?? p.kind}: ${said(e)}`); continue; }
+          await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "reject", reason: `The library already holds this ${p.kind === "section" ? "section" : "list"} (${same}): reused, not added again.` });
+          if (p.kind === "section") sectionsReused.push(same);
+        }
+      }
+    };
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
         // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
         const notFiled = (await this.familyForm(c.id, keyOf.get(c.id)))?.other ?? null;
         const forms = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
           .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
-        for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
-        const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition" }, select: { id: true } })).map((j) => j.id);
-        // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
-        const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true, work: true, reason: true } }))
-          .filter((p) => p.kind === "section" || (p.payload as { label?: string }).label === "Marital status");
-        // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
-        for (const p of take) {
-          // QA-206 (tech lead on #883; AGENTS rule 4: Sample, never guessed): a section the rules pass holds for a name is
-          // named only by print, through the same naming edit a person uses: with the heading that edition prints over it
-          // (another part prints it too). With no printed heading it stays waiting on To review and is listed as refused.
-          const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
-          if (held?.unnamed && !held.heading) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
-          try {
-            const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], held?.unnamed
-              ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
-              : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
-            if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
-          } catch (e) {
-            // The card's own words: a section the library already holds is rejected here and that section reused (the
-            // placement step reads its boxes into it).
-            const same = /already in the library as (\S+?)[ )]/.exec(said(e))?.[1];
-            if (!same) { sectionsRefused.push(`${(p.payload as { label?: string }).label ?? p.kind}: ${said(e)}`); continue; }
-            await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "reject", reason: `The library already holds this ${p.kind === "section" ? "section" : "list"} (${same}): reused, not added again.` });
-            if (p.kind === "section") sectionsReused.push(same);
-          }
-        }
+        await sectionsFrom(c, forms);
       }
     });
 
@@ -683,10 +690,88 @@ export class Demo {
     row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", status: !released.length ? "waiting" : blocked.length ? "partial" : "done", shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
       why: blocked.length ? blocked.join(" · ") : null });
     const visitor = released.some((l) => /Visitor visa/.test(l));
-    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
-      why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
-    row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
-    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
+    // C10.1 rows 11–12 (Lead 9, 5 Nov; DEMO.md "The story"): the family case of the story opened on Visitor visa's release 1
+    // by the case officer through the case services (C6.x), answered from the one Sample record (expected/p5-case-c1.json,
+    // made-up), then IMM 5257 generated for each applicant (C7.1). Before release 2, so the case is pinned to release 1.
+    // Validate is a person's step in Adobe Reader (P-46, P-171): never simulated here, so the read-back waits for a person.
+    let caseWhy: string | null = visitor ? null : "Waits for the Visitor visa's release 1 (a case runs on a release).";
+    let onCase = 0, answered = 0, generated = 0, applicants = 0;
+    if (visitor && vvId) await timed("the family case on release 1 (C6.x, C7.1)", async () => {
+      try {
+        const officer = RUNTIME_ACTORS.find((a) => a.id === "user-O")!;
+        const fam = sampleFamilyFacts();
+        const facts = (pid: string) => Object.fromEntries(fam.facts.filter((f) => f.personId === pid && f.row === null).map((f) => [f.key, f.value]));
+        const A = facts("principal");
+        const made = await this.runtime.createCase(officer, { combinationId: vvId, reference: "C10.1-family", clientActor: "user-P", principal: { displayName: `${A["person.given_names"] ?? "Client"} ${A["person.family_name"] ?? "A"} (Sample)` }, idempotencyKey: "c101-family-case" });
+        const caseId = made.id as string;
+        const subjectOf = (role: string) => (made.people as { role: string; subject_id: string }[]).find((x) => x.role === role)!.subject_id;
+        const add = async (role: string, displayName: string, key: string) => ((await this.runtime.addPerson(officer, caseId, { role, displayName, idempotencyKey: key })) as { subject_id: string }).subject_id;
+        const P = subjectOf("principal"), K = subjectOf("case");
+        const SP = await add("spouse_or_partner", "Partner (Sample)", "c101-spouse");
+        const C1 = await add("child", "Child under 18 (Sample)", "c101-child-1");
+        const C2 = await add("child", "Child 18 or over (Sample)", "c101-child-2");
+        const put = async (subject: string, field: string, value: unknown) => { try { await this.runtime.putAnswer(officer, caseId, subject, field, { value, expectedId: null }); answered++; } catch { /* a fact this release does not ask, or a value its list does not hold */ } };
+        for (const [pid, subject] of [["case", K], ["principal", P], ["spouse_or_partner", SP], ["child-1", C1]] as const) for (const [k, v] of Object.entries(facts(pid))) await put(subject, k, v);
+        // DEMO.md's family has a second child, 18 or over, who answers for themselves; the Sample record has one child, so
+        // the second child's few facts are Sample, made up here (a name and a date of birth that make them 19 in 2026).
+        for (const [k, v] of [["person.family_name", A["person.family_name"] ?? "SAMPLE"], ["person.given_names", "SECOND CHILD (SAMPLE)"], ["person.date_of_birth", "2007-03-14"]] as const) await put(C2, k, v);
+        const subjects = [P, SP, C1, C2];
+        applicants = subjects.length; onCase = (made.people as unknown[]).length + 3;
+        const copies: string[] = [];
+        for (const subject of subjects) {
+          try { const g = (await this.caseForms.generate(officer, caseId, "IMM 5257", subject, { idempotencyKey: `c101-imm5257-${subject}` })) as { id?: string; copy?: { id: string } }; const id = g.copy?.id ?? g.id; if (id) copies.push(id); }
+          catch (e) { caseWhy = `IMM 5257 was not generated for every applicant: ${said(e)}`; }
+        }
+        const t = Date.now();
+        while (Date.now() - t < 180_000 && (await this.db.formInstance.count({ where: { id: { in: copies }, status: { in: ["QUEUED", "RUNNING"] } } }))) await new Promise((r) => setTimeout(r, 1000));
+        generated = await this.db.formInstance.count({ where: { id: { in: copies }, status: "GENERATED" } });
+      } catch (e) { caseWhy = `The family case could not be opened: ${said(e)}`; }
+    });
+
+    // C10.1 row 9 (Lead 9, 5 Nov; P-143): release 2 of Visitor visa with mixed channels, set on its Forms tab's own routes:
+    // IMM 5257 filed Online, so the family information form is IMM 5645 (FAMILY_FORM_BY_CHANNEL); IMM 5476 a PDF upload
+    // signed by hand and scanned. Then the same review as release 1: submit, the SME's sign-off, a different person approves.
+    let r2Why: string | null = visitor ? null : "Waits for the Visitor visa's release 1: its channels change for release 2.";
+    if (visitor && vvId) await timed("release 2 (mixed channels)", async () => {
+      try {
+        await this.forms.setChannel(author, vvId, "IMM 5257", { channel: "ONLINE" });
+        const fam = (await this.familyForm(vvId, "vv.single"))!;
+        const has = new Set((await this.db.combinationForm.findMany({ where: { combinationId: vvId, status: { not: "RETIRED" } }, select: { lineageKey: true } })).map((x) => x.lineageKey));
+        if (!has.has(fam.form)) await this.formLibrary.attach(author, vvId, { formKey: fam.form });
+        await this.studio.saveForm(author, vvId, fam.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
+        if (has.has(fam.other)) await this.studio.saveForm(author, vvId, fam.other, { retire: true });
+        // The family form now filed: its form fields no saved answer proposed are filled by hand, as on release 1.
+        for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: fam.form }, channel: "PDF" }, select: { id: true } })) {
+          for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved"))
+            await this.library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON });
+          await this.forms.draftOptionMaps(author, ed.id);
+        }
+        // Its sections drafted from its own parts (as on release 1, where the channel took it off), its facts asked in the
+        // section of their form field (the Smart questionnaire tab's step), and
+        // any new library item it adds approved by the second person.
+        await sectionsFrom({ id: vvId }, (await this.db.sourceAttachment.findMany({ where: { combinationId: vvId, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } })).filter((a) => (a.edition ?? "").startsWith(`${fam.form} (`)));
+        for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true } }))
+          await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
+        await placeFromFormParts(this.db, this.studio, author, vvId);
+        for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true } }))
+          await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
+        await this.forms.setChannel(author, vvId, "IMM 5476", { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" });
+        await seedSampleSources(this.db, vvId);
+        const sub = await this.studio.submit(author, vvId, "Release 2 with mixed channels, submitted by the sample loader (C10.1 checkpoint, row 9).");
+        const items = (sub.changeSummary as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`);
+        if (items.length) await this.studio.signoff(sme, vvId, { items, action: "signed", note: "Signed by the sample loader as the SME (C10.1 checkpoint, release 2)." });
+        await this.studio.approve(approver, vvId);
+      } catch (e) { r2Why = `Release 2 was not made: ${said(e)}`; }
+    });
+    const vvReleases = vvId ? await this.db.configRelease.count({ where: { combinationId: vvId } }) : 0;
+    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: !r2Why && vvReleases >= 2 ? "done" : "waiting",
+      shows: !r2Why && vvReleases >= 2 ? "Visitor visa release 2: IMM 5257 Online, IMM 5645 as the family information form, IMM 5476 a PDF upload signed by hand and scanned (Forms tab, reviewed and approved)" : "The channel route and the signed-scan lines are built (Forms tab)", why: r2Why });
+    row({ row: "11", title: "A family case on release 1", status: !caseWhy && onCase >= 5 && answered > 0 ? "done" : "waiting",
+      shows: onCase ? `Case C10.1-family on Visitor visa release 1: principal applicant, travelling spouse, a child under 18 and a child 18 or over (Sample names); ${answered} answers from the Sample record` : "The case area is built (Demo › Open the case area)", why: caseWhy });
+    // Row 12: a copy generated for each applicant; the read-back needs a person's Validate in Adobe Reader (P-46, P-171).
+    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: applicants && generated === applicants ? "partial" : "waiting",
+      shows: generated ? `IMM 5257 generated for ${generated} of ${applicants} applicants on release 1 (C7.1)` : "The fill is built (C7.1)",
+      why: applicants && generated === applicants ? "Validate each copy in Adobe Reader and upload the validated copy on the case's Forms tab: the checkpoint cannot press Validate (P-46, P-171), so the read-back waits for a person." : caseWhy ?? "IMM 5257 was not generated for every applicant." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
     // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The
     // Visitor visa's form finder may already have held it (its replay attaches the page's forms): then this send answers
