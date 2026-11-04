@@ -1,0 +1,93 @@
+{
+ "file": "official-sources/ircc/forms/imm5257e.pdf",
+ "sha256": "0dc03b24e7914a178ad29e2cfae811045835a1d36d7a3c35f040251d0aca562e",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.Header": {
+   "heading": "Application for visitor visa (temporary Resident visa)",
+   "printed": "APPLICATION FOR VISITOR VISA (TEMPORARY RESIDENT VISA)",
+   "how": "banner"
+  },
+  "Page1.PersonalDetails": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner"
+  },
+  "Page2.MaritalStatus": {
+   "heading": "Personal details",
+   "printed": "PERSONAL DETAILS",
+   "how": "banner",
+   "continues": true
+  },
+  "Page2.natID": {
+   "heading": "National identity document",
+   "printed": "NATIONAL IDENTITY DOCUMENT",
+   "how": "banner"
+  },
+  "Page2.USCard": {
+   "heading": "US PR card",
+   "printed": "US PR CARD",
+   "how": "banner"
+  },
+  "Page2.ContactInformation": {
+   "heading": "Contact information",
+   "printed": "CONTACT INFORMATION",
+   "how": "banner"
+  },
+  "Page3.SectionHeader_DetailsOfVisit": {
+   "heading": "Details of visit to Canada",
+   "printed": "DETAILS OF VISIT TO CANADA",
+   "how": "banner"
+  },
+  "Page3.DetailsOfVisit": {
+   "heading": "Details of visit to Canada",
+   "printed": "DETAILS OF VISIT TO CANADA",
+   "how": "carried",
+   "from": "Page3.SectionHeader_DetailsOfVisit"
+  },
+  "Page3.Contacts_Row2": {
+   "heading": "Details of visit to Canada",
+   "printed": "DETAILS OF VISIT TO CANADA",
+   "how": "carried",
+   "from": "Page3.SectionHeader_DetailsOfVisit"
+  },
+  "Page3.Education": {
+   "heading": "Education",
+   "printed": "EDUCATION",
+   "how": "banner"
+  },
+  "Page3.Occupation": {
+   "heading": "Employment",
+   "printed": "EMPLOYMENT",
+   "how": "banner"
+  },
+  "Page3.BackgroundInfo_SectionHeader": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "banner"
+  },
+  "Page3.BackgroundInfo": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "carried",
+   "from": "Page3.BackgroundInfo_SectionHeader"
+  },
+  "Page3.BackgroundInfo2": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "carried",
+   "from": "Page3.BackgroundInfo_SectionHeader"
+  },
+  "Page3.PageWrapper": {
+   "heading": "Background information",
+   "printed": "BACKGROUND INFORMATION",
+   "how": "carried",
+   "from": "Page3.BackgroundInfo_SectionHeader"
+  },
+  "Page3.Disclosure": {
+   "heading": "Privacy notice",
+   "printed": "PRIVACY NOTICE",
+   "how": "banner"
+  }
+ }
+}
