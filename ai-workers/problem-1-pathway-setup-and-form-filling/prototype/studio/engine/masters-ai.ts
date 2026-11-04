@@ -173,7 +173,7 @@ export function withPrintedChoices(n: unknown, choicesOf: (field: string) => [st
   const values = Array.isArray(o.value) ? o.value : [o.value];
   const printed = values.map((v) => choiceOf(choices, v));
   const bad = values.find((_, i) => printed[i] === null);
-  if (bad !== undefined || !values.length) return { why: `its condition compares ${o.field} with ${JSON.stringify(bad)}, which is not one of that box's printed choices (${choices.map(([w]) => `"${w}"`).slice(0, 6).join(", ")})` };
+  if (bad !== undefined || !values.length) return { why: `its condition compares ${o.field} with ${JSON.stringify(bad)}, which is not one of that form field's printed choices (${choices.map(([w]) => `"${w}"`).slice(0, 6).join(", ")})` };
   return { node: { ...o, value: Array.isArray(o.value) ? printed : printed[0] } };
 }
 
@@ -191,7 +191,7 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
     for (const c of r.output.checks) {
       const reads = [...new Set(c.reads)];
       const drop = (why: string) => dropped.push({ item: c.sentence.slice(0, 120), why: `${why} (${which})` });
-      if (!reads.length || reads.length > 20 || reads.some((p) => !boxes.has(p) || p.length > 120)) { drop(`It reads a box that is not a visible box of ${f.printed}, so it is not proposed`); continue; }
+      if (!reads.length || reads.length > 20 || reads.some((p) => !boxes.has(p) || p.length > 120)) { drop(`It reads a form field that is not a visible form field of ${f.printed}, so it is not proposed`); continue; }
       if (!quoteFound(c.quote)) { drop(`Its words are not printed on ${f.printed}, so it is not proposed`); continue; }
       const sentence = c.sentence.trim();
       if (sentence.length < 3 || sentence.length > 300) { drop("It has no sentence of 3 to 300 characters"); continue; }
@@ -207,7 +207,7 @@ export function formMastersFromRounds(rounds: { draft: MRound<FormAnswer>; check
       if ("why" in ex) { drop(`Not proposed: ${ex.why}`); continue; }
       const sorted = [...reads].sort();
       const key = keyOf(`${f.edition}|${sorted.join(",")}`);
-      if (out.has(key)) { drop("Another check of this reading reads the same boxes; the first is kept"); continue; }
+      if (out.has(key)) { drop("Another check of this reading reads the same form fields; the first is kept"); continue; }
       out.set(key, { key, same: canonical(t.root as never), quote: c.quote, reading: `${sentence} (${ROLE_WORDS[c.subject_kind] ?? c.subject_kind.toLowerCase()})`, problem: ex.wrong,
         payload: { kind: "form_check", sentence, tree: t.root, reads: sorted, examples: ex.examples },
         rules: [{ rule: "quote_printed_on_form", passed: true, why: null }, { rule: "condition_in_11_operators", passed: true, why: null }, { rule: "examples_hold", passed: !ex.wrong, why: ex.wrong?.slice(0, 300) ?? null }], work: { boxes: sorted } });

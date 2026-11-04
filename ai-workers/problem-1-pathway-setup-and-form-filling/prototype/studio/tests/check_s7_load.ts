@@ -75,11 +75,11 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   const waiting = n(`select count(*) from proposal_item where workspace_id='${ws}' and status='waiting' and origin='ai'`);
   ok("C11.7 (P-149): saved AI field-map answers are replayed through the one door as waiting proposals, origin ai", l.body.drafts.replayed >= 3 && waiting > 0 && waiting === l.body.drafts.proposals_waiting, l.body.drafts);
   ok("C11.7: replayed drafts are recorded as saved answers (mode replay, US$0)", n(`select count(*) from drafting_job where workspace_id='${ws}' and kind='field_map' and mode='REPLAY' and status='COMPLETED'`) === l.body.drafts.replayed, l.body.drafts.status);
-  // R-146, QA-163 and the C11.8 live run (#746): fifteen forms have a whole-form saved answer and IMM 5645 its four saved
-  // parts, which Saved now uses (check_forms_saved_parts.ts), so it no longer waits. IMM 5669 and IMM 0008 DEP wait since the
-  // C11.7 intake reads their editions (no saved run yet). A saved run lost or no longer matching its job adds its form to the
-  // list and fails this; the missing-part case is in check_forms_saved_parts.ts.
-  ok("P-138: a form without a saved AI answer waits for Draft with AI, listed by name (IMM 5669 and IMM 0008 DEP); IMM 5645 replays from its four saved parts", JSON.stringify(l.body.drafts.waiting_for_draft_with_ai) === JSON.stringify(["IMM 5669 (05-2021)", "IMM 0008 DEP (10-2024)"]) && l.body.drafts.replayed === 16, l.body.drafts);
+  // R-146, QA-163, the C11.8 live run (#746) and the C11.7 result (3 Nov): seventeen forms have a whole-form saved answer
+  // (IMM 5669 and IMM 0008 DEP since the C11.7 paid runs) and IMM 5645 its four saved parts, which Saved uses
+  // (check_forms_saved_parts.ts), so no form waits. A saved run lost or no longer matching its job puts its form on the
+  // list and lowers the count, so this fails; the missing-part case is in check_forms_saved_parts.ts.
+  ok("P-138: every form of the six has a saved AI answer, so none waits for Draft with AI (IMM 5645 replays from its four saved parts)", JSON.stringify(l.body.drafts.waiting_for_draft_with_ai) === "[]" && l.body.drafts.replayed === 18, l.body.drafts);
   // The form finder, replayed per combination from its recorded canada.ca page.
   const vv = l.body.finder.find((f: any) => /Visitor visa/.test(f.combination));
   ok("C11.7: the form finder is replayed on the Visitor visa (saved AI answers, US$0) and picks its forms", ["COMPLETED", "PARTIAL"].includes(vv?.status) && n(`select count(*) from ai_batch where workspace_id='${ws}' and operation='find_forms' and mode='REPLAY'`) === 5, l.body.finder);

@@ -50,7 +50,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
 
     await open(id);
     const offer = await p.locator("[data-offer]").innerText();
-    step("C9.1 P-138: the review offers Draft with AI for the 23 new and reworded boxes with its cost in words; nothing runs on opening", /23 new and reworded boxes/.test(offer) && /about US\$\d+\.\d\d · at most US\$\d+\.\d\d/.test(offer) && sql(`select count(*) from drafting_job where kind = 'field_map_impact'`) === "0", offer);
+    step("C9.1 P-138: the review offers Draft with AI for the 23 new and reworded boxes with its cost in words; nothing runs on opening", /23 new and reworded form fields/.test(offer) && /about US\$\d+\.\d\d · at most US\$\d+\.\d\d/.test(offer) && sql(`select count(*) from drafting_job where kind = 'field_map_impact'`) === "0", offer);
     const btn = p.locator("[data-priced]");
     step("C9.1 P-175: while live AI is off the priced button is greyed, its cost on it and the reason next to it (never clicked)", await btn.isDisabled() && /at most US\$/.test(await btn.innerText()) && /live AI is off/.test(await p.locator("#impact-ai-why").innerText()));
     const until = await p.locator("[data-accepted-until]").innerText();

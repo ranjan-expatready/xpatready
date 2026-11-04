@@ -10,6 +10,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
+import { PRINTED_EDITION } from "../../engine/rounds.ts";
 import { claimedTwice, compareMaps, formWords, mapRules, quoteOnForm, type MapField } from "../../engine/field-map-rounds.ts";
 import { checkerRound } from "./field-map-check.ts";
 import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
@@ -79,7 +80,7 @@ export const overrideOf = (plan: unknown): LaunchOverride | undefined => { const
 export const launchArgs = (launcher: string, jobId: string, mode: "stub" | "live", approved: string[], ov?: LaunchOverride) =>
   [launcher, "--job", jobId, `--${mode}`, ...approved, ...(mode === "live" && ov ? ["--override-id", ov.id, "--run-key", ov.run_key] : [])];
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
-const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
+const EDITION = PRINTED_EDITION; // IMM or IRM (engine/rounds.ts)
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
  *  copy's own workspace folder, so a demo reset removes it with the database row and test copies never share one. */
 export const APPROVED_DIR = () => join(VAR("demo"), "approved-sources");

@@ -1,0 +1,1201 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-imm0008depe-live-20261103t175714156z-fae6bf",
+  "idempotency_key": "25f2cf8d4db1033eb102b3b404a9a1028f62cce7c78c473fcba77159a591a785",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "a44ad500fe16a283f51c47db78dbefb357b7471c7be95b6a46f4810e96222530",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm0008depe.inventory.json",
+     "sha256": "32e7c73116b50c37133242155ad32c85937b0544833719ed634762dbf1f7317c"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 64000,
+   "prompt_version": "field-map.v2.md",
+   "prompt_sha256": "7c0e9a9c7fc11fc5853282645e6dd15f846f6201b984ec719ba0bca261715872"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 55810,
+    "output_tokens": 21098,
+    "duration_ms": 157891
+   }
+  ],
+  "usage": {
+   "input_tokens": 55810,
+   "output_tokens": 21098,
+   "cost_usd": 0.6452,
+   "duration_ms": 157891
+  },
+  "started_at": "2026-11-03T17:57:14.158Z",
+  "ended_at": "2026-11-03T17:59:52.487Z",
+  "entries": [
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].FormHeader[0].TextField[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden header helper field with no caption; form mechanics, not a fact.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "PROTECTED WHEN COMPLETED - B"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].Header[0].titleSF[0].CRCNum[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible internal/office field (CRC #); not filled by the applicant or the firm.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "CRC #"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].Header[0].titleSF[0].ReaderInfo[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible reader/viewer information helper; form mechanics.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Reader Info"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].q1[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Family name(s) (exactly as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].q1[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_name",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Given name(s) (exactly as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.other_family_name",
+    "transform": "derive_yes_no_code:Y/N (Y if any other family or given name is recorded for the subject, else N)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Have you ever used any other name (e.g. Nickname, maiden name, alias, etc.) ?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasName[0].AliasFamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.other_family_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when the other-name indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Family name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasName[0].AliasGivenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.other_given_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when the other-name indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Given name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].UCI[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.uci",
+    "transform": "as_is (max 10 chars)",
+    "condition": "Only if the subject already has a UCI.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "UCI"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].Sex[0].Sex[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.sex",
+    "transform": "code_list:imm0008dep.sex (F Female=Female, M Male=Male, U Unknown=Unknown, X Another gender=Unspecified)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Sex"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].heightCM[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.height_cm",
+    "transform": "as_is",
+    "condition": "Fill either centimetres or feet/inches, not both.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "cm"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].heightFT[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.height_cm",
+    "transform": "cm_to_ft_in:feet (whole feet)",
+    "condition": "Only if imperial units are used instead of the cm box.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "ft."
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].heightIN[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.height_cm",
+    "transform": "cm_to_ft_in:inches (remaining inches)",
+    "condition": "Only if imperial units are used instead of the cm box.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "in."
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].eyeColor[0].eyeColor[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.eye_colour",
+    "transform": "code_list:imm0008dep.eye_colour (Black=01, Blue=02, Brown=03, Green=04, Hazel=05, Grey=06, Pink=07, Sea Green=08, Other=09)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Eye colour"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBYYYY[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY (year part only); inventory lists a country option list on this text box, likely an extraction artefact - reviewer to confirm",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Date of Birth"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBMM[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:MM (month part only); inventory lists a country option list on this text box, likely an extraction artefact - reviewer to confirm",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Date of Birth"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBDD[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:DD (day part only); inventory lists a country option list on this text box, likely an extraction artefact - reviewer to confirm",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Date of Birth"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].PlaceBirthCity[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.birth_city",
+    "transform": "as_is (max 30 chars)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Place of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].PlaceBirthCountry[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.birth_country",
+    "transform": "code_list:imm0008dep.country_birth (codes as listed in inventory, e.g. Canada=511)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Place of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q9[0].citizenship1[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.citizenship",
+    "transform": "list_item[0] then code_list:imm0008dep.citizenship (codes as listed in inventory, e.g. Stateless=979)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Citizenship(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q9[0].citizenship2[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.citizenship",
+    "transform": "list_item[1] then code_list:imm0008dep.citizenship (codes as listed in inventory)",
+    "condition": "Only if the subject holds a second citizenship.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Citizenship(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q10[0].relationToapplicant[0].relationshipToapplicant[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.relationship_to_principal_applicant",
+    "transform": "code_list:imm0008dep.relationship (Common-Law Partner=01, Child=02, Step-Child=03, Grandchild=04, Spouse=10, Other=85, Adopted Child=87, Step-Grandchild=100)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "a) Relationship to principal applicant"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q10[0].Other[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.relationship_to_principal_applicant_other",
+    "transform": "as_is (max 30 chars)",
+    "condition": "Only when relationship is Other (85).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "b) Other"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q12[0].accompanyPAIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "case.accompanies_principal_applicant",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "a) Will accompany principal applicant to Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q12[0].reason[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "case.non_accompanying_reason",
+    "transform": "as_is (max 50 chars)",
+    "condition": "Only when accompany indicator is N.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "b) Reason why dependant is non-accompanying"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q11[0].TypeOfDepChildren[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "The inventory gives only 'Type A/B/C Dependant' (codes 01/02/03) with no definition; the category is a legal determination the case record does not hold as such. Reviewer must define the fact or derivation.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Dependant Type"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Country[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.current_residence_country",
+    "transform": "code_list:imm0008dep.country_residence (codes as listed in inventory)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Current country of residence:"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Status[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.current_residence_status",
+    "transform": "code_list:imm0008dep.residence_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Current country of residence:"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.current_residence_status_other",
+    "transform": "as_is (max 30 chars)",
+    "condition": "Only when current status is Other (06).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Current country of residence:"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].FromDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.current_residence_from_date",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Current country of residence:"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].ToDate[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "form_subject",
+    "fact": "person.current_residence_to_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only if the current residence period has a known end date (e.g. status expiry); otherwise left blank.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Current country of residence:"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q12[0].lastEntryDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.last_entry_canada_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only if the subject has entered Canada.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Date and place of your last entry to Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q12[0].PlaceOfEntry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.last_entry_canada_place",
+    "transform": "as_is (max 30 chars)",
+    "condition": "Only if the subject has entered Canada.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Date and place of your last entry to Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PCRIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.previous_residence_country",
+    "transform": "derive_yes_no_code:Y/N (Y if any previous residence in the past five years in a country other than citizenship/current residence is recorded, else N)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Country[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_country",
+    "transform": "list_item[0] then code_list:imm0008dep.country_residence (codes as listed in inventory)",
+    "row": 0,
+    "condition": "Only when previous residence indicator is Y. Fixed table: this is the first of two data rows (Row2); no further rows can be added.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Status[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_status",
+    "transform": "list_item[0] then code_list:imm0008dep.residence_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)",
+    "row": 0,
+    "condition": "Only when previous residence indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.previous_residence_status_other",
+    "transform": "list_item[0], as_is (max 30 chars)",
+    "row": 0,
+    "condition": "Only when this row's status is Other (06).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].FromDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_from_date",
+    "transform": "list_item[0], date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only when previous residence indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].ToDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_to_date",
+    "transform": "list_item[0], date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Only when previous residence indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Country[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_country",
+    "transform": "list_item[1] then code_list:imm0008dep.country_residence (codes as listed in inventory)",
+    "row": 1,
+    "condition": "Only when a second previous residence exists. Fixed table second data row (Row3); more than two previous residences cannot be listed here.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Status[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.previous_residence_status",
+    "transform": "list_item[1] then code_list:imm0008dep.residence_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)",
+    "row": 1,
+    "condition": "Only when a second previous residence exists. Inventory shows this box carries a preset Student/05 value; reviewer should confirm it is cleared when the row is unused.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.previous_residence_status_other",
+    "transform": "list_item[1], as_is (max 30 chars)",
+    "row": 1,
+    "condition": "Only when this row's status is Other (06).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].FromDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_from_date",
+    "transform": "list_item[1], date:YYYY-MM-DD",
+    "row": 1,
+    "condition": "Only when a second previous residence exists.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].ToDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_residence_to_date",
+    "transform": "list_item[1], date:YYYY-MM-DD",
+    "row": 1,
+    "condition": "Only when a second previous residence exists.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Previous countries of residence: During the past five years have you lived in any country other than your country of cit"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm0008dep.marital_status (Married=01, Single=02, Common-Law=03, Divorced=04, Legally Separated=05, Widowed=06, Annulled Marriage=09)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "a) Your current marital status"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].DateOfMarriage[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.current_union_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when marital status is Married (01) or Common-Law (03).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when marital status is Married (01) or Common-Law (03).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.given_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when marital status is Married (01) or Common-Law (03).",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].PrevMarriedIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "relationship.previous_union_type",
+    "transform": "derive_yes_no_code:Y/N (Y if any previous marriage or common-law relationship is recorded for the subject, else N)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Have you previously been married or in a common-law relationship?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].PMFamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "relationship.previous_union_partner_family_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when previously-married indicator is Y. Former partner's name is held as part of the subject's relationship history (no separate former-partner role exists); only one previous relationship fits.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Have you previously been married or in a common-law relationship?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].GivenName[0].PMGivenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "relationship.previous_union_partner_given_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when previously-married indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Have you previously been married or in a common-law relationship?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].TypeOfRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.previous_union_type",
+    "transform": "code_list:imm0008dep.previous_relationship_type (Married=01, Common-Law=03)",
+    "condition": "Only when previously-married indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Type of relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].FromDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.previous_union_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when previously-married indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "From"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].ToDate[0].ToDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "relationship.previous_union_end_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when previously-married indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "To"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].Passport[0].passportValidInd[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "form_subject",
+    "fact": "person.passport_expiry_date",
+    "transform": "derive_yes_no_code:Y/N (Y if a passport is recorded with expiry date not passed, else N)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "YYYY-MM-DD"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].Passport[0].PassportNum[0].PassportNum[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.passport_number",
+    "transform": "as_is (max 20 chars)",
+    "condition": "Only when the valid-passport indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Passport/Travel document number (exactly as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].Passport[0].CountryofIssue[0].CountryofIssue[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.passport_country_of_issue",
+    "transform": "code_list:imm0008dep.country_issue (codes as listed in inventory)",
+    "condition": "Only when the valid-passport indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Country of issue"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].Passport[0].IssueDate[0].IssueDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.passport_issue_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when the valid-passport indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Issue date"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].Passport[0].ExpiryDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.passport_expiry_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when the valid-passport indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Expiry date"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].natID[0].q1[0].natIDIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.national_id_number",
+    "transform": "derive_yes_no_code:Y/N (Y if a national identity document is recorded, else N)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Do you have a national identity document?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.national_id_number",
+    "transform": "as_is (max 20 chars)",
+    "condition": "Only when national identity document indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Document number"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.national_id_country_of_issue",
+    "transform": "code_list:imm0008dep.country_issue (codes as listed in inventory)",
+    "condition": "Only when national identity document indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Country of issue"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.national_id_issue_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when national identity document indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Issue date"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].ExpiryDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.national_id_expiry_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when national identity document indicator is Y.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Expiry date"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].LevelEdu[0].LevelEdu[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.education_level",
+    "transform": "code_list:imm0008dep.education_level (None=00, Secondary or less=01, Trade/Apprenticeship Certificate/Diploma=02, Non-University Certificate/Diploma=03, Post-Secondary – No Degree=04, Bachelor’s Degree=05, Post Graduate – No Degree=06, Master’s Degree=07, Doctorate - Ph D=08)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Highest level of education"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].YearsOfedu[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.education_years",
+    "transform": "as_is (integer, max 2 chars)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Number of years of education in total"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].currentOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.current_occupation",
+    "transform": "as_is (max 50 chars)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Current occupation"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].intendedOccupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.intended_occupation",
+    "transform": "as_is (max 50 chars)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Intended occupation"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].languageDetails[0].languages[0].nativeLang[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.native_language",
+    "transform": "code_list:imm0008dep.native_language (codes as listed in inventory, e.g. English=001, French=002, Other=499)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "a) Native language"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].languageDetails[0].languages[0].freqLang[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.most_frequent_official_language",
+    "transform": "code_list:imm0008dep.frequent_language (English=01, French=02, Neither=03)",
+    "condition": "Only when the native language is not English or French.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "b) If your native language is not English or French, which one do you use most frequently?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].AddDependant[0].languageDetails[0].languages[0].communicationLang[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.official_language_ability",
+    "transform": "code_list:imm0008dep.communication_language (English=English, French=French, Both=Both, Neither=Neither)",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Are you able to communicate in English and/or French?"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].declaration[0].Consent1[0].consentIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.consent_release_to_province",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Must reflect the person's own recorded consent decision.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Consent to release information to intended province/territory of destination"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].declaration[0].Consent1[0].dateSigned[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of signing the declaration/consent belongs to the signing act by the person; entering it also toggles barcode generation (presence script). Not pre-filled by the system.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "Date: YYYY-MM-DD"
+    }
+   },
+   {
+    "form_edition": "IMM 0008 DEP (10-2024)",
+    "form_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+    "data_path": "form1[0].Page1[0].declaration[0].ReaderInfo[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible reader-information helper in the footer; form mechanics.",
+    "evidence": {
+     "file_sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+     "quote": "readerInfo"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "0140996a33f3501a1f207e59cbceacd6f433ba3e0daf936ae5c698bdaee02dc9",
+  "template_sha256": "fb6c38830aa5cdd5a0179d54e352d6c54f71eaa490f19304a1e7b72dc9e85622",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 0008 DEP (10-2024)"
+  },
+  "screened": true,
+  "output_sha256": "a44ad500fe16a283f51c47db78dbefb357b7471c7be95b6a46f4810e96222530",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "ad0286756deb97d1722e29cebf9c6a9d81ec5f9fb0f468d2ad57caa14d2bfaf6",
+  "request_bytes": 129338,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 67.125244
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm0008depe.inventory.json",
+    "sha256": "32e7c73116b50c37133242155ad32c85937b0544833719ed634762dbf1f7317c",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "366324f3bafc810f7c81bf3ec5a733919f576b150af869cd82598a1c62595220",
+   "digest_made_at": "2026-11-03T17:57:14.157Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "992f9efc74e9d419a01e815323a011ad",
+   "ticket_expires_at": "2026-11-03T17:59:14.157Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 0008 DEP (10-2024)\",\"canonical_fields\":[{\"id\":\"person.family_name\",\"meaning\":\"Family name(s) of a person exactly as shown on their passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_name\",\"meaning\":\"Given name(s) of a person exactly as shown on their passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.other_family_name\",\"meaning\":\"Another family name the person has used (nickname, maiden name, alias, etc.)\",\"value_type\":\"text\"},{\"id\":\"person.other_given_name\",\"meaning\":\"Another given name the person has used (nickname, alias, etc.)\",\"value_type\":\"text\"},{\"id\":\"person.uci\",\"meaning\":\"Unique Client Identifier assigned to the person by IRCC\",\"value_type\":\"code\"},{\"id\":\"person.sex\",\"meaning\":\"Sex of the person\",\"value_type\":\"code\"},{\"id\":\"person.height_cm\",\"meaning\":\"Height of the person in centimetres\",\"value_type\":\"number\"},{\"id\":\"person.eye_colour\",\"meaning\":\"Eye colour of the person\",\"value_type\":\"code\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"Date of birth of the person\",\"value_type\":\"date\"},{\"id\":\"person.birth_city\",\"meaning\":\"City or town where the person was born\",\"value_type\":\"text\"},{\"id\":\"person.birth_country\",\"meaning\":\"Country where the person was born\",\"value_type\":\"country\"},{\"id\":\"person.citizenship\",\"meaning\":\"Country or countries of which the person is a citizen (ordered list)\",\"value_type\":\"country\"},{\"id\":\"relationship.relationship_to_principal_applicant\",\"meaning\":\"How the person is related to the principal applicant\",\"value_type\":\"code\"},{\"id\":\"relationship.relationship_to_principal_applicant_other\",\"meaning\":\"Free-text description of the relationship to the principal applicant when it is not a listed type\",\"value_type\":\"text\"},{\"id\":\"case.accompanies_principal_applicant\",\"meaning\":\"Whether the dependant will accompany the principal applicant to Canada\",\"value_type\":\"yes_no\"},{\"id\":\"case.non_accompanying_reason\",\"meaning\":\"Reason a dependant will not accompany the principal applicant\",\"value_type\":\"text\"},{\"id\":\"person.current_residence_country\",\"meaning\":\"Country where the person currently resides\",\"value_type\":\"country\"},{\"id\":\"person.current_residence_status\",\"meaning\":\"Immigration status of the person in their current country of residence\",\"value_type\":\"code\"},{\"id\":\"person.current_residence_status_other\",\"meaning\":\"Free-text description of the current residence status when it is 'other'\",\"value_type\":\"text\"},{\"id\":\"person.current_residence_from_date\",\"meaning\":\"Date the person's current residence period began\",\"value_type\":\"date\"},{\"id\":\"person.current_residence_to_date\",\"meaning\":\"Date the person's current residence period ends or ended, if any\",\"value_type\":\"date\"},{\"id\":\"person.last_entry_canada_date\",\"meaning\":\"Date of the person's most recent entry to Canada\",\"value_type\":\"date\"},{\"id\":\"person.last_entry_canada_place\",\"meaning\":\"Place (port of entry) of the person's most recent entry to Canada\",\"value_type\":\"text\"},{\"id\":\"person.previous_residence_country\",\"meaning\":\"Country of a past residence period (list of previous residences)\",\"value_type\":\"country\"},{\"id\":\"person.previous_residence_status\",\"meaning\":\"Immigration status held during a past residence period\",\"value_type\":\"code\"},{\"id\":\"person.previous_residence_status_other\",\"meaning\":\"Free-text description of a past residence status when it is 'other'\",\"value_type\":\"text\"},{\"id\":\"person.previous_residence_from_date\",\"meaning\":\"Start date of a past residence period\",\"value_type\":\"date\"},{\"id\":\"person.previous_residence_to_date\",\"meaning\":\"End date of a past residence period\",\"value_type\":\"date\"},{\"id\":\"person.marital_status\",\"meaning\":\"Current marital status of the person\",\"value_type\":\"code\"},{\"id\":\"relationship.current_union_start_date\",\"meaning\":\"Date the person married or began the current common-law relationship\",\"value_type\":\"date\"},{\"id\":\"relationship.previous_union_partner_family_name\",\"meaning\":\"Family name of the person's former spouse or common-law partner\",\"value_type\":\"text\"},{\"id\":\"relationship.previous_union_partner_given_name\",\"meaning\":\"Given name of the person's former spouse or common-law partner\",\"value_type\":\"text\"},{\"id\":\"relationship.previous_union_type\",\"meaning\":\"Type of the person's previous relationship (marriage or common-law)\",\"value_type\":\"code\"},{\"id\":\"relationship.previous_union_start_date\",\"meaning\":\"Start date of the person's previous marriage or common-law relationship\",\"value_type\":\"date\"},{\"id\":\"relationship.previous_union_end_date\",\"meaning\":\"End date of the person's previous marriage or common-law relationship\",\"value_type\":\"date\"},{\"id\":\"person.passport_number\",\"meaning\":\"Passport or travel document number\",\"value_type\":\"text\"},{\"id\":\"person.passport_country_of_issue\",\"meaning\":\"Country that issued the passport or travel document\",\"value_type\":\"country\"},{\"id\":\"person.passport_issue_date\",\"meaning\":\"Issue date of the passport or travel document\",\"value_type\":\"date\"},{\"id\":\"person.passport_expiry_date\",\"meaning\":\"Expiry date of the passport or travel document\",\"value_type\":\"date\"},{\"id\":\"person.national_id_number\",\"meaning\":\"National identity document number\",\"value_type\":\"text\"},{\"id\":\"person.national_id_country_of_issue\",\"meaning\":\"Country that issued the national identity document\",\"value_type\":\"country\"},{\"id\":\"person.national_id_issue_date\",\"meaning\":\"Issue date of the national identity document\",\"value_type\":\"date\"},{\"id\":\"person.national_id_expiry_date\",\"meaning\":\"Expiry date of the national identity document\",\"value_type\":\"date\"},{\"id\":\"person.education_level\",\"meaning\":\"Highest level of education completed\",\"value_type\":\"code\"},{\"id\":\"person.education_years\",\"meaning\":\"Total number of years of education\",\"value_type\":\"number\"},{\"id\":\"person.current_occupation\",\"meaning\":\"The person's current occupation\",\"value_type\":\"text\"},{\"id\":\"person.intended_occupation\",\"meaning\":\"The occupation the person intends to have in Canada\",\"value_type\":\"text\"},{\"id\":\"person.native_language\",\"meaning\":\"The person's native language\",\"value_type\":\"code\"},{\"id\":\"person.most_frequent_official_language\",\"meaning\":\"Which official language (English/French/neither) the person uses most frequently\",\"value_type\":\"code\"},{\"id\":\"person.official_language_ability\",\"meaning\":\"Whether the person can communicate in English, French, both or neither\",\"value_type\":\"code\"},{\"id\":\"case.consent_release_to_province\",\"meaning\":\"Whether the person consents to release of information to the intended province/territory of destination\",\"value_type\":\"yes_no\"}],\"entries\":[{\"data_path\":\"form1[0].Page1[0].FormHeader[0].TextField[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden header helper field with no caption; form mechanics, not a fact.\",\"evidence_quote\":\"PROTECTED WHEN COMPLETED - B\"},{\"data_path\":\"form1[0].Page1[0].Header[0].titleSF[0].CRCNum[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible internal/office field (CRC #); not filled by the applicant or the firm.\",\"evidence_quote\":\"CRC #\"},{\"data_path\":\"form1[0].Page1[0].Header[0].titleSF[0].ReaderInfo[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible reader/viewer information helper; form mechanics.\",\"evidence_quote\":\"Reader Info\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].q1[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name(s) (exactly as shown on your passport or travel document)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].q1[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (exactly as shown on your passport or travel document)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasNameIndicator[0].AliasNameIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.other_family_name\",\"transform\":\"derive_yes_no_code:Y/N (Y if any other family or given name is recorded for the subject, else N)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you ever used any other name (e.g. Nickname, maiden name, alias, etc.) ?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasName[0].AliasFamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.other_family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when the other-name indicator is Y.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name(s)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q2[0].AliasName[0].AliasGivenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.other_given_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when the other-name indicator is Y.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].UCI[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.uci\",\"transform\":\"as_is (max 10 chars)\",\"condition\":\"Only if the subject already has a UCI.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"UCI\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].Sex[0].Sex[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.sex\",\"transform\":\"code_list:imm0008dep.sex (F Female=Female, M Male=Male, U Unknown=Unknown, X Another gender=Unspecified)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Sex\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].heightCM[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.height_cm\",\"transform\":\"as_is\",\"condition\":\"Fill either centimetres or feet/inches, not both.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"cm\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].heightFT[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.height_cm\",\"transform\":\"cm_to_ft_in:feet (whole feet)\",\"condition\":\"Only if imperial units are used instead of the cm box.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"ft.\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].heightIN[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.height_cm\",\"transform\":\"cm_to_ft_in:inches (remaining inches)\",\"condition\":\"Only if imperial units are used instead of the cm box.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"in.\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q3-4-5-6[0].eyeColor[0].eyeColor[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.eye_colour\",\"transform\":\"code_list:imm0008dep.eye_colour (Black=01, Blue=02, Brown=03, Green=04, Hazel=05, Grey=06, Pink=07, Sea Green=08, Other=09)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Eye colour\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBYYYY[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY (year part only); inventory lists a country option list on this text box, likely an extraction artefact - reviewer to confirm\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of Birth\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBMM[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:MM (month part only); inventory lists a country option list on this text box, likely an extraction artefact - reviewer to confirm\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of Birth\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].DOB[0].DOBDD[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:DD (day part only); inventory lists a country option list on this text box, likely an extraction artefact - reviewer to confirm\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of Birth\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].PlaceBirthCity[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.birth_city\",\"transform\":\"as_is (max 30 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Place of birth\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q7-8[0].PlaceBirthCountry[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.birth_country\",\"transform\":\"code_list:imm0008dep.country_birth (codes as listed in inventory, e.g. Canada=511)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Place of birth\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q9[0].citizenship1[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.citizenship\",\"transform\":\"list_item[0] then code_list:imm0008dep.citizenship (codes as listed in inventory, e.g. Stateless=979)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Citizenship(s)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q9[0].citizenship2[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.citizenship\",\"transform\":\"list_item[1] then code_list:imm0008dep.citizenship (codes as listed in inventory)\",\"condition\":\"Only if the subject holds a second citizenship.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Citizenship(s)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q10[0].relationToapplicant[0].relationshipToapplicant[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.relationship_to_principal_applicant\",\"transform\":\"code_list:imm0008dep.relationship (Common-Law Partner=01, Child=02, Step-Child=03, Grandchild=04, Spouse=10, Other=85, Adopted Child=87, Step-Grandchild=100)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"a) Relationship to principal applicant\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q10[0].Other[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.relationship_to_principal_applicant_other\",\"transform\":\"as_is (max 30 chars)\",\"condition\":\"Only when relationship is Other (85).\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Other\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q12[0].accompanyPAIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.accompanies_principal_applicant\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"a) Will accompany principal applicant to Canada?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q12[0].reason[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.non_accompanying_reason\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when accompany indicator is N.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Reason why dependant is non-accompanying\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q11and12[0].q11[0].TypeOfDepChildren[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"The inventory gives only 'Type A/B/C Dependant' (codes 01/02/03) with no definition; the category is a legal determination the case record does not hold as such. Reviewer must define the fact or derivation.\",\"evidence_quote\":\"Dependant Type\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Country[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.current_residence_country\",\"transform\":\"code_list:imm0008dep.country_residence (codes as listed in inventory)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Current country of residence:\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Status[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.current_residence_status\",\"transform\":\"code_list:imm0008dep.residence_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Current country of residence:\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.current_residence_status_other\",\"transform\":\"as_is (max 30 chars)\",\"condition\":\"Only when current status is Other (06).\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Current country of residence:\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].FromDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.current_residence_from_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Current country of residence:\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q13[0].CurrentCOR[0].Row2[0].ToDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.current_residence_to_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only if the current residence period has a known end date (e.g. status expiry); otherwise left blank.\",\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"Current country of residence:\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q12[0].lastEntryDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.last_entry_canada_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only if the subject has entered Canada.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date and place of your last entry to Canada\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q12[0].PlaceOfEntry[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.last_entry_canada_place\",\"transform\":\"as_is (max 30 chars)\",\"condition\":\"Only if the subject has entered Canada.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Date and place of your last entry to Canada\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PCRIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.previous_residence_country\",\"transform\":\"derive_yes_no_code:Y/N (Y if any previous residence in the past five years in a country other than citizenship/current residence is recorded, else N)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Country[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.previous_residence_country\",\"transform\":\"list_item[0] then code_list:imm0008dep.country_residence (codes as listed in inventory)\",\"condition\":\"Only when previous residence indicator is Y. Fixed table: this is the first of two data rows (Row2); no further rows can be added.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Status[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.previous_residence_status\",\"transform\":\"list_item[0] then code_list:imm0008dep.residence_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)\",\"condition\":\"Only when previous residence indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.previous_residence_status_other\",\"transform\":\"list_item[0], as_is (max 30 chars)\",\"condition\":\"Only when this row's status is Other (06).\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].FromDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.previous_residence_from_date\",\"transform\":\"list_item[0], date:YYYY-MM-DD\",\"condition\":\"Only when previous residence indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row2[0].ToDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.previous_residence_to_date\",\"transform\":\"list_item[0], date:YYYY-MM-DD\",\"condition\":\"Only when previous residence indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Country[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":1,\"fact\":\"person.previous_residence_country\",\"transform\":\"list_item[1] then code_list:imm0008dep.country_residence (codes as listed in inventory)\",\"condition\":\"Only when a second previous residence exists. Fixed table second data row (Row3); more than two previous residences cannot be listed here.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Status[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":1,\"fact\":\"person.previous_residence_status\",\"transform\":\"list_item[1] then code_list:imm0008dep.residence_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)\",\"condition\":\"Only when a second previous residence exists. Inventory shows this box carries a preset Student/05 value; reviewer should confirm it is cleared when the row is unused.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":1,\"fact\":\"person.previous_residence_status_other\",\"transform\":\"list_item[1], as_is (max 30 chars)\",\"condition\":\"Only when this row's status is Other (06).\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].FromDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":1,\"fact\":\"person.previous_residence_from_date\",\"transform\":\"list_item[1], date:YYYY-MM-DD\",\"condition\":\"Only when a second previous residence exists.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q14[0].PreviousCOR[0].Row3[0].ToDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":1,\"fact\":\"person.previous_residence_to_date\",\"transform\":\"list_item[1], date:YYYY-MM-DD\",\"condition\":\"Only when a second previous residence exists.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous countries of residence: During the past five years have you lived in any country other than your country of cit\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm0008dep.marital_status (Married=01, Single=02, Common-Law=03, Divorced=04, Legally Separated=05, Widowed=06, Annulled Marriage=09)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"a) Your current marital status\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].DateOfMarriage[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.current_union_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when marital status is Married (01) or Common-Law (03).\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when marital status is Married (01) or Common-Law (03).\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q16[0].MaritalStatus[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.given_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when marital status is Married (01) or Common-Law (03).\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].PrevMarriedIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.previous_union_type\",\"transform\":\"derive_yes_no_code:Y/N (Y if any previous marriage or common-law relationship is recorded for the subject, else N)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you previously been married or in a common-law relationship?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].PMFamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.previous_union_partner_family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when previously-married indicator is Y. Former partner's name is held as part of the subject's relationship history (no separate former-partner role exists); only one previous relationship fits.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you previously been married or in a common-law relationship?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].GivenName[0].PMGivenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.previous_union_partner_given_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when previously-married indicator is Y.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you previously been married or in a common-law relationship?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].TypeOfRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.previous_union_type\",\"transform\":\"code_list:imm0008dep.previous_relationship_type (Married=01, Common-Law=03)\",\"condition\":\"Only when previously-married indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Type of relationship\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].FromDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.previous_union_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when previously-married indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"From\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].personalDetails[0].q17[0].ToDate[0].ToDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"relationship.previous_union_end_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when previously-married indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"To\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].Passport[0].passportValidInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.passport_expiry_date\",\"transform\":\"derive_yes_no_code:Y/N (Y if a passport is recorded with expiry date not passed, else N)\",\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"YYYY-MM-DD\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].Passport[0].PassportNum[0].PassportNum[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.passport_number\",\"transform\":\"as_is (max 20 chars)\",\"condition\":\"Only when the valid-passport indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Passport/Travel document number (exactly as shown on your passport or travel document)\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].Passport[0].CountryofIssue[0].CountryofIssue[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.passport_country_of_issue\",\"transform\":\"code_list:imm0008dep.country_issue (codes as listed in inventory)\",\"condition\":\"Only when the valid-passport indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of issue\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].Passport[0].IssueDate[0].IssueDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.passport_issue_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the valid-passport indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Issue date\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].Passport[0].ExpiryDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.passport_expiry_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the valid-passport indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Expiry date\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].natID[0].q1[0].natIDIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.national_id_number\",\"transform\":\"derive_yes_no_code:Y/N (Y if a national identity document is recorded, else N)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Do you have a national identity document?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.national_id_number\",\"transform\":\"as_is (max 20 chars)\",\"condition\":\"Only when national identity document indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Document number\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.national_id_country_of_issue\",\"transform\":\"code_list:imm0008dep.country_issue (codes as listed in inventory)\",\"condition\":\"Only when national identity document indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country of issue\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.national_id_issue_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when national identity document indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Issue date\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].natID[0].natIDdocs[0].ExpiryDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.national_id_expiry_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when national identity document indicator is Y.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Expiry date\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].LevelEdu[0].LevelEdu[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.education_level\",\"transform\":\"code_list:imm0008dep.education_level (None=00, Secondary or less=01, Trade/Apprenticeship Certificate/Diploma=02, Non-University Certificate/Diploma=03, Post-Secondary – No Degree=04, Bachelor’s Degree=05, Post Graduate – No Degree=06, Master’s Degree=07, Doctorate - Ph D=08)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Highest level of education\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].YearsOfedu[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.education_years\",\"transform\":\"as_is (integer, max 2 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Number of years of education in total\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].currentOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.current_occupation\",\"transform\":\"as_is (max 50 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Current occupation\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].educationOccupation[0].EducationOccupation[0].intendedOccupation[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.intended_occupation\",\"transform\":\"as_is (max 50 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Intended occupation\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].languageDetails[0].languages[0].nativeLang[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.native_language\",\"transform\":\"code_list:imm0008dep.native_language (codes as listed in inventory, e.g. English=001, French=002, Other=499)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"a) Native language\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].languageDetails[0].languages[0].freqLang[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.most_frequent_official_language\",\"transform\":\"code_list:imm0008dep.frequent_language (English=01, French=02, Neither=03)\",\"condition\":\"Only when the native language is not English or French.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"b) If your native language is not English or French, which one do you use most frequently?\"},{\"data_path\":\"form1[0].Page1[0].AddDependant[0].languageDetails[0].languages[0].communicationLang[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.official_language_ability\",\"transform\":\"code_list:imm0008dep.communication_language (English=English, French=French, Both=Both, Neither=Neither)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you able to communicate in English and/or French?\"},{\"data_path\":\"form1[0].Page1[0].declaration[0].Consent1[0].consentIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.consent_release_to_province\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Must reflect the person's own recorded consent decision.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Consent to release information to intended province/territory of destination\"},{\"data_path\":\"form1[0].Page1[0].declaration[0].Consent1[0].dateSigned[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of signing the declaration/consent belongs to the signing act by the person; entering it also toggles barcode generation (presence script). Not pre-filled by the system.\",\"evidence_quote\":\"Date: YYYY-MM-DD\"},{\"data_path\":\"form1[0].Page1[0].declaration[0].ReaderInfo[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible reader-information helper in the footer; form mechanics.\",\"evidence_quote\":\"readerInfo\"}]}"
+}

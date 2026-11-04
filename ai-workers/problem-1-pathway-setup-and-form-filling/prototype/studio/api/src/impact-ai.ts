@@ -18,7 +18,7 @@ import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { costWords } from "../../contracts/start-setup.ts";
 import { costBesideLimit, isProviderLimit } from "../../engine/ai-run.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
-import { editionContextKey, replayPattern, savedRunKey, type SavedRun } from "../../engine/rounds.ts";
+import { editionContextKey, PRINTED_EDITION, replayPattern, savedRunKey, type SavedRun } from "../../engine/rounds.ts";
 import { SOLUTION } from "./core.ts";
 import { fieldMapShapeOk, sameEdition, type FieldMapOutput } from "./field-drafts.ts";
 import { MODEL, roundBudgetUsd, RUNS, type AiStep } from "./rounds.ts";
@@ -57,24 +57,24 @@ export function componentsView(uses: Use[], rows: BoxRow[], fieldLabel: Map<stri
     const boxes = changedBy(u.field);
     const box = boxes.map((b) => b.change === "removed" ? `"${b.caption.slice(0, 80)}" (removed in ${edition})` : `"${(b.was ?? "").slice(0, 80)}" (reworded in ${edition} as "${b.caption.slice(0, 80)}")`).join(", ");
     return { key: u.key, label: u.label, field: u.field, combination: comboLabel.get(u.combinationId) ?? "A combination", combination_id: u.combinationId, boxes: boxes.map((b) => b.dataPath),
-      why: `The box ${box || "(none)"} fills ${fieldLabel.get(u.field) ?? u.field}, and ${HOW[u.how]}.`.slice(0, 600) };
+      why: `The form field ${box || "(none)"} fills ${fieldLabel.get(u.field) ?? u.field}, and ${HOW[u.how]}.`.slice(0, 600) };
   }).filter((x) => x.boxes.length).sort((a, b) => `${a.combination}|${a.label}`.localeCompare(`${b.combination}|${b.label}`));
   return { sections: of("section"), document_types: of("document_type"), rules: of("rule"), checks: of("check") };
 }
 
 export const IMPACT_JOB_BASE = "studio-fieldmap-impact";
 export const IMPACT_AI_WORDS = {
-  noSaved: "No saved AI run for this comparison yet: Draft with AI runs it (about US$x · at most US$y), or a person maps each new and reworded box.",
+  noSaved: "No saved AI run for this comparison yet: Draft with AI runs it (about US$x · at most US$y), or a person maps each new and reworded form field.",
   badSaved: "The saved AI run for this comparison could not be read, so it was not used.",
-  nothingUsed: "Nothing of it was used: a person maps each new and reworded box.",
-  offer: (n: number, cost: string) => `Draft with AI (${cost}): proposals for the ${n} new and reworded box${n === 1 ? "" : "es"} only; nothing runs until you click, and a person accepts each one.`,
-  none: "No new or reworded boxes: nothing for AI to draft.",
-  liveOff: (cost: string) => `Draft with AI (${cost}) is not open on this copy: live AI is off (only the founder turns it on). Nothing was sent and nothing was charged. Use a saved AI run (US$0), or a person maps each new and reworded box.`,
-  stale: "The saved AI run was made for another comparison of this edition (its new and reworded boxes differ), so it is out of date and not used. Draft with AI again, or a person maps the boxes.",
+  nothingUsed: "Nothing of it was used: a person maps each new and reworded form field.",
+  offer: (n: number, cost: string) => `Draft with AI (${cost}): proposals for the ${n} new and reworded form field${n === 1 ? "" : "s"} only; nothing runs until you click, and a person accepts each one.`,
+  none: "No new or reworded form fields: nothing for AI to draft.",
+  liveOff: (cost: string) => `Draft with AI (${cost}) is not open on this copy: live AI is off (only the founder turns it on). Nothing was sent and nothing was charged. Use a saved AI run (US$0), or a person maps each new and reworded form field.`,
+  stale: "The saved AI run was made for another comparison of this edition (its new and reworded form fields differ), so it is out of date and not used. Draft with AI again, or a person maps the form fields.",
   overCap: (worst: number, left: number) => `Not started: the worst case (US$${worst.toFixed(2)}) is above what is left of the AI spending cap (US$${left.toFixed(2)}). Nothing was started.`,
   savedFirst: "A saved AI run of this comparison is here: use it at US$0. A paid run is not started while a saved one exists.",
-  paidOnce: (usd: number) => `This comparison already had a paid AI run (${usd > 0 ? `counted at US$${usd.toFixed(2)}` : "stopped before its cost was recorded, so it may have been sent"}) whose answer could not be used, so another is not started from here. A person maps each new and reworded box; another paid run needs the tech lead's Go.`,
-  outside: (path: string) => `The AI answer named a box that is not new or reworded (${path.slice(0, 120)}), so it was not used.`,
+  paidOnce: (usd: number) => `This comparison already had a paid AI run (${usd > 0 ? `counted at US$${usd.toFixed(2)}` : "stopped before its cost was recorded, so it may have been sent"}) whose answer could not be used, so another is not started from here. A person maps each new and reworded form field; another paid run needs the tech lead's Go.`,
+  outside: (path: string) => `The AI answer named a form field that is not new or reworded (${path.slice(0, 120)}), so it was not used.`,
 };
 
 /** The inventory part of the changed boxes, exactly as the guard admits it (copied unchanged from the parent). */
@@ -110,7 +110,7 @@ export const answersInside = (o: FieldMapOutput, inside: Set<string>) => o.entri
 
 /** The round context of the step: the edition's key (`edition:<code>:<edition>`, the launcher's known printed edition). */
 export const impactContext = (printed: string, part: ReturnType<typeof impactPart>, batchId?: string) => {
-  const m = /^(IMM [0-9A-Z ]+?) \(([0-9]{2}-[0-9]{4})\)$/.exec(printed);
+  const m = PRINTED_EDITION.exec(printed);
   return { trail: part.file.replace(/\.part\.json$/, ""), contextKey: m ? editionContextKey(m[1], m[2]) : `edition:${printed}`, inputs: [{ file: part.rel, sha256: part.sha256 }], batchId };
 };
 

@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-fieldmap-imm0008depe",
+ "path_code_sha256": "0140996a33f3501a1f207e59cbceacd6f433ba3e0daf936ae5c698bdaee02dc9",
+ "screening_sources": [
+  {
+   "file": "prototype/expected/slice-1-field-map.json",
+   "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+  },
+  {
+   "file": "prototype/expected/slice-1-field-map.v2.json",
+   "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+  },
+  {
+   "file": "prototype/p1/e5-family-values.json",
+   "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+  },
+  {
+   "file": "prototype/p1/adobe-complete-1295-values.json",
+   "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+  }
+ ],
+ "digest_sha256": "f059dc645a03a005d621010365e5e72c60e8babcc3c65dbc130bb0bd5097ff3b",
+ "run_id": "studio-fieldmap-imm0008depe-stub-20261103t175713545z-ae6817",
+ "at": "2026-11-03T17:57:13.960Z",
+ "stub_calls": 1
+}
