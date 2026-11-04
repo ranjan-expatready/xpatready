@@ -25,11 +25,13 @@ export class FilingReadinessRoutes {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit,
     @Inject(CasePrepare) private readonly prepare: CasePrepare, @Inject(Workspace) private readonly ws: Workspace) {}
 
-  /** The filing, reached as staff of its case's firm (a client, configuration people and another firm: 403 or 404). */
-  private async filing(actor: Actor, id: string) {
+  /** The filing, reached as staff of its case's firm (a client, configuration people and another firm: 403 or 404).
+   *  Break B8 on #861: a filing recorded as submitted is read-only here (C8.2 keeps its record). */
+  private async filing(actor: Actor, id: string, open = true) {
     const f = UUID.test(id) ? await this.db.filing.findUnique({ where: { id } }) : null;
     if (!f || !f.active) fail("No such filing.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, f!.caseId, "officer");
+    if (open && f!.status === "SUBMITTED") fail("This filing is recorded as submitted: its review and warnings are closed. Correct the record instead.", HttpStatus.CONFLICT);
     return { f: f!, c };
   }
   private async now(actor: Actor, caseId: string, filing: string) {
@@ -47,13 +49,23 @@ export class FilingReadinessRoutes {
     const rep = team.find((m) => m.role === "LEAD_REPRESENTATIVE")?.userId ?? null;
     if (!rep || rep !== actor.id) fail("Only the representative of record reviews this filing (P-155). A case officer prepares it; the representative reviews it.", HttpStatus.FORBIDDEN);
     const b = (body ?? {}) as { note?: unknown; self?: unknown };
-    const note = typeof b.note === "string" ? b.note.trim().slice(0, 400) : null;
-    const prepared = team.some((m) => m.role === "OFFICER" && m.userId === actor.id);
-    if (prepared && b.self !== true) problem(400, "Some details need fixing", "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person.", { errors: [{ field: "self", message: "Confirm you prepared and reviewed it yourself." }] });
+    // Break B6 on #861: a note is optional, but when given it follows the reason's text rule (no hidden or control
+    // characters), and a long one is refused, never cut silently.
+    if (b.note !== undefined && b.note !== null && typeof b.note !== "string") problem(400, "Some details need fixing", "Write the note as text.", { errors: [{ field: "note", message: "Text, or leave it out." }] });
+    const note = typeof b.note === "string" && b.note.trim() ? b.note.trim() : null;
+    const noteWhy = note ? (note.length > 400 ? "Keep the note to 400 characters." : /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(note) ? "Remove the control or invisible characters from the note." : null) : null;
+    if (noteWhy) problem(400, "Some details need fixing", noteWhy, { errors: [{ field: "note", message: noteWhy }] });
     const firm = firmOfActor(actor), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
+    const prepared = team.some((m) => m.role === "OFFICER" && m.userId === actor.id);
+    // Break B9 on #861 (P-155 (1)): "Self-reviewed" is a solo firm's: in a firm with another representative, the one who
+    // prepared the filing does not review it as if a second person had.
+    if (prepared && !firm?.solo) fail("You prepared this filing, and your firm has another representative: hand the review to them (change the representative of record), or pass the review warning with a reason.", HttpStatus.CONFLICT);
+    if (prepared && b.self !== true) problem(400, "Some details need fixing", "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person.", { errors: [{ field: "self", message: "Confirm you prepared and reviewed it yourself." }] });
     if (!licence) fail("A review needs the representative's licence number on the firm record; none is set.", HttpStatus.CONFLICT);
     const kind = prepared ? "self_reviewed" : "reviewed";
-    const row = await this.db.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note } });
+    // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
+    const rd = await this.now(actor, c.id, f.id);
+    const row = await this.db.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
     await this.audit.log(f.workspaceId, actor.id, kind, "filing", f.id, `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`, { case: c.id, note });
     const name = firm ? userIn(firm, actor.id)?.name ?? actor.name : actor.name;
     return { id: row.id, filing: f.id, reviewed_by: actor.id, name, kind, licence_number: licence!.number, at: row.reviewedAt.toISOString(),
@@ -69,26 +81,38 @@ export class FilingReadinessRoutes {
     const b = (body ?? {}) as { reason?: unknown; key?: unknown };
     const why = passProblem(b.reason);
     if (why) problem(400, "Some details need fixing", why, { errors: [{ field: "reason", message: why }] });
+    // Break B4 on #861: a key, when sent, is one line's key as text; anything else is refused, never read as "every line".
+    if (b.key !== undefined && (typeof b.key !== "string" || !b.key)) problem(400, "Some details need fixing", "Send key as the warning line's key (text), or leave it out to pass every open line of this kind.", { errors: [{ field: "key", message: "Text, or leave it out." }] });
     const rd = await this.now(actor, c.id, f.id);
-    const keys = passKeys(rd, code as WarnCode, typeof b.key === "string" ? b.key : undefined);
+    const keys = passKeys(rd, code as WarnCode, b.key as string | undefined);
     if (!keys.length) fail(`There is no open "${CODE_WORDS[code as WarnCode]}" warning on this filing to pass. Reload.`, HttpStatus.CONFLICT);
     const reason = (b.reason as string).trim(), severity = isCritical(code) ? "critical" : "warning";
-    const row = await this.db.readinessPass.create({ data: { workspaceId: f.workspaceId, filingId: f.id, code, keys, severity, reason, passedBy: actor.id } });
-    await this.audit.log(f.workspaceId, actor.id, "warning_passed", "filing", f.id, `${actor.name} passed "${CODE_WORDS[code as WarnCode]}"${severity === "critical" ? " (CRITICAL)" : ""} on case ${c.id.slice(0, 8)}: ${reason}`, { case: c.id, code, severity, keys });
-    return { id: row.id, filing: f.id, code, severity, keys, reason, by: actor.id, at: row.passedAt.toISOString() };
+    // Break B8: under the filing's row lock, a line already passed meanwhile (two passes at once) is not passed twice.
+    const row = await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM filing WHERE id = ${f.id}::uuid FOR UPDATE`;
+      const taken = new Set((await tx.readinessPass.findMany({ where: { filingId: f.id, code }, select: { keys: true } })).flatMap((p) => p.keys));
+      const fresh = keys.filter((k) => !taken.has(k));
+      if (!fresh.length) return null;
+      return tx.readinessPass.create({ data: { workspaceId: f.workspaceId, filingId: f.id, code, keys: fresh, severity, reason, passedBy: actor.id } });
+    }, { timeout: 15_000, maxWait: 10_000 });
+    if (!row) fail(`This "${CODE_WORDS[code as WarnCode]}" warning was passed meanwhile. Reload.`, HttpStatus.CONFLICT);
+    await this.audit.log(f.workspaceId, actor.id, "warning_passed", "filing", f.id, `${actor.name} passed "${CODE_WORDS[code as WarnCode]}"${severity === "critical" ? " (CRITICAL)" : ""} on case ${c.id.slice(0, 8)}: ${reason}`, { case: c.id, code, severity, keys: row!.keys });
+    return { id: row!.id, filing: f.id, code, severity, keys: row!.keys, reason, by: actor.id, at: row!.passedAt.toISOString() };
   }
 
   /** POST /runtime/filings/:id/ready: "Ready to file" (409 naming every block and open warning). */
   async ready(actor: Actor, id: string) {
     const { f, c } = await this.filing(actor, id);
-    if (["SUBMITTED"].includes(f.status)) fail("This filing is already recorded as submitted.", HttpStatus.CONFLICT);
-    const rd = await this.now(actor, c.id, f.id);
+    const rd = await this.now(actor, c.id, f.id); // also takes a stale "Ready to file" back to Not started (break B1)
     if (!rd.ready) {
       const n = rd.blocks.length, w = rd.warns.length;
       problem(409, "Not ready to file", `${n ? `${n} block${n === 1 ? "" : "s"} (fix ${n === 1 ? "it" : "them"}: a barcode form needs its validated copy read back)` : ""}${n && w ? " and " : ""}${w ? `${w} open warning${w === 1 ? "" : "s"} (pass each with a reason, or fix ${w === 1 ? "it" : "them"})` : ""} stand before Ready to file.`,
         { blocks: rd.blocks, warns: rd.warns });
     }
-    const n = await this.db.filing.updateMany({ where: { id: f.id, status: f.status }, data: { status: "READY_TO_FILE" } });
+    // Break B8: marking a filing that is Ready to file again changes nothing and records nothing new.
+    const now = await this.db.filing.findUnique({ where: { id: f.id }, select: { status: true } });
+    if (now?.status === "READY_TO_FILE") return { filing: f.id, status: "ready_to_file", already: true, passed: rd.passed, reviewed: rd.reviewed };
+    const n = await this.db.filing.updateMany({ where: { id: f.id, status: now?.status ?? f.status }, data: { status: "READY_TO_FILE" } });
     if (n.count !== 1) fail("This filing changed since you read it. Reload, then mark it again.", HttpStatus.CONFLICT);
     await this.audit.log(f.workspaceId, actor.id, "ready_to_file", "filing", f.id, `${actor.name} marked a filing Ready to file on case ${c.id.slice(0, 8)} (${rd.passed.length} warning${rd.passed.length === 1 ? "" : "s"} passed with a reason)`, { case: c.id, passed: rd.passed.map((p) => ({ code: p.code, key: p.key, by: p.by })) });
     return { filing: f.id, status: "ready_to_file", passed: rd.passed, reviewed: rd.reviewed };
@@ -103,9 +127,13 @@ export class FilingReadinessRoutes {
     if (!e) fail("No such form edition.", HttpStatus.NOT_FOUND);
     const b = (body ?? {}) as { acceptedUntil?: unknown; reason?: unknown };
     if (!("acceptedUntil" in b)) problem(400, "Some details need fixing", "Send acceptedUntil: a date (YYYY-MM-DD), or null to clear it.", { errors: [{ field: "acceptedUntil", message: "Required (a date or null)." }] });
+    // Break B7 on #861: a plain day (YYYY-MM-DD) between 2000 and 2100, or null; a timestamp or another shape is refused.
     let until: string | null = null;
-    try { until = b.acceptedUntil === null ? null : dayOf(b.acceptedUntil as string, "acceptedUntil"); }
-    catch { problem(400, "Some details need fixing", "acceptedUntil is not a date: write it as YYYY-MM-DD, or null to clear it.", { errors: [{ field: "acceptedUntil", message: "Not a date (YYYY-MM-DD)." }] }); }
+    const notDate = () => problem(400, "Some details need fixing", "acceptedUntil is not a date: write it as YYYY-MM-DD (2000 to 2100), or null to clear it.", { errors: [{ field: "acceptedUntil", message: "Not a date (YYYY-MM-DD)." }] });
+    if (b.acceptedUntil !== null) {
+      if (typeof b.acceptedUntil !== "string" || !/^(20\d{2}|2100)-\d{2}-\d{2}$/.test(b.acceptedUntil)) notDate();
+      try { until = dayOf(b.acceptedUntil as string, "acceptedUntil"); } catch { notDate(); }
+    }
     const why = passProblem(b.reason);
     if (why) problem(400, "Some details need fixing", why.replace("this warning is passed", "this date is set"), { errors: [{ field: "reason", message: why }] });
     const row = await this.db.formEditionAcceptedUntil.create({ data: { workspaceId, formEditionId: e!.id, acceptedUntil: until ? new Date(`${until}T00:00:00Z`) : null, reason: (b.reason as string).trim(), setBy: actor.id } });

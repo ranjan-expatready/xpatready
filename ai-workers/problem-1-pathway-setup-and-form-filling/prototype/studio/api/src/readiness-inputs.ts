@@ -6,6 +6,7 @@
 import { filingReadiness, WARN_CODES, type DocumentItem, type Finding, type FilingReadiness, type FormItem, type Owes, type Pass, type WarnCode } from "../../engine/runtime/readiness.ts";
 import type { Channel, Signature } from "../../contracts/forms.ts";
 import type { Readiness } from "../../contracts/runtime.ts";
+import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,8 +14,9 @@ const RECEIVED = new Set(["received", "being_checked", "approved"]);
 const SIGNER: Record<string, string> = { person: "the person", parent: "a parent", principal: "the principal applicant", representative: "the representative" };
 
 /** What the prepare view already worked out for one form item (case-prepare.ts), as readiness reads it. */
-export type PreparedForm = { id: string; filing: string; subject: string; person: string; form: string; channel: Channel; signature: Signature; signed_by: string | null; signers: string[]; state: string;
-  steps?: { key: string; done: boolean | null }[] };
+export type PreparedForm = { id: string; filing: string; subject: string; person: string; form: string; channel: Channel; signature: Signature; signed_by: string | null; signers?: string[]; state: string;
+  reason?: string; steps?: { key: string; done: boolean | null }[] };
+// Review B1 on #861: `signers` may be missing on a line (`signers?` in its type), so readiness never assumes it.
 export type ReadinessInputs = {
   workspaceId: string; caseId: string; filings: string[];
   forms: PreparedForm[];
@@ -32,22 +34,28 @@ export type ReadinessInputs = {
   /** Online sections entered before a fact changed (C7.3), per item. */
   enteredStale: Map<string, string[]>;
   barcode: (form: string) => boolean;
+  /** The fingerprint of the facts one form reads for one person (engine/runtime/forms.ts inputHash of its coverage). */
+  factsHash: (form: string, subject: string) => string;
   today: Date;
 };
 export type ReadinessView = { filing: string; ready: boolean; status_rule: string;
   blocks: FilingReadiness["blocks"]; warns: FilingReadiness["warns"]; passed: FilingReadiness["passed"]; owes: FilingReadiness["owes"];
-  reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null };
+  reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null;
+  /** The filing's facts fingerprint now (the review route stores it) and the representative of record now. */
+  facts_hash: string; representative: string | null };
 
 /** Every filing's readiness on one case, from the prepare view's own items and the stored reviews, passes, findings,
  *  checklist lines and accepted-until dates. */
 export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<ReadinessView[]> {
   const ids = x.filings.filter((f) => UUID.test(f));
-  const [reviews, passes, findings, lines] = await Promise.all([
-    db.filingReview.findMany({ where: { filingId: { in: ids } }, orderBy: [{ reviewedAt: "desc" }, { id: "asc" }] }),
-    db.readinessPass.findMany({ where: { filingId: { in: ids } }, orderBy: [{ passedAt: "asc" }, { id: "asc" }] }),
-    db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: "open" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
-    db.checklistLine.findMany({ where: { caseId: x.caseId }, select: { subjectId: true, documentType: true, state: true } }),
-  ]);
+  // One query at a time (C6.12 break B1: 120 reads at once on one case must not starve the connection pool; parallel
+  // reads here made the view's own read transaction wait past its start limit and answer 500).
+  const rows = ids.length ? await db.filing.findMany({ where: { id: { in: ids } }, select: { id: true,
+    reviews: { orderBy: [{ reviewedAt: "desc" }, { id: "asc" }], take: 1 }, passes: { orderBy: [{ passedAt: "asc" }, { id: "asc" }] } } }) : [];
+  const reviews = rows.flatMap((f) => f.reviews), passes = rows.flatMap((f) => f.passes);
+  const findings = ids.length ? await db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: "open" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }) : [];
+  const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
+  const lines = x.documents.length ? await db.checklistLine.findMany({ where: { caseId: x.caseId }, select: { subjectId: true, documentType: true, state: true } }) : [];
   // P-151 (1): the newest accepted-until row of each edition the case's forms are filed on.
   const labels = [...new Set(x.forms.map((f) => x.editionOf(f.form, f.channel)).filter((l): l is string => !!l))];
   const editions = labels.length ? await db.formEdition.findMany({ where: { workspaceId: x.workspaceId, editionLabel: { in: labels } }, select: { id: true, editionLabel: true, acceptedUntil: { orderBy: [{ setAt: "desc" }, { id: "desc" }], take: 1 } } }) : [];
@@ -55,16 +63,24 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
   const lineState = new Map(lines.map((l) => [`${l.subjectId}|${l.documentType}`, l.state]));
   const today = x.today.toISOString().slice(0, 10);
   return x.filings.map((filing) => {
-    const forms: FormItem[] = x.forms.filter((f) => f.filing === filing).map((f) => {
+    const mineForms = x.forms.filter((f) => f.filing === filing);
+    // Break B2: what the representative reviews is the filing's forms and the facts they read, as they are now.
+    const factsHash = createHash("sha256").update(mineForms.map((f) => `${f.form}|${f.subject}|${f.state === "cannot_start" ? "waits" : x.factsHash(f.form, f.subject)}`).sort().join("\n")).digest("hex");
+    const forms: FormItem[] = mineForms.map((f) => {
+      // Break B3: a form that cannot start yet (an answer decides whether it applies) is never dropped: it stands as a
+      // CRITICAL "missing facts" line until that answer is in. No signature or Validate is waited for until it applies.
+      if (f.state === "cannot_start") return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, needsValidate: false, validatedCurrent: false, signature: "TYPED_NAME", signed: false, edition: null,
+        readiness: { ready: false, missing: [{ fact: `applies:${f.form}`, label: `whether ${f.form} applies (${(f.reason ?? "it waits for an answer").replace(/\.$/, "")})`, about: f.person, reason: "not answered" }] }, owesFact: { [`applies:${f.form}`]: "staff" } } satisfies FormItem;
       const label = x.editionOf(f.form, f.channel), until = label ? untilOf.get(label) ?? null : null;
       const facts = x.factsOf(f.form, f.subject);
       const owesFact: Record<string, Owes> = Object.fromEntries(facts.missing.map((m) => [m.fact, x.owesFact(m.fact, f.subject)]));
       // Signed: a hand-signed scan received (C8.1); on Paper, the "sign in pen" step done (C7.7 part 2).
       const signed = f.signature === "HAND_SCANNED" ? x.scanned(f.id) : f.signature === "PEN" ? !!f.steps?.some((s) => s.key === "sign_in_pen" && s.done) : false;
-      const signers = f.signers.map((s) => SIGNER[s] ?? s);
+      const who = f.signers ?? []; // never trusted to be there: a line without it reads as "each person who signs it"
+      const signers = who.map((s) => SIGNER[s] ?? s);
       return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, readiness: facts, owesFact,
         needsValidate: x.barcode(f.form), validatedCurrent: x.validatedCurrent(f.form, f.subject), signature: f.signature, signed, signers, signedBy: f.signed_by,
-        signerOwes: f.signers.length && f.signers.every((s) => s === "representative") ? "representative" : "client",
+        signerOwes: who.length && who.every((s) => s === "representative") ? "representative" : "client",
         // An accepted-until date is set only on an edition IRCC has replaced (P-151 (1)): it is superseded until then.
         edition: label ? { label, superseded: until !== null, acceptedUntil: until } : null,
         enteredOutOfDate: x.enteredStale.get(f.id) ?? [] } satisfies FormItem;
@@ -74,11 +90,13 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
       return { item: d.item, label: d.label, subject: d.subject, person: d.person, required: d.required && st !== "not_applicable", received: !!st && RECEIVED.has(st), owes: "client" };
     });
     const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.quote }));
-    const review = reviews.find((r) => r.filingId === filing) ?? null;
+    // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.
+    const latest = reviews.find((r) => r.filingId === filing) ?? null;
+    const review = latest && latest.reviewedBy === rep && latest.factsHash === factsHash ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
-    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, passes: mine, today });
+    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, passes: mine, today });
     return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
-      reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null };
+      reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });
 }
 

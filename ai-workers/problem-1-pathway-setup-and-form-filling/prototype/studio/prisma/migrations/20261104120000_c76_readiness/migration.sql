@@ -3,7 +3,8 @@
 -- edition. Additive: three new tables, nothing existing is changed or dropped, so the code on main before this runs on
 -- this schema unchanged (it reads none of them). `filing.status` already exists (READY_TO_FILE is a new value of it).
 --   * filing_review: the representative of record's review of one filing (P-155): "reviewed", or "self_reviewed" by a
---     solo firm's one person, with the licence number and when. Append-only (a trigger refuses UPDATE).
+--     solo firm's one person, with the licence number and when, and `facts_hash`, the fingerprint of the filing's forms'
+--     facts it reviewed (a later change reopens the review, break B2 on #861). Append-only (a trigger refuses UPDATE).
 --   * readiness_pass: a warning of one filing passed with a written reason (who, when, reason; AG-07 BR-26, P-237,
 --     P-238): `keys` are the warning lines it covered when written, so it never covers a line that appears later;
 --     `severity` says whether a CRITICAL warning (a former block) was passed. Append-only.
@@ -22,14 +23,17 @@ CREATE TABLE "filing_review" (
     "filing_id" UUID NOT NULL,
     "reviewed_by" TEXT NOT NULL,
     "kind" TEXT NOT NULL,
-    "licence_number" TEXT,
+    "licence_number" TEXT NOT NULL,
     "note" TEXT,
+    "facts_hash" VARCHAR(64) NOT NULL,
     "reviewed_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "filing_review_pkey" PRIMARY KEY ("id")
 );
 CREATE INDEX "filing_review_filing_id_idx" ON "filing_review"("filing_id");
 ALTER TABLE "filing_review" ADD CONSTRAINT "filing_review_filing_id_fkey" FOREIGN KEY ("filing_id") REFERENCES "filing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "filing_review" ADD CONSTRAINT "filing_review_kind_check" CHECK ("kind" IN ('reviewed', 'self_reviewed'));
+-- A review names the licence it was made under (P-155: name, licence number, time).
+ALTER TABLE "filing_review" ADD CONSTRAINT "filing_review_licence_check" CHECK (char_length(btrim("licence_number")) >= 1);
 
 CREATE TABLE "readiness_pass" (
     "id" UUID NOT NULL,
@@ -48,7 +52,12 @@ ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_filing_id_fkey" FORE
 ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_severity_check" CHECK ("severity" IN ('critical', 'warning'));
 -- A barcode form without its Validate is never passed (P-237): the database refuses it too.
 ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_code_check" CHECK ("code" <> 'barcode_not_validated');
-ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_reason_check" CHECK (char_length(btrim("reason")) >= 5);
+ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_reason_check" CHECK (char_length(btrim("reason")) BETWEEN 5 AND 300);
+-- Break B10 on #861: only the warning codes engine/runtime/readiness.ts knows, at least one line covered, and the severity
+-- that goes with the code (the CRITICAL ones are the former blocks, P-237, P-238).
+ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_known_code_check" CHECK ("code" IN ('missing_facts', 'fact_problem', 'open_check', 'out_of_date', 'missing_signature', 'edition_expired', 'representative_review', 'missing_document', 'finding', 'edition_superseded', 'copy_stale', 'entered_out_of_date'));
+ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_keys_check" CHECK (cardinality("keys") >= 1);
+ALTER TABLE "readiness_pass" ADD CONSTRAINT "readiness_pass_severity_matches_check" CHECK (("severity" = 'critical') = ("code" IN ('missing_facts', 'fact_problem', 'open_check', 'out_of_date', 'missing_signature', 'edition_expired', 'representative_review')));
 
 CREATE TABLE "form_edition_accepted_until" (
     "id" UUID NOT NULL,

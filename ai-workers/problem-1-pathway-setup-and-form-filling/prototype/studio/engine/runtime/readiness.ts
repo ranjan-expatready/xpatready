@@ -71,8 +71,11 @@ export type Pass = { code: WarnCode; keys: string[]; reason: string; by: string;
 
 export type FilingInput = {
   filing: string; forms: FormItem[]; documents?: DocumentItem[]; openChecks?: OpenCheck[]; findings?: Finding[]; fees?: Fee[];
-  /** The representative's review of this filing (or "Self-reviewed") is recorded (BR-21). */
+  /** The representative's review of this filing (or "Self-reviewed") is recorded (BR-21) by the representative of
+   *  record now, for the filing's facts as they are now. */
   reviewed: boolean;
+  /** Break B2: a review exists but the facts changed after it (or another person is now the representative): its day. */
+  reviewedBefore?: string | null;
   passes?: Pass[];
   /** Today, YYYY-MM-DD (the firm's date; UTC until firms have a time zone). */
   today: string;
@@ -153,7 +156,10 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     if (until && today > until) critical({ code: "edition_expired", ...at, owes: "staff", words: `Fee "${fee.line}" was valid until ${until}. Adopt the current fee table.` });
     else if (fee.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `Fee "${fee.line}" has a newer amount${until ? `; it is accepted until ${until}` : ""}. Adopt update.` });
   }
-  if (!x.reviewed) critical({ code: "representative_review", owes: "representative", words: "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
+  const before = x.reviewed ? null : dayOf(x.reviewedBefore, "the earlier review");
+  if (!x.reviewed) critical({ code: "representative_review", part: before ?? "none", owes: "representative", words: before
+    ? `The filing changed after it was reviewed on ${before} (or the representative of record changed). The representative of record reviews it again.`
+    : "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
   for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
 
@@ -180,7 +186,10 @@ export function passProblem(reason: unknown): string | null {
   // The same rule as the contract's reason (contracts/runtime.ts `reason`: 5–300 characters, a letter or digit, no
   // control or invisible characters; review r4 m2).
   const t = typeof reason === "string" ? reason.trim() : "";
-  if (t.length < 5 || !/[\p{L}\p{N}]/u.test(t.replace(/[\u115f\u1160\u3164\uffa0]/g, ""))) return "Say why this warning is passed (at least 5 characters, with words).";
+  // Break B5: only characters a person can see count: format characters (joiners, soft hyphen, tags, U+180E), the
+  // combining grapheme joiner, blank Hangul fillers and the braille blank are left out of the count.
+  const seen = [...t.replace(/[\p{Cf}\u034f\u115f\u1160\u3164\uffa0\u2800\s]/gu, "")];
+  if (seen.length < 5 || !/[\p{L}\p{N}]/u.test(seen.join(""))) return "Say why this warning is passed (at least 5 characters, with words).";
   if (t.length > 300) return "Keep it to 300 characters.";
   if (/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(t)) return "Remove the control or invisible characters from this text.";
   return null;

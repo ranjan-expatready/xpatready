@@ -2166,8 +2166,10 @@ model FilingReview {
   reviewedBy    String   @map("reviewed_by")
   /// reviewed · self_reviewed
   kind          String
-  licenceNumber String?  @map("licence_number")
+  licenceNumber String   @map("licence_number")
   note          String?
+  /// The fingerprint of the filing's forms' facts when reviewed: a later change reopens the review (break B2, #861).
+  factsHash     String   @map("facts_hash") @db.VarChar(64)
   reviewedAt    DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
 
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
