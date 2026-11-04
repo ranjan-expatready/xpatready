@@ -67,7 +67,12 @@ run(async () => {
   // P-279: the source gate refuses Submit while a published number (a date counts) has no source entry; answered first.
   await T.sourceGate(wp);
   r = await call("POST", `/combinations/${wp}/submit`, { note: "section order (acceptance C4.1)" }, AUTHOR);
-  const line = ((r.body?.changeSummary ?? []) as any[]).find((c) => /section/i.test(String(c.kind)));
-  ok("C4.1 pass: the review names the move as one change line, in words (the section's title and its new place, now 1st)", !!line && String(line.label).includes(`"${lib}" now 1st`) && /reordered/i.test(String(line.label)), r.status >= 300 ? words(r) : line ?? (r.body?.changeSummary ?? []).map((c: any) => `${c.kind}|${c.key}`).slice(0, 5));
+  const summary = (r.body?.changeSummary ?? []) as any[];
+  const line = summary.find((c) => /section/i.test(String(c.kind)) && /reordered/i.test(String(c.label)));
+  // B71 (P-341): on a combination never released (Visitor visa of the six) the review has no released order to compare
+  // with, so it lists each section as added, in the draft's order; the moved section is then the first one.
+  const firstAdded = summary.find((c) => String(c.kind) === "Section");
+  if (released[0]) ok("C4.1-B71a pass: Submit goes through and the review names the move as one change line, in words (the section's title and its new place, now 1st)", r.status < 300 && !!line && String(line.label).includes(`"${lib}" now 1st`), r.status >= 300 ? words(r) : line);
+  else ok("C4.1-B71a pass: Submit goes through, and on a combination never released the review lists its sections as added in the new order, the moved one first", r.status < 300 && firstAdded?.key === second && firstAdded?.change === "added", r.status >= 300 ? words(r) : { first: firstAdded, moved: second });
   T.done();
 });
