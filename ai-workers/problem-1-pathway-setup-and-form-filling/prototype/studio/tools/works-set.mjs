@@ -70,13 +70,6 @@ const inMilestone = (m, want) => m.split(/[\s,;/]+/).some((t) => t.toUpperCase()
 export const protectedSet = (md, milestone = "M2", packs = packsOf) =>
   [...new Set(rows(md).filter((r) => inMilestone(r.milestone, milestone) && isWorks(r.status)).map((r) => r.id))].map((id) => ({ id, packs: packs(id) }));
 
-/** The hold file (markdown): a list line "- <C…> <reason>" (a capability) or "- <C…-name.test.ts> <reason>" (one pack),
- *  or a table row "| <C…> | <reason> |", or the same with no bullet (a quote, a check box, "•" or _emphasis_ around the
- *  id are read); the reason says "red" and names its evidence, a run id ("run 41788362078") or a bug (QA-nnn), and is
- *  not "lifted". Fenced code (closed only by the same fence), HTML comments (an unclosed one runs to the end) and
- *  struck-out text are not read. A line that starts with a capability id but is not such a hold is returned in `bad` and
- *  holds nothing (#857 rounds 2 and 3: a history line "- C3.2 lifted 5 Nov, green in run 41799999999" or an example is
- *  never a hold). */
 /** The lines of a qa notes file that start with a capability id, as plain text: fenced code (closed only by the same
  *  fence), indented code, HTML comments (an unclosed one runs to the end) and struck-out text are not read; a list, a
  *  table row, a quote, a check box, "•" and _emphasis_ around the id are. Shared by the hold file and the data file. */
@@ -95,6 +88,13 @@ function idLines(text) {
   }
   return out;
 }
+/** The hold file (markdown): a list line "- <C…> <reason>" (a capability) or "- <C…-name.test.ts> <reason>" (one pack),
+ *  or a table row "| <C…> | <reason> |", or the same with no bullet (a quote, a check box, "•" or _emphasis_ around the
+ *  id are read); the reason says "red" and names its evidence, a run id ("run 41788362078") or a bug (QA-nnn), and is
+ *  not "lifted". Fenced code (closed only by the same fence), HTML comments (an unclosed one runs to the end) and
+ *  struck-out text are not read. A line that starts with a capability id but is not such a hold is returned in `bad` and
+ *  holds nothing (#857 rounds 2 and 3: a history line "- C3.2 lifted 5 Nov, green in run 41799999999" or an example is
+ *  never a hold). */
 export function held(text) {
   const caps = new Map(), packs = new Map(), bad = [];
   for (const l of idLines(text)) {
@@ -111,20 +111,24 @@ export function held(text) {
  *  id, a bug (QA-n) or a decision (P-n). Every other row runs on the six (setup rows count there). Read like the hold
  *  file; a line that cannot be read is reported and changes nothing. */
 export function dataRows(text) {
-  const data = new Map(), bad = [];
+  const data = new Map(), bad = [], torn = new Set();
   for (const l of idLines(text)) {
     const m = l.match(/^([Cc]\d{1,2}\.\d{1,2})\s+(six|checkpoint)\b[\s:,;—-]*(\S.*)$/i);
-    if (!m || !/\brun\s+\d{6,}\b|\bQA-\d+\b|\bP-\d+\b/i.test(m[3])) { bad.push(l.slice(0, 120)); continue; }
-    const id = `C${m[1].slice(1)}`;
-    if (data.has(id) && data.get(id).data !== m[2].toLowerCase()) { bad.push(`${l.slice(0, 100)} (another line says ${data.get(id).data})`); data.delete(id); continue; }   // two answers: the six, as before
-    data.set(id, { data: m[2].toLowerCase(), why: m[3] });
+    // The reason names its evidence; a history or negated line ("until", "since", "back on", "lifted", "no longer", a
+    // question) and a second capability on the line are reported, never read (break m2, m4).
+    if (!m || !/\brun\s+\d{6,}\b|\bQA-\d+\b|\bP-\d+\b/i.test(m[3]) || /\b(until|since|back on|lifted|no longer)\b|\?/i.test(m[3]) || /\b[Cc]\d{1,2}\.\d{1,2}\b/.test(m[3])) { bad.push(l.slice(0, 120)); continue; }
+    const id = `C${m[1].slice(1)}`, v = m[2].toLowerCase();
+    if (torn.has(id)) { bad.push(`${l.slice(0, 100)} (this row has two answers: it runs on the six)`); continue; }
+    // Two answers for one row: the row runs on the six for the rest of the file, whatever later lines say (break M1).
+    if (data.has(id) && data.get(id).data !== v) { bad.push(`${l.slice(0, 100)} (another line says ${data.get(id).data}: it runs on the six)`); data.delete(id); torn.add(id); continue; }
+    data.set(id, { data: v, why: m[3] });
   }
   return { data, bad };
 }
 /** A file as it is on the base (the working tree off CI); a file not on the base yet reads as "" when missingOk. */
 function atBase(path, missingOk = false) {
   const base = baseOf();
-  if (!base) { try { return readFileSync(path, "utf8"); } catch (e) { if (missingOk) return ""; throw e; } }
+  if (!base) { try { return readFileSync(path, "utf8"); } catch (e) { if (missingOk && e.code === "ENOENT") return ""; throw e; } }   // a file that exists but cannot be read is never "missing" (B77 break m3)
   const r = spawnSync("git", ["show", `${base}:${relative(top(), path)}`], { cwd: S, encoding: "utf8", maxBuffer: 64 << 20 });
   if (r.status === 0) return r.stdout;
   if (missingOk && /exists on disk, but not in|does not exist in/.test(r.stderr)) return "";
@@ -149,9 +153,13 @@ function once(id, skip, data) {
   const r = spawnSync(process.execPath, [gate, "--title", id, "--kind", "code"], { cwd: S, env, encoding: "utf8", maxBuffer: 64 << 20, timeout: 1_140_000, killSignal: "SIGKILL" });
   return { status: r.status ?? (r.error ? 124 : 1), out: (r.stdout ?? "") + (r.stderr ?? "") + (r.error ? `\n(stopped: ${r.error.message})` : "") };
 }
-/** The packs the base names that a run did not run (each pack gate B runs prints "<file> on the six", "<file> on the
- *  checkpoint" or "<file> fixture only" with its exit). */
-export const notRun = (expected, out) => expected.filter((f) => !new RegExp(`^\\s*${f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (on the six|on the checkpoint|fixture only)`, "m").test(out));
+const esc = (f) => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** The packs the base names that a run did not run on the data asked for (each pack gate B runs prints "<file> on the
+ *  six", "<file> on the checkpoint" or "<file> fixture only" with its exit; a pack whose run line has setup steps runs
+ *  on its own fixture whatever the data). A pack that ran on the other demo data did not run (B77 break m1). */
+export const notRun = (expected, out, data = "six") => expected.filter((f) => !new RegExp(`^\\s*${esc(f)} (on the ${data}|fixture only)`, "m").test(out));
+/** Where each pack ran, as gate B says it: "on the six", "on the checkpoint" or "fixture only". */
+const ranWhere = (files, out) => files.map((f) => `${f} ${new RegExp(`^\\s*${esc(f)} (on the six|on the checkpoint|fixture only)`, "m").exec(out)?.[1] ?? "?"}`);
 
 function main(argv) {
   // In --json mode stdout is only the array (CI writes it to GITHUB_OUTPUT): every other line goes to stderr (round 3 M1).
@@ -179,10 +187,12 @@ function main(argv) {
     const all = packs(opt.run), skip = hold.caps.has(opt.run) ? all : all.filter((f) => hold.packs.has(f)), expected = all.filter((f) => !skip.includes(f));
     if (!expected.length) { say(`**${opt.run}**: ${all.length ? "every pack is held" : "no acceptance pack on the base"}; nothing to run.`); return all.length ? 0 : 2; }
     const data = dataOfRow(opt.run);
-    const attempt = () => { const r = once(opt.run, skip, data), miss = notRun(expected, r.out); process.stdout.write(r.out); return miss.length ? { status: 1, why: `did not run ${miss.join(", ")} (missing at the head, renamed, or the gate ran no pack)` } : { status: r.status, why: `exit ${r.status}` }; };
+    let lastOut = "";
+    const attempt = () => { const r = once(opt.run, skip, data), miss = notRun(expected, r.out, data); lastOut = r.out; process.stdout.write(r.out); return miss.length ? { status: 1, why: `did not run ${miss.join(", ")} (missing at the head, renamed, or the gate ran no pack)` } : { status: r.status, why: `exit ${r.status}` }; };
     const first = attempt();
-    if (first.status === 0) { say(`**${opt.run}**: green on the ${data} (${expected.join(", ")}${skip.length ? `; held: ${skip.join(", ")}` : ""}).`); return 0; }
-    say(`**${opt.run}**: red on the ${data} on the first run (${first.why}); running it once more (a flaky pack is retried once).`);
+    // Say where each pack really ran: a pack with setup steps runs on its fixture, never on the data asked for (break M2).
+    if (first.status === 0) { say(`**${opt.run}**: green (${ranWhere(expected, lastOut).join(", ")}${skip.length ? `; held: ${skip.join(", ")}` : ""}).`); return 0; }
+    say(`**${opt.run}**: red on the first run, asked for the ${data} (${first.why}); running it once more (a flaky pack is retried once).`);
     const again = attempt();
     if (again.status === 0) { say(`**${opt.run}**: green on the retry — flaky (first run: ${first.why}).`); return 0; }
     say(`**${opt.run}**: red twice (${first.why}, then ${again.why}): this batch would take away a Works row.`);
@@ -201,7 +211,7 @@ function main(argv) {
   for (const r of set) {
     if (!r.packs.length) { say(`  ${r.id}: no acceptance pack (not re-run)`); continue; }
     const h = r.packs.filter((f) => hold.caps.has(r.id) || hold.packs.has(f));
-    say(`  ${r.id}${dataOfRow(r.id) === "checkpoint" ? " (on the checkpoint)" : ""}: ${live(r).join(", ") || "—"}${h.length ? `; held, not re-run: ${h.map((f) => `${f} (${hold.packs.get(f) ?? hold.caps.get(r.id)})`).join("; ")}` : ""}`);
+    say(`  ${r.id}${dataOfRow(r.id) === "checkpoint" ? " (on the checkpoint where its pack runs alone)" : ""}: ${live(r).join(", ") || "—"}${h.length ? `; held, not re-run: ${h.map((f) => `${f} (${hold.packs.get(f) ?? hold.caps.get(r.id)})`).join("; ")}` : ""}`);
   }
   const all = new Set(set.flatMap((r) => r.packs));
   for (const id of hold.caps.keys()) if (!set.some((r) => r.id === id && r.packs.length)) say(`  stale hold: ${id} is no longer a protected row with a pack; remove its line`);
