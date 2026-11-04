@@ -370,13 +370,46 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
   return keys.join(",");
 }
 
+/** A form edition's printed captions by form field, read once per reading file (a committed reading does not change). */
+const CAPTIONS = new Map<string, Map<string, string>>();
+function captionsOf(file: string | null): Map<string, string> {
+  if (!file) return new Map();
+  let m = CAPTIONS.get(file);
+  if (!m) { try { m = new Map((JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fields?: { data_path?: string; caption?: string }[] }).fields?.map((x) => [x.data_path ?? "", x.caption?.trim() ?? ""]) ?? []); CAPTIONS.set(file, m); } catch { return new Map(); } }
+  return m;
+}
+export type CheckRead = { field: string; words: string; shared: string | null; sharedWords: string | null };
+const fieldWords = (k: string) => { const w = (k.split(".").pop() ?? k).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
+const shortWords = (w: string) => (w.length > 70 ? `${w.slice(0, 68).trimEnd()}…` : w);
+/** QA-196 (tech lead, 4 Nov): what a check reads, each as the shared field it becomes, for the lander and for To review.
+ *  A form edition's check reads the form's own fields: each by its printed caption (the edition's reading), and the
+ *  shared field the edition's field map maps it to (null: not mapped yet). A guide's check reads answers: a shared field
+ *  when the library has it, else its words (null: not in the library yet; a draft may read it, release warns). */
+export async function checkReads(db: Client, ws: string, r: Pick<Row, "formEdition" | "combinationId">, tree: unknown): Promise<{ reads: CheckRead[]; edition: { id: string; label: string; formId: string; formKey: string } | null }> {
+  const read = fieldsOf(tree);
+  const names = async (keys: string[]) => new Map((await db.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: { in: keys }, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, label: true } })).map((f) => [f.canonicalFieldKey, f.label?.trim() || fieldWords(f.canonicalFieldKey)]));
+  if (r.combinationId || !r.formEdition) {
+    const lib = await names(read);
+    return { reads: read.map((f) => ({ field: f, words: lib.get(f) ?? fieldWords(f), shared: lib.has(f) ? f : null, sharedWords: lib.get(f) ?? null })), edition: null };
+  }
+  const ed = await db.formEdition.findFirst({ where: { workspaceId: ws, editionLabel: r.formEdition }, include: { form: { select: { id: true, formKey: true } } } });
+  if (!ed) return { reads: read.map((f) => ({ field: f, words: f, shared: null, sharedWords: null })), edition: null };
+  const maps = effective(await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: read } } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED");
+  const to = new Map(maps.filter((m) => m.outcome === "mapped" && m.canonicalFieldKey).map((m) => [m.dataPath, m.canonicalFieldKey!]));
+  const printed = captionsOf(ed.inventoryFile);
+  const lib = await names([...to.values()]);
+  return { reads: read.map((f) => { const k = to.get(f) ?? null; return { field: f, words: shortWords(maps.find((m) => m.dataPath === f)?.caption?.trim() || printed.get(f) || f.split(".").slice(-2).join(".").replace(/\[0\]/g, "")), shared: k, sharedWords: k ? lib.get(k) ?? fieldWords(k) : null }; }),
+    edition: { id: ed.id, label: ed.editionLabel, formId: ed.form.id, formKey: ed.form.formKey } };
+}
+
 /** QA-196 (P-149 (1) one door, P-120): an accepted AI check becomes a DRAFT check where checks live, on a combination
  *  (Library › Checks lists it, used in each), under the section-check writer's rules (studio.ts saveCheck): a condition in
  *  the condition language, never the same check twice in a draft. A guide's check lands on its own combination (a check
  *  over two answers or more is a cross-answer check). A form edition's check reads the form's own fields:
  *  each is read as the shared field the edition's field map maps it to, and the check lands on every combination whose
  *  draft files that form, under one key. A landed check warns, whatever the AI read (P-136: only two things block "Ready
- *  to file"; the AI's reading stays on the item). Its examples stay unconfirmed until the expert confirms (P-149 (5)). */
+ *  to file"), unless the person chose another severity before Accept. Its examples stay unconfirmed until the expert
+ *  confirms (P-149 (5)). */
 async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
   need(l.actor, "author"); // draft edits of a combination are the author duty (studio.ts saveCheck)
   const parsed = ProposalPayload.safeParse(p);
@@ -390,22 +423,15 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
     if (!one) fail("The combination this check was drafted for is no longer there: reject it.", HttpStatus.NOT_FOUND);
     combos = [one!];
   } else {
-    const ed = r.formEdition ? await tx.formEdition.findFirst({ where: { workspaceId: l.ws, editionLabel: r.formEdition }, include: { form: { select: { id: true, formKey: true } } } }) : null;
+    const { reads, edition: ed } = await checkReads(tx, l.ws, r, c.tree);
     if (!ed) fail(`The form edition this check was drafted from (${r.formEdition ?? "none named"}) is no longer in the library: reject it.`, HttpStatus.CONFLICT);
-    const maps = effective(await tx.formFieldMap.findMany({ where: { formEditionId: ed!.id, dataPath: { in: fieldsOf(c.tree) } } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED");
-    const to = new Map(maps.filter((m) => m.outcome === "mapped" && m.canonicalFieldKey).map((m) => [m.dataPath, m.canonicalFieldKey!]));
-    const unmapped = fieldsOf(c.tree).filter((f) => !to.has(f));
-    if (unmapped.length) {
-      // Each form field by its printed caption (the edition's reading), never its internal path where the reading has it.
-      const printed = (() => { try { return new Map((JSON.parse(readFileSync(join(SOLUTION, ed!.inventoryFile ?? ""), "utf8")) as { fields?: { data_path?: string; caption?: string }[] }).fields?.map((x) => [x.data_path ?? "", x.caption?.trim() ?? ""]) ?? []); } catch { return new Map<string, string>(); } })();
-      const short = (w: string) => (w.length > 70 ? `${w.slice(0, 68).trimEnd()}…` : w);
-      const words = unmapped.map((f) => short(maps.find((m) => m.dataPath === f)?.caption?.trim() || printed.get(f) || f.split(".").slice(-2).join(".").replace(/\[0\]/g, "")));
-      fail(`This check reads ${unmapped.length === 1 ? "a form field" : `${unmapped.length} form fields`} of ${ed!.editionLabel} that ${unmapped.length === 1 ? "is" : "are"} not mapped to a shared field yet (${words.slice(0, 3).map((w) => `"${w}"`).join(", ")}${words.length > 3 ? ", …" : ""}). Map ${unmapped.length === 1 ? "it" : "them"} on the form's field page first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
-    }
+    const unmapped = reads.filter((x) => !x.shared);
+    if (unmapped.length) fail(`This check reads ${unmapped.length === 1 ? "a form field" : `${unmapped.length} form fields`} of ${ed!.label} that ${unmapped.length === 1 ? "is" : "are"} not mapped to a shared field yet (${unmapped.slice(0, 3).map((x) => `"${x.words}"`).join(", ")}${unmapped.length > 3 ? ", …" : ""}). Map ${unmapped.length === 1 ? "it" : "them"} on the form's field page first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
+    const to = new Map(reads.map((x) => [x.field, x.shared!]));
     tree = renamed(c.tree, (f) => to.get(f) ?? f);
-    const lines = effective(await tx.combinationForm.findMany({ where: { workspaceId: l.ws, govFormDefId: ed!.form.id }, include: { combination: { select: { id: true, label: true } } } }), (x) => `${x.combinationId}|${x.lineageKey}`, "draft").filter((x) => x.status !== "RETIRED");
+    const lines = effective(await tx.combinationForm.findMany({ where: { workspaceId: l.ws, govFormDefId: ed!.formId }, include: { combination: { select: { id: true, label: true } } } }), (x) => `${x.combinationId}|${x.lineageKey}`, "draft").filter((x) => x.status !== "RETIRED");
     combos = [...new Map(lines.map((x) => [x.combination.id, x.combination])).values()].sort((a, b) => a.label.localeCompare(b.label));
-    if (!combos.length) fail(`No combination files ${ed!.form.formKey} yet, so this check has nowhere to apply: add the form to a combination's Forms first, then accept it; or reject it.`, HttpStatus.CONFLICT);
+    if (!combos.length) fail(`No combination files ${ed!.formKey} yet, so this check has nowhere to apply: add the form to a combination's Forms first, then accept it; or reject it.`, HttpStatus.CONFLICT);
   }
   // As the section-check writer: a condition in the condition language; a field not in the library yet is allowed in a
   // draft (release warns), a retired one is refused (as the requirement lander, C11.9 break M1).
@@ -420,6 +446,8 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
   if (errs.length) fail(`Its condition does not fit the condition language (${errs[0]}): reject it, or edit its condition.`);
   const cross = c.kind === "cross_check";
   const group = cross ? "cross_record" : typeof work.group === "string" && /^[a-z_]{3,40}$/.test(work.group) ? work.group : "official_rule";
+  // A landed check warns unless the person chose otherwise before Accept (an edit; tech lead, 4 Nov); a cross-answer one only warns.
+  const severity = c.kind === "form_check" ? c.severity ?? "warn" : "warn";
   const appliesTo = fieldsOf(tree)[0] ?? null;
   const message = c.sentence.trim().slice(0, 500);
   const quote = ((r.source as { quote?: string } | null)?.quote ?? "").trim();
@@ -427,7 +455,7 @@ async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promis
   for (const k of combos) {
     const same = (await tx.check.findMany({ where: { combinationId: k.id, status: "DRAFT", checkGroup: group, appliesTo, message }, select: { predicateJson: true } })).some((x) => canonical(x.predicateJson as never) === canonical(tree as never));
     if (same) fail(`"${message}" is already in ${k.label}'s draft: reject this one.`, HttpStatus.CONFLICT);
-    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: tree as Prisma.InputJsonValue, severity: "warn", message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: tree as Prisma.InputJsonValue, severity, message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
   }
   return key;
 }

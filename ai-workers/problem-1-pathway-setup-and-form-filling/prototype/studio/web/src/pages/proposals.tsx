@@ -9,7 +9,7 @@ import { Check, ChevronRight, Undo2 } from "lucide-react";
 import { NearLine, ownReason, type NearView } from "@/components/near-line";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
-import { Button, Notice, Panel, Pill, Table, Textarea } from "@/components/ui/controls";
+import { Button, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -160,20 +160,47 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
     { invalidate: inv, success: (r) => (r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
   const checkPayload = p.readings.check?.payload ?? null;
   const differ = p.agreement === "differ" && !!checkPayload;
+  // QA-196 (tech lead, 4 Nov): a form check warns unless the person makes it a serious warning before Accept (an edit).
+  const asRead = ((p.readings.draft?.payload ?? null) as { severity?: string } | null)?.severity ?? "warn";
+  const [severity, setSeverity] = React.useState(asRead);
+  const withSeverity = (payload: unknown) => (p.kind === "form_check" && payload && typeof payload === "object" ? { ...payload, severity } : payload);
+  const acceptFirst = () => (p.kind === "form_check" && severity !== asRead ? run.mutate({ action: "edit", payload: withSeverity(p.readings.draft?.payload) }) : run.mutate({ action: "accept" }));
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={p.title} description={`${p.kind_word} · ${p.lands_on === "library" ? "shared library" : "this combination"}${p.basis === "SAMPLE" ? " · Sample until the immigration expert confirms" : ""}`}
       badge={<Pill tone={BAND_TONE[p.band]}>{BAND_WORDS[p.band]}</Pill>}
       footer={<>
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
         <span className="flex flex-wrap gap-2">
-          {differ ? <Button variant="secondary" busy={run.isPending} onClick={() => run.mutate({ action: "edit", payload: checkPayload })}>Accept the checker's reading</Button> : null}
-          <Button busy={run.isPending} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
+          {differ ? <Button variant="secondary" busy={run.isPending} onClick={() => run.mutate({ action: "edit", payload: withSeverity(checkPayload) })}>Accept the checker's reading</Button> : null}
+          <Button busy={run.isPending} onClick={acceptFirst}>{differ ? "Accept the first reading" : "Accept"}</Button>
         </span>
       </>}>
       <div className="flex flex-col gap-4 text-sm">
         {p.reason ? <Notice tone={p.band === "decide" ? "danger" : "warn"} title="Why a person looks">{p.reason}</Notice> : null}
         {p.meaning ? <section><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it means</h3><p className="mt-1">{p.meaning}</p></section> : null}
         {p.values?.length ? <section aria-label="Answer values" data-answer-values><h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Answer values · {p.values.length}</h3><ul className="mt-1 list-disc pl-5">{p.values.map((v) => <li key={v.code}>{v.label}</li>)}</ul></section> : null}
+        {p.reads ? (
+          <section aria-label="What it reads" data-check-reads>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">What it reads</h3>
+            <ul className="mt-1 space-y-1.5">{p.reads.map((x) => (
+              <li key={x.field} className="flex flex-wrap items-center gap-x-2" data-read={x.shared ?? ""}>
+                <span>{x.words}</span><span aria-hidden className="text-text-muted">→</span>
+                {x.shared ? <span><span className="sr-only">reads the shared field </span>{x.shared_words} <span className="text-xs text-text-muted">{x.shared}</span></span>
+                  : <Pill tone="warn">{p.lands_on === "library" ? "Not mapped to a shared field yet" : "Not in the library yet: read in words"}</Pill>}
+              </li>))}
+            </ul>
+            {p.lands_on === "library" && p.reads.some((x) => !x.shared) ? <p className="mt-1 text-xs text-text-muted">Map these on the form's field page before you accept it.</p> : null}
+          </section>
+        ) : null}
+        {p.kind === "form_check" ? (
+          <div>
+            <label className="block text-sm font-medium" htmlFor="check-severity">When it fires</label>
+            <Select id="check-severity" value={severity} onChange={(e) => setSeverity(e.target.value)} className="mt-1 max-w-xs">
+              <option value="warn">Warns</option>
+              <option value="block">Serious warning</option>
+            </Select>
+          </div>
+        ) : p.kind === "cross_check" ? <p className="text-xs text-text-muted">A check that compares two answers or more only warns.</p> : null}
         <section aria-label="Both readings">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted"><Tip tip="AI reads the source twice: a first reading, then a checker that has not seen it. Items from the rules have no AI reading." focusable><span>Both readings</span></Tip> · {p.agreement_word}</h3>
           <div className="mt-1 grid gap-2">

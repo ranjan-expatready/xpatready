@@ -2,13 +2,15 @@
 // undone on To review like every other kind. Before: Accept answered 409 "A form check proposal is accepted with its own
 // step, not yet on this queue" (LANDERS had no form_check or cross_check). After, at US$0 with no model call, on Demo ›
 // Reset to the six with Saved runs recorded from the committed jobs' stub passes (as check_forms_c34_ai.ts):
-//   guide 5256's check over one answer lands as a DRAFT check of Visitor visa (its group, warning as every check does
-//   (P-136) though the AI read block, its sentence and quote, made by AI) and is listed on Library › Checks after a reload; its check over two answers lands as a
-//   cross-answer check that only warns; an edit lands the edited sentence; a reject writes nothing; Undo takes a landed
-//   check back; a reviewer without the author duty is refused;
+//   guide 5256's check over one answer lands as a DRAFT check of Visitor visa (its group, its sentence and quote, made
+//   by AI; it warns, as every check does unless a person chose otherwise, P-136) and is listed on Library › Checks after
+//   a reload; its check over two answers lands as a cross-answer check that only warns (an edit to more is refused); an
+//   edit lands the edited sentence; a reject writes nothing; Undo takes a landed check back; a reviewer without the
+//   author duty is refused;
 //   IMM 5257's form check reads the form's own fields: refused in plain words while they are not mapped to shared fields
 //   (nothing written), then, once the edition's field map maps them, it lands on every combination whose draft files
-//   IMM 5257, reading the shared fields, under one key.
+//   IMM 5257, reading the shared fields, under one key: warning as it is, a serious warning when the person chose that
+//   before Accept (tech lead, 4 Nov). To review shows each read as the shared field it becomes, or that it is not yet.
 //   zsh studio/tools/isolated.sh forms_qa196 4612 start && tsx studio/tests/check_qa196_check_landers.ts 4612 xr_studio_forms_qa196
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -103,6 +105,8 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   ok("QA-196 pass: an edit lands the edited sentence as the check's words", r.status === 201 && !!k2 && sql(`select message from check_def where check_key='${k2}'`) === edited.sentence, { status: r.status, said: said(r) });
 
   // ── a check over two answers: a cross-answer check that only warns
+  r = await decide([two?.id], "edit", { payload: { ...(two?.readings?.draft?.payload ?? {}), severity: "block" } });
+  ok("QA-196 fail: a cross-answer check cannot be made more than a warning (refused, nothing written)", r.status === 400 && sql(`select status from proposal_item where id='${two?.id}'`) === "waiting", { status: r.status, said: said(r) });
   r = await decide([two?.id], "accept");
   const k3 = r.body?.items?.[0]?.landedAs as string | undefined;
   const row3 = k3 ? sql(`select check_group || '|' || severity from check_def where check_key='${k3}'`) : "";
@@ -112,6 +116,11 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   ok("QA-196 pass: a reject writes no check and records the reason", r.status === 201 && !sql(`select count(*) from check_def where check_key='${k3}'`).match(/[1-9]/) && sql(`select status || '|' || decision_reason from proposal_item where id='${two?.id}'`) === "rejected|Not what the guide asks", sql(`select status from proposal_item where id='${two?.id}'`));
 
   // ── IMM 5257's form check: it reads the form's own fields, so it needs them mapped to shared fields
+  const readsOf = async (id: string) => ((await band("edition:IMM 5257 (09-2023)")).find((i) => i.id === id)?.reads ?? null) as { field: string; words: string; shared: string | null; shared_words: string | null }[] | null;
+  const unmappedReads = await readsOf(formCheck?.id);
+  ok("QA-196 pass (tech lead): To review shows what the form check reads, each form field by its printed words and \"not mapped yet\"", unmappedReads?.length === 2 && unmappedReads.every((x) => x.shared === null && !/form1\[0\]/.test(x.words)) && /Have you ever committed/.test(unmappedReads[0].words), unmappedReads);
+  const guideReads = one?.reads; // as To review showed it when the guide was drafted
+  ok("QA-196 pass (tech lead): a guide check's reads say which answers are not in the library yet (read in words)", Array.isArray(guideReads) && guideReads.length >= 1 && guideReads.every((x: any) => x.shared === null && x.words.length > 0), guideReads); // eslint-disable-line @typescript-eslint/no-explicit-any
   const before = Number(sql("select count(*) from check_def"));
   r = await decide([formCheck?.id], "accept");
   ok("QA-196 fail: IMM 5257's form check is refused in plain words while the form fields it reads are not mapped to shared fields, and nothing is written", r.status === 409 && /not mapped to a shared field yet/.test(said(r)) && /field page first/.test(said(r)) && /Have you ever committed, been arrested/.test(said(r)) && !/form1\[0\]|BackgroundInfo3/.test(said(r)) && Number(sql("select count(*) from check_def")) === before && sql(`select status from proposal_item where id='${formCheck?.id}'`) === "waiting", said(r));
@@ -119,12 +128,18 @@ const GUIDE_ANSWER = { checks: [guideCheck, crossCheck], unresolved: [] };
   const ed = sql(`select id from form_edition where edition_label='IMM 5257 (09-2023)'`), ws = sql("select id from workspace limit 1");
   const OFFENCE = "person.criminal_offence_declared", OFFENCE_DETAILS = "person.criminal_offence_details";
   for (const [p, key] of [[CHOICE, OFFENCE], [DETAILS, OFFENCE_DETAILS]]) sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, outcome, canonical_field_key, version, status, origin, updated_by) values (gen_random_uuid(), '${ws}', '${ed}', '${p}', 'mapped', '${key}', 1, 'DRAFT', 'HUMAN', 'user-A')`);
+  const mappedReads = await readsOf(formCheck?.id);
+  ok("QA-196 pass (tech lead): once mapped, To review shows each form field → the shared field it becomes", JSON.stringify(mappedReads?.map((x) => x.shared)) === JSON.stringify([OFFENCE, OFFENCE_DETAILS]) && mappedReads!.every((x) => !!x.shared_words), mappedReads);
   r = await decide([formCheck?.id], "accept");
+  ok("QA-196 pass (tech lead): accepted as it is, a form check warns", r.status === 201 && sql(`select string_agg(distinct severity, ',') from check_def where check_key='${r.body?.items?.[0]?.landedAs}'`) === "warn", said(r));
+  await call("POST", `/review/proposals/undo/${r.body?.batchId}`, {});
+  r = await decide([formCheck?.id], "edit", { payload: { ...(formCheck?.readings?.draft?.payload ?? {}), severity: "block" } });
   const k4 = r.body?.items?.[0]?.landedAs as string | undefined;
   const filing = sql(`select coalesce(string_agg(distinct cf.combination_id::text, ',' order by cf.combination_id::text), '') from combination_form cf join gov_form_def g on g.id=cf.gov_form_def_id where g.form_key='IMM 5257' and cf.status <> 'RETIRED'`).split(",").filter(Boolean);
   const landedOn = k4 ? sql(`select coalesce(string_agg(combination_id::text, ',' order by combination_id::text), '') from check_def where check_key='${k4}'`).split(",").filter(Boolean) : [];
   ok("QA-196 pass: once mapped, IMM 5257's form check lands on every combination whose draft files IMM 5257, under one key", r.status === 201 && filing.length > 0 && JSON.stringify(landedOn) === JSON.stringify(filing), { status: r.status, said: said(r), filing: filing.length, landedOn: landedOn.length });
   const tree = k4 ? sql(`select predicate_json::text from check_def where check_key='${k4}' limit 1`) : "";
+  ok("QA-196 pass (tech lead): made a serious warning before Accept, it lands as one (block)", !!k4 && sql(`select string_agg(distinct severity, ',') from check_def where check_key='${k4}'`) === "block");
   ok("QA-196 pass: the landed form check reads the shared fields, never the form's own field names", tree.includes(OFFENCE) && tree.includes(OFFENCE_DETAILS) && !tree.includes("form1[0]"), tree.slice(0, 200));
   const l4 = k4 ? await listed(k4) : null;
   ok("QA-196 pass: after a reload, Library › Checks lists IMM 5257's check once, used in each of those combinations", !!l4 && l4.used_in?.length === filing.length, l4 && l4.used_in?.map((u: any) => u.label)); // eslint-disable-line @typescript-eslint/no-explicit-any
