@@ -97,3 +97,83 @@ Journeys: J1 author, after Reset, loads the checkpoint and opens With an LMIA's 
 **To fix:** R1-B1 and R1-M1. R1-m1 to R1-m5 with them, or on the slice 3 row.
 
 Verdict: Changes requested
+
+## Round 2: diff-only re-review of e9f5e3d7 (`git diff 69ca9b06..e9f5e3d7`)
+
+Reviewer: the same fresh context, 4 Nov 2026. I ran e9f5e3d7 from a separate git worktree, on port 4482 with database `xr_studio_rv2`. I started it with the same steps as `isolated.sh`, because the sandbox refuses its database status check on a scratch path. The server is stopped, the database dropped and the worktree removed.
+
+**What I ran on e9f5e3d7** (`tsx --tsconfig api/tsconfig.json`, as `run-suites` does):
+* `check_forms_channels.ts`: **107/107**;
+* `check_qa144_lmia_release.ts`: **22/22**;
+* `check_qa144_vv_release.ts`: **28/28**;
+* `typecheck.mjs`: "no new type errors (15 known, 0 fixed)".
+* CI for e9f5e3d7 was still queued. The walk screenshots are the walk's own output at 3b6efbdf; I did not re-walk.
+
+**Round 1 findings**
+* **R1-B1: fixed.** `exactFirst` replaces the second `both` (`check_forms_channels.ts:128`). The file parses and the suite runs in full.
+* **R1-M1: fixed.** `engine/options.ts:29-32` maps a value only when it has exactly one free option as its ending, and no other unmatched value ends with that option. I ran it with tsx:
+  * the IMM 5710 case still maps Legally Separated to 05;
+  * Simplified and Traditional Chinese against "Chinese" map nothing;
+  * "Not Legally Separated" and "Judicially Separated" against "Legally Separated" and "Separated" map nothing.
+  * The failing half is now tested (`check_forms_channels.ts:131-133`).
+* **R1-m3: the reporting part is fixed.** Row 7 names the unchosen sections, and the LMIA check asserts it (`:82`). The risk to hand-made choices is deferred to the screen button's row, with the reason given. That is acceptable while the blank-copy load is the only caller.
+* **R1-m4: fixed in the code.** `keepChosenEveryones` runs again after the IRM 0002 fact is placed (`demo.ts:561`).
+  * Audit order: the Visitor visa's `personal_details` is removed at 04:01:18, during its own step. That is before With an LMIA's first selection (04:01:20).
+  * In round 1 it was removed only later, by With an LMIA.
+* **R1-m1, R1-m2, R1-m5: unchanged, and moved to the PR as questions for the tech lead and the expert.**
+  * I agree none must be fixed before merge. m1 is labelled Sample and quoted exactly; m2 cannot happen in this load; m5 is deterministic today.
+  * One condition: m5's unused `marital_status_2` must be on the tech lead's list, because it is an approved item in the shared library.
+
+**New this round (minors, Should)**
+* **R2-m1 (this round; not slice 1's rule of the same name). R1-m4's fix has no failing test.**
+  * If the new `keepChosenEveryones` call is removed, every check still passes, because With an LMIA's placement later unchooses `personal_details` on the Visitor visa anyway.
+  * Fix: assert in the LMIA check that the Visitor visa's removal of the IRM 0002 fact's section comes before With an LMIA's first section selection in Activity.
+* **R2-m2 (nit). Row 7 names the same combination two ways** (`demo.ts:565,577`, by reading). The Visitor visa's own entries use the six's path label ("Visitors › Visitor visa"); entries from another combination's pass use `combination.label` ("Visitor visa"). Row 7 would then list the Visitor visa twice. Fix: use one label source.
+
+**Journey test, round 2: 7½/10. Still not a pass.**
+* "Feedback and state" rises to 1 (row 7 now says what was unchosen).
+* "Correct data" stays at ½ (m5's unused list).
+* The other half points (next step, plain words, speed, trust) come from screens that existed before this slice, or from questions now with the tech lead. Not re-walked.
+
+Verdict: Approve e9f5e3d7
+
+## Round 3 (merge check): 28cf7e8c, 3b1adfd7 and `git diff 3b1adfd7 da761218`
+
+Reviewer: the same fresh context, 4 Nov 2026. My copy `rv2` ran on port 4482 at da761218, the head of this working copy; it is now stopped and its database dropped.
+
+**What I ran on da761218**
+* `check_qa144_lmia_release.ts`: **23/23**. The load took 60.7 s and released With an LMIA at US$0.
+* `check_c10_1_configured.ts`: **31/31**, including main's new line "every configured release's draft matches its release right after the load" (drifted: none).
+* `check_qa144_vv_release.ts`: **28/28**.
+* `typecheck.mjs`: "no new type errors (15 known, 0 fixed)".
+
+**1. The conflict resolution in 28cf7e8c holds.**
+* The combined diff keeps both sides:
+  * #798's QA-182 wording, "form field" instead of "box", in the `noSection` line and in row 7's "facts asked in the section of their form field";
+  * this slice's `keepChosenEveryones` call, the `unchosen` collection and row 7's unchosen clause.
+* The `++` line in row 7 is #798's text with this slice's clause added at the end. Nothing from either side is lost, and the imports merge cleanly.
+
+**2. The follow-up commit da761218 holds.**
+* **Round 2's R2-m1: fixed.** The new assertion (`check_qa144_lmia_release.ts:85-91`) requires the Visitor visa to remove the IRM 0002 fact's section before With an LMIA's first selection.
+  * The round-1 Activity data, from before the R1-m4 call existed, shows the removal coming after LMIA's selections, so the line fails without the call. This agrees with the builder's 22/23. With the call it passes.
+  * It compares timestamps as text. That is safe here, because every timestamp comes from one session in one time zone.
+* **Round 2's R2-m2: fixed.** `nameOf` now reads `combination.label` for every combination (`form-part-placements.ts:106-107`), so each combination is named once in row 7.
+* **The C10.1 B10 label: sound.**
+  * The line is unchanged except for its label.
+  * I ran main's `gate-b.mjs` `packVerdict("C10.1", ["B10"], …)`. It passes on a `PASS  C10.1 B10` line even when other part B lines fail, and refuses on `FAIL  C10.1 B10`.
+  * Naming only step B10 matches what this slice delivers: the other part B lines wait on the Visitor visa's release (IRM 0002's paid map) and on rows 9, 11, 12 and 17.
+
+**3. Main's merged changes do not break this slice.**
+* **`applySampleFormRoles`** runs once before the releases (`demo.ts:601`) and again after the load (`:164`). It sets IMM 5707's and IMM 5645's `family_information` role only where none is set yet, so the second call changes nothing. C10.1's no-drift line proves this on the released With an LMIA.
+* **`STARTED_FROM_RELEASE` (#837)** is read only by Demo › Start With an LMIA (`releaseWithSources`), on the six. The configured load never calls it, and it refuses a combination that already has a release. Gate B in CI ran C5.4 27/27 on the six at da761218.
+
+**CI at da761218: red, but not because of the code.**
+* Shard 1 stopped at gate B. Its log shows `PR_BODY: Capabilities: C10.1, C5.4`: the body as it was when the push event fired, before the edit to "C10.1 (steps B10)". Gate B therefore ran the whole C10.1 pack (15/23).
+* Shards 2 to 6 were cancelled, so **no suite has run in CI on this commit**.
+* `ci.yml:31` does not trigger on `edited`, and re-running a job reuses the old event's body. To refresh the body without changing the head commit, close and reopen the PR (`reopened` is a trigger). An empty push would also work, but that moves the head off the commit reviewed here.
+
+**Open: none new.** R1-m1, m2 and m5 stay as questions for the tech lead and the expert, with m5's unused list on the tech lead's list, as round 2 said. The hand-choice risk stays with the screen button's row.
+
+**Journey test: 7½/10, carried. Not a pass. Not re-walked.** Round 2 recorded what keeps it below 8.
+
+Verdict: Approve da761218 (merge only on a green CI run that reads the current body)
