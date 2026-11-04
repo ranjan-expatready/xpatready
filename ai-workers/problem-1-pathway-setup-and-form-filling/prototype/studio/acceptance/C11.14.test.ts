@@ -89,7 +89,12 @@ const statusOf = (ids: string[]) => sql(`select string_agg(status, ',' order by 
   // field (or is an unclear match) says it is decided on its own.
   const newField = (id: string) => sql(`select (step = 'field_map' and coalesce(work->>'outcome', '') <> 'REUSE')::text from proposal_item where id = '${id}'`) === "true";
   const tickable = readyBand.filter((x: { id: string }) => !newField(x.id));
-  ok("C11.14 AT-4 the field-mapping proposals are on To review in their bands; the Ready reuse matches can be ticked in bulk (no \"decided on its page\" exception) and a Ready new shared field says it is decided on its own (P-296 (1))", !!g && tickable.length > 0 && readyBand.every((x: { id: string; bulk_why: string | null }) => (newField(x.id) ? /decided on its own/.test(x.bulk_why ?? "") : x.bulk_why === null)), { group: g?.id ?? null, groups: (q?.groups ?? []).map((x: { id: string }) => x.id), ready: readyBand.length, tickable: tickable.length, why: readyBand[0]?.bulk_why });
+  // qa lane, 4 Nov (Lead 5's triage of AT-4): on Reset to the six the library starts empty, so the first edition's mappings
+  // are all new shared fields and none can be a reuse match; the check no longer demands a tickable reuse (it did, and
+  // failed on #785 with 49 Ready items, all new). P-318 (4) (#726): a Ready reuse match that needs a near reason is not
+  // ticked in bulk either, and says so. Bulk acceptance of clean reuse is proven below, on items written through the door.
+  const reuseWhyOk = (w: string | null) => w === null || /near|reason/i.test(w);
+  ok("C11.14 AT-4 the field-mapping proposals are on To review in their bands; every Ready new shared field says it is decided on its own (P-296 (1)), and a Ready reuse match is tickable in bulk unless it needs a near reason (P-318 (4))", !!g && readyBand.length > 0 && readyBand.every((x: { id: string; bulk_why: string | null }) => (newField(x.id) ? /decided on its own/.test(x.bulk_why ?? "") : reuseWhyOk(x.bulk_why))), { group: g?.id ?? null, ready: readyBand.length, newFields: readyBand.length - tickable.length, reuse: tickable.length, why: readyBand[0]?.bulk_why });
 
   // ── the queue's bulk rules, on items written through the door
   const { Db } = await import("../api/src/core.ts");
