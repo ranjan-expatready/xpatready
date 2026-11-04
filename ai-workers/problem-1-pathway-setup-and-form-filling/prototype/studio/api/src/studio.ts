@@ -250,7 +250,8 @@ export class Studio {
     const rows = found.filter((r) => !later.has(r.id));
     const by = new Map<string, { form: string; n: number; example: string }>();
     // The example is the form's own words (a field's caption), never its PDF path (IMM_5476[0].Page1[0]…, #118 review).
-    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && r.caption?.trim()) cur.example = r.caption.trim(); by.set(k, cur); }
+    // C10.1 (#1009): a box with no label on the form can carry its PDF path as its caption; that is never the example either.
+    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && r.caption?.trim() && !/\[\d+\]/.test(r.caption)) cur.example = r.caption.trim(); by.set(k, cur); }
     return [...by.values()];
   }
 
