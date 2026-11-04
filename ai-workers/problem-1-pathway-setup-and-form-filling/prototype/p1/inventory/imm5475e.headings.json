@@ -1,0 +1,12 @@
+{
+ "file": "official-sources/ircc/forms/imm5475e.pdf",
+ "sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Page1.Seven": {
+   "heading": "Your declaration",
+   "printed": "7. Your declaration",
+   "how": "numbered"
+  }
+ }
+}

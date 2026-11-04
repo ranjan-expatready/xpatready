@@ -1,0 +1,93 @@
+{
+ "file": "official-sources/ircc/forms/imm1344e.pdf",
+ "sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+ "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
+ "parts": {
+  "Part1.SponsorDetails": {
+   "heading": "Part 1: application to sponsor and undertaking",
+   "printed": "PART 1: APPLICATION TO SPONSOR AND UNDERTAKING",
+   "how": "banner",
+   "sub": {
+    "SectionHeader": {
+     "heading": "Sponsor personal details",
+     "printed": "SPONSOR PERSONAL DETAILS"
+    }
+   }
+  },
+  "Part1.SponsorContactInfo": {
+   "heading": "Sponsor contact information",
+   "printed": "SPONSOR CONTACT INFORMATION",
+   "how": "banner"
+  },
+  "Part1.SponsorResidency": {
+   "heading": "Sponsor residency declaration",
+   "printed": "SPONSOR RESIDENCY DECLARATION",
+   "how": "banner"
+  },
+  "Part1.SponsorEA": {
+   "heading": "Sponsor eligibility assessment",
+   "printed": "SPONSOR ELIGIBILITY ASSESSMENT",
+   "how": "banner"
+  },
+  "Part1.CoSigner": {
+   "heading": "Co-signer personal details",
+   "printed": "CO-SIGNER PERSONAL DETAILS",
+   "how": "banner",
+   "sub": {
+    "CosignContactInfo": {
+     "heading": "Co-signer contact information",
+     "printed": "CO-SIGNER CONTACT INFORMATION"
+    },
+    "CosignResidency": {
+     "heading": "Co-signer residency declaration",
+     "printed": "CO-SIGNER RESIDENCY DECLARATION"
+    },
+    "CosignEA": {
+     "heading": "Co-signer eligibility assessment",
+     "printed": "CO-SIGNER ELIGIBILITY ASSESSMENT"
+    }
+   }
+  },
+  "Part1.Undertaking": {
+   "heading": "Undertaking by sponsor and co-signer, if applicable",
+   "printed": "UNDERTAKING BY SPONSOR AND CO-SIGNER, IF APPLICABLE",
+   "how": "banner"
+  },
+  "Part2.Header": {
+   "heading": "Part 2: sponsorship agreement",
+   "printed": "PART 2: SPONSORSHIP AGREEMENT",
+   "how": "banner"
+  },
+  "Part2.Sponsored": {
+   "heading": "Obligations of the person to be sponsored",
+   "printed": "OBLIGATIONS OF THE PERSON TO BE SPONSORED",
+   "how": "banner"
+  },
+  "Part2.ImportantInfo": {
+   "heading": "Important information",
+   "printed": "IMPORTANT INFORMATION",
+   "how": "banner"
+  },
+  "Part2.AuthDiscloseInfo": {
+   "heading": "Authorization for disclosure of personal information",
+   "printed": "AUTHORIZATION FOR DISCLOSURE OF PERSONAL INFORMATION",
+   "how": "banner"
+  },
+  "Part2.Declaration": {
+   "heading": "Declaration",
+   "printed": "DECLARATION",
+   "how": "banner"
+  },
+  "Part2.Signatures": {
+   "heading": "Signatures",
+   "printed": "SIGNATURES",
+   "how": "banner",
+   "sub": {
+    "Disclosure": {
+     "heading": "Disclosure",
+     "printed": "DISCLOSURE"
+    }
+   }
+  }
+ }
+}
