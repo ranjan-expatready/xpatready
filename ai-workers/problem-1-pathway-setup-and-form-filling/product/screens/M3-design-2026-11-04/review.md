@@ -106,3 +106,30 @@ No Blocker. Three Majors: a founder recommendation that contradicts a recorded r
 * The order puts M3-only work first, and the C7.6 dependency table matches the packs.
 * Each challenge's Blockers and Majors have a matching rule, test or Definition-of-ready line in its r2 concept.
 * Each row has at most three questions, each with a recommendation.
+
+## Re-review (diff only: `git diff HEAD~1 HEAD`, bc42e4ab; the range 7a5b2b0b does not exist in this clone)
+
+**Verdict: Changes needed.** One Major and four Minors remain. M2, M3 and m1–m13 are fixed. M1 is half fixed. The diff touches only this folder (`review.md` came in unchanged).
+
+**Fixed:**
+* **M2:** gate B is now described as `gate-b.mjs` checks it. The order table has a "Before Claims Works" column, and the two Definitions of ready match.
+* **M3:** "in force" is worked out when the table is read, nothing runs on approve, and `fee_table` cascades from `library_change` (`rows.md:529-538`, `fee-table/concept-draft.md:18`).
+* **m1–m13:** all fixed as the response says (QA-149's check, the readers, the child fee, `pr_adult`, the P-151 wording, `App.tsx`, the types, the field-scope body, C11.5-8 and the create route, C6.5's route and test file, the cascades, -23 under P-319, the board).
+
+**Remaining Major**
+* **R1 (from M1). The demo story no longer has an Online form, and one claim in the fix is false.**
+  * **The false claim.** `rows.md:781` says DEMO.md row 9 "follows" P-318 (6), with "no IMM 5707". Row 9 actually reads "IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 Signed PDF upload" (`DEMO.md:23`), so it also goes against P-318 (6).
+  * **The missing Online form.**
+    * The new recommendation (`:783`) keeps IMM 5257 as a PDF upload and makes IMM 5645 the family form, but never says IMM 5645's channel.
+    * C10.2's Done when still needs "Online sections entered" (`:739`), and its -6 checks an ONLINE item with its sections entered. DEMO row 14 needs a "portal sheet".
+    * If IMM 5645 is Online, it has no section list: `studio/contracts/pdf-sections.json` (hot) holds only IMM 5257, 1295, 5707 and 5476, and an Online item without one is refused. If it is a PDF upload, release 2 has no Online item at all.
+  * **Fix:**
+    * State release 2's channels in full, including IMM 5645's.
+    * If IMM 5645 is Online, add its section list outside the hot prefix (as C11.6 (b) proposes, `samples/pdf-sections-*.json`) or get the tech lead's hot-file line. Then add that to C10.2's files and to its "Waits for".
+    * Correct the DEMO row 9 claim, and name DEMO row 9 among the records the tech lead corrects.
+
+**Remaining Minors**
+* **r1, `rows.md:251`, `:285-286`, `:858`.** C7.3 still says "C10.2 reaching Done on IMM 5707" and still waits for "C10.2's Q1 (whether release 2 has IMM 5707 at all)". With R1, C10.2 no longer uses IMM 5707. **Fix:** "C10.2's family form" or "the Online family form".
+* **r2, `rows.md:784`.** C7.3 would score Works only on a Sample fixture whose channel goes against P-318 (6). That fixture is the shared `setup_vv_m3.ts` release, which every M3 pack uses, not a fixture of C7.3's own. P-322 counts Works only where a real user meets the capability. **Fix:** put this to the tech lead as a named question (Works on that fixture, or C7.3 Works waits for C11.6 (b)).
+* **r3, `fee-table/concept-draft.md:17`.** The Loader row still says the cache is refreshed "when a version is approved". The concept's back-end plan ("the challenge's table, unchanged") still reads "sync cache refreshed on approve". Both contradict line 18. The `status` column's meaning is also left open. **Fix:** "refreshed from the read (version check)", and say that `status` is never trusted over the change's state.
+* **r4, `rows.md:283-284` and `:605-607`.** QA-165 is listed twice in C7.3's "Depends on". C11.5-9 repeats clause 2. **Fix:** remove the duplicates.

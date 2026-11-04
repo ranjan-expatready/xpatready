@@ -245,15 +245,15 @@ Tests:
 * **Live portal order (W6) is not M3.** P-245 moves the extension to M4. P-152 and BR-8: "until the W6 extension the answer sheet follows the sections of the PDF twin".
 
 **2. Done when**
-* On the case page, an Online IMM 5707 (in the pack's own Sample fixture: P-318 (6) makes IMM 5645 the family form on an online release, see C10.2 Q1) opens its answer sheet, sections in PDF-twin order, labelled "PDF twin order (live portal order later)".
+* On the case page, an Online form opens its answer sheet, sections in PDF-twin order, labelled "PDF twin order (live portal order later)". The form is **IMM 5257 Online** on release 2 (C10.2 Q1). The pack's existing IMM 5707 Online steps run on `setup_vv_m3.ts`'s Sample release, against P-318 (6) (Q4).
 * Each answer has a Copy button (copies `copy_text`) and its source.
 * "Entered in the portal" ticks with who and when; a later change shows Out of date and only warns (FQ-6).
-* After every question on a family case is answered, the parents included, the sheet waits for nothing and IMM 5707 can read Done.
+* After every question on a family case is answered, the parents included, the sheet waits for nothing and the Online form can read Done.
 * Axe clean at 1440 and 1024 px.
 
 Tests:
 * keep C7.3-1 to -13;
-* **add** C7.3-14 ("after fillEverything, IMM 5707's sheet waits for nothing", qa's suggestion in `qa/reports/2026-11-02-vv-m3-round2.md`);
+* **add** C7.3-14 ("after fillEverything, the Online form's sheet waits for nothing", qa's suggestion in `qa/reports/2026-11-02-vv-m3-round2.md`, on IMM 5707 as qa wrote it and on IMM 5257 Online);
 * **add** C7.3-15 (two parents give two entries, each with its own source; n2);
 * new browser suite `tests/check_c73_sheet_browser.cjs`.
 
@@ -276,14 +276,14 @@ Tests:
 * **Q1 (tech lead). Who fixes QA-153?** *Recommend:* the M2 forms owner places the parent questions, as P-300 (2) assigned. It is an M2 bug fix, so M2 priority is kept. A small M3 PR then maps relative answers to `parent_N`.
 * **Q2 (tech lead). How are parents asked?** *Recommend:* a repeating group "Parents" (`per_row`, at most 2) on each person, with row N read as `parent_N` in the resolver. It reuses a repeat mode that exists and avoids `snapshot.ts` and the release schema.
 * **Q3 (founder). Can C7.3 score Works with PDF-twin order?** The row says "the portal's screen order". *Recommend:* yes for M3, with the label shown and live portal order in M4 (P-245).
+* **Q4 (tech lead, P-322). Which release does C7.3 count Works on?** `setup_vv_m3.ts`, which every M3 pack uses, releases IMM 5707 Online. That goes against P-318 (6), and the setup is not C7.3's own fixture. *Recommend:* add IMM 5257 Online steps on release 2 (C10.2 Q1) and count Works there. Then change `setup_vv_m3.ts` to P-318 (6) in one runtime PR, with the packs that read IMM 5707 Online changed and named in it.
 
 **5. Size and order**
 * **Size:** M overall (screen S–M; QA-153 S on each side).
 * **Depends on:**
   * QA-153 and QA-165, for the PR that claims Works (gate B);
-  * QA-165 (also names C7.3, M2 forms; the PR names it if it is still open);
-  * C10.2's Q1 (whether release 2 has IMM 5707 at all).
-* **Unblocks:** C7.7 and C10.2 reaching Done on IMM 5707, and C9.2's entered-section steps.
+  * C10.2 Q1 and C7.3 Q4 (which Online form, on which release).
+* **Unblocks:** C7.7 and C10.2 reaching Done on the Online form, and C9.2's entered-section steps.
 
 ---
 
@@ -604,7 +604,7 @@ On the released work-permit fixture, the case officer links the case to a Sample
 
 Test: a new `acceptance/C11.5.test.ts` (the merged id), steps C11.5-1 to -7, one per clause above, plus:
 * **C11.5-8**: an organisation fact resolves from the organisation subject, never from a person (taken over from C3.16-5, which names C11.5);
-* **C11.5-9**: the representative's boxes stay the firm's.
+* **C11.5-9**: a Retail case whose only `organisation.*` boxes belong to the representative (IMM 5476) is **not** offered the link (the box-owner filter).
 
 The Sample employer record is created by `POST /runtime/employers` (staff, Sample, demo workspace only) in the new file. It is named as scaffolding until L-SA5 (M4). Also a new fail case in `tests/runtime/check_c115_employer.ts` from c1-v3's IMM 5476 entry.
 
@@ -736,11 +736,11 @@ These go in a new `acceptance/C3.16.test.ts`. **C3.16 scores Works only after pa
 On a fresh isolated copy, only the author can start Demo › Load the finished story (a case officer gets 403; the author gets a job, 202). The job:
 * runs the configured checkpoint;
 * then, through the screens' own services and as the person who holds each duty, takes the family-of-four Visitor visa case on release 2 to Ready to file on every filing, in one group:
-  * Online sections entered;
-  * IMM 5257 validated and read back;
+  * IMM 5257 Online, its sections entered (Q1);
+  * IMM 5645 filled as a PDF upload;
   * IMM 5476's signed scan in;
   * the checklist per person, with some lines received;
-* leaves the thin case on release 1.
+* leaves the thin case on release 1, with its IMM 5257 validated and read back (the barcode round trip, C10.1 row 12).
 
 It costs US$0. Loading twice keeps two Visitor visa cases. Reset leaves no cases.
 
@@ -776,14 +776,20 @@ Test: `C10.2.test.ts` -1 to -11, changed as follows:
   * P-318 (6): "the family form follows the channel (online IMM 5645, paper IMM 5707)";
   * P-102 (row 13 parked);
   * P-93, the "one story, loadable finished" rule, is cited only in DEMO.md, not in DECISIONS.md.
-* **Q1 (conflict, tech lead first, founder if it changes P-318). Release 2's family form and channels.**
-  * The pack (-6) and FQ-2 say: IMM 5257 PDF upload, validated; **IMM 5707 Online**; IMM 5476 signed scan.
-  * **P-318 (6)** (tech lead's ruling, 4 Nov) says: "the family form follows the channel (online IMM 5645, paper IMM 5707 per IMM 5484), never by removing one". DEMO.md row 9 and #798's C10.1 part B follow it: IMM 5257 Online, IMM 5645 the family form, no IMM 5707.
-  * So the pack's "IMM 5707 Online" goes against P-318 (6).
-  * *Recommend:* follow P-318 (6) in the demo story. Release 2 files online, so the family form is IMM 5645, and IMM 5257 keeps the PDF upload with its barcode round trip. C10.2-6 changes to IMM 5645 in the same PR (its first line says so).
-  * C7.3's answer sheet keeps its IMM 5707 Online case **only in its own test fixture, labelled Sample**, until a released form is Online on a portal (P-113's permanent-residence forms, C11.6 (b)). Otherwise the answer sheet would have no Online form to prove itself on.
-  * Reversing P-318 (6) instead is the founder's choice and is not recommended.
-  * QA-153's parent facts are needed either way, because IMM 5645 also lists the parents.
+* **Q1 (conflict, tech lead first). Release 2's channels and family form.**
+  * **The pack** (-6) and FQ-2 say: IMM 5257 PDF upload, validated; **IMM 5707 Online**; IMM 5476 signed scan.
+  * **DEMO.md row 9** (read 4 Nov) says: "IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 Signed PDF upload".
+  * **P-318 (6)** (the tech lead's ruling, 4 Nov) says: "the family form follows the channel (online IMM 5645, paper IMM 5707 per IMM 5484), never by removing one". STATE records the follow-up "DEMO.md row 9 → IMM 5645 online" (Builder 8, after QA-144).
+  * Neither the pack nor row 9 as written today matches P-318 (6).
+  * **Recommend:** release 2 is DEMO row 9 brought up to P-318 (6):
+    * **IMM 5257 Online** (its answer sheet has a section list already: `studio/contracts/pdf-sections.json` covers IMM 5257);
+    * **IMM 5645 PDF upload**, the family form of an online application (channel Sample until the expert confirms);
+    * **IMM 5476 Signed PDF upload**.
+  * This gives the story its Online form with entered sections (DEMO row 14) without touching the hot section-list file.
+  * The **barcode round trip** stays in the story on the **thin case on release 1** (IMM 5257 PDF upload, validated and read back; C10.1 row 12).
+  * C10.2-6 changes to these channels in the same PR (its first line says so). DEMO row 9's wording is the tech lead's to update.
+  * QA-153's parent facts are needed either way, because IMM 5645 lists the parents.
+  * Reversing P-318 (6) is the founder's choice and is not recommended.
 * **Q2. Validated copies without Acrobat.**
   * Today only the test-only `tests/runtime/validated.ts` (`tools/simulate_validate.py`) makes them.
   * *Recommend:* a demo step labelled Sample, refused outside the demo workspace, that uploads through the product's own read-back route. This is the one shortcut the P-322 verdict allows.
@@ -855,7 +861,7 @@ Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading
 | 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b | — (C6.5 Works needs 2b) |
 | 5 | **C7.5 part 2, PR 1** review runs, prompt, job, stub pass, Review page (US$0) | runtime | M | M3-only (new `review-runs.ts`; never edit `studio/contracts/findings.ts`) | — | PR 2 | — (C7.5 Works needs PR 2 and C7.6) |
 | 6 | **C11.6 (a)** channel select on the row | screens | S | M3-only (`prepare.tsx`) | 2 | C10.2 | — (C11.6 Works needs (b) or (b) named as breadth) |
-| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on IMM 5707 | QA-153, QA-165 closed |
+| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on the Online form | QA-153, QA-165 closed |
 | 8 | **C6.12-25** fees in the tab | screens | S | M3-only | 2, 3 | C10.2 | see 3 |
 | 9 | **C6.5 2b** the drawer | screens | S–M | M3-only | 1, 4 | C4.5 (P-256), J7 3.3 to 3.8 | — (C6.5 Works: 2a + 2b; part 3 named) |
 | 10 | **C11.5 (+C1.3)** employer pre-fill on a Sample employer record | runtime | M | M3-only (new `case-employer.ts`, migration) | Q1 (M3 or M4) | C9.2's employer step, SI-10 | — |
@@ -887,7 +893,7 @@ Rows 1, 3, 4 and 5 can start the same day. None touches an M2-hot file.
 
 ## Questions for the founder (one at a time, through the tech lead; each recommended answer first)
 1. **C11.5 Q1. Employer pre-fill: M3 or M4?** P-239 puts the link in M4 (L-SA5). *Recommend:* M3 links to a Sample employer record; M4 adds the Corporate case.
-2. **C10.2 Q1. The family form on release 2** (only if the tech lead's P-318 (6) is to be reversed). *Recommend:* keep P-318 (6): IMM 5645 on the online release, with the pack changed to match. IMM 5707 Online stays only in C7.3's Sample fixture.
+2. **C10.2 Q1. Release 2** (only if the tech lead's P-318 (6) is to be reversed). *Recommend:* keep P-318 (6). Release 2 is IMM 5257 Online, IMM 5645 PDF upload and IMM 5476 Signed PDF upload. The barcode round trip is shown on release 1's thin case.
 3. **C6.12 Q2 and Q3. Fees.**
    * A fee version is stamped on the submission group when its filings are first worked out, and never reprices them.
    * This follows P-151 (1)'s warn-not-reprice, as amended by P-237 (3). The stamp time is new.
@@ -914,7 +920,12 @@ All the other questions in the rows are the tech lead's own rulings.
 ## Response to the Opus review of the records (`review.md`, 4 Nov)
 **Verdict:** Changes needed (no Blockers, 3 Majors, 13 Minors). All are taken.
 
-* **M1, P-318 (6):** C10.2 Q1 now follows the tech lead's P-318 (6): IMM 5645 on the online release, with the pack changed to match. C7.3 keeps IMM 5707 Online only in its own Sample fixture. Founder question 2 now asks only whether to reverse P-318 (6), and recommends no.
+* **M1, P-318 (6):** C10.2 Q1 now states release 2's channels: DEMO row 9 brought up to P-318 (6), that is IMM 5257 Online, IMM 5645 PDF upload and IMM 5476 Signed PDF upload. The barcode round trip is on release 1's thin case. C7.3 counts Works on IMM 5257 Online (Q4). Founder question 2 now asks only whether to reverse P-318 (6), and recommends no.
+* **Re-review (diff only):**
+  * R1: release 2's channels are stated, the IMM 5257 section list already exists, and the DEMO row 9 claim is corrected;
+  * r1 and r2: C7.3 is rewritten around the Online form, and Q4 goes to the tech lead;
+  * r3: the fee-table loader row no longer says "on approve", and `status` is defined;
+  * r4: the duplicate QA-165 is removed, and C11.5-9 is a distinct case.
 * **M2, gate B:** described as `tools/gate-b.mjs` checks it (only on "Claims Works:" lines, `Fixes: QA-nnn`). The order table has a "Before Claims Works" column, and the concepts' Definitions of ready match.
 * **M3, the fee table off hot files:**
   * "in force" is worked out when the table is read;

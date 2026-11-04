@@ -14,7 +14,7 @@
 | Layer | Exists (main 9caa043b) | New here |
 |---|---|---|
 | Data | `samples/fee-table.json`, read by `engine/runtime/filings.ts`, `engine/runtime/case-checklist.ts` (`checklist: true`), `engine/source-register.ts`, `api/src/source-register.ts` (G1, called from `studio.ts`, which is M2-hot), `api/src/case-prepare.ts` (biometrics ages; the split's words), `api/src/workspace.ts` (`hasFeeRules`, `defaultModeOf`) and `acceptance/C6.12-breadth.test.ts`. The builder confirms the list with `grep -l "FEE_TABLE\|fee-table.json"` | the JSON becomes **version 0**; table `fee_table` (id, `as_of`, lines JSON, status, created_by, reason); `submission_group.fee_table_id` |
-| Loader | — | one loader in the new `api/src/fee-table.ts` returns today's `FeeTable` shape (modes, checklist and group_why carried from the previous version). Readers that are synchronous today (`feeLinesOf`, the checklist, G1) read a cache the loader refreshes when a version is approved, so `studio.ts` is never touched |
+| Loader | — | one loader in the new `api/src/fee-table.ts` returns today's `FeeTable` shape (modes, checklist and group_why carried from the previous version). Synchronous readers (`feeLinesOf`, the checklist, G1) read a cache that is **refreshed from the read itself** (a version check against the newest APPROVED version), never from an approval hook, so neither `library-changes.ts` nor `studio.ts` (both hot) is touched. `fee_table.status` is derived on read: Waiting while its change is WAITING, In force for the newest APPROVED version, Earlier for older approved ones, Returned when its change was returned |
 | Guarded change | `library_change` + `POST /library/changes/:id/approve`; `decideChange` refuses the proposer and only changes the status (`library-changes.ts`, hot) | kind `fee_table`, written from the new file, as `finder.ts` already does for `form_accepts`. **Nothing runs on approve.** "In force" = the newest version whose change is APPROVED, worked out when the table is read (as `form-library.ts` does). Sync readers refresh their cache from that read. `fee_table.change_id` → `library_change` with `ON DELETE CASCADE`, so Reset (`demo.ts`, hot) removes stored versions and version 0 is back (P-108). To review shows it as a generic change (Minor, named) |
 | API | none (S7a gets 404) | `GET /library/fees` (version 0 while nothing is stored); `PUT /library/fees` returns 202 and waits for a second person |
 | UI | none | a minimal read-only list, **in a second PR** |
@@ -94,7 +94,7 @@ S8's loop already approves Waiting changes.
 * **The breadth test** reads `GET /library/fees`, not the file.
 * **PR 2:** the browser shows all 10 lines with sources, Sample badges and In force or Waiting; axe clean at 1440 and 1024 px.
 
-**Back-end plan:** the challenge's table, unchanged.
+**Back-end plan:** the challenge's table, except its "Readers" row. The cache is refreshed from the read (a version check), not on approve.
 
 ## 6b. Capability or scaffolding
 * **Capability:** the dated, approved, versioned table, pricing from it, and the read-only list.
