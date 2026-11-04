@@ -1,0 +1,72 @@
+PASS  C11.10: all five steps done → bar "✓ Live", 5 of 5, no next item, chip Live — {"done":5,"of":5,"text":"✓ Live","next":null}
+PASS  C11.10: the contract parses the engine's answer (five steps)
+PASS  C11.10 (fail case): a checklist with four steps is refused by the contract
+PASS  C11.16: Not started → "0 of 5 steps", Start setup for the author — {"done":0,"of":5,"text":"0 of 5 steps","next":null}
+PASS  C11.16 (fail case): a combination that exists never offers Start setup — Resume setup
+PASS  C11.16 / concept §4a: just started (no forms, no documents) → "0 of 5 steps", step 4 open — {"bar":"0 of 5 steps","step4":"todo"}
+PASS  C11.16 (fail case): no document lines is never done, with or without forms — ["Draft questions and documents"]
+PASS  C11.10: an unconfirmed people list stays open on step 2 and in the Next line — ["confirm_people"]
+PASS  C11.10: the people step opens Forms (Before forms, P-161 (2)) — {"tab":"forms","href":"/c/c-1/forms?focus=people%3Acard"}
+PASS  C11.10 (fail case): Resume on the people step never lands on Smart questionnaire (SQR) — /c/c-1/forms?focus=people%3Acard
+PASS  C11.10 (fail case): it is not Needs you for the expert while no screen offers the confirmation — null
+PASS  C1.4: 3 library forms found for its sources → "Add 3 forms found", never "Find forms" — ["Add 3 forms found"]
+PASS  C1.4 (fail case): nothing attached and no lines → "Find forms"
+PASS  C1.4: precedence — a people proposal on step 2 wins over a run on step 3 — Who can be in this application: Review 1 people proposal
+PASS  C1.4 (fail case): with no proposal the run's own step is next, and its button is View AI progress — {"kind":"view_ai","count":1,"text":"View AI progress","focus":"ai:b1","acts":null,"fromRelease":false}
+PASS  UX-A3 (break B1): a released combination failing the startable check is Not ready, never Live — {"status":"NOT_READY","release":3}
+PASS  UX-A3 (break B1) fail case: a released, startable combination stays Live
+PASS  Lead 5 fail case: AI proposals are Needs you for the approver and the expert (review duty) — {"forB":[{"kind":"review_proposals","count":3,"text":"Review 3 proposals","focus":"review:forms","acts":"review","fromRelease":false,"step":"forms","tab":"forms"}],"forC":[{"kind":"review_proposals","count":3,"text":"Rev
+PASS  Lead 5 pass: nobody without the review duty has them
+PASS  UX-A3 (Devin) fail case: Not ready by the startable check alone has a next step, never "nothing to do" — {"item":{"kind":"fix_problems","count":1,"text":"No questions yet for Principal applicant: firms cannot open cases until it is fixed","focus":"questionnaires:problems","acts":"author","fromRelease":true,"startable":true}
+PASS  UX-A3 (Devin): the cause lands on the step that fixes it (questions on Questionnaires) — {"item":{"kind":"fix_problems","count":1,"text":"No questions yet for Principal applicant: firms cannot open cases until it is fixed","focus":"questionnaires:problems","acts":"author","fromRelease":true,"startable":true}
+PASS  UX-A3 (Devin) pass: a released, startable combination gets no such item
+PASS  C11.10: Not ready — the release's problem is the first item (before a draft proposal), chip Not ready, step 5 reopens — {"item":{"kind":"fix_problems","count":1,"text":"Fix 1 problem: firms cannot open cases until it is fixed","focus":"documents:problems","acts":"author","fromRelease":true},"step":"questions_documents","href":"/c/c-1/docu
+PASS  C11.10: Not ready → Resume setup and Needs you for the author — {"button":"Resume setup","needsYou":{"count":2,"text":"Review 1 people proposal · Fix 1 problem: firms cannot open cases until it is fixed"},"nextLine":"Questions and documents: Fix 1 problem: firms cannot open cases unt
+PASS  C11.10 X1 pass: a Not ready rule problem is a questionnaires:problems item and step 4 opens Smart questionnaire (SQR) — {"focus":"questionnaires:problems","tab":"questionnaires","href":"/c/c-1/questionnaires?focus=questionnaires%3Aproblems"}
+PASS  C11.10 X1 fail: a Not ready documents problem never lands on Smart questionnaire (SQR) (documents:problems, Documents tab) — {"focus":"documents:problems","tab":"documents"}
+PASS  C11.10 X1: problems in both parts are two items with their own counts (1 documents, 2 questions) — ["documents:problems:1","questionnaires:problems:2"]
+PASS  C11.10 (fail case): a release with no problems is Live and has no release item
+PASS  C11.10: Live with back-filled pages → chip Live, step 1 open, the card's button stays Open
+PASS  C11.10: no official-pages record yet → step 1 open with no item (forms lane's record not landed) — {"key":"pages","label":"Official pages","state":"todo","summary":"No official pages record yet","open":[],"tab":"forms"}
+PASS  C11.10 (fail case): a confirmed record closes step 1
+PASS  C11.10: pages, one match (sure) → the author's filled confirm; the expert may confirm too — {"kind":"confirm_pages","count":1,"text":"Confirm the checklist page","focus":"pages:record","acts":"author","fromRelease":false,"tier":"author"}
+PASS  C11.10 (fail case): pages, three matches (not sure) → the author may not confirm (the server answers 403); the expert's filled — {"kind":"choose_pages","count":1,"text":"Choose the checklist page","focus":"pages:record","acts":"sme","fromRelease":false,"tier":"expert","reason":"3 pages match"}
+PASS  C11.10: the author's Next line names who it waits for — Waiting for the immigration expert: Choose the checklist page (3 pages match)
+PASS  C11.10 (fail case): the submitter may not sign (second person) — {"kind":"sign","count":1,"text":"Review and sign","focus":"review:sign","acts":"sme","fromRelease":false,"notBy":["user-C"]}
+PASS  C11.10: the expert signs what someone else submitted (filled for the expert, Needs you) — {"button":"Open","needsYou":{"count":1,"text":"Review and sign"},"nextLine":"Review and release: Review and sign","filled":true}
+PASS  C11.10: Release is the approver's, never the author's
+PASS  C11.10 (fail case): the approver who submitted may not release
+PASS  C11.10: the expert and the approver see Open on every state — ["Open","Open","Open","Open","Open"]
+PASS  C11.10 (fail case): the author sees Start setup or Resume setup before Live
+PASS  C11.10: Retired → "Retired at Release n", no Needs you
+PASS  C11.10 (fail case): building work (Map forms, Find forms) is not Needs you
+PASS  UX-A2 (P-273): a draft's release-blocking problem is Needs you for the author, not for the expert — {"count":1,"text":"Fix 1 form problem"}
+PASS  C11.10: waiting proposals are Needs you for every holder of the review duty (3), not for someone without it — {"author":{"count":3,"text":"Review 2 proposals · Review 1 proposal"},"sme":{"count":3,"text":"Review 2 proposals · Review 1 proposal"}}
+PASS  C11.10: an overlay keeps the contract (ViewerChecklist parses)
+PASS  C11.10: Submit for review is offered when Forms and Questions and documents are done — ["submit"]
+PASS  C11.10 (fail case): no Submit for review while Forms or Documents are still open (the endpoint would refuse it) — ["Forms: Find forms","Questions and documents: Fix 1 problem"]
+PASS  C11.10 (fail case): with draft changes and Forms or Documents open, step 5 is not done — ["todo","todo"]
+PASS  C11.10: a Live combination with no draft changes has step 5 done — done
+PASS  C11.10: an answer a form reads and nobody is asked → step 4 open, "2 answers asked of nobody", 4b not done, 4a done — [{"kind":"unasked","count":2,"text":"2 answers asked of nobody","focus":"questionnaires:gaps","acts":"author","fromRelease":false}]
+PASS  C11.10 (fail case): with no gap step 4 is done
+PASS  C11.10: forms but no document lines → "Draft questions and documents" on Documents
+PASS  C11.10: every validator `where` in engine/ (11) has a step — Tests, Forms, Eligibility, People, Checks, Questions, Questionnaires, Library, Documents, Rules, Derived fields
+PASS  C11.10: every proposal kind (11) has a step
+PASS  C11.10 (fail case): a new `where` value without a row is caught (and falls back to step 5)
+PASS  C11.10: one counts object — proposals and problems by step — {"forms":2,"formsSetUp":2,"people":3,"applicants":2,"documents":4,"questions":30,"proposals":{"pages":0,"people":2,"forms":1,"questions_documents":4,"release":0},"problems":{"pages":0,"people":0,"forms":1,"questions_docu
+PASS  C11.10: the bar never says "Step n of 5"
+PASS  C11.10: "Review n proposals" opens the proposals page for the combination and the step (PR #108 minor (c)) — /review/proposals?c=c-1&step=2
+PASS  setup: sample inputs loaded on the isolated copy — 201
+PASS  C11.10: GET /catalogue gives every card its setup (chip, bar, steps without items, the viewer's button) — 29 cards, 6 started
+PASS  C11.16: Not started cards say "0 of 5 steps" and Start setup for the author
+PASS  C11.10: the immigration expert sees Open on every card (P-180 Q1) — ["Open"]
+PASS  C11.10: counts.needs and ?filter=needs are the person's Needs you (author and expert) — {"author":{"count":0,"mine":0,"shown":0,"onlyMine":true},"expert":{"count":0,"mine":0,"shown":0,"onlyMine":true}}
+PASS  C11.10 (fail case): the count is not the same old number for every person — {"author":0,"expert":0}
+PASS  C11.10 (fail case): the catalogue without a person is refused (401, deny by default) — 401
+PASS  C1.4: parity on every started sample combination (6; 5 with a setup step today): the same next setup action, the same counts, one bar on both answers, Live the same — same
+PASS  C11.10 (fail case): the summary without a person is refused (401), so every checklist answer carries a viewer — 401
+PASS  C11.10: the expert's summary carries the same checklist with the expert's overlay (Open)
+PASS  C11.10: a setup checklist's Review link opens a group holding that combination's proposals — {"reviewLink":"/review/proposals?c=b6ca5a7e-69f4-4048-924b-28d4e81e4942&step=2","group":"combination:b6ca5a7e-69f4-4048-924b-28d4e81e4942"}
+PASS  C11.10 (fail case): a combination with nothing waiting opens no group (200), and a step outside 1–5 is refused (400) — [200,null,400]
+PASS  C11.10: 150 combinations (≥ 150) — catalogue with setup cold 635 ms < 1500, warm 21 ms < 200 — {"made":121,"cold":635,"warm":21}
+71/71 passed

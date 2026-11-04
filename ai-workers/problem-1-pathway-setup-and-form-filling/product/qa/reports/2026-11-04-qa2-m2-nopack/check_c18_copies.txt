@@ -1,0 +1,30 @@
+PASS  C1.8 pass (contract): 1, 2 and 9 copies are accepted
+PASS  C1.8 fail (contract): 0, 10, 1.5 and null copies are refused with the words
+PASS  C1.8 pass (words): more than one copy is said; one copy says nothing, so most rows stay quiet
+PASS  C1.8 pass (Undo signature): one copy keeps the signature a step recorded before copies existed
+PASS  C1.8 fail (Undo signature): two copies change it, so Undo never puts back a line someone has changed since
+PASS  C1.8 read: every line on the Forms tab says its copies, 1 by default — ["IMM 1295:1","IMM 5257 SCH1:1","IMM 5409:1","IMM 5475:1","IMM 5476:1","IMM 5707:1"]
+PASS  C1.8 pass: the default single copy is not written into the snapshot, so a released combination's fingerprint is unchanged
+PASS  C1.8 fail: only the author sets copies (403 for the approver) — 403
+PASS  C1.8 pass: 2 copies are saved to the draft and shown on the line — {"status":200,"copies":2}
+PASS  C1.8 pass: the draft snapshot carries copies: 2 for that form, so a case can read it
+PASS  C1.8 pass: the change shows as a draft change (the fingerprint moved)
+PASS  C1.8 fail: copies 0 is refused on its field with the fix in words — {"status":400,"msg":"Copies is a whole number from 1 to 9."}
+PASS  C1.8 fail: copies 10 is refused on its field with the fix in words — {"status":400,"msg":"Copies is a whole number from 1 to 9."}
+PASS  C1.8 fail: copies 2.5 is refused on its field with the fix in words — {"status":400,"msg":"Copies is a whole number from 1 to 9."}
+PASS  C1.8 fail: copies "two" is refused on its field with the fix in words — {"status":400,"msg":"Copies is a whole number from 1 to 9."}
+PASS  C1.8: a refused value leaves the saved 2 in place
+PASS  C1.8 fail: copies saved from an old revision is a 409 naming who changed it — "Changed by Configuration author at 08:23:14 UTC while you were editing. Your change was not saved; reopen the item to see the current version."
+PASS  C1.8 fail (database): 12 copies are refused by the database check too
+PASS  C1.8 fail (review m2): a checklist line is never filed, so 2 copies on it are refused on the field — {"line":"IMM 5488","status":400,"msg":"A checklist is not filed, so it has no copies."}
+PASS  C1.8 pass: the checklist line keeps 1 copy
+PASS  C1.8 pass (contract): 1 copy on a checklist line is accepted (it is the default), more is refused
+PASS  C1.8 pass: Undo last change puts the line back to 1 copy — {"status":201,"copies":1}
+PASS  C1.8 pass: back at 1 copy the snapshot has no copies key again and the fingerprint is the released one
+PASS  C1.8 m4: a huge number is refused with the sentence once — ["Copies is a whole number from 1 to 9."]
+PASS  setup M1: 6 copies, from age 18, signed by the person, then released — 200
+PASS  C1.8 m3 fail: copies sent with a removal are not stored on the removed line (it keeps 6) — {"status":200,"removed":"6"}
+PASS  setup M1: the removal is released
+PASS  C1.8 M1: a form added back after a released removal comes back with its 6 copies, from age 18 and signed by the person — {"status":201,"copies":6,"minAge":18,"signedBy":"person"}
+
+28/28 passed

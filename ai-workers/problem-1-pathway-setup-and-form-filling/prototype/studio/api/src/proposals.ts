@@ -7,12 +7,14 @@
 import { HttpStatus } from "@nestjs/common";
 import { proposeConditionChange } from "./question-condition.ts";
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Prisma, type ProposalItem as Row } from "@prisma/client";
 import { ProposalItem, ProposalPayload, type ProposalKind } from "../../contracts/proposal-item.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
-import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
-import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
+import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
+import { fail, need, SOLUTION, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
@@ -22,6 +24,9 @@ import { checkCondition } from "../../engine/validate.ts";
 import { isRuleWhy, nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
 import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
+import { canonical } from "../../../contracts/rules.ts";
+import { fieldsOf } from "../../engine/masters-ai.ts";
+import { printedChoices, type InvField } from "../../engine/printed-choices.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -52,6 +57,7 @@ export function lineTitle(p: { documentType?: unknown; roles?: unknown }): strin
 /** The words a person reads for an item: its name, never an answer list's code list or hash (C3.4 review Minor 5). */
 export function nameOf(p: ProposalPayload, given: string): string {
   if (p.kind === "requirement_line") return lineTitle(p);
+  if (p.kind === "form_check" || p.kind === "cross_check") return p.sentence; // QA-196 review m1: never its identity key
   const named = (p as { label?: unknown; name?: unknown }).label ?? (p as { name?: unknown }).name;
   return typeof named === "string" && named.trim() ? named : identityKeyOf(p, given);
 }
@@ -425,6 +431,146 @@ async function landRequirementLine(tx: Tx, r: Row, p: ProposalPayload, l: Landin
   return keys.join(",");
 }
 
+/** A form edition's printed captions by form field, read once per reading file (a committed reading does not change). */
+/** A form edition's reading (its boxes), read once per file (a committed reading does not change). */
+const READINGS = new Map<string, Map<string, InvField>>();
+function readingOf(file: string | null): Map<string, InvField> {
+  if (!file) return new Map();
+  let m = READINGS.get(file);
+  if (!m) { try { m = new Map(((JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fields?: InvField[] }).fields ?? []).map((x) => [x.data_path ?? "", x])); READINGS.set(file, m); } catch { return new Map(); } }
+  return m;
+}
+export type CheckRead = { field: string; words: string; shared: string | null; sharedWords: string | null; values: { printed: string; shared: string | null }[] };
+const fieldWords = (k: string) => { const w = (k.split(".").pop() ?? k).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
+const shortWords = (w: string) => (w.length > 70 ? `${w.slice(0, 68).trimEnd()}…` : w);
+type Loose = { op?: unknown; field?: unknown; value?: unknown; args?: unknown; arg?: unknown; [k: string]: unknown };
+/** The values a condition compares each field with (eq, neq, in), as written. */
+function comparedValues(n: unknown, out = new Map<string, unknown[]>()): Map<string, unknown[]> {
+  const o = n && typeof n === "object" && !Array.isArray(n) ? (n as Loose) : null;
+  if (!o) return out;
+  if (typeof o.field === "string" && ["eq", "neq", "in"].includes(String(o.op))) out.set(o.field, [...(out.get(o.field) ?? []), ...(Array.isArray(o.value) ? o.value : [o.value])]);
+  if (Array.isArray(o.args)) o.args.forEach((a) => comparedValues(a, out));
+  if (o.arg) comparedValues(o.arg, out);
+  return out;
+}
+/** QA-196 review M1: a form check compares a form field with the form's printed choice words ("* Yes", "Other"); on the
+ *  shared field the same answer is what the field holds (engine/qd-conditions.ts): a yes/no box (transform yes_no_code)
+ *  true or false; a choice whose field map has an option map, the answer-list value whose form code that word prints.
+ *  Anything else cannot be read on the shared field yet (undefined: the lander refuses it, fail closed). */
+function sharedValue(v: unknown, m: { transform: string | null; optionMap: unknown }, box: InvField | undefined): unknown {
+  if (typeof v !== "string") return undefined;
+  const choices = box ? printedChoices(box) : [];
+  const code = Array.isArray(choices) ? choices.find(([w]) => w === v)?.[1] : undefined;
+  if (/^yes_no_code\b/.test((m.transform ?? "").trim())) {
+    const word = [v, code ?? ""].map((x) => x.toLowerCase().replace(/[^a-z]/g, ""));
+    return word.some((w) => w === "yes" || w === "y") ? true : word.some((w) => w === "no" || w === "n") ? false : undefined;
+  }
+  const map = (m.optionMap as { map?: Record<string, string> } | null)?.map;
+  if (map && code !== undefined) return Object.entries(map).find(([, c]) => c === code)?.[0];
+  return undefined;
+}
+function translated(n: unknown, field: (f: string) => string, value: (f: string, v: unknown) => unknown): unknown {
+  const o = n && typeof n === "object" && !Array.isArray(n) ? (n as Loose) : null;
+  if (!o) return n;
+  const f = typeof o.field === "string" ? o.field : null;
+  const compared = f !== null && ["eq", "neq", "in"].includes(String(o.op));
+  return { ...o, ...(f !== null ? { field: field(f) } : {}), ...(compared ? { value: Array.isArray(o.value) ? o.value.map((v) => value(f!, v)) : value(f!, o.value) } : {}),
+    ...(Array.isArray(o.args) ? { args: o.args.map((a) => translated(a, field, value)) } : {}), ...(o.arg ? { arg: translated(o.arg, field, value) } : {}) };
+}
+/** QA-196 (tech lead, 4 Nov): what a check reads, each as the shared field it becomes, for the lander and for To review.
+ *  A form edition's check reads the form's own fields: each by its printed caption (the edition's reading), the shared
+ *  field the edition's field map maps it to (null: not mapped yet), and each printed choice it compares with as that
+ *  field's answer (null: not readable on the shared field yet). A guide's check reads answers: a shared field when the
+ *  library has it, else its words (null: not in the library yet; a draft may read it, release warns). `tree` is the
+ *  condition over the shared fields, or null while anything is not translated. */
+export async function checkReads(db: Client, ws: string, r: Pick<Row, "formEdition" | "combinationId">, tree: unknown): Promise<{ reads: CheckRead[]; edition: { id: string; label: string; formId: string; formKey: string } | null; tree: unknown | null }> {
+  const read = fieldsOf(tree), compared = comparedValues(tree);
+  const names = async (keys: string[]) => new Map((await db.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: { in: keys }, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, label: true } })).map((f) => [f.canonicalFieldKey, f.label?.trim() || fieldWords(f.canonicalFieldKey)]));
+  if (r.combinationId || !r.formEdition) {
+    const lib = await names(read);
+    return { reads: read.map((f) => ({ field: f, words: lib.get(f) ?? fieldWords(f), shared: lib.has(f) ? f : null, sharedWords: lib.get(f) ?? null, values: [] })), edition: null, tree };
+  }
+  const ed = await db.formEdition.findFirst({ where: { workspaceId: ws, editionLabel: r.formEdition }, include: { form: { select: { id: true, formKey: true } } } });
+  if (!ed) return { reads: read.map((f) => ({ field: f, words: f, shared: null, sharedWords: null, values: [] })), edition: null, tree: null };
+  const maps = new Map(effective(await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: read } } }), (m) => m.dataPath, "draft").filter((m) => m.status !== "RETIRED" && m.outcome === "mapped" && m.canonicalFieldKey).map((m) => [m.dataPath, m]));
+  const boxes = readingOf(ed.inventoryFile);
+  const lib = await names([...maps.values()].map((m) => m.canonicalFieldKey!));
+  const reads = read.map((f) => {
+    const m = maps.get(f), k = m?.canonicalFieldKey ?? null;
+    const values = [...new Set((compared.get(f) ?? []).map((v) => JSON.stringify(v)))].map((j) => { const v = JSON.parse(j) as unknown; const to = m ? sharedValue(v, m, boxes.get(f)) : undefined; return { printed: String(v), shared: to === undefined ? null : String(to) }; });
+    return { field: f, words: shortWords(m?.caption?.trim() || boxes.get(f)?.caption?.trim() || f.split(".").slice(-2).join(".").replace(/\[0\]/g, "")), shared: k, sharedWords: k ? lib.get(k) ?? fieldWords(k) : null, values };
+  });
+  const whole = reads.every((x) => x.shared && x.values.every((v) => v.shared !== null));
+  return { reads, edition: { id: ed.id, label: ed.editionLabel, formId: ed.form.id, formKey: ed.form.formKey },
+    tree: whole ? translated(tree, (f) => maps.get(f)!.canonicalFieldKey!, (f, v) => sharedValue(v, maps.get(f)!, boxes.get(f))) : null };
+}
+
+/** QA-196 (P-149 (1) one door, P-120): an accepted AI check becomes a DRAFT check where checks live, on a combination
+ *  (Library › Checks lists it, used in each), under the section-check writer's rules (studio.ts saveCheck): a condition in
+ *  the condition language, never the same check twice in a draft. A guide's check lands on its own combination (a check
+ *  over two answers or more is a cross-answer check). A form edition's check reads the form's own fields:
+ *  each is read as the shared field the edition's field map maps it to, and the check lands on every combination whose
+ *  draft files that form, under one key. A landed check warns, whatever the AI read (P-136: only two things block "Ready
+ *  to file"), unless the person chose another severity before Accept. Its examples stay unconfirmed until the expert
+ *  confirms (P-149 (5)). */
+async function landCheck(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<string> {
+  need(l.actor, "author"); // draft edits of a combination are the author duty (studio.ts saveCheck)
+  const parsed = ProposalPayload.safeParse(p);
+  if (!parsed.success || (parsed.data.kind !== "form_check" && parsed.data.kind !== "cross_check")) fail(`This check is incomplete (${parsed.success ? "not a check" : plainIssues(parsed.error)}): reject it.`);
+  const c = parsed.data as Extract<ProposalPayload, { kind: "form_check" | "cross_check" }>;
+  const work = (r.work ?? {}) as { group?: unknown };
+  let tree = c.tree;
+  let combos: { id: string; label: string }[];
+  if (r.combinationId) {
+    const one = await tx.combination.findUnique({ where: { id: r.combinationId }, select: { id: true, label: true } });
+    if (!one) fail("The combination this check was drafted for is no longer there: reject it.", HttpStatus.NOT_FOUND);
+    combos = [one!];
+  } else {
+    const got = await checkReads(tx, l.ws, r, c.tree), ed = got.edition, reads = got.reads;
+    if (!ed) fail(`The form edition this check was drafted from (${r.formEdition ?? "none named"}) is no longer in the library: reject it.`, HttpStatus.CONFLICT);
+    const unmapped = reads.filter((x) => !x.shared);
+    if (unmapped.length) fail(`This check reads ${unmapped.length === 1 ? "a form field" : `${unmapped.length} form fields`} of ${ed!.label} that ${unmapped.length === 1 ? "is" : "are"} not mapped to a shared field yet (${unmapped.slice(0, 3).map((x) => `"${x.words}"`).join(", ")}${unmapped.length > 3 ? ", …" : ""}). Map ${unmapped.length === 1 ? "it" : "them"} on the form's field page first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
+    // Review M1: a printed choice the shared field cannot hold would never match an answer (contracts/rules.ts compares strictly).
+    const odd = reads.flatMap((x) => x.values.filter((v) => v.shared === null).map((v) => ({ x, v })));
+    if (odd.length) fail(`This check compares "${odd[0].x.words}" with "${odd[0].v.printed}", a choice printed on ${ed!.label} that the shared field ${odd[0].x.sharedWords} does not hold as an answer yet (its field map gives no answer for it). Set that form field's answers on its field map first, then accept it again; or reject it.`, HttpStatus.CONFLICT);
+    tree = got.tree;
+    const lines = effective(await tx.combinationForm.findMany({ where: { workspaceId: l.ws, govFormDefId: ed!.formId }, include: { combination: { select: { id: true, label: true } } } }), (x) => `${x.combinationId}|${x.lineageKey}`, "draft").filter((x) => x.status !== "RETIRED");
+    combos = [...new Map(lines.map((x) => [x.combination.id, x.combination])).values()].sort((a, b) => a.label.localeCompare(b.label));
+    if (!combos.length) fail(`No combination files ${ed!.formKey} yet, so this check has nowhere to apply: add the form to a combination's Forms first, then accept it; or reject it.`, HttpStatus.CONFLICT);
+  }
+  // As the section-check writer: a condition in the condition language; a field not in the library yet is allowed in a
+  // draft (release warns), a retired one is refused (as the requirement lander, C11.9 break M1).
+  const all = await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, valueType: true, status: true } });
+  const newest = new Map(all.map((f) => [f.canonicalFieldKey, f]));
+  const retired = new Set([...newest.values()].filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey));
+  const fields = new Map([...newest.values()].filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
+  const derived = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
+  const gone = fieldsOf(tree).find((f) => retired.has(f));
+  if (gone) fail(`It reads "${gone.split(".").pop()!.replace(/_/g, " ")}", a retired field: restore it in Shared library › Fields first, or reject it.`, HttpStatus.CONFLICT);
+  const errs = checkCondition(tree, fields, derived).filter((e) => !/, which is not in the library$/.test(e));
+  if (errs.length) fail(`Its condition does not fit the condition language (${errs[0]}): reject it, or edit its condition.`);
+  const cross = c.kind === "cross_check";
+  // Review m2 (P-153): only the guide prompt's own groups; any other word is an official rule (a section check would stop a
+  // filing, P-136, and form_native or document_validity would never be evaluated).
+  const group = cross ? "cross_record" : work.group === "readiness_warning" ? "readiness_warning" : "official_rule";
+  // A landed check warns unless the person chose otherwise before Accept (an edit; tech lead, 4 Nov); a cross-answer one only warns.
+  const severity = c.kind === "form_check" ? c.severity ?? "warn" : "warn";
+  const appliesTo = fieldsOf(tree)[0] ?? null;
+  const message = c.sentence.trim().slice(0, 500);
+  const quote = ((r.source as { quote?: string } | null)?.quote ?? "").trim();
+  const key = `AC-${createHash("sha256").update(r.id).digest("hex").slice(0, 10)}`;
+  // Review B1: the AI writes a check's condition TRUE when the answers pass (p2/prompts/masters-*.v2.md); a stored check
+  // fires when its condition holds (engine/render.ts, like a section check), so what lands is "not" the passing condition.
+  const { subjectKind, ...passes } = (tree ?? {}) as { subjectKind?: unknown; [k: string]: unknown };
+  const fires = { op: "not", arg: passes, ...(subjectKind !== undefined ? { subjectKind } : {}) };
+  for (const k of combos) {
+    const same = (await tx.check.findMany({ where: { combinationId: k.id, status: "DRAFT", checkGroup: group, appliesTo, message }, select: { predicateJson: true } })).some((x) => canonical(x.predicateJson as never) === canonical(fires as never));
+    if (same) fail(`"${message}" is already in ${k.label}'s draft: reject this one.`, HttpStatus.CONFLICT);
+    await tx.check.create({ data: { workspaceId: l.ws, combinationId: k.id, checkKey: key, checkGroup: group, appliesTo, predicateJson: fires as Prisma.InputJsonValue, severity, message, sourceQuote: quote.slice(0, 1000) || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
+  }
+  return key;
+}
+
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
   /** C4.11 part 3 (forms lane): a waiting library change for a second person (question-condition.ts), never a direct edit. */
@@ -484,7 +630,8 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const d = p as Extract<ProposalPayload, { kind: "document_type" }>;
     // QA-195 (break B1; P-134, P-153 (1)): the one door holds the identity rule whoever made or edited the proposal: an
     // identity document by its flag, category or name is never given an AI reader, and is recorded as one.
-    if (aiReadsIdentity(d)) fail(`"${d.name}" is an identity document: AI never reads it (P-134). Choose its coded lines, its printed layout or a person's reading.`, HttpStatus.CONFLICT);
+    const no = docTypeWhy(p);
+    if (no) fail(no, HttpStatus.CONFLICT);
     const identityDocument = identityOf(d);
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
@@ -497,6 +644,8 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     return key;
   },
   requirement_line: landRequirementLine,
+  form_check: landCheck,
+  cross_check: landCheck,
 };
 
 /** C4.7 (P-76, P-149 one door): a pre-qualification pick lands on this combination, not the library. Accept writes the
@@ -534,7 +683,11 @@ const STAMP: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown
   section: (tx, ws, key) => tx.logicalSection.findMany({ where: { workspaceId: ws, sectionKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
   answer_list: (tx, ws, key) => tx.answerList.findMany({ where: { workspaceId: ws, answerListKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true, values: { orderBy: { valueKey: "asc" }, select: { valueKey: true, label: true, sortOrder: true } } } }),
   document_type: (tx, ws, key) => tx.documentType.findMany({ where: { workspaceId: ws, documentTypeKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
+  // QA-196: an accepted check's rows on every combination it landed on.
+  form_check: (tx, ws, key) => checkStamp(tx, ws, key),
+  cross_check: (tx, ws, key) => checkStamp(tx, ws, key),
 };
+const checkStamp = (tx: Tx, ws: string, key: string) => tx.check.findMany({ where: { workspaceId: ws, checkKey: key }, orderBy: [{ combinationId: "asc" }, { version: "asc" }], select: { combinationId: true, version: true, status: true, updatedAt: true } });
 /** C2.6: a document line a checklist item landed, as it stands (its lineages on its combination). */
 const lineStamp = (tx: Tx, combinationId: string, key: string) => tx.documentRequirement.findMany({ where: { combinationId, lineageKey: { in: key.split(",") } }, orderBy: [{ lineageKey: "asc" }, { version: "asc" }], select: { lineageKey: true, version: true, status: true, updatedAt: true } });
 const stampOf = async (tx: Tx, ws: string, kind: string, key: string, combinationId?: string | null) =>
@@ -569,7 +722,21 @@ export const NEW_ITEM_ALONE_QUEUE = "It adds a new item to the shared library, s
 export const CONDITION_ALONE = "It changes when a shared question is asked, for every combination that asks it, so it is decided on its own: open it and accept it alone.";
 /** P-305 review m1: a checklist line that would land its new document type with it adds to the library too. */
 export const LINE_WITH_NEW_TYPE_ALONE = "It adds its new document type to the shared library with it, so it is decided on its own: open it and accept it alone.";
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; relatesTo?: string | null; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown }): string | null {
+/** QA-195 (P-134, P-153 (1)): why a document type row's payload cannot be accepted, in plain words. The caller decides
+ *  by the row's kind, never the payload's (break B1): a stored payload that does not follow the contract (no kind, an
+ *  unknown reader, a name that is not text) is refused as such, and an identity document (by its flag, category or name,
+ *  engine/identity-documents.ts) given a reader that is AI is refused by P-134. One sentence for the lander, a reuse
+ *  accept (which runs no lander) and the bulk box, so a row stored before the masters guard knew names is refused everywhere. */
+export function docTypeWhy(p: unknown): string | null {
+  const parsed = ProposalPayload.safeParse(p);
+  if (!parsed.success || parsed.data.kind !== "document_type") return `This document type proposal does not follow the queue's contract${parsed.success ? " (it is not a document type)" : `: ${plainIssues(parsed.error)}`}. Reject it; nothing was written.`;
+  const d = parsed.data;
+  return aiReadsIdentity(d) ? `"${d.name}" is an identity document: AI never reads it (P-134). Choose its coded lines, its printed layout or a person's reading.` : null;
+}
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; relatesTo?: string | null; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown; payload?: unknown }): string | null {
+  // QA-195: an identity document with an AI reader is never accepted, alone or with others; the box says why first.
+  const identity = r.kind === "document_type" ? docTypeWhy(r.payload) : null;
+  if (identity) return identity;
   // G-CORE B5 (P-288 (2)): a field-map item is ticked with others on To review like any item when it is Ready (High:
   // both rounds agree and the rules pass, re-rated here from what is stored); otherwise the box says why, in P-121's
   // words. It still opens on its form-field page.
@@ -690,8 +857,20 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
             identity = { ...nearIds, near: [], nearReason: null, nearReasonBy: null } as Prisma.InputJsonValue; nearGiven = true;
           }
         }
+        // QA-195 (P-134): checked on the item as it will land, before the reuse branch (which runs no lander), so a row
+        // stored with an AI reader for an identity document is refused here too, alone or in a batch.
+        const noIdentity = r.kind === "document_type" ? docTypeWhy(payload) : null;
+        if (noIdentity) fail(noIdentity, HttpStatus.CONFLICT);
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
+          // QA-195 break B2 (P-134): a reuse never lands on a library document type that is itself an identity document
+          // read by AI (one stored before the guard knew names): its reader is corrected in the library first.
+          if (r.kind === "document_type") {
+            const lib = await tx.documentType.findFirst({ where: { workspaceId, documentTypeKey: reuse.existingKey! }, orderBy: { version: "desc" }, select: { name: true, category: true, readerProfile: true } });
+            const rp = (lib?.readerProfile ?? {}) as { readerKind?: unknown; identityDocument?: unknown };
+            if (lib && aiReadsIdentity({ name: lib.name, category: lib.category, identityDocument: rp.identityDocument === true, readerKind: String(rp.readerKind ?? "") }))
+              fail(`"${lib.name}" in the library is an identity document with a reader that is AI (P-134), so nothing may reuse it: give it its coded lines, its printed layout or a person's reading in the library first. Nothing was accepted.`, HttpStatus.CONFLICT);
+          }
           landedAs = reuse.existingKey; reused = true;
         } else if (ON_ITS_PAGE.has(r.step)) {
           landedAs = await acceptOnItsPage(tx, r); reused = true; // nothing lands in the library before its draft is applied
@@ -780,7 +959,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey, r.combinationId)) !== landedStamp)
-        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: ${r.kind === "requirement_line" ? "change or remove the line on the combination's Documents instead" : "retire or delete it in the shared library instead"}.`, HttpStatus.CONFLICT);
+        fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: ${r.kind === "requirement_line" ? "change or remove the line on the combination's Documents instead" : r.kind === "form_check" || r.kind === "cross_check" ? "change the check on its combination's draft instead" : "retire or delete it in the shared library instead"}.`, HttpStatus.CONFLICT);
     }
     // C4.7: an accepted pick's tick is taken back only while it is the draft the accept wrote (not changed or released
     // since); the draft it replaced comes back as it was.
@@ -797,6 +976,8 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
     // C2.6: the draft document lines a checklist item wrote (unchanged since, checked above) go with it.
     for (const r of rows) if (r.kind === "requirement_line" && r.decidedKey && r.combinationId) await tx.documentRequirement.deleteMany({ where: { combinationId: r.combinationId, lineageKey: { in: r.decidedKey.split(",") }, version: 1, status: "DRAFT" } });
+    // QA-196: the draft checks an accepted check wrote, on each combination (unchanged since, checked above), go with it.
+    for (const r of rows) if ((r.kind === "form_check" || r.kind === "cross_check") && r.decidedKey) await tx.check.deleteMany({ where: { workspaceId, checkKey: r.decidedKey, version: 1, status: "DRAFT" } });
     for (const x of lists) await dropFieldList(tx, workspaceId, x.answerListKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
