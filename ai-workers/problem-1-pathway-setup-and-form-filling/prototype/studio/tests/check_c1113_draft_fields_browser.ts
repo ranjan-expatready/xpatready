@@ -57,7 +57,7 @@ async function openDrawer(p: Page, code: string) {
 
     // A form whose edition has no box reading of this file: said plainly, no button.
     s = await openDrawer(p, "IMM 5475");
-    ok("C11.13 fail: an edition with no box reading of its file says there is nothing to draft, with no button", (await s.getAttribute("data-draft-fields")) === "cannot" && /no box reading/.test(await s.innerText()) && (await s.getByRole("button").count()) === 0);
+    ok("C11.13 fail: an edition with no box reading of its file says there is nothing to draft, with no button", (await s.getAttribute("data-draft-fields")) === "cannot" && /no form-field reading/.test(await s.innerText()) && (await s.getByRole("button").count()) === 0);
 
     // A saved draft (both rounds): the author drafts at US$0, then the queue link.
     const e5409 = sampleEditions().find((e) => e.code === "IMM 5409")!;
