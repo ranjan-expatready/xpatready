@@ -630,7 +630,8 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const d = p as Extract<ProposalPayload, { kind: "document_type" }>;
     // QA-195 (break B1; P-134, P-153 (1)): the one door holds the identity rule whoever made or edited the proposal: an
     // identity document by its flag, category or name is never given an AI reader, and is recorded as one.
-    if (aiReadsIdentity(d)) fail(`"${d.name}" is an identity document: AI never reads it (P-134). Choose its coded lines, its printed layout or a person's reading.`, HttpStatus.CONFLICT);
+    const no = docTypeWhy(p);
+    if (no) fail(no, HttpStatus.CONFLICT);
     const identityDocument = identityOf(d);
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
@@ -721,7 +722,21 @@ export const NEW_ITEM_ALONE_QUEUE = "It adds a new item to the shared library, s
 export const CONDITION_ALONE = "It changes when a shared question is asked, for every combination that asks it, so it is decided on its own: open it and accept it alone.";
 /** P-305 review m1: a checklist line that would land its new document type with it adds to the library too. */
 export const LINE_WITH_NEW_TYPE_ALONE = "It adds its new document type to the shared library with it, so it is decided on its own: open it and accept it alone.";
-export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; relatesTo?: string | null; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown }): string | null {
+/** QA-195 (P-134, P-153 (1)): why a document type row's payload cannot be accepted, in plain words. The caller decides
+ *  by the row's kind, never the payload's (break B1): a stored payload that does not follow the contract (no kind, an
+ *  unknown reader, a name that is not text) is refused as such, and an identity document (by its flag, category or name,
+ *  engine/identity-documents.ts) given a reader that is AI is refused by P-134. One sentence for the lander, a reuse
+ *  accept (which runs no lander) and the bulk box, so a row stored before the masters guard knew names is refused everywhere. */
+export function docTypeWhy(p: unknown): string | null {
+  const parsed = ProposalPayload.safeParse(p);
+  if (!parsed.success || parsed.data.kind !== "document_type") return `This document type proposal does not follow the queue's contract${parsed.success ? " (it is not a document type)" : `: ${plainIssues(parsed.error)}`}. Reject it; nothing was written.`;
+  const d = parsed.data;
+  return aiReadsIdentity(d) ? `"${d.name}" is an identity document: AI never reads it (P-134). Choose its coded lines, its printed layout or a person's reading.` : null;
+}
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step"> & { kind?: string; relatesTo?: string | null; reuse?: unknown; agreement?: string; rounds?: unknown; rules?: unknown; reason?: string | null; work?: unknown; payload?: unknown }): string | null {
+  // QA-195: an identity document with an AI reader is never accepted, alone or with others; the box says why first.
+  const identity = r.kind === "document_type" ? docTypeWhy(r.payload) : null;
+  if (identity) return identity;
   // G-CORE B5 (P-288 (2)): a field-map item is ticked with others on To review like any item when it is Ready (High:
   // both rounds agree and the rules pass, re-rated here from what is stored); otherwise the box says why, in P-121's
   // words. It still opens on its form-field page.
@@ -852,8 +867,20 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
             identity = { ...nearIds, near: [], nearReason: null, nearReasonBy: null } as Prisma.InputJsonValue; nearGiven = true;
           }
         }
+        // QA-195 (P-134): checked on the item as it will land, before the reuse branch (which runs no lander), so a row
+        // stored with an AI reader for an identity document is refused here too, alone or in a batch.
+        const noIdentity = r.kind === "document_type" ? docTypeWhy(payload) : null;
+        if (noIdentity) fail(noIdentity, HttpStatus.CONFLICT);
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
+          // QA-195 break B2 (P-134): a reuse never lands on a library document type that is itself an identity document
+          // read by AI (one stored before the guard knew names): its reader is corrected in the library first.
+          if (r.kind === "document_type") {
+            const lib = await tx.documentType.findFirst({ where: { workspaceId, documentTypeKey: reuse.existingKey! }, orderBy: { version: "desc" }, select: { name: true, category: true, readerProfile: true } });
+            const rp = (lib?.readerProfile ?? {}) as { readerKind?: unknown; identityDocument?: unknown };
+            if (lib && aiReadsIdentity({ name: lib.name, category: lib.category, identityDocument: rp.identityDocument === true, readerKind: String(rp.readerKind ?? "") }))
+              fail(`"${lib.name}" in the library is an identity document with a reader that is AI (P-134), so nothing may reuse it: give it its coded lines, its printed layout or a person's reading in the library first. Nothing was accepted.`, HttpStatus.CONFLICT);
+          }
           landedAs = reuse.existingKey; reused = true;
         } else if (ON_ITS_PAGE.has(r.step)) {
           landedAs = await acceptOnItsPage(tx, r); reused = true; // nothing lands in the library before its draft is applied

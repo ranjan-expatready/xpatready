@@ -114,11 +114,18 @@ import { evaluate } from "../../contracts/rules.ts";
     // break B3–B5: short names, misspellings, look-alike and invisible characters, other languages
     "Photo ID", "proof of identity", "Travel doc", "Confirmation of Permanent Residence", "Driving licence", "Passeport", "ePassport", "Passport photo and information page", "Driver\u2019s licence", "\uff30\uff41\uff53\uff53\uff50\uff4f\uff52\uff54", "travel\u00a0document", "Pass\u200bport", "P\u0430ssport", "Carte d'identit\u00e9", "Personalausweis", "Aadhaar card",
     // review Major 1 on 369e4cf06: IRCC's own wording, and French editions
-    "Photo identification", "Identification document", "Certificate of identity", "Certificate of citizenship", "Certificate of birth", "PRTD", "Driving permit", "Acte de naissance", "Titre de voyage", "Permis de conduire", "Carte de r\u00e9sident permanent", "Certificat de citoyennet\u00e9"].map((name) => {
+    "Photo identification", "Identification document", "Certificate of identity", "Certificate of citizenship", "Certificate of birth", "PRTD", "Driving permit", "Acte de naissance", "Titre de voyage", "Permis de conduire", "Carte de r\u00e9sident permanent", "Certificat de citoyennet\u00e9",
+    // #882 break B3: other scripts' look-alikes (Armenian, Cyrillic outside the map, Cherokee), dotless i, small capitals, invisible separators
+    "Passp\u0585rt", "I\u0501entity card", "Ident\u0131ty card", "\u13e2assport", "Passpor\u1d1b", "Pass\u180eport", "Pass\u2062port", "Pass\u3164port"].map((name) => {
     const x = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name, category: "other", reader: "letter_or_record", identity_document: false }] }).items[0];
     return { name, identity: (x?.payload as any)?.identityDocument, reader: (x?.payload as any)?.readerKind };
   });
   ok("QA-195 C3.4 E fail: other identity documents by name (identity card, birth certificate, travel document, PR card, driver's licence…) are never AI-read", named.every((x) => x.identity === true && x.reader === "person_only"), named);
+  const byCategory = ["Identit\u00e9", "identification", "ID", "id_documents", "id\u0435ntity"].map((category) => {
+    const x = both({ ...FORM_ANSWER, checks: [], document_types: [{ ...passport, name: "Holder's document", category, reader: "letter_or_record", identity_document: false }] }).items[0];
+    return { category, identity: (x?.payload as any)?.identityDocument, reader: (x?.payload as any)?.readerKind };
+  });
+  ok("QA-195 C3.4 E fail (#882 break B8): a category that names identity in other words (Identit\u00e9, identification, ID, id_documents, a look-alike letter) makes it an identity document, never AI-read", byCategory.every((x) => x.identity === true && x.reader === "person_only"), byCategory);
   const notId = ["Passport-size photo", "Passport-sized photo", "Two passport photos", "Proof of travel", "Travel history", "Bank statement", "Marriage certificate", "Police certificate"].map((name) => ({ name, identity: isIdentityName(name) }));
   ok("QA-195 pass: a passport-size photo, proof of travel, a bank statement or a marriage certificate is not an identity document by name", notId.every((x) => !x.identity), notId);
   ok("QA-195 pass: the C2.6 checklist keeps its coded-lines list (a passport or travel document; never a photo)", CODED_IDENTITY.test("passport information page copy") && CODED_IDENTITY.test("travel document") && !CODED_IDENTITY.test("visa application photos"));
@@ -335,6 +342,47 @@ import { evaluate } from "../../contracts/rules.ts";
   ok("QA-195 fail (break B1): an edit giving \"Passport\" an AI reader is refused at the one door (409), and no document type lands", aiEdit.status === 409 && /identity document: AI never reads it/.test(aiEdit.body?.detail ?? aiEdit.body?.message ?? "") && typesNamed("Passport") === "", { status: aiEdit.status, body: aiEdit.body, landed: typesNamed("Passport") });
   const okEdit = await call("POST", "/review/proposals/decide", { ids: [dtItem?.id], action: "edit", payload: asEdited({ name: "Passport", category: "travel", readerKind: "coded_lines", identityDocument: false }) }, "user-C");
   ok("QA-195 pass (break B1): the same edit with its coded lines lands, recorded as an identity document", okEdit.status === 201 && typesNamed("Passport") === "coded_lines/true", { status: okEdit.status, body: okEdit.body?.detail, landed: typesNamed("Passport") });
+  // QA-195 (P-134): a row stored before the masters guard knew names (Ready, agreed, its rule passed, reusing the
+  // library's Passport, with an AI reader) is refused by Accept and by bulk accept in plain words, and the queue's box
+  // says why; a reuse accept runs no lander, so the one door checks it before the reuse branch. With a reader that is
+  // not AI the same rows go together.
+  const passportKey = sql(`select document_type_key from document_type where name = 'Passport' limit 1`);
+  const stored = (n: number, reader: string) => sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, form_edition, combination_id, lands_on, reuse, payload, source, rounds, rules, agreement, confidence, origin, identity, identity_key, basis)
+    select gen_random_uuid(), workspace_id, kind, run_id, step, form_edition, combination_id, lands_on, '${JSON.stringify({ match: "reuse", existingKey: passportKey })}'::jsonb,
+      '${JSON.stringify({ kind: "document_type", name: "Passport", proves: `identity and travel (stored row ${n})`, category: "travel", suppliesFacts: [], readerKind: reader, identityDocument: false })}'::jsonb,
+      source, rounds, '[{"rule":"quote_printed_on_form","passed":true,"why":null},{"rule":"identity_not_read_by_ai","passed":true,"why":null}]'::jsonb, 'agreed', 'ready', origin, identity, identity_key || '-qa195-${n}', basis
+    from proposal_item where id = '${dtItem?.id}' returning id`).split("\n")[0];
+  const s1 = stored(1, "letter_or_record"), s2 = stored(2, "letter_or_record");
+  const statusOf = (id: string) => sql(`select status from proposal_item where id = '${id}'`);
+  const q2 = await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`);
+  const b2 = q2.body?.group?.bands ?? {}, row1 = [...(b2.ready ?? []), ...(b2.check ?? []), ...(b2.decide ?? [])].find((i: any) => i.id === s1);
+  ok("QA-195 fail: the queue's box says a stored AI-read \"Passport\" cannot be ticked with others, because it is an identity document", /identity document: AI never reads it/.test(row1?.bulk_why ?? ""), row1?.bulk_why ?? row1);
+  const one = await call("POST", "/review/proposals/decide", { ids: [s1], action: "accept" }, "user-C");
+  ok("QA-195 fail: Accept refuses a stored \"Passport\" (category travel, not flagged) that reuses the library's type with an AI reader (409, plain words), and it stays waiting",
+    one.status === 409 && /"Passport" is an identity document: AI never reads it \(P-134\)/.test(one.body?.detail ?? one.body?.message ?? "") && statusOf(s1) === "waiting", { status: one.status, body: one.body, s: statusOf(s1) });
+  const bulk = await call("POST", "/review/proposals/decide", { ids: [s1, s2], action: "accept" }, "user-C");
+  ok("QA-195 fail: bulk accept of two stored AI-read \"Passport\" rows is refused in plain words, and nothing is accepted",
+    bulk.status === 409 && /identity document: AI never reads it/.test(bulk.body?.detail ?? bulk.body?.message ?? "") && statusOf(s1) === "waiting" && statusOf(s2) === "waiting", { status: bulk.status, body: bulk.body, s: [statusOf(s1), statusOf(s2)] });
+  sql(`update proposal_item set payload = jsonb_set(payload, '{readerKind}', '"coded_lines"') where id in ('${s1}', '${s2}')`);
+  const bulkOk = await call("POST", "/review/proposals/decide", { ids: [s1, s2], action: "accept" }, "user-C");
+  ok("QA-195 pass: the same two rows read by their coded lines are accepted together, reusing the library's Passport",
+    bulkOk.status === 201 && statusOf(s1) === "accepted" && statusOf(s2) === "accepted", { status: bulkOk.status, body: bulkOk.body, s: [statusOf(s1), statusOf(s2)] });
+  // #882 break B1: the door decides by the row's kind, never the payload's; a stored payload without its kind is refused
+  // by the contract in plain words, alone and in the queue's box, and nothing lands.
+  const s3 = stored(3, "letter_or_record");
+  sql(`update proposal_item set payload = payload - 'kind' where id = '${s3}'`);
+  const noKind = await call("POST", "/review/proposals/decide", { ids: [s3], action: "accept" }, "user-C");
+  ok("QA-195 fail (#882 break B1): a stored AI-read \"Passport\" whose payload lost its kind is refused (409, the contract in plain words), and it stays waiting",
+    noKind.status === 409 && /does not follow the queue's contract/.test(noKind.body?.detail ?? "") && statusOf(s3) === "waiting", { status: noKind.status, body: noKind.body?.detail, s: statusOf(s3) });
+  // #882 break B2: a reuse never lands on a library document type that is itself an identity document read by AI.
+  const s4 = stored(4, "coded_lines");
+  sql(`update document_type set reader_profile = jsonb_set(reader_profile, '{readerKind}', '"letter_or_record"') where document_type_key = '${passportKey}'`);
+  const libAi = await call("POST", "/review/proposals/decide", { ids: [s4], action: "accept" }, "user-C");
+  ok("QA-195 fail (#882 break B2): a reuse of the library's Passport while the library reads it by AI is refused (409), and it stays waiting",
+    libAi.status === 409 && /in the library is an identity document with a reader that is AI/.test(libAi.body?.detail ?? "") && statusOf(s4) === "waiting", { status: libAi.status, body: libAi.body?.detail, s: statusOf(s4) });
+  sql(`update document_type set reader_profile = jsonb_set(reader_profile, '{readerKind}', '"coded_lines"') where document_type_key = '${passportKey}'`);
+  const libOk = await call("POST", "/review/proposals/decide", { ids: [s4], action: "accept" }, "user-C");
+  ok("QA-195 pass (#882 break B2): with the library's Passport read by its coded lines, the same reuse is accepted", libOk.status === 201 && statusOf(s4) === "accepted", { status: libOk.status, body: libOk.body?.detail });
   const check = items.find((i) => i.kind === "form_check");
   ok("C3.4 S pass: the form check rests on IMM 5257 with its printed words found, Ready (both rounds agree), its examples unconfirmed, Sample", check?.band === "ready" && check?.source?.quote_found === true && /imm5257/i.test(check?.source?.file ?? "") && check?.basis === "SAMPLE" && (check?.readings?.draft?.payload?.examples ?? []).length === 3, check);
   ok("C3.4 S pass: the whole Saved draft spent US$0 (jobs and the shared ledger)", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0, { spent: spent(), ledger: new SpendLedger(LEDGER_DIR).committed() });
