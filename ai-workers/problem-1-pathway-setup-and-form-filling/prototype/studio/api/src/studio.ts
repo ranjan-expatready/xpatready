@@ -11,6 +11,7 @@ import { buildSnapshot, effective, snapshotHash, VALUE_TYPE_TO_DATA_TYPE, type M
 import { backgroundPathsOf } from "./background-questions.ts";
 import { backgroundWords, FAMILY_INFORMATION, familyFormWords, formNumberOf, missingFamilyForm, NOT_A_FACT, readingMissingWords } from "../../engine/form-completeness.ts";
 import { slug } from "../../engine/import.ts";
+import { FORM_LINE_WORDS, formLineProblem, isFormLine, releaseLineProblems } from "../../engine/programs.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems } from "../../engine/validate.ts";
@@ -32,6 +33,7 @@ import { refuseBlocking } from "./refusal.ts";
 import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } from "./answer-key-gate.ts";
 import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
+import { firmMayRead } from "./case-feed.ts";
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -69,6 +71,9 @@ const sourceSummary = (lines: SourceLine[] | undefined) => {
 };
 const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
 export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
+/** QA-221 (ruling C): a form line may also name "the principal applicant, a spouse or partner, and each dependent child
+ *  18 or older" (contracts/resolver.ts); documents and rules keep WHO. */
+export const FORM_WHO = [...WHO, "principal_partner_adult_children"];
 
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };
@@ -106,6 +111,9 @@ function retiredPeople(c: { label: string; retiredAt: Date | null }) {
 export const EMPTY_WORDS = "Nothing to release yet: no form is set up on this combination and it has no documents. Set up the forms it files (Find forms, add one from the Form library, or finish one attached) before sending it for review.";
 export const emptyProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
   s.forms.length || (s.document_requirements ?? []).length ? [] : [{ level: "error" as const, where: "Release", item: "", message: EMPTY_WORDS }];
+/** What a release needs on it before anything else is judged: F8 (something), then G5 (P-248: a form line and a document line). */
+export const contentProblems = (s: Pick<Snapshot, "forms" | "document_requirements">) => [...emptyProblem(s), ...releaseLineProblems(s)];
+export { FORM_LINE_WORDS, formLineProblem, isFormLine }; // G5: the rule itself is engine/programs.ts (pure, for the C5.1 pack)
 
 @Injectable()
 export class Studio {
@@ -248,8 +256,10 @@ export class Studio {
     const later = status === "PUBLISHED" && found.length ? new Set((await this.db.formFieldMap.findMany({ where: { supersedesId: { in: found.map((r) => r.id) } }, select: { supersedesId: true } })).map((r) => r.supersedesId)) : new Set<string | null>();
     const rows = found.filter((r) => !later.has(r.id));
     const by = new Map<string, { form: string; n: number; example: string }>();
-    // The example is the form's own words (a field's caption), never its PDF path (IMM_5476[0].Page1[0]…, #118 review).
-    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && r.caption?.trim()) cur.example = r.caption.trim(); by.set(k, cur); }
+    // The example is the form's own words (a field's caption), never its PDF path (IMM_5476[0].Page1[0]…, #118 review): a
+    // form field with no caption of its own carries its path as its caption (a new edition's comparison, QA-231).
+    const words = (r: { dataPath: string; caption: string | null }) => { const c = r.caption?.trim() ?? ""; return c && c !== r.dataPath ? c : ""; };
+    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && words(r)) cur.example = words(r); by.set(k, cur); }
     return [...by.values()];
   }
 
@@ -460,7 +470,7 @@ export class Studio {
     // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
     const tests = combinationId ? (gate ?? (await keyGateOf(this.db, combinationId, s, (await buildSnapshot(this.db, workspaceId, combinationId, "draft")).sha256))).problems : [];
-    const all = [...structure, ...filing, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests]; // L4: what IRCC accepts
+    const all = [...structure, ...filing, ...contentProblems(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();
@@ -935,7 +945,7 @@ export class Studio {
     const before = await snapshotLines(this.db, combinationId, [formKey]); // S4: one Undo per combination draft
     const changes: any = {};
     if (b.retire) changes.status = "RETIRED";
-    if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
+    if (b.who) { if (!FORM_WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
     // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
     const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy, copies: b.copies });
     if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
@@ -1210,28 +1220,22 @@ export class Studio {
       demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot) })); // C5.5 BR-3: outside the demo workspace every release is real
   }
 
-  /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
-   *  case events (opened, team, people, answers, sections, form copies) are left out. Case lines name their case as
-   *  "case <first 8 of its id>". Configuration people read every line, as before. */
+  /** C6.11 review Major 1, QA-225: firm staff read the configuration lines and their own firm's case lines only; another
+   *  firm's case events (opened, team, people, answers, sections, form copies, signing and signed scans, documents,
+   *  checklist lines, eligibility checks) are left out, and a line of an entity on neither list is read by no firm's
+   *  staff (case-feed.ts). Configuration people read every line, as before. */
   async activity(limit = 200, firmKey: string | null = null) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: firmKey ? limit * 5 : limit });
     let kept = rows;
     if (firmKey) {
       const own = new Set((await this.db.case.findMany({ where: { workspaceId, firmKey }, select: { id: true } })).map((c) => c.id.slice(0, 8)));
-      kept = rows.filter((e) => {
-        if (!CASE_ENTITIES.has(e.entity)) return true;
-        const id = e.entity === "case" && e.entityKey ? e.entityKey.slice(0, 8) : /\bcase ([0-9a-f]{8})\b/.exec(e.summary)?.[1];
-        return !!id && own.has(id);
-      }).slice(0, limit);
+      kept = rows.filter((e) => firmMayRead(e, own)).slice(0, limit);   // case-feed.ts: any line naming a case is a case line
     }
     // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
     return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
 }
-
-/** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
-const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];

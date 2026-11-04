@@ -22,6 +22,7 @@ import { OriginPill, RequirementDialog, RevCtx, whoLabel, useLibraryFields } fro
 import { RowMenu } from "@/pages/workspace/sources";
 import { irccWords } from "../../../../contracts/workspace";
 import { cn } from "@/lib/utils";
+import { SuppliesPanel } from "@/pages/supplies-panel";
 
 const SAY = {
   retire: "A checklist line is removed, not retired. Retire the document type in the library.",
@@ -52,6 +53,7 @@ export function DocumentsTab({ id }: { id: string }) {
   const [when, setWhen] = React.useState<When>("all");
   const [find, setFind] = React.useState("");
   const [shown, setShown] = React.useState<string | null>(null);
+  const [supplies, setSupplies] = React.useState<string | null>(null); // C4.5: the document type whose facts are being changed
   const [edit, setEdit] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
   // X1 (slice C2): a ?focus= link from the setup checklist lands on its place here (documents:lines, documents:problems).
@@ -136,7 +138,7 @@ export function DocumentsTab({ id }: { id: string }) {
         {error ? <Notice tone="warn" title="Not changed" action={<Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button>}><span data-documents-error>{error}</span></Notice> : null}
         {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
         {bulk.note}
-        <p className="text-sm text-text-muted">A document that supplies facts takes those questions out of the client questionnaire. Missing or unreadable at the case, the questionnaire asks them ("We could not read it from your passport").</p>
+        <p className="text-sm text-text-muted">A document that supplies facts takes those questions out of the client questionnaire: Preview shows it, and "Try it missing" there shows them asked instead. At a case this comes with the document reader (M3); until then a case asks them.</p>
         <p className="text-xs text-text-muted" data-doc-order-note>Order: Move up or Move down in a line's ⋯ menu. A line given by several people (Each applicant) keeps one place: its order applies to everyone on this list.</p>
         {lines.length ? (
           <Table dense head={["Document", "Who", "When", "Supplies", "Status", <span key="a" className="sr-only">Actions</span>]} label={`${role.label}'s checklist`}>
@@ -160,7 +162,8 @@ export function DocumentsTab({ id }: { id: string }) {
         ) : null}
         <p className="text-xs text-text-muted">{v.data.basis}.</p>
         {!canAuthor ? <p className="text-xs text-text-muted" data-approver-copies>{APPROVER_WORDS}</p> : null}
-        {open ? <DocumentDrawer line={open} roles={roles} roleLabel={role.label} canAuthor={canAuthor} onClose={() => setShown(null)} onEdit={() => { const r = reqOf(open.lineage); if (r) { setShown(null); setEdit(r); } }} onRemove={() => { setShown(null); void remove(open); }} /> : null}
+        {open ? <DocumentDrawer line={open} roles={roles} roleLabel={role.label} canAuthor={canAuthor} onClose={() => setShown(null)} onEdit={() => { const r = reqOf(open.lineage); if (r) { setShown(null); setEdit(r); } }} onRemove={() => { setShown(null); void remove(open); }} onSupplies={() => { setShown(null); setSupplies(open.document.key); }} /> : null}
+        {supplies ? <SuppliesPanel typeKey={supplies} combinationId={id} open onClose={() => setSupplies(null)} onSaved={refresh} /> : null}
         {edit ? <RequirementDialog id={id} r={edit} fields={fields} onClose={() => setEdit(null)} onSaved={refresh} /> : null}
         {undoToast.node}{bulk.node}
       </section>
@@ -170,7 +173,7 @@ export function DocumentsTab({ id }: { id: string }) {
 
 /** Every parameter of one checklist line (board v2 frame 3): who and when, alternatives, the facts it supplies about whom
  *  and whether each is taken out of the questionnaire; Copies, Translation, Validity window read-only (P-147 Q3). */
-function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, onRemove }: { line: ChecklistLineRow; roles: ChecklistView["roles"]; roleLabel: string; canAuthor: boolean; onClose: () => void; onEdit: () => void; onRemove: () => void }) {
+function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, onRemove, onSupplies }: { line: ChecklistLineRow; roles: ChecklistView["roles"]; roleLabel: string; canAuthor: boolean; onClose: () => void; onEdit: () => void; onRemove: () => void; onSupplies: () => void }) {
   const index = (roles.find((r) => r.role === line.role)?.lines ?? []).findIndex((l) => l.lineage === line.lineage);
   const total = roles.find((r) => r.role === line.role)?.lines.length ?? 0;
   if (line.automatic) return (
@@ -203,7 +206,8 @@ function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, on
               {line.supplies.map((x) => <tr key={`${x.about}|${x.fact}`} data-supplied-fact={x.fact}><td>{x.label}</td><td className="text-xs">{aboutWords(x, roles)}</td><td className="text-xs" data-taken-out={x.takenOut ? "yes" : "no"}>{x.takenOut ? "Yes" : <span className="text-text-muted">No · {x.about === "holder" ? "asked of the client (another source is set)" : "the other person's own source applies"}</span>}</td></tr>)}
             </Table>
           ) : <p className="text-text-muted">None: it is filed as is.</p>}
-          <p className="text-xs text-text-muted">What it supplies, and about whom, is changed in the library document type; a second person approves.</p>
+          <p className="text-xs text-text-muted">What it supplies, and about whom, is set on the library document type for every combination; a second person approves.</p>
+          {canAuthor ? <Button size="sm" variant="secondary" onClick={onSupplies} data-drawer-supplies>Change the facts it supplies…</Button> : null}
         </section>
         <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1" data-doc-not-built>
           <dt className="text-text-muted">Copies</dt><dd className="text-xs">{SAY.notSet}</dd>

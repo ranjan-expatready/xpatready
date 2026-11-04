@@ -123,6 +123,19 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B62 Work-permit test family | answer keys for the LMIA maps (IMM 1295, 5710, 5707, 5409, 5476, 5475), expert-led | P-328, Lead 3 |
 | B63 CI (c) and (d) | owners and dates for the quarantined checks; a golden-journey nightly (setup → release, red until QA-144 lands) | P-320 |
 | B64 Cloud-lane flag | lead-watch.sh flags a cloud lane started over 25 min ago with no draft PR (needs a lane-to-branch map) | P-326 |
+| B65 Section keys in refusals | refusals and the "no longer chosen" list name sections by key, not by title (#936 r2-m2, r3-m1) | P-340, Lead 8, #936 |
+| B66 Ask a Yes/No field as its own question (screen) | a To review › Form fields action that shows the quoted question for the author to confirm (#967 n2); qa decides whether C4.11 or C7.7 needs it for Works, else after M2 60 | P-340, Lead 8, #967 |
+| B67 Green card wording | a Yes to "US permanent resident" with no number recorded must not say "…green card number is recorded…" (`p5/transforms.ts:110`, #967 m3); forms lane's next Minor PR | P-340, Lead 8, #967 |
+| B68 Representative of record (BR-20) | a case with a representative of record answers "Uses a representative" by itself; runtime, after M2 60 | P-340, Lead 8, #967 |
+| B69 IMM 5707 "minor travelling alone" | who fills it, from the form's own words (QA-221 option C follow-up) | P-340, Lead 7, QA-221 |
+| B70 C4.8 leftover boxes (P-214, in flight) | C4.8's pack setup decides the IMM 5707 and IMM 5409 boxes still unresolved on the six "filled by hand" through the product route, as the checkpoint loader does; then qa re-scores C4.8 and lifts its hold. Owner: #883's lane | P-340, Lead 8, #883 |
+| B71 C4.1 Submit on the six | Submit refused: 5 IMM 5707 fields have no decision on the six; fix through the product path. Owner: S2 after #973 | P-340, Lead 8, #973 |
+| B72 C3.6 rule on the six | a cited Sample rule on a six combination so "Add the fact this rule needs" is reachable (P-318 (6)). Owner: builder-yesno-facts after #967 | P-340, Lead 8 |
+| B73 C4.11 G5 Ready gap | on the six no item reaches Ready to accept; find why, post the cheapest fix first. Owner: #865's lane | P-340, Lead 8, #865 |
+| B74 QA-162 paid conditions run | P-227 option b: a paid run that shows the AI the question list, on the six; quote first (paid runner), run after #967 and the Lead's Go; frees C4.11, C4.5 and C4.1's passport step | P-340, Lead 8 |
+| B75 Field-map decision page words | the page where proposals are decided shows the checker's and the disagreement words, as the Proposals list does (QA-230, Minor); after M2 60 | P-340, qa-2, QA-230 |
+| B77 Protected set on the verdict's data (P-214, now) | the regression job runs each Works row's pack on the data its verdict counts on (the six, or `data=checkpoint` for release and case steps, as the nightly re-test mode does); until then such rows are held from the six run. Owner: Builder 1 after its flaky-checks PR | P-339, Lead 8 |
+| B76 Scale phase additions (P-336, P-339) | (1) a tooling check that refuses a Works row in CAPABILITIES without a green main run id for its pack; (2) lead-watch.sh flags a session archived with work left and a lane waiting on an open question over 30 min | Lead 8 |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
