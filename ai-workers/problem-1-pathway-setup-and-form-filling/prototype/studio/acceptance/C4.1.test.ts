@@ -106,7 +106,7 @@ run(async () => {
   const fam = snap ? { ...snap, forms: [...snap.forms.filter((f: any) => f.form_number !== "IMM 5707"), { ...(snap.forms.find((f: any) => f.form_number === "IMM 5707") ?? { form_number: "IMM 5707", title: "Family information", status: "always", condition: null }), who: "each_applicant", status: "always", condition: null, min_age: 18 }] } : null;
   const f3 = fam ? fills(family, { principal: 40, spouse: 38, "child-1": 10, "child-2": 19 }, "IMM 5707", fam) : {};
   const f4 = fam ? fills([person("principal", "principal")], { principal: 16 }, "IMM 5707", fam) : {};
-  ok("C4.1 (QA-221): IMM 5707 is unchanged: each applicant from 18 (a child of 10 not, adults and a child of 19 yes, a principal of 16 not)", f3["child-1"] === false && f3["child-2"] === true && f3.principal === true && f3.spouse === true && f4.principal === false, { f3, f4 });
+  ok("C4.1 (QA-221): the engine keeps 'each applicant, from 18' as before, as IMM 5707's line on the checkpoint uses it (a child of 10 not, adults and a child of 19 yes, a principal of 16 not)", f3["child-1"] === false && f3["child-2"] === true && f3.principal === true && f3.spouse === true && f4.principal === false, { f3, f4 });
   if (!had) await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(SCH1)}`, { retire: true }, AUTHOR);
 
   // The move is one named change line of the next review (C4.8): submitted last, so nothing after it depends on it.

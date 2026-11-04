@@ -112,7 +112,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       const c = both(rule, age);
       formWaits.set(`${f.form_number}|${person}`, { rule, age });
       const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
-      return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? `${why}; from age ${f.min_age}` : why, origin: f.origin, no_rule: wordsOnly(f) };
+      return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? (f.who === ADULT_CHILDREN ? (people.find((p) => p.id === person)?.role === ROLE.child ? `${why}; for a dependent child, from age ${f.min_age}` : `${why}; at any age for the principal applicant and a spouse or partner`) : `${why}; from age ${f.min_age}`) : why, origin: f.origin, no_rule: wordsOnly(f) };
     });
   });
 
