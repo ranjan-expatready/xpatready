@@ -87,3 +87,9 @@ QA-200 (Critical, open) names C2.4, yet C2.4 is Works (25cefb67, 1 Nov). Under P
 * **QA-205 corrected to Minor** (the tech lead, from Builder 8). The library's "IMM 5475 (05-2021)" and Visitor visa's "IMM 5475 (12-2022)" are the same file (sha256 938af318…4b83), so there is no return risk. What is left: one file, two edition labels, because the manifest takes 12-2022 from the canada.ca URL folder (IRM 0002 is the same: 16-12-2022 against 03-2021 printed). Expected: one edition label per file, the printed one (P-32). It holds no capability.
 * **qa tester 2's C9.1 verdict** (`qa/verdicts/2026-11-04-C9.1.md`, PR #811) agrees: Partial on 0932558ff. Its new row is **QA-207** (Gap · Major, C9.1 and C10.1): the configured checkpoint lists DEMO row 17 as "not built yet", so the journey cannot be reached on the demo data.
 * M2: 43/60 (unchanged; C9.1 and C10.1 were already Partial).
+
+## Records update ~09:40 IST: two flaky-on-main checks (tech lead, from #802)
+* **QA-208** (Major, merge flow, C3.4 check): `check_forms_c34_ai` stops at 64/65 with a connection reset.
+* **QA-209** (Major, merge flow, C3.4 check): `check_forms_c34_masters_browser` times out on its 30 s demo-load request.
+* Both were seen on the merge base on Builder 7's Mac. Neither appears in the last 15 failed CI runs, so there is no run id; CI passed both on #802. qa's C9.1 browser check hit the same 30 s limit twice on this Mac.
+* C3.4 is re-scored only after both #802 (QA-196) and #771 have merged.
