@@ -42,11 +42,12 @@ jobs:
         with: { fetch-depth: 0, filter: "blob:none" }
       - id: k
         name: what does this change? (notes, records or code; tools/change-kind.sh)
-        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}", SHARDS_VAR: "${{ vars.SHARDS }}" }
+        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}", SHARDS_VAR: "${{ vars.SHARDS }}", PR_AUTHOR: "${{ github.event.pull_request.user.login }}" }
         run: |
           range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
           kind=$(bash "$P/tools/change-kind.sh" "$range") || { echo "change-kind.sh failed"; exit 1; }
-          queue=false; [[ "$HEAD_REF" == mergify/* ]] && queue=true
+          # A batch only when Mergify opened it (gate B break M2): a builder's branch named mergify/* stays a pull request.
+          queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
           n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
           { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
@@ -62,7 +63,7 @@ jobs:
     if: ${{ needs.kind.outputs.kind != 'notes' && (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    permissions: { contents: read }
+    permissions: { contents: read, pull-requests: read }
     concurrency: { group: "shard-${{ github.event.pull_request.number }}-${{ matrix.shard }}", cancel-in-progress: true }
     strategy:
       fail-fast: true   # one red part fails the run: stop the others and save their minutes
@@ -106,7 +107,7 @@ jobs:
         # unless it names the bug it fixes; the named capabilities' acceptance packs pass (on the six where the pack's
         # run allows, else "fixture only"). Title and body come in as environment values, never pasted into the script.
         if: matrix.shard == 1 && env.KIND == 'code'
-        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}" }
+        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
         run: node "$S/tools/gate-b.mjs"
       - name: gate B timing on GitHub's machines (TEMPORARY, #804 only)
         if: matrix.shard == 1 && env.KIND == 'code'
