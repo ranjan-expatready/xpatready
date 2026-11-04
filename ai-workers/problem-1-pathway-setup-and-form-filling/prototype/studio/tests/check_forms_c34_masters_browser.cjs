@@ -16,7 +16,9 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : fs.existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
   const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
   const errors = []; p.on("pageerror", (e) => errors.push(e.message));
-  const api = async (pth, json) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: json }); return r.status(); };
+  // QA-209: Playwright's request has a 30 s limit by default, and Load sample takes 80–180 s on a loaded Mac (106 s at load
+  // average 18): the setup waits as long as the load really takes (10 minutes at most), so only a real fault fails it.
+  const api = async (pth, json) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: json, timeout: 600_000 }); return r.status(); };
   await api("/demo/reset", { confirm: "RESET" });
   step("setup: the six load", (await api("/demo/load", { sample: "six" })) === 201);
   await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
