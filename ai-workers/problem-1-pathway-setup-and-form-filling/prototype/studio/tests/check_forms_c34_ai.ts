@@ -324,6 +324,31 @@ import { evaluate } from "../../contracts/rules.ts";
   ok("QA-195 fail (break B1): an edit giving \"Passport\" an AI reader is refused at the one door (409), and no document type lands", aiEdit.status === 409 && /identity document: AI never reads it/.test(aiEdit.body?.detail ?? aiEdit.body?.message ?? "") && typesNamed("Passport") === "", { status: aiEdit.status, body: aiEdit.body, landed: typesNamed("Passport") });
   const okEdit = await call("POST", "/review/proposals/decide", { ids: [dtItem?.id], action: "edit", payload: asEdited({ name: "Passport", category: "travel", readerKind: "coded_lines", identityDocument: false }) }, "user-C");
   ok("QA-195 pass (break B1): the same edit with its coded lines lands, recorded as an identity document", okEdit.status === 201 && typesNamed("Passport") === "coded_lines/true", { status: okEdit.status, body: okEdit.body?.detail, landed: typesNamed("Passport") });
+  // QA-195 (P-134): a row stored before the masters guard knew names (Ready, agreed, its rule passed, reusing the
+  // library's Passport, with an AI reader) is refused by Accept and by bulk accept in plain words, and the queue's box
+  // says why; a reuse accept runs no lander, so the one door checks it before the reuse branch. With a reader that is
+  // not AI the same rows go together.
+  const passportKey = sql(`select document_type_key from document_type where name = 'Passport' limit 1`);
+  const stored = (n: number, reader: string) => sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, form_edition, combination_id, lands_on, reuse, payload, source, rounds, rules, agreement, confidence, origin, identity, identity_key, basis)
+    select gen_random_uuid(), workspace_id, kind, run_id, step, form_edition, combination_id, lands_on, '${JSON.stringify({ match: "reuse", existingKey: passportKey })}'::jsonb,
+      '${JSON.stringify({ kind: "document_type", name: "Passport", proves: `identity and travel (stored row ${n})`, category: "travel", suppliesFacts: [], readerKind: reader, identityDocument: false })}'::jsonb,
+      source, rounds, '[{"rule":"quote_printed_on_form","passed":true,"why":null},{"rule":"identity_not_read_by_ai","passed":true,"why":null}]'::jsonb, 'agreed', 'ready', origin, identity, identity_key || '-qa195-${n}', basis
+    from proposal_item where id = '${dtItem?.id}' returning id`).split("\n")[0];
+  const s1 = stored(1, "letter_or_record"), s2 = stored(2, "letter_or_record");
+  const statusOf = (id: string) => sql(`select status from proposal_item where id = '${id}'`);
+  const q2 = await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 5257 (09-2023)")}`);
+  const b2 = q2.body?.group?.bands ?? {}, row1 = [...(b2.ready ?? []), ...(b2.check ?? []), ...(b2.decide ?? [])].find((i: any) => i.id === s1);
+  ok("QA-195 fail: the queue's box says a stored AI-read \"Passport\" cannot be ticked with others, because it is an identity document", /identity document: AI never reads it/.test(row1?.bulk_why ?? ""), row1?.bulk_why ?? row1);
+  const one = await call("POST", "/review/proposals/decide", { ids: [s1], action: "accept" }, "user-C");
+  ok("QA-195 fail: Accept refuses a stored \"Passport\" (category travel, not flagged) that reuses the library's type with an AI reader (409, plain words), and it stays waiting",
+    one.status === 409 && /"Passport" is an identity document: AI never reads it \(P-134\)/.test(one.body?.detail ?? one.body?.message ?? "") && statusOf(s1) === "waiting", { status: one.status, body: one.body, s: statusOf(s1) });
+  const bulk = await call("POST", "/review/proposals/decide", { ids: [s1, s2], action: "accept" }, "user-C");
+  ok("QA-195 fail: bulk accept of two stored AI-read \"Passport\" rows is refused in plain words, and nothing is accepted",
+    bulk.status === 409 && /identity document: AI never reads it/.test(bulk.body?.detail ?? bulk.body?.message ?? "") && statusOf(s1) === "waiting" && statusOf(s2) === "waiting", { status: bulk.status, body: bulk.body, s: [statusOf(s1), statusOf(s2)] });
+  sql(`update proposal_item set payload = jsonb_set(payload, '{readerKind}', '"coded_lines"') where id in ('${s1}', '${s2}')`);
+  const bulkOk = await call("POST", "/review/proposals/decide", { ids: [s1, s2], action: "accept" }, "user-C");
+  ok("QA-195 pass: the same two rows read by their coded lines are accepted together, reusing the library's Passport",
+    bulkOk.status === 201 && statusOf(s1) === "accepted" && statusOf(s2) === "accepted", { status: bulkOk.status, body: bulkOk.body, s: [statusOf(s1), statusOf(s2)] });
   const check = items.find((i) => i.kind === "form_check");
   ok("C3.4 S pass: the form check rests on IMM 5257 with its printed words found, Ready (both rounds agree), its examples unconfirmed, Sample", check?.band === "ready" && check?.source?.quote_found === true && /imm5257/i.test(check?.source?.file ?? "") && check?.basis === "SAMPLE" && (check?.readings?.draft?.payload?.examples ?? []).length === 3, check);
   ok("C3.4 S pass: the whole Saved draft spent US$0 (jobs and the shared ledger)", spent() === spent0 && new SpendLedger(LEDGER_DIR).committed() === ledger0, { spent: spent(), ledger: new SpendLedger(LEDGER_DIR).committed() });
