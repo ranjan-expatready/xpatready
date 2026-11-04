@@ -1,0 +1,14 @@
+PASS  C1.8 setup: from age 18 and 'signed by the person' are saved on IMM 1295 — 200
+PASS  C1.8 pass: the draft snapshot a case reads carries min_age 18 and signed_by person — {"min_age":18,"signed_by":"person"}
+PASS  C1.8 pass: with the date of birth unknown, IMM 1295 is 'cannot tell' on the case (never filed, never dropped) — {"form":"IMM 1295","person":"Principal applicant","applies":"cannot_tell"}
+PASS  C1.8 pass: and the case's working view asks the principal's date of birth because it decides IMM 1295 — [{"label":"Date of birth","why":"decides whether IMM 1295 applies to Principal applicant; whether IMM 5707 applies to Principal applicant; Add form IMM 5707 Family Information for this person."}]
+PASS  C1.8 pass: a principal of 30 gets IMM 1295
+PASS  C1.8 fail: a principal of 10 does not
+PASS  C1.8 pass (edge): 18 today, on the birthday, gets it
+PASS  C1.8 fail (edge): one day before the 18th birthday does not
+PASS  C1.8 fail: a date of birth that is not a date stays 'cannot tell', never a guess
+PASS  C1.8 pass (release): with the date of birth asked, no age error stands in the way
+PASS  C1.8 fail (release): with nobody asked for a date of birth, release is refused with an error naming the fix — "IMM 1295 applies from age 18, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the mini
+PASS  C1.8 pass: clearing the age gives every person the form again (any age)
+
+12/12 passed

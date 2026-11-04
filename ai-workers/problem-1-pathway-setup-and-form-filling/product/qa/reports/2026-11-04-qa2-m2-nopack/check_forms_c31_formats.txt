@@ -1,0 +1,109 @@
+PASS  C3.1 P-162 pass: every inventoried form has its formats read from the official file (same checksum as its inventory) — []
+PASS  C3.1 P-162 pass: the UCI box carries the PDF's maximum length and the form's own check, quoted — {"caption":"UCI","checks":[{"function":"validateUCI","args":[],"quote":[{"key":"UCI","text":"The correct format is: Numeric characters"}]}],"max_chars":10}
+PASS  C3.1 P-153 pass: the format checks are a fixed set in code, each with its words and its test — ["max_length","min_length","digits_only","digits_and_spaces","digits_exact","area_code","letters_digits","letters_digits_no_space","english_french","name_characters","place_characters","email","postal_code","month","day","year_from_1900","not_future","date_after","whole_number","date_pattern"]
+PASS  C3.1 P-153 fail: a form check with no fixed check in code is shown as not checked, never claimed as enforced — {"rules":[],"not_checked":[{"function":"validateLMIAandExemptionCode","form":"IMM 1295 (09-2023)","quote":"LMIA No. must be greater than or equal to 6000000 and less than or equal to 99999999 Offer of employment No. must be in the following format: A9999999","why":"no fixed check in code matches it 
+PASS  C3.1 M4: every fixed check has a case here — []
+PASS  C3.1 max_length pass: "abcde" — []
+PASS  C3.1 max_length fail: "abcdef" refused in words — ["Keep it to 5 characters (it is 6); the form has no room for more."]
+PASS  C3.1 min_length pass: "Cook." — []
+PASS  C3.1 min_length fail: "Cook" refused in words — ["Write at least 5 characters."]
+PASS  C3.1 digits_only pass: "0123" — []
+PASS  C3.1 digits_only fail: "01a3" refused in words — ["Use digits only (0 to 9), no letters, spaces or signs."]
+PASS  C3.1 digits_and_spaces pass: "613 555 0100" — []
+PASS  C3.1 digits_and_spaces fail: "613-555-0100" refused in words — ["Use digits and spaces only."]
+PASS  C3.1 digits_exact pass: "0100" — []
+PASS  C3.1 digits_exact fail: "100" refused in words — ["Use exactly 4 digits."]
+PASS  C3.1 area_code pass: "613" — []
+PASS  C3.1 area_code fail: "113" refused in words — ["Use 3 digits that do not start with 0 or 1."]
+PASS  C3.1 letters_digits pass: "AB 12345" — []
+PASS  C3.1 letters_digits fail: "AB-12345" refused in words — ["Use letters and digits only, with no special characters."]
+PASS  C3.1 letters_digits_no_space pass: "AB12345" — []
+PASS  C3.1 letters_digits_no_space fail: "AB 12345" refused in words — ["Use letters and digits only, with no spaces, hyphens or other characters."]
+PASS  C3.1 english_french pass: "Rue de l'Église, 3e étage" — []
+PASS  C3.1 english_french fail: "Calle Peñón" refused in words — ["Use English or French letters (a to z, é, à, ç and the other French accents), digits and common signs only."]
+PASS  C3.1 name_characters pass: "O'Brien-Lefèvre" — []
+PASS  C3.1 name_characters fail: "O’Brien" refused in words — ["Use English or French letters (a to z, é, à, ç and the other French accents), hyphens, apostrophes and spaces only. Type the apostrophe as ' (the form refuses ’)."]
+PASS  C3.1 place_characters pass: "Saint-Jean-sur-Richelieu" — []
+PASS  C3.1 place_characters fail: "Zürich (CH)" refused in words — ["Use English or French letters and only these signs: / - \" . & ' ,"]
+PASS  C3.1 email pass: "a.b_c@example.ca" — []
+PASS  C3.1 email fail: "a+b@example.ca" refused in words — ["Enter an email address like name@example.com, with English or French letters, digits and . _ - only."]
+PASS  C3.1 postal_code pass: "K1A-0B1" — []
+PASS  C3.1 postal_code fail: "K1A 0B" refused in words — ["A Canadian postal code looks like A1A 1A1."]
+PASS  C3.1 month pass: "2019-06" — []
+PASS  C3.1 month fail: "2019-13" refused in words — ["The month is 01 to 12."]
+PASS  C3.1 day pass: "2019-06-30" — []
+PASS  C3.1 day fail: "2019-06-32" refused in words — ["The day is 01 to 31."]
+PASS  C3.1 year_from_1900 pass: "1990-01-01" — []
+PASS  C3.1 year_from_1900 fail: "1899-12-31" refused in words — ["The year is 1900 to 2026."]
+PASS  C3.1 not_future pass: "2026-11" — []
+PASS  C3.1 not_future fail: "2026-12" refused in words — ["This date cannot be after today."]
+PASS  C3.1 date_after pass: "2027-01-01" — []
+PASS  C3.1 date_after fail: "2026-10-31" refused in words — ["This date must be after today."]
+PASS  C3.1 whole_number pass: "2500" — []
+PASS  C3.1 whole_number fail: "2500.50" refused in words — ["Enter a whole number, without cents or signs."]
+PASS  C3.1 date_pattern pass: "2019-06-30" — []
+PASS  C3.1 date_pattern fail: "30/06/2019" refused in words — ["Enter the date as year-month-day, for example 2019-06-30."]
+PASS  C3.1 M3 fail: a curly apostrophe is refused with the way out (type ')
+PASS  C3.1 mapping: validateUCI → digits_only (the form says "The correct format is: Numeric characters") — {"check":"digits_only"}
+PASS  C3.1 mapping: validatePassportNum → letters_digits (the form says "The correct format is: All letters and numbers with no special charact") — {"check":"letters_digits"}
+PASS  C3.1 mapping: validateUSCIS → letters_digits_no_space (the form says "The correct format is: All letters and numbers with no special charact") — {"check":"letters_digits_no_space"}
+PASS  C3.1 mapping: validatePostalCodeBasedOnCountry → postal_code (the form says "The Postal Code you entered does not follow Canadian format (ie. X9X 9") — {"check":"postal_code"}
+PASS  C3.1 mapping: validateEmail → email (the form says "The correct format is: Must contain one '@' and at least one '.' and u") — {"check":"email"}
+PASS  C3.1 mapping: validateOpenText → english_french (the form says "The correct format is: English and/or French characters only") — {"check":"english_french"}
+PASS  C3.1 mapping: validateName → name_characters (the form says "The correct format is: Alphabetic characters and special characters hy") — {"check":"name_characters"}
+PASS  C3.1 mapping: validatePOBText → place_characters (the form says "The correct format is: Alphabetic characters and special characters sl") — {"check":"place_characters"}
+PASS  C3.1 mapping: validateDigits → digits_only (the form says "The correct format is: Must contain only numbers .") — {"check":"digits_only"}
+PASS  C3.1 mapping: validateIntlNum → digits_and_spaces (the form says "The correct format must contain only numbers and spaces.") — {"check":"digits_and_spaces"}
+PASS  C3.1 mapping: validateAreaCode → area_code (the form says "The correct format is: Must be 3 numbers and must not start with '0' o") — {"check":"area_code"}
+PASS  C3.1 mapping: validatePhoneNAN → digits_exact (the form says "The correct format is: Must be 4 numbers") — {"check":"digits_exact","params":{"n":4}}
+PASS  C3.1 mapping: validateDOBMM → month (the form says "The correct format is: Between 01 and 12, or **") — {"check":"month"}
+PASS  C3.1 mapping: validateEduMonth → month (the form says "The correct format is: Between 01 and 12") — {"check":"month"}
+PASS  C3.1 mapping: validateDOBDD → day (the form says "The correct format is: Between 01 and 31, or ** The correct format is:") — {"check":"day"}
+PASS  C3.1 mapping: validateDOBYYYY → year_from_1900 (the form says "The correct format is: Between 1900 - current year, or ****.") — {"check":"year_from_1900","params":{"max":"this_year"}}
+PASS  C3.1 mapping: validateEduFromYear → year_from_1900 (the form says "The correct format is: Numeric characters and between 1900 - current y") — {"check":"year_from_1900","params":{"max":"this_year"}}
+PASS  C3.1 mapping: validateEduToYear → year_from_1900 (the form says "The correct format is: Numeric characters and greater than or equal to") — {"check":"year_from_1900","params":{"max":null}}
+PASS  C3.1 mapping: validateEduDateInPresentOrPast → not_future (the form says "The correct format is: Must be less than or equal to Today's Date.") — {"check":"not_future"}
+PASS  C3.1 mapping: validateFunds → whole_number (the form says "Must be greater than or equal to Zero and less than or equal to 999,99") — {"check":"whole_number"}
+PASS  C3.1 mapping: validateJobDescription → min_length (the form says "A minimum of 5 characters must be entered") — {"check":"min_length","params":{"n":5}}
+PASS  C3.1 mapping: validateDropDown → type (the form says "") — "type"
+PASS  C3.1 mapping fail: a validation function with no check (validateLMIAandExemptionCode) maps to nothing
+PASS  C3.1 mapping: a date order with today is enforced; with another date of the form it is not claimed
+PASS  C3.1 M1 pass: a "select primary phone;" transform is read by its part (the national number is the answer's number) — ["number:max_length","number:digits_and_spaces"]
+PASS  C3.1 M2 fail: rules on pieces the answer does not store (area code, line number) are listed as not checked, with why — [{"function":"At most 3 characters","form":"IMM 1295 (09-2023)","quote":"The form field holds at most 3 characters","why":"it applies to the area code, a piece the form splits out of the answer"},{"function":"3 digits, not starting with 0 or 1","form":"IMM 1295 (09-2023)","quote":"The correct format
+PASS  C3.1 M1 pass: a real phone answer passes its format — []
+PASS  C3.1 M5 pass: a phone number typed with hyphens, dots or brackets passes (the form gets its digits) — [[],[]]
+PASS  C3.1 m9 pass: a text field whose form fields write phone parts is treated as a whole phone (no part-less rule claimed)
+PASS  C3.1 M1 fail: a phone number with letters is refused — ["Use digits and spaces only."]
+PASS  C3.1 M2 fail: a rule on a whole address written as one line is listed as not checked, never shown as checked — {"rules":[],"not_checked":[{"function":"At most 60 characters","form":"IMM 1295","quote":"address_single_line (max 60 chars)","why":"it applies to the whole address as one line on the form"}],"read":false}
+PASS  C3.1 P-162 pass: the UCI field's format is digits only, at most 10, each with its form box and quote — [{"check":"max_length","params":{"n":10},"words":"At most 10 characters","part":null,"part_words":null,"sources":[{"form":"IMM 1295 (09-2023)","box":"UCI","quote":"The form field holds at most 10 characters","from":"pdf_box"}]},{"check":"digits_only","params":{},"words":"Digits only","part":null,"pa
+PASS  C3.1 P-162 pass: a UCI of digits passes
+PASS  C3.1 P-162 fail: a UCI with letters is refused in plain words — ["Use digits only (0 to 9), no letters, spaces or signs."]
+PASS  C3.1 P-162 fail: a UCI longer than the box is refused — ["Keep it to 10 characters (it is 11); the form has no room for more."]
+PASS  C3.1 P-162 pass: a passport number of letters and digits passes — "At most 20 characters · Letters and digits only, no special characters"
+PASS  C3.1 P-162 fail: a passport number with signs is refused — ["Use letters and digits only, with no special characters."]
+PASS  C3.1 P-162 pass: a Canadian postal code in an address in Canada passes; a US ZIP in the USA passes — "postal code: At most 10 characters · postal code: Canada X9X 9X9 · USA 99999 or 99999-9999"
+PASS  C3.1 P-162 fail: a postal code not in its country's format is refused (by the address's country)
+PASS  C3.1 P-162 fail: a field whose form was not read says so (read false, no rules), never an invented format
+PASS  C3.1 P-162 pass: without a read file, the field map's own box limit still counts, sourced to the field map — [{"check":"max_length","params":{"n":30},"words":"At most 30 characters","part":null,"part_words":null,"sources":[{"form":"IMM 9999","box":"X","quote":"as_is (max 30 chars)","from":"field_map"}]}]
+PASS  C3.1 P-162 pass: a case answer in the form's format passes the runtime check — []
+PASS  C3.1 P-162 fail: a case answer against the form's format is refused by the runtime check — ["Use digits only (0 to 9), no letters, spaces or signs."]
+PASS  setup: the sample inputs load (or are already loaded on this copy)
+PASS  C3.1 P-162 pass: GET …/format gives the UCI field's rules, each sourced to a form box and quoted — {"key":"person.uci","rules":[{"check":"max_length","params":{"n":10},"words":"At most 10 characters","part":null,"part_words":null,"sources":[{"form":"IMM 1295 (09-2023)","box":"UCI","quote":"The form field holds at most 10 characters","from":"pdf_box"},{"form":"IMM 5257 SCH1 (09-2023)","box":"UCI",
+PASS  C3.1 fail: the format of a field not in the library is 404 in words — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"person.no_such_field is not in the shared library.","message":"person.no_such_field is not in the shared library."}
+PASS  C3.1 P-162 pass: format-check accepts a UCI in the form's format — {"key":"person.uci","value":"12345678","ok":true,"problems":[],"format":{"text":"At most 10 characters · Digits only","state":"read"}}
+PASS  C3.1 P-162 fail: format-check refuses a UCI with letters, in plain words — {"key":"person.uci","value":"12AB5678","ok":false,"problems":["Use digits only (0 to 9), no letters, spaces or signs."],"format":{"text":"At most 10 characters · Digits only","state":"read"}}
+PASS  C3.1 m4 fail: format-check needs a known person (401), as the other library calls do — 401
+PASS  C3.1 fail: format-check without a value is 400 in words — {"type":"https://expatready.local/problems/400","title":"Request refused","status":400,"detail":"Give the value to check.","message":"Give the value to check."}
+PASS  C3.1 P-162 pass: every Fields row carries a format or the reason it has none (never blank)
+PASS  C3.1 P-162 pass: the UCI row shows its format in words — {"text":"At most 10 characters · Digits only","state":"read"}
+PASS  C3.1 P-162 fail: a field on no form says so, not an invented format
+PASS  C3.1 P-162 pass: the field page's data carries the full format with sources — {"rules":[{"check":"max_length","params":{"n":10},"words":"At most 10 characters","part":null,"part_words":null,"sources":[{"form":"IMM 1295 (09-2023)","box":"UCI","quote":"The form field holds at most 10 characters","from":"pdf_box"},{"form":"IMM 5257 SCH1 (09-2023)","box":"UCI","quote":"The form f
+PASS  setup: Reset and Load sample again — [201,201,null]
+PASS  C3.1 QA-146 pass: after Load sample, IMM 5257 (09-2023) in the library links its read form fields (its inventory) — "prototype/p1/inventory/imm5257e.inventory.json"
+PASS  C3.1 QA-146 pass: no library edition is left without the inventory its read file has (IMM 5257, IMM 1344 were before) — ""
+PASS  C3.1 QA-146 pass: through that link, IMM 5257's date of birth month rule is read from its own form (imm5257e.formats.json, quoted) — {"rules":[{"check":"month","params":{},"words":"Month 01 to 12","part":null,"part_words":null,"sources":[{"form":"IMM 5257 (09-2023)","box":"MM","quote":"The correct format is: Between 01 and 12, or **","from":"form_script"}]}],"not_checked":[],"read":true}
+PASS  C3.1 QA-146 pass: a date of birth in IMM 5257's format passes — []
+PASS  C3.1 QA-146 fail: a date of birth with month 13 is flagged in plain words by IMM 5257's rule — ["The month is 01 to 12."]
+PASS  C3.1 QA-146 fail: reading the file again never overwrites an edition's inventory that is already set — [201,"prototype/p1/inventory/qa146-kept.inventory.json"]
+
+107 passed, 0 failed (C3.1 field formats; US$0)
