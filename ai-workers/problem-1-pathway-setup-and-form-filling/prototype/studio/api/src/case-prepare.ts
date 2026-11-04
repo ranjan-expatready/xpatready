@@ -25,7 +25,9 @@ import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
-import { formCoverage, inputHash, readiness as formReadiness } from "../../engine/runtime/forms.ts";
+import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
+import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { render, type Role } from "../../engine/render.ts";
@@ -59,6 +61,8 @@ const EnteredBody = z.object({ version: z.string({ error: "Send the section's ve
 const DOB = "person.date_of_birth";
 
 type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
+/** C9.2: one changed fact on an out-of-date item, as the screen reads it (Undo: what it restores, the answer seen). */
+type ChangeRow = { subject: string; fact: string; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null; undo: boolean; expected_id: string | null; restores: unknown };
 
 @Injectable()
 export class CasePrepare {
@@ -187,7 +191,7 @@ export class CasePrepare {
     const accepts = await acceptsOf(this.db, c.workspaceId);
     const lines = new Map((s.forms as FormLine[]).map((l) => [l.form_number, l]));
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
-    const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
+    const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true, factsJson: true } } } });
     const enteredBy = new Map<string, typeof enteredRows>();
     for (const e of enteredRows) enteredBy.set(e.itemId, [...(enteredBy.get(e.itemId) ?? []), e]);
     const wantedOf = (i: Item) => wanted.find((w) => w.subject === i.subjectId && w.kind === i.kind && w.key === i.itemKey);
@@ -204,8 +208,44 @@ export class CasePrepare {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
       return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;
     };
+    // C9.2 (BR-12): what each finished item read when it was finished (its copy's stored facts, or its entered section's
+    // answers), to name each fact that changed since, with its old and new value and the date of the change.
+    const printedCopy = (id: string) => stepsOf.get(id)?.print?.copy ?? null;
+    const copyIds = [...new Set([...reads.map((v) => v.copy.id), ...stored.items.map((i) => printedCopy(i.id)).filter((x): x is string => !!x)])];
+    const copyFacts = new Map((copyIds.length ? await this.db.formInstance.findMany({ where: { id: { in: copyIds } }, select: { id: true, snapshot: { select: { factsJson: true } } } }) : [])
+      .map((x) => [x.id, (x.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] }]));
+    const scans = await this.db.signedScan.findMany({ where: { caseId: c.id }, orderBy: [{ uploadedAt: "desc" }, { id: "asc" }], select: { id: true, itemId: true, uploadedAt: true } });
+    const questionWords = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+    const placementWords = new Map<string, string>();
+    for (const p of s.placements as { fact: string; question_text?: string | null }[]) if (p.question_text?.trim() && !placementWords.has(p.fact)) placementWords.set(p.fact, p.question_text.trim());
+    const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? ""]));
+    // A case-level fact is "about" "case" in a form's facts; its answers are stored on the case's own subject (as caseView
+    // reads it). CI on #926: never sent to the database as a subject id.
+    const caseSubject = people.find((p) => p.role === "case")?.subjectId ?? null;
+    const subjectOfAbout = (about: string) => (about === "case" ? caseSubject ?? about : about);
+    const answerOf = (about: string, fact: string) => answers.find((a) => a.subjectId === subjectOfAbout(about) && a.field === fact && !a.rowKey);
+    const words: ChangeWords = {
+      label: (fact) => questionWords.get(fact) || placementWords.get(fact) || meaning.get(fact) || fact,
+      person: (about) => (about === REPRESENTATIVE ? "the representative" : label.get(subjectOfAbout(about)) || "the application"),
+      at: (about, fact) => answerOf(about, fact)?.at ?? null,
+      saved: (about, fact) => answerOf(about, fact)?.value ?? null,
+    };
+    const nowFacts = (form: string, subject: string) => formCoverage(s, people, answers, rows, form, subject)?.facts ?? [];
+    const changesSince = (copy: string | null | undefined, form: string, subject: string) => {
+      const then = copy ? copyFacts.get(copy) : undefined;
+      if (!then) return { changes: [] as FactChange[], groups: [] as string[] };
+      return { changes: factChanges(then.facts ?? [], nowFacts(form, subject), words), groups: changedGroups(then.groups, groupFacts(view, form, subject)) };
+    };
+    // The structured list the screen reads for "Undo this change" (one per person and fact; never the firm record's).
+    // Review S1: never offered for the firm record's facts, a list entry or a declaration (the route refuses them).
+    const placeOf = new Map((s.placements as { fact: string; repeats: string }[]).map((p) => [p.fact, p.repeats]));
+    const typeOf = new Map((s.canonical_fields as { id: string; value_type?: string }[]).map((f) => [f.id, f.value_type ?? ""]));
+    // A relative's fact (another person on the form, "<id>/parent_1") is changed where it is asked, not undone from here.
+    const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && !x.relation && UUID.test(subjectOfAbout(x.about)) && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
+    // `undo`, `expected_id` and `restores` are filled once every item is worked out (one read of the answers' history).
+    const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: subjectOfAbout(x.about), fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
     const staleOf = new Map<string, string[]>(); // C7.6: Online sections entered before a fact changed, per item
-    const items = stored.items.map((i) => {
+    const items = stored.items.flatMap((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
         const ch = channelOf(lines.get(i.itemKey), accepts.get(i.itemKey), own!.portalKey, i.channel);
@@ -215,22 +255,53 @@ export class CasePrepare {
         // FQ-6, P-168), Done when every section is entered and current.
         const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? []) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
+        const fb = { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null };
         if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
-        // Review B1 on #861: this line names who signs too (readiness reads it; the prepare view answered 500 without it).
-        if (sheet && stale.length && !waits) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null,
-          signers: signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor), channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
-          state: "out_of_date", reason: `Out of date: ${stale.map((x) => x.title).join(", ")} changed after it was entered in the portal. Enter the new answers, then tick it again.` };
+        if (sheet && stale.length && !waits) {
+          // C9.2: each stale section's answers as entered, against what it shows now (warns only, FQ-6, P-168).
+          const ticks = enteredBy.get(i.id) ?? [];
+          const changes = stale.flatMap((x) => {
+            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown }[] }).answers ?? [];
+            return factChanges(then.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value })), x.answers.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value })), words);
+          });
+          const first = ticks.filter((t) => stale.some((x) => x.key === t.sectionKey)).map((t) => t.enteredAt).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+          // Review B1 on #861: this line names who signs too (readiness reads it).
+          return { ...fb, signers: signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor), state: "out_of_date", reason: outOfDateReason("entered", `${i.itemKey} (${stale.map((x) => x.title).join(", ")})`, first, changes), changes: changeList(changes) };
+        }
         // Review M2: Done only when every section is entered, current and waits for nothing.
         const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length);
         const signers = signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor);
         // C8.1: a form signed by hand and scanned is Ready once its signed scan is in, Done once uploaded to IRCC.
         const signed = !waits && ch.signature === "HAND_SCANNED" ? signedState(stepsOf.get(i.id) ?? {}, i.itemKey) : null;
-        if (signed) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
-          channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null, ...signed };
+        if (signed) {
+          // C9.2 (BR-12, BR-20): the signed form is never changed; when a fact on the copy that was printed and signed
+          // changed since (the representative of record among them), it is Out of date and a new signed one is asked for.
+          const { changes, groups: groupsChanged } = changesSince(printedCopy(i.id), i.itemKey, i.subjectId);
+          if (!changes.length && !groupsChanged.length) return { ...fb, signers, ...signed };
+          const scan = scans.find((x) => x.itemId === i.id) ?? null, rep = changes.filter((x) => x.about === REPRESENTATIVE);
+          const extra = [...(rep.length ? [representativeWords(null, null, rep[0].at)] : []), ...groupsChanged.map((g) => `${g} changed`)];
+          const old = { ...fb, signers, ...signed, state: "out_of_date", reason: outOfDateReason("signed_scan", i.itemKey, scan?.uploadedAt ?? null, changes, extra), changes: changeList(changes) };
+          // Uploaded to IRCC already: the item itself is out of date (what to do after filing is C8.2's record, BR-12).
+          if (signed.state === "done") return old;
+          // Otherwise the signed scan is listed as the out-of-date record (its own id, the item named), and the item asks
+          // for a new signed copy: printing a new copy starts its signing steps again (sign-steps.ts).
+          return [{ ...old, id: scan?.id ?? i.id, item: i.id, record: "signed_scan" as const },
+            { ...fb, signers, state: "to_do", replaces: scan?.id ?? null, reason: `A new signed ${i.itemKey} is needed: the signed one is out of date (${rep.length ? representativeWords(null, null, rep[0].at) : changes.length ? changes.slice(0, 2).map((x) => `${x.label.charAt(0).toLowerCase()}${x.label.slice(1)} of ${x.person}`).join(", ") + " changed" : "a fact it reads changed"}). Print the new copy, have it signed and upload the scan.` }];
+        }
         // C7.7 part 2 (r5c BR-8, P-144): a Paper line with its barcode page and its steps, in order.
-        if (ch.channel === "PAPER" && !waits) return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
-          channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
-          ...paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated: paperValidated(i.itemKey, i.subjectId), signers, lineOnline: ch.line_channel === "ONLINE" }) };
+        // C9.2: a validated copy read back that no longer matches the case is Out of date, naming what changed.
+        const validated = !waits && ch.channel !== "ONLINE" ? paperValidated(i.itemKey, i.subjectId) : null;
+        const since = validated && !validated.current ? changesSince(validated.copy, i.itemKey, i.subjectId) : null;
+        // Only a change it can name marks it (C8.2 break M4: the same value typed again is no change); a Paper line keeps
+        // its own Validate-again rule (C7.7, paperLine).
+        const staleCopy = since && (since.changes.length || since.groups.length || ch.channel === "PAPER") ? since : null;
+        const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
+        if (ch.channel === "PAPER" && !waits) {
+          const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers, lineOnline: ch.line_channel === "ONLINE" });
+          // C7.7 (P-144): a Paper line keeps its own next step (a new barcode page), after the words of what changed.
+          return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords("Make a new copy, press Validate again (a new barcode page) and read it back before you print, or undo the change.") : {}) };
+        }
+        if (staleCopy) return { ...fb, signers, validated, state: "out_of_date", ...staleWords() };
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
           state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
@@ -238,6 +309,18 @@ export class CasePrepare {
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
     });
+    // C9.2 review M1, M2: what Undo would put back for each change (the same rule as the route: the newest earlier value
+    // that differs, undoTarget) and the answer the officer saw, so the screen names the real value and a stale tab gets 409.
+    const rowsOfChanges = items.flatMap((x) => ((x as { changes?: ChangeRow[] }).changes ?? []).filter((y) => y.undo && UUID.test(y.subject)));
+    if (rowsOfChanges.length) {
+      const pairs = [...new Map(rowsOfChanges.map((y) => [`${y.subject}|${y.fact}`, { subjectId: y.subject, canonicalFieldKey: y.fact, rowKey: null }])).values()];
+      const hist = await this.db.clientCanonicalAnswer.findMany({ where: { OR: pairs }, orderBy: [{ effectiveAt: "desc" }, { id: "desc" }], select: { id: true, subjectId: true, canonicalFieldKey: true, valueJson: true, supersededById: true, sourceJson: true } });
+      for (const y of rowsOfChanges) {
+        const mine = hist.filter((h) => h.subjectId === y.subject && h.canonicalFieldKey === y.fact).map((h) => ({ ...h, value: h.valueJson, restoredFrom: restoredFromOf(h.sourceJson) }));
+        const cur = mine.find((h) => !h.supersededById), target = cur ? undoTarget(cur, mine.filter((h) => h.id !== cur.id)) : null;
+        y.expected_id = cur?.id ?? null; y.restores = target ? target.value : null; y.undo = !!target;
+      }
+    }
     // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
@@ -249,9 +332,24 @@ export class CasePrepare {
     const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
     const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
     // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
-    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
+    // C9.2 (BR-12, P-136, P-237): an out-of-date validated, signed or uploaded item is a CRITICAL "out of date" line on its
+    // filing (an Online section entered before a change warns, enteredStale). A signed scan's own out-of-date record is
+    // not a form of its own: its mark goes on its item, which asks for a new signed copy.
+    const records = new Map(items.flatMap((i) => ("record" in i && i.record === "signed_scan" && "item" in i ? [[i.item as string, i]] : [])));
+    const markOf = (i: (typeof items)[number] | undefined) => {
+      if (!i || i.state !== "out_of_date" || ("channel" in i && i.channel === "ONLINE")) return null;
+      const cs = (i as { changes?: ChangeRow[] }).changes ?? [];
+      // bot review on #926: the warning's identity is every change with its value now (a pass never covers a later change);
+      // its date is the latest change's.
+      // A repeating group's state now is in it too (bot review on #926: a group-only change has no fact change to name).
+      const groupsNow = "form" in i && i.form ? groupFacts(view, i.form, i.subject) : [];
+      const key = markKey(cs, groupsNow);
+      const since = cs.map((x) => x.at).filter((x): x is string => !!x).sort().at(-1) ?? today.toISOString();
+      return { fact: cs.length ? `${cs[0].label}${cs.length > 1 ? ` and ${cs.length - 1} more` : ""}` : "a fact it reads", since, key };
+    };
+    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form && !("record" in i) ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
       channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
-      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined }] : []);
+      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined, outOfDate: markOf(i) ?? markOf(records.get(i.id)) }] : []);
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
