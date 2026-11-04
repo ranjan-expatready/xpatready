@@ -21,7 +21,8 @@ const PART_NAMES = /^(Page wrapper|Nat id|Us card|Contacts row2|Background info2
   const p = await (await b.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
   const errors = []; p.on("pageerror", (e) => errors.push(e.message));
   const shot = async (name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: `${SHOTS}/${name}.png` }); } };
-  const api = async (pth, json) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: json }); return { status: r.status(), body: await r.json().catch(() => null) }; };
+  // Loading the six takes minutes on a busy machine (QA-204): each call waits up to 5 minutes.
+  const api = async (pth, json) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: json, timeout: 300000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   await api("/demo/reset", { confirm: "RESET" });
   step("setup: the six load", (await api("/demo/load", { sample: "six" })).status === 201);
   const groups = {};
