@@ -221,3 +221,16 @@ qa ran the three red packs itself on one Mac copy of the six to see the messages
 New: **QA-215** (Minor, test tooling): `C11.12-runtime.test.ts` crashes instead of exiting 2 "setup missing", and C11.3's held AT-5 is a plain FAIL, so gate B refuses C11.3.
 
 **M2: 43/60 confirmed** (was 46; −C4.7, −C3.6, −C11.12). Thin slice 6/8. All three come back when QA-144's slices land.
+
+## Batch 6 — #802 (QA-196; C3.4), #771 and #820 (C3.4), #833 (C3.8), #851 (C11.7, by qa tester 2), #848 (test fix) · main 4c3b16f0e · ~12:50–13:20 IST
+| Row | Verdict | Exit codes |
+|---|---|---|
+| C3.4 AI drafts sections, document types, rules and checks (M2) | **Partial** (unchanged) | `C3.4.test.ts` on the six on GitHub (run 41791603864): exit 0, **20/20** (was 7/16). Held by QA-195, QA-206, QA-144 (Major) and the flaky checks QA-208, QA-209 |
+| C3.8 Validator (M2) | **Works** (re-confirmed after #833's migration) | `C3.8.test.ts` on the six on GitHub: exit 0, 12/12 |
+| C11.7 Demo reset and sample (M2) | **Partial** (unchanged) | qa tester 2, `qa/verdicts/2026-11-04-C11.7.md` (#851): `C11.7.test.ts` 18/21 twice on GitHub; part B (Provincial nominee from the paper twins, P-109) is red |
+
+Walk on the six at 1440 px (one Mac copy, stopped): the Saved C3.4 draft of IMM 5257 (US$0; ledger 251,631 bytes before and after) gives 47 proposals on To review, 17 of them form checks. Accept on a form check whose form fields are not mapped yet is refused, naming the two form fields, as the QA-196 ruling says (`c34-form-check-1440.png`).
+
+Closed: **QA-196**. New: **QA-216** (Minor, from qa tester 2: the finder line says "A step failed" on 4 of the six) and **QA-217** (Minor: "Ready to accept" on a form check that cannot be accepted yet).
+
+**M2: 43/60 confirmed** (unchanged). Thin slice 6/8.

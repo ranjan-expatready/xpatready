@@ -75,3 +75,12 @@ From `qa/reports/bugs-open-detail.md`:
 
 | QA-182 | Gap · Minor | C3.10 · P-63 (never "box") | 762dbae6 (after-merge) | `acceptance/C3.10.test.ts` 7/8 twice: 18 messages the API, engine or web can show still say box/boxes, e.g. "X is not a form with boxes" (`api/src/field-drafts-routes.ts:31`), "a person maps the boxes" (`api/src/field-drafts.ts:36–39`), "write it by hand… this box" (`api/src/fill-case.ts:70`), "Re-read with AI (fields and boxes)" (`web/src/pages/library-forms.tsx:339`). The 28-page walk of 1 Nov never reached these states. Expected: form field(s) everywhere | Steps, expected and actual: this row and `qa/reports/2026-11-03-after-merge-explore.md`. Pack output is quoted there; the run logs are not committed (AGENTS.md rule 1) | forms / screens | Open |
 
+
+## QA-196 — closed 4 Nov 2026 (after-merge, #802 with #771)
+
+Closed by the qa lane on main **4c3b16f0e** (fixed by #802; #771's saved runs on main). `acceptance/C3.4.test.ts` on the six on GitHub (run 41791603864): exit 0, 20/20, accepting IMM 5257's form check and a guide 5256 check through the one door. Walk on the six at 1440 px: the Saved C3.4 draft of IMM 5257 (US$0, ledger unchanged) puts 47 proposals on To review, 17 of them form checks. Accept on a form check whose form fields are not mapped yet answers, as the tech lead ruled (P-149 (1)): "This check reads 2 form fields of IMM 5257 (09-2023) that are not mapped to a shared field yet (…). Map them on the form's field page first, then accept it again; or reject it." Its "Ready to accept" badge at that point is QA-217 (Minor).
+
+From `qa/BUGS.md`:
+
+| QA-196 | Gap · Major | C3.4 · P-120 (AI drafts a form's checks as proposals), P-149 (1) (one door) | 762dbae6 (Opus re-review of #585) | AI form checks and guide checks from the C3.4 masters step reach To review at Ready, but Accept answers 409, "A form check proposal is accepted with its own step, not yet on this queue" (`api/src/proposals.ts:576-577`; `LANDERS` at `:367` has no `form_check` or `cross_check`). C3.4's acceptance accepts only a section. Noted before only as review Minor 3 in `screens/C3.4-ai-step/review.md`. Expected: a lander for both kinds, or the items held off the queue with a reason | forms (C3.4) | Open |
+
