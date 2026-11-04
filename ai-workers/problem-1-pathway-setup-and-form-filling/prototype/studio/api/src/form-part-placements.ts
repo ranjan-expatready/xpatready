@@ -28,7 +28,13 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   const gaps = new Set(coverageGaps(snapshot).map((g) => g.fact));
   for (const m of snapshot.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]) for (const e of m.entries) if (e.outcome === "mapped" && e.fact && !placedNow.has(e.fact) && !docFacts.has(e.fact)) gaps.add(e.fact);
   // The accepted section proposals of this combination's rules passes: edition → [section key, the boxes it groups].
-  const runs = (await db.draftingJob.findMany({ where: { combinationId, kind: MASTERS_STEP }, select: { id: true } })).map((j) => j.id);
+  const jobs = await db.draftingJob.findMany({ where: { combinationId, kind: MASTERS_STEP }, select: { id: true, attachmentId: true } });
+  const runs = jobs.map((j) => j.id);
+  // The edition a rules pass read, by its file's checksum: the attachment may label one file differently from the
+  // library edition the map is filed under (IMM 5475: "12-2022" from its canada.ca folder, "05-2021" in the library).
+  const shaOf = new Map((await db.sourceAttachment.findMany({ where: { id: { in: jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, sha256: true } })).map((a) => [a.id, a.sha256]));
+  const labelOf = new Map((await db.formEdition.findMany({ where: { workspaceId: c.workspaceId, sha256: { in: [...shaOf.values()].filter((x): x is string => !!x) } }, select: { sha256: true, editionLabel: true } })).map((e) => [e.sha256, e.editionLabel]));
+  const editionOfRun = new Map(jobs.map((j) => [j.id, labelOf.get(shaOf.get(j.attachmentId ?? "") ?? "") ?? null]));
   const groups = new Map<string, { section: string; boxes: string[] }[]>();
   // A proposal rejected (or still waiting) because the library already holds a section of that name reuses that
   // section, as its card says ("reuse that item").
@@ -37,7 +43,8 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
     const pay = p.payload as { fieldKeys?: string[]; label?: string };
     const section = p.status === "accepted" ? p.decidedKey : byTitle.get(String(pay.label ?? "").trim().toLowerCase());
     if (!section) continue;
-    groups.set(p.formEdition ?? "", [...(groups.get(p.formEdition ?? "") ?? []), { section, boxes: pay.fieldKeys ?? [] }]);
+    const ed = editionOfRun.get(p.runId ?? "") ?? p.formEdition ?? "";
+    groups.set(ed, [...(groups.get(ed) ?? []), { section, boxes: pay.fieldKeys ?? [] }]);
   }
   // A form's sections may come from another edition of it than the map being read: only a box with exactly the same path
   // takes a section from there (review m3); the nearest-box fallback stays within the edition's own parts.
