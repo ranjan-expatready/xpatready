@@ -55,9 +55,10 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   const jobs = n(`select count(*) from drafting_job where kind = 'field_map' and mode = 'REPLAY'`);
   // R-146, QA-163, the C11.8 live run (#746) and the C11.7 result (3 Nov): eighteen saved answers replay (IMM 5532's re-run,
   // the Visitor visa's IMM 5257, IMM 5669 and IMM 0008 DEP since the C11.7 paid runs; check_queue_tx.ts), IMM 5645's from its
-  // four saved parts (check_forms_saved_parts.ts), so no form waits and row 3 is done. A lost or mismatched replay lowers
-  // jobs and makes the row partial with the form named, so both sides fail.
-  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the eighteen forms, IMM 5645 by its four saved parts); no form waits for the paid run", jobs === 18 && r("3").status === "done" && r("3").shows.startsWith(`${jobs} saved`) && r("3").why == null, r("3"));
+  // four saved parts (check_forms_saved_parts.ts), so no form waits and row 3 is done; QA-144 slice 1 adds IRM 0002 on the
+  // Visitor visa, attached from the library and replayed from #840's saved answer: nineteen. A lost or mismatched replay
+  // lowers jobs and makes the row partial with the form named, so both sides fail.
+  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the nineteen forms with IRM 0002, IMM 5645 by its four saved parts); no form waits for the paid run", jobs === 19 && r("3").status === "done" && r("3").shows.startsWith(`${jobs} saved`) && r("3").why == null, r("3"));
   ok("C10.1 row 4: the author decides every replayed proposal with a reason, one edited and one returned, and the drafts are applied", n(`select count(*) from proposal_item p join drafting_job j on j.id = p.run_id where j.kind = 'field_map' and p.status = 'waiting'`) === 0 && n(`select count(*) from proposal_item where choice = 'RETURNED' and decision_reason like 'Returned by the sample loader%'`) === 1 && n(`select count(*) from proposal_item where decision_reason like 'Edited by the sample loader%'`) === 1 && n(`select count(*) from drafting_job where kind = 'field_map' and status = 'APPLIED'`) === jobs, r("4").shows);
   ok("C10.1 row 4 fail: no proposal is decided without a person's name and reason", n(`select count(*) from proposal_item where choice is not null and (decided_by is null or coalesce(decision_reason, '') = '')`) === 0);
   // Row 5: every new library item approved by a second person, never by the author who accepted it.
@@ -83,13 +84,12 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
   // QA-144 slice 1: the Visitor visa is released; the combinations not set up yet stay drafts with the validator's words.
-  // Until IRM 0002's saved field map lands (tech lead on #798), its "no form fields mapped" is the one named block.
-  const irm0002Map = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0;
-  ok(irm0002Map ? "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)" : "C10.1 row 10: the Visitor visa's one block is IRM 0002's missing field map, named (QA-144 slice 1; its saved map is the paid runner's)",
-    irm0002Map ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows)
-      // QA-206: while sections wait for a name, the facts only their form reads are asked of nobody and block too
-      // (check_qa144_vv_release.ts names each); IRM 0002's missing map is still the first block named.
-      : (heldNow ? /Visitor visa: Fix \d+ problems before submitting: IRM 0002: No form fields mapped yet/ : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/).test(r("10").why ?? ""), r("10").why?.slice(0, 200));
+  // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the Visitor visa is released (review m2), unless
+  // sections wait for a name (QA-206; tech lead on #883): then its release check names the blocks (check_qa144_vv_release.ts
+  // checks each is a fact of a form whose sections all wait for a name).
+  ok(heldNow ? "C10.1 row 10 (QA-206): while sections wait for a name, the Visitor visa stays a draft and its row names the blocks" : "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)",
+    heldNow ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 0 && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? "")
+      : n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 1 && /Visitor visa/.test(r("10").shows), heldNow ? r("10").why?.slice(0, 200) : r("10").shows);
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // Slice 2 moves this example to Express Entry, a combination no slice sets up yet.

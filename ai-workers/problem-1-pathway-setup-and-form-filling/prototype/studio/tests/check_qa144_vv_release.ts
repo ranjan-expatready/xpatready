@@ -36,12 +36,9 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   const vv = sql(`select id from combination where combination_key = 'vv.single'`);
   console.log(`      loaded in ${l.body.seconds.toFixed(1)} s; released ${JSON.stringify(l.body.released)}`);
 
-  // The Done-when (tech lead on #798): the Visitor visa is released by the checkpoint. Until IRM 0002's saved field map
-  // lands (the paid runner, #798), IRM 0002's "no form fields mapped" is its one named block (QA-180 stays strict:
-  // a conditional form needs its map too); once a saved map exists, nothing but the release passes.
+  // The Done-when (tech lead on #798): the Visitor visa is released by the checkpoint, with no release block left.
   const o = (await call("GET", `/combinations/${vv}`)).body;
   const errors = (o?.draft?.problems ?? []).filter((p: { level: string }) => p.level === "error");
-  const irm0002Map = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0;
   // QA-206 (tech lead on #883): the sections the forms print no heading over stay waiting on To review, so the facts only
   // their boxes read are asked of nobody until a person names them: the honest block, each named.
   const held = sql(`select payload->>'label' from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' order by payload->>'label'`).split("\n").filter(Boolean);
@@ -49,12 +46,14 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // only facts left asked of nobody are those read on a form with no accepted section at all, every one of its sections
   // waiting for a name (IMM 5257 SCH1 prints no heading; review r8 M8: never a form with one held part among named ones).
   const heldFacts = new Set(sql(`select distinct m.canonical_field_key from form_field_map m join form_edition e on e.id = m.form_edition_id where m.canonical_field_key is not null and e.edition_label in (select form_edition from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true') and not exists (select 1 from proposal_item q where q.kind = 'section' and q.form_edition = e.edition_label and q.status in ('accepted', 'edited', 'rejected'))`).split("\n").filter(Boolean));
-  const allowed = (e: { item: string }) => e.item === "IRM 0002" || heldFacts.has(e.item);
+  // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the release is the one outcome (review m2), unless
+  // a form's sections all wait for a name (QA-206; tech lead on #883: the honest signal): then the release blocks on those
+  // facts only, each named, and on nothing else.
   const released = (l.body.released as string[]).some((x) => /Visitor visa/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${vv}' order by version desc limit 1`) === "1|user-B|user-A";
-  if (irm0002Map) ok("QA-144 pass: the configured checkpoint releases the Visitor visa (release 1, submitted by the author, approved by the Approver)", released, { released: l.body.released, row10: r("10").why?.slice(0, 300) });
-  else ok("QA-144 pass: with no saved map for IRM 0002 yet, its \"no form fields mapped\" blocks the Visitor visa's release, named on the release check (row 10), with only the facts of sections held for a name (QA-206)", !released && errors.some((e: { item: string }) => e.item === "IRM 0002") && errors.every(allowed) && errors.filter((e: { item: string }) => e.item === "IRM 0002").length === 1 && errors.find((e: { item: string }) => e.item === "IRM 0002") && /No form fields mapped yet/.test(errors.find((e: { item: string }) => e.item === "IRM 0002")!.message) && /IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""),
-    errors.slice(0, 4).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 120)}`));
-  ok("QA-144 fail: nothing else blocks the Visitor visa's release (no form field without a decision, no fact asked of nobody but those of the held sections, no rule in words only)", errors.every(allowed) && !(o?.draft?.problems ?? []).some((p: { item: string; message: string }) => /nobody is asked for it/.test(p.message) && !heldFacts.has(p.item)), { heldFacts: heldFacts.size, notHeld: errors.filter((e: { item: string }) => !allowed(e)).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 140)}`).slice(0, 6) });
+  if (!heldFacts.size) ok("QA-144 pass: the configured checkpoint releases the Visitor visa (release 1, submitted by the author, approved by the Approver)", released, { released: l.body.released, row10: r("10").why?.slice(0, 300) });
+  else ok("QA-144 pass (QA-206): the Visitor visa's release blocks only on the facts of a form whose sections all wait for a name (IMM 5257 SCH1), each named on the release check (row 10)", !released && errors.length > 0 && errors.every((e: { item: string }) => heldFacts.has(e.item)) && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? ""), { released: l.body.released, notHeld: errors.filter((e: { item: string }) => !heldFacts.has(e.item)).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 120)}`).slice(0, 4) });
+  ok("QA-144 pass: IRM 0002 is attached and mapped from its saved answer (US$0)", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0 && r("3").status === "done", r("3"));
+  ok("QA-144 fail: nothing else blocks the Visitor visa's release (no form field without a decision, no fact asked of nobody but those of a form whose sections all wait for a name, no rule in words only)", errors.every((e: { item: string }) => heldFacts.has(e.item)) && !(o?.draft?.problems ?? []).some((p: { item: string; message: string }) => /nobody is asked for it/.test(p.message) && !heldFacts.has(p.item)), errors.filter((e: { item: string }) => !heldFacts.has(e.item)).slice(0, 4).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 120)}`));
   ok("QA-144 fail-guard: no live AI call and nothing spent (US$0)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before);
 
   // Row 7: sections from the forms' own parts (rules, no AI), approved by a second person.
@@ -63,9 +62,14 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   ok("QA-144 row 7 (QA-206): no section was named by a made-up name: every section in the library carries a printed heading or a person's name, none a placeholder", n(`select count(*) from logical_section where title ilike 'unnamed section%'`) === 0 && n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work ? 'heading'`) === 0);
   ok("QA-144 rules pass: every Visitor visa form it files had its sections drafted by rules (no AI, US$0; not IMM 5645, which the paper channel takes off)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form' and coalesce(edition, '') not like 'IMM 5645 (%'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
-  // Slice 2: an approved item a release uses reads RELEASED (With an LMIA is released by the same load).
-  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver", n(`select count(*) from library_change where kind = 'section' and status in ('APPROVED', 'RELEASED') and decided_by = 'user-B'`) > 10
-    && n(`select count(*) from library_change where kind = 'section' and status not in ('APPROVED', 'RELEASED')`) === 0);
+  // Slice 2 (#878): With an LMIA is released by the same load, so items its release uses read RELEASED too.
+  // Approved by the Approver; a section the Visitor visa's release carries is RELEASED with it, one it does not use stays
+  // APPROVED (review m3: once released, the release's own sections must be RELEASED).
+  const approved = "status in ('APPROVED', 'RELEASED')";
+  const inRelease = sql(`select string_agg(distinct s->>'id', ',') from config_release r, jsonb_array_elements(r.snapshot->'sections') s where r.combination_id = '${vv}'`).split(",").filter(Boolean);
+  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver, and those the Visitor visa's release carries are released with it", n(`select count(*) from library_change where kind = 'section' and ${approved} and decided_by = 'user-B'`) > 10
+    && n(`select count(*) from library_change where kind = 'section' and not (${approved})`) === 0
+    && inRelease.length > 0 && n(`select count(*) from library_change where kind = 'section' and key in (${inRelease.map((k) => `'${k}'`).join(",") || "''"}) and status <> 'RELEASED'`) === 0, { inRelease: inRelease.length });
   ok("QA-144 BR-7 fail: the author approved no library item", n(`select count(*) from library_change where decided_by = 'user-A'`) === 0);
 
   // The shared placement step: each placement is the author's, asked of the client, in a section the combination uses.
@@ -104,18 +108,18 @@ type Row = { row: string; status: string; shows: string; why: string | null };
 
   // Ruling 3: the form lines from IRCC's words, as rules a case can read.
   const line = (form: string) => sql(`select f.attach_mode || '|' || f.status || '|' || coalesce(f.min_age::text, '') || '|' || coalesce(f.predicate_json::text, '') from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${vv}' and g.form_key = '${form}' order by f.version desc limit 1`);
-  ok("QA-144 rule IMM 5409 (Guide 5256, Question 10): only for an applicant in a common-law union", /^ANSWER_CONDITIONAL\|DRAFT\|\|.*"field": "person\.marital_status".*"value": "common_law"/.test(line("IMM 5409")), line("IMM 5409"));
+  ok("QA-144 rule IMM 5409 (Guide 5256, Question 10): only for an applicant in a common-law union", /^ANSWER_CONDITIONAL\|PUBLISHED\|\|.*"field": "person\.marital_status".*"value": "common_law"/.test(line("IMM 5409")), line("IMM 5409"));
   ok("QA-144 rule IMM 5476 and IMM 5475 (IMM 5484 p. 1): only when the case says so", /case\.representative_form_action/.test(line("IMM 5476")) && /case\.release_authorization_action/.test(line("IMM 5475")));
   // The family information form by how the combination files (tech lead, 4 Nov; IRCC-P2-04a): the sample files IMM 5257
   // as a PDF upload, so IMM 5707 (IMM 5484, the paper checklist); filed online it would be IMM 5645 (canada.ca APPLY).
   const filed = sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${vv}' and g.form_key = 'IMM 5257' order by f.version desc limit 1`);
   const [pick, other] = filed === "ONLINE" ? ["IMM 5645", "IMM 5707"] : ["IMM 5707", "IMM 5645"];
-  ok(`QA-144 rule, family information form by channel (IMM 5257 filed ${filed}): ${pick} required of each person 18 or older, ${other} taken off this draft`, line(pick).startsWith("COMBINATION_MANDATORY|DRAFT|18|") && line(other).split("|")[1] === "RETIRED", [line(pick), line(other)]);
+  ok(`QA-144 rule, family information form by channel (IMM 5257 filed ${filed}): ${pick} required of each person 18 or older, ${other} taken off this draft`, /^COMBINATION_MANDATORY\|PUBLISHED\|18\|/.test(line(pick)) && line(other).split("|")[1] === "RETIRED", [line(pick), line(other)]);
   // IRM 0002 (Guide 5256, Question 3): only for a person whose gender identifier differs from their documents; the fact
   // is added for its rule (C3.6), approved by the Approver and asked of each person.
   const g = "person.gender_identifier_differs_from_documents";
-  ok("QA-144 rule IRM 0002 (Guide 5256, Question 3): only when the person's gender identifier differs from their documents", new RegExp(`^ANSWER_CONDITIONAL\\|DRAFT\\|\\|.*"field": "${g.replace(/\./g, "\\.")}"`).test(line("IRM 0002")), line("IRM 0002"));
-  ok("QA-144 IRM 0002's fact: in the library, approved by the Approver (not the author), asked of each person", n(`select count(*) from library_change where key = '${g}' and status = 'APPROVED' and decided_by = 'user-B'`) === 1
+  ok("QA-144 rule IRM 0002 (Guide 5256, Question 3): only when the person's gender identifier differs from their documents", new RegExp(`^ANSWER_CONDITIONAL\\|PUBLISHED\\|\\|.*"field": "${g.replace(/\./g, "\\.")}"`).test(line("IRM 0002")), line("IRM 0002"));
+  ok("QA-144 IRM 0002's fact: in the library, approved by the Approver (not the author), asked of each person", n(`select count(*) from library_change where key = '${g}' and status = 'RELEASED' and decided_by = 'user-B'`) === 1
     && n(`select count(*) from section_question where canonical_field_key = '${g}' and repeats = 'per_person' and collected_from = 'client_questionnaire'`) > 0);
   ok("QA-144 rule fail-guard: no Visitor visa form is left with its condition in words only", !/condition is in words only/.test(JSON.stringify(o?.draft?.problems ?? [])));
   ok("QA-144 IMM 5409's rule reads a list value: person.marital_status has the form's own marital status list, with common_law", sql(`select l.answer_list_key from canonical_field f join answer_list l on l.answer_list_key = f.answer_list_key where f.canonical_field_key = 'person.marital_status' order by f.version desc limit 1`) !== ""
