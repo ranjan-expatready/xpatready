@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-impact-check-imm5476e-impact-2d69ae6ecab9-28cc6ecb-live-20261103t173632167z-5e7d71",
+  "idempotency_key": "429114fd488cb441b7fcb6235a897e655b77d2b311bae937bb6896fe734eba38",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map_edition",
+  "output_sha256": "01344c765b9c39f2158e16e5a77112bacd1ee493eba9db09f5e3bcb86da16733",
+  "inputs": {
+   "combination": "edition:IMM 5476:11-2025",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm5476e.impact-2d69ae6ecab9.part.json",
+     "sha256": "380053dad5394237d0580ae18f25a49dc2573a62984dfa44e7afc95ad081319e"
+    }
+   ],
+   "configuration_version": "c91-impact"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 10900,
+   "prompt_version": "field-map-check.v1.md",
+   "prompt_sha256": "51474a479d9e91c3dd36a9e120d137796a2040e1409b39d5ef3c665cb6ec901b"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 8530,
+    "output_tokens": 6087,
+    "duration_ms": 49390
+   }
+  ],
+  "usage": {
+   "input_tokens": 8530,
+   "output_tokens": 6087,
+   "cost_usd": 0.15586,
+   "duration_ms": 49390
+  },
+  "started_at": "2026-11-03T17:36:32.169Z",
+  "ended_at": "2026-11-03T17:37:21.760Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "5b4425ee99c413f090a9c42866aed7e2fbf953be859dba17c83d6a7356a46f8b",
+  "template_sha256": "707130b8cae250f820fe2ce5ef29c39bb6ddadaa6ade3b636e88c2ba8a472ffb",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 5476 (11-2025)"
+  },
+  "screened": true,
+  "output_sha256": "01344c765b9c39f2158e16e5a77112bacd1ee493eba9db09f5e3bcb86da16733",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "782784208197972ad34c220b0cc241cd993ccde0c6dff29cb051bb9ff077b9a7",
+  "request_bytes": 19586,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 65.81540399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm5476e.impact-2d69ae6ecab9.part.json",
+    "sha256": "380053dad5394237d0580ae18f25a49dc2573a62984dfa44e7afc95ad081319e",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "e8ac2dc381825ac2891490901551fd0b45148db1ce4530338168fe3ff17ab2e8",
+   "digest_made_at": "2026-11-03T17:36:32.168Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "18f0a09a8c023ab51ce1a44eb41d4197",
+   "ticket_expires_at": "2026-11-03T17:38:32.168Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5476 (11-2025)\",\"canonical_fields\":[{\"id\":\"person.family_name\",\"meaning\":\"Person's family name (surname) as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"Person's given name(s) as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"case.application_type\",\"meaning\":\"Type of immigration application the case concerns (e.g. permanent residence, study permit extension)\",\"value_type\":\"text\"},{\"id\":\"case.application_number\",\"meaning\":\"Application number assigned by the immigration authority, if known\",\"value_type\":\"text\"},{\"id\":\"case.representative_request_type\",\"meaning\":\"What the use of representative request does: appoint, update contact information, cancel, cancel and appoint new, or representative withdrawal\",\"value_type\":\"code\"},{\"id\":\"organisation.name\",\"meaning\":\"Name of a firm or organization\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5476[0].Page1[0].RadioButtonList[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.representative_request_type\",\"transform\":\"code_list:imm5476.request_type (1=appointing, 2=updating contact information, 3=cancelling, 4=cancelling and appointing new, 5=withdrawing role as representative)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"appointing a representative. Complete Sections A, B and E.\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].familyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (Surname) (as shown on your passport or travel document)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].givenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on your passport or travel document)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].office[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Box has no caption in the inventory; it is probably the applicant's email address or date of birth, but the inventory does not say which. A person must check the printed form.\",\"evidence_quote\":\"SECTION A: APPLICANT INFORMATION\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].office[1]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the applicant has no email address\",\"confidence\":\"low\",\"unresolved_reason\":\"Caption may be an instruction label for the email box or a box for an alternative contact (telephone number or address). The box accepts either a phone or an address, so no single fact applies. A person must confirm the box's purpose and the selection rule.\",\"evidence_quote\":\"If you do not have an email address, provide either your telephone number or your address\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].office[2]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.application_type\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Type of application (permanent residence, extension of study permit, etc.)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionA[0].application[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.application_number\",\"transform\":\"as_is\",\"condition\":\"Only if the application number is known\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Application number (if known)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].province2[0]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section B applies to request types 1, 2 and 4\",\"confidence\":\"low\",\"unresolved_reason\":\"The heading is truncated ('(i) is UNPAID and is a'). The inventory does not show which representative category (unpaid or paid; which licensing body) this province box belongs to, and the category selector is not in the inventory.\",\"evidence_quote\":\"Which Province/Territory?\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership2[0]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section B applies to request types 1, 2 and 4\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory does not show which licensing body or representative category this membership ID belongs to (the heading is truncated). Mapping the wrong body's ID would misstate the representative's authorization.\",\"evidence_quote\":\"Membership ID number (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[1]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section B applies to request types 1, 2 and 4\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory does not show which licensing body this membership ID box belongs to (the heading is truncated and no category selector is in the inventory).\",\"evidence_quote\":\"Membership ID number\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section B applies to request types 1, 2 and 4\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory does not show which representative category this province box belongs to (shared truncated heading '(i) is UNPAID and is a').\",\"evidence_quote\":\"Which Province/Territory?\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].membership[0]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section B applies to request types 1, 2 and 4\",\"confidence\":\"low\",\"unresolved_reason\":\"The inventory does not show which licensing body or category this membership ID belongs to.\",\"evidence_quote\":\"Membership ID number (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]\",\"outcome\":\"never_filled\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the representative; must not be filled by the system.\",\"evidence_quote\":\"Signature of representative\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if a supervising lawyer applies\",\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the supervising lawyer; must not be filled by the system.\",\"evidence_quote\":\"(if applicable) Signature of supervising lawyer\"},{\"data_path\":\"IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[1]\",\"outcome\":\"never_filled\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the representative's declaration, written when the declaration is signed; it is not a stored case fact.\",\"evidence_quote\":\"9. Your representative's declaration:\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].familyName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Section D applies only when the request type is 5 (withdrawing role as a representative)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name (Surname)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].givenName[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Section D applies only when the request type is 5 (withdrawing role as a representative)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].organization[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"organisation.name\",\"transform\":\"as_is\",\"condition\":\"Section D applies only when the request type is 5; fill only if the representative belongs to a firm or organization\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of firm or organization (if applicable)\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionD[0].signatrureApplicant[0]\",\"outcome\":\"never_filled\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Section D applies only when the request type is 5\",\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the representative; must not be filled by the system.\",\"evidence_quote\":\"Signature of representative\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the applicant or the parent or legal guardian; must not be filled by the system.\",\"evidence_quote\":\"Signature of applicant or Parent/Legal Guardian for a person under 18 years of age\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].dateApplicantSigned[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date written by the applicant at signing; it is not a stored case fact.\",\"evidence_quote\":\"SECTION E: YOUR DECLARATION\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[1]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only for a sponsorship application\",\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the spouse or common-law partner; must not be filled by the system.\",\"evidence_quote\":\"If a sponsorship application: Signature of spouse or common-law partner\"},{\"data_path\":\"IMM_5476[0].Page1[0].sectionE[0].dateSpouseSigned[0]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only for a sponsorship application\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date written by the spouse or common-law partner at signing; it is not a stored case fact.\",\"evidence_quote\":\"SECTION E: YOUR DECLARATION\"}]}"
+}
