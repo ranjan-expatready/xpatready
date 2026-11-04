@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
+import { FindingsPanel } from "./findings";
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
@@ -181,6 +182,7 @@ function CasePage() {
       </section>
       <EligibilityCard caseId={c.id} people={c.people} />
       <FormsPanel caseId={c.id} />
+      <FindingsPanel caseId={c.id} people={c.people} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>
       {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
