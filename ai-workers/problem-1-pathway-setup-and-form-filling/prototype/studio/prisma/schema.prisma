@@ -2154,7 +2154,7 @@ model FilingRecord {
   @@map("filing_record")
 }
 
-/// C8.2: the UCI IRCC gave one person on a recorded filing. Append-only (trigger).
+/// C8.2: the UCI IRCC gave one person on a recorded filing; only `uci` changes, through a correction (trigger).
 model FilingPersonRecord {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
@@ -2170,13 +2170,15 @@ model FilingPersonRecord {
   @@map("filing_person_record")
 }
 
-/// C8.2 "Correct a number": the application number before and after, with the reason. Append-only (trigger).
+/// C8.2 "Correct a number": the application number (field application_number) or a person's UCI (field uci, with the
+/// person; a UCI added later has no before) before and after, with the reason. Append-only (trigger).
 model FilingRecordCorrection {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
   filingId    String   @map("filing_id") @db.Uuid
   field       String   @default("application_number")
-  before      String
+  subjectId   String?  @map("subject_id") @db.Uuid
+  before      String?
   after       String
   reason      String
   correctedBy String   @map("corrected_by")

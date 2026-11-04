@@ -63,6 +63,13 @@ r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), s
 ok("C8.2-4 fail: a submission date after today is refused on its field (400)", r.status === 400 && /today|future/i.test(JSON.stringify(r.body)) && field(r) === "filings.0.submitted_on", r.body);
 r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), submitted_on: "2026-02-30" }, line(fS, "V300000102", "SAMPLE-REF-2")] }));
 ok("C8.2-4 fail: a date that does not exist (30 February) is refused (400)", r.status === 400 && field(r) === "filings.0.submitted_on", r.body);
+r = await record(body({ filings: [{ ...line(fP, "V300000101", "SAMPLE-REF-1"), submitted_on: "1995-01-01" }, line(fS, "V300000102", "SAMPLE-REF-2")] }));
+ok("fail (break m): a date before the case was opened is refused (400)", r.status === 400 && field(r) === "filings.0.submitted_on" && /before this case was opened/.test(JSON.stringify(r.body)), r.body);
+r = await record(body({ filings: [{ ...line(fP, "", "SAMPLE-REF-1"), submitted_on: inDays(3) }, line(fS, "", "SAMPLE-REF-2")] }));
+const fields = ((r.body as { errors?: { field: string }[] })?.errors ?? []).map((e) => e.field);
+ok("fail (break m): every field's problem comes back at once, each on its field", r.status === 400 && ["filings.0.submitted_on", "filings.0.application_number", "filings.1.application_number"].every((x) => fields.includes(x)), fields);
+r = await record(body({ ucis: [{ subject: P, uci: "hello world" }, { subject: S, uci: "2222-2222" }] }));
+ok("fail (break M3): a UCI not in the release's shape for a UCI is refused on its field (400)", r.status === 400 && fields.length >= 0 && ((r.body as { errors?: { field: string }[] })?.errors ?? []).some((e) => e.field === "ucis.0.uci"), r.body);
 r = await record(body({ version: p?.version }), CLIENT);
 ok("C8.2-5 fail: a client cannot record the submission (403)", r.status === 403, r.status);
 r = await record(body({ filings: [line(fP, "V300000101", "SAMPLE-REF-1")] }));
@@ -90,7 +97,12 @@ ok("C8.2-7 pass (view): the Prepare view reads Prepared by · Reviewed by with n
 ok("data: the filing's own application number follows the record (slice 1's filing record reads it)", sql(`select application_number from filing where id='${fS}'`) === "V300000102");
 ok("data: the audit line names no application number or UCI", sql(`select count(*) from audit_event where entity='submission group' and entity_key='${g?.id}' and summary not like '%V3000001%' and summary not like '%1111-1111%'`) === "1");
 r = await record(body({ version: p?.version }));
-ok("C8.2-8 fail (BR-15): a second recording is refused (409)", r.status === 409 && /already recorded/i.test(JSON.stringify(r.body)), r.status);
+ok("C8.2-8 fail (BR-15): a second recording is refused (409)", r.status === 409 && /already recorded/i.test(JSON.stringify(r.body)) && /problems\/conflict/.test(JSON.stringify(r.body)), r.body);
+// Review M1, break B1 and M1: the case's people are not changed once recorded.
+r = await call("POST", `/runtime/cases/${c.id}/people`, { role: "child", displayName: "Sample Child C1" }, officer);
+ok("fail (review M1, break M1): nobody is added to a recorded case (409); no new filing appears", r.status === 409 && /recorded as submitted/i.test(JSON.stringify(r.body)) && sql(`select count(*) from filing where case_id='${c.id}'`) === "2", r.body);
+r = await call("PATCH", `/runtime/cases/${c.id}/people/${S}`, { applies: false }, officer);
+ok("fail (review M1, break B1): a person on a recorded filing is not marked not travelling (409); the recorded filing stays", r.status === 409 && sql(`select active from filing where id='${fS}'`) === "t", r.body);
 
 // The read-only lock.
 const imm = itemsOf(p, P, "IMM 5257")[0];
@@ -102,6 +114,8 @@ r = await call("PUT", `/runtime/filings/${fP}/application-number`, { value: "V30
 ok("fail (lock): the filing record's own number route is refused once recorded (409, says Correct a number)", r.status === 409 && /correct a number/i.test(JSON.stringify(r.body)) && sql(`select application_number from filing where id='${fP}'`) === "V300000101", r.body);
 
 // Correct a number.
+r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000102", reason: "Typo (Sample)" }, officer);
+ok("fail (review M2, break M2): a correction to the number of another filing of the same submission is refused (400)", r.status === 400 && field(r) === "application_number" && /another filing of this submission/i.test(JSON.stringify(r.body)) && sql(`select application_number from filing_record where filing_id='${fP}'`) === "V300000101", r.body);
 r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000109" }, officer);
 ok("C8.2-10 fail: correcting a number without a reason is refused (400, names the reason)", r.status === 400 && field(r) === "reason", r.body);
 r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "bad", reason: "Typo (Sample)" }, officer);
@@ -116,6 +130,15 @@ const corr = filingsOf(p).find((x) => x.id === fP);
 ok("C8.2-11 pass: \"Correct a number\" changes it and keeps the old one in the history with the reason", r.status === 200 && corr?.number === "V300000109" && sql(`select count(*) from filing_record_correction where filing_id='${fP}'`) === "1"
   && corr.record?.corrections[0]?.before === "V300000101" && corr.record.corrections[0].after === "V300000109" && /Typo/.test(corr.record.corrections[0].reason), corr?.record);
 sql(`update filing_record_correction set reason='x' where filing_id='${fP}'`); // refused by the trigger (sql answers null)
+// Break M3: a person's UCI is corrected with a reason, the old one kept; the wrong shape is refused.
+r = await call("POST", `/runtime/filings/${fS}/record/corrections`, { uci: { subject: S, uci: "hello" }, reason: "Typo (Sample)" }, officer);
+ok("fail (break M3): a corrected UCI not in the release's shape is refused (400, on the UCI)", r.status === 400 && field(r) === "uci.uci", r.body);
+r = await call("POST", `/runtime/filings/${fS}/record/corrections`, { uci: { subject: S, uci: "2222-3333" }, reason: "Letter shows another UCI (Sample)" }, officer);
+const recS2 = filingsOf((await prepare(c.id, officer)).p).find((x) => x.id === fS)?.record;
+ok("pass (break M3): a person's UCI is corrected with a reason; the old one stays in the history", r.status === 200 && sql(`select uci from filing_person_record where filing_id='${fS}' and subject_id='${S}'`) === "2222-3333"
+  && (recS2?.corrections as unknown as { field: string; before: string; after: string }[] | undefined)?.some((x) => x.field === "uci" && x.before === "2222-2222" && x.after === "2222-3333"), recS2);
+sql(`update filing_record set our_reference='x' where filing_id='${fP}'`); // refused by the trigger (sql answers null)
+ok("data (break m): a record changes in place only in its application number", sql(`select our_reference from filing_record where filing_id='${fP}'`) === "SAMPLE-REF-1");
 ok("data: a correction is never changed in place (append-only)", /Typo/.test(sql(`select reason from filing_record_correction where filing_id='${fP}'`) ?? ""));
 const unrecorded = await openCase(vv, [{ role: "principal", name: "Sample Client D", dob: yearsAgo(30) }], { representative: rep, caseOfficers: [officer] });
 const fD = filingsOf((await prepare(unrecorded.id, officer)).p)[0]?.id;
@@ -124,12 +147,17 @@ ok("fail: a filing that is not recorded has no number to correct (409)", r.statu
 
 // A fact changed after filing (BR-12, P-142 D7).
 ok("pass: before a change, no item is \"Filed with an earlier value\" and no task is open", !itemsOf(p, P).some((i) => i.state === "out_of_date") && sql(`select count(*) from case_task where case_id='${c.id}'`) === "0", itemsOf(p, P).map((i) => i.state));
+// Break M4: the same value typed again (left unconfirmed) is no change: no item marked, no task.
+const filedName = JSON.parse(sql(`select value_json from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) ?? "null");
+await answer(c.id, P, "person.family_name", filedName, officer);
+p = (await prepare(c.id, officer)).p;
+ok("pass (break M4): the same family name typed again is no change after filing: nothing marked, no task", !itemsOf(p, P).some((i) => i.state === "out_of_date") && sql(`select count(*) from case_task where case_id='${c.id}'`) === "0", itemsOf(p, P).map((i) => i.state));
 const changedBy = await answer(c.id, P, "person.family_name", "SAMPLEDY", officer); // from the passport (verified_document)
 ok("setup: the officer enters the corrected family name after filing (facts stay the person's, never locked)", changedBy.status < 300, changedBy.body);
 p = (await prepare(c.id, officer)).p;
 ok("C8.2-12 pass (BR-12, P-142 D7): a fact changed after filing marks the filed items \"Filed with an earlier value\" and opens a task to re-sign or tell IRCC (Unconfirmed: no counsel)",
   itemsOf(p, P).some((i) => i.state === "out_of_date" && /earlier value/i.test(i.reason ?? "") && /no counsel/i.test(i.reason ?? "")) && Number(sql(`select count(*) from case_task where case_id='${c.id}' and kind='after_filing_change'`) ?? 0) >= 1, itemsOf(p, P).map((i) => [i.form, i.state, i.reason]));
-ok("pass: the reason says whose fact changed, in words (never the fact's key)", itemsOf(p, P).some((i) => /Sample Client C's family name changed after Sample Client C's IMM 5257/.test(i.reason ?? "")) && !itemsOf(p, P).some((i) => /person\.family_name/.test(i.reason ?? "")), itemsOf(p, P).map((i) => i.reason));
+ok("pass: the reason says whose fact changed, in words (never the fact's key)", itemsOf(p, P).some((i) => /Sample Client C's answer to “[^”]+” changed after Sample Client C's IMM 5257/.test(i.reason ?? "")) && !itemsOf(p, P).some((i) => /person\.family_name/.test(i.reason ?? "")), itemsOf(p, P).map((i) => i.reason));
 const filedOf = (i: unknown) => (i as { filed?: { current: boolean } }).filed;
 ok("pass: a filed form that does not read the changed fact stays as it was (the spouse's IMM 5476)", itemsOf(p, S, "IMM 5476").every((i) => filedOf(i)?.current === true && i.state !== "out_of_date") && itemsOf(p, S, "IMM 5476").length === 1, itemsOf(p, S, "IMM 5476"));
 ok("pass: the spouse's forms that read the principal's name (IMM 5257 spouse part) are marked too", itemsOf(p, S, "IMM 5257").every((i) => i.state === "out_of_date"), itemsOf(p, S).map((i) => [i.form, i.state]));
@@ -137,5 +165,11 @@ const tasks = sql(`select count(*) from case_task where case_id='${c.id}'`);
 await prepare(c.id, officer);
 ok("pass: reading again opens no second task for the same change", sql(`select count(*) from case_task where case_id='${c.id}'`) === tasks, tasks);
 ok("pass: the Prepare view lists the open task", ((p as unknown as { tasks?: { kind: string; state: string }[] }).tasks ?? []).some((t) => t.kind === "after_filing_change" && t.state === "open"), (p as unknown as { tasks?: unknown }).tasks);
+
+// Break M4: the name changed back to the value filed: the forms read current again and their tasks close by themselves.
+await answer(c.id, P, "person.family_name", filedName, officer);
+p = (await prepare(c.id, officer)).p;
+ok("pass (break M4): the value changed back to the one filed: no form is marked and every task closed by itself", !itemsOf(p, P).some((i) => i.state === "out_of_date") && sql(`select count(*) from case_task where case_id='${c.id}' and state='open'`) === "0" && Number(sql(`select count(*) from case_task where case_id='${c.id}' and state='done' and done_by='rules'`)) >= 1,
+  sql(`select string_agg(state, ',') from case_task where case_id='${c.id}'`));
 
 process.exitCode = summary() ? 1 : 0;

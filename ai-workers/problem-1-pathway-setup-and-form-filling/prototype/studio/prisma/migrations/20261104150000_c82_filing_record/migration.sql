@@ -7,13 +7,16 @@
 --     reference, the date it was submitted, IRCC's application number, the fee receipt, Prepared by (the case officer who
 --     recorded it) and Reviewed by (the representative of record), and `filed_facts`, the facts each of its forms was
 --     filed with (as answer_snapshot keeps them), so a later change reads "Filed with an earlier value" (BR-12).
---   * filing_person_record: the UCI IRCC gave each person on the filing. Append-only (a trigger refuses UPDATE).
---   * filing_record_correction: "Correct a number": the number before and after, the reason, who and when. Append-only.
+--   * filing_person_record: the UCI IRCC gave each person on the filing; only `uci` changes in place, through a
+--     correction (a trigger refuses any other change).
+--   * filing_record_correction: "Correct a number": the application number or a person's UCI before and after (a UCI
+--     added later has no before), the reason, who and when. Append-only.
+--   A filing_record row changes in place only in its application number, through a correction (a trigger).
 --   * case_task: a task on a case; kind `after_filing_change` (BR-12, P-142 D7): a fact changed after filing, so the form
 --     is re-signed or IRCC is told (Unconfirmed: no counsel). One open task per item and kind (a partial unique index).
 -- Rollback (STANDARDS §5): stop the app, then in one transaction:
 --   DROP TABLE "case_task"; DROP TABLE "filing_record_correction"; DROP TABLE "filing_person_record";
---   DROP TABLE "filing_record"; DROP FUNCTION "c82_append_only"();
+--   DROP TABLE "filing_record"; DROP FUNCTION "c82_append_only"(); DROP FUNCTION "c82_record_only_corrected"();
 --   UPDATE "filing" SET "status" = 'READY_TO_FILE' WHERE "status" = 'SUBMITTED';
 --   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261104150000_c82_filing_record';
 -- Records, UCIs, corrections and tasks are lost by a rollback; recorded filings fall back to Ready to file (their
@@ -66,7 +69,8 @@ CREATE TABLE "filing_record_correction" (
     "workspace_id" UUID NOT NULL,
     "filing_id" UUID NOT NULL,
     "field" TEXT NOT NULL DEFAULT 'application_number',
-    "before" TEXT NOT NULL,
+    "subject_id" UUID,
+    "before" TEXT,
     "after" TEXT NOT NULL,
     "reason" TEXT NOT NULL,
     "corrected_by" TEXT NOT NULL,
@@ -75,9 +79,11 @@ CREATE TABLE "filing_record_correction" (
 );
 CREATE INDEX "filing_record_correction_filing_id_idx" ON "filing_record_correction"("filing_id");
 ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_filing_id_fkey" FOREIGN KEY ("filing_id") REFERENCES "filing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_field_check" CHECK ("field" IN ('application_number'));
+ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_field_check" CHECK ("field" IN ('application_number', 'uci'));
+-- A number correction has a before and no person; a UCI correction names its person (a UCI added later has no before).
+ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_shape_check" CHECK (("field" = 'application_number' AND "subject_id" IS NULL AND "before" IS NOT NULL) OR ("field" = 'uci' AND "subject_id" IS NOT NULL));
 ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_reason_check" CHECK (char_length(btrim("reason")) BETWEEN 1 AND 400);
-ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_changed_check" CHECK ("before" <> "after");
+ALTER TABLE "filing_record_correction" ADD CONSTRAINT "filing_record_correction_changed_check" CHECK ("before" IS DISTINCT FROM "after");
 
 CREATE TABLE "case_task" (
     "id" UUID NOT NULL,
@@ -103,11 +109,23 @@ ALTER TABLE "case_task" ADD CONSTRAINT "case_task_kind_check" CHECK ("kind" IN (
 ALTER TABLE "case_task" ADD CONSTRAINT "case_task_state_check" CHECK ("state" IN ('open', 'done'));
 ALTER TABLE "case_task" ADD CONSTRAINT "case_task_done_check" CHECK (("state" = 'done') = ("done_at" IS NOT NULL));
 
--- Append-only: a UCI as recorded and a correction are never changed in place (a new correction is a new row). Deleting
--- stays possible, so a case's Reset still removes its rows.
+-- A correction is never changed in place (a new correction is a new row). A record changes in place only in its
+-- application number, and a person's record only in its UCI, each through a correction that keeps the old value (break
+-- m on #924). Deleting stays possible, so a case's Reset still removes its rows.
 CREATE FUNCTION "c82_append_only"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION '% is append-only: add a new row instead', TG_TABLE_NAME;
 END $$;
-CREATE TRIGGER "filing_person_record_no_update" BEFORE UPDATE ON "filing_person_record" FOR EACH ROW EXECUTE FUNCTION "c82_append_only"();
 CREATE TRIGGER "filing_record_correction_no_update" BEFORE UPDATE ON "filing_record_correction" FOR EACH ROW EXECUTE FUNCTION "c82_append_only"();
+CREATE FUNCTION "c82_record_only_corrected"() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'filing_record' AND (to_jsonb(NEW) - 'application_number') IS DISTINCT FROM (to_jsonb(OLD) - 'application_number') THEN
+    RAISE EXCEPTION 'filing_record changes only in its application number, through a correction';
+  END IF;
+  IF TG_TABLE_NAME = 'filing_person_record' AND (to_jsonb(NEW) - 'uci') IS DISTINCT FROM (to_jsonb(OLD) - 'uci') THEN
+    RAISE EXCEPTION 'filing_person_record changes only in its UCI, through a correction';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER "filing_record_only_corrected" BEFORE UPDATE ON "filing_record" FOR EACH ROW EXECUTE FUNCTION "c82_record_only_corrected"();
+CREATE TRIGGER "filing_person_record_only_corrected" BEFORE UPDATE ON "filing_person_record" FOR EACH ROW EXECUTE FUNCTION "c82_record_only_corrected"();

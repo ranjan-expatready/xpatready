@@ -14,7 +14,8 @@ import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { CorrectNumber, RecordSubmission } from "../../contracts/submission-record.ts";
 import { checkApplicationNumber, duplicateWarning, type NumberRule } from "../../engine/runtime/filing-record.ts";
-import { coverageProblem, duplicateInGroup, submittedOnProblem } from "../../engine/runtime/submission-record.ts";
+import { beforeCaseProblem, coverageProblem, duplicateInGroup, submittedOnProblem } from "../../engine/runtime/submission-record.ts";
+import { checkValue } from "../../engine/runtime/case.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
@@ -22,20 +23,32 @@ import { CasePrepare, storedVersion } from "./case-prepare.ts";
 import type { FiledForm } from "./submission-record.ts";
 
 type H = string | undefined;
+type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 const RULES = JSON.parse(readFileSync(join(STUDIO, "samples", "filing-numbers.json"), "utf8")) as { applicationNumber: NumberRule };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const short = (id: string) => id.slice(0, 8);
 /** 400, Problem Details naming the field. */
 const refuse = (field: string, detail: string, status = HttpStatus.BAD_REQUEST): never => {
-  throw new HttpException({ type: "https://expatready.local/problems/validation", title: status === HttpStatus.CONFLICT ? "Not now" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status);
+  const conflict = status === HttpStatus.CONFLICT; // review m6: a 409 is a conflict, never a validation problem
+  throw new HttpException({ type: `https://expatready.local/problems/${conflict ? "conflict" : "validation"}`, title: conflict ? "Not now" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status);
 };
 const stale = (): never => refuse("version", "This application changed since you read it. Reload, then record the submission again.", HttpStatus.CONFLICT);
 const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { const r = schema.safeParse(input ?? {}); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
-/** The application number as stored (slice 1's rule); blank or the wrong shape is refused on its field. */
-const numberOf = (raw: string, field: string): string => {
+/** The application number as stored (slice 1's rule), or why it is refused: blank, or the wrong shape. */
+const numberCheck = (raw: string): { value: string } | { error: string } => {
   const checked = checkApplicationNumber(raw, RULES.applicationNumber);
-  if ("error" in checked) return refuse(field, checked.error);
-  return checked.value ?? refuse(field, "Give the application number IRCC gave this filing: it is required to record the submission.");
+  if ("error" in checked) return checked;
+  return checked.value ? { value: checked.value } : { error: "Give the application number IRCC gave this filing: it is required to record the submission." };
+};
+const numberOf = (raw: string, field: string): string => { const n = numberCheck(raw); return "value" in n ? n.value : refuse(field, n.error); };
+/** Break M3 on #924: a UCI in the release's own shape for the person's UCI (its `person.uci` checks; spaces and hyphens
+ *  as people type them are allowed), never free text. Nothing in code says what a UCI looks like. */
+const UCI_FACT = "person.uci";
+const uciProblem = (s: ReturnType<Runtime["snapshotOf"]>, raw: string): string | null => {
+  const bare = raw.replace(/[\s-]+/g, "");
+  if (!/[0-9]/.test(bare)) return "Give the UCI as IRCC wrote it (its digits).";
+  const p = checkValue(s, UCI_FACT, bare);
+  return p.length ? `UCI: ${p.join(" ")}` : null;
 };
 const STATUS_WORDS: Record<string, string> = { not_started: "not started", ready_to_file: "Ready to file", submitted: "recorded as submitted" };
 type View = Awaited<ReturnType<CasePrepare["view"]>>;
@@ -56,21 +69,28 @@ export class Submission {
     const want = group!.filings as string[];
     const cover = coverageProblem(want, b.filings.map((f) => f.filing));
     if (cover) refuse("filings", cover);
+    // Every field's problem at once (break m on #924: one at a time made a person resubmit for each), each on its field.
+    const problems: { field: string; message: string }[] = [];
     const lines = b.filings.map((f, i) => {
-      const problem = submittedOnProblem(f.submitted_on);
-      if (problem) refuse(`filings.${i}.submitted_on`, problem);
-      return { ...f, application_number: numberOf(f.application_number, `filings.${i}.application_number`), fee_receipt: f.fee_receipt || null };
+      const date = submittedOnProblem(f.submitted_on) ?? beforeCaseProblem(f.submitted_on, c.createdAt);
+      if (date) problems.push({ field: `filings.${i}.submitted_on`, message: date });
+      const n = numberCheck(f.application_number);
+      if ("error" in n) problems.push({ field: `filings.${i}.application_number`, message: n.error });
+      return { ...f, application_number: "value" in n ? n.value : "", fee_receipt: f.fee_receipt || null };
     });
-    if (duplicateInGroup(lines.map((l) => l.application_number))) refuse("filings", "Two filings of this submission have the same application number: IRCC gives each filing its own.");
-    // A UCI for each person on the group's filings at most once.
+    // A UCI for each person applying on the group's filings at most once, in the release's own shape for a UCI.
     const filings = view.filings.filter((f) => want.includes(f.id)) as ViewFiling[];
-    const filingOfSubject = new Map(filings.flatMap((f) => f.applicants.map((a) => [a.subject, f.id] as const)));
-    const seen = new Set<string>();
+    const filingOfSubject = new Map(filings.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => [a.subject, f.id] as const)));
+    const seen = new Set<string>(), snap = this.r.snapshotOf(c);
     b.ucis.forEach((u, i) => {
-      if (!filingOfSubject.has(u.subject)) refuse(`ucis.${i}.subject`, "This person is not on this submission group's filings.");
-      if (seen.has(u.subject)) refuse(`ucis.${i}.subject`, "This person's UCI is listed twice.");
+      if (!filingOfSubject.has(u.subject)) problems.push({ field: `ucis.${i}.subject`, message: "This person is not applying on this submission group's filings." });
+      else if (seen.has(u.subject)) problems.push({ field: `ucis.${i}.subject`, message: "This person's UCI is listed twice." });
+      const bad = uciProblem(snap, u.uci);
+      if (bad) problems.push({ field: `ucis.${i}.uci`, message: bad });
       seen.add(u.subject);
     });
+    if (!problems.length && duplicateInGroup(lines.map((l) => l.application_number))) problems.push({ field: "filings", message: "Two filings of this submission have the same application number: IRCC gives each filing its own." });
+    if (problems.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: problems.map((x) => x.message).join(" "), errors: problems }, HttpStatus.BAD_REQUEST);
     // BR-15: once only. Then the version read, then Ready to file (BR-11, P-168).
     if (await this.db.filingRecord.count({ where: { filingId: { in: want } } })) refuse("filings", "This submission is already recorded: it is read-only. A wrong application number is fixed with \"Correct a number\".", HttpStatus.CONFLICT);
     if (String(b.version) !== String(view.version)) stale();
@@ -113,12 +133,17 @@ export class Submission {
     const c = await this.r.reach(actor, f!.caseId, "officer");
     const b = parse(CorrectNumber, body);
     if (!f!.record) refuse("filing", "This filing is not recorded as submitted yet: its number is set on the filing record. Nothing was changed.", HttpStatus.CONFLICT);
-    const value = numberOf(b.application_number, "application_number");
+    if (b.uci) return this.correctUci(actor, c, f!, b.uci, b.reason);
+    const value = numberOf(b.application_number!, "application_number");
     const before = f!.record!.applicationNumber;
     if (value === before) refuse("application_number", "That is the number already recorded: nothing to correct.");
+    // Review M2: the rule of recording holds for a correction too: two filings of one submission never share a number.
+    const sameGroup = () => this.db.filingRecord.count({ where: { submissionGroupId: f!.record!.submissionGroupId, applicationNumber: value, NOT: { filingId: f!.id } } });
+    if (await sameGroup()) refuse("application_number", "Another filing of this submission has that application number: IRCC gives each filing its own.");
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       // The number read is the lock: a correction made meanwhile leaves this one unsaved (409), never overwritten.
+      if (await tx.filingRecord.count({ where: { submissionGroupId: f!.record!.submissionGroupId, applicationNumber: value, NOT: { filingId: f!.id } } })) refuse("application_number", "Another filing of this submission has that application number: IRCC gives each filing its own.");
       const n = await tx.filingRecord.updateMany({ where: { filingId: f!.id, applicationNumber: before }, data: { applicationNumber: value } });
       if (n.count !== 1) refuse("application_number", "Someone corrected this number after you read it: Reload, then try again. Nothing was changed.", HttpStatus.CONFLICT);
       await tx.filing.update({ where: { id: f!.id }, data: { applicationNumber: value } });
@@ -127,8 +152,34 @@ export class Submission {
       await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, "corrected", "application number", f!.id,
         `On case ${short(c.id)} (${c.reference}): ${actor.name} corrected the application number on ${person}'s recorded filing (reason given)`, { before, after: value });
     });
+    // Review M2 (EXPERIENCE 8): the same number on another case of the firm warns, as recording and slice 1 do.
+    const others = await this.db.filing.findMany({ where: { workspaceId: c.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true } } } });
     const after = await this.prepare.view(actor, c.id);
-    return { filing: after.filings.find((x) => x.id === f!.id), version: after.version };
+    return { filing: after.filings.find((x) => x.id === f!.id), warning: duplicateWarning(others.map((o) => o.case)), version: after.version };
+  }
+
+  /** Break M3 on #924: a person's UCI on a recorded filing, added later or corrected, kept with the reason (the old one
+   *  in the history). The person must be applying on this filing; the UCI is in the release's shape for a UCI. */
+  private async correctUci(actor: Actor, c: Reached, f: { id: string }, u: { subject: string; uci: string }, reason: string) {
+    const on = await this.db.filingApplicant.findFirst({ where: { filingId: f.id, subjectId: UUID.test(u.subject) ? u.subject : "00000000-0000-0000-0000-000000000000", mode: "applying" } });
+    if (!on) refuse("uci.subject", "This person is not applying on this filing.");
+    const bad = uciProblem(this.r.snapshotOf(c), u.uci);
+    if (bad) refuse("uci.uci", bad);
+    const value = u.uci.trim();
+    const was = await this.db.filingPersonRecord.findUnique({ where: { filingId_subjectId: { filingId: f.id, subjectId: u.subject } } });
+    if (was?.uci === value) refuse("uci.uci", "That is the UCI already recorded: nothing to correct.");
+    await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
+      // The UCI read is the lock: a correction made meanwhile leaves this one unsaved (409).
+      if (was) { const n = await tx.filingPersonRecord.updateMany({ where: { id: was.id, uci: was.uci }, data: { uci: value } }); if (n.count !== 1) refuse("uci.uci", "Someone corrected this UCI after you read it: Reload, then try again. Nothing was changed.", HttpStatus.CONFLICT); }
+      else await tx.filingPersonRecord.create({ data: { workspaceId: c.workspaceId, filingId: f.id, subjectId: u.subject, uci: value, recordedBy: actor.id } }); // unique (filing, person): a second add at once fails
+      await tx.filingRecordCorrection.create({ data: { workspaceId: c.workspaceId, filingId: f.id, field: "uci", subjectId: u.subject, before: was?.uci ?? null, after: value, reason, correctedBy: actor.id } });
+      const person = this.r.peopleOf(c).find((p) => p.subjectId === u.subject)?.label ?? "a person";
+      await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, was ? "corrected" : "added", "uci", f.id,
+        `On case ${short(c.id)} (${c.reference}): ${actor.name} ${was ? "corrected" : "added"} ${person}'s UCI on a recorded filing (reason given)`, { before: was?.uci ?? null, after: value });
+    });
+    const after = await this.prepare.view(actor, c.id);
+    return { filing: after.filings.find((x) => x.id === f.id), warning: null, version: after.version };
   }
 }
 

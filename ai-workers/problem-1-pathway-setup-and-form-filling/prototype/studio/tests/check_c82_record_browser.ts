@@ -123,13 +123,28 @@ try {
   ok("C8.2-11 (screen): the new number shows and the old one stays in the history with who and the reason", /V300000209/.test(corr) && /Case officer corrected V300000201 to V300000209: “Typo in the number \(Sample\)”/.test(corr), corr);
   await state("corrected");
 
+  // 3b. The spouse's UCI, not given when recording, added later with a reason (break M3).
+  await press(panel().getByRole("button", { name: "Add Sample Spouse E’s UCI" }));
+  await dialog().waitFor();
+  await type(dialog().getByLabel("UCI", { exact: true }), "hello");
+  await type(dialog().getByLabel("Reason"), "From IRCC's letter (Sample)");
+  await press(dialog().getByRole("button", { name: "Add the UCI" }));
+  await dialog().getByRole("alert").filter({ hasText: /UCI/ }).waitFor({ timeout: 10_000 });
+  await p.waitForTimeout(200);
+  ok("fail (break M3, screen): a UCI in the wrong shape is refused on the UCI field, focus on it, no toast over the dialog", await p.evaluate(() => document.activeElement?.getAttribute("aria-invalid") === "true") && (await p.locator("[aria-live=polite]").filter({ hasText: /as IRCC wrote it/ }).count()) === 0);
+  await type(dialog().getByLabel("UCI", { exact: true }), "3333-4444");
+  await press(dialog().getByRole("button", { name: "Add the UCI" }));
+  await dialog().waitFor({ state: "detached", timeout: 15_000 });
+  await panel().locator(`[data-uci="${S}"]`).getByText("3333-4444").waitFor({ timeout: 15_000 });
+  ok("pass (break M3, screen): the spouse's UCI shows, and the history says it was added with the reason", /added Sample Spouse E’s UCI 3333-4444: “From IRCC's letter \(Sample\)”/.test(await panel().locator(`[data-submission-filing="${fS}"]`).innerText()), await panel().locator(`[data-submission-filing="${fS}"]`).innerText());
+
   // 4. A fact changed after filing (the officer enters a corrected name from the passport).
   await answer(c.id, P, "person.family_name", "SAMPLEDE", officer);
   await open();
   const tasks = p.locator("[data-after-filing-tasks]");
   await tasks.waitFor({ timeout: 15_000 });
   ok("C8.2-12 (screen): a fact changed after filing shows the tasks to re-sign or tell IRCC, whose fact in words (Unconfirmed: no counsel)",
-    /Sample Client E's family name changed after Sample Spouse E's IMM 5257 was filed/.test(await tasks.innerText()) && /no counsel/.test(await tasks.innerText()) && !/person\.family_name/.test(await tasks.innerText()), await tasks.innerText());
+    /Sample Client E's answer to “[^”]+” changed after Sample Spouse E's IMM 5257 was filed/.test(await tasks.innerText()) && /no counsel/.test(await tasks.innerText()) && !/person\.family_name/.test(await tasks.innerText()), await tasks.innerText());
   await state("after-filing-task");
   ok("no page errors", errs.length === 0, errs);
 } catch (e) {
