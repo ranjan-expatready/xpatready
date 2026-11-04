@@ -358,6 +358,7 @@ model FormEdition {
   maps FormFieldMap[]
   recaptureTasks RecaptureTask[]
   accepts        FormEditionAccept[]
+  acceptedUntil  FormEditionAcceptedUntil[] // C7.6, P-151 (1)
 
   @@unique([workspaceId, editionLabel])
   @@map("form_edition")
@@ -1273,6 +1274,8 @@ model Case {
   signSteps   SignStep[]   // C8.1
   signedScans SignedScan[] // C8.1
   findings    ReviewFinding[] // C7.5
+  filingRecords FilingRecord[] // C8.2
+  tasks         CaseTask[]     // C8.2
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1724,6 +1727,7 @@ model SubmissionGroup {
 
   case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filings Filing[]
+  records FilingRecord[] // C8.2
 
   @@index([caseId])
   @@map("submission_group")
@@ -1744,12 +1748,19 @@ model Filing {
   status            String   @default("NOT_STARTED")
   applicationNumber String?  @map("application_number")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// C8.2: the record of the submission (one, BR-15), each person's UCI, the number's corrections, its tasks.
+  record            FilingRecord?
+  personRecords     FilingPersonRecord[]
+  corrections       FilingRecordCorrection[]
+  tasks             CaseTask[]
 
   case       Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
   group      SubmissionGroup   @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
   applicants FilingApplicant[]
   items      FilingItem[]
   findings   ReviewFinding[] // C7.5
+  reviews    FilingReview[]  // C7.6
+  passes     ReadinessPass[] // C7.6
 
   @@unique([caseId, subjectId])
   @@map("filing")
@@ -1798,6 +1809,7 @@ model FilingItem {
   entered EnteredSection[]
   signSteps   SignStep[]   // C8.1
   signedScans SignedScan[] // C8.1
+  tasks       CaseTask[]   // C8.2
 
   @@unique([filingId, kind, itemKey, subjectId])
   @@index([caseId])
@@ -2117,6 +2129,94 @@ model SignedScan {
   @@map("signed_scan")
 }
 
+/// C8.2 (BR-15, BR-21, P-155): what one filing was submitted as, written once when its group is recorded. Prepared by is
+/// the case officer who recorded it; Reviewed by the representative of record. `filedFacts` keeps the facts each form
+/// was filed with, so a later change reads "Filed with an earlier value" (BR-12).
+model FilingRecord {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  caseId            String   @map("case_id") @db.Uuid
+  filingId          String   @unique @map("filing_id") @db.Uuid
+  submissionGroupId String   @map("submission_group_id") @db.Uuid
+  portal            String?
+  ourReference      String   @map("our_reference")
+  submittedOn       DateTime @map("submitted_on") @db.Date
+  applicationNumber String   @map("application_number")
+  feeReceipt        String?  @map("fee_receipt")
+  preparedBy        String   @map("prepared_by")
+  reviewedBy        String?  @map("reviewed_by")
+  recordedBy        String   @map("recorded_by")
+  recordedAt        DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+  filedFacts        Json     @map("filed_facts")
+
+  case   Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing          @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  group  SubmissionGroup @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
+
+  @@index([caseId])
+  @@map("filing_record")
+}
+
+/// C8.2: the UCI IRCC gave one person on a recorded filing; only `uci` changes, through a correction (trigger).
+model FilingPersonRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  subjectId   String   @map("subject_id") @db.Uuid
+  uci         String
+  recordedBy  String   @map("recorded_by")
+  recordedAt  DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@unique([filingId, subjectId])
+  @@map("filing_person_record")
+}
+
+/// C8.2 "Correct a number": the application number (field application_number) or a person's UCI (field uci, with the
+/// person; a UCI added later has no before) before and after, with the reason. Append-only (trigger).
+model FilingRecordCorrection {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  field       String   @default("application_number")
+  subjectId   String?  @map("subject_id") @db.Uuid
+  before      String?
+  after       String
+  reason      String
+  correctedBy String   @map("corrected_by")
+  correctedAt DateTime @default(now()) @map("corrected_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("filing_record_correction")
+}
+
+/// C8.2 (BR-12, P-142 D7): a task on a case. Kind after_filing_change: a fact changed after filing, so the form is
+/// re-signed or IRCC is told (Unconfirmed: no counsel). State open · done; one open task per item and kind.
+model CaseTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  filingId    String?   @map("filing_id") @db.Uuid
+  itemId      String?   @map("item_id") @db.Uuid
+  kind        String
+  words       String
+  state       String    @default("open")
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  doneBy      String?   @map("done_by")
+  doneAt      DateTime? @map("done_at") @db.Timestamptz
+
+  case   Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing?     @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  item   FilingItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("case_task")
+}
+
 /// C7.5 part 1 (BR-19; AG-11-69, -70, -71): one finding of a case's independent review, in the team's words. Severity
 /// CRITICAL · MAJOR · MINOR · INFO; source rules · ai · manual; state open · acknowledged · resolved · waived (CRITICAL
 /// only) · dismissed. A rules finding names its rule and a fingerprint of the facts it compared; the database keeps one
@@ -2156,4 +2256,62 @@ model ReviewFinding {
   @@unique([caseId, idempotencyKey])
   @@index([caseId])
   @@map("review_finding")
+}
+
+/// C7.6 (P-155): the representative of record's review of one filing: "reviewed", or "self_reviewed" by a solo firm's
+/// one person, with the licence number. Append-only (trigger); the newest row counts.
+model FilingReview {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  filingId      String   @map("filing_id") @db.Uuid
+  reviewedBy    String   @map("reviewed_by")
+  /// reviewed · self_reviewed
+  kind          String
+  licenceNumber String   @map("licence_number")
+  note          String?
+  /// The fingerprint of the filing's forms' facts when reviewed: a later change reopens the review (break B2, #861).
+  factsHash     String   @map("facts_hash") @db.VarChar(64)
+  reviewedAt    DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("filing_review")
+}
+
+/// C7.6 (AG-07 BR-26; P-237, P-238): a warning of one filing passed with a written reason; `keys` are the warning lines
+/// it covered when written (engine/runtime/readiness.ts passKeys). Never the barcode block (a check). Append-only.
+model ReadinessPass {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  code        String
+  keys        String[]
+  /// critical (a former block, P-315) · warning
+  severity    String
+  reason      String
+  passedBy    String   @map("passed_by")
+  passedAt    DateTime @default(now()) @map("passed_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("readiness_pass")
+}
+
+/// C7.6 (P-151 (1)): IRCC's accepted-until date for a form edition, set with a reason; the newest row counts, null
+/// clears it. Append-only (the rows are the history).
+model FormEditionAcceptedUntil {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  formEditionId String    @map("form_edition_id") @db.Uuid
+  acceptedUntil DateTime? @map("accepted_until") @db.Date
+  reason        String
+  setBy         String    @map("set_by")
+  setAt         DateTime  @default(now()) @map("set_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@index([formEditionId])
+  @@map("form_edition_accepted_until")
 }

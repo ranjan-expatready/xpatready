@@ -216,7 +216,7 @@ export function stepsVerdict(id, steps, out) {
   const missing = [];
   for (const s of steps) {
     const re = (w) => new RegExp(`^${w}\\s+${esc(id)}[- ]${esc(s)}(?![0-9A-Za-z])`, "m");
-    if (!re("PASS").test(out) || re("FAIL").test(out)) missing.push(s);
+    if (!re("PASS").test(out) || re("FAIL").test(out) || re("HELD").test(out)) missing.push(s);   // a held step is not green (QA-215 break 1)
   }
   return missing;
 }
@@ -286,6 +286,16 @@ function sh(bin, args, opts, ms) {
   });
 }
 const summary = (out) => out.trim().split("\n").reverse().find((l) => /\d+\/\d+ passed|passed|failed/i.test(l))?.trim() ?? "no summary line";
+/** The last lines a run printed (non-blank, each cut to 200 characters): the reason a pack or setup that stopped with
+ *  exit 2, a crash or no summary gives ("STOP  setup missing: …"), which the report names instead of "no summary line"
+ *  (#933's re-test: C11.12-runtime "exit 2, no summary line"; P-214). A crash ends in stack frames, so its last
+ *  "…Error: …" or "STOP …" line comes first when the last lines do not hold one (review m1). */
+export const tail = (out, n = 3) => {
+  const lines = out.split("\n").map((l) => l.trim()).filter(Boolean), last = lines.slice(-n);
+  const why = [...lines].reverse().find((l) => /^(\w*Error\b|STOP\s)/.test(l));
+  return (why && !last.includes(why) ? [why, ...last.slice(1)] : last).map((l) => l.slice(0, 200));
+};
+const lastLines = (out) => { const t = tail(out); return t.length ? `; last lines: ${t.join(" | ")}` : "; it printed nothing"; };
 const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(l)).slice(0, 5); return f.length ? `; first FAIL lines: ${f.map((l) => l.slice(0, 160)).join(" | ")}` : ""; };
 /** Part 2: one pack on a fresh copy in slot `slot` (its own name and port). A pack whose run has no setup lines runs on
  *  the six (Demo › Reset to the six first); a pack whose run line builds its own data runs on its documented blank copy,
@@ -316,13 +326,18 @@ async function runPack(id, file, wanted, slot) {
       if (s.script.endsWith(`acceptance/${file}`)) { out = r.out; last = r.status; continue; }
       log.push(`    setup ${s.script}: exit ${r.status}${r.status ? ` (${summary(r.out)})` : ""}`);
       // Exit 1 is a setup's own known gaps (setup_vv_m3 says so); anything else stops the pack.
-      if (r.status !== 0 && r.status !== 1) { setupBad = `setup ${s.script} exit ${r.status} (${summary(r.out)})`; break; }
+      if (r.status !== 0 && r.status !== 1) { setupBad = `setup ${s.script} exit ${r.status} (${summary(r.out)})${lastLines(r.out)}`; break; }
     }
     const sec = (a, b) => Math.round((b - a) / 1000);
     if (setupBad) return { log, why: `${file}: ${setupBad}; the pack did not run` };
     log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, ${demo} ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
+    // A held part's steps (P-284) print HELD and fail nothing; the report names them, so a held step is never unseen.
+    for (const l of out.split("\n").filter((x) => /^HELD\s/.test(x)).slice(0, 5)) log.push(`      ${l.slice(0, 500)}`);
     const why = packVerdict(id, wanted, last, out);
-    return { log, why: why ? `${file} ${where}: ${why}${fails(out)}` : null };
+    // Exit 2, a crash, a timeout or no summary line: the pack's own last lines say why (never "exit 2" alone).
+    const quiet = (last !== 0 && last !== 1) || summary(out) === "no summary line";
+    if (quiet) for (const l of tail(out)) log.push(`      ${l}`);
+    return { log, why: why ? `${file} ${where}: ${why}${fails(out)}${quiet ? lastLines(out) : ""}` : null };
   } finally {
     await iso("stop");
     spawnSync("dropdb", ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio", "--if-exists", db], { env, encoding: "utf8" });
@@ -380,7 +395,10 @@ async function main(argv) {
   const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
   say(`Gate B: the PR names ${named || "nothing readable"}${cl.works.size ? `; claims Works for ${[...cl.works].join(", ")}` : "; claims Works for none (no bug check)"}${cl.fixes.size ? `; says it fixes ${[...cl.fixes].join(", ")}` : ""}.`);
   const reasons = part1(cl, bugs);
-  const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).map((f) => ({ id, f, st })));
+  // GATE_B_SKIP_PACKS: pack files left out by name (the protected regression set's held packs, works-set.mjs).
+  const skip = new Set((process.env.GATE_B_SKIP_PACKS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
+  const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
+  if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) { for (const r of runs) console.log(r.f, JSON.stringify(runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")))); return 0; }
   let infra = false;

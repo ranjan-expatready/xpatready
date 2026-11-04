@@ -288,3 +288,65 @@ All three Partials have one root: on the six, no step places a form's facts into
 * **QA-195 closed.** `check_forms_c34_ai.ts` 0 · 87/87 twice on fresh Mac copies (load 1.6). Its 14 QA-195 cases all pass: identity documents are decided by name, and every door refuses an AI-read Passport in plain words. `C3.4.test.ts` on the six on GitHub: 0 · 20/20 (run 41810052972). US$0; ledger unchanged across the runs.
 * **C3.4 stays Partial**, held by QA-218, QA-206, QA-144 and the flaky checks QA-208/209.
 * **M2: 40/60 confirmed** (unchanged).
+
+## Batch 9 — #798 (QA-144 slice 1) · main 830b32062 · ~16:10–16:35 IST
+The GitHub re-test ran the packs of the rows QA-144 holds, on both data sets (checkpoint run 41815696194, six run 41815706129):
+
+| Pack | On the six | On the checkpoint |
+|---|---|---|
+| C4.7 | exit 2 (setup missing) | **0 · 17/17** |
+| C4.1 | exit 2 | 1 · 14/17 (section titles, QA-206) |
+| C4.8 | exit 2 | 1 · 6/11 (Submit refused: IRM 0002 not mapped) |
+| C3.6 | exit 2 | exit 2 (no rule) |
+| C10.1 | 1 · 13/23 | 1 · 13/23 (nothing released) |
+| C4.11 | 1 · 4/23 | 1 · 14/23 (QA-162) |
+| C11.12 / -runtime | 0 · 20/20 / crash (QA-215) | the same |
+
+Walk on the checkpoint at 1440 px (one Mac copy, stopped): the Visitor visa has 123, 112, 112 and 108 questions per person, "Every fact has one source", and Preview by family shows them. Its sections read "Consent1", "Ill treat section", "Sub no1", "Five", "Seven" (QA-206 on screen). Documents shows "No documents yet". Its one release block is IRM 0002's field map.
+
+**No status changes.** Under P-322 the setup rows count on Reset to the six, and there no screen runs the placement step yet. The code says "A screen button calls the same step later (its own row); the configured checkpoint calls it now". QA-144 stays open with three parts left: (1) the screen step on the six, (2) IRM 0002 applied so the Visitor visa releases, (3) section titles (QA-206).
+
+**M2: 40/60 confirmed** (unchanged).
+
+### Question for the tech lead
+C4.7 now passes 17/17 on the checkpoint but cannot be reached on the six. The #798 body says "Works on the checkpoint, not on the six" is the founder's call (P-304 (2)), and P-322 says setup rows count on the six. qa keeps C4.7 Partial until the screen step exists. If the founder's call is that the checkpoint counts for setup rows that a person cannot yet reach on the six, C4.7 becomes Works.
+
+## Records update ~16:45 IST: the qa testers' verdicts after #798 (#914–#918)
+* C4.1, C4.8 and C10.1 are confirmed Partial on the checkpoint, the same counts as qa's batch 9. C4.2 is Partial: the PQR tick works on the checkpoint but reaches no release. C3.10 Works stands on the checkpoint (its one red step is IRCC's own printed label "P.O. box").
+* **New QA-221 (Bug · Major, C4.1, C10.1):** on the checkpoint, a child aged 0–4 is asked 24 facts only IMM 5257 Schedule 1 needs. The form says "dependent children aged 18 years or older … must complete their own copy", but the checkpoint files SCH1 "each applicant" with no age rule.
+* **New QA-222 (UX · Minor, C10.1):** the checkpoint's result row 10 cuts each problem list in the middle of a word.
+* M2: 40/60 (unchanged).
+
+## Ruling ~16:50 IST (Lead 5, P-322 as written)
+* Setup rows count on the six. The checkpoint counts only for later steps built by the product's steps. **C4.7 stays Partial** until it passes on the six; this needs no founder question.
+* Owners: QA-144 part 1 (the placement step on the six) is Builder S1. Part 2 (IRM 0002 applied by the checkpoint) is Builder 8, #891. Part 3 (QA-206) is the cloud lane, #883. QA-219 is Builder S2. QA-218 has no owner yet.
+* qa re-scores the nine QA-144 rows as soon as S1's PR or #891 merges.
+
+## Batch 10 — gate A (Lead 5) and after-merge for #867, #870, #878 · main 03ea24052 · ~16:55–17:40 IST
+### Gate A (each PR's own head; its pack on GitHub on the six; a 1440 px walk on its own copy)
+| PR | Verdict | Pack | Walk |
+|---|---|---|---|
+| #867 C11.17 | **PASS** | 24/24 (run 41818523697) | A 130-character Category shows "Keep the name under 120 characters." under its own field |
+| #870 C1.6 | **PASS**, with Minor QA-224 | 31/31 (run 41818535054) | The card and List read "Mixed · Online · IRCC secure account: IMM 5645"; the Forms tab's summary lags until a reload |
+| #868 G5/C5.1 | **FAIL** | 29/30 (B4 waits for QA-144) | P-248's document-line half is not built: on the six the Visitor visa (7 forms, 0 documents) is not refused for it. The tech lead ruled: build it in #868, then qa re-runs gate A |
+| #872 C11.8 | **PASS** | 34/34 (run 41825318927) | IMM 5645 offers "Use Saved (US$0)" for its 4 parts; IMM 5406, being mapped elsewhere, starts nothing (Saved disabled) |
+
+### After-merge on main 03ea24052
+| Row | Verdict | Exit codes |
+|---|---|---|
+| C11.17 (M2) | **Works** (was Partial) | `C11.17.test.ts` on the six: 0 · 24/24 (run 41825099237). QA-183 closed |
+| C1.6 (M2) | **Works** (was Partial) | `C1.6.test.ts` on the six: 0 · 31/31 (run 41825147241). Open Minors only (QA-224, QA-185) |
+| C10.1 after #878 | Partial (unchanged) | 1 · 15/23 on the checkpoint (was 13/23, run 41825187356) |
+| C4.7, C4.8, C11.12 on the checkpoint | unchanged | 17/17 · 6/11 · 20/20 (runtime crash, QA-215) |
+
+### qa's own packs (P-318: only qa changes its packs)
+* **C11.14 AT-4** (Lead 5's triage): it was the pack's wording. After Reset to the six the library is empty, so the first edition's Ready mappings are all new shared fields and none can be a reuse match. AT-4 demanded at least one tickable reuse. It now checks two things: every Ready new field says it "is decided on its own", and a Ready reuse is tickable unless it needs a near reason (P-318 (4)). On #785's head, its own pack with only this change gives exit 0, 14/14. On main, AT-2, AT-3 and AT-4 stay red until #785's checker rounds merge (0 Ready items there).
+* **C11.7 case 2** (#881's question; approved by Lead 5): after the load, the provincial nomination certificate waits as one library proposal, and the load writes no document type itself. Once a second person accepts it, the author adds it as a required line (P-149, P-108). It is re-scored after #881 merges.
+
+### Disclosures
+1. The PR copies shared this copy's `node_modules`. #872's schema is older than main's (#833's form role), so the Prisma client was generated from the branch's schema for its walk, then back from main's. An earlier stale client gave a 500 on Reset to the six in a C11.14 run on main. It was regenerated and re-run, and was not a product fault.
+2. My first #785 runs used main's pack copied over #785's own pack, which drops #785's AT-1 and AT-2 changes. The 14/14 run is #785's own pack plus the AT-4 change only.
+
+**M2: 42/60 confirmed** (was 40; +C11.17, +C1.6).
+
+**Note on qa PR #939 (gate B):** its first title named the capabilities it re-scored. Gate B then ran the C11.14 and C11.7 packs, which are red on main by design until #785 and #881 merge, and refused (CI run 41826732671). A qa records PR claims no capability, so the title no longer names one. Gate B's checks of the product PRs themselves are unaffected.

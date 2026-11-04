@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -138,6 +138,9 @@ ok("whole pack: exit 0 with no FAIL passes; exit 0 with a FAIL line, exit 1, 2 o
   packVerdict("C9.9", null, 0, "PASS  a\n2/2 passed") === null && [[0, "FAIL  x"], [1, "PASS"], [2, ""], [137, ""], [124, "(stopped)"]].every(([c, o]) => packVerdict("C9.9", null, c, o)));
 ok("named steps: exit 1 passes when they are green; exit 2, a crash or a timeout never does",
   packVerdict("C99.8", ["1"], 1, "PASS  C99.8-1 a\nFAIL  C99.8-2 b") === null && [2, 124, 137, 127].every((c) => packVerdict("C99.8", ["1"], c, "PASS  C99.8-1 a")));
+ok("a named step with a HELD line is not green, though another check of that step PASSes (QA-215 break 1)", stepsVerdict("C11.3", ["AT-5"], "PASS  C11.3 AT-5 refusal x\nHELD  C11.3 AT-5 the AI check — P-284\n").join() === "AT-5" && packVerdict("C11.3", null, 0, "PASS  C11.3 AT-5 x\nHELD  C11.3 AT-5 y\n26/26 passed, 1 held") === null);
+ok("tail() gives the last non-blank lines, trimmed and cut, so an exit-2 pack's reason reaches the report (P-214)", JSON.stringify(tail("PASS  a\n\nSTOP  setup missing: no combination wp.family on this copy   \n\n")) === JSON.stringify(["PASS  a", "STOP  setup missing: no combination wp.family on this copy"]) && tail("x\n".repeat(9)).length === 3 && tail("y".repeat(300))[0].length === 200 && tail("").length === 0);
+ok("tail() of a crash keeps its Error line, which sits above the stack frames (review m1)", (() => { const t = tail("PASS  a\nfile:///x.ts:3\nTypeError: Cannot read properties of undefined (reading 'id')\n    at f (x.ts:3:9)\n    at g (x.ts:9:1)\n    at h (x.ts:12:1)\nNode.js v24.21.0\n"); return t.length === 3 && t[0].startsWith("TypeError: Cannot read") && t[2] === "Node.js v24.21.0"; })());
 ok("labels with a space (C3.2 AT-1) work", stepsVerdict("C3.2", ["AT-1"], out).length === 0 && stepsVerdict("C3.2", ["AT-3"], out).join() === "AT-3");
 
 // Every pack's documented run can be read, so part 2 never skips a pack in silence.
@@ -164,7 +167,7 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
 // Each command case starts from a clean CI environment: the job's own QUEUE, KIND, RANGE, PR_* and GITHUB_* values
 // (a merge-queue batch sets QUEUE=true, a records PR KIND=records) would otherwise change what the gate does (#826).
-const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "" };
+const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "" };
 const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, ...CLEAN, ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13"]);
 const r3a = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13"]), r3b = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192"]);
@@ -187,6 +190,8 @@ r = run([], { PR_TITLE: "merge queue: checking #726 on main", KIND: "code", QUEU
 ok("command: a merge-queue batch re-checks its PRs, and without GITHUB_TOKEN it could not run (exit 2)", r.code === 2 && /GITHUB_TOKEN/.test(r.out), r);
 r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--title", "screens: C11.13"], { encoding: "utf8", env: { ...process.env, ...CLEAN, GITHUB_ACTIONS: "" } });
 ok("command: off CI, packs need GATE_B_PORT (exit 2, nothing started)", r.status === 2 && /GATE_B_PORT/.test(r.stdout + r.stderr), r.stdout + r.stderr);
+r = run(["--title", "runtime: C11.12"], { GATE_B_SKIP_PACKS: "C11.12-runtime.test.ts" });
+ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the regression set's held packs)", r.code === 0 && /packs: C11\.12\.test\.ts$/m.test(r.out) && /held, not run: C11\.12-runtime\.test\.ts/.test(r.out), r);
 r = run(["--title", "x", "--bogus"]);
 ok("command: an unknown option exits 2", r.code === 2, r);
 rmSync(T, { recursive: true, force: true });

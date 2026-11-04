@@ -4,10 +4,14 @@
 // stays split and a form keeps the channel the case officer chose. Fees are worked out per group on each read
 // (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. Visitor
 // visa only in this slice; other combinations answer "not derived yet". No model call (US$0). Readiness is C7.6's
-// (engine/runtime/readiness.ts, M3-A3): the view leaves its slot and never decides it here.
+// (engine/runtime/readiness.ts, M3-A3; L-SA3, P-315): this view gathers its inputs (api/src/readiness-inputs.ts) and
+// shows the result per filing; the rules are never decided here.
 // One implementation (#356 on #325's tables, migration 20261102030000): #325's guards are kept (the release must match
 // its fingerprint, B2; a read with nothing new takes no transaction, B1; HEAD is refused, B4); a filing or item that
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
+// C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
+// ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
+import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
 import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json" };
@@ -16,7 +20,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { CHANNEL_WORDS, isBarcodeForm } from "../../contracts/forms.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
-import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, knownOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
@@ -29,10 +33,14 @@ import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, r
 import { render, type Role } from "../../engine/render.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
+import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
+import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
 import { CaseForms, formPassed } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
+import { readinessOfCase, type PreparedForm } from "./readiness-inputs.ts";
+import { pdfMapInUse } from "../../engine/programs.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -112,7 +120,7 @@ export class CasePrepare {
       q.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
     ] as const;
     const sync = async (tx: Tx | Db, write: boolean) => {
-      const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead" });
+      const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead", maxWait: 10_000 }); // C7.6: as the write path (C6.12 B1, 120 reads at once)
       let groups = g0;
       const liveOwner = new Map(filings0.filter((f) => f.active).map((f) => [f.subjectId, f.id]));
       const live = new Map([...onFiling].filter(([, o]) => liveOwner.has(o)).map(([subject, o]) => [subject, liveOwner.get(o)!]));
@@ -172,7 +180,7 @@ export class CasePrepare {
     const idOfFiling = new Map(stored.filings.map((f) => [`filing-${f.subjectId}`, f.id]));
     const fid = (x: string) => idOfFiling.get(x) ?? x;
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
-    const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status, number: f.number }));
+    const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
     const groups = done.groups.map((g) => ({ ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }));
     // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
     const fees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
@@ -236,6 +244,7 @@ export class CasePrepare {
     const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && !x.relation && UUID.test(subjectOfAbout(x.about)) && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
     // `undo`, `expected_id` and `restores` are filled once every item is worked out (one read of the answers' history).
     const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: subjectOfAbout(x.about), fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
+    const staleOf = new Map<string, string[]>(); // C7.6: Online sections entered before a fact changed, per item
     const items = stored.items.flatMap((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
@@ -247,6 +256,7 @@ export class CasePrepare {
         const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? []) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
         const fb = { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null };
+        if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
         if (sheet && stale.length && !waits) {
           // C9.2: each stale section's answers as entered, against what it shows now (warns only, FQ-6, P-168).
           const ticks = enteredBy.get(i.id) ?? [];
@@ -255,7 +265,8 @@ export class CasePrepare {
             return factChanges(then.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value })), x.answers.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value })), words);
           });
           const first = ticks.filter((t) => stale.some((x) => x.key === t.sectionKey)).map((t) => t.enteredAt).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
-          return { ...fb, state: "out_of_date", reason: outOfDateReason("entered", `${i.itemKey} (${stale.map((x) => x.title).join(", ")})`, first, changes), changes: changeList(changes) };
+          // Review B1 on #861: this line names who signs too (readiness reads it).
+          return { ...fb, signers: signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor), state: "out_of_date", reason: outOfDateReason("entered", `${i.itemKey} (${stale.map((x) => x.title).join(", ")})`, first, changes), changes: changeList(changes) };
         }
         // Review M2: Done only when every section is entered, current and waits for nothing.
         const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length);
@@ -309,16 +320,54 @@ export class CasePrepare {
     }
     // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
-    // C7.6 (M3-A3) fills this from engine/runtime/readiness.ts; until then each filing is not ready and says why.
-    const readiness = filings.map((f) => ({ filing: f.id, ready: false, blocks: [] as { code: string; item?: string; words: string }[], warns: [] as { code: string; item?: string; words: string }[], built: false, why: "Ready to file is worked out by C7.6 (not built yet)." }));
+    // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
+    // The edition a form is filled on: the release's PDF edition in use (pdfMapInUse, P-32: the newest, as the fill picks
+    // it; review M2 on #861); on a line filed Online, its online version, else the PDF edition its answer sheet follows
+    // (C7.3 order_basis pdf_twin).
+    const maps = ((s as { field_maps?: { form_number: string; form_edition: string; channel?: string }[] }).field_maps ?? []);
+    const pdfOf = (form: string) => pdfMapInUse(maps, form)?.form_edition ?? null;
+    const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
+    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
+    // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
+    const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
+      channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
+      steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined }] : []);
+    const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
+    const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
+      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
+      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
+      validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
+      editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
+        // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
+        // answer as given now (an unconfirmed change is a change the representative did not review).
+        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value])]);
+        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${JSON.stringify(waiting)}`).digest("hex");
+      }, today });
+    // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
+    // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
+    // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".
+    const statusOf = new Map(stored.filings.map((f) => [f.id, f.status]));
+    for (const f of filings) {
+      if (statusOf.get(f.id) === "READY_TO_FILE" && readiness.find((x) => x.filing === f.id)?.ready === false) {
+        const n = await this.db.filing.updateMany({ where: { id: f.id, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
+        if (n.count) await this.audit.log(c.workspaceId, actor.id, "ready_to_file_reopened", "filing", f.id, `A filing on case ${short(c.id)} is no longer Ready to file: something changed after it was marked (C7.6).`);
+        statusOf.set(f.id, "NOT_STARTED");
+      }
+      const st = statusOf.get(f.id); if (st && st !== "NOT_STARTED") f.status = st.toLowerCase();
+    }
     // Review r3 m1: the version from the very rows this view shows (never a later read), so a write from it is checked
     // against what the officer saw.
     const version = versionOf(stored.filings, stored.items);
     const peopleView = people.filter((p) => p.role !== "case").map((p) => { const f = filings.find((x) => x.applicants.some((a) => a.subject === p.subjectId) || x.owner?.subject === p.subjectId); const nf = done.not_filing.find((x) => x.subject === p.subjectId); return { subject: p.subjectId, label: p.label, role: p.role, applies: p.applies, age: ages.get(p.subjectId) ?? null, filing: f?.id ?? null, why: nf?.why ?? null }; });
+    // C8.2 (BR-12, BR-15): a recorded filing reads "submitted" with its record; a form filed with a fact changed since reads
+    // "Filed with an earlier value" and opens its task (api/src/submission-record.ts).
+    const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+    const tasks = await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
+      nowOf: (form, subject) => currentValues(formCoverage(s, people, answers, rows, form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
-      people: peopleView, filings, groups, items, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version };
+      people: peopleView, filings, groups, items, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
@@ -329,6 +378,7 @@ export class CasePrepare {
     if (!g) fail("No such submission group.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, g!.caseId, "officer");
     const b = parse(SplitBody, body);
+    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { submissionGroupId: g!.id }, select: { id: true } })).map((f) => f.id).concat(UUID.test(String(b.filing)) ? [b.filing] : []), "the submission group"); // C8.2-9
     const now = await this.build(actor, c);
     const group = now.groups.find((x) => x.id === g!.id);
     if (!b.reason) {
@@ -341,6 +391,7 @@ export class CasePrepare {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
       const members = await tx.filing.findMany({ where: { submissionGroupId: g!.id, active: true }, select: { id: true, subjectId: true, mode: true } });
+      await refuseIfRecorded(tx, members.map((m) => m.id), "the submission group"); // C8.2-9, under the case's row lock
       const f = members.find((x) => x.id === b.filing);
       if (!f) return "not_in_group" as const;
       // C11.12 BR-4: a sponsorship is sent with the principal's application; neither is split from the other (break m5:
@@ -391,6 +442,7 @@ export class CasePrepare {
    *  out-of-date one freezes the new answers and keeps the old tick as history (review M1). */
   async entered(actor: Actor, itemId: string, key: string, body: unknown) {
     const { c, item } = await this.onlineItem(actor, itemId);
+    await refuseIfRecorded(this.db, [item.filingId], `"Entered in the portal" for ${item.itemKey}`); // C8.2-9
     const now = await this.sheet(actor, itemId);
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
@@ -399,6 +451,7 @@ export class CasePrepare {
     if (b.version !== sec!.version) throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: `The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then tick again.` }, HttpStatus.CONFLICT);
     const made = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await refuseIfRecorded(tx, [item.filingId], `"Entered in the portal" for ${item.itemKey}`); // C8.2-9, under the lock
       const was = await tx.enteredSection.findFirst({ where: { itemId: item.id, sectionKey: key, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
       if (was && was.snapshot.inputHash === sec!.version) return { row: was, created: false };
       if (was) await tx.enteredSection.update({ where: { id: was.id }, data: { supersededAt: new Date() } });
@@ -431,6 +484,7 @@ export class CasePrepare {
     const item = await this.db.filingItem.findUnique({ where: { id: idOf(itemId, "item") } });
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, item!.caseId, "officer");
+    await refuseIfRecorded(this.db, [item!.filingId], `how ${item!.itemKey} is filed`); // C8.2-9: even a change IRCC accepts
     const b = parse(ChannelBody, body);
     if (item!.kind !== "form" || !item!.active) refuse(422, "channel", "Only a form on this application has a channel.");
     const accepts = await acceptsOf(this.db, c.workspaceId);
@@ -445,6 +499,7 @@ export class CasePrepare {
       if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
       const row = await tx.filingItem.findUnique({ where: { id: item!.id } });
       if (!row || !row.active) return "stale" as const;
+      await refuseIfRecorded(tx, [row.filingId], `how ${row.itemKey} is filed`); // C8.2-9, under the case's row lock
       if ((row.channel ?? before) === to) return "same" as const;
       await tx.filingItem.update({ where: { id: row.id }, data: { channel: to, channelReason: b.reason || null, channelBy: actor.id, channelAt: new Date(), version: row.version + 1 } });
       // Devin on #617: signing steps done for the old channel never count for the new one (they are kept as history).
@@ -475,7 +530,7 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
  *  checks it under the case's row lock exactly as the view computed it. */
-async function storedVersion(tx: Tx | Db, caseId: string) {
+export async function storedVersion(tx: Tx | Db, caseId: string) {
   const [filings, items] = await Promise.all([
     tx.filing.findMany({ where: { caseId, active: true }, select: { id: true, submissionGroupId: true } }),
     tx.filingItem.findMany({ where: { caseId, active: true }, select: { id: true, channel: true, version: true } }),

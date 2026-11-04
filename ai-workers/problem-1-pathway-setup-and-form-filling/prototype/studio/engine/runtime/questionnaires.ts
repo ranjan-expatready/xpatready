@@ -71,7 +71,7 @@ export function questionnairesView(s: Snapshot, roleIn: string | undefined, wher
   const person = firstOf.get(role)?.subjectId ?? "principal";
   const field = new Map((s.canonical_fields as { id: string; meaning?: string; value_type?: string }[]).map((f) => [f.id, f]));
   const place = new Map((s.placements as Placement[]).map((p) => [p.fact, p]));
-  const titles = new Map((s.sections as { id: string; title: string }[]).map((x) => [x.id, x.title]));
+  const titles = new Map([...(s.section_titles ?? []), ...(s.sections as { id: string; title: string }[])].map((x) => [x.id, x.title]));
   const byId = new Map<string, QuestionnaireSection>();
   for (const part of view.sections.filter((x) => mine(person)(x.subjectId))) {
     const sec = byId.get(part.section) ?? { id: part.section, title: titles.get(part.section) ?? libraryTitles.get(part.section) ?? part.title, questions: [] };
@@ -91,6 +91,9 @@ export function questionnairesView(s: Snapshot, roleIn: string | undefined, wher
   // (or the application, with the principal) is theirs, not an empty section of this person.
   const askedSomeone = new Set(view.sections.filter((x) => x.questions.length).map((x) => x.section));
   for (const x of s.sections as { id: string; title: string }[]) if (!byId.has(x.id) && !askedSomeone.has(x.id)) byId.set(x.id, { id: x.id, title: x.title, questions: [] });
+  // C4.2 (P-294 (B)): forms pull their questions, so a section not chosen here still asks what they need; it says so.
+  const chosen = new Set((s.sections as { id: string }[]).map((x) => x.id));
+  for (const sec of byId.values()) if (!chosen.has(sec.id) && sec.questions.length) sec.stillAsked = { forms: [...new Set(sec.questions.flatMap((x) => x.neededBy))].sort() };
   const order = (s.sections as { id: string }[]).map((x) => x.id);
   const sections = [...byId.values()].sort((a, b) => (order.indexOf(a.id) + 1 || 999) - (order.indexOf(b.id) + 1 || 999));
   // Coverage for this person: every fact a form field needs, by who covers it.

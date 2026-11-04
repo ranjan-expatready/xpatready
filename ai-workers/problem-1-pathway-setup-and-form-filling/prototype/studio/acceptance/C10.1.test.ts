@@ -50,7 +50,13 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   const r2 = formsOf(vvRel[1]), f2 = (code: string) => r2.find((f) => f.form_number === code);
   // Tech lead on #798 (IRCC-P2-04a): filed online, the family information form is IMM 5645, not IMM 5707.
   ok("C10.1 part B (DEMO.md row 9, P-143): Visitor visa release 2: IMM 5257 Online, so IMM 5645 (not IMM 5707), IMM 5476 PDF upload signed by hand and scanned", f2("IMM 5257")?.channel === "ONLINE" && !!f2("IMM 5645") && !f2("IMM 5707") && (f2("IMM 5476")?.channel ?? "PDF_UPLOAD") === "PDF_UPLOAD" && f2("IMM 5476")?.signature === "HAND_SCANNED", r2.map((f) => `${f.form_number}:${f.channel ?? "PDF_UPLOAD"}:${f.signature ?? "NONE"}`));
-  ok("C10.1 part B (DEMO.md checkpoint 2, row 10): With an LMIA (B) is released too (its reuse of A's facts, row 18, is C10.2's checkpoint 3)", releasesOf(lmia).length >= 1, releasesOf(lmia).length);
+  // Labelled B10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps B10)"; QA-144 slice 2).
+  ok("C10.1 B10 part B (DEMO.md checkpoint 2, row 10): With an LMIA (B) is released too (its reuse of A's facts, row 18, is C10.2's checkpoint 3)", releasesOf(lmia).length >= 1, releasesOf(lmia).length);
+  // Labelled S10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps S10)"; QA-144 slice 3): the study
+  // permit (outside Canada) is set up from its forms and released by the checkpoint through the product's own duties.
+  const sp = sql(`select id from combination where combination_key = 'sp.outside' and retired_at is null limit 1`);
+  ok("C10.1 S10 row 10: the Study permit (outside Canada) has release 1, submitted by the author and approved by the Approver after the SME's sign-off", releasesOf(sp).length >= 1
+    && n(`select count(*) from config_release where combination_id = '${sp}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1, releasesOf(sp).length);
   ok("C10.1 part B (DEMO.md row 10): each release is approved by the Approver after the SME's sign-off, never by the author", n(`select count(*) from config_release where approver_id <> '${APPROVER}'`) === 0 && n(`select count(*) from config_release`) >= 3 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1 && n(`select count(*) from review_submission where submitted_by = '${AUTHOR}' and status = 'APPROVED'`) >= 3);
   // Row 11: the thin family case, one Sample family of four (DEMO.md "The story").
   const vvCase = vv ? sql(`select id from runtime_case where combination_id = '${vv}' order by created_at limit 1`) : "";

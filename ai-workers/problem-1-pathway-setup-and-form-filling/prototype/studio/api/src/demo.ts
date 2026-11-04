@@ -26,16 +26,18 @@ import { Studio } from "./studio.ts";
 import { draftSourceProblems, seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
-import { placeFromFormParts } from "./form-part-placements.ts";
+import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.ts";
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
-/** QA-144 slice 1 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
+import { FormLibrary } from "./form-library.ts";
+/** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
-const SET_UP_FROM_FORMS = new Set(["vv.single"]);
+const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
 /** QA-144 slice 1 (ruling 3): the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
  *  expert" (AGENTS rule 4). IMM 5484 (05-2026) is official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; Guide
  *  5256 is official-sources/ircc/instructions/guide-5256.html, modified 2026-03-31, saved 19 Oct 2026. */
-export const VV_FORM_RULES: { form: string; condition?: object; minAge?: number; retire?: true; cite: string }[] = [
+type FormRule = { form: string; condition?: object; minAge?: number; retire?: true; cite: string };
+export const VV_FORM_RULES: FormRule[] = [
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
   { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
@@ -55,13 +57,69 @@ export const FAMILY_FORM_BY_CHANNEL = {
 } as const;
 /** QA-144 slice 1 (tech lead, 4 Nov): IRM 0002's rule reads a fact no form asks, added through C3.6's door for its rule
  *  (a second person approves it) and asked of each person beside their gender. Sample, Unconfirmed: expert. */
-export const GENDER_FACT = { fact: "person.gender_identifier_differs_from_documents", rule: "IRM 0002", label: "Gender identifier differs from earlier documents", valueType: "yes_no",
+export const GENDER_FACT = { fact: "person.gender_identifier_differs_from_documents", rule: "IRM 0002", cite: "Guide 5256, Question 3", label: "Gender identifier differs from earlier documents", valueType: "yes_no",
   meaning: "Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002)." };
+/** QA-144 slice 2 (brief on #798): With an LMIA – inside Canada's form lines as IRCC's own words set them. Each is Sample,
+ *  "Unconfirmed: expert" (AGENTS rule 4). Guide 5553 is official-sources/ircc/instructions/guide-5553.html (modified
+ *  2026-06-05, saved 27 Oct 2026); IMM 5556 (03-2024) is official-sources/ircc/checklists/imm5556e.pdf, saved 27 Oct 2026;
+ *  the combination's own page is official-sources/ircc/canada/pages/work-canada-permit-inside-forms-documents.html
+ *  (modified 2026-05-15, recorded 27 Oct 2026). Its people are the worker, a spouse or partner, and a representative. */
+export const LMIA_FORM_RULES: FormRule[] = [
+  { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
+    cite: "Guide 5553, \"Completing the forms\": \"The following are the forms that must be filled out and submitted: … Statutory Declaration of Common-law Union [IMM 5409] (opens in a new tab), if applicable\"; IMM 5556 (03-2024), its forms list: \"Statutory Declaration of Common-law Union (IMM 5409), if applicable\"" },
+  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
+    cite: "IMM 5556 (03-2024), its forms list: \"Use of a Representative (IMM 5476) Note: Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5553, \"Use of a Representative (IMM 5476)\": \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative's appointment.\"" },
+  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
+    cite: "IMM 5556 (03-2024), its forms list: \"Authority to Release Personal Information to a Designated Individual (IMM 5475) Note: Complete this form only if you authorize IRCC and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
+];
+/** QA-144 slice 3 (brief on #798): the study permit's form lines (outside Canada) as IRCC's own words set them, each
+ *  Sample, "Unconfirmed: expert" (AGENTS rule 4). Guide 5269 is official-sources/ircc/instructions/guide-5269.html
+ *  (canada.ca, modified 2026-10-06, saved 27 Oct 2026); IMM 5483 (08-2025) is official-sources/ircc/checklists/imm5483e.pdf
+ *  (checked 21 Oct 2026). IMM 1294 stays on the draft as every student files it. Its people are one student and a
+ *  representative. */
+export const SP_FORM_RULES: FormRule[] = [
+  // Guide 5269 and IMM 5483 disagree on the age (17 or less, against less than 17): the guide's wider words are taken, for the expert to confirm.
+  { form: "IMM 5646", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.minor_studying_without_parent", value: true },
+    cite: "Guide 5269, Custodians: \"Children 17 years of age or less coming to Canada to study without an accompanying parent or a legal guardian must still be in the care of a responsible adult in Canada. [...] The parents or legal guardians in the country or territory of origin and the custodian in Canada must complete a notarized Custodianship Declaration (IMM 5646)\"; IMM 5483 (08-2025) p. 1: \"Must be completed if the minor studying in Canada is less than 17 years old.\"" },
+  { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
+    cite: "Guide 5269, Step 2: \"Statutory Declaration of Common-law Union (IMM 5409) [...], if applicable\"" },
+  { form: "IMM 5476", condition: { subjectKind: "CASE", op: "exists", field: "case.representative_form_action" },
+    cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative.\"; Guide 5269: \"Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative’s appointment.\"" },
+  { form: "IMM 5475", condition: { subjectKind: "CASE", op: "exists", field: "case.release_authorization_action" },
+    cite: "IMM 5483 (08-2025) p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
+];
+/** QA-144 slice 3: IMM 5646's rule reads a fact no form asks (no age is worked out in this workspace), added through
+ *  C3.6's door for its rule and asked of each person beside their date of birth. Sample, Unconfirmed: expert. Guide 5269
+ *  also says a student from 17 to the age of majority "may need a custodian at the discretion of an immigration officer":
+ *  not in this fact, for the expert. */
+export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", cite: "Guide 5269, Custodians", label: "Minor studying without a parent or guardian", valueType: "yes_no",
+  meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
+  beside: ["person.date_of_birth"] };
+/** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
+ *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
+ *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
+export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFact?: typeof GENDER_FACT & { beside?: string[] } }> = {
+  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFact: GENDER_FACT, family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
+  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES,
+    family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
+  // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
+  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFact: MINOR_FACT,
+    family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
+};
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
-/** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5476's 2021 edition, the file row 17
- *  also uses (official-sources/ircc manifest, P-32), saved again so its checksum is on no list; its IRCC page on canada.ca. */
-export const OFF_LIST_COPY = { official: "previous-editions/imm5476e-2021.pdf", name: "imm5476e-2021-from-email.pdf", page: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5476.html" };
+/** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5257's previous edition (the
+ *  official-sources/ircc manifest's previous-editions/imm5257e-pre-2023.pdf, P-32), saved again so its checksum is on no
+ *  list; its IRCC page on canada.ca. Not IMM 5476 2021 since QA-207: row 17 makes that the library's edition. */
+export const OFF_LIST_COPY = { official: "previous-editions/imm5257e-pre-2023.pdf", name: "imm5257e-pre-2023-from-email.pdf", page: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5257.html", library: "IMM 5257 (09-2023)" };
+/** C10.1 row 17 (QA-207, tech lead's ruling (a), 4 Nov): the library uses IMM 5476's 2021 edition on every combination
+ *  that files it, and the current edition arrives as a new edition, held, so C9.1's comparison and impact can be reached
+ *  on the demo data. Only once a saved field map of the 2021 edition is recorded (the paid runner's): without it the
+ *  2021 edition would leave IMM 5476 unmapped and QA-180's rule refuses the releases. The current edition, cited (P-170):
+ *  canada.ca "Use of a Representative Form (IMM 5476)" (official-sources/ircc/web-pages/page-imm5476.html, modified
+ *  2025-12-12, saved 19 Oct 2026): "A new version of this form is available (11-2025). Make sure you are using the most
+ *  recent version." The 2021 file is IRCC's own, from the web archive (manifest: imm5476e-2021.pdf). */
+export const ROW17 = { previous: "imm5476e-2021.pdf", previousInventory: "prototype/p1/inventory/imm5476e-2021.inventory.json", current: "imm5476e.pdf", previousLabel: "IMM 5476 (11-2021)", currentLabel: "IMM 5476 (11-2025)" };
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 /** C10.1: one DEMO.md row of the configured checkpoint, as the Demo menu shows it. */
@@ -95,7 +153,15 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary) {}
+
+  /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
+  private async familyForm(combinationId: string, key: string | undefined) {
+    const setup = FORM_SETUP[key ?? ""];
+    if (!setup) return null;
+    const filed = (await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: setup.application }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
+    return FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
+  }
 
   async status() {
     const workspaceId = await this.ws.id();
@@ -290,7 +356,7 @@ export class Demo {
    *  answers, US$0; a combination with none stops with the reason, for a person); each read form's saved AI field-map
    *  answer replayed through the one door (insertProposals) as waiting proposals. No live AI call, no release, no
    *  library row written directly: the library fills only when people accept and a second person approves. */
-  private async loadSix(actor: Actor, workspaceId: string, t0: number, log: string[]) {
+  private async loadSix(actor: Actor, workspaceId: string, t0: number, log: string[], opts: { swap?: Record<string, string> } = {}) {
     const sample = JSON.parse(readFileSync(SAMPLES_SIX, "utf8")) as SampleFile;
     // C10.1: where the load's time goes, step by step (seconds per kind of step, summed), returned with the result.
     const timings: Record<string, number> = {};
@@ -305,17 +371,19 @@ export class Demo {
     const official = new Set(officialFiles());
     const setUp = async (node: { programNodeKey: string; label: string }, path: string, c: SixSetup) => {
       const comp = await this.studio.createCombination(actor, { programKey: node.programNodeKey, label: node.label, key: c.key, participants: c.participants, description: c.note, sourceBasis: "ILLUSTRATIVE", basisNote: c.note });
-      const absent = c.sources.filter((f) => !official.has(f));
+      // QA-207: the configured checkpoint may file another edition of a form (ROW17), by its own official file.
+      const sources = c.sources.map((f) => opts.swap?.[f] ?? f);
+      const absent = sources.filter((f) => !official.has(f));
       const refused: { code: string; why: string }[] = [];
-      for (const f of c.sources.filter((x) => official.has(x))) {
+      for (const f of sources.filter((x) => official.has(x))) {
         const r = await timed("form intake (read code, edition, checksum)", () => this.intake.sample(actor, comp.id, f));
         if (!r.attachmentId) refused.push({ code: f, why: r.message }); // the intake's own words: shown, never hidden
         else if (r.attachmentStatus === "RECOGNISED") await timed("form read (form fields)", () => this.sources.read(actor, r.attachmentId!));
       }
       const missing = [...(c.missing ?? []).map((m) => ({ code: m.code, why: m.why })), ...refused];
-      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: c.sources.length - absent.length - refused.length, absent });
+      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: sources.length - absent.length - refused.length, absent });
       const out = [...absent, ...missing.map((m) => m.code)];
-      log.push(`  ${path}: ${c.sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
+      log.push(`  ${path}: ${sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
     };
     for (const p of sample.programs) {
       const prog = await this.studio.createNode(actor, { kind: "PROGRAM", label: p.label, parentKey: p.pathway, key: p.key, description: p.description, sourceBasis: "ILLUSTRATIVE" });
@@ -374,11 +442,11 @@ export class Demo {
    *  submits, the SME (user-C) signs and user-B releases. Nothing is faked: a step a rule refuses stays undone and its row
    *  says the rule's own words; a row whose function another lane has not merged says "not built yet". New saved AI
    *  answers drop in with no code change (the six load replays whatever saved answer matches). US$0, no live AI call. */
-  /** C10.1 row 1 (X9a): an off-list copy of IMM 5476's 2021 edition, as a person would have saved it from an email (its
+  /** C10.1 row 1 (X9a): an off-list copy of IMM 5257's previous edition, as a person would have saved it from an email (its
    *  bytes differ from the official file, so its checksum is on no approved list; Sample). The author uploads it on the
    *  Visitor visa (held for source verification), records the IRCC page it came from, and the approver, a second person,
-   *  compares and approves it on the intake's own route (P-80). The library holds IMM 5476 (11-2025), not 11-2021, so the
-   *  copy is not a duplicate (review-3 Major 1). Once approved it goes through the intake again: an edition older than the
+   *  compares and approves it on the intake's own route (P-80). The library holds IMM 5257 (09-2023), not the older
+   *  edition, so the copy is not a duplicate (review-3 Major 1). Once approved it goes through the intake again: an edition older than the
    *  library's is set aside by the Approver, never used, which the row says. */
   private async heldFileApproved(author: Actor, approver: Actor, workspaceId: string): Promise<{ ok: true; shows: string } | { ok: false; why: string }> {
     const vv = await this.db.combination.findFirst({ where: { workspaceId, combinationKey: "vv.single" }, select: { id: true } });
@@ -386,7 +454,7 @@ export class Demo {
     const copy = Buffer.concat([readFileSync(join(OFFICIAL, OFF_LIST_COPY.official)), Buffer.from("\n% Sample: a copy saved from an email (C10.1 row 1, X9a)\n")]);
     const up = (await this.intake.intake(author, [{ originalname: OFF_LIST_COPY.name, buffer: copy }], vv.id)).results[0];
     const item = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: up.sha256 ?? "", status: "HELD", outcome: "held" } });
-    if (!item) return { ok: false, why: `The off-list copy of IMM 5476 (11-2021) was not held for a source check: ${up.message}` };
+    if (!item) return { ok: false, why: `The off-list copy of IMM 5257's previous edition was not held for a source check: ${up.message}` };
     await this.intake.recordPage(author, item.id, { irccPage: OFF_LIST_COPY.page });
     const done = await this.intake.decideHeld(approver, item.id, "approve", { note: "Sample: compared with the IRCC page", irccPage: OFF_LIST_COPY.page });
     // Review m2 (f7): the re-intake holds it as an older edition; the Approver sets it aside with that reason, so nothing is
@@ -395,14 +463,19 @@ export class Demo {
     if (done.result?.outcome === "older_edition_held") {
       const older = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: item.sha256, status: "HELD", outcome: "older_edition_held" }, select: { id: true } });
       // #300 n2: say "set it aside" only when there was a held row to set aside.
-      if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: "Sample: older than the library's IMM 5476 (11-2025), so it is not used." });
-      after = older ? ` Then the intake found it older than the library's IMM 5476 (11-2025), and ${approver.name} set it aside: not used.` : ` Then the intake found it older than the library's IMM 5476 (11-2025): not used.`;
+      if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: `Sample: older than the library's ${OFF_LIST_COPY.library}, so it is not used.` });
+      after = older ? ` Then the intake found it older than the library's ${OFF_LIST_COPY.library}, and ${approver.name} set it aside: not used.` : ` Then the intake found it older than the library's ${OFF_LIST_COPY.library}: not used.`;
     }
-    return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5476 (11-2021)"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
+    return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5257's previous edition"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
   }
 
   private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
-    const six = await this.loadSix(actor, workspaceId, t0, log);
+    // Row 17 (QA-207): IMM 5476 2021 in the library only when its saved field map is recorded (see ROW17).
+    // The same reading as the six's replay (ai.ts plan: the job id and the inventory's checksum), so a map recorded for
+    // an older reading of the 2021 file never swaps the edition in (review m1).
+    const inv2021 = join(SOLUTION, ROW17.previousInventory);
+    const row17 = existsSync(inv2021) && this.sources.savedRuns(this.sources.jobIdFor(ROW17.previous), createHash("sha256").update(readFileSync(inv2021)).digest("hex")).some((r) => r.valid);
+    const six = await this.loadSix(actor, workspaceId, t0, log, row17 ? { swap: { [ROW17.current]: ROW17.previous } } : {});
     const person = (id: string) => ACTORS.find((a) => a.id === id)!;
     const author = person("user-A"), sme = person("user-C"), approver = person("user-B");
     const timings: Record<string, number> = { ...six.timings };
@@ -411,17 +484,35 @@ export class Demo {
     const rows: CheckpointRow[] = [];
     const row = (r: CheckpointRow) => { rows.push(r); log.push(`  row ${r.row} ${r.title}: ${r.status}${r.why ? ` (${r.why.slice(0, 200)})` : ""}`); };
     log.push("configured checkpoint (C10.1): each DEMO.md row through the screens' services");
+    const keyOf0 = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true } })).map((x) => [x.id, x.combinationKey]));
 
     // Row 1: every official file through the intake (the six load), then one off-list file with a readable edition, held
     // and approved by a second person through the intake's own steps (X9a; the forms lane's demo story does the same).
     const files = six.combinations.reduce((t, c) => t + c.files, 0);
-    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { fileName: true } });
+    // Only a file held because its edition could not be read (outcome "held"); a new edition held for row 17 is another
+    // kind of held file, said on row 17 (QA-207 review m5).
+    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "held" }, select: { fileName: true } });
     const offList = await timed("held file approved by a second person", () => this.heldFileApproved(author, approver, workspaceId).catch((e) => ({ ok: false as const, why: said(e) })));
     const unreadWords = unread.length ? ` ${unread.length} official file${unread.length === 1 ? " stays" : "s stay"} held because the form's edition could not be read from the file (${unread.map((h) => h.fileName).join(", ")}): such a file cannot become a source.` : "";
     row({ row: "1", title: "Ingest PDF forms; a held file approved by a second person", status: offList.ok ? "done" : "partial",
       shows: `${files} official files read on the six combinations (code, edition, checksum; no AI)${offList.ok ? `; ${offList.shows}` : ""}`,
       why: offList.ok ? (unreadWords.trim() || null) : `${offList.why}${unreadWords}` });
     row({ row: "2", title: "Online forms captured with the browser extension", status: "out", shows: "Parked (P-102, W6)", why: null });
+
+    // QA-144 slice 1 (#840): the Visitor visa's IRM 0002 line has no file in the sample. The author attaches the library's
+    // official file to it, the form is read, and its saved AI field-map answer (a draft and a blind checker round, #840)
+    // replays through the review queue at US$0, so rows 3–4 decide and apply it with the others. Nothing runs live.
+    const vvId = six.combinations.find((c) => keyOf0.get(c.id) === "vv.single")?.id;
+    let irmWhy: string | null = null; // review m4: a failed attach is said on row 3, never only logged
+    if (vvId) await timed("IRM 0002 attached and its saved answer replayed", async () => {
+      const r = await this.intake.sample(author, vvId, "irm0002e.pdf");
+      if (!r.attachmentId) { irmWhy = `IRM 0002 was not attached to the Visitor visa: ${r.message}`; log.push(`  ${irmWhy}`); return; }
+      if (r.attachmentStatus === "RECOGNISED") await this.sources.read(author, r.attachmentId);
+      const plan = await this.ai.plan({ kind: "source", ids: [r.attachmentId] }, "REPLAY");
+      if (!plan.targets.some((t) => t.action === "reuse_saved_output")) { irmWhy = `IRM 0002's saved AI answer does not replay (${plan.targets.map((t) => t.why ?? t.action).join("; ").slice(0, 200)})`; log.push(`  ${irmWhy}`); return; }
+      const b = await this.ai.launch(author, { scope: { kind: "source", ids: [r.attachmentId] }, mode: "REPLAY", idempotencyKey: `configured-irm0002-${workspaceId}`, planSha256: plan.plan_sha256 });
+      await this.settled(b.id!);
+    });
 
     // Rows 3–4: the replayed field-map drafts, decided by the author on each draft's own page, then applied to the draft.
     const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" }, orderBy: { startedAt: "asc" } });
@@ -450,22 +541,23 @@ export class Demo {
       } catch (e) { refused.push(`${form}: ${said(e)}`); }
     }
     const waitingForAi = six.drafts.waiting_for_draft_with_ai;
-    row({ row: "3", title: "AI maps form fields to shared fields (saved answers, US$0)", status: !jobs.length ? "waiting" : waitingForAi.length ? "partial" : "done", shows: `${jobs.length} saved AI answers replayed (US$0)`,
-      why: waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : null });
-    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations`,
+    row({ row: "3", title: "AI maps form fields to shared fields (saved answers, US$0)", status: !jobs.length ? "waiting" : waitingForAi.length || irmWhy ? "partial" : "done", shows: `${jobs.length} saved AI answers replayed (US$0)`,
+      why: [waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : "", irmWhy ?? ""].filter(Boolean).join(" ") || null });
+    // Review m1: the Sample loader also accepts the items where the draft and the checker rounds differ; the row says how many.
+    const differ = jobs.length ? await this.db.proposalItem.count({ where: { runId: { in: jobs.map((j) => j.id) }, agreement: "differ", choice: "ACCEPTED" } }) : 0;
+    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations${differ ? `; ${differ} where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)` : ""}`,
       why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
 
     // Row 7 (QA-144 slice 1): sections from each form's own parts, by the C3.4 rules pass (no AI, US$0), accepted by the
     // author on To review; the approver approves them with the other new items below (row 5).
-    const keyOf = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true } })).map((x) => [x.id, x.combinationKey]));
+    const keyOf = keyOf0;
     const fromForms = six.combinations.filter((c) => SET_UP_FROM_FORMS.has(keyOf.get(c.id) ?? ""));
     const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [];
     let maritalList: string | null = null;
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
         // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
-        const filedAs = (await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: "IMM 5257" }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
-        const notFiled = keyOf.get(c.id) === "vv.single" ? FAMILY_FORM_BY_CHANNEL[filedAs === "ONLINE" ? "online" : "paper"].other : null;
+        const notFiled = (await this.familyForm(c.id, keyOf.get(c.id)))?.other ?? null;
         const forms = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
           .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
         for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
@@ -477,14 +569,14 @@ export class Demo {
         for (const p of take) {
           try {
             const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
-            if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList = landed?.landedAs ?? null;
+            if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
           } catch (e) {
             // The card's own words: a section the library already holds is rejected here and that section reused (the
             // placement step reads its boxes into it).
             const same = /already in the library as (\S+?)[ )]/.exec(said(e))?.[1];
             if (!same) { sectionsRefused.push(`${(p.payload as { label?: string }).label ?? p.kind}: ${said(e)}`); continue; }
-            await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "reject", reason: `The library already holds this section (${same}): reused, not added again.` });
-            sectionsReused.push(same);
+            await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "reject", reason: `The library already holds this ${p.kind === "section" ? "section" : "list"} (${same}): reused, not added again.` });
+            if (p.kind === "section") sectionsReused.push(same);
           }
         }
       }
@@ -503,29 +595,38 @@ export class Demo {
     // QA-144 slice 1, after the second person's approval: each needed fact placed in the section of its form box (the
     // shared rules step), each form field no saved answer proposed filled by hand (ruling 2), each form line set by IRCC's
     // words (ruling 3). All as the author, through the screens' own services.
-    const placedFacts: string[] = [], setUpRefused: string[] = [];
+    const placedFacts: string[] = [], setUpRefused: string[] = [], unchosen: string[] = [];
     let byHand = 0, lines = 0;
     await timed("questions, form fields and form rules (rules)", async () => {
       for (const c of fromForms) {
         // The form lines first: a form whose rule is in words only is not read by the coverage check, so its facts would
         // be missed by the placement step.
-        if (keyOf.get(c.id) === "vv.single") {
-          for (const r of VV_FORM_RULES) {
+        const setup = FORM_SETUP[keyOf.get(c.id) ?? ""];
+        if (setup) {
+          // A form IRCC's words name for the combination with no line yet is added from the Form library, as the Forms
+          // tab's "add one from the Form library" does (QA-144 slice 2: With an LMIA's IMM 5707, 5409, 5476 and 5475).
+          const family = (await this.familyForm(c.id, keyOf.get(c.id)))!;
+          const has = new Set((await this.db.combinationForm.findMany({ where: { combinationId: c.id }, select: { lineageKey: true } })).map((x) => x.lineageKey));
+          for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) {
+            try { await this.formLibrary.attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
+          }
+          for (const r of setup.rules) {
             const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge };
             try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
           }
-          if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
-          // The family information form by how IMM 5257 is filed (paper or PDF upload: IMM 5707; online: IMM 5645).
-          const filed = (await this.db.combinationForm.findFirst({ where: { combinationId: c.id, lineageKey: "IMM 5257" }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
-          const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
-          for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], [family.other, { retire: true }]] as const) {
+          // The shared field takes the list once (the first combination's), for every combination after it.
+          if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); maritalList = null; } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
+          // The family information form by how the application form is filed (paper or PDF upload: IMM 5707; online:
+          // IMM 5645); the other one is taken off only where it is a line.
+          for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const) {
             try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
-          // IRM 0002's fact, added for its rule (C3.6), accepted by the author; the Approver approves it below.
-          try {
-            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: GENDER_FACT.fact, rule: GENDER_FACT.rule, label: GENDER_FACT.label, meaning: GENDER_FACT.meaning, valueType: GENDER_FACT.valueType });
-            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: "Accepted by the sample loader: the fact IRM 0002's rule reads (Guide 5256, Question 3; Sample)." });
-          } catch (e) { setUpRefused.push(`${GENDER_FACT.label}: ${said(e)}`); }
+          // A fact only a rule reads (IRM 0002's), added for its rule (C3.6), accepted by the author; the Approver approves it below.
+          const rf = setup.ruleFact;
+          if (rf) try {
+            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType });
+            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` });
+          } catch (e) { setUpRefused.push(`${rf.label}: ${said(e)}`); }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }
@@ -533,14 +634,18 @@ export class Demo {
         const p = await placeFromFormParts(this.db, this.studio, author, c.id);
         placedFacts.push(...p.placed.map((x) => x.fact));
         // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's sex or gender as
-        // the forms read it, else their date of birth).
-        if (keyOf.get(c.id) === "vv.single") {
-          const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: ["person.sex", "person.gender", "person.date_of_birth"] } }, select: { canonicalFieldKey: true, sectionKey: true } });
-          const beside = ["person.sex", "person.gender", "person.date_of_birth"].map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
-          if (beside) { try { await this.studio.placeField(author, GENDER_FACT.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(GENDER_FACT.fact); } catch (e) { setUpRefused.push(`${GENDER_FACT.fact}: ${said(e)}`); } }
-          else setUpRefused.push(`${GENDER_FACT.fact}: neither the person's sex, gender nor date of birth is asked in a section`);
+        // the forms read it, else their date of birth; IMM 5646's, beside the date of birth).
+        const rf = FORM_SETUP[keyOf.get(c.id) ?? ""]?.ruleFact;
+        if (rf) {
+          const at = rf.beside ?? ["person.sex", "person.gender", "person.date_of_birth"];
+          const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: at } }, select: { canonicalFieldKey: true, sectionKey: true } });
+          const beside = at.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
+          // R2-m1 after it too (review R1-m4): its section may be a chosen one, and only a conditional form reads the fact.
+          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(rf.fact); await keepChosenEveryones(this.db, this.studio, author, c.id, new Set([beside.sectionKey]), p); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
+          else setUpRefused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a form field that reads it`));
+        unchosen.push(...p.unselected);
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
@@ -552,7 +657,7 @@ export class Demo {
       }
     });
     row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length ? "partial" : "done",
-      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)`,
+      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
       why: [...sectionsRefused, ...setUpRefused].slice(0, 6).join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
@@ -584,7 +689,21 @@ export class Demo {
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
-    row({ row: "17", title: "New edition: IMM 5476 2021 → 11-2025 comparison and impact", status: "not built yet", shows: "Not built yet: the screens lane adds the comparison (C9.1); the checkpoint calls it once it is on main.", why: null });
+    // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
+    // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The
+    // Visitor visa's form finder may already have held it (its replay attaches the page's forms): then this send answers
+    // "already waiting", and the row reads the one held item either way (review m4).
+    let held17: string | null = null, why17: string | null = null;
+    if (row17) {
+      const item = (JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items as { file: string; path: string }[]).find((i) => i.file === ROW17.current);
+      const r = item ? (await timed("new edition held (row 17)", () => this.intake.intake(author, [{ originalname: item.file, buffer: readFileSync(join(OFFICIAL, item.path)) }], undefined, "SAMPLE"))).results[0] : null;
+      const heldNow = await this.db.intakeItem.findFirst({ where: { workspaceId, outcome: "new_edition_held", status: "HELD", code: "IMM 5476" }, select: { editionLabel: true } });
+      if (heldNow) held17 = heldNow.editionLabel ?? ROW17.currentLabel; else why17 = `${ROW17.currentLabel} was not held as a new edition: ${r?.message ?? "its official file is not in the manifest"}`;
+    }
+    const users = row17 ? (await this.db.combinationForm.findMany({ where: { workspaceId, lineageKey: "IMM 5476", status: { not: "RETIRED" } }, select: { combinationId: true }, distinct: ["combinationId"] })).length : 0;
+    row({ row: "17", title: "New edition: IMM 5476 2021 → 11-2025 comparison and impact", status: !row17 ? "waiting" : held17 ? "done" : "partial",
+      shows: held17 ? `${held17} held as a new edition over the library's ${ROW17.previousLabel}, which ${users} combination${users === 1 ? " files" : "s file"}: its comparison and impact are on To review (saved AI comparison, US$0); canada.ca names 11-2025 the current edition` : "The comparison and impact are built (C9.1, its saved AI comparison #781)",
+      why: !row17 ? `Waits for a saved field map of ${ROW17.previousLabel} (the paid runner's; tech lead, 4 Nov): the library then files the 2021 edition and holds 11-2025 as the new one.` : why17 });
     rows.sort((a, b) => Number(a.row) - Number(b.row));
     const count = (s: CheckpointRow["status"]) => rows.filter((r) => r.status === s).length;
     await this.audit.log(workspaceId, actor.id, "loaded", "configured checkpoint", null, `${actor.name} loaded the configured checkpoint in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${count("done")} rows done, ${count("partial")} partly, ${count("waiting")} waiting, ${count("not built yet")} not built yet`);
