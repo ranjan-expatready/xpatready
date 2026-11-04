@@ -7,7 +7,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, forwardRef, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf } from "../../contracts/documents.ts";
 import { isSignStep, minorFromAnswers, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
@@ -17,6 +17,7 @@ import { caseView } from "../../engine/runtime/case.ts";
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
+import { CasePrepare } from "./case-prepare.ts"; // C7.6: Ready to file is read now (case-prepare.ts imports signStepsOf: forwardRef below)
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -33,7 +34,8 @@ export async function signStepsOf(db: Db, caseId: string): Promise<Map<string, S
 
 @Injectable()
 export class SignSteps {
-  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit,
+    @Inject(forwardRef(() => CasePrepare)) private readonly prepare: CasePrepare) {}
 
   /** A form item the case officer may sign for, with its case and line. */
   private async item(actor: Actor, itemId: string) {
@@ -69,8 +71,12 @@ export class SignSteps {
     const { c, item, handScanned } = await this.item(actor, itemId);
     if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it has no signing steps. Nothing was recorded.`, HttpStatus.CONFLICT);
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
-    // Ready to file is C7.6's (L-SA3, held under P-251): the filing's stored status says it once that is built.
-    const refusal = stepRefusal(key, done, item.itemKey, { filingReady: item.filing.status.toLowerCase() === "ready_to_file" } /* review m-3 on #617: C7.6's pack reads "ready_to_file"; the column stores upper case (NOT_STARTED) */);
+    // Ready to file is C7.6's (L-SA3, P-315). Break B1 on #861: it is read now, from the prepare view (which takes a
+    // filing that is no longer ready back to Not started), never from the stored status alone.
+    const filingReady = key === "uploaded_to_ircc"
+      ? ((await this.prepare.view(actor, c.id)) as { filings: { id: string; status: string }[] }).filings.find((x) => x.id === item.filingId)?.status === "ready_to_file"
+      : item.filing.status.toLowerCase() === "ready_to_file";
+    const refusal = stepRefusal(key, done, item.itemKey, { filingReady });
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
     let copyId: string | null = null;
     if (key === "print") {
