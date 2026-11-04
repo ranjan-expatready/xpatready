@@ -53,9 +53,13 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   ok("QA-144 rules pass: every Visitor visa form it files had its sections drafted by rules (no AI, US$0; not IMM 5645, which the paper channel takes off)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form' and coalesce(edition, '') not like 'IMM 5645 (%'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
   // Approved by the Approver; once the Visitor visa is released (IRM 0002's map, #891), the release marks them RELEASED.
-  const approved = "status = 'RELEASED'"; // approved by the Approver, then released with the Visitor visa (review m3)
-  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver and released with the Visitor visa", n(`select count(*) from library_change where kind = 'section' and ${approved} and decided_by = 'user-B'`) > 10
-    && n(`select count(*) from library_change where kind = 'section' and not (${approved})`) === 0);
+  // Approved by the Approver; a section the Visitor visa's release carries is RELEASED with it, one it does not use stays
+  // APPROVED (review m3: once released, the release's own sections must be RELEASED).
+  const approved = "status in ('APPROVED', 'RELEASED')";
+  const inRelease = sql(`select string_agg(distinct s->>'id', ',') from config_release r, jsonb_array_elements(r.snapshot->'sections') s where r.combination_id = '${vv}'`).split(",").filter(Boolean);
+  ok("QA-144 BR-7 pass: every section in the library was approved by the Approver, and those the Visitor visa's release carries are released with it", n(`select count(*) from library_change where kind = 'section' and ${approved} and decided_by = 'user-B'`) > 10
+    && n(`select count(*) from library_change where kind = 'section' and not (${approved})`) === 0
+    && inRelease.length > 0 && n(`select count(*) from library_change where kind = 'section' and key in (${inRelease.map((k) => `'${k}'`).join(",") || "''"}) and status <> 'RELEASED'`) === 0, { inRelease: inRelease.length });
   ok("QA-144 BR-7 fail: the author approved no library item", n(`select count(*) from library_change where decided_by = 'user-A'`) === 0);
 
   // The shared placement step: each placement is the author's, asked of the client, in a section the combination uses.
@@ -105,7 +109,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // is added for its rule (C3.6), approved by the Approver and asked of each person.
   const g = "person.gender_identifier_differs_from_documents";
   ok("QA-144 rule IRM 0002 (Guide 5256, Question 3): only when the person's gender identifier differs from their documents", new RegExp(`^ANSWER_CONDITIONAL\\|PUBLISHED\\|\\|.*"field": "${g.replace(/\./g, "\\.")}"`).test(line("IRM 0002")), line("IRM 0002"));
-  ok("QA-144 IRM 0002's fact: in the library, approved by the Approver (not the author), asked of each person", n(`select count(*) from library_change where key = '${g}' and ${approved} and decided_by = 'user-B'`) === 1
+  ok("QA-144 IRM 0002's fact: in the library, approved by the Approver (not the author), asked of each person", n(`select count(*) from library_change where key = '${g}' and status = 'RELEASED' and decided_by = 'user-B'`) === 1
     && n(`select count(*) from section_question where canonical_field_key = '${g}' and repeats = 'per_person' and collected_from = 'client_questionnaire'`) > 0);
   ok("QA-144 rule fail-guard: no Visitor visa form is left with its condition in words only", !/condition is in words only/.test(JSON.stringify(o?.draft?.problems ?? [])));
   ok("QA-144 IMM 5409's rule reads a list value: person.marital_status has the form's own marital status list, with common_law", sql(`select l.answer_list_key from canonical_field f join answer_list l on l.answer_list_key = f.answer_list_key where f.canonical_field_key = 'person.marital_status' order by f.version desc limit 1`) !== ""
