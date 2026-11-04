@@ -6,13 +6,73 @@
 # "cancelled" on 3 and 4 Nov and started hours late. The repository is public, so GitHub's machines bill no minutes
 # (US$0). "Run workflow" (workflow_dispatch) starts it by hand; from a branch it tests that branch's suites. Every
 # part runs to its end (no fail-fast), so one red suite never hides another. No model call: every suite replays saved runs.
+# Re-test (founder 4 Nov ~10:30 IST "Yes, build it"): "Run workflow" with capabilities "C11.10 C5.4" runs only those
+# capabilities' acceptance packs instead of the full set, one GitHub machine each, on the demo data (Reset to the six)
+# where the pack's run allows, else on its fixture, labelled "fixture only" (studio/tools/gate-b.mjs, the same runner gate B
+# uses), so qa's re-score after a merge needs no Mac copy:
+#   gh workflow run nightly.yml -f capabilities="C11.10 C5.4"        (on main; --ref <branch> for a branch)
+# qa still walks the screens like a person and gives the verdict (P-290); the run is the independent machine re-run.
 name: nightly
 on:
   schedule:
     - cron: "0 21 * * *"
   workflow_dispatch:
+    inputs:
+      capabilities:
+        description: "Re-test only these capabilities' packs, e.g. C11.10 C5.4 (empty = the full nightly set)"
+        required: false
+        default: ""
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      caps: ${{ steps.p.outputs.caps }}
+    steps:
+      - id: p
+        name: full set, or the named capabilities' packs?
+        env: { CAPS: "${{ github.event.inputs.capabilities }}" }
+        run: |
+          caps=$(printf '%s' "$CAPS" | tr ',;' '  ' | xargs -n1 2>/dev/null | sort -u | tr '\n' ' ')
+          for c in $caps; do [[ "$c" =~ ^C[0-9]{1,2}\.[0-9]{1,2}$ ]] || { echo "not a capability id: \"$c\" (want e.g. C11.10)"; exit 1; }; done
+          json="[]"; [ -n "$caps" ] && json="[$(for c in $caps; do printf '"%s",' "$c"; done | sed 's/,$//')]"
+          echo "caps=$json" >> "$GITHUB_OUTPUT"
+          [ "$json" = "[]" ] && echo "**Full nightly set** on 6 parts" >> "$GITHUB_STEP_SUMMARY" || echo "**Re-test** of $caps (one machine each)" >> "$GITHUB_STEP_SUMMARY"
+  packs:
+    needs: plan
+    if: ${{ needs.plan.outputs.caps != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions: { contents: read }
+    strategy:
+      fail-fast: false
+      matrix:
+        cap: ${{ fromJSON(needs.plan.outputs.caps) }}
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser packs need)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: ${{ matrix.cap }} acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)
+        env: { CAP: "${{ matrix.cap }}", GATE_B_JOBS: "1", KIND: code }
+        run: |
+          [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+          echo "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          node "$S/tools/gate-b.mjs" --title "$CAP" --kind code
   suites:
+    needs: plan
+    if: ${{ needs.plan.outputs.caps == '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions: { contents: read }
