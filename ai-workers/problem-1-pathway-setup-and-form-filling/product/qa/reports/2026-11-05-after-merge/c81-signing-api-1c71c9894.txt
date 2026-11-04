@@ -1,0 +1,15 @@
+PASS  setup: the copy has Visitor visa release 2 (the pack's setup) — 2
+PASS  pass (Devin on #617): a dependent child aged 20 signs their own IMM 5257 ("person"), never "parent" — ["person"]
+PASS  pass (VV-R09): a child aged 9 is signed for by a parent — ["parent"]
+PASS  pass: the item read says the same as the prepare view (one rule) — ["person"]
+PASS  setup: IMM 5476 is accepted on PDF upload and Paper (Sample), approved by a second person — 201
+PASS  fail (Devin on #617): IMM 5707 (TYPED_NAME) takes no signing step and no signed scan (409, in words), nothing recorded — [409,"IMM 5707 is not signed by hand and scanned on this application, so it has no signing steps. Nothing was recorded.",409]
+PASS  fail (break M1 on #617): printing IMM 5476 from a copy made before a fact it shows changed is refused (409, in words), nothing recorded — [409,"This copy of IMM 5476 is out of date: 1 change since it was made. Generate a new copy and print that one. Nothing was recorded."]
+PASS  setup: IMM 5476 printed, signed and its scan received — ["print","signed","scan_received"]
+PASS  pass (#924): the firm's own officer reads this case's sign and scan lines in the activity feed — {"status":200,"entities":["signed scan","sign step","sign step"]}
+PASS  fail (#924, security): another firm's staff (user-S) never read this case's sign or scan lines — {"status":200,"lines":[]}
+PASS  fail (Devin on #617): after IMM 5476's channel changes (PDF_UPLOAD → PAPER), the steps done for the old one no longer count, and are kept as history — {"status":200,"done":[]}
+PASS  fail (Devin on #617): changing back does not bring the old steps back: the form is signed again for this channel — {"status":200,"done":[]}
+PASS  fail (review N4 on #617): printing IMM 5476 from a copy made before its repeating group changed ("none apply" taken back) is refused (409, out of date), nothing recorded — [200,409,"This copy of IMM 5476 is out of date: 1 change since it was made. Generate a new copy and print that one. Nothing was recorded."]
+
+13/13 passed
