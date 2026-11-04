@@ -1,73 +1,64 @@
 # C7.6 Ready to file — break report (PR #861)
 
-Breaker, 4 Nov 2026. **Round 1** at 01595640. Its full text is kept in git at 08b5720 (this file).
-**Round 2** (diff only, `git diff 0159564..08b5720`) on 08b5720: a fresh isolated copy `brk` on :4455 (db `xr_studio_brk`) on the
-changed migration. Ran `setup_visitor_visa.ts` (13/13) and `setup_vv_m3.ts` (44/46: S2w, and S7a "Cannot PUT /api/library/fees", both outside this PR).
-Then I reran the round-1 scripts unchanged and added new probes through `acceptance/lib/m3.ts`. The app booted with the
-`forwardRef(() => CasePrepare)` in `api/src/sign-steps.ts:38`; no dependency-injection or circular-import error. Copy stopped and removed. Live AI off, US$0.
+Breaker, 4 Nov 2026. Each round's full text is kept in git: round 1 at 08b5720 (this file, round-1 section) and round 2 at bb6d192.
+**Round 3** (the last; diff only, `git diff 08b5720..bb6d192`) on bb6d192: a fresh isolated copy `brk` on :4455 (db `xr_studio_brk`).
+Ran `setup_visitor_visa.ts` (13/13) and `setup_vv_m3.ts` (44/46: S2w and S7a, outside this PR). Then I reran the round-1 role
+and code scripts and added new probes through `acceptance/lib/m3.ts`. `tests/check_c76_readiness.ts` 73/73. Copy stopped and removed. Live AI off, US$0.
 
-## Round 2: status of the round-1 breaks on 08b5720
+**Verdict on bb6d192: no Blocker or Major open.** Four Minors remain (B5 note, R1, R2, R3 below). None of them is a permission hole.
 
-| # | Sev | Status | Evidence on 08b5720 |
+## Round 3: status of the round-2 findings
+
+| # | Sev | Status | Evidence on bb6d192 |
 |---|---|---|---|
-| B1 | Blocker | **fixed** | Same flow: readyToFile, then `PUT …/person.passport_number "ZX9999999"`. The view shows `status NOT_STARTED`, `blocks [barcode_not_validated]`, db `NOT_STARTED`, and an audit `ready_to_file_reopened` row. `uploaded_to_ircc` → **409** "only once its filing is Ready to file". Ready → 409. See N3 for the gap still left. |
-| B2 | Major | **fixed** (see N1, N2) | (a) Rep R→T: `reviewed null`, `representative_review` open. R's review → 403. T's review → 200. (b) A confirmed change after a review reopens it ("changed after it was reviewed on 2026-11-04"). (c) The SQL `filing_review` without `facts_hash`/licence is refused. |
-| B3 | Major | **fixed** | Family case with no dates of birth: IMM 5476 and IMM 5707 of the spouse and child are named on their filings (`IMM 5707:true, IMM 5476:true`) as CRITICAL "whether … applies". See N5. |
-| B4 | Minor | **fixed** | `key:123` and `key:["x"]` → 400 "Send key as the warning line's key (text)". |
-| B5 | Minor | **partly fixed** | Word joiner, ZWJ, soft hyphen, CGJ, U+180E, U+2800, tag characters and Hangul filler + `a` → 400. Still accepted: `"á́́́"` (one letter carrying combining marks; reaches the 409 stage) and a valid reason with hidden characters inside, `"Checked by phone⁠\u{E0041}­"`, stored as sent. Cause: `engine/runtime/readiness.ts:191` counts Mn marks; `:194` still misses U+00AD, U+2060-2064 and the tag characters. |
-| B6 | Minor | **fixed** | 5000 characters → 400 "Keep the note to 400 characters". NUL → 400 (was 404). Object → 400 "Write the note as text". U+202E → 400. |
-| B7 | Minor | **fixed** (by reading the code) | `readiness.ts` now accepts only `^(20\d{2}|2100)-\d{2}-\d{2}$`, then `dayOf`. Timestamps, `0000-01-01` and numbers are refused there. I did not re-run curl this round. |
-| B8 | Minor | **fixed** | Ready again → 200 `already: true`, with no new audit row. Ready at once from two sessions → 200 + 409. 3 passes at once → `[200, 409, 409]`, 1 row. SUBMITTED filing: ready, review and pass → 409. |
-| B9 | Minor | **fixed** (see N4) | R as representative + officer in the Sample firm: review → 409 "your firm has another representative", with or without `self`. The solo firm without `self` → 400. |
-| B10 | Minor | **fixed** | SQL inserts with `code='not_a_code'`, with `severity='critical'` on `missing_document` and empty `keys`, and with `barcode_not_validated`: all refused. UPDATE on `readiness_pass` / `filing_review` is refused by the triggers. A random `workspace_id` with no match is still possible, but none of the inserts got past the checks. |
+| N1 | Major | **fixed** | Review with no `facts_hash` → 400. Upper-case hash → 400. 64 zeros → 409. Client / officer with the right hash → 403 (role checked first). The hash read, then `PUT passport_number`, then review with that hash → **409** "changed after you read it". The current hash → 200. Six reads of one filing → 1 distinct hash (stable). |
+| N2 | Minor | **fixed** | The review line's key is now `representative_review|||2026-11-04|0f90c94330129d3f`. user-O passes it (200). A second confirmed change reopens it (`rr open true`), and the status goes back to `NOT_STARTED`. |
+| N3 | Minor | **fixed** | 4 races of Ready to file against `PUT passport_number`: ready → 409 every time, and the database ends at `NOT_STARTED` (0/4 stale). |
+| N4 | Minor | **fixed** (see R2) | The pack's N4 check passes (another officer added then ended → 409). Representative + the only officer ever, in the Sample firm, `self:true` → 200 `self_reviewed` (BR-21, as ruled). |
+| N5 | Minor | **fixed** (by reading the code) | `api/src/readiness-inputs.ts:74` now sets `needsValidate: x.barcode(f.form)` on a form that cannot start. Not exercised: no Visitor visa barcode form ever waits. |
+| N6 | Minor | **fixed** | In SQL, a `missing_facts` pass row with reason `'a'||repeat(chr(8288),4)`: the line stays open. The API pass with a good reason → **200** (was 409). |
+| B5 | Minor | **fixed for reasons; still open for the note** | Reasons: `"á×4"` → 400. U+2060, a tag character or U+00AD inside a valid reason → 400 "Remove the invisible characters". ZWJ inside Devanagari → accepted. The review **note** still accepts them: `{"note":"ok⁠\u{E0041}"}` → 200, because the note keeps the old character list (`api/src/readiness.ts:60`). |
 
-## Round 2: new findings in the fixes
+## Round 3: new findings in the fixes (all Minor)
 
-**N1 · Major: the review records the facts as they are when the request arrives, not the ones the representative saw.**
-Did: user-R reads `GET …/prepare` (`facts_hash` cc4dc3aefd67). user-O then changes `person.passport_number` to `"QQ1111111"` (200).
-user-R sends `POST /runtime/filings/:id/review {"note":"Looked fine"}` → **200**.
-Actual: the stored review has `facts_hash` 52149ae41dad, the facts after the change, so `reviewed` is set for facts the representative never saw.
-This is the "two sessions on the same record" case. The review body takes no `facts_hash` or version to check against.
-Cause: `api/src/readiness.ts:67-68` (`now()` is computed inside the request and stored as is). Fix direction for the lead: the client sends the `facts_hash` it showed, and a mismatch gets 409.
+**R1 · Minor: another person's answer moves a filing's fingerprint.** Did: family case. Read the principal's filing `facts_hash`, then
+`PUT …/answers/<spouse>/person.passport_number "SP0000001"` (the spouse's own filing). The principal's hash changed (`true`).
+The safe way round: it reopens a review, or takes a Ready to file back to Not started, for a change on someone else's filing.
+That costs a review again; it never skips a check. Cause: `api/src/case-prepare.ts:261` filters `answers` by `field` only, not by the subject
+(`about`) of the waiting fact. The answers also come with no ORDER BY (`api/src/runtime.ts:222`), so their order could also change the hash.
+In my runs it stayed stable (6 reads → 1 hash).
 
-**N2 · Minor: a pass on "representative review" is keyed only by the day, so the B2 reopen does not hold after a pass.**
-Did: reviewed → confirmed change → `representative_review|||2026-11-04` opens. user-O passes it (200).
-Another confirmed passport change the same day: `rr open false, rr passed true` (facts_hash 6ba93ee04422 is new). With no review ever,
-the key is `…|||none`, and one pass covers every later change for good. P-237 allows passing the review. But the key should
-carry the facts fingerprint, so a pass covers the facts it was written for. Cause: `engine/runtime/readiness.ts:160` (`part: before ?? "none"`).
+**R2 · Minor: "who prepared it" means officer rows only, not who did the work.** Did: a case with user-R as representative and
+user-O as the only officer. user-R enters `person.passport_number` himself (200), then reviews `{facts_hash}` → **200
+`kind: reviewed`**: logged as a second person's review of answers he entered. Cause: `api/src/readiness.ts:63-64` (`prepared`
+is having an OFFICER row, never who entered or confirmed the answers). P-237 already allows passing the review with a reason, so this is a recording accuracy point, not a way past a block.
 
-**N3 · Minor: the stored status is corrected only when someone reads the prepare view.** Two cases:
-(a) Ready to file racing an answer change: `ready 200, answer 200, db status right after: READY_TO_FILE`. `ready()` still works
-readiness out first, then re-reads the status and updates on status alone (`api/src/readiness.ts:107-115`).
-(b) After any change, `filing.status` stays `READY_TO_FILE` until the next `GET …/prepare` or `uploaded_to_ircc`.
-Those resets are written during a GET, with the reader as the actor of the audit row (`case-prepare.ts:258-260`).
-Today every gate that matters reads through the view, so this holds. C8.2's recording (and any report or export) must do the same, or it will trust a stale value.
+**R3 · Minor (i18n): a short reason in a script with vowel signs is refused.** `"ठीक है"` ("it's fine", 6 code points) → 400
+"at least 5 characters". The vowel signs are `\p{M}`, so only 3 letters count. `"फोन पर ठीक"` → accepted. A five-letter English reason passes.
+Cause: `engine/runtime/readiness.ts` `passProblem` removes all of `\p{M}` from the count. Counting grapheme clusters would treat every script the same.
 
-**N4 · Minor: the B9 refusal can be dodged by ending your own officer row.** Did: case with user-R as representative + officer.
-`POST …/team/officers {"userId":"user-O"}` (201), then `POST …/team/officers/user-R/end {reason}` (201), then user-R `POST …/review {}` → **200
-`kind: reviewed`**. The person who prepared the filing is now logged as the second person. Cause: `api/src/readiness.ts:59`
-(`prepared` reads only current OFFICER rows, not ended ones or who entered the answers).
+**On the facts_hash, as asked:**
+- **Forged:** not meaningfully. It is a SHA-256 of the facts the server computes now, and only firm staff can read it (`GET …/prepare` is officer-only).
+  The representative still has to be the one of record (403 otherwise).
+- **Replayed:** an old hash after a change → 409. The same facts again (A→B→A) give the same hash and are accepted. That is right: the facts reviewed are those.
+- **Stale-proof:** I found no change that leaves a review standing.
+  - Confirmed values and waiting facts with their answers move it.
+  - A "none apply" on a waiting repeating group moved it.
+  - Over-sensitive, not under (R1).
 
-**N5 · Minor (latent): a barcode form that "cannot start" waits for no Validate.** `api/src/readiness-inputs.ts:72` sets
-`needsValidate: false` while a form's applicability is unknown. Its "whether it applies" line is a CRITICAL warning, so it can be passed with a reason.
-If that happens, Ready to file succeeds with no Validate for that form. IMM 5257 never waits on the Visitor visa path. IMM 0008/1344 on later programs would skip P-237's only hard stop.
+## Round 3: what held
+- **Roles**, rerun in full: clients user-P/Q → 403. user-A/B/C → 403. Unknown or empty actor → 401. user-S on a Sample-firm filing → 404, and user-R/O/T on the solo filing → 404.
+- **Review:** only the representative of record; user-O and user-T → 403.
+- **Pass and ready:** firm staff only. user-T passes (200).
+- **Codes:** a block code → 409. Unknown codes, prototype names and wrong case → 404. Bad or inactive filing ids → 404.
 
-**N6 · Minor: a pass row the current rule refuses blocks its line for good.** Did: in SQL, a `readiness_pass` row for a
-`missing_facts` key with reason `'a'||repeat(chr(8288),4)`. The database CHECK accepts it (btrim length 5), and the view refuses it, so the line stays open.
-`POST …/warnings/missing_facts/pass {reason:"Client confirmed by phone (Sample)", key}` → **409 "passed meanwhile"**, every time.
-This happens to any row written under an older, looser rule. Cause: `api/src/readiness.ts:93` counts every earlier key as taken, even when the view does not honour that pass.
-Note for the lead: the migration `20261104120000_c76_readiness` was edited in place. Any copy that applied the round-1 version needs a reset before it can migrate.
-
-## Round 2: what held
-* **Roles**, rerun in full: clients → 403. user-A/B/C → 403. Unknown or empty actor → 401. Cross-firm (S on A; R/O/T on S) → 404.
-  O and T review → 403. T and the ended R may pass and mark ready, as planned.
-* **Codes:** a block code → 409. `nosuch`, `__proto__`, `constructor`, `toString`, `MISSING_FACTS`, `missing_facts%20` → 404. No open line → 409.
-  A foreign key → 409. Bad or inactive filing ids → 404.
-* **Reasons:** spaces, marks, ZWSP, NUL, newline, U+202E, emoji, number, array, 301 characters → 400. 300 characters, Russian and Hindi → accepted.
-* **B1 path:** a stale Ready goes back to Not started and is audited. `uploaded_to_ircc` reads the live view.
+## Round 2 (08b5720), summary
+B1–B4 and B6–B10 fixed. B5 partly fixed. New: N1 Major, a review stamped the facts as they were when the request arrived, not as read.
+N2: the review-warning pass was keyed by day. N3: a race left READY_TO_FILE stale. N4: self-review dodged by ending your own officer row.
+N5: a "cannot start" barcode form skipped its Validate (latent). N6: a pass row the rule refused blocked its line for good.
 
 ## Round 1 (01595640), summary
-B1 Blocker: READY_TO_FILE kept after the barcode block came back; `uploaded_to_ircc` 200. B2 Major: any review by anyone, at any time, counted
+B1 Blocker: READY_TO_FILE kept after the barcode block came back, and `uploaded_to_ircc` 200. B2 Major: any review by anyone, at any time, counted
 (ended representative, empty filing, client row in SQL). B3 Major: `cannot_start` forms dropped from readiness. B4–B10 Minor: a non-text key widened
 the pass; hidden characters in reasons; the note unchecked (NUL → 404); timestamp dates and `0000-01-01` → 500; repeated Ready/pass
 duplicated records, and review/pass allowed on SUBMITTED; self-review in a two-person firm; missing CHECKs on `readiness_pass` and `filing_review`.

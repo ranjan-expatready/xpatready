@@ -68,3 +68,18 @@ New fail cases in `tests/check_c76_readiness_api.ts` (23) and `tests/check_c76_r
 * **B5 rest:** combining marks never count alone; a hidden format character inside a reason is refused (U+200C/D allowed).
 * **Review m7:** the prepare view's items are mapped field by field into readiness (no `as unknown` cast).
 * **Review m10:** the header of case-prepare.ts says a read can write the Ready-to-file revert.
+
+## Round 3 (the last, tech lead P-293 (3)): Approve on bb6d192; breaker: no Blocker or Major open
+* **Ruling (tech lead, 4 Nov ~13:55 IST):** any staff of the firm may pass the CRITICAL "representative's review" warning,
+  with a reason (AG07-D24/D25; P-237 (4) amends P-155 (1)). **Unconfirmed: no counsel.** A preference question goes to
+  the founder; the one-line alternative (only the representative of record passes that line) stays ready.
+* **Nightly ×2 on GitHub's machines, bb6d192:** runs 41818114598 and 41818123920: C7.6 25/25 and C8.1 14/14 in each
+  (fixture only; Works needs the qa lane's demo-data PASS, gate A). PR CI on bb6d192: green (run 41797954675).
+* **Follow-up rows (Minor; none a permission hole; not pushed, to keep the approved and tested head):**
+  - m11 / R1: the review fingerprint's waiting answers take that fact for every person and in no fixed order: filter by
+    the form's own person and sort before hashing (fails closed: a review reopens when nothing relevant changed).
+  - m12: a Ready to file refused by N3's re-read writes `ready_to_file_reopened` with no `ready_to_file` line before it.
+  - R2: "who prepared it" reads officer rows, not who did the work (the team's AG-07 work log is not built yet).
+  - R3 (i18n): a short reason in a script with vowel signs (e.g. "ठीक है") can fall under 5 counted characters: count
+    grapheme clusters, not base letters.
+  - B5 note: the review note keeps the older hidden-character list; use the reason's rule for it too.
