@@ -54,7 +54,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const head = await p.locator("[data-header-next]").innerText();
   const strip = await p.locator("[data-strip-head]").innerText();
   step("pass: LMIA is Live and its header next step says it is for the next release", lsum.row.status === "READY" && /Next step for the next release/.test(head), head);
-  step("pass: its setup strip starts with Live and says the open steps are for the next release", /^Live · setup steps for the next release: \d of 5 done$/.test(strip.trim()), strip);
+  // QA-184: Live first, then the next release's one count in the card's words (or that nothing is open for it).
+  step("pass: its setup strip starts with Live and says what the next release needs", /^Live · Release \d+ · (Next release: \d of 5 steps? to do|nothing open for the next release)$/.test(strip.trim()), strip);
   step("fail case: a combination that is not Live never says \"for the next release\"", await (async () => { await p.goto(`${BASE}/c/${vv}/overview`); await p.locator("[data-strip-head]").waitFor(); return !/for the next release/.test(await p.locator("main").innerText()); })());
   await p.goto(`${BASE}/c/${lm}/overview`); await p.locator("[data-strip-head]").waitFor();
   await p.screenshot({ path: path.join(SHOTS, "uxa3-02-live-next-step-1440.png"), fullPage: false });
