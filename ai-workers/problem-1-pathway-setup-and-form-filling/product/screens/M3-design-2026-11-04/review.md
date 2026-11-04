@@ -133,3 +133,22 @@ No Blocker. Three Majors: a founder recommendation that contradicts a recorded r
 * **r2, `rows.md:784`.** C7.3 would score Works only on a Sample fixture whose channel goes against P-318 (6). That fixture is the shared `setup_vv_m3.ts` release, which every M3 pack uses, not a fixture of C7.3's own. P-322 counts Works only where a real user meets the capability. **Fix:** put this to the tech lead as a named question (Works on that fixture, or C7.3 Works waits for C11.6 (b)).
 * **r3, `fee-table/concept-draft.md:17`.** The Loader row still says the cache is refreshed "when a version is approved". The concept's back-end plan ("the challenge's table, unchanged") still reads "sync cache refreshed on approve". Both contradict line 18. The `status` column's meaning is also left open. **Fix:** "refreshed from the read (version check)", and say that `status` is never trusted over the change's state.
 * **r4, `rows.md:283-284` and `:605-607`.** QA-165 is listed twice in C7.3's "Depends on". C11.5-9 repeats clause 2. **Fix:** remove the duplicates.
+
+## Re-review 2 (diff only: `git diff HEAD~1 HEAD`, 085adfc1)
+
+**Verdict: Approve.** R1 and r1–r4 are fixed, and no new Blocker or Major appears. The diff touches only `rows.md`, `fee-table/concept-draft.md` and `review.md`; this section is the only change to `review.md`.
+
+**What was fixed:**
+* **R1.** Release 2 is now IMM 5257 Online, IMM 5645 PDF upload (channel Sample) and IMM 5476 signed scan (`rows.md:779-792`).
+  * This matches P-318 (6) and STATE's recorded follow-up "DEMO.md row 9 → IMM 5645 online" (`STATE.md:19`).
+  * IMM 5257 has a section list in `pdf-sections.json` (checked), so the hot file is not touched.
+  * DEMO row 9 is now quoted correctly.
+  * The barcode round trip moves to the thin case on release 1.
+* **r1, r2.** C7.3 is rewritten around "the Online form", and Q4 goes to the tech lead under P-322.
+* **r3.** The cache is refreshed from the read, `status` is derived when the table is read, and the back-end plan's "Readers" row is overridden.
+* **r4.** The duplicate is gone, and C11.5-9 is now a distinct case (the box-owner filter).
+
+**Carry into the builds (Minor, no change needed before merge):**
+* **n1. C7.3's Works now needs release 2,** which C10.1 part B (M2, `demo.ts`, #798) builds. Add that to row 7's "Before Claims Works" cell (`rows.md:864`).
+* **n2. `acceptance/C10.1.test.ts:50` still expects "IMM 5707 PDF upload" on release 2.** The P-318 (6) follow-up should change it with DEMO row 9. Name it in C10.2 Q1 for the tech lead.
+* **n3. Say whether IMM 5645 is a barcode form.** If it is, P-144's one hard stop needs its validated copy read back on release 2 (the Sample step in Q2), and its field map is a #798 dependency. C10.2's Done when (`:740`) says only "filled as a PDF upload".

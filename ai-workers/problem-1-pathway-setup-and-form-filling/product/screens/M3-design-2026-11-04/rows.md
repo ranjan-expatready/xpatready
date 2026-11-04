@@ -737,7 +737,7 @@ On a fresh isolated copy, only the author can start Demo › Load the finished s
 * runs the configured checkpoint;
 * then, through the screens' own services and as the person who holds each duty, takes the family-of-four Visitor visa case on release 2 to Ready to file on every filing, in one group:
   * IMM 5257 Online, its sections entered (Q1);
-  * IMM 5645 filled as a PDF upload;
+  * IMM 5645 filled as a PDF upload. Whether IMM 5645 makes a barcode page is not recorded in the repo. The builder reads it from the edition. If it does, its validated copy must be read back before Ready to file (P-144, the one hard stop), and its field map depends on #798's family-form work;
   * IMM 5476's signed scan in;
   * the checklist per person, with some lines received;
 * leaves the thin case on release 1, with its IMM 5257 validated and read back (the barcode round trip, C10.1 row 12).
@@ -787,7 +787,7 @@ Test: `C10.2.test.ts` -1 to -11, changed as follows:
     * **IMM 5476 Signed PDF upload**.
   * This gives the story its Online form with entered sections (DEMO row 14) without touching the hot section-list file.
   * The **barcode round trip** stays in the story on the **thin case on release 1** (IMM 5257 PDF upload, validated and read back; C10.1 row 12).
-  * C10.2-6 changes to these channels in the same PR (its first line says so). DEMO row 9's wording is the tech lead's to update.
+  * C10.2-6 changes to these channels in the same PR (its first line says so). DEMO row 9's wording is the tech lead's to update, and with it `acceptance/C10.1.test.ts` (it still expects "IMM 5707 PDF upload" on release 2), as part of the P-318 (6) follow-up.
   * QA-153's parent facts are needed either way, because IMM 5645 lists the parents.
   * Reversing P-318 (6) is the founder's choice and is not recommended.
 * **Q2. Validated copies without Acrobat.**
@@ -861,7 +861,7 @@ Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading
 | 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b | — (C6.5 Works needs 2b) |
 | 5 | **C7.5 part 2, PR 1** review runs, prompt, job, stub pass, Review page (US$0) | runtime | M | M3-only (new `review-runs.ts`; never edit `studio/contracts/findings.ts`) | — | PR 2 | — (C7.5 Works needs PR 2 and C7.6) |
 | 6 | **C11.6 (a)** channel select on the row | screens | S | M3-only (`prepare.tsx`) | 2 | C10.2 | — (C11.6 Works needs (b) or (b) named as breadth) |
-| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on the Online form | QA-153, QA-165 closed |
+| 7 | **C7.3** answer-sheet panel + relative answers + Minors n2, n3, m6, n7 | screens + runtime | M | M3-only (Q2 avoids `snapshot.ts`) | 2; QA-153's M2 half | C7.7 and C10.2 at Done on the Online form | QA-153, QA-165 closed; release 2 from C10.1 part B (M2, `demo.ts`, #798) for the IMM 5257 Online steps (C7.3 Q4) |
 | 8 | **C6.12-25** fees in the tab | screens | S | M3-only | 2, 3 | C10.2 | see 3 |
 | 9 | **C6.5 2b** the drawer | screens | S–M | M3-only | 1, 4 | C4.5 (P-256), J7 3.3 to 3.8 | — (C6.5 Works: 2a + 2b; part 3 named) |
 | 10 | **C11.5 (+C1.3)** employer pre-fill on a Sample employer record | runtime | M | M3-only (new `case-employer.ts`, migration) | Q1 (M3 or M4) | C9.2's employer step, SI-10 | — |
@@ -926,6 +926,10 @@ All the other questions in the rows are the tech lead's own rulings.
   * r1 and r2: C7.3 is rewritten around the Online form, and Q4 goes to the tech lead;
   * r3: the fee-table loader row no longer says "on approve", and `status` is defined;
   * r4: the duplicate QA-165 is removed, and C11.5-9 is a distinct case.
+* **Re-review 2: Approve.** Its three carry-forward Minors are written in:
+  * n1: C7.3's Works also needs release 2 (C10.1 part B), in order row 7;
+  * n2: `C10.1.test.ts` changes with DEMO row 9;
+  * n3: IMM 5645's barcode status is read from the edition, and if it has one, P-144 applies.
 * **M2, gate B:** described as `tools/gate-b.mjs` checks it (only on "Claims Works:" lines, `Fixes: QA-nnn`). The order table has a "Before Claims Works" column, and the concepts' Definitions of ready match.
 * **M3, the fee table off hot files:**
   * "in force" is worked out when the table is read;
