@@ -1,0 +1,17 @@
+PASS  C1.1 Immigration programs lists the six's combinations (5 Retail + 1 Corporate), each with its trail and status — "5 combinations · 5 in progress"
+PASS  C1.1 a card shows its step count and one button
+PASS  C1.2 Program structure shows the tree and one Add — "Add"
+FAIL  C1.4 the combination page shows the trail, status and exactly one Next step — ""
+FAIL  C1.8 the form lines show Signature and Signed by columns
+FAIL  C1.8 a form line opens its drawer from the row (IMM 5257) — "no IMM 5257 row button"
+PASS  C2.1 uploading IMM 1295 reads its code and edition by rules, no AI, US$0 — "Rules read it: IMM 1295 (09-2023) · Application for work permit made outside of Canada. No AI call was made."
+PASS  C2.2 an altered IMM 5409 is held with a plain reason, not added — "Held for source verification: IMM 5409 (01-2023) is not on the approved source list. It was not added to the library, attached, or sent to AI. The library already holds IMM 5409 (01-2023) from the official file, so this
+PASS  C2.3 To review lists the held file
+PASS  C2.3 the uploader sees the reason and cannot approve their own file (button off or refused) — "Waiting for a second person"
+FAIL  C2.3 the Approver sees what to compare and an Approve button — ""
+PASS  C3.1 IMM 5257's field proposals say reuse or new and how sure (bands)
+PASS  C3.1 the form-field page shows each form field beside IRCC's words and its proposed shared field — "Visitor visa\nForms\nAI field-map draft\nIMM 5257 (09-2023): AI-proposed field map\nSaved\nCompleted\nUS$0.00\n0s\n\nSaved: no model was called now. The AI sees only the"
+PASS  C3.5 Shared library › Fields lists fields in words
+FAIL  C3.5 a field opens its page — "no field link on the six (library empty until field maps are applied)"
+PASS  C3.7 a form in use is not deletable, and says why — "Used by"
+11 passed, 5 failed · page errors 0
