@@ -1,3 +1,55 @@
+# B83 final read: head 3773ef7e9, diff since 6701498dd4 (independent reviewer, 5 Nov 2026, 14:35 IST)
+
+**Verdict: Block** (head 3773ef7e9be2cfd354ef34ac1d064a0ef98ab976). V2 and the four minors are closed, and the type no longer goes out. But F1's fix causes one new Major: the Release page promises the change, and the press publishes a release without it. **Delta touched money, schema, permissions or a new screen: No.** **Journey score: 8.5 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, US$0, nothing committed. The head moved twice during this read, from 989dc6420: 7f43dd453 changes one line, the browser check's own `api` helper; 3773ef7e9 changes only two walk pictures.
+
+## Major
+**F1-a. When F1's skip fires, the Release page says "Will be released", and pressing it publishes a release without the change, possibly an empty one (this diff; a new state).** `api/src/library-changes.ts:346` skips, and `api/src/programs.ts:456` still says `will_release: c.status === "APPROVED"`. By reading; not run.
+* **Reach, from the product's own screens:** a new document type's ADD is approved and its row stays DRAFT. "Change the facts it supplies…" shows for any type not retired (`web/src/pages/library.tsx:385`), the panel offers a field still waiting (`document-supplies.ts:64`), and `propose` accepts a draft type (`:90`). Approving writes the fact into the DRAFT row (`core.ts:147`). This is not only SQL state: every time the skip fires, this follows.
+* **What the releaser sees before:** "Will be released" on the row (`web/src/pages/release.tsx:68`), counted in `changes` (`programs.ts:467`), and the button "Release 1 library change as Release N".
+* **What the press does:** the guard at `programs.ts:493` passes because `releasing` is not empty. `studio.ts:1164` creates the new release first, then the skip leaves `library` empty. With no combination ready the reply is 2xx: toast "Release N published: 0 combinations", a Notice titled "Release N published" whose body is only ".", an audit line "released Release N: " with nothing after it, and "Last release: Release N". The row still says "Will be released", so each further press makes another empty release. With combinations ready, the type is missing from what went out and no word says so or why.
+* **Why Major:** a false statement at the release step, which `programs.ts:425` says the page must never make ("never says 'Will be released' for a row the server will refuse"), and a numbered release that holds nothing. No client data is wrong and no type goes out, so this is not a Blocker.
+* **Main:** the type goes out there, so main does not reach this state. `studio.ts:1164`'s order is on main, and `library-changes.ts:350`'s existing `continue` might produce an empty release there. main: not run.
+* **Fix (small; no new screen, so no breaker by the ruling):** one shared check, used by `draft()` and by `publishLibraryChanges`. Such a change gets `will_release: false`, is not counted in `changes`, and its row says what it waits for, by the field's name; "Waiting for a second person" (`release.tsx:77`) would be false for an approved change. A press with nothing to publish makes no release. Check the refusal words at `programs.ts:493` too: with no rows, the "Every change is held back" text is empty.
+* **Fail test:** extend `tests/check_b83_undo_withdraw.ts:541-543`: `/draft` shows `will_release` false, and `pack_version` does not grow when nothing else goes out.
+
+## The questions asked
+| | State | Evidence |
+|---|---|---|
+| V2 | **Closed** | `check_b83_own_question_screen_browser.cjs:238` asks `/changed after it was proposed/`; `web/src/pages/review-items.tsx:114` says those words, same case, inside `[data-came-back]`. Your 56/56 stands for it, on 853b742d0 |
+| F1, the type going out | **Closed** | Skip at `library-changes.ts:344-347`, both doors. A combination listing the type is refused earlier by `unapprovedOf` (`studio.ts:1144`). `releaseSupplies` marks nothing released while the draft stands (`document-supplies.ts:234`), so no false "released" on the facts change |
+| F1, a release saying something false | **Yes: F1-a above** | |
+| F1's fail test exercises it? | **Yes, by reading; one hole** | After `:533` `vv.single` has changed since its submission, so it is held, and the press reaches `publishLibraryChanges` through `releaseRows`. Take the skip out and the type is PUBLISHED and the change RELEASED, so `:543` fails. **Hole:** `u.status` is never asserted, so any refusal (a 409 before the publish) also passes. Its state is seeded by SQL, and its own press is probably F1-a's empty release, which it does not look at |
+| `screen02.ts:140` words | **Closed** | `c.action === "DELETE" ? "deleted" : "applied"`. `check_w1_structure_r3.ts:112`, a delete, still expects "Nothing was deleted" |
+| `document-supplies.ts:160` words | **Closed** | Now covers the change as well as the field |
+| Clipping, `document-supplies.ts` | **Closed** | `clip` at `:203` marks with "…" and stays within its limit. `said` is at most 180, `earlier` at most 298 minus `said`, so the two `.slice(0, 300)` at `:212-213` never cut. The space before "The new field" is there, and the false comment is gone |
+| V1 test's regex | **Closed** | `:377` `/A proposal to add "/` matches only the restored name check in this route's path (`rule-facts.ts:188`; the one at `:253` is in `addForRule`, another route). The two other refusals, `:191` and `:199`, do not quote the label, so the test now fails if V1 comes back |
+| Merge, `questionnaires.tsx` | **Kept both sides** | `git show --cc 853b742d0`: `<OwnQuestionsLine>` stays, and `<PlaceFromFormParts>` has main's `conditionFacts` offer. `git diff` against each parent shows only the other side's lines |
+| Money, schema, permissions, new screen | **No** | B83's own commits change `document-supplies.ts`, `library-changes.ts`, `screen02.ts` and the two checks (`git diff --name-only 6701498dd4 92b3133b2`; the two commits after the merge change only the browser check). No Prisma or migration file anywhere in the range, main's side included |
+
+**Also read:**
+* **The browser check's two retries (`:94-98`, `:140`):** test only; one press again on a 500, so a repeated 500 still fails. `save`'s error clears on the press (`own-questions.tsx:106`), so the wait does not read the old message.
+* **R1 step's type:** made by SQL for that step and removed after it; it does not stand in for a product step.
+* **G5:** the B83 commits touch neither coverage nor placement, so its going green is not this PR's code. It came from main's side, or from a copy that was not fresh (`acceptance/C4.11.test.ts:19` warns of that). Not traced.
+* **Ran, no database:** `tsc -p api/tsconfig.json --noEmit`, no error in the four API files named here, filtered by name. `graph.mjs` without `--write`: G1 0, G2 0, G4 0, G5 0; G3 13, G6 5, as before.
+
+## Minors, one line each
+1. **F1's test does not assert `u.status`.** `check_b83_undo_withdraw.ts:543`. Fix with F1-a's test.
+2. **The clip has no test.** No line of `check_b83_undo_withdraw.ts` reads the mark. Long text only.
+
+## Open, not in this delta
+n13, Minor 5's second half (no browser check reads `data-withdraw-taken-out`) and the left-open table below stand. The PR body must list the unfixed Minors, with their "main: not run" marks (step 4).
+
+## Journey (by reading; provisional)
+As last read, except feedback and state ½ (F1-a). **8.5.** Speed still not measured; sizes and accessibility are the builder's.
+
+## Could not check
+Any behaviour by running: F1-a is from reading, not seen. Your figures (172/172, 25/25, 26/26, 33/33, 66/66, 56/56, 24/24) are on 853b742d0 and not re-run. 989dc6420 and 7f43dd453 change only the browser check. 3773ef7e9's commit message says that check went 56/56 on a fresh copy of 7f43dd453; I read that message and saw no run.
+
+**Verdict: Block** (head 3773ef7e9). Open Major F1-a: `api/src/library-changes.ts:346` with `api/src/programs.ts:456`. Any push needs a new read of that fix and the label (step 5); no breaker by the ruling.
+
+---
+Below: the previous verdict, unchanged. Its V2 and Minors 1, 2, 3 and 4 are closed above, and its F1 is settled above.
+
 # B83 last pass: head 6701498dd4, diff since 4bcf2ae14b (independent reviewer, 5 Nov 2026, 13:20 IST)
 
 **Verdict: Block** (head 6701498dd4). V1 and M11 are closed and the product code added no Major. The one Major is a check this diff breaks: one regex, in a test. **Journey score: 9 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, US$0, nothing committed.
