@@ -109,7 +109,13 @@ const LMIA = "case.lmia_or_offer_number";
     const row = value.locator("xpath=..");
     ok("C1.3 BR-5: the copied employer name reads \"To confirm\" beside the \"Employer case\" source", await row.getByText("To confirm").count() === 1 && await row.getByText("Employer case").count() === 1, await row.innerText());
     const source = row.getByRole("button", { name: /^Source: employer case\. Copied from Sample employer case: Sample Employer Ltd \(Sample\) on / });
+    // Review R2-1 (root cause measured: 4/4 open once the scroll has settled, 1/4 when focused in the scroll's frame):
+    // the scroll event of bringing the label into view arrives a frame later and Radix closes a tooltip on scroll. So the
+    // label is put in view, the page's scroll position is read steady over two frames, then it is focused.
+    await source.scrollIntoViewIfNeeded();
+    await p.waitForFunction(() => new Promise((done) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => done(scrollY === y))); }), undefined, T);
     await source.focus();
+    ok("C1.3: the source label takes keyboard focus", await source.evaluate((el) => el === document.activeElement));
     await p.getByRole("tooltip").filter({ hasText: "Changes there are not copied" }).first().waitFor({ state: "attached", timeout: 20000 });
     ok("C1.3 (review m2): the source label opens its tooltip from the keyboard and names the employer case", true);
     await value.scrollIntoViewIfNeeded();

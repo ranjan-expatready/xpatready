@@ -73,3 +73,25 @@ Recorded: concept §5 (screen "Employer case" = team badge "Linked file"; audit 
 A visible headed browser (headless Playwright with screenshots), a real screen reader, a true browser zoom (I used a 512 px viewport for 1024 px at 200 %), the CI run of this commit, the "red on main" first run of the test, and D17/D20 (founder or an intended user).
 
 **Verdict: Block** for commit da3032f87. Fix: Major 1 (focus after Copy), Major 2 (race test on an all-Same case). List or fix the Minors in the PR.
+
+## Round 2 — diff only, `da3032f87..011bc9769` (P-293 (3))
+**Runs on 011bc9769** (same reviewer; my own copy `rv_c13` on :4433, blank database; US$0, no AI): `acceptance/C1.3.test.ts` **52/52**, exit 0 · `graph.mjs --check` G1 0, G2 0 · `tests/check_c13_employer_link_browser.cjs` **13/14, exit 1, twice in a row**: it stops at the new tooltip step (`:111-113`, "waiting for getByRole('tooltip')… 'Changes there are not copied'"), so its 13 later checks never run.
+
+**Round 1 Majors: both closed.** Major 1 (focus): after Copy, focus lands on the linked line (`document.activeElement` = `P` "Sample employer case: …"; my 1024 px keyboard walk). `returnFocus` falls back to it once the opener is gone (`employer.tsx:49`). Major 2 (lock proof): I removed `FOR UPDATE` again on a scratch server. The new all-Same race in the pack now fails, `[201,201,409,201]`: 1 FAIL.
+**Minors from round 1:**
+* m1 one date: closed (Toronto on both sides; header and refusal both say "4 Nov" at 04:2x UTC).
+* m2 source label: closed. A real button whose `aria-label` and Tip name the employer case.
+* m3 one message and Reload on any 409: closed. My two-tab walk shows the refusal once, with Reload; after Reload the drawer shows "already relies" with only Close.
+* m4 tests: (a), (b), (c) and (e) closed (Verified with `answered.channel = linked_file`; IMM 5710 written +3; 1024 px; the pack back in `acceptance/`); (d) left open in the PR, reasoned.
+* m6 duplication: left open in the PR, reasoned.
+* The breaker's m1/m5/m6/m7 fixes read correctly. `comparable()` trims text and ignores country case; a name in another case stays Different. Reach comes before parse, so a client gets 403 on a bad body. `seen` is capped at 50.
+
+**New Major R2-1 (Must): the browser check's tooltip step depends on the label already being on screen.** `source.focus()` (`check_c13_employer_link_browser.cjs:112`) hits a label below the fold. The browser scrolls it into view, and Radix closes a tooltip on scroll, so it never opens. My probe: focused off-screen, `data-state=closed` and 0 tooltips; the same button after `scrollIntoViewIfNeeded()`, `instant-open`.
+
+The builder's 27/27 depends on that timing; on my copy it failed 2 of 2. Nothing is wrong in the product. With `await source.scrollIntoViewIfNeeded()` before the focus, a patched copy of the check (scratchpad only) ran **27/27** on the same copy. Fix: add that line (the step already scrolls just after it).
+* Why it is Major: this is the commit's own browser check. It is red when someone other than the maker re-runs it (D16), and it would put a flaky suite on `main`.
+* Not a finding (P-26): the same close-on-scroll applies to every Radix Tip in the app when Tab lands off-screen. Keyboard and screen-reader users still get the words from the `aria-label`.
+
+**New Minor (Should):** `employer-link.ts:86` copies `refuseIfCaseRecorded`'s query to change its words (`submission-record.ts:32-35`). Better to give the shared helper the detail text as a parameter than to keep two copies of the rule.
+
+**Verdict: Block** for commit 011bc9769. One fix: Major R2-1, a single line in the browser check. Re-run it on a fresh copy. With that line I would approve; nothing else is open above Minor.
