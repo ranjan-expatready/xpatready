@@ -74,6 +74,8 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 
 * **Added after P-348 (P-349 to P-353):** row 12b is a real Adobe Validate, saved, after C4.11 (P-349). M3 runs by its shared cause in the cloud, 3-4 lanes, cloud qa for its gate A, M2 first on `demo.ts` and the Mac qa (P-351, replacing P-350's pause in part). New rows walk a person's journey by screens before the first Opus review; checked 10 Nov (P-352). Scale work: design now, build after M2, before M3 grows (P-353). Questions to the founder in AskUserQuestion, one at a time; every report carries the factory view; read the app view, not only PRs (founder, 5 Nov).
 
+* **Added 5 Nov, P-360, wins over the above until checked 09:30 IST on 6 Nov:** PRs naming only steps merge after CI and Approve, qa counts Works on `main`; M2 has a fixed exit list (QA-255, QA-262, QA-270, QA-271, row 12b), a new find joins only if it stops a person by screens on one of the six, other Majors go to the hardening pass and are named in every report; one builder and qa pair on the Visitor visa walk, a fresh qa gives the verdict.
+
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.
 
