@@ -14,6 +14,9 @@ on #1050 + #1062 alone too (not this PR's; told the tech lead on #1052).
    `studio/samples/section-names.json`, then delete it here.
 3. B78's two "29" counts → 59 (29 + 30), with the reason beside them: `tests/check_b78_section_names.ts`,
    `tests/check_qa144_vv_release.ts` (two places).
+3b. #1050's a90c36e78 makes `tests/check_c10_1_configured.ts` use Family sponsorship's spouse as its refused-draft
+   example ("slice 5 not built yet"): once Family sponsorship is released, move that example to a combination still
+   refused (Labour market impact assessment › High-wage position: no form, P-113) or read "any refused draft", and run it.
 4. Re-run fs/vv/sp/lmia/ee checks, C4.1 (six), C4.8 and C9.1 (checkpoint), `run-suites.sh --changed`, graph, count-any;
    Opus screen-reviewer on the diff; then ready + label `review: approved`. Delete this note in that commit.
 
