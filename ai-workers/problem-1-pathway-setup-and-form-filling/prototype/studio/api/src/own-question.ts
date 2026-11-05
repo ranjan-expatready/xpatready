@@ -142,7 +142,7 @@ export class OwnQuestions {
     // A form field nothing fills yet is about the person the form is for (each applicant's own copy).
     const group = unmapped ? "person" : (from[0] ?? cur!.canonicalFieldKey ?? "person").split(".")[0];
     const now = await this.db.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: cur!.canonicalFieldKey ?? "", status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, canonicalFieldKey: true, label: true, meaning: true } });
-    if (now && YES_NO.has(now.valueType) && !from.includes(now.canonicalFieldKey)) fail(`"${question}" is already asked as its own question ("${now.label?.trim() || now.meaning?.trim() || factName(now.canonicalFieldKey)}"). Undo it first to choose another.`, HttpStatus.CONFLICT);
+    if (!unmapped && now && YES_NO.has(now.valueType) && !from.includes(now.canonicalFieldKey)) fail(`"${question}" is already asked as its own question ("${now.label?.trim() || now.meaning?.trim() || factName(now.canonicalFieldKey)}"). Undo it first to choose another.`, HttpStatus.CONFLICT);
     const page = pageOf(b.dataPath);
     const source = `${ed.editionLabel}${page ? ` p. ${page}` : ""}: "${question}"${saved?.path ? ` (official-sources/ircc/${saved.path}${saved.downloaded_utc ? `, saved ${saved.downloaded_utc.slice(0, 10)}` : ""})` : ""}`;
     const res = await this.db.$transaction(async (tx) => {
@@ -183,9 +183,9 @@ export class OwnQuestions {
       // The form field keeps its "worked out" transformation: it now reads its own question, and the facts it names
       // stay the cross-check (QA-165). Its evidence is the printed question only (review m1: it is the box's label on the
       // list before the file); the full citation is the new field's source and the history line.
-      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason, ...(unmapped ? { outcome: now2.outcome, person: now2.person, transform: now2.transform } : {}) };
+      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason, ...(unmapped ? { outcome: now2.outcome, person: now2.person, transform: now2.transform, canonicalFieldKey: now2.canonicalFieldKey, asked: { key, transform: `yes_no_code:${codes!.yes}/${codes!.no}` } } : {}) };
       // B116: a form field nothing filled is now mapped to the question, written in the form's own Yes and No codes.
-      const mapping = unmapped ? { outcome: "mapped", person: "form_subject", transform: `yes_no_code:${codes!.yes}/${codes!.no}` } : {};
+      const mapping = unmapped ? { outcome: "mapped", person: "form_subject", transform: was.asked!.transform } : {};
       await reviseUnreleased(tx, fresh, { ...mapping, canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
       return { key, created, name, was };
     }, { timeout: 30_000, maxWait: 10_000 });
@@ -204,7 +204,9 @@ export class OwnQuestions {
     const b = p.data!;
     const ed = await this.edition(editionId);
     const ws = ed.workspaceId;
-    const question = printedQuestion(readingOf(ed.inventoryFile)?.get(b.dataPath));
+    const asked = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.dataPath } }), (m) => m.dataPath, "draft")[0];
+    // B116 (review m6): a form field asked with the form's words quoted reads as those words (its reading may print a neighbour's).
+    const question = asked?.origin === "HUMAN" && asked.outcome === "mapped" && !isWorkedOutYesNo(asked.transform) && asked.evidenceQuote ? asked.evidenceQuote : printedQuestion(readingOf(ed.inventoryFile)?.get(b.dataPath));
     const words = (cap: string | null | undefined) => wordsOfRow(cap, question);
     const { key, from, name, unmapped } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`own-question:${ed.id}:${b.dataPath}`}))`;
@@ -215,13 +217,14 @@ export class OwnQuestions {
       const key = cur!.canonicalFieldKey;
       const field = key ? await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, label: true, meaning: true } }) : null;
       // B116: a form field nothing filled before its ask goes back to the decision it had (no decision, or by hand).
-      const before = !facts.length && key && field && YES_NO.has(field.valueType) && cur!.outcome === "mapped" ? (await whatAskReplaced(tx, ws, ed.id, b.dataPath)) as (Awaited<ReturnType<typeof whatAskReplaced>> & { outcome?: string; person?: string | null; transform?: string | null }) | null : null;
-      if (before?.outcome === "unresolved" || before?.outcome === "by_hand") {
+      const before = !facts.length && key && field && YES_NO.has(field.valueType) && cur!.outcome === "mapped" ? (await whatAskReplaced(tx, ws, ed.id, b.dataPath)) as (Awaited<ReturnType<typeof whatAskReplaced>> & { outcome?: string; person?: string | null; transform?: string | null; canonicalFieldKey?: string | null; asked?: { key: string; transform: string } }) | null : null;
+      // Review M1: only while the form field still holds exactly what this ask wrote; a later change is never rolled back.
+      if ((before?.outcome === "unresolved" || before?.outcome === "by_hand") && before.asked?.key === key && before.asked?.transform === cur!.transform) {
         await lockItem(tx, ws, "field", [key!]);
         // A draft that only held this ask over a released row goes, so the release sees no change (as for a worked-out ask).
         const under = cur!.supersedesId ? rows.find((r) => r.id === cur!.supersedesId) : undefined;
-        if (cur!.status === "DRAFT" && under && under.outcome === before.outcome && !under.canonicalFieldKey) { if (!(await tx.formFieldMap.deleteMany({ where: { id: cur!.id, status: "DRAFT" } })).count) fail(`"${words(cur!.caption)}" was released just now: look at it again.`, HttpStatus.CONFLICT); }
-        else await reviseUnreleased(tx, rows, { outcome: before.outcome, canonicalFieldKey: null, person: before.person ?? null, transform: before.transform ?? null, origin: before.origin, confidence: before.confidence, evidenceQuote: before.evidenceQuote, reason: before.reason }, actor.id, `"${words(cur!.caption)}" was released just now: look at it again.`);
+        if (cur!.status === "DRAFT" && under && under.outcome === before.outcome && (under.canonicalFieldKey ?? null) === (before.canonicalFieldKey ?? null)) { if (!(await tx.formFieldMap.deleteMany({ where: { id: cur!.id, status: "DRAFT" } })).count) fail(`"${words(cur!.caption)}" was released just now: look at it again.`, HttpStatus.CONFLICT); }
+        else await reviseUnreleased(tx, rows, { outcome: before.outcome, canonicalFieldKey: before.canonicalFieldKey ?? null, person: before.person ?? null, transform: before.transform ?? null, origin: before.origin, confidence: before.confidence, evidenceQuote: before.evidenceQuote, reason: before.reason }, actor.id, `"${words(cur!.caption)}" was released just now: look at it again.`);
         return { key: key!, from: [] as string[], name: field!.label?.trim() || field!.meaning?.trim() || factName(key!), unmapped: true };
       }
       if (!key || !field || !YES_NO.has(field.valueType) || !facts.length || facts.includes(key)) fail(`"${words(cur!.caption)}" is not asked as its own question, so there is nothing to take back.`, HttpStatus.CONFLICT);

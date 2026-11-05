@@ -25,17 +25,21 @@ export function yesNoCodes(b: Box | undefined): { yes: string; no: string } | nu
   return opts.length === 2 && yes && no ? { yes: yes[1], no: no[1] } : null;
 }
 
-/** B116 (P-170, AGENTS rule 4): whether `words` are the form's own, found as they are in its saved text (the official
- *  file's XFA template, prototype/expected/source-text/<file>.xfa-template.txt). Spacing and the two apostrophes are read
- *  alike; nothing else is. False when the form's text is not saved: quoted words are then never taken. */
+/** B116 (P-170, AGENTS rule 4; review M2): whether `words` are a question the form prints, found as they are in its saved
+ *  text (the official file's XFA template, prototype/expected/source-text/<file>.xfa-template.txt, its header line left
+ *  out). Only a question is taken: 20 characters or more, ending in "?", starting with a capital, and with none of a
+ *  script's marks (; = { } ( ) or a dotted name), so a piece of the form's code or two captions run together never passes.
+ *  Spacing and the two apostrophes are read alike; nothing else is. False when the form's text is not saved. */
 export function inFormText(officialFile: string | null | undefined, words: string): boolean {
   const stem = /([^/]+)\.pdf$/i.exec(officialFile ?? "")?.[1];
   if (!stem || !/^[\w-]+$/.test(stem)) return false;
   let text: string;
   try { text = readFileSync(join(import.meta.dirname, "..", "..", "..", "expected", "source-text", `${stem}.xfa-template.txt`), "utf8"); } catch { return false; }
-  const norm = (t: string) => t.replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim();
+  const norm = (t: string) => t.replace(/[\u2018\u2019]/g, "'").replace(/\s+/g, " ").trim();
   const w = norm(words);
-  return w.length >= 10 && norm(text).includes(w);
+  if (w.length < 20 || !/^[A-Z][^?]*\?$/.test(w) || /[;={}()]|\b\w+\.\w+\b/.test(w)) return false;
+  const body = norm(text.split("\n").slice(1).join(" ")); // the first line is the file's own header, not the form's words
+  return body.includes(w);
 }
 
 /** B52 (P-334 (5)): an application form's Yes/No form fields worked out from other answers, each asked as its own question
