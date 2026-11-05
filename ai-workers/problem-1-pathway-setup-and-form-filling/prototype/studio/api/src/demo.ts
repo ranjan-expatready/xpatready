@@ -840,7 +840,7 @@ export class Demo {
     const wouldRefuse = !visitor ? null : await (async () => {
       const editions = await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: onlineFamily }, channel: "PDF" }, select: { id: true } });
       return editions.length ? (await Promise.all(editions.map((ed) => this.forms.optionMapProblemsIfFiled(ed.id)))).flat() : null;
-    })().catch(() => null);
+    })().catch((e) => { console.error(`[demo] row 9 could not read ${onlineFamily}:`, e); return null; });
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
       why: visitor ? releaseTwoWords({ application: FORM_SETUP["vv.single"].application, form: onlineFamily }, wouldRefuse) : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     const rowEleven = !!fam?.caseId && fam.people === 4 && fam.births === 4 && fam.fromRecord > 0;

@@ -249,7 +249,7 @@ export class Forms {
   async optionMapProblemsIfFiled(editionId: string) {
     const ed = await this.pdfEdition(editionId);
     const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const lists = new Map((await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "asc" } })).map((l) => [l.answerListKey, l])); // the newest of each list
+    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
     const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
     const optionsOf = this.formOptions(ed, maps);
     return maps.flatMap((m) => {
