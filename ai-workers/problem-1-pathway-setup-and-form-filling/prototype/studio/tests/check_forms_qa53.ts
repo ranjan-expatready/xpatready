@@ -36,7 +36,7 @@ function routes() {
   return out;
 }
 const REVIEWED: Record<string, "case" | "open"> = {
-  "/api/session": "open", "/api/attachments/:id/file": "open", "/api/artifacts/:id/file": "open", "/api/intake/held/:id/file": "open",
+  "/api/session": "open", "/api/attachments/:id/file": "open", "/api/intake/held/:id/file": "open", // QA-270: /api/artifacts/:id/file is a configuration read now
   "/api/releases": "case", "/api/activity": "case",
 };
 

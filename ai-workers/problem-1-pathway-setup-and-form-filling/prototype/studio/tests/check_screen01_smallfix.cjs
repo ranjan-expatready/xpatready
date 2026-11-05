@@ -17,6 +17,8 @@ const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4445), DB = process.argv[3] ?? "xr_studio_screens_sf";
 const BASE = `http://localhost:${PORT}`;
+// QA-270: a filled PDF is a configuration read (the author's header); a stored source file stays an open link.
+const AUTHOR_READ = { headers: { "x-actor": "user-A" } };
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0;
@@ -75,19 +77,19 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     const art = sql(`insert into generated_artifact (id, workspace_id, kind, path, sha256, created_by) values (gen_random_uuid(), '${ws}', 'TEST', '${path.join(rel, "qa4.pdf")}', 'x', 'test') returning id`).split("\n")[0];
     try {
       for (const [what, url] of [["a stored source file", `/api/attachments/${att}/file`], ["a filled PDF", `/api/artifacts/${art}/file`]]) {
-        const r = await fetch(`${BASE}${url}`); const t = await r.text();
+        const r = await fetch(`${BASE}${url}`, AUTHOR_READ); const t = await r.text();
         step(`C3.1 QA-4: ${what} under a dot-folder downloads`, r.status === 200 && t === body && /attachment/.test(r.headers.get("content-disposition") ?? ""), `${r.status} ${r.headers.get("content-disposition")}`);
       }
-      let r = await fetch(`${BASE}/api/artifacts/00000000-0000-0000-0000-000000000000/file`);
+      let r = await fetch(`${BASE}/api/artifacts/00000000-0000-0000-0000-000000000000/file`, AUTHOR_READ);
       step("control: an unknown filled PDF still answers 404", r.status === 404, r.status);
       fs.rmSync(path.join(ROOT, rel, "qa4.pdf"));
-      r = await fetch(`${BASE}/api/artifacts/${art}/file`); const j = await r.json().catch(() => ({}));
+      r = await fetch(`${BASE}/api/artifacts/${art}/file`, AUTHOR_READ); const j = await r.json().catch(() => ({}));
       step("C3.1 QA-4: a filled PDF whose file is gone answers 404 with the plain reason, not a server error", r.status === 404 && /removed by a reset/.test(j.detail ?? ""), `${r.status} ${j.detail}`);
       fs.writeFileSync(path.join(ROOT, rel, "qa4.pdf"), body);
       sql(`update generated_artifact set path='${path.join(rel, "qa4.pdf", "inside.pdf")}' where id='${art}'`);
-      r = await fetch(`${BASE}/api/artifacts/${art}/file`); const k = await r.json().catch(() => ({}));
+      r = await fetch(`${BASE}/api/artifacts/${art}/file`, AUTHOR_READ); const k = await r.json().catch(() => ({}));
       step("C3.1 break m5: a stored path through a file (ENOTDIR) answers the plain 404, not a server error", r.status === 404 && /removed by a reset/.test(k.detail ?? ""), `${r.status} ${k.detail}`);
-      r = await fetch(`${BASE}/api/artifacts/abc%00def/file`);
+      r = await fetch(`${BASE}/api/artifacts/abc%00def/file`, AUTHOR_READ);
       step("C3.1 break m5: an id with a NUL byte answers 404, not a server error", r.status === 404, r.status);
     } finally {
       sql(`update source_attachment set stored_path='${was}' where id='${att}'`); sql(`delete from generated_artifact where id='${art}'`);

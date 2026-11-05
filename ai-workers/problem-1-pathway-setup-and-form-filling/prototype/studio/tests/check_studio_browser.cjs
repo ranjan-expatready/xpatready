@@ -112,15 +112,17 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A4: IMM 1295 filled from confirmed sample facts: every written value reads back and the file is intact", /The file is intact and every written value reads back/.test(dlg), dlg.split("\n").slice(2, 3).join(" ").slice(0, 300));
   await shot("A4-pdf-fill.png");
   // A failed download is a failed step, not the end of the run (a lane copy under a dot-folder answers 404 here, QA-4).
-  const dlLink = p.getByRole("link", { name: "Download the checked PDF" }); const href = await dlLink.getAttribute("href");
-  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 30000 }).catch(() => null), dlLink.click()]);
+  // QA-270 (file half): the download is a button that fetches the file with the person header (a plain link carries none
+  // and is refused); the file request's own answer is the evidence when no download arrives.
+  const dlBtn = p.getByRole("dialog").getByRole("button", { name: "Download the checked PDF" });
+  const fileAnswer = p.waitForResponse((r) => /\/api\/artifacts\/[^/]+\/file$/.test(r.url()), { timeout: 30000 }).catch(() => null);
+  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 30000 }).catch(() => null), dlBtn.click()]);
   if (dl) {
     const pdfPath = path.join(OUT, `downloaded-${dl.suggestedFilename()}`); await dl.saveAs(pdfPath);
     step("A4: the checked PDF downloads", fs.statSync(pdfPath).size > 800000 && fs.readFileSync(pdfPath).subarray(0, 5).toString() === "%PDF-", `${dl.suggestedFilename()} ${fs.statSync(pdfPath).size} bytes`);
   } else {
-    const r = await p.request.fetch(`${URL}${href}`);
-    step("A4: the checked PDF downloads", false, `no download; ${href} answered ${r.status()} ${(await r.text()).slice(0, 120)}${/\/\.[^/]+\//.test(__dirname) ? " (this copy lives under a dot-folder: QA-4 also affects file downloads)" : ""}`);
-    if (p.url().includes("/api/")) { await p.goBack(); await idle(); }
+    const r = await fileAnswer;
+    step("A4: the checked PDF downloads", false, `no download; ${r ? `${r.url().replace(URL, "")} answered ${r.status()} ${(await r.text().catch(() => "")).slice(0, 120)}` : "no request for the file was made"}${/\/\.[^/]+\//.test(__dirname) ? " (this copy lives under a dot-folder: QA-4 also affects file downloads)" : ""}`);
   }
   if (await p.getByRole("dialog").count()) await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
 
