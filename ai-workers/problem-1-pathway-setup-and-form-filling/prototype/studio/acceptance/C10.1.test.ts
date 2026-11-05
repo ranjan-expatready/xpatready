@@ -64,7 +64,8 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   const ee = sql(`select id from combination where combination_key = 'pnp.express_entry' and retired_at is null limit 1`);
   const eeWhy = (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Provincial nominees › Express Entry stream: ")).join(" · ");
   // Review m1 and r2-m2 (#1050): the whole list of the draft's blocking problems, not row 10's first three, read from the
-  // combination's own read (GET, writes nothing; Submit refuses on exactly these). A released combination is not read.
+  // combination's own read (GET, writes nothing; Submit refuses on these, after first running the draft's answer keys,
+  // which can only add refusals). A released combination is not read.
   const eeErrors = ee && !releasesOf(ee).length ? ((((await call("GET", `/combinations/${ee}`)).body?.draft?.problems ?? []) as { level: string; message: string }[]).filter((p) => p.level === "error")) : [];
   const undecided = eeErrors.filter((e) => /form fields? ha(s|ve) no decision|nobody is asked for it/.test(e.message));
   ok("C10.1 E10 row 7 and 10: Express Entry is set up from its forms, and Submit refuses it for no form field without a decision and no fact nobody is asked", !!ee && /Provincial nominees › Express Entry stream/.test(r("7")?.shows ?? "")

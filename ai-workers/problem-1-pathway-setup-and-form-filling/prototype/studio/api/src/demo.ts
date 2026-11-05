@@ -798,8 +798,10 @@ export class Demo {
           // From the form setup's data (samples/form-setup.json), cited; Sample, Unconfirmed: expert.
           for (const mark of (setup?.notOnForm ?? []).filter((x) => x.form === ed.form.formKey)) {
             const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, canonicalFieldKey: mark.fact, outcome: "mapped", status: { not: "RETIRED" } }, orderBy: { version: "desc" }, select: { dataPath: true, optionMap: true } });
+            // Review r3-m1: found once it finds its form fields, so a refused save is said once, in its own words.
+            if (rows.length) marked.add(`${mark.form}|${mark.fact}`);
             for (const [dataPath, om] of new Map(rows.reverse().map((r) => [r.dataPath, r.optionMap as { map?: Record<string, string>; unused?: string[] } | null]))) {
-              try { await this.forms.setOptionMap(author, ed.id, { dataPath, map: om?.map ?? {}, unused: om?.unused ?? [], notOnForm: mark.values }); marked.add(`${mark.form}|${mark.fact}`); } catch (e) { setUpRefused.push(`${mark.form} not on this form: ${said(e)}`); }
+              try { await this.forms.setOptionMap(author, ed.id, { dataPath, map: om?.map ?? {}, unused: om?.unused ?? [], notOnForm: mark.values }); } catch (e) { setUpRefused.push(`${mark.form} not on this form: ${said(e)}`); }
             }
           }
         }
