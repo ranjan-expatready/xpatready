@@ -23,7 +23,7 @@ import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Cha
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
-import { formValues, type Inventory } from "../../engine/form-values.ts";
+import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
 import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
@@ -191,12 +191,14 @@ export class CaseForms implements OnModuleInit {
     const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && formPassed(v) && v.factsHash === inputHash(today);
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
-    const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; result: string; why: string | null }[] } | null;
+    const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
     const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: plainWhy(b.why) }));
+    // B81 (challenge M1): apart from "by hand": the form has no such choice to write by hand; it names whose answer it is.
+    const notOnForm = notOnFormLines(result?.boxes ?? [], (f) => labels.get(f));
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: (x.resultJson as { not_for_filing?: boolean } | null)?.not_for_filing ?? notForFiling, source: "ircc_pdf",
-      by_hand: byHand, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
+      by_hand: byHand, not_on_form: notOnForm, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
       validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !formPassed(v) ? NOT_FORM_CHECKED : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
   }
 
@@ -272,10 +274,10 @@ export class CaseForms implements OnModuleInit {
       const r = await writeForm(snapshot, { boxes: stored.boxes }, x.formNumber, dir, base, { notForFiling, channel });
       if (!r.report.intact) throw new Error("the filled file did not pass its checks (read back, signatures, unchanged parts); it is not handed over");
       const by = (k: string) => r.boxes.filter((b: { result: string }) => b.result === k).length;
-      const counts = { written: by("written"), by_hand: by("by hand"), blank: by("blank"), not_written: by("not written"), by_a_person: by("by a person") };
+      const counts = { written: by("written"), by_hand: by("by hand"), not_on_form: by("not on this form"), blank: by("blank"), not_written: by("not written"), by_a_person: by("by a person") };
       await this.db.formInstance.update({ where: { id }, data: { status: "GENERATED", path: r.out.replace(`${ROOT}/`, ""), sha256: createHash("sha256").update(readFileSync(r.out)).digest("hex"), finishedAt: new Date(),
         resultJson: { not_for_filing: notForFiling, counts, intact: r.report.intact, read_back_equal: r.report.read_back_equal, written: r.report.written, signatures: r.report.signatures, person_steps: r.steps.map((p) => p.say), report_file: r.reportFile,
-          boxes: r.boxes.map((b: { box: string; fact: string | null; result: string; why?: string; nothing_recorded?: true }) => ({ box: b.box, fact: b.fact, result: b.result, why: b.why ?? null, ...(b.nothing_recorded ? { nothing_recorded: true } : {}) })) } } });
+          boxes: r.boxes.map((b: { box: string; fact: string | null; about_label?: string; result: string; why?: string; nothing_recorded?: true }) => ({ box: b.box, fact: b.fact, result: b.result, why: b.why ?? null, ...(b.result === "not on this form" ? { about_label: b.about_label } : {}), ...(b.nothing_recorded ? { nothing_recorded: true } : {}) })) } } });
       await this.audit.log(x.workspaceId, x.createdBy, "generated", "form copy", x.formNumber, `Copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)} generated: ${counts.written} form fields written, read back ${r.report.read_back_equal}/${r.report.written}, intact`);
     } catch (e) {
       const why = e instanceof HttpException ? String((e.getResponse() as { detail?: string; message?: string }).detail ?? e.message) : (e as Error).message;

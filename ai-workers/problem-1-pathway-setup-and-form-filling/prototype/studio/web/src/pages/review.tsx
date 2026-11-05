@@ -21,6 +21,9 @@ const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated an
 const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? roleKeysInWords(p.label) : "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
 
+/** B81 (challenge M3): a problem on a form's option map says where it is fixed: the form's panel on the Forms tab. */
+const choicesAt = (p: { where?: unknown; message?: unknown }): string | null => { const m = /^Field map ((.+) \([^)]*\))$/.exec(String(p.where ?? "")); return m && /no code for|no option map yet|neither mapped|not on this form|the answer list does not have|has a code, but the form prints/.test(String(p.message ?? "")) ? `choices=${encodeURIComponent(m[2])}&edition=${encodeURIComponent(m[1])}` : null; };
+
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
 export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
@@ -84,7 +87,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
           <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced || lineBox ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
-          <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
+          <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}{can("author") && choicesAt(p) ? <> <Link data-choices-link className="text-text-link underline" to={`/c/${id}/forms?${choicesAt(p)}`}>Set this form's choices</Link></> : null}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>
       ) : unsourced || lineBox ? null : <Notice tone="ok" title="The draft passes validation" />}

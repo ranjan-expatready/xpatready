@@ -1,0 +1,118 @@
+// B81 (C10.1 row 9, C3.8; concept screens/b81-not-on-form/concept.md): on a form's panel, how each answer on a shared list
+// becomes the choice this form prints. An answer the form prints nothing for is marked "Not on this form", so a case with
+// it is refused at filling in words, never given the nearest choice. Every choice comes from the form (STANDARDS §3.2
+// pick, don't type); the server decides what may be saved and says why. Saved on the edition. US$0, no AI.
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as React from "react";
+import type { OptionMapGroup, OptionMapsView } from "../../../contracts/forms";
+import { api, ApiError, useToast } from "@/lib/api";
+import { Gated, useDuties } from "@/components/answer-key-editors";
+import { Button, Dialog, Notice, Pill, Select, Table } from "@/components/ui/controls";
+import { PERSON } from "@/pages/job";
+
+const NOT_ON_FORM = "__not_on_form";
+const WHY_AUTHOR = "Only the configuration author sets a form's choices.";
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const whoOf = (person: string | null) => (person ? PERSON[person] ?? person.replace(/_/g, " ") : "this form");
+const whom = (g: OptionMapGroup) => [...new Set(g.form_fields.map((f) => f.part ?? whoOf(f.person)))].join(", ");
+/** Identical captions told apart: the part the form prints, whose answer it reads and, in a list, which row. */
+const fieldWords = (f: OptionMapGroup["form_fields"][number]) => [f.part, (f.caption ?? "").replace(/:\s*$/, ""), whoOf(f.person), f.row != null ? `row ${f.row + 1}` : null].filter(Boolean).join(" · ");
+const stillOpen = (g: OptionMapGroup) => g.values.filter((v) => !v.code && !v.not_on_form);
+
+/** The section on the form's panel: what is on the form, what is open, and the way in. Nothing shows for a form with no
+ *  form field on an answer list. `start`: arrived from a release problem, so the dialog opens at once. */
+export function FormChoices({ combinationId, editionId, edition = null, start = false }: { combinationId: string; editionId: string; edition?: string | null; start?: boolean }) {
+  const key = ["option-maps", editionId];
+  const q = useQuery<OptionMapsView>({ queryKey: key, queryFn: () => api(`/editions/${editionId}/option-maps`) });
+  const [open, setOpen] = React.useState(start);
+  // Break m9: focus goes back to the button that opens the dialog, however it was closed.
+  const button = React.useRef<HTMLButtonElement>(null), wasOpen = React.useRef(open), hId = React.useId();
+  React.useEffect(() => { if (wasOpen.current && !open) button.current?.focus(); wasOpen.current = open; }, [open]);
+  if (q.isLoading) return start ? <p role="status" className="border-t border-border pt-4 text-sm text-text-muted">Reading this form's choices…</p> : null;
+  if (q.isError) return <section aria-labelledby={hId} className="space-y-1 border-t border-border pt-4" data-form-choices="error"><h3 id={hId} className="text-xs font-medium">Choices this form prints</h3><p role="alert" className="text-sm text-text-danger">Its choices could not be read: {(q.error as Error).message} <Button size="sm" variant="ghost" onClick={() => void q.refetch()}>Try again</Button></p></section>;
+  const v = q.data!;
+  if (!v.groups.length) return null;
+  const fields = v.groups.reduce((t, g) => t + g.form_fields.length, 0), blocks = v.groups.filter((g) => g.problems.length).length;
+  const marks = new Set(v.groups.flatMap((g) => g.values.filter((x) => x.not_on_form).map((x) => x.key))).size, gaps = new Set(v.groups.flatMap((g) => stillOpen(g).map((x) => x.key))).size;
+  return (
+    <section aria-labelledby={hId} className="space-y-2 border-t border-border pt-4" data-form-choices>
+      <h3 id={hId} className="text-xs font-medium">Choices this form prints{edition ? `: ${edition}` : ""} {blocks ? <Pill tone="danger">Blocks release</Pill> : null}</h3>
+      <p className="text-sm">{plural(fields, "form field")} read an answer list. {gaps ? `${plural(gaps, "answer has", "answers have")} no choice set. ` : ""}{marks ? `${plural(marks, "answer is", "answers are")} marked not on this form.` : ""}</p>
+      <Button ref={button} size="sm" variant="secondary" onClick={() => setOpen(true)} data-set-choices>Set choices</Button>
+      {open ? <ChoicesDialog view={v} combinationId={combinationId} onClose={() => setOpen(false)} /> : null}
+    </section>
+  );
+}
+
+function ChoicesDialog({ view, combinationId, onClose }: { view: OptionMapsView; combinationId: string; onClose: () => void }) {
+  const n = view.combinations.length;
+  // Review M4: asked only while something is really unsaved, however the dialog is closed (each group says when it is).
+  const changed = React.useRef(new Set<string>());
+  const close = () => { if (changed.current.size && !window.confirm("Discard your unsaved changes?")) return; onClose(); };
+  return (
+    <Dialog open wide onOpenChange={(o) => { if (!o) close(); }} title={`Choices: ${view.edition}`}
+      description={`How each answer becomes the choice this form prints. Saved on ${view.edition}: ${n ? `${plural(n, "combination files", "combinations file")} it (${view.combinations.join(", ")})` : "no combination files it yet"}; a case gets it only through a release.`}
+      footer={<Button variant="ghost" onClick={close}>Close</Button>}>
+      <div className="space-y-5" data-choices-dialog>
+        <p className="text-xs text-text-muted">Not on this form: the form prints no such choice, so a case with this answer is refused at filling, in words, and never given the nearest choice. <Pill tone="warn" title="Sample until the immigration expert confirms.">Sample</Pill> Whether IRCC accepts the form field left blank: Unconfirmed: expert.</p>
+        {view.groups.map((g) => <ChoiceGroup key={`${g.list}|${g.form_fields[0].data_path}`} group={g} editionId={view.edition_id} combinationId={combinationId} onChanged={(on) => { const k = `${g.list}|${g.form_fields[0].data_path}`; if (on) changed.current.add(k); else changed.current.delete(k); }} />)}
+      </div>
+    </Dialog>
+  );
+}
+
+function ChoiceGroup({ group: g, editionId, combinationId, onChanged }: { group: OptionMapGroup; editionId: string; combinationId: string; onChanged: (on: boolean) => void }) {
+  const qc = useQueryClient(); const toast = useToast(); const can = useDuties().family;
+  const initial = React.useCallback(() => Object.fromEntries(g.values.map((v) => [v.key, v.not_on_form ? NOT_ON_FORM : v.code ?? ""])), [g.revision]); // eslint-disable-line react-hooks/exhaustive-deps -- a save or someone else's change starts it again
+  const [picked, setPicked] = React.useState<Record<string, string>>(initial);
+  // Break m1: someone else's save never takes away what this person has picked: the save then says it is stale.
+  // Review R3-M1: and a save is against what these picks were based on, so that person is told, never overwritten.
+  const touched = React.useRef(false), basedOn = React.useRef(g.revision);
+  React.useEffect(() => { if (!touched.current) { setPicked(initial()); basedOn.current = g.revision; } }, [initial]); // eslint-disable-line react-hooks/exhaustive-deps -- initial follows g.revision
+  const [busy, setBusy] = React.useState(false), [refused, setRefused] = React.useState<string | null>(null), [stale, setStale] = React.useState(false);
+  const lookAgain = () => { touched.current = false; basedOn.current = g.revision; setRefused(null); setStale(false); setPicked(initial()); refresh(); };
+  const refresh = () => { for (const k of [["option-maps", editionId], ["combination", combinationId], ["combination-summary", combinationId], ["config", combinationId]]) void qc.invalidateQueries({ queryKey: k }); };
+  // Break M3: a problem Submit lists can always be saved away, even with every row looking right.
+  const edited = g.values.some((v) => picked[v.key] !== (v.not_on_form ? NOT_ON_FORM : v.code ?? "")), dirty = !g.saved || edited || g.problems.length > 0;
+  React.useEffect(() => { onChanged(edited); return () => onChanged(false); }, [edited]); // eslint-disable-line react-hooks/exhaustive-deps -- the parent's callback is new each draw
+  const takenBy = (code: string, key: string) => g.values.find((v) => v.key !== key && picked[v.key] === code);
+  const usedCodes = new Set(Object.values(picked));
+  const save = async () => {
+    setBusy(true); setRefused(null); setStale(false);
+    const map = Object.fromEntries(Object.entries(picked).filter(([, c]) => c && c !== NOT_ON_FORM));
+    const notOnForm = Object.entries(picked).filter(([, c]) => c === NOT_ON_FORM).map(([k]) => k);
+    try {
+      await api(`/editions/${editionId}/option-maps/group`, { method: "PATCH", json: { dataPaths: g.form_fields.map((f) => f.data_path), map, notOnForm, baseRevision: basedOn.current } });
+      touched.current = false; toast.push({ tone: "ok", text: `Choices saved on ${plural(g.form_fields.length, "form field")}` }); refresh();
+    } catch (e) { const err = e as ApiError; setRefused(err.message); if (err.status === 409) setStale(true); } finally { setBusy(false); }
+  };
+  return (
+    <section className="space-y-2 rounded-lg border border-border p-3" data-choice-group={g.list} aria-label={`${g.list_label ?? g.list}, ${whom(g)}`}>
+      <div>
+        <p className="text-sm font-medium [overflow-wrap:anywhere]">{g.list_label ?? g.list} <span className="font-normal text-text-muted">· {plural(g.form_fields.length, "form field")}: {whom(g)}</span> {g.problems.length ? <Pill tone="danger">Blocks release</Pill> : null}</p>
+        <details className="text-xs text-text-muted" data-choice-fields><summary className="cursor-pointer">Show the {plural(g.form_fields.length, "form field")}</summary><ul className="mt-1 list-disc space-y-0.5 pl-5">{g.form_fields.map((f) => <li key={f.data_path}>{fieldWords(f)}</li>)}</ul></details>
+        {g.saved ? null : <p className="text-xs text-text-muted" data-not-saved>Nothing saved yet: the choices shown are suggested from the form's own words. Check them and save.</p>}
+      </div>
+      {refused ? <Notice tone="danger" title="Not saved" action={stale ? <Button size="sm" variant="secondary" onClick={lookAgain}>Look again</Button> : undefined}>{refused}</Notice> : null}
+      {g.saved && g.problems.length ? <ul className="space-y-0.5 text-sm text-text-danger [overflow-wrap:anywhere]" data-choice-problems>{g.problems.map((p) => <li key={p}>{p}.</li>)}</ul> : null}
+      <Table dense head={["Answer on the list", "This form prints"]}>
+        {g.values.map((v) => (
+          <tr key={v.key} data-choice-value={v.key}>
+            <td className="text-sm [overflow-wrap:anywhere]">{v.label}</td>
+            <td className="text-sm">
+              {v.asks_more ? <p data-asks-more>This form prints {v.printed.map((p) => `"${p}"`).join(" and ")}: the immigration expert decides. Until then, decide these form fields "filled by hand" on To review: this answer keeps blocking release here.</p>
+                : <Select aria-label={`${v.label}: what this form prints`} value={picked[v.key] ?? ""} disabled={!can} title={can ? undefined : WHY_AUTHOR} onChange={(e) => { touched.current = true; setPicked((p) => ({ ...p, [v.key]: e.target.value })); }}>
+                  <option value="">Not set</option>
+                  {g.choices.map((c) => { const other = takenBy(c.code, v.key); return <option key={c.code} value={c.code} disabled={!!other}>{c.label}{other ? ` (used by ${other.label})` : ""}</option>; })}
+                  <option value={NOT_ON_FORM} disabled={v.printed.length > 0}>{v.printed.length ? `Not on this form (it prints ${v.printed.join(", ")})` : "Not on this form"}</option>
+                </Select>}
+              {!g.saved && v.code && picked[v.key] === v.code ? <span className="mt-0.5 block text-xs text-text-muted">Suggested from the form's words</span> : null}
+            </td>
+          </tr>
+        ))}
+      </Table>
+      {g.choices.some((c) => !usedCodes.has(c.code)) ? <p className="text-xs text-text-muted" data-printed-unused>Printed, no answer uses it: {g.choices.filter((c) => !usedCodes.has(c.code)).map((c) => c.label).join(", ")}.</p> : null}
+      <Gated size="sm" allowed={can} why={WHY_AUTHOR} busy={busy} disabled={can && !dirty} onClick={() => void save()} data-save-choices>Save {plural(g.form_fields.length, "form field")}</Gated>
+    </section>
+  );
+}
