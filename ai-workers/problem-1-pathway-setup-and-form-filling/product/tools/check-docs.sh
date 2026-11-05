@@ -11,6 +11,14 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
 {
   check 100 10 "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md
   check 60 0 "$ROOT/CLAUDE.md" "$ROOT/AGENTS.md"
+  # STATE.md names the current Lead on exactly one line, so every lane can find whom to report to (founder, 6 Nov
+  # ~03:00 IST: "a hard rule and it never messes up"; tools/current-lead.sh reads it; test: check-current-lead.sh).
+  S="$PH/STATE.md"
+  if [ -f "$S" ]; then
+    n=$(grep -c '^current_lead: ' "$S")
+    [ "$n" -eq 1 ] || echo "CURRENT LEAD: STATE.md has $n current_lead lines, needs exactly one (current_lead: <session id> <title>)"
+    [ "$n" -eq 1 ] && ! grep -qE '^current_lead: [^ ]+ .*Lead [0-9]+' "$S" && echo "CURRENT LEAD: STATE.md's current_lead line needs a session id, then a title naming \"Lead N\""
+  fi
   for f in "$PH"/*.md "$PH"/domain/*.md "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md; do
     grep -o '`[A-Za-z0-9_./-]*\.md`' "$f" | tr -d '`' | sort -u | while read -r ref; do
       # Retired files (P-188, P-189) live in git history; old decision rows and records may still name them.

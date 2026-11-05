@@ -1,6 +1,7 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
 updated: 2026-11-05 19:30 IST by **Lead 14 · 5 Nov 19:14 IST**, after the account switch · milestone: **M2; M3 holds until M2 lands (P-356)** · rules: **`RULES.md`** + DECISIONS P-354, P-355, P-356 · hand-over note: `history/lead12-handover-2026-11-05.md` · earlier STATE: git history
+current_lead: local_fd377295-8ebb-4918-ab1a-180389866716 Lead 20 · 6 Nov ~03:15 IST
 
 ## Where we are
 * **M2: 57/60 (qa, #1105).** Left: C4.5 (QA-255, at the C4.11 stack's gate A), C4.11 (B83, B86, B88), C10.1 (B78, B79a, B79b, B97, row 12b = B99). Of the 57, qa has shown none to reach a dead end now that C2.6 is out; that is a floor. Walk list: QA-233, QA-234, QA-237, QA-239.
