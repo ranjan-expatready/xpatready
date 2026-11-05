@@ -257,8 +257,8 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const bump = (k: string, f: "added" | "changed" | "removed", ai: boolean) => { const form = k.split("|")[0]; const x = byForm.get(form) ?? { added: 0, changed: 0, removed: 0, ai: 0 }; x[f]++; if (ai) x.ai++; byForm.set(form, x); };
   // B86 BR-8: a form field's condition rule is named once, in words, for the immigration expert (what a case fills changes
   // with it); a box whose only change is that rule is not counted again in its form's "Field map" line.
-  const noRule = (e: any) => { const { condition_rule: _r, ...rest } = e; return rest; };
-  const ruleWords = (k: string, e: any, had: boolean) => `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
+  const noRule = (e: Record<string, unknown>) => { const { condition_rule: _r, ...rest } = e; return rest; };
+  const ruleWords = (k: string, e: { caption?: string | null; fact: string }, had: boolean) => `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
   for (const [k, e] of b) {
     const was = a.get(k), rule = e.condition_rule ?? null, wasRule = was?.condition_rule ?? null;
     if (canonical(rule) !== canonical(wasRule)) out.push({ kind: "Form field condition", key: k, change: !wasRule ? "added" : !rule ? "removed" : "changed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, !rule) });
