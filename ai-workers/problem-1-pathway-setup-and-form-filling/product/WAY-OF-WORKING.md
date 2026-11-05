@@ -13,7 +13,7 @@ The one page a builder reads; it replaces the swarm (P-220), the team board and 
 | **Evidence** | Mac session, when needed | official forms, Adobe checks, `sources/`, `code/` |
 | **Outside check** | Devin, weekly | report-only findings into `inbox/` |
 
-The Mac runs only the tech lead and the :4400 demo (plus evidence work on request). No fixed builder count: the tech lead adds builders while batch failures stay under 10% and approved-to-merged under 1 hour, and removes them when either breaks. Areas (screens · forms and AI · runtime · evidence) are file ownership; row owners are at the top of `BACKLOG.md`. Ports: tech lead 4420–4429 · runtime 4430–4439 · screens 4440–4449 · forms 4450–4459 · qa 4470–4479. The demo is :4400 and is never used for tests.
+The Mac runs the tech lead, the :4400 demo, qa and at most two builders with test copies (standbys the tech lead names, P-344 (3), P-347), plus evidence work on request. No fixed builder count: the tech lead adds builders while batch failures stay under 10% and approved-to-merged under 1 hour, and removes them when either breaks. Areas (screens · forms and AI · runtime · evidence) are file ownership; row owners are at the top of `BACKLOG.md`. Ports: tech lead 4420–4429 · runtime 4430–4439 · screens 4440–4449 · forms 4450–4459 · qa 4470–4479. The demo is :4400 and is never used for tests.
 
 ## The loop, one row at a time
 1. **Ready.** The row has its acceptance test, its text ("Done when") and every founder decision it needs answered; no build on an open question. A new screen part needs a board and the founder's early look, or the tech lead's approval after an independent challenger when there is no board (P-223 (4); skill **screen-concept**).
