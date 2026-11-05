@@ -154,6 +154,8 @@ export type WorkspaceFormLine = {
   /** QA-103: the form's current edition in the Form library (PDF), whatever the line's field map says; null when the
    *  library holds no file for it. */
   libraryEdition?: string | null;
+  /** B81: the PDF editions whose field maps the release check reads for this form (the one in use first), for its choices step. */
+  choiceEditions?: { id: string; label: string }[];
   who: string; minAge: number | null; copies: number; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
   /** P-143 (W1-10 slice 1): the line's signature value, the signatures that fit its channel (C-2), and every channel
@@ -195,7 +197,9 @@ export function stillAskedWords(x: { forms: string[] }): string {
 export type QuestionnaireRole = { role: string; label: string; questions: number; gaps: number };
 export type QuestionnairesView = {
   roles: QuestionnaireRole[]; role: string;
-  coverage: { needed: number; client: number; officer: number; gaps: { fact: string; meaning: string; forms: string[]; boxes: number }[] };
+  coverage: { needed: number; client: number; officer: number; gaps: { fact: string; meaning: string; forms: string[]; boxes: number }[];
+    /** B82: facts a document line's condition reads that nobody is asked (engine/coverage.ts). */
+    conditionFacts: number };
   sections: QuestionnaireSection[]; notAsked: number;
 };
 
