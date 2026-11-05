@@ -220,7 +220,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   // The six holds no document type yet: one for this step alone, removed after it (the question list never sees it).
   const backDoc = "b83_walk_document";
   sql(`insert into document_type (id, workspace_id, document_type_key, name, category, version, status, origin, updated_by) values (gen_random_uuid(), (select workspace_id from combination where id = '${vv}'), '${backDoc}', 'B83 walk document', 'supporting', 1, 'PUBLISHED', 'HUMAN', 'user-A')`);
-  const addFact = sql("select canonical_field_key from canonical_field where group_key = 'person' and status = 'PUBLISHED' order by 1 limit 1");
+  const addFact = sql(`select canonical_field_key from canonical_field where group_key = 'person' and status in ('DRAFT','PUBLISHED') and canonical_field_key <> '${backKey}' and value_type not in ('yes_no','boolean') order by 1 limit 1`);
   const citeWalk = (fact) => ({ fact, about: "holder", source: "Test words (walk), page 1", quote: "Test: B83 walk, Sample", readOn: new Date().toISOString().slice(0, 10) });
   const backChange = await api("POST", `/library/document-types/${backDoc}/supplies`, { facts: [citeWalk(addFact), citeWalk(backKey)], reason: "A B83 walk of a document's facts." });
   await api("POST", `/library/changes/${backChange.body?.id}/approve`, { note: "Approved in the walk" }, "user-B");
