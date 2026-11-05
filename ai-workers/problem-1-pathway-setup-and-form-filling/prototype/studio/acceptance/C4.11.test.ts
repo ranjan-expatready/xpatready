@@ -19,7 +19,7 @@
 // Run it on a fresh copy each time (review m6, 4 Nov): G5 accepts the run's Ready items, so a second run on the same copy
 // finds none left to accept.
 import { randomUUID } from "node:crypto";
-import { AUTHOR, pack2, run, VV_PEOPLE } from "./lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, run, VV_PEOPLE } from "./lib/pack2.ts";
 import { WHO_HOLDERS, WHO_ROLES, type Who } from "../contracts/resolver.ts";
 
 const T = pack2("C4.11");
@@ -136,5 +136,22 @@ run(async () => {
   ok("C4.11-22 pass: Stop stops a run (its state says stopped or finished, in words)", !!stopRun && st.status < 300 && /stop|complet|finish|done/i.test(String(after?.status ?? "")), { stop: st.status, status: after?.status });
   // The run view gives its cost as { spent, worst } (US$).
   ok("C4.11-23 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd?.spent ?? view?.usd ?? NaN) === 0, view?.usd);
+  // QA-237, B86 (P-322; step agreed with qa): a person accepts a condition, a second person approves it, and the way out of
+  // "Hiding a value a form reads" works through the product's own routes, on the question this run proposes and both rounds agree on.
+  const FF = "person.other_family_name", held = (await T.queued(vv)).find((x: any) => x.kind === "condition" && x.form_fields?.fact === FF);
+  const blocking = async () => (((await call("POST", `/combinations/${vv}/submit`, { note: "C4.11 pack (QA-237)" }, AUTHOR)).body?.errors ?? []) as any[]).filter((e) => e.item === FF && /^Hiding a value a form reads/.test(e.message ?? ""));
+  r = await call("POST", "/review/proposals/decide", { ids: [held?.id ?? randomUUID()], action: "accept" }, AUTHOR);
+  const cond = T.sql(`select id from library_change where kind='placement_condition' and key='${FF}' and status='WAITING'`);
+  const second = cond ? await call("POST", `/library/changes/${cond}/approve`, { note: "Approved by the C4.11 pack as the second person (QA-237)." }, APPROVER) : { status: 0, body: null };
+  const refused = await blocking();
+  ok("C4.11-24 fail (QA-237): a condition accepted and approved, its form field not confirmed: Submit refuses, in the rule's words", second.status < 300 && refused.length > 0 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(refused[0]?.message ?? ""), refused[0]?.message ?? words(second));
+  const boxes = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body?.rows ?? [];
+  const asked = boxes.filter((x: any) => x.can_confirm);
+  for (const x of asked) {
+    const c = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: FF, formEditionId: x.form_edition_id, dataPath: x.data_path }, AUTHOR);
+    if (c.body?.id) await call("POST", `/library/changes/${c.body.id}/approve`, { note: "Approved by the C4.11 pack as the second person (QA-237)." }, APPROVER);
+  }
+  const left = await blocking();
+  ok("C4.11-25 pass (QA-237): the author confirms the form field that reads it, showing its own words, a second person approves, and Submit no longer refuses that question", asked.length > 0 && asked.every((x: any) => !!x.words) && left.length === 0, { confirmed: asked.length, left: left.map((e) => e.message) });
   T.done();
 });

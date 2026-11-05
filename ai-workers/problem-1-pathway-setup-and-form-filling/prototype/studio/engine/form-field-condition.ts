@@ -44,6 +44,13 @@ export function notNeededWords(c: { applies: unknown; missing: string[] }, rule:
   return "Not needed: its condition is not met";
 }
 
+/** The condition as the rest of a sentence ("filled only when …"), in the deciding question's words. */
+export function whenWords(tree: unknown, words: (fact: string) => string): string | null {
+  const r = tree as { op?: string; field?: unknown; value?: unknown } | null;
+  if (r?.op !== "eq" || typeof r.field !== "string") return null;
+  return `"${words(r.field)}" is ${r.value === true ? "Yes" : r.value === false ? "No" : `"${String(r.value)}"`}`;
+}
+
 /** BR (no field codes, PRODUCT §4): a form field's words as a person reads them. Only an identifier-shaped token (a capital
  *  inside a word: `natIDIndicator`) is touched: matching exactly one data-path segment of this edition, it reads as that
  *  form field's question; otherwise "another form field". Never its caption: a form's inventory can carry a wrong one.

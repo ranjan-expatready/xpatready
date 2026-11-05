@@ -7,7 +7,7 @@ import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Inje
 import { Prisma, type LibraryChange } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { isWorkedOutYesNo, plainWords, showCondition } from "../../engine/form-field-condition.ts";
+import { isWorkedOutYesNo, plainWords, showCondition, whenWords } from "../../engine/form-field-condition.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { factWords } from "../../engine/sources.ts";
 import { bareCond } from "../../engine/validate.ts";
@@ -87,7 +87,7 @@ export class FormFieldConditions {
   /** BR-1: the condition a form field is compared with: a waiting card's while it belongs to this combination and targets
    *  this question and the library holds no condition or the same one; else the question's own SHOW condition. Never typed. */
   private async conditionOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, item?: string): Promise<{ tree: unknown; sentence: string | null; why: string | null }> {
-    const placed = (s.placements as { fact: string; condition?: unknown; condition_effect?: string | null; condition_plain?: string | null }[]).find((p) => p.fact === fact);
+    const placed = (s.placements as { fact: string; condition?: unknown; condition_effect?: string | null }[]).find((p) => p.fact === fact);
     const own = showCondition(s.placements as never, fact);
     if (placed?.condition && !own) return { tree: null, sentence: null, why: "This question's condition does not hide it (it is not \"asked only when\"), so no form field needs to hold it." };
     if (item) {
@@ -97,10 +97,10 @@ export class FormFieldConditions {
       if (it.combinationId !== combinationId || it.kind !== "condition" || p?.target?.key !== fact || !p.condition?.tree) throw problem(409, "Not this question", "That proposal is not a condition on this question of this combination, so nothing was changed.");
       if (it.status !== "waiting") throw problem(409, "Already decided", "That proposal has been decided, so its condition is not used here. Once the question holds it, confirm the form field on Review and release.");
       if (own && !sameCondition(own, p.condition.tree)) throw problem(409, "A different condition", "The library's question already holds a different condition, so this card's cannot be confirmed. Decide the card first.");
-      return { tree: p.condition.tree, sentence: p.condition.sentence ?? null, why: null };
+      return { tree: p.condition.tree, sentence: whenWords(p.condition.tree, (f) => factWords(s, f)) ?? "its question's condition holds", why: null };
     }
     if (!own) return { tree: null, sentence: null, why: "This question has no condition yet, so there is nothing to compare this form field with." };
-    return { tree: own, sentence: placed?.condition_plain ?? null, why: null };
+    return { tree: own, sentence: whenWords(own, (f) => factWords(s, f)) ?? "its question's condition holds", why: null };
   }
 
   /** The form fields of this combination's forms that read the answer, each with its own words (every edition, as the rule). */
@@ -138,7 +138,7 @@ export class FormFieldConditions {
   async propose(actor: Actor, body: unknown) {
     need(actor, "author");
     const parsed = Confirm.safeParse(body);
-    if (!parsed.success) throw problemFromZod(parsed.error);
+    if (!parsed.success) throw problem(HttpStatus.BAD_REQUEST, "Some details need fixing", problemFromZod(parsed.error).detail ?? "The request is not valid.");
     const b = parsed.data, workspaceId = await this.ws.id();
     const c = await this.db.combination.findUnique({ where: { id: b.combinationId } });
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");

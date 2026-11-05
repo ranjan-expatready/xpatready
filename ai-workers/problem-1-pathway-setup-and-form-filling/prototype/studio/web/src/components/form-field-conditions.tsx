@@ -42,7 +42,7 @@ export function FormFieldConditions({ combinationId, fact, item }: { combination
                 {r.change_id ? <Link className="text-text-link underline" to={`/review/change/${r.change_id}`}>Open on To review</Link> : null}
               </div>
               {r.why ? <p className="mt-1 text-xs text-text-muted">{r.why}</p> : null}
-              {r.warning ? <p className="mt-1 text-xs font-medium text-warn" data-form-field-warning>{r.warning}</p> : null}
+              {r.warning ? <p className="mt-1 text-xs font-medium text-text-warn" data-form-field-warning>{r.warning}</p> : null}
             </li>
           ))}
         </ul>
