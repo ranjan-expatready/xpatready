@@ -71,7 +71,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // QA-144 slice 1: row 7 is the C3.4 rules pass and the shared placement step on the Visitor visa (tests/check_qa144_vv_release.ts).
   // QA-206 (tech lead on #883): sections the forms print no heading over wait on To review for a person to name, so the
   // row is partial exactly while any waits, and names them.
-  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and coalesce(form_edition, '') not like 'IMM 5645 (%'`); // IMM 5645's are row 9's (B97)
   ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver; partial exactly while sections wait for a name (QA-206)", r("7").status === (heldNow ? "partial" : "done") && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows) && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")), r("7").shows);
   // Row 17 (QA-207): IMM 5476 2021 in the library and 11-2025 held as the new edition, once the 2021 edition's saved field
   // map is recorded (p2/runs, the paid runner's); until then the row waits for it, in words, and the library keeps 11-2025.
