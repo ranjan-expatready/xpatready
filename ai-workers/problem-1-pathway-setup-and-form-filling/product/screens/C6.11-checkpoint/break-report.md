@@ -85,3 +85,15 @@ The firm-record answer ids are `firm_record:<user>:<fact>` and carry no appointm
 - **Race.** 6 rounds of a representative change against generate and prepare. Each copy froze one representative's full set, and `out_of_date` was right every time.
 - **Screens.** No sideways scroll at 1440 px, 1024 px or 200 % zoom, including the Case team dialog. Axe found 0 violations on the Agent view and client page. Arrow keys move between and select the Agent view tabs. No page errors.
 - **Budgets.** Agent questionnaire 52–74 ms, prepare 0.22–0.32 s, forms 0.24–0.32 s, team 12–15 ms, on a 6-person case.
+
+## Re-check at b1872f158 (`git diff e1801f98f..b1872f158`)
+Fresh copy `brk611` on :4437, configured checkpoint (86 s, US$0), stopped after. Round-1 findings only.
+- **M1: fixed.** With a stored `uses_representative=false` added by SQL, Confirm section returns 201, also with the hidden id in `seen`; the row stays DECLARED and unconfirmed. Not reopened by: the firm-record id in `seen` (400), the "representative" subject (404), `representative.*` on the principal (never listed), or groups (no firm-given fact in one). **New Minor n1:** `changes/undo` on `case.uses_representative` returns 200 "Undone … back to its earlier value" with a current representative and writes a hidden row; nothing on screen changes. Steps: no current representative, type Yes then No, assign user-T, undo. Undo should refuse a firm-given fact, as PUT does (`api/src/case-changes.ts`).
+- **M2: ruled (B107).** R000000 is still in all four membership boxes; the copy says "Checked copy, not for filing".
+- **M3: fixed for #1072's part.** No address, e-mail or phone is given any more. The IMM 5475 copy writes 2 boxes and its prepare item has no `representative`. Remaining firm-record writes to IMM 5475 (as on main, from C7.7): `Five.AppFamily` = Representative and `Five.AppGiven` = Sample ("firm_record by user-R"). After R→T, the IMM 5475 copy goes `out_of_date` (given names).
+- **M4: ruled (B107), and it has grown.** With the M3 keys withdrawn, IMM 5476 has **17** unanswerable "about The representative" facts (was 7; e-mail, address and phone added) and IMM 5475 has 10. The tab reads "The representative 17 missing". The built note and B107 still say "the seven".
+- **M5: ruled (C9.2 follow-up).** No change seen.
+- **m1, m2, m3: fixed.** With no current representative, staff can type the fact (200); with one they get 422 "Change the team (Case team)". A client gets 403 "Your case team sets…". The line reads "Set by the case team (the representative of record)".
+- **m4: fixed** (the note's wording). **m6: fixed** (`licensingBodyKey`): CICC gives `cicc`; the other bodies rest on the unit test, since every Sample firm uses CICC.
+- **m5: still open, smaller.** The office block is no longer written (ruled), but `GET …/team` still lists `representative_category: rcic` under `imm5476.facts`, and IMM 5476 has no box for it.
+- **m7: still open** (predates #1072). `GET …/forms` says `applies:true` for a child with no date of birth; the questionnaire says `cannot_tell`.
