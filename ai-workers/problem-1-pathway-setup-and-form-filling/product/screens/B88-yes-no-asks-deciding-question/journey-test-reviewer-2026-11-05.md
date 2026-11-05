@@ -76,3 +76,6 @@ Break pass on the step-finding (tech lead's request; details in `review.md`): th
 | **Total** | **7** | **8½ / 10** | passes the bar of 8; no criterion at 0 |
 
 Round 2 verdict: **passes (8½/10)**. The review still blocks on R2-M1 (fixing it would raise "correct data" to 1).
+
+## Round 3: R2-M1 fix only (9527f905f)
+Differential test of the filler at 7ce4a9630 against 9527f905f: 600 cases, 4 differ. All 4 are the answer No with a named detail recorded, which before wrote Y and now goes to a person. Every other value is unchanged. "Correct data" rises from ½ to 1: **9 / 10** (passes; no criterion at 0). Not re-walked in the browser (no web change in this diff).

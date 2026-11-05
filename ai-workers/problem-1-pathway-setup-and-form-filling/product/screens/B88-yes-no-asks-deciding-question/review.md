@@ -1,6 +1,19 @@
 # B88 review: a worked-out Yes/No asks its form's own deciding question (QA-239, C4.11)
 
-The reviewer agent did not build this. This file holds two rounds. Round 1 was on 2d85215f3 (`git diff d68a8b79a..2d85215f3`; B86 #1053 is the base). Round 2, the last, is on **7ce4a9630**, diff only (`git diff 2d85215f3..7ce4a9630`). It covers my 4 Majors, the breaker's 5 (`break-report.md`), and the tech lead's request (#1068, 6651254531) to try to break the step-finding by data path. Date: 5 Nov 2026. US$0, live AI off. My own copies ran on :4456 and :4457, never :4400, and are stopped.
+The reviewer agent did not build this. This file holds three rounds. Round 1 was on 2d85215f3 (`git diff d68a8b79a..2d85215f3`; B86 #1053 is the base). Round 2 was on **7ce4a9630**, diff only (`git diff 2d85215f3..7ce4a9630`). It covers my 4 Majors, the breaker's 5 (`break-report.md`), and the tech lead's request (#1068, 6651254531) to try to break the step-finding by data path. Date: 5 Nov 2026. US$0, live AI off. My own copies ran on :4456 and :4457, never :4400, and are stopped.
+
+## Round 3 verdict (9527f905f): **Ship**. **Verdict: Approve** (no open Blocker or Major)
+Scope: the tech lead's ruling (#1068, 6651482813), a diff-only check of the R2-M1 fix, `git diff 7ce4a9630..9527f905f`. Files: `p5/transforms.ts`, `engine/form-field-condition.ts`, `api/src/library-changes.ts`, `tests/check_forms_b88_fill.ts`.
+* **R2-M1 fixed, and the branch is additive.** In the RECORDED branch (`p5/transforms.ts:112`), an explicit `v === false` together with a fact named in `any(…)` that is present now returns `hand(…)`. The `any` computation is unchanged.
+  * Differential test: the filler at 7ce4a9630 against 9527f905f, 600 cases. Inputs: 12 step shapes (`any(…)`, `X recorded`, `valid X recorded (not expired)`, post-secondary, previous residence, the AI's `derive: Y if …`, `equals`, `yes_no_code`, `as_is`, `derive_inverse`, `check_code`) × 10 values (undefined, null, "", false, true, text, [], [x], 0, "N") × 5 contexts (with and without facts, with and without nothingRecorded).
+  * **Exactly 4 cases differ.** All are the `any(…)` step with v = false and a named fact present: before, Y (or `true`); now, by hand.
+  * Nothing else moves. IMM 5257's live map, whose alias box fact is the detail `person.other_family_name` (text, never `false`), still gives Y or N. The `X recorded` and `valid X recorded` shapes name no `any(…)` facts, so they are untouched. `p5/engine.ts:313` passes no context, so it is untouched too.
+  * On the case path the result is the same as before, since QA-165 already refused that box before the filler ran. The Studio's sample fill (`api/src/fill.ts`) can no longer write Y for a No.
+* **Tests, one each way.** The fail guard (No plus a named detail → by hand) **fails when the branch is removed** (I checked on an exported copy: 32/33). The pass case is No with nothing recorded → N, and Yes → Y.
+* **R2-m2 fixed:** the page stop is now `/i` (`engine/form-field-condition.ts:94`). It changes only paths with a lowercase `page1[0]`/`part…` segment (IMM 5532, IMM 5707 readings). None of the 9 asked boxes has one, so their blocks and steps are unchanged.
+* **R2-m4 fixed:** both refusals say "change of the question a form field asks" for this action (`library-changes.ts:125,127`).
+* **Re-run on 9527f905f:** `check_forms_b88_fill` 33/33, `check_forms_b86_fill` 29/29, `check_qa165_mandatory` 40/40 (`--tsconfig api/tsconfig.json`). I did not re-run `check_c72_imm5257_fill` (it needs a server; the builder reports 54/54 on :4434). The differential test covers its transforms.
+* **Still open, listed in the PR, not blocking:** R2-m1 (a block shared with another Yes/No; latent), R2-m3 (RELEASED without `releasedIn`), R2-m5 (followers load per question), and round-1 m6 (B86's returned-change page).
 
 ## Round 2 verdict (7ce4a9630): **Ship after fixes**. **Verdict: Block**: 1 new Major (R2-M1), no Blocker
 All 4 of my round-1 Majors and the breaker's 5 are fixed, each with a test, and I re-checked each one on my own copies. The step-finding holds on the six and on every reading I tried. On the case path it never writes a wrong value, because QA-165 refuses a No while a named detail is recorded. One Major is left: **the step B88 writes turns a person's No into Y wherever QA-165 does not run first**, and one product route fills a PDF that way.
@@ -57,6 +70,8 @@ D2 Data integrity 4 (records now true; R2-M1 on the sample path) · D5 Stability
 ## Could not check
 A real screen reader; an intended user's unaided walk (D17/D20); a full release record on the six; a client case filled end to end in the browser; real 200 % zoom (simulated at 512 px).
 
-Journey test: `journey-test-reviewer-2026-11-05.md`: round 1 **7/10**, round 2 **8½/10** (passes; no criterion at 0).
+Journey test: `journey-test-reviewer-2026-11-05.md`: round 1 **7/10**, round 2 **8½/10**, round 3 **9/10** (correct data 1 once R2-M1 is fixed; passes, no criterion at 0).
 
-**Verdict: Block.** Fix R2-M1 with its test. Fix R2-m1 to R2-m5 or list them in the PR.
+Round 2 ended on **Block** (R2-M1); round 3 closes it.
+
+**Verdict: Approve** on 9527f905f.
