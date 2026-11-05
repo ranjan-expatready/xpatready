@@ -59,8 +59,8 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
     && n(`select count(*) from config_release where combination_id = '${sp}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1, releasesOf(sp).length);
   // Labelled E10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps E10)"; QA-144 slice 4, B79a):
   // Express Entry set up from its forms; Submit refuses it for no form field without a decision and no fact nobody is
-  // asked (219 on main 86b721eac). E10b is its release: it waits on a ruling for IMM 0008 DEP, which prints no "Unknown"
-  // marital status (#1050).
+  // asked (219 on main 86b721eac). E10b is its release: IMM 0008 DEP prints no "Unknown" marital status, marked Not on this
+  // form through B81's door (tech lead on #1050).
   const ee = sql(`select id from combination where combination_key = 'pnp.express_entry' and retired_at is null limit 1`);
   const eeWhy = (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Provincial nominees › Express Entry stream: ")).join(" · ");
   // Review m1 (#1050): the whole refusal, not row 10's first three problems: Submit asked again (it writes nothing when
