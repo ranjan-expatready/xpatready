@@ -58,7 +58,7 @@ r = await save({ notOnForm: [], baseRevision: g.revision });
 ok("B81 fail (challenge M4): a save against what someone has changed since is refused, and says so", r.status === 409 && /changed these choices/.test(r.body.message), r);
 const drafted = (await call("POST", `/editions/${ed}/option-maps/draft`)).body.option_maps.filter((o: { fact: string }) => o.fact === "person.marital_status");
 ok("B81 (challenge M6): a new rules draft keeps the mark", drafted.length >= paths.length && drafted.every((o: { optionMap: { notOnForm?: string[] } }) => o.optionMap.notOnForm?.join() === unprinted.key), drafted.map((o: { optionMap: unknown }) => o.optionMap));
-ok("B81: the save is in the audit trail, naming the value", sql(`select count(*) from audit_event where action = 'changed' and detail like '%not on this form: ${unprinted.key}%'`) >= "1");
+ok("B81: the save is in the audit trail, naming the value", sql(`select count(*) from audit_event where action = 'changed' and detail::text like '%not on this form: ${unprinted.key}%'`) >= "1");
 
 // The real fill path on IMM 1295, which the fixture's sample fills with "married": that box does print Married, so the mark
 // is written straight into this copy's database (the route rightly refuses it), only to read what a fill does with a mark.
