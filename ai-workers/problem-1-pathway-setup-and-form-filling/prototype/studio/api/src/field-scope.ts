@@ -34,7 +34,8 @@ async function factsOf(db: Tx | Db, workspaceId: string, key: string) {
     key,
     published: versions.some((v) => v.status !== "DRAFT" || !!v.supersedesId),
     placements: placements.map((p) => ({ repeats: p.repeats, condition: p.predicateJson !== null && p.predicateJson !== undefined })),
-    merged: versions.some((v) => !!v.mergedIntoKey) ? (versions.find((v) => v.mergedIntoKey)!.mergedIntoKey as string) : null,
+    // m8 on #1054: the field it went into, by its name (never a key on the main path)
+    merged: await (async () => { const to = versions.find((v) => v.mergedIntoKey)?.mergedIntoKey; if (!to) return null; const t = await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: to }, orderBy: { version: "desc" } }); return (t?.label ?? t?.meaning ?? "another field").trim(); })(),
     representativeBox,
   };
   return { current, facts, sections: [...new Set(placements.map((p) => p.sectionKey))], name: (current.label ?? current.meaning ?? key).trim() };

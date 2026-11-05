@@ -82,3 +82,49 @@ CLIENT_LEVEL → PERSON, CASE_LEVEL → FILING, HOUSEHOLD and ORGANISATION as th
 
 ## Could not check
 A real screen reader. The intended users' unaided walk. The M2 packs against main. The demo's Visitor visa list drift (m8 in the challenge), which belongs to qa.
+
+## Round 2 (608f793af)
+Reviewed only the diff since round 1: `git diff 22aef7e01..608f793af` (a69cc0936 for the review fixes, 608f793af for breaks 1–7). I ran it on fresh copies, `rev316` on :4456 and `rev316b` on :4459 (both now stopped). Live AI off, US$0.
+
+**Verdict: Approve** (commit 608f793af). No Blocker or Major is open.
+
+**Re-run:**
+* Six part: **33/33, exit 0**.
+* `setup_visitor_visa.ts`: 15/15. Case part: **16/16, exit 0**.
+* `check_c316_field_scope.ts`: **30/30**. `check_sh3_resolver.ts`: **85/85**.
+* `web` tsc: no errors.
+* Browser at 1440 px: axe 0 on the officer's application and spouse tabs and on the client questionnaire. No console or page errors.
+
+**Round 1 findings:**
+* **M1: closed.**
+  * `engine/resolver.ts:182`: a representative's box keeps its own reading for a marked field.
+  * `:188`: a marked Organisation fact reads the case only for `form_subject`, `none` or null on the principal's form.
+  * The same probe as round 1 now gives, on the principal's form:
+    * Organisation: partner, child, parent and sibling boxes → null; `representative` → the representative; `form_subject` and `none` → `case`.
+    * Household: `representative` → the representative.
+  * Pass and fail lines added at `tests/check_c316_field_scope.ts:51-52`.
+  * Side effect, not a finding: a representative's box for a marked field stays blank, because putAnswer saves a marked fact only on the case. It never shows the employer's value.
+* **m1: closed.** The scope check is now inside the transaction, after `lockItem` (`api/src/studio.ts:674`). The six-race line (break 3) never leaves Household together with per_row.
+* **m2: partly closed.** The status is now 422 (`question-condition.ts:32`), and the check reads the placement's field key. Still no API test reaches `refuseScoped`. I do not hold the approval for it: it is a Minor, and the pure `placementRefusal` lines pin the rule. One fail line through a queued condition proposal on the fixture would close it.
+* **m3: closed.** Measured: "30 Jun 2012 · Answered for the household by Client A · 5 Nov, 04:46". This uses the case page's own WHO, `when` and `shown`, and names who answered (`answered ?? answer`).
+* **m4: closed.** After "Change it in For the household", focus is on `#a-<case>-relationship-start_date` (measured).
+* **m5: closed.** The approver gets a read-only notice (`web/src/pages/field-scope.tsx:256`). Checked in the code only: every field on my post-pack copies was published.
+* **m6: closed.** "Ask it as an application fact instead."
+* **m7: closed.** In the case part:
+  * the scaffolding asks the date per person;
+  * the unmarked draft asks each person;
+  * the client's questionnaire asks it once, tagged;
+  * the client's one answer counts as confirmed.
+  * Measured: the client page shows the read-only line on both adults' parts.
+
+**Breaker's items:**
+* Break 1: `mergeScopeRefusal` is checked at proposal (`forms.ts:312`) and again inside the approval transaction (`:362`), with a pack line. `forms.ts` is not on the hot list.
+* Break 2: placements are read by lineage key or field key (`api/src/field-scope.ts:36`).
+* Break m7: a body with an extra or `__proto__` key gives 400.
+
+**New Minor (does not hold the approval):**
+* **m8. A field key shows on the main path for a merged field.**
+  * `scopeRefusal` appends the target field's key ("… merged into (person.kept_name).", `engine/field-scope.ts:154`).
+  * `field-scope.tsx:46` shows that text under each refused choice.
+  * This is against EXPERIENCE §5, the same class as round 1's m6.
+  * *Fix:* name the field it went into by its label, or leave the key out. The Merged notice already says it in words.

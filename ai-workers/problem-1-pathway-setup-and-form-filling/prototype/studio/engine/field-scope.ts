@@ -59,13 +59,13 @@ export type ScopeFacts = {
   placements: { repeats: string; condition: boolean }[];
   /** a form field map entry that reads the key for the representative */
   representativeBox: boolean;
-  /** the key it was merged into, when it was (break m4 on #1054) */
+  /** the name of the field it was merged into, when it was (break m4, review m8 on #1054) */
   merged?: string | null;
 };
 
 /** BR-2: why this scope cannot be set on this field, or null when it can. The order is the concept's. */
 export function scopeRefusal(f: ScopeFacts, scope: Scope): { status: 409 | 422; message: string } | null {
-  if (f.merged) return { status: 409, message: `${SCOPE_WORDS_REFUSED.merged} (${f.merged}).` };
+  if (f.merged) return { status: 409, message: `${SCOPE_WORDS_REFUSED.merged}, "${f.merged}".` };
   if (f.published) return { status: 409, message: SCOPE_WORDS_REFUSED.published };
   const caseKey = f.key.startsWith("case.");
   if (scope === "person") return caseKey ? { status: 422, message: SCOPE_WORDS_REFUSED.caseKey } : null;
