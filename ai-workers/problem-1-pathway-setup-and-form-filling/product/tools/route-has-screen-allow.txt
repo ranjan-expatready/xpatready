@@ -16,7 +16,7 @@ POST /library/fields/:key/answer-list  # C3.4: linking a shared field to an answ
 DELETE /library/fields/:key/answer-list  # C3.4: unlinking a field's answer list, the same set-up step; no screen yet; no QA number yet
 POST /editions/:id/option-maps/draft  # C3.8: drafting a form edition's option maps (each choice to its code) has no screen; release 1's set-up does it; no QA number yet
 PATCH /editions/:id/option-maps  # C3.8: matching a choice list's values to the form's codes by hand (setup_visitor_visa.ts 4.5) has no screen; no QA number yet
-PUT /combinations/:id/eligibility-gates  # C6.9: the gates are written by the Visitor visa set-up (setup_vv_m3.ts S7); no screen authors them yet; no QA number yet
+PUT /combinations/:id/eligibility-gates  # QA-244, C6.9 Partial: gates have no authoring screen (C6.9 concept, Not built); row B106 builds it. Written by the Visitor visa set-up (setup_vv_m3.ts S7) and by the configured checkpoint (api/src/checkpoint-stage-one.ts, B104; tech lead's ruling on #1084). C6.9 is not Works on this route alone
 
 # Set-up shortcuts with a person's own way on a screen (not a dead end):
 POST /combinations/:id/attachments/sample  # P-103 (lead, 31 Oct): adds a file from the official library for the demo seed; a person uploads the same file through POST /intake (web/src/components/forms.tsx)
