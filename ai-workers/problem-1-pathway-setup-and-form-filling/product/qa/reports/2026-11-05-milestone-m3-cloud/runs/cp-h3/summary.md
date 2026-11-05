@@ -1,0 +1,15 @@
+# h3 on the checkpoint, main 344e08699 (after #1056): every step the same as round 1
+
+* C6.12-breadth: exit 1 · PASS 1 · FAIL 3 (load 95 s, run 5 s)
+* C6.4: exit 1 · PASS 18 · FAIL 12 (load 95 s, run 5 s)
+* C6.12: exit 0 · PASS 24 · FAIL 0 (load 97 s, run 7 s)
+* C6.9: exit 1 · PASS 2 · FAIL 13 (load 92 s, run 1 s)
+* C6.5: exit 1 · PASS 9 · FAIL 23 (load 92 s, run 2 s)
+* C6.11: exit 1 · PASS 22 · FAIL 3 (load 94 s, run 3 s)
+* C7.5: exit 1 · PASS 9 · FAIL 7 (load 88 s, run 22 s)
+* C7.6: exit 1 · PASS 19 · FAIL 6 (load 89 s, run 26 s)
+* C7.3: exit 1 · PASS 2 · FAIL 11 (load 90 s, run 37 s)
+* C8.1: exit 1 · PASS 0 · FAIL 14 (load 86 s, run 26 s)
+* C8.2: exit 1 · PASS 11 · FAIL 1 (load 86 s, run 46 s)
+* C9.2: exit 1 · PASS 5 · FAIL 6 (load 88 s, run 39 s)
+* C10.2: exit 1 · PASS 0 · FAIL 11 (load 86 s, run 2 s)
