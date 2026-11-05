@@ -8,6 +8,7 @@
 //   zsh tools/isolated.sh acc_c13 4436 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C1.3.test.ts 4436 xr_studio_acc_c13 ; zsh tools/isolated.sh acc_c13 4436 stop
 import { carriedFacts, employerFacts, employerLinkOffer, factState } from "../engine/runtime/employer.ts";
 import { isFilingFact } from "../engine/resolver.ts";
+import { spawn } from "node:child_process";
 import { client, recorder } from "../tests/runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_c13_link";
@@ -175,6 +176,19 @@ async function api() {
   const after = await formOf();
   const missing = new Set((after?.readiness?.missing ?? []).map((m: { fact: string }) => m.fact));
   ok("C1.3 (M4): once confirmed, IMM 5710 is filled from the copies (3 more boxes written, none of them still missing)", after && before && after.draft.written_now >= before.draft.written_now + 3 && ![NAME, ADDRESS, LMIA].some((f) => missing.has(f)), { before: before?.draft, after: after?.draft });
+
+  // BR-6 (Devin review on #1051): an answer save takes no case lock, so the link locks the current answers it compared.
+  // A session holding the lock on a kept (unticked Different) answer for 2 s makes the link wait for it; without the
+  // lock the link would commit at once on what may by then be a stale view.
+  const c5 = await open(wp, "held"), s5 = subjects(c5);
+  const kept = (await answer(c5.id, s5.filing, LMIA, "A123")).body?.answer?.id as string;
+  const l5 = (await call("GET", `/runtime/cases/${c5.id}/employer-cases`, undefined, OFFICER)).body.employer_cases[0].facts;
+  const holder = spawn("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atq", "-c", "BEGIN", "-c", `SELECT id FROM client_canonical_answer WHERE id = '${kept}' FOR UPDATE`, "-c", "SELECT 'held'", "-c", "SELECT pg_sleep(2)", "-c", "COMMIT"], { stdio: ["ignore", "pipe", "inherit"] });
+  const closed = new Promise((done) => holder.on("close", done));
+  await new Promise<void>((done, failed) => { const t = setTimeout(() => failed(new Error("setup: the holding session never took the lock (10 s)")), 10_000); holder.stdout.on("data", (d: Buffer) => { if (/held/.test(String(d))) { clearTimeout(t); done(); } }); });
+  const t0 = Date.now(), held = await call("POST", `/runtime/cases/${c5.id}/employer-link`, { employerCase: EMPLOYER, seen: seenOf(l5) }, OFFICER), waited = Date.now() - t0;
+  await closed;
+  ok("C1.3 BR-6 fail (Devin review): the link waits for a save holding a kept answer it compared, then links", (held.status === 201 || held.status === 200) && waited >= 1200, { status: held.status, waited });
 
   // BR-6 with nothing to write ("Link without copying"): only the case row lock keeps it to one link (review M2).
   const c4 = await open(wp, "same"), s4 = subjects(c4);

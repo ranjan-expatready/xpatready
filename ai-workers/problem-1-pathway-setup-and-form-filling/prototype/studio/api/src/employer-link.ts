@@ -86,7 +86,13 @@ export class EmployerLinks {
       if (await tx.filingRecord.count({ where: { caseId: r.c.id } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no employer case is linked and no employer facts are copied.");
       const before = await linkedOf(tx, r.c.workspaceId, r.c.id);
       if (before) notPossible(`This case already relies on ${before.label} (linked ${dateWords(before.created_at)}). Its facts were copied then; edit a copied value on this case.`);
-      const lines = this.lines(r, await this.currentAnswers(tx, [r.principal.subjectId, r.filing.subjectId], Object.keys(ec!.facts)), ec!);
+      // Devin review on #1051: an answer save takes no case lock, so the current answers of the carried facts are locked
+      // here before they are compared with what the officer saw. A save that committed first is read below and refused
+      // as changed; one that comes later waits for this link (its own supersede then runs after it). A fact with no
+      // answer yet is guarded by the unique current-answer index (a save at the same moment fails one of the two).
+      const subjects = [r.principal.subjectId, r.filing.subjectId], keys = Object.keys(ec!.facts);
+      await tx.$queryRaw`SELECT id FROM client_canonical_answer WHERE subject_id = ANY(${subjects}::uuid[]) AND canonical_field_key = ANY(${keys}::text[]) AND row_key IS NULL AND superseded_by_id IS NULL FOR UPDATE`;
+      const lines = this.lines(r, await this.currentAnswers(tx, subjects, keys), ec!);
       const changed = lines.filter((l) => (l.current?.answer_id ?? null) !== (b.seen[l.fact] ?? null));
       if (changed.length) stale(changed.map((l) => l.label));
       const bad = lines.filter((l) => l.problems.length && (l.state === "new" || (l.state === "different" && b.replace.includes(l.fact))));
