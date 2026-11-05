@@ -40,7 +40,9 @@ export const MAX_VALIDITY_MONTHS = 120;
 export type Need = "needed" | "not_needed" | "answer_first";
 /** A question to answer first; `answered`: it is answered, but with the others it does not work out (e.g. a birth date
  *  after the application date), so it is to check rather than to answer. */
-export type Missing = { key: string; question: string; answered: boolean };
+export type Missing = { key: string; question: string; answered: boolean;
+  /** C6.4 (a): whose question it is, so a link reaches it: the case's own (asked once for the application) or the person's. */
+  on: "case" | "person" };
 /** M3-CONTRACT (pack 4, C6.4): a line's id, document type, label, the team's state (SI-14: storage, requests and file
  *  status are AG-09's; every derived line is Not requested until C6.4's storage slice), reason and required; plus this
  *  slice's detail. A line is in `lines` when the person needs it, in `waiting` when an answer decides it first, and in
@@ -133,7 +135,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const has = (f: string) => known.has(`${isFilingFact(f, placed.get(f)) ? FILING : about}|${f}`) || known.has(`${isFilingFact(f) ? FILING : about}|${f}`);
       const all = d ? [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])] : [k];
       const open = all.filter((f) => !has(f));
-      for (const f of open.length ? open : all) out.set(f, { key: f, question: words(f), answered: !open.length });
+      for (const f of open.length ? open : all) out.set(f, { key: f, question: words(f), answered: !open.length, on: isFilingFact(f, placed.get(f)) ? "case" : "person" });
     }
     return [...out.values()];
   };
@@ -160,7 +162,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
         if (age === undefined) {
           state = "answer_first";
           const born = known.has(`${h}|${MINOR.birthDateField}`);
-          missing = born ? [{ key: MINOR.birthDateField, question: words(MINOR.birthDateField), answered: true }, ...(day(appDate) ? [{ key: APPLICATION_DATE, question: words(APPLICATION_DATE), answered: true }] : [])] : toAsk([MINOR.birthDateField], h);
+          missing = born ? [{ key: MINOR.birthDateField, question: words(MINOR.birthDateField), answered: true, on: "person" as const }, ...(day(appDate) ? [{ key: APPLICATION_DATE, question: words(APPLICATION_DATE), answered: true, on: "case" as const }] : [])] : toAsk([MINOR.birthDateField], h);
           why = say(missing, "Needed from age 18");
         }
         else if (age < 18) { state = "not_needed"; why = `Only for people 18 or older; this person is ${age} on ${agesOn}.`; }

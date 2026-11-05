@@ -31,7 +31,7 @@ const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeri
 export const received = (lines: ChecklistLine[]) => { const need = lines.filter((l) => l.required); return { n: need.filter((l) => HAVE.includes(l.state)).length, m: need.length }; };
 
 /** The documents of one case, under the case view's query key so any answer change refreshes it (a line appears or goes). */
-export function DocumentsPanel({ caseId, nameOf }: { caseId: string; nameOf: (actorId: string) => string }) {
+export function DocumentsPanel({ caseId, caseSubject, nameOf }: { caseId: string; caseSubject: string; nameOf: (actorId: string) => string }) {
   const actor = useActorId();
   const q = useApi<ChecklistView>(["runtime", "view", caseId, "checklist", actor], `/runtime/cases/${caseId}/checklist`, { retry: noRetryOnRefusal });
   return (
@@ -43,23 +43,23 @@ export function DocumentsPanel({ caseId, nameOf }: { caseId: string; nameOf: (ac
       </header>
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The documents could not be loaded">{(q.error as Error).message}</Notice></div>
-        : <Body caseId={caseId} d={q.data!} nameOf={nameOf} />}
+        : <Body caseId={caseId} caseSubject={caseSubject} d={q.data!} nameOf={nameOf} />}
     </section>
   );
 }
 
-function Body({ caseId, d, nameOf }: { caseId: string; d: ChecklistView; nameOf: (id: string) => string }) {
+function Body({ caseId, caseSubject, d, nameOf }: { caseId: string; caseSubject: string; d: ChecklistView; nameOf: (id: string) => string }) {
   if (!d.derived) return <div className="p-4"><Notice title="Not worked out for this combination">{d.why}</Notice></div>;
   if (d.empty_release) return <div className="p-4"><Notice tone="warn" title="This release has no document lines">{d.basis}</Notice></div>;
   return (
     <div className="divide-y divide-border">
-      {d.people.map((p) => <PersonDocuments key={p.subject} caseId={caseId} p={p} nameOf={nameOf} />)}
+      {d.people.map((p) => <PersonDocuments key={p.subject} caseId={caseId} caseSubject={caseSubject} p={p} nameOf={nameOf} />)}
       <p className="px-4 py-2 text-xs text-text-muted">{d.basis} {d.ages_on_why}</p>
     </div>
   );
 }
 
-function PersonDocuments({ caseId, p, nameOf }: { caseId: string; p: Person; nameOf: (id: string) => string }) {
+function PersonDocuments({ caseId, caseSubject, p, nameOf }: { caseId: string; caseSubject: string; p: Person; nameOf: (id: string) => string }) {
   const { n, m } = received(p.lines);
   const id = `docs-${p.subject}`;
   return (
@@ -77,9 +77,10 @@ function PersonDocuments({ caseId, p, nameOf }: { caseId: string; p: Person; nam
             <li key={l.id} className="rounded-lg border border-dashed border-border px-3 py-2 text-sm" data-waiting-line={l.lineage}>
               <span className="font-medium">{l.label}</span> <span className="text-xs text-text-muted">{l.who_words}</span>
               <p className="text-[13px] text-text-muted">{l.reason}</p>
-              {l.missing.length ? <p className="text-[13px]">Answer first, in the Agent view: {l.missing.map((x, i) => <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${lineId(p.subject, x.key)}`} data-answer-first={x.key}
-                // The Agent view opens the person's tab on the address change; the same link twice is announced again.
-                onClick={() => { if (window.location.hash === `#${lineId(p.subject, x.key)}`) window.dispatchEvent(new HashChangeEvent("hashchange")); }}>{x.question}</a></React.Fragment>)}</p> : null}
+              {l.missing.length ? <p className="text-[13px]">Answer first, in the Agent view: {l.missing.map((x, i) => { const to = lineId(x.on === "case" ? caseSubject : p.subject, x.key); return <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${to}`} data-answer-first={x.key}
+                // The Agent view opens the tab the question is on (the application's, or the person's) on the address
+                // change; the same link twice is announced again.
+                onClick={() => { if (window.location.hash === `#${to}`) window.dispatchEvent(new HashChangeEvent("hashchange")); }}>{x.question}{x.on === "case" ? " (for the application)" : ""}</a></React.Fragment>; })}</p> : null}
             </li>))}</ul>
         </div>) : null}
       {p.not_needed.length ? (

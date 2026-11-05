@@ -10,7 +10,7 @@ import type { Page } from "playwright";
 import { FAMILY, call, main, needVisitorVisa, ok, openCase, yearsAgo } from "./lib/m3.ts";
 import { walker } from "./lib/browser.ts";
 
-type Line = { id: string; label: string; state: string; state_words: string; required: boolean; version: number; kept: boolean; who_words: string; reason: string; missing: { key: string; question: string }[]; lineage: string };
+type Line = { id: string; label: string; state: string; state_words: string; required: boolean; version: number; kept: boolean; who_words: string; reason: string; missing: { key: string; question: string; answered: boolean; on: "case" | "person" }[]; lineage: string };
 type Person = { subject: string; label: string; applies: boolean; lines: Line[]; waiting: Line[]; not_needed: Line[] };
 type List = { derived?: boolean; people: Person[] };
 const PORT = process.argv[2] ?? "4440", BASE = `http://127.0.0.1:${PORT}`;
@@ -116,38 +116,57 @@ await main("C6.4", "Documents panel on the case page (screen, 1440 px)", async (
     await open();
     api = await list();
     const wp2 = api.people.find((p) => p.waiting.length), wl2 = wp2?.waiting[0];
-    const answerBy = async (pick: number) => {
-      const anchor = `a-${wp2!.subject}-${wl2!.missing[0].key.replace(/[^a-z0-9_]/gi, "-")}`;
-      // The panel's link while the line waits; once it has moved, the same address (the line is no longer waiting).
-      const link = page.locator(`[data-waiting-line="${wl2!.lineage}"] [data-answer-first]`).first();
+    /** Answers one "answer first" question by screen: the panel's link while the line waits (else the same address), the
+     *  question's Add or Edit in the Agent view, then a choice (the pick-th answer), or a date (today), and Save. */
+    const answerBy = async (m: { key: string; on: "case" | "person" }, pick: number, who = wp2!.subject, lineage = wl2!.lineage) => {
+      const anchor = `a-${m.on === "case" ? c.caseSubject : who}-${m.key.replace(/[^a-z0-9_]/gi, "-")}`;
+      const link = page.locator(`[data-documents-person="${who}"] [data-waiting-line="${lineage}"] [data-answer-first="${m.key}"]`).first();
       if (await link.count()) await link.click(); else await page.evaluate((h) => { window.location.hash = h; }, anchor);
       const row = page.locator(`[id="${anchor}"]`);
       await row.getByRole("button", { name: /^(Add|Edit) / }).click();
-      const dlg = page.getByRole("dialog"), sel = dlg.locator("select");
-      if (await sel.count()) await sel.first().selectOption({ index: pick }); else await dlg.locator("input[type=radio]").nth(pick - 1).check();
+      const dlg = page.getByRole("dialog"), sel = dlg.locator("select"), radios = dlg.locator("input[type=radio]"), day = dlg.getByLabel("Day", { exact: true });
+      let kind: "choice" | "date" = "choice";
+      if (await sel.count()) await sel.first().selectOption({ index: pick });
+      else if (await radios.count()) await radios.nth(pick - 1).check();
+      else if (await day.count()) { const t = new Date(); kind = "date"; await day.fill(String(t.getDate())); await dlg.getByLabel("Month", { exact: true }).fill(String(t.getMonth() + 1)); await dlg.getByLabel("Year", { exact: true }).fill(String(t.getFullYear())); }
+      else throw new Error(`C6.4-37: the question ${m.key} is neither a choice nor a date; this walk cannot answer it`);
       await dlg.getByRole("button", { name: "Save" }).click();
       await dlg.waitFor({ state: "detached", timeout: 15_000 });
       await w.settle(page, "after the answer");
+      return kind;
     };
     const placeOf = (l: List, p: string, lineage: string) => { const x = l.people.find((y) => y.subject === p)!; return x.lines.some((y) => y.lineage === lineage) ? "lines" : x.waiting.some((y) => y.lineage === lineage) ? "waiting" : x.not_needed.some((y) => y.lineage === lineage) ? "not_needed" : "gone"; };
     const screenPlace = async (p: string, lineage: string, label: string) => page.evaluate(([pp, lin, lab]) => { const s = document.querySelector(`[data-documents-person="${pp}"]`); if (!s) return "gone"; if (s.querySelector(`[data-waiting-line="${lin}"]`)) return "waiting"; if ([...s.querySelectorAll("[data-line-label]")].some((e) => e.textContent === lab)) return "lines"; if ([...(s.querySelector("[data-not-needed]")?.querySelectorAll("li") ?? [])].some((e) => e.textContent?.startsWith(`${lab}:`))) return "not_needed"; return "gone"; }, [p, lineage, label] as const);
-    let moved = false, moved2 = false;
     if (wl2) {
       const nav = await page.evaluate(() => performance.getEntriesByType("navigation").length);
-      await answerBy(1);
-      const p1 = placeOf(await list(), wp2!.subject, wl2.lineage), s1 = await screenPlace(wp2!.subject, wl2.lineage, wl2.label);
-      moved = p1 !== "waiting" && p1 === s1 && (await page.evaluate(() => performance.getEntriesByType("navigation").length)) === nav;
-      ok("C6.4-37 pass: answering the waiting line's question in the Agent view (reached from the panel's link) moves the line on the panel where the API puts it, without a page reload", moved, { p1, s1 });
-      // The other way: the next answers in turn, until the API puts the line somewhere else (at most six tries).
-      let p2 = p1, s2 = s1;
-      for (let pick = 2; pick <= 7 && p2 === p1; pick++) {
-        try { await answerBy(pick); } catch { break; } // fewer answers than tries
-        p2 = placeOf(await list(), wp2!.subject, wl2.lineage); s2 = await screenPlace(wp2!.subject, wl2.lineage, wl2.label);
+      // Each question the line waits on, in turn, until it leaves "May be needed" (at most four).
+      let p1 = "waiting", last: { key: string; on: "case" | "person" } | null = null, lastKind = "";
+      for (let i = 0; i < 4 && p1 === "waiting"; i++) {
+        const now = (await list()).people.find((x) => x.subject === wp2!.subject)!.waiting.find((x) => x.lineage === wl2.lineage);
+        const m = now?.missing.find((x) => !x.answered) ?? now?.missing[0];
+        if (!m) break;
+        lastKind = await answerBy(m, 1); last = m;
+        p1 = placeOf(await list(), wp2!.subject, wl2.lineage);
       }
-      moved2 = p2 !== p1 && p2 === s2;
-      ok("C6.4-37 fail: answering it the other way, the panel follows the API again (needed, not needed, or kept when acted on)", moved2, { p2, s2 });
+      const s1 = await screenPlace(wp2!.subject, wl2.lineage, wl2.label);
+      ok("C6.4-37 pass: answering the waiting line's questions in the Agent view (reached from the panel's links) moves the line on the panel where the API puts it, without a page reload",
+        p1 !== "waiting" && p1 === s1 && (await page.evaluate(() => performance.getEntriesByType("navigation").length)) === nav, { p1, s1, last: last?.key });
+      // The other way: the choice this line was settled by, else (it was settled by a date) a line that now waits on a choice,
+      // its answers in turn: after each, the panel shows the line where the API puts it, and at least two answers put it in
+      // different places (at most seven).
+      const cand = last && lastKind === "choice" ? { who: wp2!.subject, l: wl2, m: last }
+        : (await list()).people.flatMap((x) => x.waiting.map((l) => ({ who: x.subject, l, m: l.missing.find((y) => !y.answered) }))).find((x) => !!x.m);
+      const seen = new Set<string>(); let follows = !!cand, p2 = "", s2 = "";
+      if (cand) for (let pick = 1; pick <= 7 && seen.size < 2; pick++) {
+        let kind: string;
+        try { kind = await answerBy(cand.m!, pick, cand.who, cand.l.lineage); } catch { break; } // fewer answers than tries: the step fails below
+        if (kind !== "choice") break;
+        p2 = placeOf(await list(), cand.who, cand.l.lineage); s2 = await screenPlace(cand.who, cand.l.lineage, cand.l.label);
+        follows &&= p2 === s2; seen.add(p2);
+      }
+      ok("C6.4-37 fail: answering a choice the other way, the panel follows the API again each time (needed, not needed, still waiting, or kept when acted on)", follows && seen.size >= 2, { line: cand?.l.label, places: [...seen], p2, s2 });
     } else {
-      ok("C6.4-37 pass: answering the waiting line's question in the Agent view moves the line on the panel where the API puts it, without a page reload", false, "no waiting line on this release to answer");
+      ok("C6.4-37 pass: answering the waiting line's questions in the Agent view moves the line on the panel where the API puts it, without a page reload", false, "no waiting line on this release to answer");
       ok("C6.4-37 fail: answering it the other way, the panel follows the API again (needed, not needed, or kept when acted on)", false, "no waiting line on this release to answer");
     }
 
