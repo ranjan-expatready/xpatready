@@ -1,6 +1,6 @@
 # qa milestone: M2's last walk on main, 6 Nov 2026, 02:10–02:45 IST
 
-**Commit tested: `bf12209f1`** (origin/main head). For the tech lead (Lead 19). Live AI off, US$0: no `STUDIO_*_LIVE`, no priced button, every pack's ledger line US$0. Verdict by a fresh reader that did not walk (P-360 (3), P-290). Facts: `2026-11-06-milestone/walk.md`; logs beside it.
+**Commit tested: `bf12209f1`** (origin/main head). For the tech lead (Lead 19). Live AI off, US$0: no `STUDIO_*_LIVE`, no priced button, every pack's ledger line US$0. Verdict by a fresh reader that did not walk (P-360 (3), P-290). Facts and exit codes: `2026-11-06-milestone/walk.md`.
 
 ## Verdict
 **M2: 58/60 on qa's records, with known Majors** (P-360 (2)). C4.5 and C4.11 move to **Works**. C4.6 stays **Partial**, held by QA-270's file half. C10.1 was not in this walk (row 12b, QA-271, QA-272).
@@ -11,7 +11,7 @@
 | C4.6 | **Partial** (unchanged) | `C4.6.test.ts` 22/22, run 42097532123, the six; Mac copy 22/22 | QA-270 (the file route) |
 | C4.11 | **Works** (was Partial) | `C4.11.test.ts` 30/30 + `C4.11-spread.test.ts` 8/8, run 42097532123, the six; Mac copies the same (spread twice) | nothing on the exit list; QA-262, QA-263 closed |
 
-**The commit point (P-339):** run 42097532123 ran on `35045aef9` (#1068's merge). Main's head `bf12209f1` adds only #1112's records: `git diff --stat 35045aef9 bf12209f1 -- …/prototype` is empty. So the run tested main's code, by tree, not by sha. Job lines: `2026-11-06-milestone/github-run-42097532123.log`. A fresh run on main's sha was not started: my `workflow_dispatch` was refused by this session's permission check. The scheduled nightly had not started at 02:40 IST.
+**The commit point (P-339):** run 42097532123 ran on `35045aef9` (#1068's merge). Main's head `bf12209f1` adds only #1112's records: `git diff --stat 35045aef9 bf12209f1 -- …/prototype` is empty. So the run tested main's code, by tree, not by sha. Job lines: the end of `2026-11-06-milestone/walk.md`. A fresh run on main's sha was not started: my `workflow_dispatch` was refused by this session's permission check. The scheduled nightly had not started at 02:40 IST.
 
 ## The exit list and the bugs rated
 | Item | Result on `bf12209f1` | Evidence |

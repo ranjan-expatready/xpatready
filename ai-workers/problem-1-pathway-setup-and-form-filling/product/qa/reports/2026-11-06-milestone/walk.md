@@ -32,3 +32,17 @@
 5. **C4.11 / QA-262 release by screens** (copy :4474, reset to the six, then `C4.11-spread.test.ts` exit 0 8/8, then a scratch copy of `check_qa262_row4.ts` with its release loop removed, exit 0 19/19: Visitor visa's own Hiding cleared through the second-person doors, 354 conditioned questions in force, a Sample document line, numbers' sources, nothing released). Study permit ("Outside Canada") › Review and release: "322 draft changes; 0 problems to fix", 0 errors, 26 warnings › Submit for review ("Submitted for review") › Content reviewer: Select all I can sign › Sign: "158 of 158 … signed" › Approver: Approve and release: toast "Released version 1", "The draft is identical to the released version." Then Visitor visa: "359 draft changes; 0 problems to fix" › Submit › reviewer Sign 359: "176 of 176 … signed" › Approver: Approve and release: "The draft is identical to the released version."; underneath one release each for `sp.outside` and `vv.single`.
 6. **Next capability's first step** (:4474): Case officer › Cases › Open a case. Pressed empty: "Give the case a reference of at least 3 characters.", "Give the principal applicant a display name." Visitor visa · release 1, reference QA-M2-VV-0602, Sample Client A › Open case: "Case opened", page QA-M2-VV-0602, Open, Release 1, "159 questions for this household". The two empty-field messages stayed under the fields after valid text was typed, until the next press. The release picker lists Study permit as "Outside Canada · release 1", with no program name.
 7. **C4.5** (copy qa_c45 :4471 after its pack): Visitor visa › Smart questionnaire: "397 Form facts, all people = 27 From documents + 346 Client answers + 24 Case officer enters", "Every fact has one source". Documents: "Passport information page copy · Each applicant · Always · 9 facts"; the tab's words on "Try it missing" in Preview. Library › Document types › passport › "Change the facts it supplies…": "Approved · next release … To change it again first, withdraw it", each fact with its quote, page and date read.
+
+## GitHub run 42097532123, job lines (read by qa through the API, 6 Nov ~02:40 IST)
+```
+GATE_B_DATA: six
+C4.11-spread.test.ts on the six: exit 0, 8/8 passed (60 s: copy 4, Reset to the six 17, run 38)
+C4.11.test.ts on the six: exit 0, 30/30 passed (40 s: copy 4, Reset to the six 18, run 17)
+GATE_B_DATA: six
+C4.5.test.ts on the six: exit 0, 26/26 passed (40 s: copy 5, Reset to the six 18, run 17)
+GATE_B_DATA: six
+C4.6.test.ts on the six: exit 0, 22/22 passed (20 s: copy 4, Reset to the six 15, run 1)
+GATE_B_DATA: six
+C5.1.test.ts on the six: exit 0, 49/49 passed (74 s: copy 3, Reset to the six 14, run 57)
+```
+The per-check logs named above stay on the Mac copy only (`*.log` is not committed, AGENTS rule 1); each check reruns with the command in `prototype/studio/tests/qa/README.md`.
