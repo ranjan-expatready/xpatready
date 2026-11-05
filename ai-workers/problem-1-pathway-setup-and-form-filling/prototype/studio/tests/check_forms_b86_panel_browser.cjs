@@ -92,6 +92,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const backId = (await p.locator(`${under} a`).getAttribute("href")).split("/").pop();
   await api(`/library/changes/${backId}/approve`, "POST", { note: "Approved by a test (B86)." }, "user-B");
   await p.reload();
+  // Break n1 (its last part): with no Hiding problem to sit under, a failed request still says so, and Try again brings Undo back.
+  await p.route("**/api/combinations/*/form-field-conditions", (route) => route.abort());
+  await p.reload();
+  await p.waitForSelector("[data-held-failed]", { timeout: 60_000 });
+  step("break n1 pass: no Hiding problem, the request fails: it says so, with Try again", await p.locator("[data-held-failed]").getByRole("button", { name: "Try again" }).count() === 1);
+  await p.unroute("**/api/combinations/*/form-field-conditions");
+  await p.locator("[data-held-failed]").getByRole("button", { name: "Try again" }).click();
+  await p.waitForSelector("[data-form-fields-held]", { timeout: 60_000 });
   await p.locator("[data-form-fields-held] summary").click();
   await check("Review and release, a form field holding a condition", "[data-form-fields-held]", "held");
   const undo = p.locator(`[data-form-fields-held] ${under}`).getByRole("button", { name: /Take the condition off/ });

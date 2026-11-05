@@ -99,6 +99,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>
       ) : unsourced || lineBox ? null : <Notice tone="ok" title="The draft passes validation" />}
+      {formFieldsView.isError && !underProblem.size ? <div data-held-failed><Notice tone="warn" title="The form fields holding a question's condition could not be read" action={<Button size="sm" variant="secondary" onClick={() => void formFieldsView.refetch()}>Try again</Button>}>Nothing has changed. Their Undo shows here when they can be read.</Notice></div> : null}
       <FormFieldsHeld combinationId={id} questions={formFields} shown={underProblem} />
       <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
