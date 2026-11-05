@@ -115,6 +115,8 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   const coFiled = c.co_filed_fees;
   const coFiledSound = !!coFiled && typeof coFiled === "object" && coFiled.on === "principal" && typeof coFiled.why === "string" && !!coFiled.why.trim();
   if (coFiled !== undefined && !coFiledSound) return undefined;
+  // Break m6: co_filed_fees belongs to a combination whose table modes co-file (one copy-paste must not lift the guard).
+  if (coFiledSound && !modes.some(([, m]) => m === "co_files")) return undefined;
   if (modes.some(([role, m]) => (m === "co_files" ? !(coFiledSound && CO_FILING_ROLES.has(role)) : !APPLICANT_ROLES.has(role)))) return undefined;
   // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
   // (per_position), a family maximum without its cap, or a per-role line naming no role.
@@ -232,11 +234,17 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // Review on #500 M1 (break M2 through the release): with a co-filed sponsorship on the case, no table line is charged.
   // No basis reaches the co-filing sponsor, and the table cannot say which of its lines are the sponsorship's, so a
   // sponsorship fee would land on the sponsored person. The filings stand; the fees are "not worked out yet" (BR-10).
-  // C6.12-22: priced when the table places the co-filed filing's fees (on the sponsored person's application) and that
-  // application is on the case; a sponsorship with no principal's application to be charged on is never priced.
-  const coFiling = filings.some((f) => f.mode === "co_filed");
-  const coPriced = coFiling && !!rules?.coFiledFees && !!principal;
-  const priced = coFiling && !coPriced ? [] : fees0;
+  // Break M1, m3, m5: a combination whose table prices a co-filed sponsorship (coFiledFees) is priced only when the case
+  // carries exactly that: one sponsorship, filed by the sponsor, beside the sponsored person's application, in one
+  // submission. Otherwise no line is charged and the words say what is missing (never the bundle without a sponsorship).
+  const coFiled = filings.filter((f) => f.mode === "co_filed");
+  const coFiling = coFiled.length > 0;
+  const coMissing = !rules?.coFiledFees ? null
+    : !principal ? `no sponsored person's application is on this case (the principal applicant is not applying)`
+    : coFiled.length !== 1 || !CO_FILING_ROLES.has(coFiled[0].owner!.role) ? `its fees are worked out with the sponsor's sponsorship filed beside the sponsored person's application, and ${coFiled.length ? "this case's co-filed application is not the sponsor's alone" : "no sponsorship is filed on this case yet (add the sponsor; Who can be in this application sets the sponsor's filing)"}`
+    : new Set(filings.map((f) => f.group)).size > 1 ? `an application is split out from the sponsorship's submission, and the sponsorship's fees cover one submission only` : null;
+  const coPriced = coFiling && !!rules?.coFiledFees && !coMissing;
+  const priced = rules?.coFiledFees ? (coMissing ? [] : fees0) : coFiling ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
@@ -286,7 +294,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const feesKnown = priced.length > 0;
   const body = { filings, groups, fees, not_filing: notFiling };
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
-    fees_why: feesKnown ? null : coFiling && fees0.length ? `Fees not worked out yet for ${label} with a sponsorship: who pays the sponsorship's fees is not built, so no fee line is charged; nothing is guessed.` : notWorkedOut(label),
+    fees_why: feesKnown ? null : coMissing && fees0.length ? `Fees not worked out yet for ${label}: ${coMissing}; no fee line is charged, nothing is guessed.` : coFiling && fees0.length ? `Fees not worked out yet for ${label} with a sponsorship: who pays the sponsorship's fees is not built, so no fee line is charged; nothing is guessed.` : notWorkedOut(label),
     basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${coPriced ? `${rules!.coFiledFees!.why} ` : ""}${ageWords(rules!, !!opts.ages)} Paying is not built.`
       : `Filings from the release's filing modes (Sample until the immigration expert confirms). ${notWorkedOut(label)} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
