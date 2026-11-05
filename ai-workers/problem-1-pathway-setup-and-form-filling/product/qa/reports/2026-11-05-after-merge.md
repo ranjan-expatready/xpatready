@@ -75,3 +75,11 @@ Reproduced by route and walked at 1440 px on a fresh six: an approved condition 
 
 ## Records ~07:30 IST: QA-238 (Bug · Minor), from the verdict on #1040
 A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M2 unchanged. #1040's verdict: PASS as a Saved result (C4.11 24/24, C4.7 17/17 on its head; run 41951440360). C4.11 stays Partial (QA-234, QA-237).
+
+## Batch 22 — #1037, #1040 (paid pairs) · main 86b721eac · ~08:34 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C4.11 (M2) | Partial (pack 24/24 on the six) | run 41958562644; held by QA-234 (B83) and QA-237 (B86) |
+| C4.7 (M2) | Works (unchanged) | 17/17 on the six, same run |
+
+**M2: 58/60.** Left: C4.11 (B83, B86), C10.1 (#1009).
