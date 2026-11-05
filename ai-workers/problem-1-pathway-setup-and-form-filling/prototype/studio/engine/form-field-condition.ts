@@ -83,3 +83,22 @@ export function yesNoStep(options: unknown): string | null {
   const yes = says(/^yes$/i), no = says(/^no$/i);
   return yes.length === 1 && no.length === 1 && yes[0][1] && no[0][1] && !/[/:;]/.test(yes[0][1] + no[0][1]) ? `yes_no_code:${yes[0][1]}/${no[0][1]}` : null;
 }
+
+/** B88 (challenge M1, QA-165): the details a Yes/No vouches for: the facts of the other mapped form fields in its own printed
+ *  block, found by its data path only (never by reading words). From the Yes/No's parent upward, the first part of the path
+ *  that holds other mapped form fields (IMM 1294 "…AliasName[0]": the other family and given names; "…natID[0]": the
+ *  document's number, country and dates), never above a page or part. Empty when none: the door then refuses. */
+export function blockFacts(entries: Entry[], dataPath: string, deciding: string): string[] {
+  const segs = dataPath.split(".");
+  for (let n = segs.length - 1; n >= 2; n--) {
+    if (/^(?:Page|Part)\d+\[\d+\]$/.test(segs[n - 1]) || /^(?:Page|Part)\d+\[\d+\]$/.test(segs[n])) break;
+    const prefix = `${segs.slice(0, n).join(".")}.`;
+    const facts = [...new Set(entries.filter((e) => e.outcome === "mapped" && e.fact && e.fact !== deciding && e.data_path !== dataPath && e.data_path.startsWith(prefix)).map((e) => e.fact!))].sort();
+    if (facts.length) return facts;
+  }
+  return [];
+}
+
+/** B88 BR-4: the step a worked-out Yes/No gets when it asks its deciding question, in B52's shape (IMM 5257's), so the filler
+ *  writes the person's own Yes or No and QA-165 still never writes No while one of these details is recorded. */
+export const askedStep = (facts: string[], codes: string) => `derived:any(${facts.join(", ")}) recorded -> ${codes}`;
