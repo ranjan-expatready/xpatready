@@ -67,4 +67,10 @@ Not touched: `api/src/demo.ts`, `engine/render.ts`, `api/src/proposals.ts`, `api
   * an imported field keeping a Household scope (import derives it from the key, m9);
   * an id across cases;
   * SA-1B-134 rules 2–4 (with C6.5's follow-up).
-* **#1051 (C1.3 + C11.5):** this PR and #1051 meet at `aboutOf`. Whichever lands second merges main and shows one test: an Organisation-scoped field copied from the employer case lands once, on the case's own record (tech lead on #1054).
+* **#1051 (C1.3 + C11.5), corrected by the tech lead on #1054 (comment 6650232198):**
+  * #1051 copies employer facts with `carriedFacts`, which uses `scopeOf`, not `aboutOf`. A field marked Organisation would be copied onto the principal while `aboutOf` reads the case's own record.
+  * Whichever PR lands second carries the check, in two parts:
+    * a unit line: `carriedFacts` with `{ fact, repeats: "per_person", scope: "organisation" }` gives `on: "case"`;
+    * API lines on the case part's SQL-scoped fixture: a link puts the answer on the case's own record, the question shows it, the principal's IMM 5710 box reads it, and a value typed beforehand shows Same or Different.
+  * Neither this pack nor `check_c316_field_scope.ts` calls `carriedFacts` or the link route today.
+  * A trial merge against #1051 conflicts only on import lines in `api/src/runtime.ts` and `web/src/runtime/questionnaire.tsx`: keep both sides.
