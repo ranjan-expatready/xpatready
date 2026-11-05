@@ -2,6 +2,8 @@
 // and for a form field already holding one (its Undo). Each form field with its own words; an author says they say the same as
 // the condition, and a second person approves on To review. The condition is the server's, never typed here. Every condition is
 // Sample until the expert confirms.
+// B88 (QA-239): a worked-out Yes/No that prints the condition's deciding question is asked as that question instead, the form's
+// printed question shown beside the deciding question's words; a second person approves; Undo puts its earlier step back.
 import { Link } from "react-router-dom";
 import { Info } from "lucide-react";
 import type { FormFieldRow, FormFieldState, FormFieldsOfCombination, FormFieldsOfQuestion } from "../../../contracts/form-field-conditions";
@@ -19,6 +21,7 @@ const STATE: Record<FormFieldState, { word: string; tone: string; tip: string }>
   different: { word: "Holds a different condition", tone: "warn", tip: "What this form field holds is not this question's condition, so it counts for nothing: the form field behaves as if it held none." },
   no_words: { word: "No words on the form field", tone: "neutral", tip: "Nothing on this form field's map says it is conditional, so it cannot be confirmed." },
   worked_out: { word: "A worked-out Yes/No", tone: "neutral", tip: "This Yes/No must write No when the answer is No, so it cannot be filled only under the condition." },
+  asked: { word: "Asks its deciding question", tone: "ok", tip: "This Yes/No was asked as its condition's deciding question: it writes the person's own answer, Y or N, and no longer reads the hidden answer." },
 };
 const TIP = "A form field that is filled only in some cases. If it says the same as this condition, the client is not asked and the form leaves it empty when the answer is No.";
 const allKey = (combinationId: string) => ["form-field-conditions", combinationId];
@@ -26,7 +29,7 @@ const allKey = (combinationId: string) => ["form-field-conditions", combinationI
 /** The panel for one question, from what the page already read. */
 export function FormFieldsPanel({ combinationId, view: v, item }: { combinationId: string; view: FormFieldsOfQuestion; item?: string }) {
   const { canAuthor } = useSessionView();
-  const act = useAction((x: { row: FormFieldRow; clear?: boolean }) => api<{ id: string; spread: string | null }>("/library/form-field-conditions", { method: "POST", json: { combinationId, fact: v.fact, formEditionId: x.row.form_edition_id, dataPath: x.row.data_path, ...(item && !x.clear ? { item } : {}), ...(x.clear ? { clear: true } : {}) } }),
+  const act = useAction((x: { row: FormFieldRow; clear?: boolean; ask?: boolean }) => api<{ id: string; spread: string | null }>("/library/form-field-conditions", { method: "POST", json: { combinationId, fact: v.fact, formEditionId: x.row.form_edition_id, dataPath: x.row.data_path, ...(item && !x.clear ? { item } : {}), ...(x.clear ? { clear: true } : {}), ...(x.ask ? { ask: true } : {}) } }),
     { invalidate: [allKey(combinationId), ["combination", combinationId], ["review"], ["review-queue"]], success: "Sent to a second person on To review." });
   return (
     <section aria-label={`Form fields that read the answer to ${v.question}`} data-form-field-conditions={v.fact}>
@@ -38,10 +41,17 @@ export function FormFieldsPanel({ combinationId, view: v, item }: { combinationI
             <li key={`${r.form_edition_id}:${r.data_path}`} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-form-field-row data-state={r.state}>
               <p className="font-medium">{r.edition} · {r.caption || "A form field with no printed name"}</p>
               {r.words ? <p className="mt-0.5 [overflow-wrap:anywhere]">“{r.words}”</p> : null}
+              {r.asks ? (
+                <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-sm" data-form-field-asks>
+                  <dt className="text-text-muted">The form asks</dt><dd className="[overflow-wrap:anywhere]">“{r.asks.printed}”</dd>
+                  <dt className="text-text-muted">{r.state === "asked" ? "Asked as" : "Its deciding question"}</dt><dd className="[overflow-wrap:anywhere]">“{r.asks.deciding}” · writes {r.asks.writes}</dd>
+                </dl>
+              ) : null}
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Tip tip={STATE[r.state].tip} focusable><span><Pill tone={STATE[r.state].tone}>{STATE[r.state].word}</Pill></span></Tip>
                 {r.can_confirm && canAuthor ? <Button size="sm" variant="secondary" busy={act.isPending} onClick={() => act.mutate({ row: r })}>Says the same as this condition</Button> : null}
-                {r.can_undo && canAuthor ? <Button size="sm" variant="ghost" busy={act.isPending} aria-label={`Take the condition off ${r.caption || "this form field"}`} onClick={() => act.mutate({ row: r, clear: true })}>Undo</Button> : null}
+                {r.can_ask && r.asks && canAuthor ? <Button size="sm" variant="secondary" busy={act.isPending} aria-label={`Asks the same question: “${r.asks.deciding}”`} onClick={() => act.mutate({ row: r, ask: true })}>Asks the same question</Button> : null}
+                {r.can_undo && canAuthor ? <Button size="sm" variant="ghost" busy={act.isPending} aria-label={r.state === "asked" ? `Undo: ${r.caption || "this form field"} is worked out from other answers again` : `Undo: take the condition off ${r.caption || "this form field"}`} onClick={() => act.mutate({ row: r, clear: true })}>Undo</Button> : null}
                 {r.change_id ? <Link className="text-text-link underline" to={`/review/change/${r.change_id}`}>Open on To review</Link> : null}
               </div>
               {r.why ? <p className="mt-1 text-xs text-text-muted">{r.why}</p> : null}
@@ -68,7 +78,7 @@ export function FormFieldConditions({ combinationId, fact, item }: { combination
 /** Review and release's one request for every question's form fields (STANDARDS: one request per screen view, not per row). */
 export const useFormFieldsOfCombination = (combinationId: string) => useApi<FormFieldsOfCombination>(allKey(combinationId), `/combinations/${combinationId}/form-field-conditions`);
 
-const HOLDS = new Set<FormFieldState>(["confirmed", "different", "waiting", "returned"]);
+const HOLDS = new Set<FormFieldState>(["confirmed", "different", "waiting", "returned", "asked"]); // B88: an asked Yes/No has its Undo here too
 /** BR-7: the way back. A form field holding a condition has no problem to sit under, so its Undo is listed here. */
 export function FormFieldsHeld({ combinationId, questions, shown }: { combinationId: string; questions: FormFieldsOfQuestion[]; shown: Set<string> }) {
   const held = questions.filter((q) => !shown.has(q.fact) && q.rows.some((r) => HOLDS.has(r.state)));

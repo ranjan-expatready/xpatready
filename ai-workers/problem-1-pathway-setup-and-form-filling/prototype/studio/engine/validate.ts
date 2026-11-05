@@ -304,7 +304,15 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
     if (canonical(rule) !== canonical(wasRule)) out.push({ kind: "Form field condition", key: k, change: !wasRule ? "added" : !rule ? "removed" : "changed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, !rule) });
   }
   for (const [k, e] of a) if (e.condition_rule && !b.has(k)) out.push({ kind: "Form field condition", key: k, change: "removed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, true) });
-  for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(noRule(a.get(k))) !== bare(noRule(e))) bump(k, "changed", e.origin === "AI_PROPOSAL");
+  // B88 (challenge M3): a Yes/No form field that now asks its own question, or no longer does, is named once, in words, for the
+  // immigration expert: it writes the person's own answer instead of one worked out from the details recorded. Only a move from
+  // one field to another counts (CI on #1068): a mapping cleared to no field is a Field map change, below.
+  const yesNo = (e?: { transform?: string | null }) => /\byes_no_code:/.test(e?.transform ?? "");
+  const asked = new Set<string>();
+  for (const [k, e] of b) { const was = a.get(k); if (was && was.fact && e.fact && was.fact !== e.fact && (yesNo(e) || yesNo(was))) asked.add(k), out.push({ kind: "Form field question", key: k, change: "changed", origin: e.origin, needs_sme: true, label: `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": reads "${factWords(next, e.fact)}", was "${factWords(next, was.fact)}" (shared library; Sample, Unconfirmed: expert)` }); }
+  // B88 (review minor): a form field whose only change is the question it reads is named above, not counted again here.
+  const noAsk = (k: string, e: Record<string, unknown>) => { const r = noRule(e); if (!asked.has(k)) return r; const { fact: _f, transform: _t, origin: _o, evidence_quote: _q, ...rest } = r; return rest; };
+  for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(noAsk(k, a.get(k))) !== bare(noAsk(k, e))) bump(k, "changed", e.origin === "AI_PROPOSAL");
   for (const k of a.keys()) if (!b.has(k)) bump(k, "removed", false);
   for (const [form, x] of byForm) out.push({ kind: "Field map", key: form, change: x.added && !x.changed && !x.removed ? "added" : "changed", origin: x.ai ? "AI_PROPOSAL" : undefined, needs_sme: x.ai > 0, label: `${x.added} form fields added, ${x.changed} changed, ${x.removed} removed${x.ai ? ` (${x.ai} AI-proposed)` : ""}` });
 

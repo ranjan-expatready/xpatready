@@ -219,7 +219,8 @@ export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: {
     await tx.libraryChange.update({ where: { id }, data: nothingLeft ? { status: "WITHDRAWN", decisionNote: `${earlier}${said}`.slice(0, 300), matches }
       : { label: `${document} · ${n ? `supplies ${n} fact${n === 1 ? "" : "s"}` : "supplies no fact"}, for every combination`.slice(0, 300), matches, decisionNote: `${earlier}${said}`.slice(0, 300), ...(wasApproved ? { status: "WAITING", decidedBy: null, decidedAt: null } : {}) } });
     const proposer = ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person";
-    await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `${said}. It was taken out of ${proposer}'s change "${c.label ?? c.key}", which ${nothingLeft ? "has nothing left to do and ended" : wasApproved ? "waits for a second person again" : "still waits"}.`.slice(0, 600) } });
+    // QA-263: the activity line reaches every firm's staff, so it never carries the typed reason (the note above keeps it).
+    await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `The new field "${fieldName}" it named was withdrawn by ${actor.name} (the reason is on the change). It was taken out of ${proposer}'s change "${c.label ?? c.key}", which ${nothingLeft ? "has nothing left to do and ended" : wasApproved ? "waits for a second person again" : "still waits"}.`.slice(0, 600) } });
     names.push(document);
   }
   return names;
