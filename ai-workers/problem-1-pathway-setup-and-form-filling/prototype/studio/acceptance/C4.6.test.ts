@@ -64,6 +64,17 @@ run(async () => {
   const family = [P, S2 ? await pv(S2.subjectId) : null, C];
   const once = family.flatMap((x: any) => (x?.forms ?? []).filter((f: any) => f.group === "COUPLE" || f.group === "APPLICATION").map((f: any) => `${f.group}:${f.form}`));
   ok("C4.6 pass: IMM 5409 shows under 'Filed once for the couple' and IMM 5475 under 'Filed once for the application', each once across the family", once.includes("COUPLE:IMM 5409") && once.includes("APPLICATION:IMM 5475") && once.length === new Set(once).size, once);
+  // QA-270: Preview's filled PDF takes Preview's own check (readerOf): case people are refused as on Preview itself, and a
+  // refusal leaves no artifact and no audit line. A real fill by the studio's people: tests/check_fill_duty.ts (this line has no form map).
+  const fillIt = (who: string) => call("POST", `/combinations/${vv}/fill`, { form: "IMM 5257", person: "principal", mode: "draft" }, who);
+  const preview = (who: string) => call("GET", `/combinations/${vv}/preview?mode=draft`, undefined, who);
+  const saved = () => ({ artifacts: Number(sql("select count(*) from generated_artifact")), audit: Number(sql("select count(*) from audit_event")) });
+  for (const [who, label] of [["user-P", "a client"], ["user-Q", "another client"], ["user-S", "another firm's representative"], ["user-R", "the firm's own representative"], ["user-O", "a case officer"]]) {
+    const before = saved();
+    r = await fillIt(who);
+    const after = saved(), seen = await preview(who);
+    ok(`C4.6 fail: ${label} is refused the filled PDF by route (403, as on Preview), no form field returned, no artifact, no audit line`, r.status === 403 && seen.status === 403 && !r.body?.boxes && after.artifacts === before.artifacts && after.audit === before.audit, { fill: r.status, preview: seen.status, before, after, words: words(r) });
+  }
   // Online is a choice per line, filled by the browser extension in a later wave (P-102, P-114): Preview says so.
   r = await call("PATCH", `/combinations/${vv}/forms/${encodeURIComponent(line("IMM 5707"))}/channel`, { channel: "ONLINE", signature: "TYPED_NAME", from: "PDF_UPLOAD", fromSignature: "NONE" }, AUTHOR);
   const on = ((await pv("principal"))?.forms ?? []).find((f: any) => f.form === "IMM 5707");
