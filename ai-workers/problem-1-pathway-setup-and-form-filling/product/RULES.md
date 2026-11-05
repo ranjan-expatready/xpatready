@@ -76,6 +76,8 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 
 * **Added 5 Nov, P-360, wins over the above until checked 09:30 IST on 6 Nov:** PRs naming only steps merge after CI and Approve, qa counts Works on `main`; M2 has a fixed exit list (QA-255, QA-262, QA-270, QA-271, row 12b), a new find joins only if it stops a person by screens on one of the six, other Majors go to the hardening pass and are named in every report; one builder and qa pair on the Visitor visa walk, a fresh qa gives the verdict.
 
+* **Added 5 Nov, P-361:** on Ollama Cloud, "Opus" in these rules means `kimi-k3.1-pro`, a different maker from the builder's `glm-5.3`, once the canary passes; a Claude qa re-checks the canary row. Hand over when compaction loses track, not at 400k: Claude Code treats an unknown model as 200K. Sessions, standbys and `get_usage` are desktop-app tools: see the resume page.
+
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.
 
