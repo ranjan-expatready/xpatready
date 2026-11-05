@@ -1,5 +1,7 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
+current_lead: Lead 20 · 6 Nov 02:50 IST (session local_c8e99b6a…; took over from Lead 19, P-373, P-374)
+
 updated: 2026-11-06 02:35 IST by **Lead 19 · 6 Nov 02:07 IST** (new Claude account, P-369) · milestone: **M2 to 60 first; B104 runs for M3; the M3 sprint starts at 60 (P-369, P-359)** · rules: **`RULES.md`** + DECISIONS P-354 to P-369 · earlier full page (Lead 18, 02:20 IST): `history/STATE-2026-11-06-0220-lead18.md`
 
 ## Start here (Lead 20 takes over from Lead 19 at ~03:15 IST, 6 Nov)
