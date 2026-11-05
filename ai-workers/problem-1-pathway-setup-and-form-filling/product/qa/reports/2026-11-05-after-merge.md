@@ -116,3 +116,6 @@ One condition approved on Visitor visa adds release-refusing Hiding errors on th
 
 ## Records ~13:13 IST: QA-252 (Bug · Major), C11.15 Partial
 The founder's test, reproduced by screens: the page choice refuses Start Up Visa, Saved and Rules only. C11.15 moves Works → Partial until fixed. **M2: 56/60** (C2.6 and C11.15 held). qa found no walk that chose an offered page other than the first (a search of the capability table and the reports, not of every chat); the suite's check types one page into Another canada.ca page, through a stand-in live launcher, and the report of 29 Oct tests only that a non-canada.ca page is refused.
+
+## Records ~14:05 IST: after #1058 (B82), C2.6 Works; QA-233, QA-242 closed
+Main 53515caef. C2.6 Works, 48/48 on the six (run 41994356502). C4.8 Works, 11/11 on the checkpoint (run 41994360877), 12/12 on the six (run 41994356502). The walk by screens at 1440 px closes what gate A left open: the draft's refusal (`2026-11-05-after-merge/c26-refusal-names-the-step-1440.png`) and the ask step (`c26-ask-step-1440.png`). Not on main by screen: release and the case (gate A's head), and two of the three facts and a No (`check_forms_b82_case_lines.ts`). New QA-253, QA-254 (Minor). **M2: 57/60** (not Works: C11.15, C4.11, C10.1).
