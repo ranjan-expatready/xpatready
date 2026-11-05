@@ -5,7 +5,7 @@
 // fill (writeForm, which then writes the PDF) and the answer-key runner (engine/answer-keys.ts), so a test checks
 // exactly what a fill writes.
 import { runTransform } from "../../p5/transforms.ts";
-import { codeForValue, hasCodes, labelForText, type ListValue, type OptionMap } from "./options.ts";
+import { codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
 import type { BoxRow } from "./render.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -36,7 +36,7 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
     if (r.coverage !== "confirmed fact" && !r.nothing_recorded) return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
     // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
     const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
-    if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) return { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
+    if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) { const not = notOnFormValue(r.value, e.option_map, list); return { ...r, result: "by hand", why: not ? `Refused: this form field prints no choice for "${not.label}" (a person marked it "not on this form"), so nothing is written and nothing is guessed. A person decides what to do for this answer.` : `"${r.value}" has no code in this form field's option map` }; } write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
     const own = box.get(r.box) ?? {};
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);

@@ -89,8 +89,20 @@ export const NewAnswerList = z.object({
   values: z.array(z.object({ key: z.string().trim().regex(/^[a-z][a-z0-9_]{0,60}$/, "Value keys are lower case, for example another_gender."), label: z.string().trim().min(1).max(120) })).min(2, "An answer list has at least two values."),
 });
 export const LinkAnswerList = z.object({ list: z.string().trim() });
-/** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused. */
-export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
+/** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused;
+ *  values the form prints no choice for are marked notOnForm, so filling refuses them in words (B81). */
+export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]), notOnForm: z.array(z.string()).default([]) });
+/** B81: the same choices saved on several form fields that print the same choices and read the same answer list. */
+export const SetOptionMaps = z.object({ dataPaths: z.array(z.string().trim().min(1)).min(1, "Name the form fields.").max(200), map: z.record(z.string(), z.string()), notOnForm: z.array(z.string()).default([]) });
+/** B81: the option-map step of one PDF edition as a person reads it: form fields that print the same choices and read
+ *  the same answer list are one group. `code` is what is saved, or (saved false) what the rules suggest from the form's
+ *  own words, nothing saved until a person saves. */
+export type OptionMapGroup = {
+  list: string; list_label: string | null; fact: string; form_fields: { data_path: string; caption: string | null; part: string | null }[];
+  choices: { code: string; label: string }[]; saved: boolean;
+  values: { key: string; label: string; code: string | null; not_on_form: boolean }[]; problems: string[];
+};
+export type OptionMapsView = { edition: string; edition_id: string; groups: OptionMapGroup[] };
 /** F1-P (Screen 02 Q3, SA-1B-11, 12, 27): what a list on a form holds, and what happens when the case has more rows
  *  than the form has room for. Words are Sample until the immigration expert confirms them. Never a silent cut. */
 export const LIST_PURPOSES = [
