@@ -227,7 +227,7 @@ export class OwnQuestions {
     const now = (await this.db.libraryChange.findUnique({ where: { id: changeId }, select: { status: true } }))?.status;
     if (now === "APPROVED" || now === "RELEASED") return "A second person approved the new field just now, so it stays in the library.";
     if (now === "WITHDRAWN") return "The new field was withdrawn just now.";
-    return "The new field stays waiting on To review: it changed just now.";
+    return "The new field stays waiting on To review: it could not be withdrawn just now, so withdraw it there.";
   }
 
   /** The titles of the sections that still ask a field (review F3). */

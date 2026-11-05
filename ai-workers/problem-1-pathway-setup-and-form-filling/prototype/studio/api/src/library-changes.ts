@@ -278,7 +278,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     // Breaker m8: BR-10 changes form fields, so the history says so.
     await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "decided", entity: "shared field", entityKey: c.key, summary: `${actor.name} withdrew the new field "${c.label ?? c.key}": ${why}. ${restored} form field${restored === 1 ? "" : "s"} back to worked out, ${maps.count} to no decision${readers.length ? `; still read by ${readers.map((r) => r.name).join("; ")}` : ""}`.slice(0, 600) } });
     return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count, form_fields_restored: restored, readers: readers.map((r) => r.name) };
-  });
+  }, { timeout: 30_000, maxWait: 10_000 }); // the readers are read under the lock, on a busy machine too (the same room as an ask)
 }
 
 /** The one publisher (B1): every APPROVED change goes into this pack version, called by the shared release and by a

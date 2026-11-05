@@ -17,7 +17,9 @@ let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  C4.11 ${name}${detail !== undefined && !c ? ` — ${JSON.stringify(detail).slice(0, 600)}` : ""}`); };
 const sql = (q: string) => execFileSync(PSQL, [URL_DB, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
-const call = (method: string, path: string, body?: unknown, actor: string | null = AUTHOR) => new Promise<{ status: number; body: any }>((done, failed) => {
+// A busy Mac: Postgres answers "Interrupted system call" now and then (5 Nov) and the request rolls back: pressed again once, as pack2 does.
+const call = async (method: string, path: string, body?: unknown, actor: string | null = AUTHOR) => { const r = await once(method, path, body, actor); return r.status >= 500 ? once(method, path, body, actor) : r; };
+const once = (method: string, path: string, body: unknown, actor: string | null) => new Promise<{ status: number; body: any }>((done, failed) => {
   const data = body === undefined ? undefined : JSON.stringify(body);
   const rq = request({ host: "localhost", port: PORT, path: `/api${path}`, method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json", ...(data ? { "content-length": Buffer.byteLength(data) } : {}) } }, (r) => {
     let t = ""; r.setEncoding("utf8"); r.on("data", (c) => (t += c)); r.on("end", () => { let b: any = null; try { b = JSON.parse(t); } catch { /* not JSON */ } done({ status: r.statusCode ?? 0, body: b }); });
