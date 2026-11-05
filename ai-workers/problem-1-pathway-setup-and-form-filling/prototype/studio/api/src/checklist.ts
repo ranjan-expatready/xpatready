@@ -8,19 +8,25 @@
 //    each one's quote found in the checklist's text, else dropped and listed (P-121). One AI round and no checker round,
 //    so every item reads "Check" (or "Decide" where the checklist leaves it to the visa office), never "Ready".
 //    Saved readings today: IMM 5488 (10-2024) and IMM 5484 (05-2026) (prototype/p2/runs/*-requirements-live-*).
+//    B82 (QA-233): a line's condition may read a fact the library lacks, which release rightly refuses, so the fact its
+//    condition reads is proposed with the line through the library-add step (conditionFactItems): a person accepts it and
+//    a second person approves it, as for a fact added for a rule (C3.6, rule-facts.ts, proposals.ts LANDERS.field).
 // Accepting a line on To review writes it as a draft document line (proposals.ts LANDERS.requirement_line, QA-157); the
 // old apply door here answers 410.
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
 import { identityKeyOf, insertProposals, linesOnCombination, QUEUE_TX, type NewProposal, type Work } from "./proposals.ts";
+import { factsRead, RULE_FACT_TYPES, valuesCompared } from "./rule-facts.ts";
+import { isChoice } from "./answer-values.ts";
 import { combinationTrails } from "./where-used.ts";
 import type { ProposalPayload } from "../../contracts/proposal-item.ts";
 
 export { linesOnCombination } from "./proposals.ts";
 export const CHECKLIST_KINDS = ["document_requirement", "section", "rule", "check"] as const;
 export { inventoryOf, linesOf, savedReading, treeOf, wordsOf, type ReadLine, type RequirementProposal, type SavedReading } from "./saved-readings.ts";
-import { linesOf, partFits, savedReading, wordsOf, type ReadLine, type RequirementProposal } from "./saved-readings.ts";
+import { linesOf, partFits, savedReading, wordsOf, type ReadLine, type RequirementProposal, type SavedFact } from "./saved-readings.ts";
+import { normalizeLabel } from "../../contracts/programs.ts";
 import { CODED_IDENTITY, isIdentityName, isPassportPhoto } from "../../engine/identity-documents.ts";
 
 
@@ -111,10 +117,14 @@ export class Checklists {
         message: "", detail: { operation: "draft_from_checklist", source: a.edition, kinds: CHECKLIST_KINDS, runFile: r!.runFile } } });
       const ids = await insertProposals(tx, a.workspaceId, typeItems(job.id));
       const typeIds = new Map([...newTypes.keys()].map((k, i) => [k, ids[i]] as [string, string]));
+      // B82: read under the door's lock, so two checklists read at once propose one fact once.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${a.workspaceId}`}))`;
+      const facts = conditionFacts(lines, r!.facts, await factsKnown(tx, a.workspaceId));
+      await insertProposals(tx, a.workspaceId, facts.propose.map((f) => factItem(f, job.id, a.combinationId, r!.runFile, source(f.lines[0].quote), name)));
       await insertProposals(tx, a.workspaceId, lineItems(job.id, typeIds));
       const office = lines.filter((l) => l.office).length;
-      const message = `Replayed the saved AI reading of ${name} (US$0): ${lines.length} document requirement${lines.length === 1 ? "" : "s"} proposed with the checklist's own words beside each${newTypes.size ? `, and ${newTypes.size} document type${newTypes.size === 1 ? "" : "s"} the shared library lacks` : ""}${dropped.length ? `; ${dropped.length} left out by the rules: ${dropped.join("; ")}` : ""}. They are decided one by one on To review. One AI round, no checker round yet, so each one reads Check${office ? `, and the ${office} the checklist leaves to the visa office read Decide` : ""}. Every value is Sample until the immigration expert confirms it.`;
-      const done = await tx.draftingJob.update({ where: { id: job.id }, data: { message, detail: { operation: "draft_from_checklist", source: a.edition, kinds: CHECKLIST_KINDS, runFile: r!.runFile, proposed: lines.length, types: newTypes.size, dropped } } });
+      const message = `Replayed the saved AI reading of ${name} (US$0): ${lines.length} document requirement${lines.length === 1 ? "" : "s"} proposed with the checklist's own words beside each${newTypes.size ? `, and ${newTypes.size} document type${newTypes.size === 1 ? "" : "s"} the shared library lacks` : ""}${facts.propose.length ? `, and ${facts.propose.length} fact${facts.propose.length === 1 ? "" : "s"} their conditions read that the library lacks` : ""}${facts.held.length ? `; ${facts.held.length} fact${facts.held.length === 1 ? "" : "s"} not proposed: ${facts.held.join("; ")}` : ""}${dropped.length ? `; ${dropped.length} left out by the rules: ${dropped.join("; ")}` : ""}. They are decided one by one on To review. One AI round, no checker round yet, so each one reads Check${office ? `, and the ${office} the checklist leaves to the visa office read Decide` : ""}. Every value is Sample until the immigration expert confirms it.`;
+      const done = await tx.draftingJob.update({ where: { id: job.id }, data: { message, detail: { operation: "draft_from_checklist", source: a.edition, kinds: CHECKLIST_KINDS, runFile: r!.runFile, proposed: lines.length, types: newTypes.size, facts: facts.propose.map((f) => f.fact), factsHeld: facts.held, dropped } } });
       return { job: done, made: true, proposed: lines.length };
     }, QUEUE_TX);
     if (made) await this.audit.log(a.workspaceId, actor.id, "started", "checklist draft", name, `${actor.name} replayed the saved AI reading of ${name}: ${proposed} document requirements proposed${newTypes.size ? `, ${newTypes.size} new document types` : ""}${dropped.length ? `, ${dropped.length} left out` : ""} (US$0)`, undefined, a.combinationId);
@@ -133,6 +143,81 @@ export class Checklists {
 }
 
 type DocTypePayload = Extract<ProposalPayload, { kind: "document_type" }>;
+type FieldPayload = Extract<ProposalPayload, { kind: "field" }>;
+/** What the library and the queue already hold, by fact key and by name. */
+type FactsKnown = { live: Set<string>; retired: Set<string>; named: Map<string, string>; waitingKeys: Set<string>; waitingNames: Set<string> };
+/** One fact a checklist's lines read and the library lacks. */
+export type ConditionFact = { fact: string; lines: ReadLine[]; label: string; meaning: string; valueType: string; compared: string[]; defined: SavedFact | null };
+/** A fact key as the rules write it (rule-facts.ts). */
+const FACT_KEY = /^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/;
+
+async function factsKnown(tx: Parameters<typeof insertProposals>[0], ws: string): Promise<FactsKnown> {
+  const [fields, derived, waiting] = await Promise.all([
+    tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true, label: true, status: true, mergedIntoKey: true } }),
+    tx.derivedField.findMany({ where: { workspaceId: ws }, select: { derivedKey: true } }),
+    tx.proposalItem.findMany({ where: { workspaceId: ws, kind: "field", status: "waiting" }, select: { identityKey: true, work: true } }),
+  ]);
+  const usable = fields.filter((f) => f.status !== "RETIRED" && !f.mergedIntoKey);
+  return { live: new Set([...usable.map((f) => f.canonicalFieldKey), ...derived.map((d) => d.derivedKey)]), retired: new Set(fields.filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey)),
+    named: new Map(usable.filter((f) => f.label).map((f) => [normalizeLabel(f.label!), f.canonicalFieldKey])),
+    waitingKeys: new Set(waiting.map((w) => (w.work as { ruleFact?: unknown; proposedKey?: unknown } | null)).flatMap((w) => [w?.ruleFact, w?.proposedKey]).filter((k): k is string => typeof k === "string")),
+    waitingNames: new Set(waiting.map((w) => w.identityKey).filter((k): k is string => !!k)) };
+}
+
+/** An answer type from how the condition tests the fact, when the reading gave none (true/false: yes or no; a number or
+ *  an ordered test: a number; a word: a choice). */
+function typeFromTests(lines: ReadLine[], fact: string): string {
+  let found = "text";
+  const walk = (n: unknown) => {
+    if (!n || typeof n !== "object") return;
+    const o = n as { field?: unknown; op?: unknown; value?: unknown; args?: unknown; arg?: unknown };
+    if (o.field === fact) found = typeof o.value === "boolean" ? "yes_no" : typeof o.value === "number" || ["gt", "gte", "lt", "lte"].includes(String(o.op)) ? "number" : "code";
+    (Array.isArray(o.args) ? o.args : []).forEach(walk); if (o.arg) walk(o.arg);
+  };
+  lines.forEach((l) => walk(l.condition_tree));
+  return found;
+}
+
+/** B82 (QA-233; pure): the facts these lines' conditions read that the library lacks, one each. `propose` are proposed
+ *  with the lines. `held` says, in words, each one that cannot be: release keeps refusing its line until a person settles
+ *  it. A fact another proposal is already adding is neither (that proposal is the one a person decides). */
+export function conditionFacts(lines: ReadLine[], defined: SavedFact[], known: FactsKnown): { propose: ConditionFact[]; held: string[] } {
+  const by = new Map<string, ReadLine[]>();
+  for (const l of lines) for (const f of factsRead(l.condition_tree)) by.set(f, [...(by.get(f) ?? []), l]);
+  const propose: ConditionFact[] = [], held: string[] = [], names = new Set<string>();
+  for (const [fact, read] of [...by].sort(([x], [y]) => x.localeCompare(y))) {
+    if (known.live.has(fact) || known.waitingKeys.has(fact)) continue;
+    if (!FACT_KEY.test(fact)) { held.push(`"${fact}" is not a fact key (group.name), so correct its condition`); continue; }
+    if (known.retired.has(fact)) { held.push(`${fact} is a retired library field: restore it in Library › Fields`); continue; }
+    const def = defined.find((d) => d.id === fact) ?? null;
+    const label = typeName(fact.split(".").slice(1).join(" ")).slice(0, 120), name = normalizeLabel(label);
+    const twin = known.named.get(name);
+    if (twin) { held.push(`${fact} has the name of the library's ${twin}: correct the condition to read it`); continue; }
+    if (known.waitingNames.has(name) || names.has(name)) { held.push(`${fact}: a proposal named "${label}" is already waiting on To review, so decide that first`); continue; }
+    names.add(name);
+    const type = def?.valueType && RULE_FACT_TYPES.includes(def.valueType) ? def.valueType : typeFromTests(read, fact);
+    const words = def?.meaning ?? read.map((l) => l.condition_plain).find((c) => c && c.length >= 10) ?? `Read by the condition of ${typeName(read[0].document_type)}.`;
+    propose.push({ fact, lines: read, label, meaning: words.slice(0, 500), valueType: type, compared: [...new Set(read.flatMap((l) => valuesCompared(l.condition_tree, fact)))], defined: def });
+  }
+  return { propose, held };
+}
+
+/** One `field` proposal for a fact a line's condition reads: it keeps the key the condition reads (the lander's ruleFact),
+ *  and waits as Decide when only lines the checklist leaves to the visa office read it. Sample, as every item here. */
+function factItem(f: ConditionFact, runId: string, combinationId: string, runFile: string, source: NewProposal["source"], checklist: string): NewProposal & Work {
+  const docs = [...new Set(f.lines.map((l) => typeName(l.document_type)))], first = f.lines[0];
+  const sentence = `Document condition ${typeName(first.document_type)}: ${first.condition_plain ?? "no sentence yet"}`.slice(0, 300);
+  // A choice's list comes from what the conditions test; fewer than two is for the person to complete on To review.
+  const values = isChoice(f.valueType) && f.compared.length >= 2 ? f.compared.map((code) => ({ code, label: typeName(code) })) : undefined;
+  const payload: FieldPayload = { kind: "field", label: f.label, aliases: [], meaning: f.meaning, valueType: f.valueType, subject: f.fact.split(".")[0], ...(values ? { values } : {}), formBox: null };
+  const why = `${docs.join(", ")} ${docs.length === 1 ? "reads" : "read"} this fact and the library lacks it, so a release would be refused. ${f.defined?.derived ? "The saved reading works it out from other facts, and no calculation here does that, so it is proposed as a fact a person answers. " : f.defined ? "" : "The saved reading does not define it, so its meaning is the condition's words. "}One AI round: check its name, meaning and answer type; a second person approves it once accepted.${isChoice(f.valueType) && !values ? " Add its answer values before accepting." : ""}`;
+  const reading = `${f.label}, read by ${checklist}'s conditions: ${f.defined?.plain ?? f.meaning}`;
+  return { kind: "field", runId, step: "rule_fact", scope: { formEdition: null, combinationId }, landsOn: "library", reuse: { match: "new", existingKey: null }, payload,
+    source: source ? { ...source, rule: { key: first.document_type, sentence } } : null, rounds: { draft: { reading: reading.slice(0, 300), payload, from: "replay", runFile, costUsd: 0 }, check: null },
+    rules: [{ rule: "quote_in_source", passed: true, why: null }, { rule: "condition_reads_fact", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }],
+    agreement: "one_round", confidence: f.lines.every((l) => l.office) ? "decide" : "check", reason: why.slice(0, 500), origin: "ai", identity: { key: normalizeLabel(f.label), near: [], nearReason: null }, relatesTo: null, revision: null, basis: "SAMPLE",
+    work: { ruleFact: f.fact, ruleKind: "requirement", ruleValues: f.compared } };
+}
 /** "passport_information_page_copy" → "Passport information page copy" (a person reads names, never keys). */
 export const typeName = (t: string) => { const w = t.replace(/[_\s]+/g, " ").trim(); return w ? (w[0].toUpperCase() + w.slice(1)).replace(/\bUs\b/, "US") : t; };
 const cut = (t: string, n: number) => (t.length <= n ? t : `${t.slice(0, n - 2).trimEnd()}…"`);

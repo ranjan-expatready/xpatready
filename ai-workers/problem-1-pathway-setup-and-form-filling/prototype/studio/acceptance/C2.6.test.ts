@@ -12,7 +12,7 @@
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C2.6.test.ts 4440 xr_studio_accept
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { AUTHOR, pack2, run, VV_CHECKLIST } from "./lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, run, VV_CHECKLIST } from "./lib/pack2.ts";
 
 const T = pack2("C2.6");
 const { call, sql, ok, words } = T;
@@ -105,6 +105,45 @@ run(async () => {
   const before2 = sql(`select count(*) from document_requirement where combination_id='${vv}'`);
   r = await call("POST", `/jobs/${job ?? "00000000-0000-4000-8000-000000000000"}/apply-checklist`, {}, AUTHOR);
   ok("C2.6 fail: the old apply-checklist door is closed (410 or 409, saying to use the review queue) and adds no line", !!job && [409, 410].includes(r.status) && /review/i.test(words(r)) && sql(`select count(*) from document_requirement where combination_id='${vv}'`) === before2, { status: r.status, words: words(r) });
+  // ---------------------------------------------------------------- B82 (QA-233; tech lead's ruling on #1022): a line's condition
+  // reads only facts the library has or facts proposed with it, through the library-add step, so release's refusal is
+  // never a dead end. Facts are Sample; a second person approves each.
+  const treeFacts = (t: unknown): string[] => [...JSON.stringify(t ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]);
+  const inLibrary = (f: string) => sql(`select (select count(*) from canonical_field where canonical_field_key='${f}' and status <> 'RETIRED') + (select count(*) from derived_field where derived_key='${f}')`) !== "0";
+  const after = await call("GET", "/review/proposals");
+  const lib2: any[] = [];
+  for (const g of (after.body?.groups ?? []) as any[]) { const v = (await call("GET", `/review/proposals?group=${encodeURIComponent(g.id)}`)).body?.group?.bands ?? {}; lib2.push(...[...(v.ready ?? []), ...(v.check ?? []), ...(v.decide ?? [])]); }
+  // A fact a form field reads waits on that form's own draft (its proposed key); the rest wait as the checklist's.
+  const factOf = (f: string) => sql(`select id from proposal_item where kind='field' and status='waiting' and '${f}' in (work->>'ruleFact', work->>'proposedKey') limit 1`);
+  const read = [...new Set(items.flatMap((x: any) => treeFacts(payloadOf(x).condition?.tree)))];
+  const unheld = read.filter((f) => !inLibrary(f) && !factOf(f));
+  ok("C2.6 pass (B82): every line's condition reads a fact in the library or proposed with it (none left with no way to release)", read.length >= 3 && unheld.length === 0, { read, unheld });
+  const facts = lib2.filter((x) => x.kind === "field" && /imm5484/i.test(x.source?.file ?? ""));
+  ok("C2.6 pass (B82): each proposed fact waits as a library item resting on IMM 5484's own words, Sample, with a meaning a person can read", facts.length > 0 && facts.every((x) => x.lands_on === "library" && x.source?.quote_found === true && text ? text!.includes(String(x.source?.quote ?? "").replace(/\s+/g, " ").trim()) : true) && facts.every((x) => x.basis === "SAMPLE" && String(x.readings?.draft?.payload?.meaning ?? "").length >= 10), facts.map((x) => x.title));
+  ok("C2.6 pass (B82): a fact only visa-office lines read waits as Decide, never Check", facts.filter((x) => x.band === "decide").every((x) => items.filter((l: any) => treeFacts(payloadOf(l).condition?.tree).includes(sql(`select work->>'ruleFact' from proposal_item where id='${x.id}'`))).every((l: any) => l.band === "decide")), facts.map((x) => `${x.title}: ${x.band}`));
+  // The three the visa's lines read on the six, as IMM 5484's page 1 conditions them.
+  const named = [{ line: /US nonimmigrant visa/i }, { line: /Two photos/i }, { line: /current immigration status/i }].map((e) => { const l = items.find((x: any) => e.line.test(x.source?.quote ?? "")); return { line: l, facts: treeFacts(payloadOf(l).condition?.tree) }; });
+  const lineFact = named.find((n) => n.line && n.facts.some((f) => !inLibrary(f)));
+  const key1 = lineFact?.facts.find((f) => !inLibrary(f)) ?? "";
+  const p1 = key1 ? factOf(key1) : "";
+  const problem = async () => ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).map((x: any) => String(x.message ?? x));
+  if (lineFact) {
+    r = await call("POST", "/review/proposals/decide", { ids: [lineFact.line.id], action: "accept", reason: "Accepted by a test (C2.6 B82)." }, AUTHOR);
+    ok("C2.6 setup: a conditional line is accepted", r.status < 300, words(r));
+    ok("C2.6 fail (B82): before its fact is in the library the draft says so, in the release's own words", (await problem()).some((m: string) => m.includes(`reads ${key1}, which is not in the library`)), await problem());
+    r = await call("POST", "/review/proposals/decide", { ids: [p1], action: "accept", reason: "Accepted by a test (C2.6 B82)." }, AUTHOR);
+    ok("C2.6 pass (B82): accepting the fact lands it through the library-add step, under the key the condition reads", r.status < 300 && inLibrary(key1), r.status >= 300 ? words(r) : key1);
+    const waiting = sql(`select id from library_change where status='WAITING' and key='${key1}'`);
+    ok("C2.6 pass (B82): a second person approves it, as any new library item", !!waiting, waiting);
+    r = await call("POST", `/library/changes/${waiting}/approve`, { note: "Approved by a test as the second person (C2.6 B82)." }, AUTHOR);
+    ok("C2.6 fail (B82): the author cannot approve their own fact", r.status >= 400, r.status);
+    r = await call("POST", `/library/changes/${waiting}/approve`, { note: "Approved by a test as the second person (C2.6 B82)." }, APPROVER);
+    ok("C2.6 pass (B82): the second person approves the fact", r.status < 300, words(r));
+    ok("C2.6 pass (B82): the release's refusal for that fact is gone", !(await problem()).some((m: string) => m.includes(`reads ${key1},`)), await problem());
+  } else ok("C2.6 pass (B82): a conditional line reads a fact the library lacks here (else this copy's library is already set up)", false, read);
+  // The paid pairs replay on the people's-steps question list: a fact only a document condition reads is not a form field,
+  // so the list a form-read question sits on never moves with it.
+  ok("C2.6 fail (B82): a fact only a condition reads is not asked by adding it (no question appears)", !key1 || sql(`select count(*) from section_question where canonical_field_key='${key1}' and status <> 'RETIRED'`) === "0");
   ok("C2.6 pass: the whole test spent US$0", items.length > 0 && T.spent() === before);
   T.done();
 });

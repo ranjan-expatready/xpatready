@@ -16,7 +16,10 @@ export const inventoryOf = (officialFile: string) => `prototype/p1/inventory/${b
 /** Quotes are compared on their words: case, spaces and the kind of quote mark do not count. */
 export const wordsOf = (t: string) => t.toLowerCase().replace(/[\u2018\u2019\u201c\u201d'"`]/g, "").replace(/\s+/g, " ").trim();
 type SavedDoc = { document_type?: unknown; who?: unknown; base_or_conditional?: unknown; condition_plain?: unknown; condition?: unknown; provided_by?: unknown; source_file?: unknown; source_quote?: unknown; confidence?: unknown; reason?: unknown; new_type?: unknown };
-export type SavedReading = { runFile: string; runId: string; inventory: string; sha256: string; text: string; docs: SavedDoc[] };
+/** B82: a fact the saved reading itself defined: its proposed_fields (a meaning and an answer type) and its derived_fields
+ *  (worked out from others: its plain words, no answer type). */
+export type SavedFact = { id: string; meaning: string; plain: string; valueType: string | null; derived: boolean };
+export type SavedReading = { runFile: string; runId: string; inventory: string; sha256: string; text: string; docs: SavedDoc[]; facts: SavedFact[] };
 /** The newest saved real (live, contract-valid) requirements run that read this checklist's text with the same checksum,
  *  or null. A stub run is never replayed (break R5-1); a run of another edition's text does not match its checksum. */
 export function savedReading(officialFile: string | null, where: { runs?: string; root?: string } = {}): SavedReading | null {
@@ -30,12 +33,20 @@ export function savedReading(officialFile: string | null, where: { runs?: string
     let d: SavedRun; try { d = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; } catch { continue; }
     if (d?.caller !== "live" || d?.contract_valid !== true || d?.drafting_run?.kind !== "requirements") continue;
     if (!(d.drafting_run.inputs?.official_files ?? []).some((x) => x?.file === inventory && x?.sha256 === sha256)) continue;
-    let out: { documents?: unknown }; try { out = (typeof d.raw_output === "string" ? JSON.parse(d.raw_output) : d.raw_output) as { documents?: unknown }; } catch { continue; }
+    let out: { documents?: unknown; proposed_fields?: unknown; derived_fields?: unknown }; try { out = (typeof d.raw_output === "string" ? JSON.parse(d.raw_output) : d.raw_output) as typeof out; } catch { continue; }
     if (!Array.isArray(out?.documents)) continue;
     let text = ""; try { text = String(JSON.parse(bytes.toString("utf8")).text ?? ""); } catch { /* no text: every quote is dropped */ }
-    return { runFile: `prototype/p2/runs/${f}`, runId: String(d.drafting_run.run_id ?? f.replace(/\.json$/, "")), inventory, sha256, text, docs: out.documents as SavedDoc[] };
+    return { runFile: `prototype/p2/runs/${f}`, runId: String(d.drafting_run.run_id ?? f.replace(/\.json$/, "")), inventory, sha256, text, docs: out.documents as SavedDoc[], facts: savedFacts(out) };
   }
   return null;
+}
+/** B82: the facts a saved reading defined. A derived one means its first sentence; the rest is the AI's working, kept in
+ *  `plain` for the item's reading (it may say what a person must settle, such as an age the checklist does not state). */
+function savedFacts(out: { proposed_fields?: unknown; derived_fields?: unknown }): SavedFact[] {
+  const list = (v: unknown) => (Array.isArray(v) ? v : []) as { id?: unknown; meaning?: unknown; value_type?: unknown; plain?: unknown }[];
+  const asked = list(out.proposed_fields).map((f) => ({ id: str(f.id, 120), meaning: str(f.meaning, 500), plain: str(f.meaning, 500), valueType: str(f.value_type, 40), derived: false }));
+  const worked = list(out.derived_fields).map((f) => ({ id: str(f.id, 120), meaning: str(f.plain, 500)?.split(/(?<=\.)\s+/)[0] ?? null, plain: str(f.plain, 500), valueType: null, derived: true }));
+  return [...asked, ...worked].filter((f): f is SavedFact => !!f.id && !!f.meaning && !!f.plain);
 }
 /** BR-10 (C4.11 part 4c): the newest saved real reading of this checklist FILE whose text checksum is no longer the
  *  file's (a newer edition replaced the text), or null. It is never replayed (savedReading matches checksums only); it

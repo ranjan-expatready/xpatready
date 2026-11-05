@@ -184,14 +184,15 @@ export function pack2(id: string) {
   /** C4.5 (P-322): a combination of the six gets its document lines the way people give them, US$0: on the Documents
    *  tab the author drafts each document checklist from its saved reading (Saved, never Live), accepts its Ready lines
    *  and new document types on To review, and a second person approves the new library items. Lines for a person to
-   *  decide (visa office words) stay waiting. Test setup only; the product never calls it. */
+   *  decide (visa office words) stay waiting, and the facts only they read (B82). Test setup only; the product never calls it. */
   async function documentsBySteps(comboId: string) {
     const out = { drafted: 0, accepted: 0, approved: 0, refused: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Document checklist' order by created_at`)) if (say("draft the checklist", await call("POST", `/attachments/${a}/draft-checklist`, { mode: "replay" }, AUTHOR))) out.drafted++;
-    // The library's new document types first (a line lands only on a type the library holds), then the lines.
-    for (const kind of ["document_type", "requirement_line"]) {
+    // The library's new document types first (a line lands only on a type the library holds), the facts the lines'
+    // conditions read (B82, QA-233: release refuses a line whose fact the library lacks), then the lines.
+    for (const kind of ["document_type", "field", "requirement_line"]) {
       const ready = ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='checklist_draft' and p.kind='${kind}' and p.status='waiting' order by p.created_at, p.identity_key`);
       const v = await queued(comboId), lib = (await call("GET", "/review/proposals")).body?.groups ?? [];
       const bands = new Map<string, string>(v.map((x: any) => [x.id, x.band]));
