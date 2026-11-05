@@ -4,7 +4,8 @@
 //   own questions through To review › Form fields (POST /editions/:id/form-fields/own-question), in the form's words
 //   (page, quote, saved date), with the library's field of the same name; the shared placement step then asks them;
 // * IMM 5476 and IMM 5475 apply to a represented case (their deciding questions answered Yes) and to no other (No), and
-//   are "cannot tell yet" (listed, asked) before anyone answers; on main their "exists" rule made them never apply;
+//   are "cannot tell yet" (listed, asked) before anyone answers; on main their "exists" rule made them never apply. On a
+//   firm case (C6.11, #1072) "Uses a representative" is Yes from the case team, so IMM 5476 is listed on each;
 // * the route's refusals, each in words, and a new field waiting for a second person.
 //   zsh studio/tools/isolated.sh s9_yesno 4440 start && tsx studio/tests/check_b52_own_yes_no.ts 4440 xr_studio_s9_yesno
 import { execFileSync } from "node:child_process";
@@ -132,25 +133,31 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("QA-227 pass: With an LMIA's IMM 5476 and IMM 5475 wait for the same two questions", !!formsOf(lp, "IMM 5476")?.missing.includes("case.uses_representative") && !!formsOf(lp, "IMM 5475")?.missing.includes("case.authorizes_release_to_designated_individual"), [formsOf(lp, "IMM 5476"), formsOf(lp, "IMM 5475")]);
   ok("QA-227 pass: both facts came through C3.6's door for their rule (a rules proposal, approved), never SQL", sql("select count(*) from canonical_field where canonical_field_key in ('case.uses_representative', 'case.authorizes_release_to_designated_individual') and status = 'PUBLISHED' and source_ref like 'Needed by Form condition IMM 547%'") === "2");
 
+  // C6.11 (#1072): every firm case has a representative of record, so "Uses a representative" is Yes from the case team
+  // (never typed: 422) and IMM 5476 is listed on each; IMM 5475 still follows its typed question.
+  let typedRep: { status: number; detail?: string } | null = null;
   const caseFor = async (ref: string, answer: boolean | null, combinationId = vv) => {
     const id = (await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER)).body?.id as string;
     const people = (await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[];
     const subject = people.find((p) => p.role === "case")!.subject_id;
-    if (answer !== null) for (const fact of ["case.uses_representative", "case.authorizes_release_to_designated_individual"]) {
-      const w = await call("PUT", `/runtime/cases/${id}/answers/${subject}/${fact}`, { value: answer, expectedId: null }, OFFICER);
-      if (w.status !== 200) ok(`QA-227: answer ${fact} on case ${ref}`, false, w);
+    if (answer !== null) {
+      const w = await call("PUT", `/runtime/cases/${id}/answers/${subject}/case.authorizes_release_to_designated_individual`, { value: answer, expectedId: null }, OFFICER);
+      if (w.status !== 200) ok(`QA-227: answer case.authorizes_release_to_designated_individual on case ${ref}`, false, w);
+      const r = await call("PUT", `/runtime/cases/${id}/answers/${subject}/case.uses_representative`, { value: answer, expectedId: null }, OFFICER);
+      typedRep ??= { status: r.status, detail: r.body?.detail };
     }
     return new Set(((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; applies: boolean }[]).filter((f) => f.applies).map((f) => f.form));
   };
   const represented = await caseFor("represented", true), unrepresented = await caseFor("unrepresented", false), unanswered = await caseFor("unanswered", null);
-  ok("QA-227 pass: a represented case (uses a representative, authorizes a release: Yes) lists IMM 5476 and IMM 5475", represented.has("IMM 5476") && represented.has("IMM 5475"), [...represented]);
-  ok("QA-227 fail: a case answering No lists neither", !unrepresented.has("IMM 5476") && !unrepresented.has("IMM 5475"), [...unrepresented]);
-  ok("QA-227 pass: a case nobody answered yet lists both as not decided yet (asked, never silently missing)", unanswered.has("IMM 5476") && unanswered.has("IMM 5475"), [...unanswered]);
+  ok("QA-227 pass: a represented case (the case team's representative; authorizes a release: Yes) lists IMM 5476 and IMM 5475", represented.has("IMM 5476") && represented.has("IMM 5475"), [...represented]);
+  ok("C6.11 fail: \"Uses a representative\" is not typed on a firm case (422, the case team sets it)", typedRep?.status === 422 && /case team/.test(typedRep?.detail ?? ""), typedRep);
+  ok("QA-227 fail: a case answering No to the release lists no IMM 5475; IMM 5476 stays (the case has a representative of record)", unrepresented.has("IMM 5476") && !unrepresented.has("IMM 5475"), [...unrepresented]);
+  ok("QA-227 pass: a case nobody answered yet lists IMM 5476 (from the case team) and IMM 5475 as not decided yet (asked, never silently missing)", unanswered.has("IMM 5476") && unanswered.has("IMM 5475"), [...unanswered]);
   // Review m4: the same on With an LMIA – inside Canada and Study permit – outside Canada (their releases).
   for (const key of ["wp.lmia_inside", "sp.outside"]) {
     const c = sql(`select id from combination where combination_key = '${key}'`);
     const [y, n] = [await caseFor(`${key}-yes`, true, c), await caseFor(`${key}-no`, false, c)];
-    ok(`QA-227 pass: on ${key} a represented case lists IMM 5476 and IMM 5475, a No lists neither`, y.has("IMM 5476") && y.has("IMM 5475") && !n.has("IMM 5476") && !n.has("IMM 5475"), { yes: [...y], no: [...n] });
+    ok(`QA-227 pass: on ${key} a represented case lists IMM 5476 and IMM 5475; a No to the release lists IMM 5476 only`, y.has("IMM 5476") && y.has("IMM 5475") && n.has("IMM 5476") && !n.has("IMM 5475"), { yes: [...y], no: [...n] });
   }
 
   // ------------------------------------------------------------ B52: the box reading its own question, on a case (QA-165 kept)

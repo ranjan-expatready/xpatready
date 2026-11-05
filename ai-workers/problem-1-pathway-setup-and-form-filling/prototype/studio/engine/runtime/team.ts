@@ -95,6 +95,16 @@ export function representativeContact(firm: Firm, members: Member[]): Record<str
   return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== undefined && v !== null && v !== ""));
 }
 
+/** The library's option key for a licence body (IMM 5476 Section B: CICC, a provincial or territorial law society, the
+ *  Chambre des notaires du Québec); a body it does not know gives none, so the question stays asked (break m6). */
+export function licensingBodyKey(body: string): string | null {
+  const b = body.trim().toLowerCase();
+  if (/^cicc\b|college of immigration and citizenship consultants/.test(b)) return "cicc";
+  if (/law society|barreau/.test(b)) return "law_society";
+  if (/notaires|notaries/.test(b)) return "chambre_notaires_quebec";
+  return null;
+}
+
 /** C6.11 (VV-R10, QA-152): IMM 5476's licence part and firm name from the representative of record, keyed by the
  *  library's representative facts: the category, the membership ID, the licensing body (the library's option key, "cicc"
  *  for CICC) and the name of the firm. Never typed per case or per applicant. A value the record lacks is left out
@@ -104,7 +114,7 @@ export function representativeLicence(firm: Firm, members: Member[]): Record<str
   if (!u) return null;
   const all: Record<string, string | undefined> = {
     "representative.representative_category": u.licence?.category, "representative.membership_id": u.licence?.number,
-    "representative.licensing_body": u.licence?.body ? u.licence.body.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") : undefined,
+    "representative.licensing_body": u.licence?.body ? licensingBodyKey(u.licence.body) ?? undefined : undefined,
     "representative.organization_name": firm.name,
   };
   return Object.fromEntries(Object.entries(all).filter((e): e is [string, string] => !!e[1]));

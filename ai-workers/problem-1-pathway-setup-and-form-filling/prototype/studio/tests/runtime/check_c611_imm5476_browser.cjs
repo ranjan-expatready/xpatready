@@ -98,8 +98,8 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
     const uses = r.locator("#agent-view div[id*='case-uses_representative']");
     if (await uses.count()) {
       const ut = await uses.first().innerText();
-      ok("C6.11 pass: \"Uses a representative\" is Yes from the case team (the firm record), with no Edit", /Yes/.test(ut) && /firm record/i.test(ut) && (await uses.first().getByRole("button", { name: /^(Add|Edit)/ }).count()) === 0, ut.replace(/\s+/g, " ").slice(0, 200));
-    } else ok("C6.11 pass: \"Uses a representative\" is Yes from the case team (the firm record), with no Edit", false, "no such line in the Agent view");
+      ok("C6.11 pass: \"Uses a representative\" is Yes from the case team (the firm record), says the case team sets it, with no Edit", /Yes/.test(ut) && /firm record/i.test(ut) && /Set by the case team/.test(ut) && !/Change it in the firm record/.test(ut) && (await uses.first().getByRole("button", { name: /^(Add|Edit)/ }).count()) === 0, ut.replace(/\s+/g, " ").slice(0, 200));
+    } else ok("C6.11 pass: \"Uses a representative\" is Yes from the case team (the firm record), says the case team sets it, with no Edit", false, "no such line in the Agent view");
     await axe("Agent view with the representative's part from the firm record");
 
     // Change the representative of record in the Case team dialog; the Agent view follows.

@@ -8,7 +8,7 @@
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/runtime/check_c611_team.ts 4431 xr_studio_runtime_m3a
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cannotAssign, cannotBeOfficer, cannotRepresent, imm5476, openingTeam, representativeAnswers, representativeContact, representativeFacts, representativeLicence, USES_REPRESENTATIVE, type Firm, type Member } from "../../engine/runtime/team.ts";
+import { cannotAssign, cannotBeOfficer, cannotRepresent, imm5476, openingTeam, representativeAnswers, representativeContact, representativeFacts, representativeLicence, licensingBodyKey, USES_REPRESENTATIVE, type Firm, type Member } from "../../engine/runtime/team.ts";
 import { RUNTIME_ACTORS } from "../../api/src/core.ts";
 import { FORMAT_CHECKS } from "../../engine/field-format.ts";
 import { client, recorder } from "./api.ts";
@@ -61,11 +61,15 @@ function pure() {
   // C6.11 (VV-R10, QA-152): IMM 5476's licence part and firm name from the representative of record, never typed per case.
   const lic = representativeLicence(firm, one);
   ok("C6.11 pass: IMM 5476's licence part (membership ID, category, licensing body as the library's key) and the firm's name come from the representative of record", lic?.["representative.membership_id"] === "R000000" && lic?.["representative.representative_category"] === "rcic" && lic?.["representative.licensing_body"] === "cicc" && lic?.["representative.organization_name"] === firm.name, lic);
+  ok("C6.11 pass (break m6): a licence body gives the library's option key (CICC, a law society, the Chambre des notaires)", licensingBodyKey("CICC") === "cicc" && licensingBodyKey("Law Society of Ontario") === "law_society" && licensingBodyKey("Barreau du Québec") === "law_society" && licensingBodyKey("Chambre des notaires du Québec") === "chambre_notaires_quebec");
+  ok("C6.11 fail (break m6): a body the library does not know gives no key, so the question stays asked", licensingBodyKey("Sample board") === null && !("representative.licensing_body" in (representativeLicence({ ...firm, users: firm.users.map((u) => (u.id === REP ? { ...u, licence: { ...u.licence!, body: "Sample board" } } : u)) }, one) ?? {})));
   const unlic: Firm = { ...firm, users: firm.users.map((u) => (u.id === REP ? { ...u, licence: null } : u)) };
   ok("C6.11 fail: no representative of record gives no licence part; a value the record lacks is left out (asked as before), never blank", representativeLicence(firm, []) === null && !("representative.membership_id" in (representativeLicence(unlic, one) ?? {})) && representativeLicence(unlic, one)?.["representative.organization_name"] === firm.name);
   const withCase = representativeAnswers(firm, one, "case-subject");
   ok("C6.11 pass: a case with a representative of record answers \"Uses a representative\" Yes for the application, from the firm record", withCase.some((x) => x.subjectId === "case-subject" && x.field === USES_REPRESENTATIVE && x.value === true && x.channel === "firm_record" && x.actor === REP));
   ok("C6.11 fail: without a representative of record nothing answers \"Uses a representative\"; without the case's subject it is not given", !representativeAnswers(firm, [], "case-subject").some((x) => x.field === USES_REPRESENTATIVE) && !ra.some((x) => x.field === USES_REPRESENTATIVE));
+  const noOffice = representativeContact({ ...firm, office: undefined, users: firm.users.map((u) => ({ ...u, email: undefined })) }, one) ?? {};
+  ok("C6.11 fail (review m2): a firm record without an office or e-mail gives none of the checkpoint's address, phone or e-mail keys (asked as before)", !Object.keys(noOffice).some((k) => /^person\.(address_|phone_|email$)/.test(k)), Object.keys(noOffice));
   // The firm record's e-mail passes IRCC's own e-mail check (engine/field-format.ts: 2 to 6 letters after the last dot),
   // so IMM 5476's representative section never shows "to fix" for a value nobody on the case can change.
   const email = (v: string) => FORMAT_CHECKS.email.test(v, {}, {}) === null;

@@ -309,14 +309,16 @@ export class CasePrepare {
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
     });
-    // C6.11 (VV-R10, BR-20): a form that names the representative (IMM 5476's representative part, from the firm record)
-    // says which representative of record it is for, so a change of representative shows on the item that needs a new one.
+    // C6.11 (VV-R10, BR-20): a form that names the representative (IMM 5476's licence part, the library's representative.*
+    // facts, from the firm record) says which representative of record it is for, so a change of representative shows on
+    // the item that needs a new one. A form reading only a person's name and address about the representative (IMM
+    // 5475's designated individual, break M3) is not tagged.
     const repOfRecord = (await this.db.caseTeamMember.findFirst({ where: { caseId: c.id, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
     const namesRep = new Map<string, boolean>();
     for (const i of items) {
       if (i.kind !== "form" || !("form" in i) || !i.form) continue;
       const k = `${i.form}|${i.subject}`;
-      if (!namesRep.has(k)) namesRep.set(k, nowFacts(i.form, i.subject).some((f) => f.about === REPRESENTATIVE));
+      if (!namesRep.has(k)) namesRep.set(k, nowFacts(i.form, i.subject).some((f) => f.about === REPRESENTATIVE && f.fact.startsWith("representative.")));
       if (namesRep.get(k)) Object.assign(i, { representative: repOfRecord });
     }
     // C9.2 review M1, M2: what Undo would put back for each change (the same rule as the route: the newest earlier value
