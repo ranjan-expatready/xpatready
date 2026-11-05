@@ -1,44 +1,31 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full rewrite at its hand-over); earlier by Lead 10 at 08:53 IST · milestone: **M2 — Super Admin configuration, with M3 alongside (P-344)** · rules: **`RULES.md`** (as of P-348) · hand-over note: lead10-handover-2026-11-05.md in the side-session notes folder lead10-saved-2026-11-05 · earlier STATE: git history
+updated: 2026-11-05 13:15 IST by **Lead 13 · 5 Nov 13:07 IST**, current from Lead 12's hand-over · milestone: **M2, with M3 alongside on its shared cause (P-351)** · rules: **`RULES.md`** + DECISIONS P-349 to P-353 · hand-over note: `history/lead12-handover-2026-11-05.md` · earlier STATE: git history
 
 ## Where we are
-* **M2: 58/60 on main (qa).** Confirmed since 02:31 IST: C3.4, C3.6, C9.1, C5.1, C4.5, C4.1. Left: **C4.11** (pack 24/24, held by B83 and B86) and **C10.1** (#1009, B81, B78, B79a, B79b). **M3: 1/17** on the table, qa re-scoring once (P-344 (2)).
-* **M2 is not end to end until B82 and B86 land:** QA-233 and QA-237 are dead ends a person can reach while the packs are green.
-* **Weekly plan 67% at 08:51 IST;** the plan is used to its limit, then the founder switches account (P-344). Paid AI today US$0.56 of US$30. Disk 14 GB; swap 7.6 of 8.2 GB, load 25: **the Mac is full, new builders go to the cloud or standbys.**
+* **M2: 57/60 (qa, #1078).** Left: C2.6 (QA-233; B82), C4.11 (B83, B82, B86, B88), C10.1 (B78, B79a, B79b, B97, row 12b = B99). Of the 57, qa has shown none to reach a dead end now that C2.6 is out; that is a floor. Walk list: QA-233, QA-234, QA-237, QA-239.
+* **M3: 0/17 on the checkpoint (qa, from cloud's #1069).** 10 of 14 packs first red at J7 Stage 1: row B104.
+* **The founder's own test failed ~13:05 IST:** page address on "Choose the page and find again". The cloud fix lane reads that every offered page fails, not only the long one: even the shortest, 103 characters, builds a key of about 150 against the limit of 120. Fix running, no PR yet at 13:15 IST; qa logging.
+* **Weekly plan 88%, about 6.5%/h, limit near 15:00 IST;** then he switches account (P-344). Paid AI US$0.56 of US$30 at 08:51 IST. Disk 17 GB.
 
-## In flight (08:55 IST)
-| Row | Session | Where | Next |
-|---|---|---|---|
-| B83 C4.11 | `local_6c0fdf86` | Mac, draft #1036 | Blocker + 9 Majors, breaker re-check, list id ae2133 twice, label |
-| B86 C4.11 | `local_a4308bc5` | Mac, #1053 | concept approved 09:07 IST (P-346 (1)); migration, breaker; label after B83, B82 |
-| B82 QA-233 | `local_b132d166` | Mac, #1058 | CI, review |
-| B81 C10.1 | standby A `local_d798901d` | Mac, #1057 | concept approved (P-346 (4)); screen part |
-| B78 C10.1 | standby B `local_c2bbbd2c` | Mac, `claude/screens-b78-section-names` | merges main after #1009 |
-| B79a Express Entry | cloud, #1050 | | after #1009 and B78 on demo.ts |
-| B79b Family sponsorship | cloud, #1052 | | after B79a on demo.ts |
-| C3.16 M3 | cloud, #1054 | | r4 approved (P-346 (5)); building, claims Partial |
-| C1.3 + C11.5 M3 | cloud, #1051 | | concept approved (P-346 (3)); building |
-| C11.6 M3 | cloud, #1056 | | built, 14/14 + browser 37/37; review next |
-| B84 C7.7 | cloud, #1060 | | moved off the Mac 09:45 IST; also the restart-from-a-PR rehearsal |
-| qa lane | `local_7bb326e9` | Mac | gate A, re-scores, M3 re-score once; sole writer of CAPABILITIES and BUGS |
-**demo.ts order:** #1009 merged 10:05 IST → whichever of B78 and #1036 has gate A first → B79a → B79b. Ends after its PR merges: paid runner `local_0c6484d1` and Lead 1 can be archived now #1040 has merged.
+## In flight
+See the hand-over note, critical path first. Bottleneck: rework at review on dependent PRs (#1058, #1051 five rounds, #1057 four). Queue: no batch failed.
 
 ## Leads, in order (highest = current)
-**Lead 11** `local_55e21a98-68ad-4429-a441-0462a75e910b` (current from this hand-over) · standby: see the hand-over note · Lead 10 `local_e336999f-beb6-41ae-a978-a5bdc886991c` ended · Leads 1, 2 open (ended) · Leads 3–9 archived. Hand over at about 400k tokens (P-314). The 30-minute check runs at minutes 13 and 43 (skill lead-watch, app view every check).
+**Lead 13** `local_99b1e15e-dd07-49cf-ad04-8d2411789d9d` (from this hand-over) · standby: Lead 14 `local_95c57cad-96cf-4352-8f00-f19b1f0657c3`; top up at his next typed turn · Lead 12 `local_9ab43f49-877d-45e4-aa0d-a0abc561c2de` ended · Lead 11 `local_55e21a98-…` ended · Lead 10 `local_e336999f-…` ended, parent of Mac lanes · Leads 1, 2 ended · Leads 3-9 archived. Hand over at about 400k (P-314). Check at minutes 13 and 43.
 
 ## Next (in order)
-1. Retrospective and M3 plan to the founder, very brief (founder's asks below); write "Resume on the new account"; build the factory board from `lead-watch.sh`.
-2. Critical path above; next free standby takes B84, then B87; M3 order after qa's re-score: foundations (C3.16, C11.5, C1.3, C11.6, C6.11) → case journey (C6.4, C6.12, C6.5, C7.7, C7.6, C7.3) → after filling (C7.5, C8.1, C8.2, C9.2) → C10.2 last. From row titles only; verify against code.
-3. Records once a day plus each hand-over (P-336).
+1. qa's gate A on #1058; then #1036, #1053, #1068.
+2. #1062, then the C10.1 stack; B97.
+3. The founder's bug: fix, gate A; answer him on how to be sure.
+4. Row 12b after C4.11. Scale design (B108) to him when ready; build after M2 (P-353).
 
 ## Waiting for the founder
-1. Label this records PR (auto mode refuses a Lead's own unless he names it).
-2. Fable report when he has run the prompt (P-344 (6)).
-3. What "it is only 4" meant; until then M3's target is 24 working hours, about 3 working days.
+1. New account ready by about 14:30 IST.
+2. Name the records PR for its label.
 
 ## Founder asks of 5 Nov
-**A132** (~07:35 IST) status ✓ · **A133** (~07:55) start four builders ✓ · **A134** (~08:05) full update; what went well or badly; dependency on him; ETAs; M3 and cleanup: answered, retrospective to be finished by Lead 11 · **A135** (~08:10) leads and sessions under them; cleanup ✓ · **A136** (~08:30) lessons and workflow changes, budget, account switch, standbys: answered in brief; Lead 11 finishes · **A137** (~08:32) two capabilities in 2 hours: not realistic, said why; factory pipeline; M3 order: answered; board to do · **A138** (~08:45) start in cloud ✓ · **A139** (~08:55) Lead 11 now; standbys; Fable or not; method changes; 30-minute updates: reported ✓ (P-347) · **A140** (~10:10) resume messages, B84 to the cloud, label #1055 ✓ · **A141** (~10:50) M2 in 2 hours, M3 start, clean the Mac, plan, aggressive: cloud lanes started, cleanup done, honest times given (P-348) ✓ · **A142** (~10:53) record and adopt what Fable and the Lead decided: P-348, RULES, skills, memory ✓.
+**A132** (~07:35 IST) status ✓ · **A133** (~07:55) start four builders ✓ · **A134** (~08:05) full update; what went well or badly; dependency on him; ETAs; M3 and cleanup: answered, retrospective to be finished by Lead 11 · **A135** (~08:10) leads and sessions under them; cleanup ✓ · **A136** (~08:30) lessons and workflow changes, budget, account switch, standbys: answered in brief; Lead 11 finishes · **A137** (~08:32) two capabilities in 2 hours: not realistic, said why; factory pipeline; M3 order: answered; board to do · **A138** (~08:45) start in cloud ✓ · **A139** (~08:55) Lead 11 now; standbys; Fable or not; method changes; 30-minute updates: reported ✓ (P-347) · **A140** (~10:10) resume messages, B84 to the cloud, label #1055 ✓ · **A141** (~10:50) M2 in 2 hours, M3 start, clean the Mac, plan, aggressive: cloud lanes started, cleanup done, honest times given (P-348) ✓ · **A142** (~10:53) record and adopt what Fable and the Lead decided: P-348, RULES, skills, memory ✓. · **A143** (~11:47) status, clean up from the browser, check result, rating: answered; 10 sessions archived ✓ · **A144** (~11:53) M2 only? P-350, then P-351 ✓ · **A145** (~11:58) questions apart from text; B88 now; Acrobat; M3 plan; what waits: rule saved, done ✓ · **A146** (~12:00) engineering research report: answered in brief, gap told ✓ · **A147** (~12:25) merge queue and factory view: answered, rule saved ✓ · **A148** (~12:55) why two capabilities take so long: answered, P-352 ✓ · **A149** (~12:58) fit at 100+? No; P-353 ✓ · **A150** (~13:00) watch cloud lanes in the browser: rule saved ✓ · **A151** (~13:05) his test failed, fix and why, how to be sure: fix started; answer given; qa's result due. · **A152** (~13:10) "you have all my approval related to adobe acrobat": access to Acrobat granted to Lead 13's session at 13:12 IST for row 12b; used only after C4.11 lands (P-349).
 
 ## Lessons of 5 Nov
 * Green packs hid dead ends (QA-233, QA-237): a row needs one walk of a person's full journey before it counts. Proposed; not yet a rule.
@@ -50,3 +37,7 @@ updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full r
 * Archiving Lead 5 removed its side-session notes folder (a copy was made first): keep hand-overs in the side-session notes folder lead10-saved-2026-11-05.
 * Long lanes burn the most: S2 reached 960k tokens. A context figure must be measured with `get_usage`; "90%" repeated for hours was 65%.
 * Write what happened after it happens: two "card proposed" lines and a guessed "06:45" were wrong.
+* The founder's first test of a dialog failed where every pack passed: nothing tried the other options or a long address. Walks need every offered option, not only the path a pack uses.
+* A check that reads a PR's latest question misses earlier ones (#1074, over an hour). The app view showed it.
+* Grants and permissions are per session: Acrobat access does not pass to the next Lead; Lead 14 must ask again. The app's name for it is "Acrobat", not "Adobe Acrobat".
+
