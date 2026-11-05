@@ -1,0 +1,91 @@
+{
+ "port": 4433,
+ "caseUrl": "http://127.0.0.1:4433/cases/fdfa50be-a2f9-44a8-8bc5-164739f91798",
+ "steps": [
+  {
+   "j7": "0.1",
+   "what": "Demo › Reset, then Load the configured checkpoint, through the menu",
+   "seen": true,
+   "detail": "87 s"
+  },
+  {
+   "j7": "1.1",
+   "what": "Visitor visa opens, showing its release",
+   "seen": true,
+   "detail": "Released versions: Release 1, today at 7:59 a.m., approved by Approver "
+  },
+  {
+   "j7": "1.2",
+   "what": "IMM 5476: signed by the person and the representative",
+   "seen": false,
+   "detail": "IMM 5476 Use of Representative \"Use of a representative (IMM 5476) (if using an authorized representative)\" Each applicant Conditional (a rule) Online (typed in by hand for now) (IRCC does not accept it) PDF upload Paper"
+  },
+  {
+   "j7": "1.3a",
+   "what": "IMM 5707: each person from 18, signed by the person",
+   "seen": false,
+   "detail": "IMM 5707 Family Information \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\" Each applicant · 18+ Always Online (typed in by hand for now) PDF upl"
+  },
+  {
+   "j7": "1.3b",
+   "what": "IMM 5257: a parent signs for a minor",
+   "seen": false,
+   "detail": "IMM 5257 Application for visitor visa (temporary resident visa) Picked by AI · Sample \"This form must be completed by each person applying for a Temporary Resident Visa to visit Canada.\" Each applicant Always Online (typ"
+  },
+  {
+   "j7": "1.3c",
+   "what": "IMM 5257 SCH1: children from 18 (its signer left unset, for the expert)",
+   "seen": true,
+   "detail": "IMM 5257 SCH1 Schedule 1 - Application for temporary residence \"IMM 5257 SCH1 (09-2023): IMM 5905 (C1) and IMM 5881 (C2): 'If you have answered “yes” to any of the background informati…\" Principal, spouse or partner, and"
+  },
+  {
+   "j7": "1.5",
+   "what": "IRCC account: APR Portal",
+   "seen": false,
+   "detail": "Not set (every way IRCC may accept is offered, Sample)"
+  },
+  {
+   "j7": "1.2w",
+   "what": "The Forms tab has no sideways page scroll at 1440 px (its table scrolls inside itself)",
+   "seen": true,
+   "detail": "1440 px wide in a 1440 px window"
+  },
+  {
+   "j7": "1.8",
+   "what": "Eligibility gates: no authoring screen (row B106); set by the checkpoint, read on the case at 4.1",
+   "seen": true,
+   "detail": "allow-listed route, tech lead's ruling on #1084"
+  },
+  {
+   "j7": "2.1a",
+   "what": "Open a case offers Visitor visa",
+   "seen": true,
+   "detail": "Visitor visa · release 1"
+  },
+  {
+   "j7": "2.1b",
+   "what": "The case opens on Visitor visa",
+   "seen": true,
+   "detail": "http://127.0.0.1:4433/cases/fdfa50be-a2f9-44a8-8bc5-164739f91798"
+  },
+  {
+   "j7": "2.3",
+   "what": "\"Filed through APR Portal\" read-only on the case",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "4.1a",
+   "what": "Run eligibility check gives a result, not a refusal",
+   "seen": false,
+   "detail": "e Client A — this application No eligibility rules yet This application's release has no eligibility rules yet"
+  },
+  {
+   "j7": "4.1b",
+   "what": "The four officer's-judgement lines are listed, never gates",
+   "seen": false,
+   "detail": ""
+  }
+ ],
+ "errors": []
+}
