@@ -132,3 +132,56 @@ Independent reviewer (did not build or challenge it), 5 Nov. Concept: `../M3-des
 * The fixture's `setup_vv_m3` was 44/46 on its first run here; I did not trace its two red steps, and they are outside this diff.
 
 **Verdict: Block.** To fix: M-1, with a check that fails when focus is lost. The Minors are fixed or listed in the PR.
+
+## Round 2: diff-only re-review of `git diff 57678a09c ca2db0311` (5 Nov)
+**Verdict for ca2db0311: Approve.** There is no open Blocker or Major. M-1 is fixed with a check that fails without the fix. The breaker's M1 (focus) and M2 (long text) are fixed too.
+
+**What I ran on ca2db0311** (own copy rev64 on :4472; stopped and dropped after; live AI off, US$0):
+* **Load:** Reset, then Load configured: 73.7 s, `cost_usd` 0. Visitor visa, Study permit and With an LMIA released. Row 7 still names the 5 held lines.
+* **Packs:**
+  * `C6.4-screen` **17/17** twice. C6.4-38 now runs on keys only and asserts focus after Request, Not applicable and History.
+  * `C6.4` **19/30**, the same red steps as round 1.
+  * `check_vv_checklist` **65/65**, including the new `inReason` and `whoWords` pairs.
+* **Types:** `tsc` shows no error in `checklist.tsx`, `questionnaire.tsx`, `demo.ts` or `case-checklist.ts`.
+
+**My focus probe:** in every case focus came back to that line's ⋯ button:
+* after Esc on the menu;
+* after History opened and closed with Esc;
+* after Not applicable was saved with a reason that holds a URL;
+* after Not applicable was cancelled with Esc;
+* after Request;
+* after a keyboard-chosen Upload with a 194-character file name.
+
+The next Tab goes to the following control ("Source"), not "Cases home".
+
+**Long text and zoom:**
+* At 200 % zoom (720 CSS px) there is no sideways scroll with the URL reason (`scrollWidth` 720).
+* History with the long file name fits its dialog (510/510).
+
+**Words and links:**
+* The waiting line now reads "May be needed (the applicant is married)." and then "Answer first, in the Agent view: Current marital status", once and without quote marks.
+* After the link is used, the hash is cleared and focus is on the question (breaker m5, my Minor 3).
+
+**Code read of the diff:**
+* `checklist.tsx`: `back()` refocuses through a ref after a frame and one task. The trigger is `aria-busy`, no longer `disabled`, and Request and Upload are disabled while busy. A `sending` ref stops a second Enter (breaker m2). `[overflow-wrap:anywhere]` is on the state reason, the reason column and History.
+* `case-checklist.ts:205-212`: `inReason` lower-cases only listed opening words, so names, nationalities and form numbers keep their capitals. It no longer clashes with `contracts/runtime.ts` `inSentence`.
+* `demo.ts:310-319` (`inLib` at `:311`, retire at `:316`): a line whose fact did not reach the library is retired with `saveRequirement(…, { retire: true })` (supported, `studio.ts:806`) and named in `refused`. The sample file is read inside `try` (`:854-856`). Both are unreachable on today's data, where 0 lines go in.
+* **Records:** concept §4 `:67` and the definition of ready `:140`, plus `rows.md:139` and `:858`, now name the checkpoint lines and QA-226. `notes.md` is updated.
+
+**Still open (Minor; listed or to list in the PR):**
+* Round 1 Minors 4 and 8, and the breaker's m1 (hot `contracts/documents.ts`), as the builder lists them.
+* **Minor 5, second half:** the load log still says "vv.single: 0 conditional document lines and the facts they read" with no "5 wait" (`demo.ts:857`). Row 7 names the five, so this is words only.
+* **"Kept" pill removed:**
+  * Following breaker m3, the "Kept" pill is gone and "Kept on the list" lives only in the reason. Challenge-r2 M1 (approved) said "one small 'Kept' pill only".
+  * Either reading says it once, but the change of direction should be named in the PR ("never deviate silently").
+* **No spinner on the ⋯ button during a request:** with `aria-busy` instead of `busy`, `Button` (`controls.tsx:36`) draws no spinner, so a slow Request or Upload shows no sign until the pill changes. It is only feedback (the menu items are disabled while busy).
+  * *Fix:* show the spinner inside the button without disabling it.
+* **PR body:** I could not re-read it at this commit (GitHub API 503), so I take the coordinator's word that it is updated.
+
+**Journey score, round 2: 9½/10.**
+* Accessibility and screen sizes: ½ → 1 (focus fixed; no sideways scroll at 200 % with long text).
+* Plain words stays ½ ("it is not the case that …" in kept reasons).
+* The other eight criteria are unchanged from round 1.
+* D13: 3 → 4. D10: 3 → 4. D16: 4, with the new engine word tests.
+
+**Verdict: Approve** (ca2db0311).
