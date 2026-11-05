@@ -95,8 +95,12 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // its release right after the load: no "Form changed" line nobody made.
   const releasedIds = sql("select distinct combination_id from config_release").split("\n").filter(Boolean);
   const drifted: string[] = [];
-  for (const id of releasedIds) if ((await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
-  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load", drifted.length === 0, { released: releasedIds.length, drifted }); // none released (a blocked checkpoint) has nothing to drift
+  // #1009 (Lead 10's ruling (c')): while release 2 waits for row B81, the Visitor visa's draft keeps release 2's changes,
+  // and row 9 says so; those are not changes nobody made. Every other release's draft still matches, and row 9 must say it.
+  const vvKept = sql(`select id from combination where combination_key = 'vv.single'`);
+  const keptSaid = /draft keeps the release-2 changes/.test(r("9").why ?? "");
+  for (const id of releasedIds) if (!(id === vvKept && keptSaid) && (await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
+  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load (the Visitor visa's only while row 9 does not say it keeps release 2's changes)", drifted.length === 0, { released: releasedIds.length, drifted, keptSaid }); // none released (a blocked checkpoint) has nothing to drift
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
@@ -130,7 +134,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   const made = fam ? n(`select count(*) from form_instance where case_id = '${fam}' and status = 'GENERATED'`) : 0;
   const named = Number(/; (\d+) form cop/.exec(r("11").shows)?.[1] ?? -1);
   ok("C10.1 row 11 (review M1): the copies are made one at a time: each the row names is GENERATED, none waits or runs, at least one per person", made === named && made >= 4 && fam !== "" && n(`select count(*) from form_instance where case_id = '${fam}' and status in ('QUEUED', 'RUNNING', 'FAILED')`) === 0 && n(`select count(distinct subject_id) from form_instance where case_id = '${fam}'`) === 4, { made, named });
-  ok("C10.1 row 11 fail (review M1): no copy is refused for the case's limit of copies at once (\"being generated\")", !/being generated|did not finish|failed/.test(r("11").why ?? ""), r("11").why?.slice(0, 300));
+  ok("C10.1 row 11 fail (review M1): no copy is refused for the case's limit of copies at once (\"being generated\")", !/being generated|did not finish|failed/.test(`${r("11").why ?? ""} ${r("12").why ?? ""}`), `${r("11").why ?? ""} ${r("12").why ?? ""}`.slice(0, 300));
   // #1009 (Lead 9's ruling) replaces "no answer by the loader": DEMO.md's story is answered once, from the one Sample record.
   ok("C10.1 row 11 (#1009): the case's answers come from the one Sample record, and each of the 4 people has a date of birth (a child under 18 and a child 18 or over)", fam !== "" && n(`select count(*) from client_canonical_answer a join case_participant p on p.subject_id = a.subject_id where p.case_id = '${fam}' and a.superseded_by_id is null`) > 4 && n(`select count(distinct a.subject_id) from client_canonical_answer a join case_participant p on p.subject_id = a.subject_id where p.case_id = '${fam}' and a.canonical_field_key = 'person.date_of_birth' and a.superseded_by_id is null`) === 4, r("11").shows?.slice(0, 200));
   ok("C10.1 (R-143): no live AI call, US$0, the spend ledger unchanged", ledger() === before && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && n(`select count(*) from ai_batch where mode = 'LIVE'`) === 0 && l.body.cost_usd === 0);

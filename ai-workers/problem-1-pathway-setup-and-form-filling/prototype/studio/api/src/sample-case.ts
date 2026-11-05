@@ -19,7 +19,7 @@ const MADE_UP: Record<string, [string, unknown][]> = {
   "child-2": [["person.given_names", "SECOND CHILD (SAMPLE)"], ["person.date_of_birth", "2007-03-14"]],
 };
 
-export type SampleCase = { caseId: string | null; release: number | null; people: number; copies: string[]; refused: string[];
+export type SampleCase = { caseId: string | null; release: number | null; people: number; copies: string[]; refused: string[]; copiesRefused: string[];
   /** C10.1 row 11: the record's answers saved, the made-up ones, the record's facts the case did not take, dates of birth saved. */
   fromRecord: number; madeUp: number; notTaken: number; births: number;
   /** C10.1 row 12: the applicants, and how many of them have a generated IMM 5257 copy. */
@@ -33,7 +33,7 @@ const COPY_WAIT_MS = 60_000;
  *  so the next is asked for only when the last has finished. Each refusal is kept in words; nothing is forced. */
 export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: CaseForms, combinationId: string): Promise<SampleCase> {
   const officer = RUNTIME_ACTORS.find((a) => a.id === "user-O")!;
-  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0 };
+  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0 };
   const said = (e: unknown) => String((e as { response?: { detail?: string; message?: string } }).response?.detail ?? (e as { response?: { message?: string } }).response?.message ?? (e as Error).message).slice(0, 200);
   let opened: { id: string; pin?: { release_version?: number }; people?: unknown[] };
   try { opened = await runtime.createCase(officer, { combinationId, reference: SAMPLE_CASE.reference, clientActor: "user-P", principal: { displayName: SAMPLE_CASE.principal }, idempotencyKey: "sample-vv-family-1" }) as typeof opened; }
@@ -57,12 +57,12 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
   for (const f of (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing)) {
     let copy: { id: string };
     try { copy = await forms.generate(officer, opened.id, f.form, f.subject_id, { idempotencyKey: `sample-vv-family-1-${f.form}-${f.subject_id}`.replace(/[^A-Za-z0-9-]/g, "-").slice(0, 80) }); }
-    catch (e) { out.refused.push(`${f.form} for ${f.person}: ${said(e)}`); continue; }
+    catch (e) { out.copiesRefused.push(`${f.form} for ${f.person}: ${said(e)}`); continue; }
     const until = Date.now() + COPY_WAIT_MS;
     let status = "QUEUED";
     while (Date.now() < until && (status === "QUEUED" || status === "RUNNING")) { await new Promise((r) => setTimeout(r, 150)); status = (await db.formInstance.findUnique({ where: { id: copy.id }, select: { status: true } }))?.status ?? "FAILED"; }
     if (status === "GENERATED") { out.copies.push(`${f.form} (${f.person})`); if (f.form === "IMM 5257") out.imm5257++; }
-    else out.refused.push(`${f.form} for ${f.person}: the copy ${status === "FAILED" ? "failed" : "did not finish within a minute"}.`);
+    else out.copiesRefused.push(`${f.form} for ${f.person}: the copy ${status === "FAILED" ? "failed" : "did not finish within a minute"}.`);
   }
   out.applicants = (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing && x.form === "IMM 5257").length;
   return out;
