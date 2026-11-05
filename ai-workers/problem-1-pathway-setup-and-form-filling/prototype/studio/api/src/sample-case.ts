@@ -12,6 +12,7 @@ import { sampleFamilyFacts } from "../../engine/import.ts";
 import { RUNTIME_ACTORS, STUDIO, type Db } from "./core.ts";
 import type { CaseForms } from "./fill-case.ts";
 import type { Runtime } from "./runtime.ts";
+import { replaySavedReadBacks } from "./sample-validated.ts";
 
 // The people of the one Sample family (engine/import.ts sampleFamilyFacts), each labelled Sample.
 export const SAMPLE_CASE = { reference: "SAMPLE-VV-FAMILY-1", principal: "Client A (Sample)", family: [{ role: "spouse_or_partner", displayName: "Partner (Sample)", record: "spouse_or_partner" }, { role: "child", displayName: "Child (Sample)", record: "child-1" }, { role: "child", displayName: "Child 18 or over (Sample)", record: null }] };
@@ -31,7 +32,9 @@ export type SampleCase = { caseId: string | null; release: number | null; people
   /** C10.1 row 12: the applicants, and how many of them have a generated IMM 5257 copy. */
   applicants: number; imm5257: number;
   /** B99: the Sample file's answers saved, the rows added, the groups said none apply, the sections confirmed, and what was refused. */
-  sampleAnswers: number; rows: number; noneApply: number; confirmed: number; answerRefused: string[] };
+  sampleAnswers: number; rows: number; noneApply: number; confirmed: number; answerRefused: string[];
+  /** B99 (row 12b): the IMM 5257 copies whose saved validated read-back counts (same facts as the copy validated), and why not. */
+  validated: number; validatedWhy: string[] };
 
 /** How long one copy may take before the next is asked for (a fill takes about a second). */
 const COPY_WAIT_MS = 60_000;
@@ -41,7 +44,7 @@ const COPY_WAIT_MS = 60_000;
  *  so the next is asked for only when the last has finished. Each refusal is kept in words; nothing is forced. */
 export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: CaseForms, combinationId: string): Promise<SampleCase> {
   const officer = RUNTIME_ACTORS.find((a) => a.id === "user-O")!;
-  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0, sampleAnswers: 0, rows: 0, noneApply: 0, confirmed: 0, answerRefused: [] };
+  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0, sampleAnswers: 0, rows: 0, noneApply: 0, confirmed: 0, answerRefused: [], validated: 0, validatedWhy: [] };
   const said = (e: unknown) => String((e as { response?: { detail?: string; message?: string } }).response?.detail ?? (e as { response?: { message?: string } }).response?.message ?? (e as Error).message).slice(0, 200);
   let opened: { id: string; pin?: { release_version?: number }; people?: unknown[] };
   try { opened = await runtime.createCase(officer, { combinationId, reference: SAMPLE_CASE.reference, clientActor: "user-P", principal: { displayName: SAMPLE_CASE.principal }, idempotencyKey: "sample-vv-family-1" }) as typeof opened; }
@@ -75,6 +78,9 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
     else out.copiesRefused.push(`${f.form} for ${f.person}: the copy ${status === "FAILED" ? "failed" : "did not finish within a minute"}.`);
   }
   out.applicants = (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing && x.form === "IMM 5257").length;
+  // B99 (row 12b): a person's Validate in Adobe, read back on the Mac, counts only for a copy with the same facts.
+  const v = await replaySavedReadBacks(db, opened.id, officer.id);
+  out.validated = v.written; out.validatedWhy = v.why;
   return out;
 }
 
