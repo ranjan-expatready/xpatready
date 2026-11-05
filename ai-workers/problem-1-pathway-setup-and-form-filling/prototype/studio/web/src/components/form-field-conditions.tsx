@@ -51,6 +51,7 @@ export function FormFieldsPanel({ combinationId, view: v, item }: { combinationI
         </ul>
       )}
       {v.spread ? <div className="mt-2" data-form-field-spread><Notice tone="warn" title="Other combinations">{v.spread}</Notice></div> : null}
+      {item && v.rows.some((r) => r.state === "confirmed") ? <p className="mt-1 text-xs text-text-muted" data-rated-next-draft>This card's rating changes at the next Saved draft (US$0).</p> : null}
       {v.rows.length ? <p className="mt-1 text-xs text-text-muted">For every combination that files the form · A second person approves · Sample, Unconfirmed: expert</p> : null}
     </section>
   );

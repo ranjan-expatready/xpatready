@@ -114,6 +114,8 @@ run(async () => {
   r = await call("POST", "/library/form-field-conditions", clear, AUTHOR);
   const back = r.body?.id;
   ok("BR-7 pass: approved and not released, it can be undone (a new change)", r.status < 300 && !!back, words(r));
+  ok("BR-7 (break B1): what was approved stays on the form field until the Undo is approved", ruleOf(row.form_edition_id, row.data_path).includes(GATE));
+  ok("break M1 pass: the draft is the proposer's, not the approver's, so the second person can still release it (BR-14)", sql(`select updated_by from form_field_map where form_edition_id='${row.form_edition_id}' and data_path='${row.data_path.replace(/'/g, "''")}' order by version desc limit 1`) === AUTHOR && sql(`select updated_by from section_question where lineage_key='${GIVEN}' order by version desc limit 1`) === AUTHOR);
   r = await call("POST", `/library/changes/${back}/return`, { note: "Returned by a test: keep it for now (B86)." }, APPROVER);
   ok("BR-7: a second person can return it", r.status < 300, words(r));
   r = await call("POST", `/library/changes/${back}/resubmit`, { reason: "Sent again by a test (B86)." }, AUTHOR);
@@ -123,6 +125,9 @@ run(async () => {
   r = await call("POST", "/library/form-field-conditions", clear, AUTHOR);
   const back2 = r.body?.id;
   ok("BR-7 pass: proposed again, then approved, the form field holds nothing", r.status < 300 && (await approve(back2)).status < 300 && ruleOf(row.form_edition_id, row.data_path) === "", ruleOf(row.form_edition_id, row.data_path));
+  r = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: GIVEN, formEditionId: g.form_edition_id, dataPath: g.data_path, clear: true }, AUTHOR);
+  ok("break B1 pass: Undo of a confirmed form field with its condition approved: waits for a second person, in words, and names what it holds", r.status < 300 && /holds every combination/.test((await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER)).body?.form_field?.spread ?? ""), words(r));
+  ok("break B1 pass: approved, confirm again is open: the way back and forward both work", (await approve(r.body?.id)).status < 300 && (await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: GIVEN, formEditionId: g.form_edition_id, dataPath: g.data_path }, AUTHOR)).status < 300);
   ok("BR-7 pass: the earlier approved change is closed, not left open", sql(`select status from library_change where id='${nc}'`) === "WITHDRAWN", sql(`select status from library_change where id='${nc}'`));
   await saved();
   ok("BR-6 pass: un-confirmed, a new Saved draft takes it back to Check", bandOf(NAME) === "check", bandOf(NAME));

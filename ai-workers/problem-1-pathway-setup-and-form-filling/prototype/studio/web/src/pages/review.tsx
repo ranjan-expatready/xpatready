@@ -43,6 +43,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   // S5 m7 (P-123, AGENTS rule 4): the second person sees which forms AI picked, with IRCC's words, and confirms they apply.
   const cfg = useApi<{ snapshot: { forms: { form_number: string; title: string; origin?: string; source_quote?: string | null }[] } }>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
   const aiPicked = (cfg.data?.snapshot.forms ?? []).filter((f) => f.origin === "AI_PROPOSAL" || f.origin === "AI_FOUND");
+  const formFieldsView = useFormFieldsOfCombination(id); // B86 (break B2): above the early return, as every hook
   if (r.isLoading || !session.data) return <Spinner label="Loading review" />;
   const v = r.data;
   const me = session.data.actor;
@@ -64,7 +65,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   const lineBox = noFormLine || noDocLine;
   const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine)
     .sort((a: { message?: string }, b: { message?: string }) => Number(HIDING.test(b.message ?? "")) - Number(HIDING.test(a.message ?? ""))); // B86: its way out is on the row, so never behind "Show all"
-  const formFields = useFormFieldsOfCombination(id).data?.questions ?? [];
+  const formFields = formFieldsView.data?.questions ?? [];
   const underProblem = new Set<string>(others.filter((p: { message?: string; item?: string }) => HIDING.test(p.message ?? "") && p.item).map((p: { item?: string }) => p.item as string));
   const ref = (c: any) => `${c.kind}|${c.key}`;
   const needSme = changes.filter((c) => c.needs_sme), unsignedSme = needSme.filter((c) => !signed.has(ref(c)));

@@ -54,14 +54,14 @@ export function whenWords(tree: unknown, words: (fact: string) => string): strin
 }
 
 /** BR (no field codes, PRODUCT §4): a form field's words as a person reads them. Only an identifier-shaped token (a capital
- *  inside a word: `natIDIndicator`, `PCRIndicator`; a dotted key; a name with its row, `uncompensated[0]`) is touched: matching
+ *  inside a word: `natIDIndicator`, `PCRIndicator`; snake_case; a dotted key; a path or a name with its row, `uncompensated[0]`) is touched: matching
  *  exactly one data-path segment of this edition, it reads as that form field's question; otherwise "another form field".
  *  Never its caption: a form's inventory can carry a wrong one.
  *  A worked-out Yes/No reading the target itself is "another form field" too. Plain words stay as they are. */
 export function plainWords(words: string, entries: Entry[], labelOf: (fact: string) => string, target?: string): { text: string; names: string[] } {
   const names: string[] = [];
-  const text = words.replace(/\b[a-z_]+\.[a-z_.]*[a-z_]\b|\b(?:[a-z]*[a-z0-9][A-Z][A-Za-z0-9]*|[A-Z][a-z0-9]+[A-Z][A-Za-z0-9]*|[A-Z]{2,}[a-z]{2,}[A-Za-z0-9]*)(?:\[\d+\])*|\b[A-Za-z_]+(?:\[\d+\])+/g, (raw) => {
-    const tok = raw.replace(/(\[\d+\])+$/, "");
+  const text = words.replace(/\b\w+\[\d+\](?:\.\w+(?:\[\d+\])?)*|\b[a-z_]+\.[a-z_.]*[a-z_]\b|\b[a-z]+(?:_[a-z0-9]+)+\b|\b(?:[a-z]*[a-z0-9][A-Z][A-Za-z0-9]*|[A-Z][a-z0-9]+[A-Z][A-Za-z0-9]*|[A-Z]{2,}[a-z]{2,}[A-Za-z0-9]*)\b/g, (raw) => {
+    const tok = raw.split(".").pop()!.replace(/(\[\d+\])+$/, "");
     const hit = entries.filter((e) => e.outcome === "mapped" && e.fact && e.fact !== target && e.data_path.split(".").some((seg) => seg.replace(/\[\d+\]$/, "") === tok));
     const facts = [...new Set(hit.map((e) => e.fact!))];
     if (facts.length !== 1) return "another form field";

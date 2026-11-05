@@ -119,3 +119,5 @@ Read on base e5f974a02, 5 Nov. US$0, no server started, nothing clicked. One pur
 ## Agreement
 
 ## Build discoveries
+* Break B1: `library_change_one_open` allows one WAITING or APPROVED change per key, so M5's fix "block only on WAITING or RETURNED" hit the database. A new proposal now closes the approved change.
+* Break M1: approving wrote the approver's id on the draft, so the Approver, who holds the release duty, could not release (BR-14). Fixed on the question's condition and the form field. `document-supplies.ts:149` and `who-fills.ts:94` have the same cause: named for the tech lead.

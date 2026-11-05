@@ -136,7 +136,7 @@ export function LibraryChangePage() {
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
           <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
         </>}
-      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME") ? <Withdraw id={x.id} /> : null}
+      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field) ? <Withdraw id={x.id} label={x.form_field ? "Withdraw it" : undefined} /> : null}
     </div>
   );
 }
