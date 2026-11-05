@@ -9,13 +9,14 @@ const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4452), DB = process.argv[3] ?? "xr_studio_forms_b86b";
 const BASE = `http://localhost:${PORT}`, STUDIO = path.resolve(__dirname, "..");
-const SHOTS = path.join(STUDIO, "..", "..", "product", "screens", "B86-form-field-condition", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
+// Screenshots go in the copy's own folder (they are tracked in the row's folder only when B86_SHOTS names it, on purpose).
+const SHOTS = process.env.B86_SHOTS ?? path.join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`, "shots"); fs.mkdirSync(SHOTS, { recursive: true });
 const CODES = /AliasNameIndicator|natIDIndicator|usCardIndicator|person\.[a-z_]+|form1\[/;
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 240)}` : ""}`); };
 
 (async () => {
-  const out = execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), [path.join(__dirname, "forms_b86_setup.ts"), String(PORT), DB], { encoding: "utf8", maxBuffer: 1 << 26, timeout: 540_000 });
+  const out = execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), [path.join(__dirname, "lib", "forms-b86-setup.ts"), String(PORT), DB], { encoding: "utf8", maxBuffer: 1 << 26, timeout: 540_000 });
   const { vv, given } = JSON.parse(out.split("\n").find((l) => l.startsWith("SETUP {")).slice(6));
   const b = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ headless: true }));
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
@@ -74,6 +75,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("the refusal's way out is on the problem: the form field, its own words, one button", /one name only on the form/.test(text) && (await p.locator(under).getByRole("button", { name: "Says the same as this condition" }).count()) === 1, text);
   const first = await p.locator("[data-problem]").first().innerText();
   step("BR (m5): \"Hiding a value\" sorts first, so it is never behind Show all", /Hiding a value a form reads/.test(first), first);
+
+  // ---------------------------------------------------------------- the one request fails (break n1, EXPERIENCE §4)
+  await p.route("**/api/combinations/*/form-field-conditions", (route) => route.abort());
+  await p.reload();
+  await p.waitForSelector("[data-hiding-way-out-failed]", { timeout: 60_000 });
+  step("break n1 pass: when the form fields cannot be read the problem says so, with Try again", /could not be read/.test(await p.locator("[data-hiding-way-out-failed]").innerText()) && await p.locator("[data-hiding-way-out-failed]").getByRole("button", { name: "Try again" }).count() === 1);
+  await p.unroute("**/api/combinations/*/form-field-conditions");
+  await p.locator("[data-hiding-way-out-failed]").getByRole("button", { name: "Try again" }).click();
+  await p.waitForSelector(under, { timeout: 60_000 });
+  step("break n1 pass: Try again brings the way out back", await p.locator(under).getByRole("button", { name: "Says the same as this condition" }).count() === 1);
 
   // ---------------------------------------------------------------- the way back (review M1), and a returned change (review M2)
   await p.locator(under).getByRole("button", { name: "Says the same as this condition" }).click();

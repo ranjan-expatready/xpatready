@@ -67,7 +67,7 @@ export function LibraryChangePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
       {x.kind === "library_form" ? <FormUses code={x.key} changeId={x.id} /> : null}
-      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : x.status === "WITHDRAWN" ? "Withdrawn" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
       {x.accepts ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-accepts>
           <dt className="text-text-muted">Form</dt><dd className="font-semibold">{x.accepts.form}{x.accepts.edition ? ` · ${x.accepts.edition}` : ""}</dd>
@@ -84,7 +84,7 @@ export function LibraryChangePage() {
           <dt className="text-text-muted">Form field</dt><dd className="font-semibold">{x.form_field.edition} · {x.form_field.caption || "A form field with no printed name"}</dd>
           <dt className="text-text-muted">Its own words</dt><dd className="[overflow-wrap:anywhere]">{x.form_field.words ? `“${x.form_field.words}”` : "None"}</dd>
           <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.form_field.clear ? "Filled whenever the form applies" : `Filled only when ${x.form_field.sentence}`}</dd>
-          <dd className="col-span-2 text-xs text-text-muted">For every combination that files this form. Approving says these say the same, not that the condition is correct: Sample, Unconfirmed: expert.</dd>
+          <dd className="col-span-2 text-xs text-text-muted">For every combination that files this form. {x.form_field.clear ? "Approving takes the condition off this form field: Sample, Unconfirmed: expert." : "Approving says these say the same, not that the condition is correct: Sample, Unconfirmed: expert."}</dd>
         </dl>
       ) : null}
       {x.form_field?.spread || x.condition?.spread ? <div data-change-spread><Notice tone="warn" title="Other combinations">{x.form_field?.spread ?? x.condition?.spread}</Notice></div> : null}
