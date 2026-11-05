@@ -33,7 +33,7 @@ When `--changed` selects ALL (a shared contract), run only the suites of the fil
 1. Launch **screen-reviewer** on the exact commit; also **screen-breaker** for screens, money, permissions or schema. Fix Blockers and Majors with a fail test.
 2. `git fetch origin && git merge --no-edit origin/main` (a conflict: list the files, change nothing, tell the tech lead), re-run step 4.
 3. `git push -u origin HEAD`; `gh pr create --base main` with the title and body from `WAY-OF-WORKING.md` ("Every PR"), and `qa/built/<ID>.md` per capability finished.
-4. After the reviewer approves the current commit: `gh pr ready <n>` (a draft PR runs no CI, #875), then `gh pr edit <n> --add-label "review: approved"`. Don't merge main in again unless GitHub shows a conflict (P-270): the merge batch tests with the latest main. Any later push needs a new review and the label again. CI red → read the log, fix, push.
+4. Before the label (P-312, P-317): the row's pack passes on a fresh isolated copy built from the branch, plus a walk like a person at 1440 px, with exit codes and screenshots in the PR; no open Major on that capability; a PR that claims Works also needs qa's gate A PASS. After the reviewer approves the current commit: `gh pr ready <n>` (a draft PR runs no CI, #875), then `gh pr edit <n> --add-label "review: approved"`. Don't merge main in again unless GitHub shows a conflict (P-270): the merge batch tests with the latest main. Any later push needs a new review and the label again. CI red → read the log, fix, push.
 
 ## 6. Reply
 One short report when the PR is open or merged: link, what changed in plain words, the checks, any question for the tech lead. The PR is the record.

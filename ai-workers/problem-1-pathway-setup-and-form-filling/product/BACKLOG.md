@@ -154,6 +154,7 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B93 A conditional line drops "who" and "minimum age" | IMM 5476 applies to a child of 10; on all four combinations; forms lane; from the review of #1050. No owner yet | P-346 (9) |
 | B94 Two "membership" and two "military service" sections on Express Entry | IMM 5669 and IMM 5257 SCH1 each bring their own; from the review of #1050. No owner yet | P-346 (9) |
 | B95 `draftOptionMaps` keeps the lowest version of each answer list | matters once a list has more than one version; `forms.ts`; from #1009's builder. No owner yet | P-346 (9) |
+| B96 Shared `Tip` closes for a keyboard user | Radix closes the tooltip on the scroll event that follows keyboard focus (opens at 18 ms, closed at 33 ms, traced on #1051); `web/src/components/status.tsx`; screens area; the accessible name keeps the words; #1051's check works around it. No owner yet | P-347 |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
