@@ -144,3 +144,25 @@ Scope: only what the merge of origin/main (bf12209f1; old base 74aec1b58) change
 **Round 3 journey score:** 8.5 / 10, unchanged. The merge leaves the product behaviour as it was; only the test evidence is broken (M1).
 
 Verdict: Changes requested on 4003adfbc
+
+## Round 3b (e36ade7fd)
+Scope: e36ade7fd only. `git diff --stat 4003adfbc e36ade7fd` shows two files changed, `tests/check_b104_checkpoint.ts` and this review. No product code changed. I ran my own isolated copy on :4446 and stopped it afterwards.
+
+* **M1: closed.**
+  * **What changed:** L3 and L4 now read release 1 from its own `config_release` row (version 1). Two checks were added:
+    * L3b: the newest release keeps the signer of each listed form it still files, and there must be at least 2 such forms.
+    * L5b: release 1 itself has `2|4` (gates and judgement lines).
+  * **L5:** it now accepts the newest release (release ≥ 1).
+  * **My live run on a fresh copy of the merged head:** 11/11 PASS, exit 0.
+* **The test still fails when the step is not called.** I reasoned this through main's loader and the round 2 `runs/live/live-main.txt`:
+  * L1 fails: no "J7 Stage 1" log line.
+  * L3 fails: release 1 has no signer on IMM 5257, IMM 5707 or IMM 5476. The `r1.size > 0` guard also stops an empty or missing row from passing.
+  * L3b fails: the signers are null.
+  * L5b fails: with no gates it reads `0|0` (the `coalesce`), and with no release 1 row it reads null.
+  * L6 fails: there is no APR Portal account.
+* **m6: closed.** I read the PR body through the REST API at head e36ade7fd. Line 41 reads: "IMM 5257 loses its "Picked by AI · Sample" chip on the Forms tab (review m6)".
+* **m7: still open (Minor).** IMM 5645 has no signer on release 2. The builder is taking it to the tech lead as a question, because the fix sits in the row-9 block. It does not block.
+
+**Journey score:** 8.5 / 10, unchanged.
+
+Verdict: Approve on e36ade7fd
