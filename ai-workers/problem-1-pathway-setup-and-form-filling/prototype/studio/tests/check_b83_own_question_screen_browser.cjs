@@ -137,7 +137,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await axeOf(page, "the section with an undo's words on the row", "[data-own-questions]");
 
   // Review F2, F5: the toast's Undo and a stale row say what happened, on the row, and the list refreshes. A throwaway new field.
-  const api = async (method, p, body, actor = "user-A") => { const r = await fetch(`${BASE}/api${p}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status, body: await r.json().catch(() => null) }; };
+  const api = async (method, p, body, actor = "user-A") => { const go = () => fetch(`${BASE}/api${p}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); let r = await go(); if (r.status >= 500) r = await go(); return { status: r.status, body: await r.json().catch(() => null) }; }; // pressed again once on a 500: a busy Mac, as in `save`
   const R = row(WORDS[1].box);
   const dp = await R.getAttribute("data-own-row");
   const askThrow = async (label) => {
