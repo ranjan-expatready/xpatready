@@ -15,7 +15,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, SOLUTION, type Actor, type Audit, type Db } from "./core.ts";
-import { keyFor } from "./library-changes.ts";
+import { freeKey, keyFor, refuseTakingOverReaders, withdrawnStillRead } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
@@ -589,14 +589,15 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
       const retired = await tx.canonicalField.findFirst({ where: { workspaceId: l.ws, canonicalFieldKey: ruleFact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } });
       fail(retired ? `${ruleFact} is a retired library field: reject this one and restore it in Library › Fields.` : `${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
     }
+    if (typeof ruleFact === "string") await refuseTakingOverReaders(tx, l.ws, ruleFact, r.combinationId, rule?.key); // Breaker M9 on B83: checked again as it lands
     // C11.13 (review of #427): a field drafted from a form edition keeps the id the AI proposed (the key later drafts are
     // matched by), when it is a library key and still free; otherwise a key is made from the name, as for any field.
     const proposed = r.step === DRAFT_FIELDS_STEP ? (r.work as { proposedKey?: unknown } | null)?.proposedKey : undefined;
-    const draftedKey = typeof proposed === "string" && proposed.length <= FIELD_ID_MAX && FIELD_ID.test(proposed) && !used.has(proposed) ? proposed : null;
+    const draftedKey = typeof proposed === "string" && proposed.length <= FIELD_ID_MAX && FIELD_ID.test(proposed) && !used.has(proposed) && !(await withdrawnStillRead(tx, l.ws, proposed)) ? proposed : null;
     // A drafted field whose proposed id is taken gets a key from that id's own name (its label may carry the area or a
     // number added to keep names apart); every other field keeps its whole label, as before (Devin #427).
     const proposedName = typeof proposed === "string" && proposed.includes(".") ? proposed.split(".").slice(1).join(" ").replace(/_/g, " ") : null;
-    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? keyFor(f.subject ?? "case", proposedName ?? f.label, used);
+    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? await freeKey(tx, l.ws, f.subject ?? "case", proposedName ?? f.label, used); // Breaker M1 on B83
     // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list, checked again here so an edit on To
     // review passes the add's rules (break M2); the list rides with the field (api/src/answer-values.ts).
     const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact"); // both add routes (review m-r2a)

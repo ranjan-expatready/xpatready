@@ -26,7 +26,7 @@ import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { ledgerRead } from "./cost-gate.ts";
-import { keyFor, sameName } from "./library-changes.ts";
+import { freeKey, sameName } from "./library-changes.ts";
 import { BATCH_MAX, bulkWhy, decide, identityKeyOf, insertProposals, QUEUE_TX, landField, recordChoice, reviewRow, UNDO_SECONDS, type NewProposal, type Work } from "./proposals.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
@@ -817,7 +817,7 @@ export class Sources {
       const taken = new Set([...(await tx.canonicalField.findMany({ where: { workspaceId: job.workspaceId }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey),
         ...(await tx.proposalItem.findMany({ where: { workspaceId: job.workspaceId, choice: "NEW", decidedKey: { not: null }, id: { not: it.id }, run: { status: { in: ["COMPLETED", "APPLIED"] } } }, select: { decidedKey: true } })).map((x) => x.decidedKey!),
         ...(await tx.proposalItem.findMany({ where: { runId: job.id, decidedKey: { not: null }, id: { not: it.id } }, select: { decidedKey: true } })).map((x) => x.decidedKey!)]);
-      const key = keyFor(group, label, taken);
+      const key = await freeKey(tx, job.workspaceId, group, label, taken); // Breaker M1 on B83: never over a withdrawn field's readers
       const raw = await tx.proposalItem.findUniqueOrThrow({ where: { id: it.id } });
       return reviewRow(await recordChoice(tx, it.id, { choice: "NEW", decidedKey: key, by: actor.id, reason: reason || null,
         payload: { ...(raw.payload as any), label, meaning, ...(b.valueType ? { valueType: b.valueType } : {}) }, work: { ...(raw.work as object), advisory: best ? { key: best.key, score: best.score } : null } }));
