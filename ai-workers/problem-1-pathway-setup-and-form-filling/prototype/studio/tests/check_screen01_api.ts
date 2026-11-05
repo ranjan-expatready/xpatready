@@ -215,15 +215,19 @@ function pdf(title: string, text: string) {
   ok("QA-13: removing a released form is a removal in the draft (a retired new version), not a no-op", r.status < 300 && lineState() === "1:PUBLISHED,2:RETIRED" && !(await call("GET", `/combinations/${ss.combinationId}/config?mode=draft`)).body.snapshot.forms.some((f: any) => f.form_number === "IMM 1295"), lineState());
   r = await call("POST", `/combinations/${ss.combinationId}/lines`, { kind: "FORM", formKey: "IMM 1295" });
   ok("CHECK must 2: added back before the removal is released, the released line stands again unchanged (no draft change)", r.status === 201 && lineState() === "1:PUBLISHED" && !(await call("GET", "/draft")).body.rows.some((x: any) => x.combinationId === ss.combinationId), lineState());
-  // B78 (BR-8 counts what a release asks): a release that asks each person nothing, the state BR-8 refuses.
-  sql(`update config_release set snapshot = jsonb_set(snapshot, '{placements}', '[]'::jsonb) where combination_id = '${ss.combinationId}'`);
+  ok("P-23: the draft is empty after the release", (await call("GET", "/draft")).body.changes === 0);
+  // B78 (BR-8 reads the one list Preview and a case show): for the Not ready lines, a release that asks each person nothing,
+  // the state BR-8 refuses. Its placements come back after them; the touched audit time makes the catalogue read it again.
+  const realPlacements = sql(`select snapshot->'placements' from config_release where combination_id = '${ss.combinationId}' order by version desc limit 1`);
+  const placementsOfRelease = (json: string) => { sql(`update config_release set snapshot = jsonb_set(snapshot, '{placements}', '${json.replace(/'/g, "''")}'::jsonb) where combination_id = '${ss.combinationId}' and version = (select max(version) from config_release where combination_id = '${ss.combinationId}')`); sql(`update audit_event set at = now() where id = (select id from audit_event order by at desc limit 1)`); };
+  placementsOfRelease("[]");
   ss = await leaf("individual.work_permits.open.spouse_student");
   ok("BR-8 fail: released but not startable is Not ready, with each missing item", ss.status === "NOT_READY" && ss.release.pack === 2 && ss.missing.some((m: any) => m.code === "role_without_questions"), ss.missing.map((m: any) => m.text));
   wp = await leaf("individual.work_permits.employer_specific.with_lmia");
   ok("P-23: rows not in the new draft keep their snapshot and stay Ready", wp.status === "READY" && wp.release.pack === 1, wp.statusText);
-  ok("P-23: the draft is empty after the release", (await call("GET", "/draft")).body.changes === 0);
   const nr = await cat("pathway=INDIVIDUAL&filter=not_ready");
   ok("filters: Not ready shows exactly that row with its program and category", leaves(nr.tree).length === 1 && nr.tree[0].label === "Work permits" && nr.counts.not_ready === 1, nr.counts);
+  placementsOfRelease(realPlacements);
 
   // ---------------------------------------------------------------- BR-10 counts on the catalogue equal the engine's
   const snap = JSON.parse(sql(`select r.snapshot from config_release r join combination c on c.id=r.combination_id where c.combination_key='wp.family'`));
