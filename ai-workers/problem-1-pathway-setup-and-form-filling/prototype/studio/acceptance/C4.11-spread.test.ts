@@ -16,15 +16,21 @@ run(async () => {
   const others = ["sp.outside", "wp.lmia_inside", "pnp.express_entry", "fs.spouse"];
   for (const k of others) { const id = T.combo(k); if (id) { await T.people(id).catch(() => {}); const s = await T.questionsBySteps(id); lines.push(`SETUP ${k} placed=${s.placed} refused=${s.refused.length}`); } }
   const probs = async (k: string) => ((await call("GET", `/combinations/${T.combo(k)}`)).body?.draft?.problems ?? []).filter((p: any) => /^(Hiding a value|Unreachable question)/.test(p.message));
-  const count = (ps: any[]) => `hiding=${ps.filter((p) => /^Hiding/.test(p.message)).length} unreachable=${ps.filter((p) => /^Unreachable/.test(p.message)).length}`;
   const all = ["vv.single", ...others];
-  for (const k of all) lines.push(`BEFORE ${k} ${count(await probs(k))}`);
+  const n = (ps: any[]) => `${ps.filter((p) => /^Hiding/.test(p.message)).length}h${ps.filter((p) => /^Unreachable/.test(p.message)).length}u`;
+  const snap = async () => { const o: string[] = []; for (const k of all) o.push(`${k.split(".")[0]}=${n(await probs(k))}`); return o.join(" "); };
+  const before = await snap();
+  const approve = async () => { const a: number[] = []; for (const c of sql("select id from library_change where kind='placement_condition' and status='WAITING'").split("\n").filter(Boolean)) a.push((await call("POST", `/library/changes/${c}/approve`, { note: "qa B88 probe" }, "user-B")).status); return a; };
   const pick = sql(`select id from proposal_item where kind='condition' and status='waiting' and identity_key like 'principal|person.other_family_name|%' limit 1`);
-  const a = await call("POST", "/review/proposals/decide", { ids: [pick], action: "accept" }, AUTHOR);
-  const appr: number[] = [];
-  for (const c of sql("select id from library_change where kind='placement_condition' and status='WAITING'").split("\n").filter(Boolean)) appr.push((await call("POST", `/library/changes/${c}/approve`, { note: "qa B88 probe" }, "user-B")).status);
-  lines.push(`CONDITIONS ${conds} accept=${a.status} approve=${appr.join(",")}`);
-  for (const k of all) { const ps = await probs(k); lines.push(`AFTER ${k} ${count(ps)} ${ps.map((p: any) => String(p.message).slice(0, 110)).slice(0, 2).join(" || ")}`); }
-  for (const l of lines) console.error(`STOP ${l}`);
+  const a1 = await call("POST", "/review/proposals/decide", { ids: [pick], action: "accept" }, AUTHOR); const ap1 = await approve();
+  const one = await snap();
+  const rest = sql("select id from proposal_item where kind='condition' and status='waiting'").split("\n").filter(Boolean);
+  const dec: number[] = []; for (const id of rest) dec.push((await call("POST", "/review/proposals/decide", { ids: [id], action: "accept" }, AUTHOR)).status);
+  const ap2 = await approve();
+  const allc = await snap();
+  let un = ""; for (const k of others) { const u = (await probs(k)).find((p: any) => /^Unreachable/.test(p.message)); if (u) { un = `${k}: ${String(u.message).slice(0, 150)}`; break; } }
+  console.error(`STOP BEFORE conds=${conds} ${before} | ONE ${a1.status}/${ap1.join(",")} ${one}`);
+  console.error(`STOP ALL accept=${dec.filter((x) => x < 300).length}of${dec.length} appr=${ap2.filter((x) => x < 300).length}of${ap2.length} ${allc}`);
+  console.error(`STOP UNREACHABLE ${un || "(none)"}`);
   process.exit(2);
 });
