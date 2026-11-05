@@ -279,8 +279,13 @@ def read_back(pdf_bytes, values, original_parts):
     orig = dict(leaves(data_root(ET.fromstring(original_parts["datasets"]))))
     now = dict(leaves(data)) if data is not None else {}
     written = {p.replace("[*]", "[0]") for p in values}
-    changed_other = [p for p, v in orig.items() if p not in written and now.get(p, None) != v
-                     and not any(p.startswith(w + ".") or w.startswith(p + ".") for w in written)]
+    # A written path's ancestors are not "other" data: an empty placeholder it fills, and the data root itself when the
+    # blank form holds no data at all (IMM 0008 DEP: an empty <xfa:data/> reads as one leaf at path "", B84).
+    near = lambda p: any(p == "" or p.startswith(w + ".") or w.startswith(p + ".") for w in written)
+    changed_other = [p for p, v in orig.items() if p not in written and now.get(p, None) != v and not near(p)]
+    # B84 review m1: a leaf the blank did not hold is other data too when it carries a value nobody wrote (writing a path
+    # adds only that leaf and empty placeholders before it), so a form with an empty blank (DEP) is still checked.
+    changed_other += [p for p, v in now.items() if p not in orig and p not in written and v != "" and not near(p)]
     unchanged = {k: sha(parts[k]) == sha(original_parts[k]) for k in original_parts if k != "datasets"}
     return {"written": len(values), "read_back_equal": ok, "mismatches": bad[:10],
             "other_data_leaves_changed": len(changed_other), "other_parts_unchanged": unchanged}

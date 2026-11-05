@@ -18,7 +18,7 @@ import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseO
 import { problemFromZod } from "../../contracts/programs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -41,8 +41,9 @@ const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A malformed id in the URL is "not found", never a database error. */
 const idOf = (id: string, what: string) => (UUID.test(id) ? id : fail(`No such ${what}.`, HttpStatus.NOT_FOUND));
-/** A form number as releases write them ("IMM 5257"); anything else is "not found", never echoed back (break m6). */
-const formOf = (form: string) => (/^[A-Z]{2,6} ?\d{3,5}[A-Z]?$/.test(form) ? form : fail("No such form.", HttpStatus.NOT_FOUND));
+/** QA-235: a form number exactly as the case's release writes it ("IMM 5257", "IMM 5257 SCH1", "IMM 0008 DEP"); anything
+ *  else is "not found", never echoed back (break m6). */
+const formOf = (s: Parameters<typeof releaseForms>[0], form: string) => (releaseForms(s).has(form) ? form : fail("No such form.", HttpStatus.NOT_FOUND));
 /** At most this many copies of one case wait or run at once (break m6): one case cannot hold up every other. */
 const ACTIVE_PER_CASE = 5;
 const run = promisify(execFile);
@@ -202,12 +203,12 @@ export class CaseForms implements OnModuleInit {
   /** RT-13: a new copy of one form for one person, from the confirmed facts as they are now (frozen with the copy).
    *  Missing facts are listed on the copy, not refused (P-71 blocks filing, not generating). Idempotent by key. */
   async generate(actor: Actor, caseId: string, formIn: string, subjectId: string, body: unknown) {
-    const c = await this.officerCase(actor, caseId), form = formOf(formIn);
+    const c = await this.officerCase(actor, caseId), s = this.runtime.snapshotOf(c), form = formOf(s, formIn);
     const b = parse(GenerateCopy, body);
     const who = c.participants.find((p) => p.subjectId === idOf(subjectId, "person") && p.role !== "case");
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     if (b.idempotencyKey) { const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); if (again) return this.answerFor(again, form, subjectId); }
-    const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
+    const people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
     const channel = chosen(s, await this.itemChannels(c.id), form, idOf(subjectId, "person"));
     if (channel === "NOT_NEEDED") fail(`${form} is Not needed in this case's release: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.UNPROCESSABLE_ENTITY);
