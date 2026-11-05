@@ -19,6 +19,7 @@ queue_rules:
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - -label=records
       - check-success = ci
@@ -31,6 +32,7 @@ queue_rules:
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - -label=records
       - check-success = ci
@@ -42,6 +44,7 @@ queue_rules:
 # Records out of the product queue (P-371 (4), founder 6 Nov): a PR that CI labels "records" (only records under product/,
 # tools/records-merge.sh is-records) never joins a product batch; .github/workflows/ci.yml's job "records-merge" and the
 # sweep records-merge.yml merge it while no batch is checking. A label condition, as the queues already use.
+# -draft: a draft never joins a batch (P-371 (1): a draft runs only the guard).
 
 # Approved PRs join the queue by themselves (the queue_conditions above decide which); no "@mergifyio queue" needed.
 merge_protections_settings:

@@ -48,13 +48,19 @@ runs = json.loads(gh("run", "list", "--limit", "100", "--json", "databaseId,stat
 queued = [r for r in runs if r["status"] == "queued"]
 (alarm if len(queued) > 8 else ok)(f"{len(queued)} CI runs queued (GitHub free plan: 20 machines at once, 4 per run)")
 open_heads = {p["headRefName"] for p in prs}
-waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "main" and (r["headBranch"].startswith("lead/") or r["headBranch"] not in open_heads)]
-(alarm if waste else ok)(f"{len(waste)} CI runs on records branches or branches with no open PR" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
+# P-371: a records PR's own run is its check now (records merge by themselves after it), so only branches with no open PR.
+waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "main" and r["headBranch"] not in open_heads]
+(alarm if waste else ok)(f"{len(waste)} CI runs on branches with no open PR" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
 
 # 2b. Records PRs (qa:, lead:) must never sit in the Mergify queue: a push to them throws out the batch (2 Nov 07:35).
+# P-371 (4): a records-only PR carries "records" (set by CI), which Mergify's queues skip; it merges by itself outside
+# the queue (records-merge). Never merge it by hand while a batch is checking (P-306 (3)).
 for p in approved:
-    if p["title"].startswith(("qa:", "lead:")):
-        alarm(f"#{p['number']} is a records PR carrying review: approved, so a push throws out its batch: remove the label, merge it directly")
+    names = [l["name"] for l in p["labels"]]
+    if p["title"].startswith(("qa:", "lead:")) and "records" not in names:
+        alarm(f"#{p['number']} is a qa/lead PR with review: approved but no records label, so it joins a product batch: it is not records-only (records-merge.sh is-records), or its CI has not run; split the code out or let it batch")
+    elif "records" in names and mins(p["updatedAt"]) > 60:
+        alarm(f"#{p['number']} is a labelled records PR idle over an hour: read its records-merge job and the last records-merge.yml sweep")
 
 # 3. qa (P-250, narrowed by P-277): approved PRs touching money, schema or permissions with no qa verdict comment.
 RISKY = ("prisma/", "ledger", "paid", "permission", "launcher")

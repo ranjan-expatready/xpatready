@@ -128,23 +128,32 @@ jobs:
         with: { name: "nightly-red-part-${{ matrix.shard }}", path: red/, retention-days: 14 }
   red:
     # P-371 (3): a red full run on main opens a qa row: one open issue labelled "qa: nightly red" (a comment on it when
-    # one is already open) listing the red suites, the commit and the run. qa turns it into a qa/BUGS.md row (or a
-    # quarantine, P-205, when there is no code cause) and closes it with that row's id; the Lead checks it first (skill lead).
+    # one is already open) listing the red suites, the commit and the run; qa turns it into a qa/BUGS.md row (or a
+    # quarantine, P-205, when there is no code cause). Agents may not close issues, so the first green full run on main
+    # closes it by itself.
     needs: suites
-    if: ${{ always() && needs.suites.result == 'failure' && github.ref == 'refs/heads/main' }}
+    if: ${{ always() && (needs.suites.result == 'failure' || needs.suites.result == 'success') && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: { contents: read, actions: read, issues: write }
     steps:
       - uses: actions/download-artifact@v4
+        if: needs.suites.result == 'failure'
         with: { pattern: "nightly-red-part-*", path: red, merge-multiple: true }
+      - name: green again, so close the open qa issue
+        if: needs.suites.result == 'success'
+        env: { GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}" }
+        run: |
+          for n in $(gh issue list --label "qa: nightly red" --state open --json number --jq '.[].number' 2>/dev/null); do
+            gh issue close "$n" --comment "The nightly full run on main ${GITHUB_SHA:0:9} is green: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; done
       - name: open or add to the qa issue
+        if: needs.suites.result == 'failure'
         env: { GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}" }
         run: |
           sha="${GITHUB_SHA:0:9}"; when=$(TZ=Asia/Kolkata date '+%-d %b %H:%M IST'); n=$(cat red/*.md 2>/dev/null | grep -c '| FAIL |' || true)
           { echo "Nightly full run on main **$sha** ($when) is red: $n suite(s). Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo; echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; cat red/*.md 2>/dev/null
-            echo; echo "qa: one qa/BUGS.md row per cause (or a quarantine in run-suites.sh with its evidence when there is no code cause, P-205); close this issue with the row id."; } > body.md
+            echo; echo "qa: one qa/BUGS.md row per cause (or a quarantine in run-suites.sh with its evidence when there is no code cause, P-205), naming this issue. The next green full run on main closes it."; } > body.md
           gh label create "qa: nightly red" --color B60205 --description "A red nightly full run on main (P-371)" >/dev/null 2>&1 || true
           open=$(gh issue list --label "qa: nightly red" --state open --json number --jq '.[0].number // empty')
           if [ -n "$open" ]; then gh issue comment "$open" --body-file body.md; else gh issue create --title "qa: nightly full run red on main $sha ($n suites)" --label "qa: nightly red" --body-file body.md; fi

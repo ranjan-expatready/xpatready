@@ -55,7 +55,7 @@ combined_checks() {
   git fetch -q origin "$head" 2>/dev/null || git fetch -q origin "pull/$pr/head" || { echo "  could not fetch #$pr's head"; return 1; }
   git checkout -q --detach "$base" && git -c user.name=ci -c user.email=ci@localhost merge -q --no-ff --no-edit "$head" >/dev/null 2>&1 \
     || { echo "  #$pr does not merge cleanly into $base"; git merge --abort 2>/dev/null; git checkout -q --detach "$base"; return 1; }
-  [ "$(git diff --name-only "$base" HEAD | is_records)" = yes ] || { echo "  #$pr's change on $base is not records-only"; rc=1; }
+  [ "$(git -c core.quotePath=false diff --no-renames --name-only "$base" HEAD | is_records)" = yes ] || { echo "  #$pr's change on $base is not records-only"; rc=1; }
   [ $rc = 0 ] && { bash "$T/push-guard.sh" "$base..HEAD" >/dev/null 2>&1 || { echo "  push guard refused"; rc=1; }; }
   for c in "bash $T/check-docs.sh" "bash $T/decision-impact.sh" "node $T/graph.mjs --check" "node $S/tools/check-gate-b.mjs" "node $S/tools/check-works-set.mjs"; do
     [ $rc = 0 ] || break
@@ -76,7 +76,8 @@ merge_one() {   # $1 pr, $2 wait minutes. 0 merged; 3 not eligible now (left as 
   [[ ",$labels," == *",review: approved,"* && ",$labels," == *",records,"* ]] || { echo "#$pr: needs the labels \"review: approved\" and \"records\" (has: $labels)"; return 3; }
   ci=$(gh api "repos/$R/commits/$head/check-runs?check_name=ci&per_page=100" --jq '[.check_runs[] | select(.conclusion != "skipped")] | sort_by(.started_at) | last | (.status + "/" + (.conclusion // ""))')
   [ "$ci" = completed/success ] || { echo "#$pr: ci on ${head:0:12} is $ci, not green"; return 3; }
-  [ "$(gh api "repos/$R/pulls/$pr/files?per_page=100" --paginate --jq '.[].filename' | is_records)" = yes ] || { echo "#$pr: not records-only"; return 3; }
+  # Both sides of a rename (review, 6 Nov: a rename out of tools/ or app code must never pass as a record).
+  [ "$(gh api "repos/$R/pulls/$pr/files?per_page=100" --paginate --jq '.[] | .filename, (.previous_filename // empty)' | is_records)" = yes ] || { echo "#$pr: not records-only"; return 3; }
   local until=$((SECONDS + 60 * wait)) n
   while n=$(busy "$base_ref") && [ "$n" != 0 ]; do
     [ $SECONDS -lt $until ] || { echo "#$pr: $n merge-queue batch(es) checking against $base_ref; left for the sweep (records-merge.yml)"; return 4; }
@@ -87,6 +88,11 @@ merge_one() {   # $1 pr, $2 wait minutes. 0 merged; 3 not eligible now (left as 
   combined_checks "$base" "$pr" "$head" || { echo "#$pr: checks on $base_ref ${base:0:12} with the PR merged in failed: not merged"; return 1; }
   [ "$(gh api "repos/$R/git/ref/heads/$base_ref" --jq .object.sha)" = "$base" ] || { echo "#$pr: $base_ref moved during the check; left for the next try"; return 4; }
   [ "$(busy "$base_ref")" = 0 ] || { echo "#$pr: a batch started during the check; left for the sweep"; return 4; }
+  # Re-read the PR just before merging: still open and ready, the same head, both labels still on.
+  j=$(gh api "repos/$R/pulls/$pr") || return 1
+  [ "$(jq -r '[.state, (.draft|tostring), .head.sha] | join(" ")' <<<"$j")" = "open false $head" ] || { echo "#$pr: changed during the check (state, draft or head); left as is"; return 3; }
+  labels=$(jq -r '[.labels[].name] | join(",")' <<<"$j")
+  [[ ",$labels," == *",review: approved,"* && ",$labels," == *",records,"* ]] || { echo "#$pr: a label was removed during the check; left as is"; return 3; }
   gh api -X PUT "repos/$R/pulls/$pr/merge" -f merge_method=merge -f sha="$head" \
     -f commit_title="Merge pull request #$pr (records, outside the product queue, P-371)" >/dev/null \
     || { echo "#$pr: the merge API refused (head moved or not mergeable)"; return 1; }
