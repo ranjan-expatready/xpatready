@@ -75,7 +75,7 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
               {!row.asked && row.worked_out_from_names.length ? <span className="block text-xs text-text-muted">Worked out from: {row.worked_out_from_names.join(", ")}</span> : null}
               {row.why_not ? <span className="block text-xs text-text-muted" data-own-why-not>{row.why_not}</span> : null}
               {row.asked_as ? <span className="mt-0.5 flex items-center gap-1 text-text" data-own-asked><CheckCheck className="size-4 shrink-0" aria-hidden /> <span>Asked as "{row.asked_as.name}"{row.asked_as.waiting ? <span className="text-text-muted"> · a second person approves it on To review; release is held until then</span> : null}</span></span> : null}</span>
-            {canAuthor && row.can_ask ? <Button size="sm" variant="secondary" data-own-ask aria-expanded={open === row.dataPath} onClick={() => setOpen(open === row.dataPath ? null : row.dataPath)}>Ask as its own question</Button> : null}
+            {canAuthor && row.can_ask ? <Button size="sm" variant="secondary" data-own-ask aria-expanded={open === row.dataPath} onClick={() => { setSaid(null); setOpen(open === row.dataPath ? null : row.dataPath); }}>Ask as its own question</Button> : null}
             {canAuthor && row.asked_as ? <UndoButton onUndo={() => undo(row)} /> : null}
           </div>
           {said?.dataPath === row.dataPath && !(open === row.dataPath && row.can_ask) ? <p role={said.bad ? "alert" : "status"} className={`mt-1 text-sm ${said.bad ? "text-text-danger" : "text-text"}`} data-own-said>{said.text}</p> : null}

@@ -154,7 +154,7 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
     const rKey = u.body?.field as string;
     const rule = await call("POST", `/combinations/${vv}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: rKey, value: true }, whenPlain: "a rule that reads it (B83 check)", thenPlain: "nothing, it is a check (B83 check)", forWhom: "each_applicant" });
     u = await undoAsk(USCARD);
-    ok("B83 fail (BR-9): a waiting new field a rule reads is not withdrawn; the answer says why", rule.status < 300 && u.status < 300 && u.body?.withdrew === false && /a rule or condition/.test(u.body?.kept ?? "") && sql(`select count(*) from canonical_field where canonical_field_key = '${rKey}'`) !== "0", { rule: rule.status, u });
+    ok("B83 fail (BR-9): a waiting new field a rule reads is not withdrawn; the answer says why", rule.status < 300 && u.status < 300 && u.body?.withdrew === false && /the rule "nothing, it is a check \(B83 check\)"/.test(u.body?.kept ?? "") && sql(`select count(*) from canonical_field where canonical_field_key = '${rKey}'`) !== "0", { rule: rule.status, u });
     u = await undoAsk(USCARD);
     ok("B83 fail: a second undo has nothing to take back (409)", u.status === 409, u);
   }

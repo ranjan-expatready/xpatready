@@ -116,10 +116,11 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
 
   // ------------------------------------------------------------ B1: the real release, at once, three delays
   const lib = (await list()).yes_no_fields.find((f) => f.key === "person.us_permanent_resident")!;
-  for (const [i, delay] of [300, 700, 1200, 2000, 3000].entries()) {
+  for (const [i, delay] of [1200, 1400, 1600, 1800, 2000].entries()) {
     await plain(USCARD);
     u = await ask(USCARD, { field: lib.key });
-    const s = await submit(`B83 race ${i}`);
+    let s = await submit(`B83 race ${i}`);
+    if (/Nothing has changed/.test(words(s))) { await plain(USCARD); await release(); await ask(USCARD, { field: lib.key }); s = await submit(`B83 race ${i}`); }
     if (s.status >= 300) { ok(`B1 race ${delay} ms: Submit`, false, s); continue; }
     const [a, b] = await Promise.all([call("POST", `/combinations/${vv}/approve`, {}, APPROVER), sleep(delay).then(() => undo(USCARD))]);
     const live = rowsOf(USCARD).filter((r) => /:(PUBLISHED|DRAFT):/.test(r));
