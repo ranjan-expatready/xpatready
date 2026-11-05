@@ -106,3 +106,7 @@ A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M
 **B89 is not a stop:** nothing is refused without it. It only adds conditions, which then need B86. **Not in this walk:** the other four combinations, the pack-route clicks in row 2, and anything after release (QA-235, B84, is at the case).
 ## Batch 23 ~10:44 IST: QA-239 (Gap · Major, row B88); C10.1 after #1009
 One condition approved on Visitor visa adds release-refusing Hiding errors on the four other combinations reading it (run 41972242603). "Unreachable" did not appear by route; concept §8 simulated it. C4.11 cannot be Works while this is open. C10.1: 21/24 on the checkpoint (run 41969024051). M2 58/60.
+
+## Gate A results ~11:30–11:50 IST (no row moves)
+* #1051 (C1.3, C11.5) on 130a0e62a: PASS; C1.3 54/54 on the checkpoint (run 41976449342); new QA-243 (Minor).
+* #1058 (B82) on 501291a27: FAIL for the label, journey score 7/10; packs green (run 41978442688); new QA-242 (Major, C6.4): the condition lines never reach a case.
