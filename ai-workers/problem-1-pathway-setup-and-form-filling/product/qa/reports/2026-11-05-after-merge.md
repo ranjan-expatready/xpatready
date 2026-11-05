@@ -63,3 +63,6 @@ The checklist reading lands Visitor visa lines whose conditions read three facts
 | C7.7, C6.11 (M3) | Partial (unchanged) | QA-227 closed; other Majors remain |
 
 **Closed:** QA-227 (`check_b52_own_yes_no.ts` 52/52 on a fresh copy of main). **New:** QA-234. **M2: 58/60.** Left: C4.11, C10.1.
+
+## Records ~06:45 IST: QA-235 (Bug · Major, row B84)
+Confirmed by route on a checkpoint copy of main adc904436: generating IMM 5257 SCH1 answers 404 "No such form." (IMM 5257: 202). Tagged C7.7 only (M3, already Partial): no pack step generates SCH1, so no Works row is demoted. M2 unchanged.
