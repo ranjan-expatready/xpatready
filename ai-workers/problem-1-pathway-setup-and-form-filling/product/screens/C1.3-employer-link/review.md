@@ -106,3 +106,11 @@ The builder's 27/27 depends on that timing; on my copy it failed 2 of 2. Nothing
 Re-run either fix 5+ times on a fresh copy. The three Minors stay listed in the PR, per the tech lead's ruling.
 
 **Verdict: Block** for commit 3c83686a2. Only R2-1 is open: make the tooltip step deterministic. Nothing else is open above Minor.
+
+## Round 4 — diff only, `3c83686a2..e59093d61`
+**Runs** (fresh copy `rv_c13` on :4433, configured checkpoint loaded by the pack): `acceptance/C1.3.test.ts` **54/54**; the unmodified `check_c13_employer_link_browser.cjs` **28/28 six runs in a row** (it failed 2 of 8 in round 3).
+**R2-1: closed.** The step now uses option (a). Observers are set on the label and on `document.body` before `focus()`; the check asserts the label has focus, then waits (T timeout, loud) until the tooltip has opened and its words name the employer case. This proves "opens from the keyboard and names the employer case" without depending on it staying open. The stray close-on-scroll is the shared Tip's behaviour, recorded by the tech lead as row B96, and the check does not claim it is fixed.
+**Tech lead's `isFilingFact` change: correct.** `carriedFacts` now chooses the copy's subject with the resolver's own rule (`employer.ts:56-59`) instead of a second test here. On this branch `scopeOf` ignores the field's marking, so nothing changes today (the pack's live M4 lines still pass: principal for name and address, case for the LMIA number). The new pure lines compare against `isFilingFact` itself, so they will follow C3.16 (#1054) when it merges. I did not check the #1054 trial merge; it is not on this branch.
+Open below Major: the three Minors listed in the PR (tech lead's ruling).
+
+**Verdict: Approve** for commit e59093d61.
