@@ -6,7 +6,7 @@
 // person, never by its key (P-319). Picking the employer case copies, once, the employer facts the worker's pinned
 // release reads (SA-1B-283 r4 "Copies, not live links", AG-7-55 r5). Pure rules, no database.
 import { inStoredOrder } from "./team.ts";
-import { scopeOf } from "../resolver.ts";
+import { isFilingFact, scopeOf } from "../resolver.ts";
 
 export type EmployerLinkOffer = { offered: boolean; reason: string; facts: string[] };
 
@@ -45,7 +45,7 @@ export type FactState = "new" | "same" | "different";
  *  representative) and asks (a placement), in the release's question order. Nothing else moves. */
 export function carriedFacts(s: SnapshotPart, ec: EmployerCase): CarriedFact[] {
   const read = new Set(entriesOf(s).filter(readsForWorker).map((e) => e.fact!));
-  const placements = (s.placements ?? []) as { fact: string; repeats?: string | null; order?: number }[];
+  const placements = (s.placements ?? []) as { fact: string; repeats?: string | null; scope?: string | null; order?: number }[];
   const labels = new Map(((s.canonical_fields ?? []) as { id: string; label?: string | null; meaning?: string }[]).map((f) => [f.id, f.label || f.meaning || f.id]));
   const out: (CarriedFact & { order: number })[] = [];
   for (const [fact, value] of Object.entries(ec.facts)) {
@@ -53,7 +53,10 @@ export function carriedFacts(s: SnapshotPart, ec: EmployerCase): CarriedFact[] {
     if (!read.has(fact) || !place || isBlank(value)) continue; // r5: blank stays blank
     const scope = scopeOf(fact, place);
     if (scope === "person") continue; // a worker's own facts never come from the employer (r8)
-    out.push({ fact, label: labels.get(fact) ?? fact, value: inStoredOrder(value), on: scope === "filing" ? "case" : "principal", order: place.order ?? 0 });
+    // Where the copy is written is where the resolver reads it (tech lead on #1051): a fact stored once on the case's own
+    // record (a filing fact; with C3.16 also a field marked Organisation or Household) on the case subject, otherwise
+    // on the principal (an unmarked "organisation." fact is read per person, from the form's subject).
+    out.push({ fact, label: labels.get(fact) ?? fact, value: inStoredOrder(value), on: isFilingFact(fact, place) ? "case" : "principal", order: place.order ?? 0 });
   }
   return out.sort((a, b) => a.order - b.order || a.fact.localeCompare(b.fact)).map(({ order: _o, ...f }) => f);
 }

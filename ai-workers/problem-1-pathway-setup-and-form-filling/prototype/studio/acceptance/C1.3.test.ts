@@ -7,6 +7,7 @@
 // The capability's acceptance pack (gate B runs it for a PR naming C1.3; it loads the checkpoint itself when needed).
 //   zsh tools/isolated.sh acc_c13 4436 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C1.3.test.ts 4436 xr_studio_acc_c13 ; zsh tools/isolated.sh acc_c13 4436 stop
 import { carriedFacts, employerFacts, employerLinkOffer, factState } from "../engine/runtime/employer.ts";
+import { isFilingFact } from "../engine/resolver.ts";
 import { client, recorder } from "../tests/runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_c13_link";
@@ -32,6 +33,13 @@ function pure() {
   const c = carriedFacts(s, ec);
   ok("C1.3 BR-2: only the facts the release reads and asks move, in question order, each on its subject (M4)", JSON.stringify(c.map((f) => [f.fact, f.on])) === JSON.stringify([[LMIA, "case"], [NAME, "principal"]]), c);
   ok("C1.3 BR-2 fail: a fact the release does not read, the representative's firm and an unasked fact stay on the employer case", !c.some((f) => ["organisation.business_number", "organisation.name", ADDRESS].includes(f.fact)));
+  // Tech lead on #1051: the copy goes where the resolver reads it, by its own rule (isFilingFact), never a second rule
+  // here. Today an unmarked and a marked organisation fact both read per person; once C3.16 (#1054) stores a field
+  // marked Organisation on the case's own record, the same check expects it on the case.
+  for (const place of [{ fact: NAME, repeats: "per_person", order: 1 }, { fact: NAME, repeats: "per_person", scope: "organisation", order: 1 }]) {
+    const got = carriedFacts(snap([entry(NAME, "none")], "INDIVIDUAL", [place]), { ...ec, facts: { [NAME]: "Sample Ltd" } })[0]?.on;
+    ok(`C1.3 (M4): a${place.scope ? " marked" : "n unmarked"} organisation fact is copied where the resolver reads it (${got})`, got === (isFilingFact(NAME, place) ? "case" : "principal"), got);
+  }
   ok("C1.3 BR-2 fail: a blank value is not carried (blank stays blank)", carriedFacts(s, { ...ec, facts: { [NAME]: "  ", [LMIA]: "SAMPLE-1" } }).map((f) => f.fact).join() === LMIA);
   const reordered = { country: "canada", postal_code: "L8P 0A1", province: "ON", city: "Hamilton", street_name: "Example Street", street_number: "1" };
   ok("C1.3 BR-4 (M3): an equal address in another key order is Same", factState(SAMPLE_ADDRESS, { value: reordered }) === "same");
