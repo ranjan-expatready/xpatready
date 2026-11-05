@@ -19,18 +19,22 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
 const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const Put_ = z.strictObject({ scope: z.enum(SCOPES), expected: z.enum(SCOPES) });
+/** Break m7 on #1054: only these two keys, checked on the body's own keys (a "__proto__" key is not one of them). */
+const onlyKeys = (b: unknown) => !!b && typeof b === "object" && !Array.isArray(b) && Reflect.ownKeys(b).every((k) => k === "scope" || k === "expected");
 
 /** What the rules need to know about one field, read inside the caller's transaction. */
 async function factsOf(db: Tx | Db, workspaceId: string, key: string) {
   const versions = await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
   if (!versions.length) return null;
   const current = versions.find((v) => v.status === "DRAFT") ?? versions[0];
-  const placements = await db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { repeats: true, predicateJson: true, sectionKey: true } });
+  // Break 2 on #1054: a placement that came in through a merge keeps its lineage key and asks this field by its field key.
+  const placements = await db.sectionQuestion.findMany({ where: { workspaceId, OR: [{ lineageKey: key }, { canonicalFieldKey: key }], status: { in: ["DRAFT", "PUBLISHED"] } }, select: { repeats: true, predicateJson: true, sectionKey: true } });
   const representativeBox = (await db.formFieldMap.count({ where: { workspaceId, canonicalFieldKey: key, person: "representative", status: { in: ["DRAFT", "PUBLISHED"] } } })) > 0;
   const facts: ScopeFacts = {
     key,
     published: versions.some((v) => v.status !== "DRAFT" || !!v.supersedesId),
     placements: placements.map((p) => ({ repeats: p.repeats, condition: p.predicateJson !== null && p.predicateJson !== undefined })),
+    merged: versions.some((v) => !!v.mergedIntoKey) ? (versions.find((v) => v.mergedIntoKey)!.mergedIntoKey as string) : null,
     representativeBox,
   };
   return { current, facts, sections: [...new Set(placements.map((p) => p.sectionKey))], name: (current.label ?? current.meaning ?? key).trim() };
@@ -78,7 +82,7 @@ export class FieldScopes {
     const scope = scopeOfStored(f.current.scope);
     const saved = savedRunsOf(await this.combinationsAsking(workspaceId, key, f.sections));
     return {
-      key, name: f.name, scope, words: SCOPE_WORDS[scope], published: f.facts.published,
+      key, name: f.name, scope, words: SCOPE_WORDS[scope], published: f.facts.published, merged_into: f.facts.merged,
       choices: SCOPES.map((s) => ({ scope: s, ...SCOPE_WORDS[s], current: s === scope, refused: s === scope ? null : scopeRefusal(f.facts, s)?.message ?? null })),
       saved_runs: saved,
       warning: saved.length ? `Changing this moves the saved AI results of ${new Set(saved.map((x) => x.combination)).size} combination${new Set(saved.map((x) => x.combination)).size === 1 ? "" : "s"} (${saved.length} saved run${saved.length === 1 ? "" : "s"}); they replay only after a new run.` : null,
@@ -88,7 +92,7 @@ export class FieldScopes {
   async set(actor: Actor, key: string, body: unknown) {
     need(actor, "author"); // the library's draft edits are the author's duty (the approver approves, never edits)
     if (!FIELD_KEY.test(key)) throw problem(404, "Not in the library", `${key} is not a shared field.`);
-    const b = Put_.safeParse(body);
+    const b = onlyKeys(body) ? Put_.safeParse(body) : ({ success: false } as const);
     if (!b.success) throw problem(400, "Choose a scope", `Choose one of: ${SCOPES.map((s) => SCOPE_WORDS[s].label).join(", ")}, and send the scope you saw as "expected".`);
     const workspaceId = await this.ws.id();
     const to: Scope = b.data.scope;

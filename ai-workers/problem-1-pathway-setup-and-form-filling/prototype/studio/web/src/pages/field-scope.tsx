@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCanAuthor } from "@/pages/library-item-actions";
 
 type Choice = { scope: string; label: string; short: string; example: string; current: boolean; refused: string | null };
-type ScopeView = { key: string; name: string; scope: string; published: boolean; choices: Choice[]; warning: string | null };
+type ScopeView = { key: string; name: string; scope: string; published: boolean; merged_into?: string | null; choices: Choice[]; warning: string | null };
 
 /** The pill under a field's name: whom it is about, in words (C3.16; was "once per case" / "about a person"). */
 export const SCOPE_PILL: Record<string, string> = { CLIENT_LEVEL: "about each person", CASE_LEVEL: "once for the application", HOUSEHOLD: "once for the household", ORGANISATION: "once for the employer" };
@@ -20,17 +20,19 @@ export function FieldScopePanel({ fieldKey, retired }: { fieldKey: string; retir
   const [pick, setPick] = React.useState<string | null>(null);
   React.useEffect(() => { if (v.data) setPick(v.data.scope); }, [v.data?.scope]);
   const save = useAction(() => api(`/library/fields/${encodeURIComponent(fieldKey)}/scope`, { method: "PUT", json: { scope: pick, expected: v.data?.scope } }),
-    { success: "Saved on the draft: it goes out with the next release", invalidate: [["field-scope", fieldKey], ["field", fieldKey], ["fields"], ["preview"], ["config"], ["combination"]] });
+    { success: "Saved on the draft: it goes out with the next release", invalidate: [["field-scope", fieldKey], ["field", fieldKey], ["fields"], ["preview"], ["config"], ["combination"]],
+      // Break m6 on #1054: focus stays on the choice just saved, never the top of the page.
+      onDone: () => requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector<HTMLInputElement>(`[data-field-scope] input[value="${pick}"]`)?.focus())) });
   if (v.isLoading) return <Spinner label="Loading whom this field is about" />;
   if (v.isError || !v.data) return <Notice tone="danger" title="Could not load whom this field is about">{(v.error as Error)?.message ?? "Try again."}</Notice>;
-  const d = v.data, locked = d.published || retired || !canAuthor;
+  const d = v.data, locked = d.published || !!d.merged_into || retired || !canAuthor;
   const chosen = d.choices.find((c) => c.scope === pick);
   return (
     <section data-field-scope className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="field-scope-title">
       <h2 id="field-scope-title" className="font-semibold">Asked about</h2>
       <p className="text-sm text-text-muted">Whom this fact is about. A case asks it once at that level, and every form that reads it gets the one value.</p>
-      {d.published ? <Notice tone="info" title="Published">A published field's scope cannot change. Create a new field.</Notice> : null}
-      {!d.published && !canAuthor ? <Notice tone="info" title="Read only">The configuration author chooses whom a field is about; you can see it here.</Notice> : null}
+      {d.merged_into ? <Notice tone="info" title="Merged">This field was merged into another: choose whom it is about on the field it was merged into.</Notice> : d.published ? <Notice tone="info" title="Published">A published field's scope cannot change. Create a new field.</Notice> : null}
+      {!d.published && !d.merged_into && !canAuthor ? <Notice tone="info" title="Read only">The configuration author chooses whom a field is about; you can see it here.</Notice> : null}
       {!d.published && canAuthor && retired ? <Notice tone="info" title="Read only">A retired or merged field takes no change.</Notice> : null}
       <fieldset className="grid gap-2 sm:grid-cols-2" disabled={locked}>
         <legend className="sr-only">Asked about</legend>

@@ -4,7 +4,7 @@
 // acceptance/C3.16.test.ts (six part and case part).
 //   tsx studio/tests/check_c316_field_scope.ts
 import { FILING, type PersonOnFiling } from "../contracts/resolver.ts";
-import { markOf, ONCE_WORDS, placementRefusal, SCOPE_TAG, SCOPE_WORDS_REFUSED, scopeMark, scopeOfStored, scopeRefusal, storedOfScope, type ScopeFacts } from "../engine/field-scope.ts";
+import { markOf, mergeScopeRefusal, ONCE_WORDS, placementRefusal, SCOPE_TAG, SCOPE_WORDS_REFUSED, scopeMark, scopeOfStored, scopeRefusal, storedOfScope, type ScopeFacts } from "../engine/field-scope.ts";
 import * as R from "../engine/resolver.ts";
 import { documentFacts } from "../engine/sources.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -32,6 +32,9 @@ ok("C3.16-2 fail (M2, QA-152): a field a representative's box reads refuses Orga
 ok("C3.16-2 fail (M1): a placement with a condition refuses Household", scopeRefusal(facts({ placements: [{ repeats: "per_person", condition: true }] }), "household")?.message === SCOPE_WORDS_REFUSED.condition);
 ok("C3.16-2 fail (m2): representative facts, date of birth and has-children stay about each person", ["representative.family_name", "person.date_of_birth", "person.has_children"].every((key) => scopeRefusal(facts({ key }), "household")?.message === SCOPE_WORDS_REFUSED.personOnly));
 ok("C3.16-2 (#1054 M3): a marked field cannot be placed per row or with a condition; an unmarked one can", placementRefusal("HOUSEHOLD", { repeats: "per_row", condition: null }) === SCOPE_WORDS_REFUSED.perRow && placementRefusal("ORGANISATION", { repeats: "per_person", condition: { op: "eq" } }) === SCOPE_WORDS_REFUSED.condition && placementRefusal("CLIENT_LEVEL", { repeats: "per_row", condition: { op: "eq" } }) === null && placementRefusal("HOUSEHOLD", { repeats: "per_person", condition: null }) === null);
+
+ok("C3.16-2 fail (break m4): a merged field refuses with its own words, naming the field it went into", scopeRefusal(facts({ merged: "person.kept_name" }), "household")?.message === `${SCOPE_WORDS_REFUSED.merged} (person.kept_name).`);
+ok("C3.16 (break 1): a merge of two scopes is refused in words; the same scope merges", /merged only when both are asked about the same people/.test(mergeScopeRefusal("Employer name", "ORGANISATION", "Firm name", "CLIENT_LEVEL") ?? "") && mergeScopeRefusal("A", "CLIENT_LEVEL", "B", "CLIENT_LEVEL") === null);
 
 // ---- the resolver (R5 with the mark)
 const hh = { repeats: "per_person", scope: "household" }, org = { repeats: "per_person", scope: "organisation" }, plain = { repeats: "per_person" };

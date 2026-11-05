@@ -24,6 +24,7 @@ import { ChangeSets } from "./change-sets.ts";
 import type { ChangeItem } from "../../contracts/change-set.ts";
 import { actorOf, ACTORS, Audit, Db, fail, need, revise, SOLUTION, strip, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
+import { mergeScopeRefusal } from "../../engine/field-scope.ts"; // C3.16
 import type { z } from "zod";
 
 const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? id;
@@ -308,6 +309,7 @@ export class Forms {
     const keep = rows.find((r) => r.canonicalFieldKey === b.keep), merge = rows.find((r) => r.canonicalFieldKey === b.merge);
     for (const [k, r] of [[b.keep, keep], [b.merge, merge]] as const) if (!r || r.status === "RETIRED" || r.mergedIntoKey) fail(`"${this.shown(rows, k)}" is not an active field of the library (retired or merged since).`, HttpStatus.NOT_FOUND);
     if (keep!.valueType !== merge!.valueType) conflict(`"${this.shown(rows, b.keep)}" and "${this.shown(rows, b.merge)}" take different kinds of answer (${keep!.valueType.replace(/_/g, " ")}, ${merge!.valueType.replace(/_/g, " ")}): fields of different kinds are not the same meaning.`);
+    { const no = mergeScopeRefusal(this.shown(rows, b.keep), keep!.scope, this.shown(rows, b.merge), merge!.scope); if (no) conflict(no); } // C3.16 (break 1 on #1054): one scope per field
     // One pending merge per field (break M5): a chain or a cycle of merges waits until the first is decided.
     const pending = await this.db.fieldMerge.findFirst({ where: { workspaceId, status: "PROPOSED", OR: [{ keepKey: { in: [b.keep, b.merge] } }, { mergeKey: { in: [b.keep, b.merge] } }] } });
     // QA-219: said in the fields' names (the field page shows it on the control).
@@ -357,6 +359,7 @@ export class Forms {
       const fields = await tx.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: { in: [from, to] } }, orderBy: { version: "desc" } });
       const keep = fields.find((f) => f.canonicalFieldKey === to)!, gone = fields.find((f) => f.canonicalFieldKey === from)!;
       // Checked again now (review 7, break M5): both fields still active, or the merge is refused and nothing moves.
+      { const no = keep && gone ? mergeScopeRefusal(this.shown(named, to), keep.scope, this.shown(named, from), gone.scope) : null; if (no) conflict(no); } // C3.16: checked again at approval
       for (const [k, f] of [[to, keep], [from, gone]] as const) if (!f || f.status === "RETIRED" || f.mergedIntoKey) conflict(`"${this.shown(named, k)}" was ${f?.mergedIntoKey ? `merged into "${this.shown(named, f.mergedIntoKey)}"` : "retired"} after this merge was proposed: nothing was changed; reject this merge.`);
       // QA-219 break M3: the field that goes away keeps its name too, as a name of the field that stays (so it is not free
       // for a third field), beside its key that redirects and its own other names.

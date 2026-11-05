@@ -40,7 +40,7 @@ export async function proposeConditionChange(tx: Tx, l: { ws: string; actor: Act
   const key = p.target.key, name = await nameOf(tx, l.ws, key);
   const { current } = await placementOf(tx, l.ws, key);
   if (!current) throw problem(409, "Not placed", `No question asks "${name}" in the library, so its condition has nowhere to go. Remove this item.`);
-  await refuseScoped(tx, l.ws, key); // C3.16 (#1054 M1): a household or employer question takes no condition yet
+  await refuseScoped(tx, l.ws, current.canonicalFieldKey); // C3.16 (#1054 M1): a household or employer question takes no condition yet (by its field key, break 2)
   const types = new Map((await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, select: { canonicalFieldKey: true, valueType: true } })).map((f) => [f.canonicalFieldKey, f.valueType]));
   const errs = checkCondition(p.condition.tree, types, new Set());
   if (errs.length) throw problem(409, "Condition not valid", `The condition on "${name}" is not valid any more (it ${errs[0]}), so it is not proposed. Remove this item.`);
@@ -67,7 +67,7 @@ export async function applyCondition(db: Db, audit: Audit, actor: Actor, c: Libr
   const { rows, current } = await placementOf(db, c.workspaceId, c.key);
   if (!current || !m.after) throw problem(409, "Not placed", "The question is no longer placed in the library, so nothing was changed. Return the change.");
   if (!sameTree(current.predicateJson, m.before)) throw problem(HttpStatus.CONFLICT, "Changed since", "When this question is asked changed after it was proposed, so nothing was changed. Return it; it can be drafted again.");
-  await refuseScoped(db, c.workspaceId, c.key); // C3.16: checked again at approval (the scope may have been set since)
+  await refuseScoped(db, c.workspaceId, current.canonicalFieldKey); // C3.16: checked again at approval (the scope may have been set since)
   await revise(db.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, actor.id, strip);
   await audit.log(c.workspaceId, actor.id, "approved", "placement", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the question goes out with the next release.`);
 }

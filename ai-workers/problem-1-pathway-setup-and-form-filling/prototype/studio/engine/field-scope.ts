@@ -38,6 +38,7 @@ export const markOf = (stored: string | null | undefined): { scope?: ScopeMark }
 /** Words of the refusals (BR-2; the concept's copy). */
 export const SCOPE_WORDS_REFUSED = {
   published: "A published field's scope cannot change. Create a new field.",
+  merged: "This field was merged into another: choose whom it is about on the field it was merged into",
   caseKey: "This is about the application: choose Filing, Household or Organisation.",
   filingKey: "Not built: a person's fact asked once for the application. Ask it as an application fact instead.",
   perRow: "A list is asked per person today; a household or employer list is not built.",
@@ -58,10 +59,13 @@ export type ScopeFacts = {
   placements: { repeats: string; condition: boolean }[];
   /** a form field map entry that reads the key for the representative */
   representativeBox: boolean;
+  /** the key it was merged into, when it was (break m4 on #1054) */
+  merged?: string | null;
 };
 
 /** BR-2: why this scope cannot be set on this field, or null when it can. The order is the concept's. */
 export function scopeRefusal(f: ScopeFacts, scope: Scope): { status: 409 | 422; message: string } | null {
+  if (f.merged) return { status: 409, message: `${SCOPE_WORDS_REFUSED.merged} (${f.merged}).` };
   if (f.published) return { status: 409, message: SCOPE_WORDS_REFUSED.published };
   const caseKey = f.key.startsWith("case.");
   if (scope === "person") return caseKey ? { status: 422, message: SCOPE_WORDS_REFUSED.caseKey } : null;
@@ -81,6 +85,13 @@ export function placementRefusal(stored: string | null | undefined, p: { repeats
   if (p.repeats === "per_row") return SCOPE_WORDS_REFUSED.perRow;
   if (p.condition) return SCOPE_WORDS_REFUSED.condition;
   return null;
+}
+
+/** C3.16 (break 1 on #1054): a merge keeps one field, so both must be asked about the same people (one scope per field,
+ *  SA-1B-130 rule 2); otherwise the merged field's boxes would start reading another scope's value. */
+export function mergeScopeRefusal(keepName: string, keep: string | null | undefined, goneName: string, gone: string | null | undefined): string | null {
+  const a = scopeOfStored(keep), b = scopeOfStored(gone);
+  return a === b ? null : `"${goneName}" is asked ${SCOPE_WORDS[b].short} and "${keepName}" ${SCOPE_WORDS[a].short}: fields are merged only when both are asked about the same people.`;
 }
 
 /** BR-4: the words of a save refused on a person's record for a fact asked once on the case. */

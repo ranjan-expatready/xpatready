@@ -99,6 +99,23 @@ async function sixPart() {
   const [a, b] = await Promise.all([setScope("organisation.employer_address", "organisation", "person"), setScope("organisation.employer_address", "organisation", "person")]);
   ok("C3.16-2: two saves at once give one change; the other is told it changed (lock on the field)", [a.status, b.status].sort().join(",") === "200,409" || [a.status, b.status].join(",") === "200,200", [a.status, b.status, words(a), words(b)]);
 
+  // Break 1 on #1054: a merge never mixes two scopes (the representative's firm into the employer would fill its boxes).
+  r = await call("POST", "/library/merges", { keep: EMPLOYER, merge: "organisation.name", reason: "C3.16 test: these two would mean the same here (they do not)." }, AUTHOR);
+  ok("C3.16-2 fail (break 1): merging a field asked about each person into one asked once for the employer is refused (409), in words", r.status === 409 && /merged only when both are asked about the same people/.test(words(r)), [r.status, words(r)]);
+  // Break 3 on #1054: a scope save and a per-row placement at the same moment never leave both in place.
+  const raceKey = sql("select q.lineage_key from section_question q join canonical_field f on f.canonical_field_key=q.lineage_key where q.status in ('DRAFT','PUBLISHED') and q.repeats='per_person' and (q.predicate_json is null or q.predicate_json = 'null'::jsonb) and f.status='DRAFT' and f.scope='CLIENT_LEVEL' and q.lineage_key like 'person.%' and q.lineage_key <> 'person.date_of_birth' and q.lineage_key <> 'person.has_children' and not exists (select 1 from form_field_map m where m.canonical_field_key=q.lineage_key and m.person='representative') and (select count(*) from section_question r where r.lineage_key=q.lineage_key) = 1 order by 1 limit 1") ?? "";
+  const rp = JSON.parse(sql(`select json_build_object('s', section_key, 'c', collected_from) from section_question where lineage_key='${raceKey}' order by version desc limit 1`) || "{}");
+  let bad = 0; const seen: string[] = [];
+  for (let i = 0; i < 6 && raceKey; i++) {
+    const [x, y] = await Promise.all([setScope(raceKey, "household", "person"), call("POST", `/library/fields/${raceKey}/placement`, { sectionKey: rp.s, collectedFrom: rp.c, repeats: "per_row" }, AUTHOR)]);
+    const now = sql(`select f.scope||'/'||(select repeats from section_question where lineage_key='${raceKey}' order by version desc limit 1) from canonical_field f where canonical_field_key='${raceKey}' order by version desc limit 1`) ?? "";
+    seen.push(`${x.status},${y.status}:${now}`); if (now === "HOUSEHOLD/per_row") bad++;
+    // back to the start for the next try (through the product's steps)
+    if (now.startsWith("HOUSEHOLD")) await setScope(raceKey, "person", "household");
+    if (now.endsWith("per_row")) await call("POST", `/library/fields/${raceKey}/placement`, { sectionKey: rp.s, collectedFrom: rp.c, repeats: "per_person" }, AUTHOR);
+  }
+  ok("C3.16-2 fail (break 3): six races of a Household save against a per-row placement never leave both (the field's lock)", !!raceKey && bad === 0, [raceKey, seen]);
+
   // ------------------------------------------------------------------ C3.16-5: an employer fact, asked once (Preview)
   const p = await preview(wp, { principal: 1, spouse_or_partner: 1 }, { [`case|${EMPLOYER}`]: "Sample Employer Ltd (Sample)" });
   const asked = ((p?.questions ?? []) as PQ[]).filter((q) => q.fact === EMPLOYER);
