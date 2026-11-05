@@ -268,3 +268,118 @@ I re-checked the data under it on this head:
 **Could not check:** a headed, keyboard-only or 200 % zoom walk (no screen change in this diff), a screen reader, CI on this head, the r3-m1 path (it needs a refused `setOptionMap` on a found field), or an intended user's walk (D17 and D20 stay with the founder).
 
 **Verdict: Approve e4b756667.** No open Blocker or Major. r2-m1, r2-m2 and r2-m3 are closed. r3-m1 and the Nit can go with this PR or onto the forms row.
+
+## Stack merge check (diff-only, 7a68a0bcc)
+Same reviewer, 5 Nov 2026, the stack merge's gate (P-348 (8), Lead 13). US$0: no *_LIVE variable set, no live AI. My own copy on port 4458 only (`xr_studio_rv4`), stopped and dropped afterwards.
+
+**Scope:** the builder's own work since e4b756667:
+* bd5e63b60 (r3-m1 and the nit);
+* the conflict resolution in merge 37dcac3e2 (`api/src/demo.ts`, `tests/check_c10_1_configured.ts`) and its effect on Express Entry;
+* 7a68a0bcc (ruling m19, the scoped B81 mark line).
+
+#1085's and #1062's own commits are out of scope.
+
+### What I ran
+* `tests/check_qa144_ee_release.ts 4458 xr_studio_rv4`: **26/26**, exit 0, load 76.9 s. This matches the builder. The three m19 lines give `{"status":"READY","missing":[]}`, 201, and `{"spouse":106,"child19":107,"child10":14}`.
+* `tests/check_c10_1_configured.ts 4458 xr_studio_rv4`: **40/40**, exit 0. The builder's run was still going, so this one is new.
+* A fresh configured load, rows 7, 9 and 10 read in full:
+  * Row 7 is **done** with `why` null. B78 names all 29 held sections, and there is no "nothing was marked" line.
+  * Row 9 is **done**: release 2 made, "Unknown" on 13 form fields, one IMM 5645 section waiting for a name (B97's own).
+  * Row 10 shows release 1 of all four. Its refused-draft example is `fs.spouse` ("Fix 81 problems").
+* `product/tools/typecheck.mjs`: no new type errors (15 known, 0 fixed).
+* A BR-8 probe (scratch script, not committed). It calls `engine/programs.ts missingItems` on Express Entry's release 1 snapshot from the database, and on two changed copies of it (results under m19 below).
+
+### 1. bd5e63b60: r3-m1 and the nit, done
+* **r3-m1 (`api/src/demo.ts:818-819`).** `marked.add` now runs when `rows.length` is above 0, before the `setOptionMap` loop. The `try` (`:821`) no longer adds to `marked`.
+  * A mark that finds its form fields but whose save is refused is now said once, in its own words (the `catch`).
+  * The "no form field … reads …, so nothing was marked" line (`:825`) is left only for a mark with no field. That is the fix asked for.
+  * As before, no check line drives a refused `setOptionMap`. This was accepted in round 3 as a guard on sample data.
+* **Nit (`acceptance/C10.1.test.ts:66-68`).** The comment now says Submit refuses on these after first running the draft's answer keys, which can only add refusals. That matches round 3's r2-m2 reading.
+
+### 2. Merge 37dcac3e2: the resolution is clean
+**How I checked it.** I re-ran the merge with `git merge-tree --write-tree bd5e63b60 bb0c092f3`. It conflicts in exactly these two files. Then I diffed that conflicted tree against 37dcac3e2. The only changes are the conflict markers and the dropped sides. No auto-merged line was hand-edited.
+
+**`api/src/demo.ts:42-46`.** This keeps B78's `section-names.ts` import and this PR's `SET_UP_FROM_FORMS = new Set(Object.keys(FORM_SETUP))` (P-319). #1085's three-key literal is dropped. Nothing is duplicated: one import, one `SET_UP_FROM_FORMS`.
+
+**`tests/check_c10_1_configured.ts:115-124`.**
+* Kept: this PR's two Express Entry lines (released, approved by user-B; the refused-draft example by `combination_key = 'fs.spouse'`) and B97's three row 9 lines (release 2 made, the 13 marks, the warning).
+* Dropped: #1085's old "Express Entry refused" example, and this side's old "row 9 waiting" pair with its comment.
+* Row 12's reason for not simulating a copy is still said, in B97's comment at `:119-120`.
+* The `ok(` counts add up: 38 lines on this side − 2 + 3 = 39 = 38 on #1085's side − 1 + 2.
+* All lines pass (40/40 with the top-level line).
+
+**Auto-merged `demo.ts`: Express Entry still runs with B78 and B97.** One load releases all four combinations at release 1, and the Visitor visa at release 2 (row 10: `…Express Entry stream§1§user-B, Visitor visa§2§user-B`). Draft drift is `[]` (P-319 line).
+* Express Entry's section pass now goes through B78's `sectionsFrom` (`demo.ts:706`). That function reads only the runs of the forms it is given (`attachmentId in forms`). Express Entry passes all its filed forms, so it loses nothing.
+
+**Effect on IMM 5669's sections from this PR's numbered headings: none.** From the database after the load:
+* All 9 IMM 5669 section proposals are `accepted`. None is `edited`, and none carries `work.unnamed`.
+* 7 are new and 2 are reused: Education and Government positions, which were already in the library.
+* So B78's `namedTwin` branch (`proposals.ts:850`, only an edit of an unnamed section) and the placement step's new `edited` reading (`form-part-placements.ts:45`) never touch them.
+* The placement line still puts IMM 5669's facts in Personal history, Addresses, and Military and/or paramilitary service. `samples/section-names.json` holds no Express Entry form, so B78 names none of Express Entry's sections.
+
+**Where B78 does touch Express Entry: IMM 0008's 7 heading-named held sections.** These are Passport, Language detail ×2, National identity document ×2 and Education/occupation detail ×2.
+* They are now `edited`, with a reuse of the library section of the same name (`namedTwin`). Before B78, the loader rejected each one and reused the section.
+* Placement used to find that section by title (`byTitle`). It now uses `decidedKey`, which is the same section key, so placement is unchanged.
+* IMM 5476's 2 named items behave the same way.
+
+### 3. 7a68a0bcc: ruling m19 and the scoped mark line
+**Ruling m19: the check really goes through BR-8, and it can fail.**
+* Both routes the check reads go through `missingItems` → `rolesWithoutQuestions` on the release snapshot:
+  * the catalogue row: `api/src/programs.ts:231`, then `statusOf`;
+  * opening a case: `api/src/runtime.ts:93` → `startableMissing` (`programs.ts:319-325`).
+* `applicants` (`engine/programs.ts:23`) does not read `filingMode`. So Express Entry's `on_principal` Spouse and Child are among the roles BR-8 requires. Their filing mode is confirmed in `combination.participants`.
+* `previewRender`'s default people are principal, spouse_or_partner, child-1, child-2 and representative. So `people.some(role)` holds for both roles, and they are not dropped as roles the release does not hold.
+* My probe on the release 1 snapshot:
+  * **As released:** `missingItems` = `[]`. The default render, with no answers, asks spouse_or_partner 106 questions, child-1 107 and child-2 62. These are the same counts the check's Preview reads.
+  * **Changed copy A (only the 12 case-level placements kept):** "No questions yet for Principal applicant, Spouse or partner, Child."
+  * **Changed copy B (the 108 facts asked of the Spouse unplaced; 70 of 178 placements left):** "No questions yet for Spouse or partner."
+* So line 98 (catalogue READY, no `role_without_questions`) and line 100 (201) would fail if either on_principal role were asked nothing. The pass does not come from Preview counts of 0: line 103 asks for more than 20 each, and gets 106 and 107. The builder's conclusion holds: `applicants` needs no fix for Express Entry.
+
+**The B81 mark line (`check_qa144_ee_release.ts:54-56`).** It is now scoped to Express Entry's own forms (`gov_form_def_id` in its unretired `combination_form`). It still reads exactly `IMM 0008 DEP (10-2024)|["unknown"]|7` and needs at least 1 row.
+* Excluding IMM 5645 loses nothing. The loader takes Express Entry's marks only from `notOnForm` entries filtered to its own editions (`demo.ts:816`), so they cannot land elsewhere.
+* IMM 5645's 13 marks are checked by `check_c10_1_configured.ts:123`.
+
+### Issues
+**Blockers:** none. **Majors:** none. **Minors:** none.
+
+**Nits**
+* `check_qa144_ee_release.ts:101-103`: the fail-guard reads the draft's Preview, with chosen people and answers. BR-8 reads the release snapshot with its default people and no answers.
+  * They agree on this head (106/107 both ways, by my probe), and lines 98 and 100 are the ones that go through BR-8.
+  * The comment could say that the Preview line is a guard on the data, not on BR-8 itself. Or leave it.
+
+### Journey test, stack merge (reviewer role; the one score for this check)
+**No screen change.** The diff changes no screen, route or word a person sees. The round 2 walk stands: Express Entry's Forms and Review at 400, 1024 and 1440 px, axe, and the timings.
+
+**Re-checked on this head, through the product's routes:**
+* Express Entry's catalogue row is Ready with nothing missing.
+* The case officer opens a case on its release 1 (201).
+* Preview asks the Spouse 106 questions and the child of 19 107.
+* Row 7 is now done with no refusal words.
+* Row 9 says release 2 and the one IMM 5645 section left for a person.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Four releases, plus the Visitor visa's release 2; 26/26, 40/40 |
+| Next step obvious | ½ | Unchanged from round 2 |
+| Plain words | ½ | Unchanged (m3, m5); r3-m1's false line is gone |
+| Feedback and state | 1 | Row 7 done, `why` null; row 9 names the section left for a person |
+| Correct data | 1 | BR-8 empty on the release, and fires for Spouse when the Spouse is asked nothing (probe) |
+| Error recovery | 1 | C10.1 configured's refusal lines pass (unknown checkpoint, Reset) |
+| Accessibility and sizes | 1 | Carried from round 2 (no screen change) |
+| Speed | ½ | Load about 77 s |
+| Visual quality | 1 | Carried from round 2 (no screen change) |
+| Trust and sources | ½ | Unchanged: the mark's cite stays in the data file |
+
+**Score 8/10: pass** (no 0).
+
+**Could not check:**
+* a headed, keyboard-only or 200 % zoom walk (no screen change in this diff);
+* a screen reader;
+* CI on this head;
+* the C10.1 acceptance and the VV, LMIA and SP release checks on this head (the builder's runs are still going);
+* an intended user's walk (D17 and D20 stay with the founder).
+
+**Verdict: Approve 7a68a0bcc.** No open Blocker or Major:
+* r3-m1 and the nit are closed;
+* the merge is resolved with nothing lost or duplicated;
+* ruling m19's check really goes through BR-8 and can fail.
