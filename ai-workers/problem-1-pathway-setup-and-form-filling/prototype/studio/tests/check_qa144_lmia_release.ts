@@ -10,6 +10,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { FORM_SETUP } from "../api/src/form-setup.ts";
+/** QA-144 slice 4 (P-319): the combinations set up from their forms are the form setup table's, never a list here. */
+const FROM_FORMS = Object.keys(FORM_SETUP).map((k) => `'${k}'`).join(", ");
 
 const PORT = Number(process.argv[2] ?? 4471), DB = process.argv[3] ?? "xr_studio_b8_lmia";
 let pass = 0, fail = 0;
@@ -102,7 +105,7 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
 
   // The rest keep their words: only the two slices are set up from their forms.
   // Slice 3 adds the Study permit (check_qa144_sp_release.ts).
-  ok("QA-144 slice 2 scope: only the Visitor visa, With an LMIA and the Study permit have a rules pass", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
+  ok("QA-144 slice 2 scope: only the combinations the form setup table holds have a rules pass", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in (${FROM_FORMS})`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();
