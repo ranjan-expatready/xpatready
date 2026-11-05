@@ -2,7 +2,6 @@
 // name, from samples/section-names.json. A section with no entry is never named: it stays waiting on To review.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { STUDIO } from "./core.ts";
 
 export type HeldSectionName = { form: string; first_field: string; name: string; printed: string; page: number; basis: "printed" | "sample" };
 const flat = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -19,7 +18,7 @@ export function heldSectionNames(raw: { sections: HeldSectionName[] }): Map<stri
   }
   return out;
 }
-export const readHeldSectionNames = () => heldSectionNames(JSON.parse(readFileSync(join(STUDIO, "samples", "section-names.json"), "utf8")) as { sections: HeldSectionName[] });
+export const readHeldSectionNames = () => heldSectionNames(JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "section-names.json"), "utf8")) as { sections: HeldSectionName[] });
 /** The name a person gives this held section (its form edition and first form field), or null: it stays waiting. */
 export const nameOfHeld = (names: Map<string, HeldSectionName>, form: string | null, firstField: string | undefined) => (form && firstField ? names.get(keyOf(form, firstField)) ?? null : null);
 /** The reason on the naming edit: where the words come from, always marked (AGENTS.md rule 4). */
