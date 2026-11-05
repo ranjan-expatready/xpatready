@@ -21,9 +21,11 @@ export function printedQuestion(b: Box | undefined): string | null {
  *  table is data, studio/samples/own-yes-no.json, with each box's words and the form's own question it quotes (Sample,
  *  Unconfirmed: expert); no combination or form number is in code. */
 export type OwnYesNo = { dataPath: string; label: string; meaning: string };
-type Table = { reason: string; combinations: Record<string, { application: string; boxes: OwnYesNo[] }> };
+type Table = { reason: string; near: string; combinations: Record<string, { application: string; boxes: OwnYesNo[] }> };
 const TABLE = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "own-yes-no.json"), "utf8")) as Table;
 export const OWN_YES_NO_REASON = TABLE.reason;
+/** #1036 (B83): the words for asking a form's own Yes/No question rather than the detail it leads to (sample loader). */
+export const OWN_YES_NO_NEAR = TABLE.near;
 /** Per combination: the application form whose Yes/No form fields are asked as their own questions. The checkpoint's
  *  table (api/src/form-setup.ts FORM_SETUP) reads its boxes from here, so the packs and the checkpoint ask the same ones. */
 export const OWN_YES_NO: Record<string, { application: string; boxes: OwnYesNo[] }> = TABLE.combinations;

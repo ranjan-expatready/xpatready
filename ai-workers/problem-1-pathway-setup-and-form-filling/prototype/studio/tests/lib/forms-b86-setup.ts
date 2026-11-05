@@ -1,5 +1,5 @@
 // B86: the setup of check_forms_b86_panel_browser.cjs: Visitor visa of the six through people's steps, and a Saved draft (US$0).
-// Prints one JSON line: { vv, item, given }. Not a suite of its own: in tests/lib, so run-suites never runs it alone (CI on #1068).
+// Prints one JSON line: { vv, item, given }. Not a suite of its own (so not named check_*).
 import { randomUUID } from "node:crypto";
 import { AUTHOR, pack2, run } from "../../acceptance/lib/pack2.ts";
 

@@ -19,7 +19,7 @@
 // Run it on a fresh copy each time (review m6, 4 Nov): G5 accepts the run's Ready items, so a second run on the same copy
 // finds none left to accept.
 import { randomUUID } from "node:crypto";
-import { APPROVER, AUTHOR, pack2, run, VV_PEOPLE } from "./lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, REVIEWER, run, VV_PEOPLE } from "./lib/pack2.ts";
 import { WHO_HOLDERS, WHO_ROLES, type Who } from "../contracts/resolver.ts";
 
 const T = pack2("C4.11");
@@ -157,5 +157,44 @@ run(async () => {
   const left = await hidingOf();
   const inForce = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body;
   ok("C4.11-25 pass (QA-237): the author confirms the form field through the new route, showing its own words, a second person approves: that error is gone for that question and the condition is still in force in the draft", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0 && !!inForce?.sentence && (inForce?.rows ?? []).length > 0 && inForce.rows.every((x: any) => x.state === "confirmed"), { confirmed: toConfirm.length, left: left.map((e) => e.message), rows: inForce?.rows?.map((x: any) => x.state) });
+  // qa's wording on #1053 (the fill, BR-5): on a real case of a real release, Yes, a typed name, then No leaves no name for the form.
+  // Visitor visa released through people's steps (B82 on main); its other problems are not this step's to prove, so it says them if refused.
+  await T.people(vv, VV_PEOPLE.filter((p) => p.role === "principal"));
+  await T.documentsBySteps(vv);
+  await T.sourceGate(vv);
+  const CLIENT = "user-P", OFFICER = "user-O";
+  let release: { status: number; body: any } = await call("POST", `/combinations/${vv}/submit`, { note: "C4.11 pack: a release for the fill (QA-237)" }, AUTHOR);
+  const refusedBy = release.status >= 300 ? ((release.body?.errors ?? []) as any[]).map((e) => String(e.message ?? "").slice(0, 160)) : [];
+  if (release.status < 300) {
+    const sub = (await call("GET", `/combinations/${vv}/review`, undefined, REVIEWER)).body?.submission;
+    await call("POST", `/combinations/${vv}/signoff`, { items: (sub?.changeSummary ?? sub?.change_summary ?? []).map((x: any) => `${x.kind}|${x.key}`), action: "signed" }, REVIEWER);
+    release = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
+  }
+  const opened = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `C411-${randomUUID().slice(0, 8)}`, clientActor: CLIENT, principal: { displayName: "Sample Client A" } }, OFFICER)).body;
+  const caseId = opened?.id;
+  const subject = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body?.people?.find((p: any) => p.role === "principal")?.subject_id;
+  const say = async (fact: string, value: unknown) => {
+    const view = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body;
+    const q = (view?.sections ?? []).flatMap((s: any) => s.questions).find((x: any) => x.subjectId === subject && x.fact === fact);
+    return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, CLIENT);
+  };
+  const copyOf = async (form: string) => {
+    const g = await call("POST", `/runtime/cases/${caseId}/forms/${encodeURIComponent(form)}/${subject}/generate`, { idempotencyKey: randomUUID() }, OFFICER);
+    await T.until(async () => ["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${g.body?.id}`, undefined, OFFICER)).body?.status), 90_000);
+    return (await call("GET", `/runtime/form-copies/${g.body?.id}`, undefined, OFFICER)).body;
+  };
+  const GATE = "person.has_used_other_name", OLD = "Sample Old Name";
+  // What a copy wrote, read back from its own record (the view holds no values): each form field's result and the facts frozen with it.
+  const written = (id: string) => {
+    const facts = (JSON.parse(T.sql(`select s.facts_json::text from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${id}'`) || "{}").facts ?? []) as any[];
+    const boxes = (JSON.parse(T.sql(`select result_json::text from form_instance where id = '${id}'`) || "{}").boxes ?? []) as any[];
+    return { name: facts.find((x) => x.fact === FF)?.value, gate: facts.find((x) => x.fact === GATE)?.value, box: boxes.find((x) => x.fact === FF), yesNo: boxes.find((x) => x.fact === GATE) };
+  };
+  const saidYes = await say(GATE, true), typed = await say(FF, OLD), saidNo = await say(GATE, false);
+  const whenNo = await copyOf(toConfirm[0]?.form ?? ""), no = written(whenNo?.id);
+  const saidYesAgain = await say(GATE, true);
+  const whenYes = await copyOf(toConfirm[0]?.form ?? ""), yes = written(whenYes?.id);
+  ok("C4.11-26 pass (the fill, BR-5): with the deciding answer No, that form field is not written, whatever is stored: Yes, a typed name, then No leaves no name for the form, and the form's Yes/No is written from the No", release.status < 300 && saidYes.status < 300 && typed.status < 300 && saidNo.status < 300 && whenNo?.status === "GENERATED" && no.name === undefined && no.box?.result === "not written" && /^Not needed/.test(no.box?.why ?? "") && no.gate === false && no.yesNo?.result === "written", { release: release.status, refusedBy, answers: [saidYes.status, typed.status, saidNo.status], copy: whenNo?.status, no });
+  ok("C4.11-26 control: with the answer Yes again the same form field is written with the name, so the step above can fail", saidYesAgain.status < 300 && whenYes?.status === "GENERATED" && yes.name === OLD && yes.box?.result === "written" && yes.gate === true, { copy: whenYes?.status, yes });
   T.done();
 });

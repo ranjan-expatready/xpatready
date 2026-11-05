@@ -244,9 +244,11 @@ export class FormFieldConditions {
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     const { snapshot: s } = await buildSnapshot(this.db, workspaceId, combinationId, "draft");
     const entries = (s.field_maps as { entries: { fact?: string | null; outcome?: string; condition_rule?: unknown }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.fact));
-    // B88 (breaker M2): a question whose only reader was asked as its deciding question is still listed, so its Undo stays reachable.
+    // A HIDE condition too: the rule refuses it, and the panel says what to do (break n4 on #1053). B88 (breaker M2): a question
+    // whose only reader was asked as its deciding question is still listed, so its Undo stays reachable.
+    const hides = new Set((s.placements as { fact: string; condition?: unknown; condition_effect?: string | null }[]).filter((p) => p.condition && p.condition_effect === "HIDE").map((p) => p.fact));
     const asked = (s.placements as { fact: string }[]).filter((p) => showCondition(s.placements as never, p.fact)).map((p) => p.fact);
-    const facts = [...new Set([...entries.filter((e) => e.condition_rule || showCondition(s.placements as never, e.fact!)).map((e) => e.fact!), ...asked])].sort();
+    const facts = [...new Set([...entries.filter((e) => e.condition_rule || hides.has(e.fact!) || showCondition(s.placements as never, e.fact!)).map((e) => e.fact!), ...asked])].sort();
     const questions: FormFieldsOfQuestion[] = [];
     for (const fact of facts) {
       const cond = await this.conditionOf(workspaceId, combinationId, fact, s);

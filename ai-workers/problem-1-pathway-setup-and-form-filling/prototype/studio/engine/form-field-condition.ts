@@ -60,7 +60,7 @@ export function whenWords(tree: unknown, words: (fact: string) => string): strin
  *  A worked-out Yes/No reading the target itself is "another form field" too. Plain words stay as they are. */
 export function plainWords(words: string, entries: Entry[], labelOf: (fact: string) => string, target?: string): { text: string; names: string[] } {
   const names: string[] = [];
-  const text = words.replace(/\b\w+\[\d+\](?:\.\w+(?:\[\d+\])?)*|\b[a-z_]+\.[a-z_.]*[a-z_]\b|\b[a-z]+(?:_[a-z0-9]+)+\b|\b(?:[a-z]*[a-z0-9][A-Z][A-Za-z0-9]*|[A-Z][a-z0-9]+[A-Z][A-Za-z0-9]*|[A-Z]{2,}[a-z]{2,}[A-Za-z0-9]*)\b/g, (raw) => {
+  const text = words.replace(/\b\w+\[\d+\](?:\.\w+(?:\[\d+\])?)*|\b[a-z_]+\.[a-z_.]*[a-z_]\b|\b[a-z]+(?:_[a-z0-9]+)+\b|\b(?:[a-z]*[a-z0-9][A-Z][A-Za-z0-9]*|[A-Z][a-z0-9]+[A-Z][A-Za-z0-9]*|[A-Z]{2,}[a-z]{2,}[A-Za-z0-9]*|Row\d+)\b/g, (raw) => {
     const tok = raw.split(".").pop()!.replace(/(\[\d+\])+$/, "");
     const hit = entries.filter((e) => e.outcome === "mapped" && e.fact && e.fact !== target && e.data_path.split(".").some((seg) => seg.replace(/\[\d+\]$/, "") === tok));
     const facts = [...new Set(hit.map((e) => e.fact!))];

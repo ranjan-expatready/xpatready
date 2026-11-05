@@ -99,6 +99,11 @@ run(async () => {
   h = await hiding(GIVEN);
   ok("Done when 1 pass: the draft's errors no longer hold \"Hiding a value\" for that question", h.lines.length === 0, h);
   r = await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR);
+  sql(`update section_question set condition_effect='HIDE' where lineage_key='${GIVEN}' and status='DRAFT'`);
+  const hide = ((await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR)).body?.questions ?? []).find((q: { fact: string }) => q.fact === GIVEN);
+  sql(`update section_question set condition_effect='SHOW' where lineage_key='${GIVEN}' and status='DRAFT'`);
+  ok("break n4 pass: a HIDE condition is listed on Review and release, saying what to do", /hidden under its condition/.test(hide?.why ?? ""), hide?.why);
+  r = await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR);
   ok("BR-7 pass: Review and release's one request still lists a confirmed form field, with its Undo", (r.body?.questions ?? []).some((q: { fact: string; rows: { state: string; can_undo: boolean }[] }) => q.fact === GIVEN && q.rows.some((x) => x.state === "confirmed" && x.can_undo)), r.body?.questions?.map((q: { fact: string }) => q.fact));
   r = await call("GET", FIELDS(vv, GIVEN), undefined, AUTHOR);
   ok("the row now reads Confirmed, with Undo", r.body.rows[0].state === "confirmed" && r.body.rows[0].can_undo === true && !r.body.rows[0].can_confirm, r.body.rows[0]);
