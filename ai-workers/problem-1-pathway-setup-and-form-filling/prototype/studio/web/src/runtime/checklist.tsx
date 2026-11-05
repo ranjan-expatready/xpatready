@@ -27,6 +27,10 @@ const HAVE: readonly LineState[] = ["received", "being_checked", "approved"];
 const TONE: Partial<Record<LineState, string>> = { requested: "info", received: "ok", being_checked: "info", approved: "ok", rejected: "danger", not_applicable: "neutral" };
 const ROLE: Record<string, string> = { principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+/** A question's words as a link's text: the engine quotes it ("Current marital status"); a screen reader should not read the marks. */
+const unquoted = (q: string) => q.replace(/^["“]|["”]$/g, "");
+/** A waiting line's reason without its closing "answer … first" clause: the links below it say that (no repeat). */
+const whyWaiting = (r: string) => r.replace(/: (answer|check) .*$/s, ".");
 /** "n of m received": m the lines needed now (required), n those of them received, being checked or approved. */
 export const received = (lines: ChecklistLine[]) => { const need = lines.filter((l) => l.required); return { n: need.filter((l) => HAVE.includes(l.state)).length, m: need.length }; };
 
@@ -76,11 +80,11 @@ function PersonDocuments({ caseId, caseSubject, p, nameOf }: { caseId: string; c
           <ul className="mt-1 space-y-1">{p.waiting.map((l) => (
             <li key={l.id} className="rounded-lg border border-dashed border-border px-3 py-2 text-sm" data-waiting-line={l.lineage}>
               <span className="font-medium">{l.label}</span> <span className="text-xs text-text-muted">{l.who_words}</span>
-              <p className="text-[13px] text-text-muted">{l.reason}</p>
+              <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]">{l.missing.length ? whyWaiting(l.reason) : l.reason}</p>
               {l.missing.length ? <p className="text-[13px]">Answer first, in the Agent view: {l.missing.map((x, i) => { const to = lineId(x.on === "case" ? caseSubject : p.subject, x.key); return <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${to}`} data-answer-first={x.key}
                 // The Agent view opens the tab the question is on (the application's, or the person's) on the address
                 // change; the same link twice is announced again.
-                onClick={() => { if (window.location.hash === `#${to}`) window.dispatchEvent(new HashChangeEvent("hashchange")); }}>{x.question}{x.on === "case" ? " (for the application)" : ""}</a></React.Fragment>; })}</p> : null}
+                onClick={() => { if (window.location.hash === `#${to}`) window.dispatchEvent(new HashChangeEvent("hashchange")); }}>{unquoted(x.question)}{x.on === "case" ? " (for the application)" : ""}</a></React.Fragment>; })}</p> : null}
             </li>))}</ul>
         </div>) : null}
       {p.not_needed.length ? (
@@ -99,13 +103,18 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
   const [na, setNa] = React.useState(false);
   const [history, setHistory] = React.useState(false);
   const file = React.useRef<HTMLInputElement>(null);
+  // Review and break M1 (WCAG 2.4.3): after every action and when a dialog closes, focus goes back to this line's ⋯ button,
+  // which stays focusable while its request runs (aria-busy, not disabled), so the next Tab continues from the line.
+  const trigger = React.useRef<HTMLButtonElement>(null);
+  // After the next frame and one task more: a closing dialog hands focus back on its own timer, which must not win.
+  const back = () => requestAnimationFrame(() => setTimeout(() => trigger.current?.focus(), 0));
   const reload = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
   // Every refusal shows the server's own words on the line; a 409 (the line changed, or left the list) reloads the list.
   const run = async (f: () => Promise<unknown>) => {
     setBusy(true); setError(null);
     try { await f(); await reload(); return true; }
     catch (e) { setError((e as Error).message); if (e instanceof ApiError && e.status === 409) await reload(); return false; }
-    finally { setBusy(false); }
+    finally { setBusy(false); back(); }
   };
   const request = () => run(() => api(`/runtime/checklist-lines/${l.id}/request`, { method: "POST", json: { version: l.version } }));
   const upload = (f: File) => run(() => { const fd = new FormData(); fd.append("version", String(l.version)); fd.append("file", f, f.name); return api(`/runtime/checklist-lines/${l.id}/documents`, { method: "POST", body: fd }); });
@@ -115,11 +124,11 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
   return (
     <li className="grid gap-x-4 gap-y-1 px-3 py-2.5 text-sm md:grid-cols-[minmax(0,14rem)_8rem_minmax(0,1fr)_auto]" data-line={l.id} data-state={l.state}>
       <div className="min-w-0"><p className="font-medium [overflow-wrap:anywhere]" data-line-label>{l.label}</p>
-        <p className="text-xs text-text-muted" data-who>{l.who_words}</p>
-        {l.kept ? <Pill className="mt-1" title="Acted on, so it stays on the list when the answers change">Kept</Pill> : null}</div>
-      <div><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
-        {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted">{l.state_reason}</p> : null}</div>
-      <div className="min-w-0 text-[13px]"><p data-reason>{l.reason}</p>
+        <p className="text-xs text-text-muted" data-who>{l.who_words}</p></div>
+      {/* Break m3: a kept line says so once, in its reason (the API's words); no second "Kept" label. */}
+      <div className="min-w-0"><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
+        {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted [overflow-wrap:anywhere]">{l.state_reason}</p> : null}</div>
+      <div className="min-w-0 text-[13px] [overflow-wrap:anywhere]"><p data-reason>{l.reason}</p>
         {l.quote ? <details className="mt-0.5"><summary className="cursor-pointer text-xs text-text-link">Source</summary><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></details> : null}
         <p className="mt-0.5 text-xs text-text-muted">{current ? <>File: <span className="[overflow-wrap:anywhere]">{current.file_name}</span>{earlier ? ` · ${earlier} earlier` : ""}</> : "No file yet"}{l.state_at ? ` · Last change ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}</p>
         {error ? <p role="alert" className="mt-1 text-xs text-text-danger" data-line-error>{error}</p> : null}</div>
@@ -127,20 +136,20 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
         <input ref={file} type="file" className="sr-only" tabIndex={-1} aria-hidden accept="application/pdf,image/jpeg,image/png" data-upload-input
           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
         <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild><Button size="sm" variant="ghost" aria-label={`Actions for ${label}`} busy={busy} data-line-menu><MoreHorizontal /></Button></DropdownMenu.Trigger>
+          <DropdownMenu.Trigger asChild><Button ref={trigger} size="sm" variant="ghost" aria-label={`Actions for ${label}`} aria-busy={busy || undefined} data-line-menu><MoreHorizontal /></Button></DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[220px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
-              {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
-              {UPLOAD_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => file.current?.click()} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
+              {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
+              {UPLOAD_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => file.current?.click()} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
               {NOT_APPLICABLE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa(true)} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
               <DropdownMenu.Item className={item} onSelect={() => setHistory(true)} data-action="history">History</DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
-      {na ? <NotApplicableDialog l={l} label={label} close={() => setNa(false)} done={reload} /> : null}
-      {history ? <Dialog open onOpenChange={(o) => { if (!o) setHistory(false); }} title={`History: ${label}`}>
-        <div className="space-y-2 text-sm" data-history>
+      {na ? <NotApplicableDialog l={l} label={label} close={() => { setNa(false); back(); }} done={reload} /> : null}
+      {history ? <Dialog open onOpenChange={(o) => { if (!o) { setHistory(false); back(); } }} title={`History: ${label}`}>
+        <div className="min-w-0 space-y-2 text-sm [overflow-wrap:anywhere]" data-history>
           <p>State: {l.state_words}{l.state_at ? `, since ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}{l.state_reason ? `. Reason: ${l.state_reason}` : ""}.</p>
           {l.documents.length ? <ul className="space-y-1">{[...l.documents].reverse().map((d) => <li key={d.id}>{d.file_name} · {Math.max(1, Math.round(d.size_bytes / 1024))} KB · {when(d.uploaded_at)} by {nameOf(d.uploaded_by)}{d.current ? " · current" : ` · replaced ${d.superseded_at ? when(d.superseded_at) : ""}`}</li>)}</ul> : <p className="text-text-muted">No file yet.</p>}
           <p className="text-xs text-text-muted">Opening a file comes with Fill from documents. A full history of every state change is not built yet.</p>
@@ -154,14 +163,16 @@ function NotApplicableDialog({ l, label, close, done }: { l: ChecklistLine; labe
   const [reason, setReason] = React.useState("");
   const [err, setErr] = React.useState<{ field: string | null; other: string | null }>({ field: null, other: null });
   const [busy, setBusy] = React.useState(false);
+  const sending = React.useRef(false);
   const save = async () => {
-    setBusy(true); setErr({ field: null, other: null });
+    if (sending.current) return; // break m2: Enter pressed twice sends one request
+    sending.current = true; setBusy(true); setErr({ field: null, other: null });
     try { await api(`/runtime/checklist-lines/${l.id}/not-applicable`, { method: "POST", json: { reason, version: l.version } }); await done(); close(); }
     catch (e) {
       const f = e instanceof ApiError ? e.field("reason") : null;
       setErr({ field: f, other: f ? null : (e as Error).message });
       if (e instanceof ApiError && e.status === 409) await done();
-    } finally { setBusy(false); }
+    } finally { sending.current = false; setBusy(false); }
   };
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Not applicable: ${label}`} description="The line stays on the list with your reason; any file is kept."

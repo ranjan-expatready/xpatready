@@ -29,3 +29,9 @@ Proposals on the checkpoint's IMM 5484 replay (from `proposal_item`):
 * The concept is `screens/M3-design-2026-11-04/documents/concept-draft.md` §4 Documents panel, with its fresh challenge `challenge.md` (1 Blocker, 7 Majors, answered in commit 1db4ede64).
 * No tech-lead approval is recorded for it: DECISIONS P-340 to P-346 do not name it.
 * A second independent Opus challenge, scoped to C6.4 (a) on the checkpoint's lines, is in `challenge-r2.md`.
+
+## After this PR (#1073, 5 Nov)
+* **Tech lead's rulings:** Q1 option 1 (the loader adds the minor lines from `samples/`); Q2 (C6.4-4 follows the release, qa's OK); Q3 (A) as row B102 (a calculated fact by a screen); Q4 (the panel concept approved with challenge r2's changes).
+* **Pack on the checkpoint:** 19/30. C6.4-4 is green. Groups B and C wait on B102: the loader holds the five minor lines back and names them, because `person.age_years` does not exist on the checkpoint.
+* **Screen checks:** `acceptance/C6.4-screen.test.ts` C6.4-31 to -38, 17/17 on the checkpoint and the fixture.
+* **Review and break:** `review.md` (Block on 1 Major, focus) and `break-report.md` (2 Majors: focus and long text). All three are fixed with fail tests in C6.4-38.

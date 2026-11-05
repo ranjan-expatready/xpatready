@@ -644,7 +644,8 @@ function AgentView({ view }: { view: View }) {
       const target = window.location.hash.slice(1), m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
       if (!m || !ids.split(" ").includes(m[1])) return;
       setWho(m[1]);
-      requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.getElementById(target); el?.scrollIntoView({ block: "center" }); el?.focus(); }));
+      // Break m5: the address is cleared once used, so a later render (a person added) does not jump back to this tab.
+      requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.getElementById(target); el?.scrollIntoView({ block: "center" }); el?.focus(); window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); }));
     };
     go();
     window.addEventListener("hashchange", go);

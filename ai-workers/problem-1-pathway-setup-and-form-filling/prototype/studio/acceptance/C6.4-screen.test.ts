@@ -56,7 +56,7 @@ await main("C6.4", "Documents panel on the case page (screen, 1440 px)", async (
     api = await list(); scr = await shown(page);
     const wp = api.people.find((p) => p.waiting.length), wl = wp?.waiting[0];
     const ws = wp ? scr.find((x) => x.subject === wp.subject)?.waiting.find((x) => x.lineage === wl!.lineage) : undefined;
-    ok("C6.4-32 pass: a waiting line shows under \"May be needed\" with its reason and a link to the question to answer first", !!ws && ws.link && ws.text.includes(wl!.label) && ws.text.includes(wl!.missing[0]?.question ?? "\u0000"), { wl: wl && [wl.label, wl.missing], ws });
+    ok("C6.4-32 pass: a waiting line shows under \"May be needed\" with its reason and a link to the question to answer first", !!ws && ws.link && ws.text.includes(wl!.label) && ws.text.includes((wl!.missing[0]?.question ?? "\u0000").replace(/^["“]|["”]$/g, "")), { wl: wl && [wl.label, wl.missing], ws });
     ok("C6.4-32 fail: the waiting line has no actions, and the API refuses a request on it (404)", !!ws && !ws.menu && (await call("POST", `/runtime/checklist-lines/${encodeURIComponent(wl!.id)}/request`, {}, officer)).status === 404);
 
     // 33. Request from the menu; then Request is gone. A Not applicable line offers Request again and no upload.
@@ -170,28 +170,55 @@ await main("C6.4", "Documents panel on the case page (screen, 1440 px)", async (
       ok("C6.4-37 fail: answering it the other way, the panel follows the API again (needed, not needed, or kept when acted on)", false, "no waiting line on this release to answer");
     }
 
-    // 38. Keyboard only: the menu opens and acts from the keyboard; axe clean at 1440, 1024 and 400 px.
+    // 38. Keyboard only, key presses only (review and break M1): the menu opens and acts from the keyboard, and after each
+    // action, and when each dialog closes, focus is back on that line's ⋯ button (WCAG 2.4.3), so the next Tab goes on.
     await open();
     const sixth = (await list()).people.flatMap((p) => p.lines).find((l) => l.state === "not_requested");
-    let keyed = false;
-    if (sixth) {
-      await page.locator(`[data-line="${sixth.id}"] [data-line-menu]`).focus();
+    /** Focus settles on the line's ⋯ button within 3 s (false when it never does: the step below fails on it). */
+    const onTrigger = (id: string) => page.waitForFunction((x) => document.activeElement === document.querySelector(`[data-line="${x}"] [data-line-menu]`), id, { timeout: 3_000 }).then(() => true, () => false);
+    /** Arrow down through the open menu to the item, then Enter. Each key waits for the menu to move focus first (a key
+     *  pressed before the menu has focused an item would skip one); a menu that never focuses fails loudly. */
+    const focused = () => page.evaluate(() => document.activeElement?.getAttribute("data-action") ?? null);
+    const pick = async (action: string) => {
+      await page.waitForFunction(() => !!document.activeElement?.getAttribute("data-action"), undefined, { timeout: 10_000 });
+      for (let i = 0; i < 6 && (await focused()) !== action; i++) {
+        const was = await focused();
+        await page.keyboard.press("ArrowDown");
+        await page.waitForFunction((w) => document.activeElement?.getAttribute("data-action") !== w, was, { timeout: 5_000 });
+      }
+      if ((await focused()) !== action) throw new Error(`C6.4-38: the menu has no "${action}" item to reach by keys`);
       await page.keyboard.press("Enter");
-      await page.locator("[data-action=request]").waitFor({ timeout: 10_000 });
-      await page.keyboard.press("ArrowDown").catch(() => undefined);
-      await page.locator("[data-action=request]").focus(); await page.keyboard.press("Enter");
-      await waitState(sixth.id, "requested"); keyed = true;
+    };
+    const focusAfter: Record<string, boolean> = {};
+    if (sixth) {
+      await page.locator(`[data-line="${sixth.id}"] [data-line-menu]`).focus(); // the starting point; everything after is keys
+      await page.keyboard.press("Enter"); await page.locator("[data-action]").first().waitFor({ timeout: 10_000 });
+      await pick("request"); await waitState(sixth.id, "requested");
+      focusAfter.request = await onTrigger(sixth.id);
+      await page.keyboard.press("Enter"); await page.locator("[data-action]").first().waitFor({ timeout: 10_000 });
+      await pick("not-applicable"); await page.locator("[data-na-reason]").waitFor({ timeout: 10_000 });
+      await page.keyboard.type("Sample: keyboard check"); await page.keyboard.press("Enter");
+      await waitState(sixth.id, "not_applicable");
+      focusAfter.notApplicable = await onTrigger(sixth.id);
+      await page.keyboard.press("Enter"); await page.locator("[data-action]").first().waitFor({ timeout: 10_000 });
+      await pick("history"); await page.locator("[data-history]").waitFor({ timeout: 10_000 });
+      await page.keyboard.press("Escape"); await page.locator("[data-history]").waitFor({ state: "detached", timeout: 10_000 });
+      focusAfter.history = await onTrigger(sixth.id);
     }
     const { default: AxeBuilder } = await import("@axe-core/playwright");
-    const axe: Record<number, string[]> = {};
+    // Break M2: a reason of 500 characters with no space (a pasted address) must wrap, never widen the page.
+    const longLine = (await list()).people.flatMap((p) => p.lines).find((l) => l.state === "not_requested");
+    if (longLine) await call("POST", `/runtime/checklist-lines/${longLine.id}/not-applicable`, { reason: `https://www.canada.ca/${"x".repeat(470)}` }, officer);
+    const axe: Record<number, string[]> = {}, fits: Record<number, boolean> = {};
     for (const width of [1440, 1024, 400]) {
       await page.setViewportSize({ width, height: 900 }); await open();
       const r = await new AxeBuilder({ page }).include("[data-documents-panel]").withTags(["wcag2a", "wcag2aa"]).analyze();
       axe[width] = r.violations.map((v) => `${v.id} (${v.nodes.length})`);
+      fits[width] = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
     }
-    const scroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
-    ok("C6.4-38 pass: keyboard only, the line's menu opens and Request acts from the keyboard", keyed);
-    ok("C6.4-38 fail: no accessibility violation in the panel at 1440, 1024 or 400 px, and no sideways scroll at 400 px", Object.values(axe).every((v) => v.length === 0) && scroll, { axe, scroll });
+    const scroll = !!longLine && Object.values(fits).every(Boolean);
+    ok("C6.4-38 pass: keys only: Request, Not applicable (typed reason, Enter) and History act from the keyboard, and focus returns to the line's ⋯ button after each", !!sixth && Object.keys(focusAfter).length === 3 && Object.values(focusAfter).every(Boolean), focusAfter);
+    ok("C6.4-38 fail: no accessibility violation in the panel at 1440, 1024 or 400 px, and no sideways scroll at any of them, even with a 500-character reason with no space", Object.values(axe).every((v) => v.length === 0) && scroll, { axe, fits });
     ok("C6.4-38 data: no page error while walking the panel", w.errors.length === 0, w.errors.slice(0, 3));
   } finally { await w.close(); }
 });

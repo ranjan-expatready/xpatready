@@ -307,6 +307,16 @@ export class Demo {
         await keepChosenEveryones(this.db, this.studio, author, combinationId, new Set([beside.sectionKey]), parts);
       } catch (e) { refused.push(`${f.fact}: ${say(e)}`); }
     }
+    // A line whose fact did not reach the library is taken back, so the release is never refused over it (break m6).
+    const inLib = new Set((await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: spec.facts.map((f) => f.fact) }, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey));
+    const lost = spec.facts.map((f) => f.fact).filter((f) => !inLib.has(f));
+    if (lost.length) {
+      for (const r of await this.db.documentRequirement.findMany({ where: { combinationId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { lineageKey: true, predicateJson: true } })) {
+        if (![...factsOf(r.predicateJson)].some((f) => lost.includes(f))) continue;
+        try { await this.studio.saveRequirement(author, combinationId, r.lineageKey, { retire: true } as Save); n--; refused.push(`${r.lineageKey}: taken back, its condition reads ${lost.join(", ")}, which did not reach the library`); }
+        catch (e) { refused.push(`${r.lineageKey}: ${say(e)}`); }
+      }
+    }
     return n;
   }
 
@@ -841,7 +851,9 @@ export class Demo {
           // G5 (#868, Lead 8's option 1 for the Study permit): its always-needed lines from its checklist's own words, cited.
           if (setup.documentsCited) { const d = await this.citedDocumentLines(author, sme, workspaceId, c.id, setup.documentsCited, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} document lines from its document checklist, cited with page and quote (Sample, Unconfirmed: expert; P-248)`); }
           // C6.4 (tech lead on #1073): the conditional lines and the facts they read, after the checklist's own lines.
-          const conditional = (JSON.parse(readFileSync(CONDITIONAL_DOCUMENTS, "utf8")) as Record<string, ConditionalDocuments | string>)[keyOf.get(c.id) ?? ""];
+          let conditional: ConditionalDocuments | string | undefined;
+          try { conditional = (JSON.parse(readFileSync(CONDITIONAL_DOCUMENTS, "utf8")) as Record<string, ConditionalDocuments | string>)[keyOf.get(c.id) ?? ""]; }
+          catch (e) { setUpRefused.push(`samples/conditional-documents.json could not be read, so no conditional document line was added: ${(e as Error).message.slice(0, 200)}`); }
           if (conditional && typeof conditional === "object") { const d = await this.conditionalDocumentLines(author, sme, approver, workspaceId, c.id, conditional, p, placedFacts, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} conditional document lines and the facts they read (samples/conditional-documents.json; Sample, Unconfirmed: expert)`); }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "document_type" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (G5, a document line's type)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }

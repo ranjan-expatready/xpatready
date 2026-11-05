@@ -154,7 +154,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     // A person not applying has no filing on a Visitor visa (C6.12), so no lines of their own.
     const holders = [...new Set(lineHolders(persons, r.who).map((h) => (h === "case" ? principal : h)))].filter((h): h is string => !!h && applying.has(h));
     for (const h of holders) {
-      const plain = inSentence(r.condition_plain);
+      const plain = inReason(r.condition_plain);
       let state: Need = "needed", missing: Missing[] = [];
       let why = r.base_or_conditional === "base" ? "Always needed for this application." : `Needed: ${plain ?? "its condition holds"}.`;
       if (r.who === "each_adult_18_plus") {
@@ -198,13 +198,16 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
 
-/** C6.4 (a), challenge r2 M1: a release's plain condition as it reads inside a sentence ("Needed: …."): its last full stop
- *  removed and a capitalised first word lower-cased ("The applicant is married." → "the applicant is married"), so the
- *  reason never reads "married.." or "the case that The applicant". A word in capitals (IMM, IRCC) is kept. */
-export function inSentence(plain: string | null | undefined): string | null {
+/** C6.4 (a), challenge r2 M1: a release's plain condition as it reads inside a reason ("Needed: …."): its last full stop
+ *  removed, and its first word lower-cased only when it is a common opening word ("The applicant is married." → "the
+ *  applicant is married"), so the reason never reads "married.." or "the case that The applicant". Any other first word
+ *  (a name, a nationality, IMM, IRCC) is kept as written (review minor 2). */
+const OPENERS = new Set(["The", "A", "An", "This", "That", "These", "Those", "Only", "If", "When", "Each", "Every", "Any", "Applicant", "Applicants", "Person", "Someone", "Anyone"]);
+export function inReason(plain: string | null | undefined): string | null {
   const t = (plain ?? "").trim().replace(/[.\s]+$/, "");
   if (!t) return null;
-  return /^[A-Z][a-z]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
+  const first = t.split(/\s/)[0];
+  return OPENERS.has(first) ? t[0].toLowerCase() + t.slice(1) : t;
 }
 /** Whose line it is, in the words of the Forms and Documents tabs (contracts/lines-bulk.ts WHO_WORDS), as a note
  *  ("For each applicant", "Once for the couple"); an unknown "who" is named as it is, never hidden. */
