@@ -6,7 +6,7 @@
 
 **Next in the order:** give the checkpoint J7 Stage 1 (1.2 to 1.8) through the product's own steps.
 
-* **Commits:**
+* **Commits:** (branch merged up to main 1db03f66b; #1064 since then changes only the M2 C4.1 pack)
   * main ffcfb45c8: all packs, twice (`cp-r1`, `cp-r2`), and the walk.
   * main 344e08699, after #1056 (C11.6's screen and `fill-case.ts`): C11.6 and C7.7 twice (`cp-h1`, `cp-h2`), every other pack once (`cp-h3`), and the channel walk (`walk-h/`).
   * The numbers are the same on both commits. This branch has main 344e08699 merged in and changes no app code.
