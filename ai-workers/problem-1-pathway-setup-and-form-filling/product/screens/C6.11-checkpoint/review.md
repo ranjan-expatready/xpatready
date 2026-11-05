@@ -83,3 +83,33 @@ Not checked: the demo's own cases (:4400); `check_c611_team_browser.cjs` and the
 1. **B1**: update `tests/check_b52_own_yes_no.ts` for B68 and show it green on the checkpoint.
 2. **M1**: Confirm section ignores stored answers the firm record replaces, with pass and fail tests.
 3. **M2**: keep the firm-record contact off IMM 5475, or record a tech-lead ruling and a forms-lane row on the PR.
+
+## Round 2 (diff-only): code at b1872f158, head e0993dc76
+I read `git diff e1801f98f..b1872f158`. e0993dc76 adds only the breaker's notes (`break-report.md`) and no code. Fresh copy `rev611` on :4436 with the configured checkpoint (load 87 s, US$0). It was stopped at the end: database dropped, port free.
+
+| Round 1 | Status | Evidence at b1872f158 |
+|---|---|---|
+| B1 b52 suite red | **Closed** | `check_b52_own_yes_no.ts` gives **53/53** on the checkpoint (was 49 pass, 9 fail). It now asserts the 422 and keeps IMM 5475's No branch. |
+| M1 Confirm 409 loop | **Closed** | `confirmSection` leaves out of `current` the facts the firm record gives for that subject (`runtime.ts`, `firmGives` from state()). `check_c611_checkpoint.ts`: a stored pre-#1072 "No" gives Confirm **201**, and the row stays `DECLARED:none` (not confirmed, not changed). It would have failed at e1801f9, where I reproduced the 409. |
+| M2 IMM 5475 designated individual | **Closed** (tech lead's ruling, comment 6652182464, applied as reported in 6652299900) | `representativeContact` no longer gives `person.address_*`, `person.email` or `person.phone_*`. On a checkpoint case the firm record fills only `representative.membership_id`, `licensing_body` and `organization_name` (IMM 5476), plus the family and given names (IMM 5475 and 5476, as on main). A fail test is in `check_c611_team` and `check_c611_checkpoint`. Prepare tags only forms that read `representative.*` (IMM 5476 yes, IMM 5475 no, with a fail test). |
+| m1 wording | **Closed** | The line says "Set by the case team (the representative of record)" (walk). A client gets 403 "Your case team sets…", staff get 422 naming Case team. The guard now needs a current LEAD_REPRESENTATIVE, which matches what state() gives. |
+| m2 test gaps | **Closed** | A child of 19 gets IMM 5476 and a child of 17 does not (`check_c611_checkpoint`). `licensingBodyKey` has pass and fail tests. The contact-key test now asserts their absence (ruling). |
+
+Re-run by me at b1872f158:
+* C6.11 pack **25/25** and `check_c611_checkpoint` **11/11**, on a fresh configured checkpoint.
+* `check_c611_imm5476_browser.cjs` **14/14** (the e-mail line was removed with the keys) and `check_c611_team_browser.cjs` **22/22**.
+* `check_c611_team` **70/70** and `check_vv_prepare_api` **40/40**, each on a fresh `setup_visitor_visa` copy.
+* `check_b52_own_yes_no` **53/53**.
+
+No new findings in the diff. For the tech lead, not blocking this PR:
+* On the checkpoint, IMM 5476's office block stays unfilled and cannot be answered, as on main. So do the seven representative facts and the four membership boxes. C6.11 stays Partial until the forms-lane row (IMM 5475's designated individual as its own person) and B107 land.
+* Neither row is in `BACKLOG.md` on main or on this branch yet.
+* A stored pre-#1072 answer stays in the database unread, with no trace on screen. That is acceptable: the history is kept and nothing is confirmed unseen.
+
+Journey score, re-scored on the round-1 journeys at b1872f158: **9 / 10, pass** (no criterion at 0).
+* Journey 4 now completes, so error recovery and feedback rise to 1.
+* Journey 7 now matches main, so correct data rises to 1.
+* "Next step" stays ½: IMM 5476 still waits on facts nobody can enter (the pre-existing gap above).
+* "Plain words" stays ½: the other firm-record lines still say "Change it in the firm record", and that has no screen (SI-9).
+
+**Verdict: Approve**, for code commit **b1872f158** and head **e0993dc76** (notes only on top). No Blocker or Major is open.
