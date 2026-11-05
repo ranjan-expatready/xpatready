@@ -5,7 +5,7 @@
 import { sharedStep, type MissingItem, type NextAction, type Status } from "../contracts/programs.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { isFilingFact } from "./resolver.ts";
+import { isFilingFact, roleOf } from "./resolver.ts";
 import { previewRender } from "./coverage.ts";
 import { compareEditions, editionMonth, newestEdition } from "./editions.ts";
 export { compareEditions, editionMonth, newestEdition };
@@ -24,14 +24,16 @@ const applicants = (ps: Participant[]) => ps.filter((p) => p.role !== "represent
 const isCaseLevel = (p: { repeats: string; fact: string }) => isFilingFact(p.fact, p); // SH3 R5
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** Questions a person is asked, from the one list Preview and a case show (engine/render.ts through previewRender), so BR-8
- *  can never disagree with them: not those about the application, not a representative's, not one a condition hides. B78:
- *  a form's fact counts though its section is not chosen (Study permit: its one chosen section is about the application). */
-function personQuestions(s: Snapshot) {
-  if (!s.placements.length) return []; // nothing placed, nothing asked (render asks only a placed fact)
+/** BR-8, "every person role has questions" (B78; Lead 13, P-294): the roles that file and have none, from the one list Preview
+ *  and a case show (engine/render.ts through previewRender), so it can never disagree with them. A question about the
+ *  application is no role's, and one a condition hides is not asked yet. A form's fact counts though its section is not
+ *  chosen (Study permit: its one chosen section is about the application). A role the release does not hold is not asked. */
+function rolesWithoutQuestions(s: Snapshot, participants: Participant[]) {
+  const filing = applicants(participants);
+  if (!s.placements.length) return filing; // nothing placed, nothing asked (render asks only a placed fact)
   const { people, r } = previewRender(s);
-  const representative = new Set(people.filter((p) => p.role === "representative").map((p) => p.id));
-  return r.questions.filter((q) => q.about !== FILING && !representative.has(q.about.split("/")[0]) && q.status !== "hidden by a condition");
+  const asked = new Set(r.questions.filter((q) => q.about !== FILING && q.status !== "hidden by a condition").map((q) => roleOf(people, q.about)));
+  return filing.filter((p) => people.some((x) => x.role === p.role) && !asked.has(p.role));
 }
 
 /** Where the row's setup stands (draft): forms attached as sources and not set up yet, and what moves them on. */
@@ -75,7 +77,7 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
   const unmapped = formsWithoutFieldMap(s).map((f) => f.form_number); // QA-180: the rule release reads too
   if (unmapped.length) out.push(line("form_without_edition", `No form fields mapped yet for ${unmapped.join(", ")}.`, "Draft setup", " (AI maps the form fields from the form)"));
   // Founder finding F2: one cause, one line, with what to do next (not one line per person role).
-  const roles = personQuestions(s).length ? [] : applicants(participants).map((p) => p.label);
+  const roles = rolesWithoutQuestions(s, participants).map((p) => p.label);
   // With its forms set up, questions come from the library's placements for the fields the forms read; AI drafting maps
   // boxes and never writes questions (api/src/ai.ts), so the step is a person's: add them on the Configuration tab.
   if (roles.length) out.push(line("role_without_questions", `No questions yet for ${roles.join(", ")}.`, "Add questions", " (Configuration › Questions and sections)"));
