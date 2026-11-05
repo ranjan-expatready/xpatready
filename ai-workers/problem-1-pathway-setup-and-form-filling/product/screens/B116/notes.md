@@ -1,5 +1,7 @@
 # B116: the release asks Background 1 a), Background 6 and the research-contact consent (C10.1 row 12b)
 
+**Where it lands.** B116 lands with row 12b in **one PR, #1123** (tech lead, 6 Nov): its commits are on `claude/forms-b99-validated-copies`, which is stacked on #1052 and #1125. The builder's session cannot edit #1123's body (the same GitHub block as its comments), so this note is the record. The branch `claude/forms-b116-own-unmapped` was only a staging branch and has no PR.
+
 **Why.** The founder ruled on #1123 (6 Nov ~03:15 IST, "Add the questions (Recommended)"): row 12b closes only when the product itself fills every box IMM 5257's own Validate insists on. No hand ticks count. The tech lead's Validate of B99's copies stopped at Background 1 a), and a practice pass (not evidence) showed that Background 6 and the research-contact consent stop it too. No saved AI answer mapped any of the three, so nothing asked them.
 
 **What changed.**
