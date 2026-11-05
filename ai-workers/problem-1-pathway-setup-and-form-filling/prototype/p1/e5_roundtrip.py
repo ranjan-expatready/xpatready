@@ -279,8 +279,10 @@ def read_back(pdf_bytes, values, original_parts):
     orig = dict(leaves(data_root(ET.fromstring(original_parts["datasets"]))))
     now = dict(leaves(data)) if data is not None else {}
     written = {p.replace("[*]", "[0]") for p in values}
+    # A written path's ancestors are not "other" data: an empty placeholder it fills, and the data root itself when the
+    # blank form holds no data at all (IMM 0008 DEP: an empty <xfa:data/> reads as one leaf at path "", B84).
     changed_other = [p for p, v in orig.items() if p not in written and now.get(p, None) != v
-                     and not any(p.startswith(w + ".") or w.startswith(p + ".") for w in written)]
+                     and not any(p == "" or p.startswith(w + ".") or w.startswith(p + ".") for w in written)]
     unchanged = {k: sha(parts[k]) == sha(original_parts[k]) for k in original_parts if k != "datasets"}
     return {"written": len(values), "read_back_equal": ok, "mismatches": bad[:10],
             "other_data_leaves_changed": len(changed_other), "other_parts_unchanged": unchanged}

@@ -8,8 +8,11 @@
 // only: Validate in Adobe adds it), then print with the barcode page on top, signed in pen, mailed once the filing is Ready
 // to file; To do until its validated copy is read back, In progress after, Out of date when a fact changes after it.
 // Breadth still to come: waiting filings ("Cannot start yet"), our-format copy for an online-only form with no IRCC PDF.
+// Schedules and dependants' forms (QA-235, B84): a case's fill accepts exactly the form numbers its release writes
+// ("IMM 5257 SCH1", "IMM 0008 DEP"), and anything else is "No such form." with nothing echoed.
 //   tsx studio/acceptance/C7.7.test.ts 4440 xr_studio_accept
-import { FAMILY, OFFICER, answer, call, copyBytes, filingOf, fillEverything, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sendFile, sql, until, validateRoundTrip } from "./lib/m3.ts";
+import { snapshotHash } from "../engine/snapshot.ts";
+import { FAMILY, OFFICER, answer, call, copyBytes, filingOf, fillEverything, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, run, sendFile, sql, until, validateRoundTrip } from "./lib/m3.ts";
 
 const STATES = ["cannot_start", "to_do", "in_progress", "ready", "out_of_date", "done", "not_needed"];
 
@@ -90,4 +93,54 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   const put = await answer(c.id, P, "person.family_name", "SAMPLE-CHANGED");
   pl = await line("IMM 5257");
   ok("C7.7-26 pass (P-171 (1)): a fact on IMM 5257 changed after the read-back makes the Paper line Out of date, asking for Validate again", put.status === 200 && pl?.state === "out_of_date" && /Validate again/.test(pl?.reason ?? "") && pl?.validated?.current === false, { put: put.status, line: pl?.state, reason: pl?.reason });
+
+  // Part 3 (QA-235, B84): schedules and dependants' forms. Pack 4's Visitor visa release holds neither IMM 5257 SCH1 nor
+  // IMM 0008 DEP (the configured checkpoint holds SCH1, drafted from a saved run; no sample release holds DEP). Test
+  // scaffolding only, on this isolated copy: the case's release gets both form lines and a field map from the official
+  // PDFs (official-sources/ircc/forms/imm5257_1e.pdf, imm0008depe.pdf) and their form field lists (p1/inventory), plus
+  // IMM 5409 as a line with no field map; its fingerprint is refitted with it (the pin is frozen by a trigger, lifted
+  // for one statement as tests/check_vv_prepare_store_api.ts does), and all is put back in `finally`. Who and minimum
+  // age are Sample (SCH1's are the checkpoint's, api/src/form-setup.ts VV_FORM_RULES; DEP's "each dependent child").
+  const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}'`);
+  // The scaffolding is put back by removing exactly the lines it added (a whole snapshot is too long for one psql
+  // argument), so none of them may be in the release before.
+  const ADDED = ["IMM 5257 SCH1", "IMM 0008 DEP", "IMM 5409"], inList = ADDED.map((f) => `'${f}'`).join(",");
+  const clean = sql(`select count(*) from config_release, jsonb_array_elements(snapshot->'forms' || snapshot->'field_maps') x where id='${rel}' and x->>'form_number' in (${inList})`) === "0", wasHash = sql(`select sha256 from config_release where id='${rel}'`);
+  const esc = (x: string) => x.replace(/'/g, "''");
+  ok("C7.7-27a (setup): the case's release and its fingerprint are read, and it holds none of the scaffolding's forms", !!rel && clean && !!wasHash, { rel });
+  const pinHash = (h: string) => sql(`alter table pack_work_pin disable trigger trg_pack_work_pin_frozen; update pack_work_pin set content_hash='${h}' where config_release_id='${rel}'; alter table pack_work_pin enable trigger trg_pack_work_pin_frozen`);
+  const formLine = (form: string, title: string, who: string, extra = {}) => ({ form_number: form, title, who, origin: "HUMAN", status: "always", condition: null, condition_plain: null, form_kind: "data_form", item_version: 1, source_quote: `${form}: test scaffolding (Sample)`, ...extra });
+  const entry = (data_path: string, fact: string) => ({ data_path, fact, person: "form_subject", outcome: "mapped", status: "PUBLISHED", origin: "HUMAN", transform: "as_is (max 100 chars)", caption: "", heading: null, condition: null, row: null, item_version: 1 });
+  const map = (form: string, edition: string, file: string, sha: string, entries: object[]) => ({ form_number: form, form_edition: edition, official_file: file, form_sha256: sha, inventory_file: `prototype/p1/inventory/${file.replace(/\.pdf$/, "")}.inventory.json`, entries });
+  const lines = [formLine("IMM 5257 SCH1", "Schedule 1 - Application for temporary residence", "principal_partner_adult_children", { min_age: 18 }), formLine("IMM 0008 DEP", "Additional dependants/declaration", "each_dependent_child"), formLine("IMM 5409", "Statutory declaration of common-law union", "each_applicant")];
+  const maps = [
+    map("IMM 5257 SCH1", "IMM 5257 SCH1 (09-2023)", "imm5257_1e.pdf", "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93", [entry("Schedule1[0].FamilyName[0]", "person.family_name"), entry("Schedule1[0].GivenName[0]", "person.given_names")]),
+    map("IMM 0008 DEP", "IMM 0008 DEP (10-2024)", "imm0008depe.pdf", "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b", [entry("form1[0].Page1[0].AddDependant[0].q1[0].FamilyName[0]", "person.family_name"), entry("form1[0].Page1[0].AddDependant[0].q1[0].GivenName[0]", "person.given_names")]),
+  ];
+  const gen = (form: string, who: string) => call("POST", `/runtime/cases/${c.id}/forms/${encodeURIComponent(form)}/${who}/generate`, { idempotencyKey: `b84-${run}-${Math.random().toString(36).slice(2, 8)}` }, OFFICER);
+  const done = async (id: string | undefined) => { if (!id) return null; await until(async () => ["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body?.status), 90_000); return (await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body; };
+  if (rel && clean && wasHash) try {
+    sql(`update config_release set snapshot = jsonb_set(jsonb_set(snapshot, '{forms}', (snapshot->'forms') || '${esc(JSON.stringify(lines))}'::jsonb), '{field_maps}', (snapshot->'field_maps') || '${esc(JSON.stringify(maps))}'::jsonb) where id='${rel}'`);
+    const h = snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")); sql(`update config_release set sha256='${h}' where id='${rel}'`); pinHash(h);
+    const listed = ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, OFFICER)).body?.forms ?? []) as { form: string; subject_id: string; applies: boolean }[];
+    const applies = (form: string, who: string) => listed.find((f) => f.form === form && f.subject_id === who)?.applies;
+    r = await gen("IMM 5257 SCH1", P);
+    const sch = await done(r.body?.id);
+    ok("C7.7-27 pass (QA-235): IMM 5257 SCH1, a schedule the case's release writes, is generated for the principal (202, then a copy of IRCC's own PDF, intact)", applies("IMM 5257 SCH1", P) === true && r.status === 202 && sch?.status === "GENERATED" && sch?.source === "ircc_pdf" && sch?.intact === true, { listed: applies("IMM 5257 SCH1", P), status: r.status, copy: sch && { status: sch.status, source: sch.source, intact: sch.intact, error: sch.error } });
+    r = await gen("IMM 0008 DEP", K15);
+    const dep = await done(r.body?.id);
+    ok("C7.7-28 pass (QA-235): IMM 0008 DEP, a dependant's form the case's release writes, is generated for the child (202, then a copy of IRCC's own PDF, intact)", applies("IMM 0008 DEP", K15) === true && r.status === 202 && dep?.status === "GENERATED" && dep?.source === "ircc_pdf" && dep?.intact === true, { listed: applies("IMM 0008 DEP", K15), status: r.status, copy: dep && { status: dep.status, source: dep.source, intact: dep.intact, error: dep.error } });
+    const [schK, depP] = [await gen("IMM 5257 SCH1", K15), await gen("IMM 0008 DEP", P)];
+    ok("C7.7-29 fail: each form only for the people its line names: SCH1 for the child of 15 (dependent children from 18) and DEP for the principal are refused (422, in words)", schK.status === 422 && depP.status === 422 && /does not apply/.test(`${schK.body?.detail} ${depP.body?.detail}`), { sch1: [schK.status, schK.body?.detail], dep: [depP.status, depP.body?.detail] });
+    const copiesBefore = sql(`select count(*) from form_instance where case_id='${c.id}'`);
+    const bad = ["IMM 9999", "IMM 5257 SCH9", "imm 5257 sch1", "IMM 5257 SCH1 ", "IMM5257SCH1", "IMM <b>x</b>"];
+    const said = await Promise.all(bad.map(async (f) => { const x = await gen(f, P); return { f, status: x.status, detail: x.body?.detail, echoed: JSON.stringify(x.body ?? "").includes(f.trim()) }; }));
+    ok("C7.7-30 fail (QA-235, break m6): a form number the release does not write (well-shaped or not, other case or spacing, markup) answers 404 \"No such form.\", never echoes it, and makes no copy", said.every((x) => x.status === 404 && x.detail === "No such form." && !x.echoed) && sql(`select count(*) from form_instance where case_id='${c.id}'`) === copiesBefore, said.filter((x) => x.status !== 404 || x.detail !== "No such form." || x.echoed));
+    r = await gen("IMM 5409", P);
+    ok("C7.7-31 fail: a form line the release lists with no PDF field map keeps its own words (404, \"has no PDF to fill\")", r.status === 404 && r.body?.detail === "IMM 5409 has no PDF to fill in this case's release.", { status: r.status, detail: r.body?.detail });
+  } finally {
+    const keep = (k: string) => `(select coalesce(jsonb_agg(x), '[]') from jsonb_array_elements(snapshot->'${k}') x where x->>'form_number' not in (${inList}))`;
+    sql(`update config_release set snapshot = jsonb_set(jsonb_set(snapshot, '{forms}', ${keep("forms")}), '{field_maps}', ${keep("field_maps")}), sha256='${wasHash}' where id='${rel}'`); pinHash(wasHash);
+  }
+  ok("C7.7-32 pass (scaffolding put back): the case's release is again exactly as released, its fingerprint matching", sql(`select sha256 from config_release where id='${rel}'`) === wasHash && snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")) === wasHash);
 });
