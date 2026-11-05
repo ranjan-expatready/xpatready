@@ -52,6 +52,12 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   ok("C10.1 part B (DEMO.md row 9, P-143): Visitor visa release 2: IMM 5257 Online, so IMM 5645 (not IMM 5707), IMM 5476 PDF upload signed by hand and scanned", f2("IMM 5257")?.channel === "ONLINE" && !!f2("IMM 5645") && !f2("IMM 5707") && (f2("IMM 5476")?.channel ?? "PDF_UPLOAD") === "PDF_UPLOAD" && f2("IMM 5476")?.signature === "HAND_SCANNED", r2.map((f) => `${f.form_number}:${f.channel ?? "PDF_UPLOAD"}:${f.signature ?? "NONE"}`));
   // Labelled B10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps B10)"; QA-144 slice 2).
   ok("C10.1 B10 part B (DEMO.md checkpoint 2, row 10): With an LMIA (B) is released too (its reuse of A's facts, row 18, is C10.2's checkpoint 3)", releasesOf(lmia).length >= 1, releasesOf(lmia).length);
+  // Labelled F10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps F10)"; QA-144 slice 5, B79b):
+  // Family sponsorship › Spouse or common-law partner set up from its forms and released by the checkpoint through the
+  // product's own duties (on main 86b721eac Submit refused it: "Fix 93 problems before submitting").
+  const fsp = sql(`select id from combination where combination_key = 'fs.spouse' and retired_at is null limit 1`);
+  ok("C10.1 F10 row 10: Family sponsorship › Spouse or common-law partner has release 1, submitted by the author and approved by the Approver after the SME's sign-off", releasesOf(fsp).length >= 1
+    && n(`select count(*) from config_release where combination_id = '${fsp}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1, (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Family sponsorship")).join(" · ").slice(0, 300));
   // Labelled S10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps S10)"; QA-144 slice 3): the study
   // permit (outside Canada) is set up from its forms and released by the checkpoint through the product's own duties.
   const sp = sql(`select id from combination where combination_key = 'sp.outside' and retired_at is null limit 1`);
