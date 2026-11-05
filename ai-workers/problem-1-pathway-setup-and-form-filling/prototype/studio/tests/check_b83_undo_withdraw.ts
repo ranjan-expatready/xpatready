@@ -326,6 +326,14 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   u = await undo(USCARD);
   ok("review R5 fail test: undo restores the row's origin, confidence, words and reason", u.status < 300 && asOf() === "AI_PROPOSAL|medium|B83 quote|B83 reason", asOf());
   await plain(USCARD);
+  // Breaker M11: the withdraw door does the same.
+  await undo(USCARD);
+  const aiRow2 = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
+  sql(`update form_field_map set origin = 'AI_PROPOSAL', confidence = 'medium', evidence_quote = 'B83 quote', reason = 'B83 reason' where id = '${aiRow2}'`);
+  u = await askNew(USCARD, "B83 door two");
+  u = await withdraw(changeOf(keyOf("B83 door two")));
+  ok("breaker M11 fail test: To review's withdraw restores the row's origin, confidence, words and reason too", u.status < 300 && u.body?.form_fields_restored === 1 && asOf() === "AI_PROPOSAL|medium|B83 quote|B83 reason", { a: asOf(), u: u.body });
+  await plain(USCARD);
 
   // Breaker M7: a release never publishes a document's facts naming a new field still waiting.
   u = await askNew(USCARD, "B83 supplied held");

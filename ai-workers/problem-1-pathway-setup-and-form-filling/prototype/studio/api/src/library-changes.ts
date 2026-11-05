@@ -7,7 +7,7 @@ import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
 import { acceptsWords, roleWords } from "../../contracts/form-library.ts";
 import { HttpException } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import type { LibraryChange, Prisma } from "@prisma/client";
+import type { LibraryChange, Origin, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { factName } from "../../engine/fact-name.ts";
 import { isRuleWhy } from "../../engine/near.ts";
@@ -212,6 +212,12 @@ type AskedRow = { canonicalFieldKey: string | null; transform: string | null; ou
 /** B83 (BR-9, breaker M3): a draft row over a released one that differs from it only by this ask: with the ask taken back
  *  it is no change at all, so it goes, and the release sees none. */
 export const onlyThisAsk = (cur: AskedRow, under: AskedRow | null | undefined, fact: string) => !!under && cur.status === "DRAFT" && under.canonicalFieldKey === fact && under.transform === cur.transform && under.outcome === cur.outcome && under.person === cur.person && under.row === cur.row && JSON.stringify(under.optionMap) === JSON.stringify(cur.optionMap) && JSON.stringify(under.listPurpose) === JSON.stringify(cur.listPurpose);
+/** B83 (review R5, breaker M11): what an ask replaced on a draft row, kept with the ask's history line, so taking it back by
+ *  either door is not a person's decision about the mapping (`needs_sme` counts an AI proposal's origin). */
+export async function whatAskReplaced(tx: Prisma.TransactionClient, workspaceId: string, editionId: string, dataPath: string) {
+  const asked = await tx.auditEvent.findFirst({ where: { workspaceId, entity: "form field", entityKey: dataPath, action: "decided", detail: { path: ["edition"], equals: editionId } }, orderBy: { at: "desc" }, select: { detail: true } });
+  return (asked?.detail as { undo?: { origin: Origin; confidence: string | null; evidenceQuote: string | null; reason: string | null } } | null)?.undo ?? null;
+}
 /** What a withdrawal leaves reading the field (tech lead on breaker M5), for To review's words before and after the press.
  *  Its form fields are not among them, nor a change of a document's facts: the withdrawal puts those right itself. */
 const PUT_RIGHT = new Set<FieldReader["kind"]>(["form_field", "waiting_supplies", "document_type_change"]);
@@ -307,7 +313,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
       if (!(await tx.canonicalField.count({ where: { workspaceId: c.workspaceId, canonicalFieldKey: named[0], status: { in: ["DRAFT", "PUBLISHED"] } } }))) continue;
       const under = m.supersedesId ? await tx.formFieldMap.findUnique({ where: { id: m.supersedesId } }) : null;
       const back = onlyThisAsk(m, under, named[0]) ? await tx.formFieldMap.deleteMany({ where: { id: m.id, status: "DRAFT" } })
-        : await tx.formFieldMap.updateMany({ where: { id: m.id, status: "DRAFT" }, data: { canonicalFieldKey: named[0], reason: `The new field "${c.label ?? c.key}" was withdrawn: worked out from other answers again.`.slice(0, 500), updatedBy: actor.id } });
+        : await tx.formFieldMap.updateMany({ where: { id: m.id, status: "DRAFT" }, data: { canonicalFieldKey: named[0], updatedBy: actor.id, ...((under?.canonicalFieldKey !== c.key ? await whatAskReplaced(tx, c.workspaceId, m.formEditionId, m.dataPath) : null) ?? { reason: `The new field "${c.label ?? c.key}" was withdrawn: worked out from other answers again.`.slice(0, 500) }) } });
       if (!back.count) throw problem(409, "Changed meanwhile", "A form field reading it changed at the same moment. Refresh to see it.");
       restored++;
     }

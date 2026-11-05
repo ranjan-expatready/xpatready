@@ -200,7 +200,7 @@ export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: {
     const after = m.after.filter((f) => f !== fact), afterAbout = Object.fromEntries(Object.entries(m.afterAbout ?? {}).filter(([k]) => k !== fact));
     const before = { facts: m.before ?? [], about: m.beforeAbout ?? {} }, nothingLeft = same({ facts: after, about: afterAbout }, before), wasApproved = c.status === "APPROVED";
     const n = after.length, document = m.document ?? c.label ?? "A document";
-    const said = `The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why.replace(/\.$/, "")}`;
+    const said = `The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why.replace(/\.$/, "")}`.slice(0, 180); // room for the approver's note: both stay (breaker n15)
     if (wasApproved) {
       const draft = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 }))[0];
       const back = await throughMerges(tx, workspaceId, before.facts, before.about); // Break R2-M1: a merge since approval moved the keys
