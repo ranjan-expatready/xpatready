@@ -1,0 +1,75 @@
+# C1.3 + C11.5 part 2 — independent screen review (commit da3032f87, PR #1051)
+
+Reviewer: a fresh Opus session that did not build or challenge this screen (skill screen-review; journey score from skill journey-test, `journey-test-reviewer-2026-11-05.md`). Inputs: concept r2, `challenge.md`, the tech lead's ruling on #1051 (copy once; one Sample employer case per firm, SI-10; no migration, freshness by the answer ids seen under the case row lock; BR-5's Declared accepted; C11.5 fix by person). Evidence: my own copy `rv_c13` on :4433 (configured checkpoint, blank start), US$0, no AI, no `*_LIVE`, nothing priced clicked.
+
+**Overall (skill scale): Ship after fixes.** The rule, the API and the drawer are right and match the concept. Two Majors, both cheap to fix: focus is lost after Copy, and the race test does not prove the row lock.
+
+## Runs on the exact commit
+* `tests/check_c13_employer_link.ts 4433 xr_studio_rv_c13`: **44/44** (43 when the checkpoint is already loaded, as `qa/built/C1.3.md` says).
+* `tests/check_c13_employer_link_browser.cjs 4433`: **22/22**, no page errors.
+* `tests/runtime/check_c115_employer.ts`: 20/20. `tests/check_stand_ins.ts`: 9/9 (SI-10 now has its chip on screen). `graph.mjs --check`: G1 0, G2 0; both new routes named by the check; no gap on this screen.
+* My journeys (Playwright, 1024 px, 512 px = 1024 at 200 %, 1440 px, keyboard only, three actors): **journey score 8/10, no criterion at 0 (pass)**, in `journey-test-reviewer-2026-11-05.md`. The four ½ scores: feedback, error recovery, accessibility, trust and sources.
+
+## Does each rule's test fail when the rule is removed? (my mutations, server rebuilt from a scratch copy)
+| Rule | Mutation | Caught |
+|---|---|---|
+| BR-6 stale (M2) | drop `if (changed.length) stale(…)` | yes, 2 FAIL |
+| BR-6 once | drop `if (before) notPossible(…)` | yes, 1 FAIL |
+| BR-6 race | drop `SELECT … FROM runtime_case … FOR UPDATE` | **no, 0 FAIL** (Major 2) |
+| BR-4 kept unless ticked | write every Different | yes, 4 FAIL |
+| C11.5 by person (m1) | drop `e.person !== "representative"` | yes, 4 FAIL (VV, SP offered again) |
+| BR-7 firms apart | drop the firm filter | yes, 13 FAIL |
+| BR-4 composite Same (M3) | drop `inStoredOrder` in `factState` | yes in the pure test; the API path is normalised twice (`carriedFacts` and jsonb) |
+
+## Issues (ranked)
+**Major 1 (Must) — focus is lost after a successful copy (WCAG 2.4.3; EXPERIENCE §2.12 [M] keyboard path).** `employer.tsx:45` passes `returnFocus={() => opener.current}`, but once linked the "Choose employer case…" button is unmounted (`employer.tsx:44`, `!linked`), so after Copy the focus falls to `<body>` (measured: `document.activeElement` = BODY; a keyboard user then needs 9 Tabs to get back). This codebase already treats this as a Major: `Panel`'s own comment (`controls.tsx:101`, G1 PR 2b review MJ-2) asks for "the next one when that row left the list". Fix: fall back to the linked line (make `[data-testid=employer-linked]` `tabIndex={-1}`) or the ⓘ button when the opener is gone; assert the focus target after Copy in the browser check.
+
+**Major 2 (Must) — the race test passes with the row lock removed (STANDARDS §7 [M] "a rule's test fails when the rule is removed"; D2).** `check_c13_employer_link.ts:144-148` races on a case where all 3 facts are New, so `uq_answer_current` turns the second write into P2002 → 409 even without the lock. On an all-Same case ("Link without copying", nothing written) the lock is the only guard: without it, **4 of 5** cases I raced (4 parallel POSTs each) were linked 2–4 times (several `relied on employer case` events). The code at this commit is correct; the proof is not. Fix: add a race on an all-Same case asserting one 201 and exactly one audit event.
+
+**Minor 1 (Should) — one link, two dates.** The server writes "linked 4 Nov 2026" (`employer-link.ts:30`, `timeZone: "America/Toronto"`); the header says "facts copied 5 Nov 2026" (`employer.tsx:20`, browser time) for the same link (J8, at 03:58 UTC). Use one date function, one zone.
+
+**Minor 2 (Should) — the source tooltip.** `EmployerCaseSource` (`employer.tsx:113-114`) uses a `title` attribute (not reachable by keyboard or touch; EXPERIENCE §2.10) and drops the employer case's name that concept §5 asks for ("Copied from <employer case> on <date>"). `source_json.employer_label` is stored; show it.
+
+**Minor 3 (Should) — the 409s in the drawer.** (a) The error shows twice: in the Notice and as a danger toast (`useAction`'s `onError`), and the toast covers the drawer's primary button for 9 s (builder's screenshot 6; my j8). (b) "Already linked" from a second tab offers no Reload, and the page behind still shows "Choose employer case…" until a manual reload. Fix: no toast when the Notice shows it; on a 409 refresh `["runtime","view",caseId]`.
+
+**Minor 4 (Should) — tests against concept §6.** (a) The BR-5 check (`:125-132`) confirms the section after the name was corrected to `agent_view`, so it never confirms a `linked_file` answer and does not assert VERIFIED (I checked by hand: all three become VERIFIED with `answered.channel = linked_file`). (b) [M4] "the IMM 5710 fill preview shows the three copied values" is only `fills` metadata; by hand, after Confirm, IMM 5710's draft reports `written_now: 3`. (c) 1024 px is not in the browser check (concept §4 lists 1440, 1024, 390). (d) `refuseIfCaseRecorded` has no test. (e) No `acceptance/C1.3.test.ts` as the concept and the ruling name, so gate B finds no C1.3 pack; say where the pack lives.
+
+**Minor 5 (Should) — PR body.** It still reads "Concept stage only … Checks and results: None yet". The ruling (4) asks the BR-5 departure to be said in the PR; add the checks, screenshots and "On the demo".
+
+**Minor 6 (Should) — duplicated web/API code (STANDARDS §7).** `LINKED_FILE`, `dateWords` and the `Linked`/`FactLine` shapes are written twice (`employer.tsx:13-15,20,112` vs the engine and API). The web already imports `contracts/`; import the engine's constant and type rather than copy them (m8 kept them out of `contracts/`, which is fine).
+
+Not findings (P-26): the Agent view shows "…, canada" in lower case: this is the questionnaire's address formatter, which existed before this PR. The "no employer case in this firm" state cannot be reached on the demo, because every Sample firm has one.
+
+## [M] lines touched (met unless named)
+STANDARDS: content as data (Sample file, labels from the release) · authorisation on the server (client and author 403, other firm 404 without the name, no actor 401) · Problem Details with field errors (stale lists labels) · freshness by seen ids under the row lock, as ruled instead of a version column · no migration (as ruled) · no per-row requests (one answers query; at most 3 field lookups inside the write) · personal data never in audit text (keys only) · axe on every state (clean at 1440, 1024, 512/200 %, 390) · **a rule's test fails when it is removed: not met for the lock (Major 2)** · no duplicated logic: not met (Minor 6). EXPERIENCE: Side panel pattern, 560 px · one primary action · status by text and shape (New, Same as on this case, Different) · states drawn (loading, empty, saving, stale with Reload, already linked, linked read-only) · tooltips on the line and chip; **keyboard path: not met after Copy (Major 1)**; the source tooltip only half met (Minor 2) · demo chrome ("Acting as (simulated)") separate · words per PRODUCT §4 ("Relies on an employer case", Employer case, Case officer).
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 Requirement fit | 4 | BR-1…BR-7 behave as the concept says; SA-1B-283 r4 copy once; the Minors are wording and tests |
+| D2 Data integrity | 4 | stale, second link and other firm refused; the lock is right but unproven (Major 2) |
+| D3 Reuse | 5 | copies are ordinary library-keyed answers on the subject `aboutOf` gives; no new table |
+| D4 Rule integrity | 4 | only facts the pinned release reads and asks; blank stays blank; Corporate never |
+| D5 Stability | 4 | reload, double click (one event), Escape all fine; focus lost after Copy |
+| D6 Governance | 4 | one audit event with actor, date and facts; the old value kept in history when replaced |
+| D7 AI trust | n/a | no AI |
+| D8 Orientation | 4 | path, header line naming the employer case |
+| D9 Flow | 5 | Choose → (tick) → Copy: 2–3 actions; the toast says to confirm in the section |
+| D10 Language | 4 | plain words, tooltips; the source tooltip lacks the name (Minor 2) |
+| D11 Feedback | 4 | busy button, counts on the button, Notice; the error is doubled and the toast covers the button (Minor 3) |
+| D12 Visual | 4 | team tokens and pills; clean at 200 % |
+| D13 Accessibility | 3 | axe clean everywhere, no sideways scroll; focus lost after Copy (Major 1) |
+| D14 Team look | 4 | CaseLink names, team badge mapping recorded |
+| D15 Speed | 5 | case page 556 ms, drawer facts 74 ms, copy and header 323 ms |
+| D16 Testability | 3 | 6 of 7 mutations caught; the lock is not (Major 2) |
+| D17 / D20 | simulated only | no intended user walked it |
+| D18 Provenance | 4 | "Employer case" beside "To confirm", the channel line "employer case · Case officer · date", the header date |
+| D19 Closure | 4 | copy → Confirm → IMM 5710 draft writes 3 (by hand, not in a test) |
+
+## Retrofit mapping
+Recorded: concept §5 (screen "Employer case" = team badge "Linked file"; audit "relied on employer case" = "opened from linked file"); `employer-cases.ts:1-4,15-16` (`Linked` = team `CaseLink` fields); `M3-CONTRACT.md` row added for both routes.
+
+## What I could not check
+A visible headed browser (headless Playwright with screenshots), a real screen reader, a true browser zoom (I used a 512 px viewport for 1024 px at 200 %), the CI run of this commit, the "red on main" first run of the test, and D17/D20 (founder or an intended user).
+
+**Verdict: Block** for commit da3032f87. Fix: Major 1 (focus after Copy), Major 2 (race test on an all-Same case). List or fix the Minors in the PR.

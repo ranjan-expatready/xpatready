@@ -95,6 +95,8 @@ const LMIA = "case.lmia_or_offer_number";
     ok("C1.3: Copy says what it copied", true);
     const linked = p.getByTestId("employer-linked");
     await linked.waitFor(T);
+    await p.waitForFunction(() => document.activeElement?.getAttribute("data-testid") === "employer-linked", undefined, T);
+    ok("C1.3 (review M1, WCAG 2.4.3): after Copy, focus moves to the linked line, not the page", true);
     ok("C1.3: the header now names the employer case and says later changes are not copied", /Sample employer case: Sample Employer Ltd \(Sample\).*facts copied .*later changes there are not copied/.test(await linked.innerText()));
     ok("C1.3: \"Choose employer case…\" is gone once linked (once per case)", await choose.count() === 0);
     await shot(p, "4-case-header-linked");
@@ -112,7 +114,11 @@ const LMIA = "case.lmia_or_offer_number";
     await p.locator("#agent-view").getByText("A123", { exact: true }).first().waitFor(T);
     ok("C1.3 BR-4: the officer's LMIA number is still on the case (The application)", true);
     await axe(p, "the case page after the link");
-    for (const w of [1440, 390]) { await p.setViewportSize({ width: w, height: 900 }); await noSideways(p, "the linked case page"); }
+    const source = row.getByRole("button", { name: /^Source: employer case\. Copied from Sample employer case: Sample Employer Ltd \(Sample\) on / });
+    await source.focus();
+    await p.getByRole("tooltip").filter({ hasText: "Changes there are not copied" }).first().waitFor({ state: "attached", timeout: 20000 });
+    ok("C1.3 (review m2): the source label opens its tooltip from the keyboard and names the employer case", true);
+    for (const w of [1440, 1024, 390]) { await p.setViewportSize({ width: w, height: 900 }); await noSideways(p, "the linked case page"); }
     await p.setViewportSize({ width: 1440, height: 1000 });
 
     // 5. Stale: the client answers while the drawer is open → refused with the label, Reload shows the new state.
@@ -130,6 +136,14 @@ const LMIA = "case.lmia_or_offer_number";
     await d2.getByRole("button", { name: "Reload" }).click();
     await d2.getByRole("button", { name: "Copy 2 facts" }).waitFor(T);
     ok("C1.3 BR-6: after Reload the drawer shows the new LMIA number as Different", await d2.locator(`[data-fact="${LMIA}"]`).getAttribute("data-state") === "different");
+    // Linked meanwhile in another tab: the refusal offers Reload, which shows the link and only Close (review m3).
+    await call("POST", `/runtime/cases/${c2.body.id}/employer-link`, { employerCase: "sample-employer-1", seen: Object.fromEntries((await call("GET", `/runtime/cases/${c2.body.id}/employer-cases`)).body.employer_cases[0].facts.map((f) => [f.fact, f.current?.answer_id ?? null])) }, "user-R");
+    await d2.getByRole("button", { name: "Copy 2 facts" }).click();
+    await d2.getByText("already relies on", { exact: false }).first().waitFor(T);
+    ok("C1.3 (review m3): the refusal shows once, in the drawer, with no toast over its button", await p.getByText("already relies on Sample employer case", { exact: false }).count() === 1);
+    await d2.getByRole("button", { name: "Reload" }).click();
+    await d2.getByText("This case already relies on an employer case").waitFor(T);
+    ok("C1.3: after Reload the drawer says the case is linked and offers only Close", await d2.getByRole("button", { name: "Close", exact: true }).count() >= 1 && await d2.getByRole("button", { name: /^Copy/ }).count() === 0);
     await p.setViewportSize({ width: 390, height: 844 });
     await noSideways(p, "the drawer");
     await axe(p, "the drawer at 390 px");

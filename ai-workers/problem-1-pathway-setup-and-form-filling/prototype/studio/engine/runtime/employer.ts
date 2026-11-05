@@ -63,7 +63,15 @@ const isBlank = (v: unknown): boolean => v === null || v === undefined || (typeo
 /** BR-4: a carried value against the worker's current answer; composite values compare in stored key order (review B1). */
 export function factState(value: unknown, current: { value: unknown } | null | undefined): FactState {
   if (!current) return "new";
-  return JSON.stringify(inStoredOrder(value)) === JSON.stringify(inStoredOrder(current.value)) ? "same" : "different";
+  return JSON.stringify(comparable(value)) === JSON.stringify(comparable(current.value)) ? "same" : "different";
+}
+/** Break m1: values that read the same are Same: text trimmed with its inner spaces collapsed, and the country part of
+ *  an address in any case ("Canada" and "canada"); a name in another case stays Different. */
+function comparable(v: unknown, key?: string): unknown {
+  if (typeof v === "string") { const t = v.trim().replace(/\s+/g, " "); return key === "country" ? t.toLowerCase() : t; }
+  if (Array.isArray(v)) return v.map((x) => comparable(x));
+  if (!v || typeof v !== "object") return v;
+  return inStoredOrder(Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, x]) => !isBlank(x)).map(([k, x]) => [k, comparable(x, k)])));
 }
 
 /** The source written on a copied answer (BR-3): the team's "Linked file" (SA-1B-283 r5), shown as "Employer case". */

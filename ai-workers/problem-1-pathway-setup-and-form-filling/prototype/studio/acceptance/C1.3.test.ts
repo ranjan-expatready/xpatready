@@ -4,9 +4,10 @@
 // r4 "Copies, not live links"). One pass and one fail per rule, BR-1 to BR-7, plus where each copy is written (M4).
 // Runs on the configured checkpoint (P-322), loaded here on a blank copy through the Demo menu's own route. Sample
 // data, no model call (US$0); the demo is never used.
-//   zsh studio/tools/isolated.sh c13_link 4436 start && tsx studio/tests/check_c13_employer_link.ts 4436 xr_studio_c13_link
+// The capability's acceptance pack (gate B runs it for a PR naming C1.3; it loads the checkpoint itself when needed).
+//   zsh tools/isolated.sh acc_c13 4436 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C1.3.test.ts 4436 xr_studio_acc_c13 ; zsh tools/isolated.sh acc_c13 4436 stop
 import { carriedFacts, employerFacts, employerLinkOffer, factState } from "../engine/runtime/employer.ts";
-import { client, recorder } from "./runtime/api.ts";
+import { client, recorder } from "../tests/runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_c13_link";
 const { call, sql } = client(PORT, DB);
@@ -35,6 +36,8 @@ function pure() {
   const reordered = { country: "canada", postal_code: "L8P 0A1", province: "ON", city: "Hamilton", street_name: "Example Street", street_number: "1" };
   ok("C1.3 BR-4 (M3): an equal address in another key order is Same", factState(SAMPLE_ADDRESS, { value: reordered }) === "same");
   ok("C1.3 BR-4 fail: a different value is Different, and no answer is New", factState("SAMPLE-1", { value: "A123" }) === "different" && factState("x", null) === "new");
+  ok("C1.3 BR-4 (break m1): \"Canada\" and \"canada\" as the country, and a trailing space, read Same", factState(SAMPLE_ADDRESS, { value: { ...SAMPLE_ADDRESS, country: "Canada" } }) === "same" && factState("Sample Ltd", { value: "Sample Ltd " }) === "same");
+  ok("C1.3 BR-4 fail (break m1): a name in another case, or another city, stays Different", factState("Sample Ltd", { value: "SAMPLE LTD" }) === "different" && factState(SAMPLE_ADDRESS, { value: { ...SAMPLE_ADDRESS, city: "Toronto" } }) === "different");
   ok("C11.5 fail: a Corporate case never links to an employer case", !employerLinkOffer(snap([entry(NAME, "none")], "CORPORATE")).offered);
 }
 
@@ -106,6 +109,9 @@ async function api() {
   ok("C1.3 BR-6 fail (M2): an answer that arrived after the officer looked is refused with its label, nothing copied", stale.status === 409 && /Changed since you looked/.test(JSON.stringify(stale.body)) && linkedCopies(c.id) === 0, stale.body);
   ok("C1.3 fail: a request with an unknown field is refused (400)", (await call("POST", `/runtime/cases/${c.id}/employer-link`, { employerCase: EMPLOYER, seen, extra: 1 }, OFFICER)).status === 400);
   ok("C1.3 BR-1 fail: the client cannot link (403)", (await call("POST", `/runtime/cases/${c.id}/employer-link`, { employerCase: EMPLOYER, seen }, CLIENT)).status === 403);
+  ok("C1.3 fail (break m6): a client sending a malformed body still gets 403, never 400", (await call("POST", `/runtime/cases/${c.id}/employer-link`, { nonsense: true }, CLIENT)).status === 403);
+  const huge = Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`organisation.f${i}`, null]));
+  ok("C1.3 fail (break m6): more than 50 seen answers is refused (400), nothing copied", (await call("POST", `/runtime/cases/${c.id}/employer-link`, { employerCase: EMPLOYER, seen: huge }, OFFICER)).status === 400 && linkedCopies(c.id) === 0);
 
   // BR-3, BR-4, BR-5: the copy
   const addressId = seen[ADDRESS];
@@ -146,6 +152,32 @@ async function api() {
   const both = await Promise.all([OFFICER, REP].map((a) => call("POST", `/runtime/cases/${c3.id}/employer-link`, { employerCase: EMPLOYER, seen: seenOf(l3) }, a)));
   ok("C1.3 BR-6 fail: two links at the same moment give one link and one set of copies", both.filter((r) => r.status === 201 || r.status === 200).length === 1 && both.filter((r) => r.status === 409).length === 1 && linkedCopies(c3.id) === 3
     && sql(`select count(*) from audit_event where entity='case' and entity_key='${c3.id}' and action='relied on employer case'`) === "1", both.map((r) => r.status));
+
+  // BR-5 and M4 on copied values: Confirm section confirms them, and IMM 5710 is then filled from them.
+  const s3 = subjects(c3);
+  const formOf = async () => ((await call("GET", `/runtime/cases/${c3.id}/forms`, undefined, OFFICER)).body?.forms ?? []).find((f: { form: string; subject_id: string }) => /5710/.test(f.form) && f.subject_id === s3.principal);
+  const before = await formOf();
+  const q3 = await questions(c3.id);
+  const confirmAll = async (subject: string, section: string) => call("POST", `/runtime/cases/${c3.id}/sections/${section}/confirm`, { subjectId: subject, seen: (await questions(c3.id)).filter((q) => q.subjectId === subject && q.section === section && q.answer).map((q) => q.answer!.id) }, OFFICER);
+  const nameQ = q3.find((q) => q.fact === NAME && q.subjectId === s3.principal)!, lmiaQ = q3.find((q) => q.fact === LMIA && q.subjectId === s3.filing)!;
+  const k1 = await confirmAll(s3.principal, nameQ.section), k2 = await confirmAll(s3.filing, lmiaQ.section);
+  const after3 = await questions(c3.id);
+  const verified = [NAME, ADDRESS, LMIA].map((f) => after3.find((q) => q.fact === f && q.subjectId === (f === LMIA ? s3.filing : s3.principal))?.answer);
+  ok("C1.3 BR-5: Confirm section confirms the copied employer facts (Verified, still sourced from the employer case)", [k1, k2].every((k) => k.status === 201 || k.status === 200) && verified.every((a) => a?.status === "VERIFIED" && a.answered?.channel === "linked_file"), verified.map((a) => [a?.status, a?.answered?.channel]));
+  const after = await formOf();
+  const missing = new Set((after?.readiness?.missing ?? []).map((m: { fact: string }) => m.fact));
+  ok("C1.3 (M4): once confirmed, IMM 5710 is filled from the copies (3 more boxes written, none of them still missing)", after && before && after.draft.written_now >= before.draft.written_now + 3 && ![NAME, ADDRESS, LMIA].some((f) => missing.has(f)), { before: before?.draft, after: after?.draft });
+
+  // BR-6 with nothing to write ("Link without copying"): only the case row lock keeps it to one link (review M2).
+  const c4 = await open(wp, "same"), s4 = subjects(c4);
+  await answer(c4.id, s4.principal, NAME, "Sample Employer Ltd (Sample)");
+  await answer(c4.id, s4.principal, ADDRESS, SAMPLE_ADDRESS);
+  await answer(c4.id, s4.filing, LMIA, "SAMPLE-0000000");
+  const l4 = (await call("GET", `/runtime/cases/${c4.id}/employer-cases`, undefined, OFFICER)).body.employer_cases[0].facts;
+  ok("setup: every fact on this case is already the same as the employer case's", l4.every((f: { state: string }) => f.state === "same"), l4.map((f: { state: string }) => f.state));
+  const four = await Promise.all([OFFICER, REP, OFFICER, REP].map((a) => call("POST", `/runtime/cases/${c4.id}/employer-link`, { employerCase: EMPLOYER, seen: seenOf(l4) }, a)));
+  ok("C1.3 BR-6 fail: four links at once with nothing to copy still give one link (the row lock), and nothing is written", four.filter((r) => r.status === 201 || r.status === 200).length === 1 && four.filter((r) => r.status === 409).length === 3
+    && sql(`select count(*) from audit_event where entity='case' and entity_key='${c4.id}' and action='relied on employer case'`) === "1" && linkedCopies(c4.id) === 0, four.map((r) => r.status));
   const solo = await call("POST", "/runtime/cases", { combinationId: wp, reference: `C13-solo-${run}`, clientActor: CLIENT, principal: { displayName: "Client C" } }, SOLO);
   const soloList = (await call("GET", `/runtime/cases/${solo.body?.id}/employer-cases`, undefined, SOLO)).body;
   ok("C1.3 BR-7: the solo firm reads only its own Sample employer case", JSON.stringify(soloList?.employer_cases?.map((e: { key: string }) => e.key)) === JSON.stringify([SOLO_EMPLOYER]), soloList?.employer_cases?.map((e: { key: string }) => e.key));

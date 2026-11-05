@@ -14,13 +14,12 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { employerCasesOf, linkedOf, RELIED_ON, type Linked } from "./employer-cases.ts";
 import { Runtime } from "./runtime.ts";
-import { refuseIfCaseRecorded } from "./submission-record.ts";
 
 type H = string | undefined;
 const LinkBody = z.object({
   employerCase: z.string().min(1).max(100),
   /** The current answer id the officer saw for each fact (null: none yet). */
-  seen: z.record(z.string().max(200), z.string().uuid().nullable()).default({}),
+  seen: z.record(z.string().max(200), z.string().uuid().nullable()).default({}).refine((v) => Object.keys(v).length <= 50, "Send at most 50 seen answers (break m6)."),
   /** Facts shown "Different" whose employer case value the officer chose to use. */
   replace: z.array(z.string().max(200)).max(50).default([]),
 }).strict();
@@ -73,17 +72,18 @@ export class EmployerLinks {
 
   /** POST: link once and copy (BR-3 to BR-6). */
   async link(actor: Actor, caseId: string, body: unknown) {
+    const r = await this.reachOffered(actor, caseId); // who may, before what was sent (break m6: a client gets 403, never 400)
     const parsed = LinkBody.safeParse(body ?? {});
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const b = parsed.data;
-    const r = await this.reachOffered(actor, caseId);
     const ec = employerCasesOf(r.c.firmKey).find((e) => e.key === b.employerCase);
     if (!ec) fail("No such employer case.", HttpStatus.NOT_FOUND); // BR-7: another firm's case is not found, never named
     const fields = (r.s.canonical_fields ?? []) as { id: string; item_version: number }[];
     const at = new Date().toISOString();
     const written = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${r.c.id}::uuid FOR UPDATE`; // BR-6: one link at a time
-      await refuseIfCaseRecorded(tx, r.c.id, "no employer facts are copied");
+      // Break m7: in this capability's own words (the C8.2 refusal speaks of people).
+      if (await tx.filingRecord.count({ where: { caseId: r.c.id } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no employer case is linked and no employer facts are copied.");
       const before = await linkedOf(tx, r.c.workspaceId, r.c.id);
       if (before) notPossible(`This case already relies on ${before.label} (linked ${dateWords(before.created_at)}). Its facts were copied then; edit a copied value on this case.`);
       const lines = this.lines(r, await this.currentAnswers(tx, [r.principal.subjectId, r.filing.subjectId], Object.keys(ec!.facts)), ec!);
@@ -109,7 +109,7 @@ export class EmployerLinks {
       return out;
     }).catch((e: unknown) => { if ((e as { code?: string }).code === "P2002") stale(["an answer saved at the same moment"]); throw e; });
     return { ...(await this.list(actor, caseId)), copied: written,
-      message: written.length ? `Copied ${written.length} fact${written.length === 1 ? "" : "s"} from ${ec!.label}. Confirm them in their section.` : `Linked to ${ec!.label}; nothing needed copying.` };
+      message: written.length ? `Copied ${written.length === 1 ? "1 fact" : `${written.length} facts`} from ${ec!.label}. Confirm ${written.length === 1 ? "it" : "them"} in ${written.length === 1 ? "its" : "their"} section.` : `Linked to ${ec!.label}; nothing was copied (this case already had these values, or you kept its own).` };
   }
 }
 
