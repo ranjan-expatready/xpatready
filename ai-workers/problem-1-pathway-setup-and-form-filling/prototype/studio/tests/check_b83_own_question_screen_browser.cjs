@@ -212,6 +212,25 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await R.locator("[data-own-said][role=alert]").waitFor({ timeout: 30_000 });
   ok("review F5: a refused save refreshes the list: the row now shows how it is asked, and the refusal stays on it, no key", other.status < 300 && /already asked/.test(await R.locator("[data-own-said]").innerText()) && (await R.locator("[data-own-asked]").count()) === 1 && !/person\.[a-z_]+|form1\[/.test(await R.innerText()), await R.innerText());
   await api("POST", `/editions/${edId}/form-fields/own-question/undo`, { dataPath: dp });
+  // Review R1 on the screen: an approved change of a document's facts a withdrawal sent back tells the second person why.
+  await askThrow("B83 came back");
+  const backKey = sql("select canonical_field_key from canonical_field where label = 'B83 came back'");
+  const backDoc = sql(`select document_type_key from document_type where status = 'PUBLISHED' and document_type_key not in (select document_type_key from document_requirement where combination_id = '${vv}') order by 1 limit 1`);
+  const addFact = sql("select canonical_field_key from canonical_field where group_key = 'person' and status = 'PUBLISHED' order by 1 limit 1");
+  const citeWalk = (fact) => ({ fact, about: "holder", source: "Test words (walk), page 1", quote: "Test: B83 walk, Sample", readOn: new Date().toISOString().slice(0, 10) });
+  const backChange = await api("POST", `/library/document-types/${backDoc}/supplies`, { facts: [citeWalk(addFact), citeWalk(backKey)], reason: "A B83 walk of a document's facts." });
+  await api("POST", `/library/changes/${backChange.body?.id}/approve`, { note: "Approved in the walk" }, "user-B");
+  await api("POST", `/library/changes/${sql(`select id from library_change where key = '${backKey}' and status = 'WAITING'`)}/withdraw`, { note: "Withdrawn in the walk" });
+  const reader = await as("user-B");
+  await reader.goto(`${BASE}/review/change/${backChange.body?.id}`, { waitUntil: "networkidle" });
+  const cameBack = reader.locator("[data-came-back]");
+  await cameBack.waitFor({ timeout: 60_000 }).catch(() => {});
+  ok("review R1 fail test: the second person's page says why it is back, no key", (await cameBack.count()) === 1 && /Decide this again/.test(await cameBack.innerText()) && /"B83 came back" it named was withdrawn/.test(await cameBack.innerText()) && !/person\.[a-z_]+/.test(await cameBack.innerText()), await reader.locator("body").innerText().then((x) => x.slice(0, 300)));
+  await axeOf(reader, "a change back for a second look", "[data-came-back]");
+  await reader.close();
+  await api("POST", `/library/changes/${backChange.body?.id}/withdraw`, { note: "Done with the walk" });
+  await page.reload({ waitUntil: "networkidle" });
+  await section.waitFor({ timeout: 60_000 });
   // Review F3 on the screen: what the route says of a question still placed reaches the row (the route's own test: check_b83_undo_withdraw).
   await page.reload({ waitUntil: "networkidle" });
   await section.waitFor({ timeout: 60_000 });

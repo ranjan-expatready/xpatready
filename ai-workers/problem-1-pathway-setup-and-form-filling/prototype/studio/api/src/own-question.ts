@@ -9,7 +9,7 @@
 // US$0. The shared placement step (api/src/form-part-placements.ts) then asks it in the section of its form field.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Prisma } from "@prisma/client";
+import type { Origin, Prisma } from "@prisma/client";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { cleanLabel, labelProblem, problemFromZod } from "../../contracts/programs.ts";
 import { OwnQuestion, OwnQuestionUndo, type OwnQuestionUndone, type OwnQuestionsToAsk, type OwnQuestionsView } from "../../contracts/own-question.ts";
@@ -171,10 +171,11 @@ export class OwnQuestions {
       // The form field keeps its "worked out" transformation: it now reads its own question, and the facts it names
       // stay the cross-check (QA-165). Its evidence is the printed question only (review m1: it is the box's label on the
       // list before the file); the full citation is the new field's source and the history line.
+      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason };
       await reviseUnreleased(tx, fresh, { canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
-      return { key, created, name };
+      return { key, created, name, was };
     }, { timeout: 30_000, maxWait: 10_000 });
-    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} asked ${source} as its own question (${res.key}${res.created ? ", a new shared field waiting for a second person" : ""}): ${b.reason}`);
+    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} asked ${source} as its own question (${res.key}${res.created ? ", a new shared field waiting for a second person" : ""}): ${b.reason}`, { edition: ed.id, undo: res.was });
     return { dataPath: b.dataPath, field: res.key, name: res.name, created: res.created, question, source };
   }
 
@@ -205,7 +206,13 @@ export class OwnQuestions {
       const released = `"${words(cur!.caption)}" was released just now: look at it again.`; // Breaker B1
       const under = cur!.supersedesId ? rows.find((r) => r.id === cur!.supersedesId) : undefined;
       if (onlyThisAsk(cur!, under, facts[0])) { if (!(await tx.formFieldMap.deleteMany({ where: { id: cur!.id, status: "DRAFT" } })).count) fail(released, HttpStatus.CONFLICT); }
-      else await reviseUnreleased(tx, rows, { canonicalFieldKey: facts[0], origin: "HUMAN", reason: `Taken back by ${actor.name}: worked out from other answers again.`.slice(0, 500) }, actor.id, released);
+      else {
+        // Review R5 (m6): a draft goes back to what the ask replaced, an AI proposal's sign-off included (`needs_sme` counts
+        // its origin): taking an ask back is not a person's decision about the mapping. A released ask is a change of its own.
+        const asked = cur!.status === "DRAFT" ? await tx.auditEvent.findFirst({ where: { workspaceId: ws, entity: "form field", entityKey: b.dataPath, action: "decided", detail: { path: ["edition"], equals: ed.id } }, orderBy: { at: "desc" }, select: { detail: true } }) : null;
+        const was = (asked?.detail as { undo?: { origin: Origin; confidence: string | null; evidenceQuote: string | null; reason: string | null } } | null)?.undo;
+        await reviseUnreleased(tx, rows, { canonicalFieldKey: facts[0], ...(was ?? { origin: "HUMAN", reason: `Taken back by ${actor.name}: worked out from other answers again.`.slice(0, 500) }) }, actor.id, released);
+      }
       return { key: key!, from: facts, name: field!.label?.trim() || field!.meaning?.trim() || factName(key!) };
     }, { timeout: 30_000, maxWait: 10_000 });
     const change = await this.db.libraryChange.findFirst({ where: { workspaceId: ws, kind: "field", action: "ADD", key, status: { in: ["WAITING", "RETURNED"] } }, select: { id: true, proposedBy: true } });

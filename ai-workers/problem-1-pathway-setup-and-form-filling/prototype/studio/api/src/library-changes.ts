@@ -14,7 +14,7 @@ import { isRuleWhy } from "../../engine/near.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
 import { isItemLifecycle, lockItem } from "./library-items.ts";
-import { fieldReaders, type FieldReader } from "./where-used.ts";
+import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
@@ -228,14 +228,22 @@ export async function freeKey(db: Parameters<typeof fieldReaders>[0], workspaceI
     taken.add(key);
   }
 }
-/** Breaker M7 on B83: a document type in this draft supplying a new field still waiting: its release would publish a fact
- *  nobody approved, which could then be withdrawn from under it. Said as any other unapproved item. */
-export async function waitingSupplied(db: Pick<Db, "libraryChange">, workspaceId: string, s: { canonical_fields: { id: string }[]; document_types: { supplies_facts?: string[] }[] }): Promise<Unapproved[]> {
+/** Breaker M7, M8 on B83: what a draft reads beyond its own fields (a document type's facts, a check, where an answer comes
+ *  from): a new field still waiting there would be released unapproved, and could then be withdrawn from under it. */
+export async function waitingSupplied(db: Pick<Db, "libraryChange">, workspaceId: string, s: { canonical_fields: { id: string }[]; document_types: { supplies_facts?: string[] }[]; checks?: { condition?: unknown }[]; fact_sources?: { fact: string }[] }): Promise<Unapproved[]> {
   const used = new Set(s.canonical_fields.map((f) => f.id));
-  const keys = [...new Set(s.document_types.flatMap((t) => t.supplies_facts ?? []))].filter((k) => !used.has(k));
+  const read = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+  const keys = [...new Set([...s.document_types.flatMap((t) => t.supplies_facts ?? []), ...(s.checks ?? []).flatMap((c) => read(c.condition)), ...(s.fact_sources ?? []).map((f) => f.fact)])].filter((k) => !used.has(k));
   if (!keys.length) return [];
   const rows = await db.libraryChange.findMany({ where: { workspaceId, kind: "field", action: "ADD", key: { in: keys }, status: { in: ["WAITING", "RETURNED"] } }, select: { key: true, label: true, status: true } });
   return rows.map((c) => ({ kind: "field" as const, key: c.key, label: c.label, status: c.status as Unapproved["status"] }));
+}
+/** Breaker M6, M9 on B83: a withdrawn field's key given a new meaning for one rule would take over its other readers in
+ *  silence: they are changed first, by name. Asked when the fact is proposed and again when it lands. */
+export async function refuseTakingOverReaders(db: Parameters<typeof fieldReaders>[0], workspaceId: string, key: string, combinationId: string | null | undefined, ruleKey: string | null | undefined) {
+  if (!(await db.libraryChange.count({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key } }))) return;
+  const others = (await fieldReaders(db, workspaceId, key)).filter((r) => !(r.combinationId === combinationId && r.ref === ruleKey));
+  if (others.length) throw problem(409, "Still read", `This fact was a new field that was withdrawn, and ${readerWords(others)} still ${others.length === 1 ? "reads" : "read"} it. Point ${others.length === 1 ? "it" : "them"} at another field first: a new meaning here would change what ${others.length === 1 ? "it means" : "they mean"}.`);
 }
 /** What holds a combination's release: unapproved items it uses, and new fields its document types supply. */
 export async function unapprovedOf(db: Pick<Db, "libraryChange" | "canonicalField" | "logicalSection" | "documentType">, workspaceId: string, s: Parameters<typeof itemsOf>[0] & Parameters<typeof waitingSupplied>[2]) {
@@ -309,7 +317,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     await tx.canonicalField.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } });
     for (const x of lists) await dropFieldList(tx, c.workspaceId, x.answerListKey); // C3.6: its own draft list goes with it
     // Breaker m8: BR-10 changes form fields, so the history says so.
-    await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "decided", entity: "shared field", entityKey: c.key, summary: `${actor.name} withdrew the new field "${c.label ?? c.key}": ${why}. ${restored} form field${restored === 1 ? "" : "s"} back to worked out, ${maps.count} to no decision${readers.length ? `; still read by ${readers.map((r) => r.name).join("; ")}` : ""}`.slice(0, 600) } });
+    await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "decided", entity: "shared field", entityKey: c.key, summary: `${actor.name} withdrew the new field "${c.label ?? c.key}": ${why.replace(/\.$/, "")}. ${restored} form field${restored === 1 ? "" : "s"} back to worked out, ${maps.count} to no decision${readers.length ? `; still read by ${readers.map((r) => r.name).join("; ")}` : ""}`.slice(0, 600) } });
     return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count, form_fields_restored: restored, readers: readers.map((r) => r.name), taken_out_of: takenOut };
   }, { timeout: 30_000, maxWait: 10_000 }); // the readers are read under the lock, on a busy machine too (the same room as an ask)
 }

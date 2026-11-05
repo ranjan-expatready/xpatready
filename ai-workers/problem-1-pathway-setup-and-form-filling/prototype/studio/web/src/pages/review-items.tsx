@@ -111,6 +111,7 @@ export function LibraryChangePage() {
         {x.with_combination ? <p data-with-combination><b>Its combination</b> is {x.action === "RESTORE" ? "restored" : "retired"} with it, in the same release.</p> : null}
         {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
+        {x.status === "WAITING" && x.supplies && x.decision_note ? <div data-came-back><Notice tone="warn" title="Decide this again: it changed after it was decided">{x.decision_note}. What it does now is above; the reason was written for what it did before.</Notice></div> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
@@ -221,7 +222,7 @@ function Withdraw({ id, label = "Withdraw the new field" }: { id: string; label?
       {asking.isLoading ? <p className="text-sm text-text-muted" data-withdraw-reading>Checking what reads this field…</p> : null}
       {asking.isError ? <div data-withdraw-unread><Notice tone="warn" title="What reads this field could not be checked">You can still withdraw it. Anything that reads it holds its combination's Submit, by name, until it is changed.</Notice></div> : null}
       {readers.length ? <div data-withdraw-readers><Notice tone="warn" title="Something still reads this field">Withdrawing it leaves {readers.join("; ")} reading a field that is gone: whichever of these is in a combination's draft holds its Submit until it is changed.</Notice></div> : null}
-      {asking.data?.taken_out.length ? <p className="text-sm text-text-muted" data-withdraw-taken-out>Withdrawing it also takes it out of {asking.data.taken_out.join("; ")}.</p> : null}
+      {asking.data?.taken_out.length ? <p className="text-sm text-text-muted" data-withdraw-taken-out>Withdrawing it also takes it out of {asking.data.taken_out.join("; ")}: an approved change then goes back to a second person.</p> : null}
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex-1 text-sm">Why withdraw it<Input autoFocus className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
         <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3 || asking.isLoading} onClick={() => go.mutate(undefined)}>{label}</Button>

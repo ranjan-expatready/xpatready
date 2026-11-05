@@ -15,7 +15,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, SOLUTION, type Actor, type Audit, type Db } from "./core.ts";
-import { freeKey, keyFor, withdrawnStillRead } from "./library-changes.ts";
+import { freeKey, keyFor, refuseTakingOverReaders, withdrawnStillRead } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
@@ -589,6 +589,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
       const retired = await tx.canonicalField.findFirst({ where: { workspaceId: l.ws, canonicalFieldKey: ruleFact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } });
       fail(retired ? `${ruleFact} is a retired library field: reject this one and restore it in Library › Fields.` : `${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
     }
+    if (typeof ruleFact === "string") await refuseTakingOverReaders(tx, l.ws, ruleFact, r.combinationId, rule?.key); // Breaker M9 on B83: checked again as it lands
     // C11.13 (review of #427): a field drafted from a form edition keeps the id the AI proposed (the key later drafts are
     // matched by), when it is a library key and still free; otherwise a key is made from the name, as for any field.
     const proposed = r.step === DRAFT_FIELDS_STEP ? (r.work as { proposedKey?: unknown } | null)?.proposedKey : undefined;

@@ -12,10 +12,9 @@ import { canonical } from "../../../contracts/rules.ts";
 type Json = Parameters<typeof canonical>[0];
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
-import { fieldReaders, readerWords } from "./where-used.ts";
 import { insertProposals } from "./proposals.ts";
 import { answerValues } from "./answer-values.ts";
-import { keyFor } from "./library-changes.ts";
+import { keyFor, refuseTakingOverReaders } from "./library-changes.ts";
 import { LibrarySources } from "./library-sources.ts";
 
 /** A rule that reads facts: where it sits, its key there, its sentence and its condition tree. */
@@ -179,20 +178,7 @@ export class RuleFacts {
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
     const ruleValues = ruleValuesKnown(rules.filter((r) => factsRead(r.tree).includes(b.fact)), b.fact, values);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
-    // Breaker M6 on B83: a withdrawn field's key given a new meaning would take over its other readers in silence: they are changed first, by name.
-    if (await this.db.libraryChange.count({ where: { workspaceId: c.workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key: b.fact } })) {
-      const others = (await fieldReaders(this.db, c.workspaceId, b.fact)).filter((r) => !(r.combinationId === c.id && r.ref === b.rule));
-      if (others.length) fail(`This fact was a new field that was withdrawn, and ${readerWords(others)} still ${others.length === 1 ? "reads" : "read"} it. Change ${others.length === 1 ? "it" : "them"} first: a new meaning would reach ${others.length === 1 ? "it" : "them"} unseen.`, HttpStatus.CONFLICT);
-    }
-    // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
-    if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
-      fail(`${b.fact} is a retired library field: restore it in Library › Fields, and the rule can read it again.`, HttpStatus.CONFLICT);
-    // m7 (review c36 r3): one waiting item per name across the workspace, as on the add by a rule's key.
-    if (await this.db.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", identityKey: normalizeLabel(b.label) }, select: { id: true } }))
-      fail(`A proposal to add "${b.label}" is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
-    if (!missing.some((m) => m.fact === b.fact)) fail(`${b.fact} is a derived fact, worked out from others: it is not asked.`, HttpStatus.CONFLICT);
-    if (!FACT_KEY.test(b.fact)) fail(`The rule reads "${b.fact}", which is not a fact key (group.name): correct the rule first.`);
-    if (waitingFor.has(b.fact)) fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
+    await refuseTakingOverReaders(this.db, c.workspaceId, b.fact, c.id, b.rule); // Breaker M6 on B83
     const subject = b.fact.split(".")[0];
     const sha256 = createHash("sha256").update(canonical(rule!.tree as Json)).digest("hex");
     // M2 (review c36): parallel adds of one fact make one proposal. The waiting check and the write run under one lock

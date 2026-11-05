@@ -144,12 +144,15 @@ export async function fieldReaders(db: Client, workspaceId: string, key: string)
   for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (named.test(JSON.stringify(k.predicateJson ?? null))) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}`, combinationId: k.combinationId, ref: k.checkKey });
   for (const f of current(r.facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.canonicalFieldKey === key) out.push({ kind: "fact_source", name: `where this answer comes from ${on(f.combinationId)}` });
   for (const d of await db.derivedField.findMany({ where: { workspaceId, OR: [{ inputs: { has: key } }, { reference: key }] }, select: { plain: true } })) out.push({ kind: "worked_out", name: `the worked-out value "${d.plain ?? "with no words"}"` });
-  const open = await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, key: true, label: true, status: true, matches: true } });
+  // Review R4: a change of who fills or when a question is asked, on a question that asks this field, is a reader too.
+  const lineages = new Set([key, ...r.questions.filter((q) => q.canonicalFieldKey === key).map((q) => q.lineageKey)]);
+  const open = await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "placement_fills", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, key: true, label: true, status: true, matches: true } });
   const changing = new Set<string>();
   for (const c of open) {
     const after = (c.matches as { after?: unknown } | null)?.after;
-    if (c.kind === "document_supplies") { if (Array.isArray(after) && after.includes(key)) { if (c.status === "APPROVED") changing.add(c.key); out.push({ kind: "waiting_supplies", name: `the change on To review "${c.label ?? "with no name"}"` }); } }
-    else if (reads(after)) out.push({ kind: "waiting_change", name: `the change on To review "${c.label ?? "with no name"}"` });
+    const name = `${c.status === "APPROVED" ? "the approved change" : "the change on To review"} "${c.label ?? "with no name"}"`;
+    if (c.kind === "document_supplies") { if (Array.isArray(after) && after.includes(key)) { if (c.status === "APPROVED") changing.add(c.key); out.push({ kind: "waiting_supplies", name }); } }
+    else if (lineages.has(c.key) || reads(after)) out.push({ kind: "waiting_change", name });
   }
   const types = await db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, version: true, status: true, suppliesFacts: true } });
   for (const t of current(types, (t) => t.documentTypeKey)) if (t.suppliesFacts.includes(key)) out.push({ kind: changing.has(t.documentTypeKey) ? "document_type_change" : "document_type", name: `the document type "${t.name}", which supplies it` });
