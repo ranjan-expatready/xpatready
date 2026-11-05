@@ -86,8 +86,6 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
     for (const n of ["Client A", "Spouse A"]) { await tab(n); employer = employer || /prospective employer/i.test(await r.locator("#agent-view").innerText()); }
     ok("C6.11 fail (QA-152): no applicant is asked an employer's name for IMM 5476's firm boxes", !employer);
     await tab("The representative");
-    const mail = await line("E-mail address", "the representative").first().innerText();
-    ok("C6.11 pass: the representative's e-mail from the firm record passes IRCC's e-mail check (nothing to fix there)", /@sample-firm\.example\.com/.test(mail) && !/Enter an email address/.test(mail), mail.replace(/\s+/g, " ").slice(0, 160));
     const member = line("membership ID", "the representative");
     await member.first().waitFor(T);
     const mt = await member.first().innerText();

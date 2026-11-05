@@ -86,12 +86,10 @@ export function representativeContact(firm: Firm, members: Member[]): Record<str
     "person.mailing_address_city": o.city, "person.mailing_address_province_state": o.province_state, "person.mailing_address_postal_code": o.postal_code,
     "person.mailing_address_country": o.country, "person.telephone_number": o.phone,
   };
-  // C6.11: the same office and e-mail under the keys the configured checkpoint's IMM 5476 field map reads (the library
-  // holds both namings; the map of each edition picks one). The phone is split into its two boxes there.
-  all["person.email"] = u.email;
-  all["person.address_apt_unit"] = o.unit; all["person.address_street_number"] = o.street_number; all["person.address_street_name"] = o.street_name;
-  all["person.address_city"] = o.city; all["person.address_province_state"] = o.province_state; all["person.address_postal_code"] = o.postal_code;
-  all["person.address_country"] = o.country; all["person.phone_country_code"] = o.phone?.country_code; all["person.phone_number"] = o.phone?.number;
+  // C6.11 (tech lead's ruling on #1072, AGENTS rule 4): never also under the keys the configured checkpoint's maps read
+  // (person.address_*, person.email, person.phone_*): its IMM 5475 map puts its designated individual on those, and IRCC
+  // says that form is for "someone who will not act as your representative". Its IMM 5476 office block waits for a
+  // reviewed map change that gives IMM 5475's designated individual its own person.
   return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== undefined && v !== null && v !== ""));
 }
 
