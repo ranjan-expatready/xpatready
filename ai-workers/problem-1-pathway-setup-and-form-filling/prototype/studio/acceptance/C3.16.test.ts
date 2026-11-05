@@ -18,7 +18,11 @@ import { AUTHOR, APPROVER, REVIEWER, pack2, run } from "./lib/pack2.ts";
 const T = pack2("C3.16");
 const { call, sql, ok, words } = T;
 const CASE_PART = process.argv[4] === "case";
-const UNION = "relationship.current_union_start_date", EMPLOYER = "organisation.employer_name";
+const EMPLOYER = "organisation.employer_name";
+/** The union's "Date" box read through the partner (IMM 5257, Marital status: "Date" of the current marriage or
+ *  common-law union): found by its box, since the saved runs name the field relationship.start_date or
+ *  relationship.current_union_start_date depending on what the library already holds. */
+const unionKey = () => sql("select m.canonical_field_key from form_field_map m where m.person = 'subject_spouse_or_partner' and m.caption = 'Date' and m.canonical_field_key like 'relationship.%' order by 1 limit 1") ?? "";
 const scopeOf = async (key: string, actor = AUTHOR) => (await call("GET", `/library/fields/${key}/scope`, undefined, actor));
 const setScope = (key: string, scope: string, expected: string, actor: string | null = AUTHOR) => call("PUT", `/library/fields/${key}/scope`, { scope, expected }, actor as string);
 const stored = (key: string) => sql(`select scope from canonical_field where canonical_field_key='${key}' order by version desc limit 1`);
@@ -34,8 +38,9 @@ async function sixPart() {
   const vv = T.combo("vv.single"), wp = T.combo("wp.lmia_inside");
   await T.needQuestions(vv);
   await T.needQuestions(wp);
+  const UNION = unionKey();
   ok("setup (P-322): Visitor visa's \"date of the union\" and the LMIA work permit's employer name exist as draft fields after the people's steps",
-    sql(`select string_agg(distinct status::text, ',') from canonical_field where canonical_field_key in ('${UNION}','${EMPLOYER}')`) === "DRAFT");
+    !!UNION && sql(`select count(distinct canonical_field_key)||':'||string_agg(distinct status::text, ',') from canonical_field where canonical_field_key in ('${UNION}','${EMPLOYER}')`) === "2:DRAFT", UNION);
 
   // ------------------------------------------------------------------ C3.16-7: an unmarked snapshot is unchanged
   const shaBefore = (await preview(vv, { principal: 1 }))?.sha256 as string;
@@ -85,7 +90,7 @@ async function sixPart() {
   const repKey = sql("select distinct m.canonical_field_key from form_field_map m join canonical_field f on f.canonical_field_key=m.canonical_field_key where m.person='representative' and f.status='DRAFT' and m.canonical_field_key not like 'representative.%' order by 1 limit 1") ?? "";
   r = await setScope(repKey, "organisation", "person");
   ok("C3.16-2 fail (QA-152): Organisation on a field a representative's box reads is 422", !!repKey && r.status === 422 && /representative's box reads this field/.test(words(r)), [repKey, r.status, words(r)]);
-  const condKey = sql("select q.lineage_key from section_question q join canonical_field f on f.canonical_field_key=q.lineage_key where q.predicate_json is not null and q.repeats <> 'per_row' and f.status='DRAFT' and q.lineage_key like 'person.%' and q.lineage_key <> 'person.date_of_birth' order by 1 limit 1") ?? "";
+  const condKey = sql("select q.lineage_key from section_question q join canonical_field f on f.canonical_field_key=q.lineage_key where q.predicate_json is not null and q.predicate_json <> 'null'::jsonb and q.status in ('DRAFT','PUBLISHED') and q.repeats <> 'per_row' and f.status='DRAFT' and q.lineage_key like 'person.%' and q.lineage_key <> 'person.date_of_birth' and not exists (select 1 from form_field_map m where m.canonical_field_key = q.lineage_key and m.person = 'representative') and not exists (select 1 from section_question r where r.lineage_key = q.lineage_key and r.repeats = 'per_row') order by 1 limit 1") ?? "";
   if (condKey) { r = await setScope(condKey, "household", "person"); ok("C3.16-2 fail: Household on a question with a condition is 422", r.status === 422 && /cannot depend on one person's answer/.test(words(r)), [condKey, r.status, words(r)]); }
   else console.log("NOTE  C3.16-2: no conditioned single person question on this copy; the condition refusal is proven by the pure check (tests/check_c316_field_scope.ts)");
   const place = JSON.parse(sql(`select json_build_object('s', section_key, 'c', collected_from) from section_question where lineage_key='${UNION}' order by version desc limit 1`) || "{}");
@@ -121,11 +126,8 @@ async function sixPart() {
 async function casePart() {
   const { needVisitorVisa, openCase, agent, answer, confirmAll, sql: msql } = await import("./lib/m3.ts");
   const vv = needVisitorVisa();
-  // The union's "Date" box read through the partner: its key on the six is UNION; the runtime setup's saved 21 Oct run
-  // named it relationship.start_date.
-  const field = sql(`select canonical_field_key from canonical_field where canonical_field_key in ('${UNION}', 'relationship.start_date') order by canonical_field_key = '${UNION}' desc limit 1`);
-  if (!field) { console.log(`STOP  setup missing: Visitor visa's release has no date of the union on this copy`); process.exit(2); }
-  const UNION_KEY = field;
+  const UNION_KEY = unionKey();
+  if (!UNION_KEY) { console.log("STOP  setup missing: Visitor visa's release has no date of the union on this copy"); process.exit(2); }
   // Named scaffolding (P-33): the field is published by release 1, so the product refuses the scope (rule 4, -2 above);
   // the test sets it in SQL, then releases again through the release's own steps, so the release carries the mark.
   sql(`update canonical_field set scope='HOUSEHOLD' where canonical_field_key='${UNION_KEY}'`);
