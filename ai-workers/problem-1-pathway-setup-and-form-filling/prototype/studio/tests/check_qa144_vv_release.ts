@@ -9,6 +9,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { FORM_SETUP } from "../api/src/form-setup.ts";
+/** QA-144 slice 4 (P-319): the combinations set up from their forms are the form setup table's, never a list here. */
+const FROM_FORMS = Object.keys(FORM_SETUP).map((k) => `'${k}'`).join(", ");
 
 const PORT = Number(process.argv[2] ?? 4470), DB = process.argv[3] ?? "xr_studio_b8_qa144";
 let pass = 0, fail = 0;
@@ -97,7 +100,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Review M2: a section is chosen only when every applying person answers all of it anyway (C4.1 orders the chosen
   // ones); every other placement goes out because a form or a rule reads its fact, and only to whom it applies. A child
   // aged 1 is asked nothing only because a section is chosen, and no representative's licence facts.
-  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least three, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3
+  // QA-144 slice 4 (qa's ruling on #1050, P-314): at least two, enough for C4.1's order since its pack reads the current
+  // last section. Express Entry's IMM 0008 puts its address parts in the shared "Contact information" section, so the
+  // Visitor visa unchooses it (review M2: no visitor is asked them); three were only for a fixed position.
+  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least two, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 2
     && n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) < n(`select count(distinct section_key) from section_question where updated_by = 'user-A'`), sql(`select string_agg(section_key, ',') from sqr_section_selection where combination_id = '${vv}'`));
   const pv = (await call("GET", `/combinations/${vv}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify({ "child-1|person.date_of_birth": "2025-03-01" }))}`)).body;
   const toddler = ((pv?.questions ?? []) as { fact: string; about: string; why?: string; required?: boolean }[]).filter((q) => q.about === "child-1");
@@ -148,7 +154,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Slices 2 and 3 add With an LMIA (check_qa144_lmia_release.ts) and the Study permit (check_qa144_sp_release.ts); R2-m1
   // keeps the Visitor visa's chosen sections ones its people all answer (the toddler and never-married checks above run
   // after their placements).
-  ok("QA-144 scope: only the Visitor visa, With an LMIA and the Study permit are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
+  ok("QA-144 scope: only the combinations the form setup table holds are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in (${FROM_FORMS})`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();

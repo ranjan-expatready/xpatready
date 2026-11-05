@@ -154,7 +154,9 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
     const values = e.outcome === "mapped" && e.fact ? lists.get(e.fact) : undefined;
     // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
     if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
-    for (const p of optionMapProblems(values, e.option_map, listedOf.get(e.fact!))) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
+    // QA-144 slice 4: labelled by its form edition, so a refusal's words name the form, never the field's PDF path
+    // ("form1[0].Page1[0]…", S5); the path stays the item a screen links to.
+    for (const p of optionMapProblems(values, e.option_map, listedOf.get(e.fact!))) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, label: m.form_edition, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
   }
   // B81: a value a person marked not on this form is said once per form: it passes, and a case with that answer is refused.
   const labels = new Map<string, string>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list?.values ?? []).map((v): [string, string] => [`${f.id}|${v.key}`, v.label])));
