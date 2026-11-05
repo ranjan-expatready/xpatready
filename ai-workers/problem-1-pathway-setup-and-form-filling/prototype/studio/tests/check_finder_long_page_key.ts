@@ -2,14 +2,14 @@
 // the offered page "Start Up Visa" (148 characters) and Saved or Rules only, Start showed "Too big: expected string to
 // have <=120 characters": the dialog put the page address itself in the launch key (web/src/pages/workspace/finder.tsx),
 // and the key is 8 to 120 characters (contracts/form-library.ts). Now the key holds a fixed-length fingerprint of the
-// address (web/src/lib/find-key.ts). This check proves, on the loaded demo's Super visa: the exact 148-character address
+// address (web/src/pages/workspace/find-key.ts). This check proves, on the loaded demo's Super visa: the exact 148-character address
 // and one of over 300 each start (pass) where the old key is refused and starts nothing (fail); the same address twice is
 // one run, two addresses are two runs; and the dialog never shows a validator's own message. Saved and Rules only: US$0,
 // no model call, canada.ca is the recorded copies.
 //   zsh studio/tools/isolated.sh forms_lpk 4451 start && tsx studio/tests/check_finder_long_page_key.ts 4451 xr_studio_forms_lpk
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { FIND_KEY_MAX, FIND_WORDS, findErrorWords, findRunKey } from "../web/src/lib/find-key.ts";
+import { FIND_KEY_MAX, FIND_WORDS, findErrorWords, findRunKey } from "../web/src/pages/workspace/find-key.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_lpk";
 let pass = 0, fail = 0;

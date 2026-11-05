@@ -19,7 +19,7 @@ import { costWords, START } from "../../../../contracts/start-setup";
 import { FindFormsStart } from "@/components/start-setup";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS } from "../../../../contracts/cost-check";
-import { findErrorWords, findRunKey } from "@/lib/find-key";
+import { findErrorWords, findRunKey } from "./find-key";
 
 export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION" | "CHECKLIST_IN_LIBRARY";
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; /** C11.15 (P-156 (4)): where the file is on canada.ca when its download failed. */ link?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string; /** QA-103: the library edition the finder used or downloaded. */ edition?: string | null };
@@ -98,7 +98,7 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
     setBusy(true); setError(null);
     try {
       const body = { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) };
-      // Founder's test 5 Nov: the key holds a fixed-length fingerprint of the page, never the page itself (lib/find-key.ts).
+      // Founder's test 5 Nov: the key holds a fixed-length fingerprint of the page, never the page itself (find-key.ts).
       const runKey = redoPath ? null : await findRunKey(key, mode, pageUrl);
       // A Redo is started as planned; over a cost limit the server refuses it in words (no Continue past a limit here).
       const v = redoPath ? await api<{ id: string }>(redoPath, { method: "POST", json: { stage, mode, planSha256: plan.data.plan_sha256, idempotencyKey: `redo-${key}-${stage}-${mode}` } }) : (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
