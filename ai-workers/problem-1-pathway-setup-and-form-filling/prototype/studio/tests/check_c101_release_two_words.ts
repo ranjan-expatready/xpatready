@@ -9,7 +9,7 @@ import { releaseTwoWords, type Listed } from "../api/src/checkpoint-words.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
-const field = (words: string): Listed => ({ message: `Marital status: (person.marital_status): ${words}.` });
+const field = (words: string): Listed => ({ message: `Marital status: ${words}.` });
 const FORM = { application: "IMM 5257", form: "IMM 5645" };
 const problems: Listed[] = [
   ...[0, 1].map(() => field("it has no option map yet")),
@@ -23,11 +23,11 @@ ok("C10.1 row 9: it says what Submit would do, not that Submit refused", /Submit
 ok("C10.1 row 9: plain words for a person: no form field code, and none of the words the C10.1 pack refuses (Error, undefined, null, prisma, [0])", !/\[0\]|person\.|ChildMStatus|IMM_5645/.test(words) && !/Error|undefined|null|prisma|\[0\]/i.test(words), words);
 ok("C10.1 row 9: a value a form field has no code for waits for row B81", /Waits for row B81/.test(words));
 const other = releaseTwoWords(FORM, [{ message: "IMM 5645 reads a list nobody keeps." }]);
-ok("C10.1 row 9 fail: another problem keeps its own words, is counted as itself and is never blamed on B81", /1 problem/.test(other) && /1 other problem: IMM 5645 reads a list nobody keeps/.test(other) && !/B81/.test(other) && !/choice form fields/.test(other), other);
+ok("C10.1 row 9 fail: another problem keeps its own words, is counted as itself and is never blamed on B81", /1 problem/.test(other) && /1 other problem: IMM 5645 reads a list nobody keeps/.test(other) && !/B81/.test(other) && !/choice form fields/.test(other) && !/\.\./.test(other), other);
 const none = releaseTwoWords(FORM, []);
 ok("C10.1 row 9 fail: no problem listed is said as none, with the draft still left as released, never a count", /shows no problem/.test(none) && /left as released/.test(none) && !/Submit would refuse/.test(none), none);
 const unread = releaseTwoWords(FORM, null);
-ok("C10.1 row 9 fail: a family form with no edition read is said so, and no count is made up", /no PDF edition read/.test(unread) && !/Submit would refuse/.test(unread), unread);
+ok("C10.1 row 9 fail: a family form with no edition read is said so, and no count is made up", /no PDF edition that can be read/.test(unread) && !/Submit would refuse/.test(unread) && !/B81/.test(unread), unread);
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

@@ -836,9 +836,13 @@ export class Demo {
     // would refuse, read without writing from the family form IMM 5257 filed Online needs (api/src/checkpoint-words.ts).
     // The steps that set release 2 come with B81 (they stood here at #1009's 4a09bcd86).
     const onlineFamily = FAMILY_FORM_BY_CHANNEL.online.form;
-    const onlineEdition = visitor ? await this.db.formEdition.findFirst({ where: { workspaceId, form: { formKey: onlineFamily }, channel: "PDF" }, select: { id: true } }) : null;
+    // Every PDF edition, as the validator reads them; a form that cannot be read is said on the row, it never stops the load.
+    const wouldRefuse = !visitor ? null : await (async () => {
+      const editions = await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: onlineFamily }, channel: "PDF" }, select: { id: true } });
+      return editions.length ? (await Promise.all(editions.map((ed) => this.forms.optionMapProblemsIfFiled(ed.id)))).flat() : null;
+    })().catch(() => null);
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
-      why: visitor ? releaseTwoWords({ application: FORM_SETUP["vv.single"].application, form: onlineFamily }, onlineEdition ? await this.forms.optionMapProblemsIfFiled(onlineEdition.id) : null) : "Waits for the Visitor visa's release 1: its channels change for release 2." });
+      why: visitor ? releaseTwoWords({ application: FORM_SETUP["vv.single"].application, form: onlineFamily }, wouldRefuse) : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     const rowEleven = !!fam?.caseId && fam.people === 4 && fam.births === 4 && fam.fromRecord > 0;
     row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : rowEleven ? "done" : "partial",
       shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} on release ${fam.release}: ${fam.people} people (principal applicant, travelling spouse, a child under 18, a child 18 or over; Sample names); ${fam.fromRecord} answers from the Sample record and ${fam.madeUp} made up (Sample: the second child's name and both children's dates of birth)${fam.notTaken ? `; ${fam.notTaken} of the record's facts not asked by this release or not on its lists` : ""}; ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made` : "The case area is built (Demo › Open the case area)",

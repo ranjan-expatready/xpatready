@@ -249,7 +249,7 @@ export class Forms {
   async optionMapProblemsIfFiled(editionId: string) {
     const ed = await this.pdfEdition(editionId);
     const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const lists = new Map((await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } })).map((l) => [l.answerListKey, l]));
+    const lists = new Map((await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "asc" } })).map((l) => [l.answerListKey, l])); // the newest of each list
     const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
     const optionsOf = this.formOptions(ed, maps);
     return maps.flatMap((m) => {
@@ -258,7 +258,7 @@ export class Forms {
       const opts = optionsOf.get(m.dataPath), values = list.values.map((v) => ({ key: v.valueKey, label: v.label }));
       const map = opts?.length ? draftOptionMap(values, opts).optionMap : m.optionMap as OptionMap | null;
       if (!map && !hasCodes(m.transform)) return [];
-      return optionMapProblems(values.map((v) => v.key), map).map((p) => ({ item: m.dataPath, message: `${m.caption ?? m.dataPath} (${m.canonicalFieldKey}): ${p}.` }));
+      return optionMapProblems(values.map((v) => v.key), map).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
     });
   }
 
