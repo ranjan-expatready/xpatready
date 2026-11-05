@@ -18,6 +18,12 @@ run(async () => {
   await T.ready();
   const wp = T.combo(T.key("vv.single"));
   await T.needQuestions(wp);
+  // B82 (QA-233; #868's P-248 rule refuses Submit with "No document line yet"): on the six the lines come from the
+  // people's own steps too, with the facts their conditions read. The checkpoint already has its lines, so nothing runs.
+  if (sql(`select count(*) from document_requirement where combination_id='${wp}' and status <> 'RETIRED'`) === "0") {
+    const docs = await T.documentsBySteps(wp);
+    console.log(`SETUP document lines through the people's steps: ${JSON.stringify(docs).slice(0, 300)}`);
+  }
   const releases = () => Number(sql(`select count(*) from config_release where combination_id='${wp}'`));
   const r0 = releases();
   const fs = (await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? [];

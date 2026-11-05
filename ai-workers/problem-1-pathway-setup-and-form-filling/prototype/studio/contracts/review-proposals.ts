@@ -59,7 +59,8 @@ export type QueueProposal = {
   created_at: string;
 };
 export type ProposalsView = { groups: ProposalGroup[]; group: (ProposalGroup & { bands: Record<Band, QueueProposal[]> }) | null; batch_max: number; undo_seconds: number };
-export type DecideResult = { batchId: string; items: { id: string; landedAs: string | null }[] };
+/** joined (B78): a held section was named what the library already holds, so it landed on that section, adding nothing. */
+export type DecideResult = { batchId: string; items: { id: string; landedAs: string | null; joined?: boolean }[] };
 
 /** What one decision landed on the library, for a second person to approve or return together. */
 export type ChangeBatch = { id: string; by: string | null; by_id: string; at: string; count: number; items: LibraryChangeView[]; can_decide: boolean; why_not: string | null };
