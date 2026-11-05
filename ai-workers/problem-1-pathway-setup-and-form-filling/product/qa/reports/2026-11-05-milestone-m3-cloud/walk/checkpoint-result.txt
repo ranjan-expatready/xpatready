@@ -1,0 +1,58 @@
+Row	What it shows	Status
+1	
+Ingest PDF forms; a held file approved by a second person
+44 official files read on the six combinations (code, edition, checksum; no AI); an off-list copy of IMM 5257 (06-2019) (imm5257e-pre-2023-from-email.pdf) held for a source check, its IRCC page recorded by Configuration author, approved by Approver. Then the intake found it older than the library's IMM 5257 (09-2023), and Approver set it aside: not used.
+	Done
+2	
+Online forms captured with the browser extension
+Parked (P-102, W6)
+	Parked
+3	
+AI maps form fields to shared fields (saved answers, US$0)
+19 saved AI answers replayed (US$0)
+	Done
+4	
+A person reviews: accept with a reason, edit, reject
+678 accepted, 1 edited, 1 returned with a reason; 19 of 19 drafts applied to their combinations; 292 where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)
+	Done
+5	
+New shared fields approved by a second person
+396 of 396 new library items approved by the Approver, not by the author
+	Done
+6	
+Reset returns to a blank workspace
+Demo › Reset demo
+	Done
+7	
+Sections and questions from the forms' own parts (rules, US$0)
+41 sections drafted from Visitors › Visitor visa, Study permits › Study permit › Outside Canada, Work permits › Employer-specific work permit › With an LMIA – inside Canada's forms and approved by the Approver; 229 facts asked in the section of their form field; 116 form fields no saved answer proposed are filled by hand; 16 form lines set from IRCC's words (Sample, Unconfirmed: expert); 4 chosen sections unchosen again where a shared placement made them not everyone's (Visitor visa)
+29 sections held on To review for a person to name (the form prints no heading over their form fields): Unnamed section 1 of IMM 5257, Unnamed section 1 of IMM 5257 SCH1, Unnamed section 2 of IMM 5257 SCH1, Unnamed section 3 of IMM 5257 SCH1, Unnamed section 4 of IMM 5257 SCH1, Unnamed section 5 of IMM 5257 SCH1, Unnamed section 1 of IMM 5409, Unnamed section 2 of IMM 5409, Unnamed section 1 of IMM 5476, Unnamed section 2 of IMM 5476, Unnamed section 1 of IMM 5475, Unnamed section 2 of IMM 5475, Unnamed section 1 of IMM 1294, Unnamed section 2 of IMM 1294, Unnamed section 3 of IMM 1294, Unnamed section 4 of IMM 1294, Unnamed section 5 of IMM 1294, Unnamed section 1 of IMM 5646, Unnamed section 2 of IMM 5646, Unnamed section 10 of IMM 5710, Unnamed section 1 of IMM 5710, Unnamed section 2 of IMM 5710, Unnamed section 3 of IMM 5710, Unnamed section 4 of IMM 5710, Unnamed section 5 of IMM 5710, Unnamed section 6 of IMM 5710, Unnamed section 7 of IMM 5710, Unnamed section 8 of IMM 5710, Unnamed section 9 of IMM 5710
+	Partly
+8	
+Smart questionnaire (SQR) per person, PQR picks, preview by person
+On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above
+	Done
+9	
+Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)
+The channel route and the signed-scan lines are built (Forms tab)
+Release 2 is not set up yet, and Visitor visa's draft is left as released (nothing changed on it). Filed Online, IMM 5257 needs IMM 5645 as the family information form, and Submit would refuse it with 13 problems on IMM 5645's choice form fields: 11 form fields have no code for some values of the answer list they read (filling would refuse them); 2 have no option map yet. Waits for row B81: a person marks a list value a form field does not print, so filling refuses it in words.
+	Waiting
+10	
+Review and release: submit, expert ticks, a different person releases
+Release 1 of Visitors › Visitor visa, Study permits › Study permit › Outside Canada, Work permits › Employer-specific work permit › With an LMIA – inside Canada
+Provincial nominees › Express Entry stream: Fix 219 problems before submitting: IMM 0008 DEP: 1 form field has no decision in this draft (for example "Dependant Type"). Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1). · IMM 5406: 2 form fields have no decision in this draft. Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1). · IMM 0008: · Family sponsorship › Spouse or common-law partner: Fix 93 problems before submitting: IMM 5604: 9 form fields have no decision in this draft (for example "I,"). Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1). · IMM 1344: 21 form fields have no decision in this draft (for example "*Family Name(s) (exactly as shown on passport or travel…"). Map each one, mark it "not a fact", or "filled by hand" · Labour market impact assessment › High-wage position: not submitted, no form is on it yet (the form finder has no saved answer for its canada.ca page, or none was confirmed).
+	Partly
+11	
+A family case on release 1
+Case SAMPLE-VV-FAMILY-1 on release 1: 4 people (principal applicant, travelling spouse, a child under 18, a child 18 or over; Sample names); 45 answers from the Sample record and 4 made up (Sample: the second child's name and both children's dates of birth); 42 of the record's facts not asked by this release or not on its lists; 21 form copies made
+	Done
+12	
+IMM 5257 filled as a PDF and read back equal
+IMM 5257 generated for 4 of 4 applicants on release 1 (C7.1)
+Validate each copy in Adobe Reader and upload the validated copy on the case's Forms tab: the checkpoint cannot press Validate (P-46, P-171), so the read-back waits for a person. Other forms' copies not made: IMM 5257 SCH1 for Client A (Sample): No such form. · IMM 5257 SCH1 for Partner (Sample): No such form. · IMM 5257 SCH1 for Child 18 or over (Sample): No such form.
+	Partly
+17	
+New edition: IMM 5476 2021 → 11-2025 comparison and impact
+IMM 5476 (11-2025) held as a new edition over the library's IMM 5476 (11-2021), which 4 combinations file: its comparison and impact are on To review (saved AI comparison, US$0); canada.ca names 11-2025 the current edition
+	Done
+What the loader did, step by step

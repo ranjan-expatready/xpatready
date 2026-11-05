@@ -1,0 +1,71 @@
+{
+ "res": {
+  "user-O": {
+   "buttons": [
+    "Case team",
+    "Add spouse or partner",
+    "Add child",
+    "Generate a copy",
+    "Add finding",
+    "Record the submission…",
+    "Confirm section",
+    "Edit"
+   ],
+   "has": {
+    "Ready to file": true,
+    "Pass": false,
+    "Review the filing": false,
+    "Reviewed by": false,
+    "Upload the validated copy": false,
+    "Printed": false,
+    "Signed by hand": false,
+    "Upload the signed scan": false,
+    "Uploaded to IRCC": false,
+    "Change channel": false,
+    "Answer sheet": false,
+    "Entered in the portal": false,
+    "Download PDF copy": false,
+    "Filed through": false,
+    "Fee": false,
+    "CAD": true,
+    "Documents": false,
+    "Out of date": false,
+    "Record the submission": true
+   }
+  },
+  "user-R": {
+   "buttons": [
+    "Case team",
+    "Add spouse or partner",
+    "Add child",
+    "Generate a copy",
+    "Add finding",
+    "Record the submission…",
+    "Confirm section",
+    "Edit"
+   ],
+   "has": {
+    "Ready to file": true,
+    "Pass": false,
+    "Review the filing": false,
+    "Reviewed by": false,
+    "Upload the validated copy": false,
+    "Printed": false,
+    "Signed by hand": false,
+    "Upload the signed scan": false,
+    "Uploaded to IRCC": false,
+    "Change channel": false,
+    "Answer sheet": false,
+    "Entered in the portal": false,
+    "Download PDF copy": false,
+    "Filed through": false,
+    "Fee": false,
+    "CAD": true,
+    "Documents": false,
+    "Out of date": false,
+    "Record the submission": true
+   }
+  }
+ },
+ "errs": []
+}
