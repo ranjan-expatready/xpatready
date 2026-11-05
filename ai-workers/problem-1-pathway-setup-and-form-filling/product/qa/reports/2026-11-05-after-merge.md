@@ -38,7 +38,7 @@
 
 **Closed:** QA-231. **New:** QA-232 (UX · Minor, #1005's supplies panel, from qa's gate A). **M2: 55/60 confirmed** (+C3.6 in batch 16, +C9.1).
 
-## Batch 18 — #868 (G5, C5.1), #1005 (C4.5) · main 8fcfc7888 · ~04:15–04:35 IST
+## Batch 18 — #868 (G5, C5.1), #1005 (C4.5) · main 8fcfc7888 · ~04:10–04:25 IST
 | Row | Verdict | Evidence |
 |---|---|---|
 | C5.1 (M2) | **Works** (was Partial) | `C5.1.test.ts` six 0 · 49/49 (run 41928294080), checkpoint 0 · 49/49 (run 41928312919); gate A on #868 |
@@ -46,12 +46,32 @@
 
 **M2: 57/60 confirmed** (55 after #1016; +C5.1, +C4.5). Thin slice 7/8. M3 1/17.
 
-## Records ~04:45 IST: QA-233 (Gap · Major, no capability)
+## Records ~04:30 IST: QA-233 (Gap · Major, no capability)
 The checklist reading lands Visitor visa lines whose conditions read three facts not in the library; Submit rightly refuses them. No acceptance step breaks today, so it holds no row (detail in `bugs-open-detail.md`). Not fixed by #967 (by code). C4.1's pack (#1022) runs the passport step after Submit, the order a person meets it.
 
-## Batch 20 — #973 (QA-221), #1022 (qa's C4.1 pack) · main c5608bb37 · ~05:20–05:45 IST
+## Batch 20 — #973 (QA-221), #1022 (qa's C4.1 pack) · main c5608bb37 · ~05:10–05:30 IST
 | Row | Verdict | Evidence |
 |---|---|---|
 | C4.1 (M2) | **Works** (was Partial) | `C4.1.test.ts` six 0 · 25/25 (run 41937658470), checkpoint 0 · 25/25 (run 41937673811) |
 
 **Closed:** QA-221. **M2: 58/60 confirmed** (was 57). Left: C4.11 and C7.7 (#967). Thin slice 7/8.
+
+## Batch 21 — #967 (B52, QA-227) · main adc904436 · ~05:50–06:15 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C4.11 (M2) | Partial, 23/24 on the six (run 41944044725) | G5 red (Ready gap; owner B73, after #865 and B74); new QA-234 (Major; row B83): the own-question step has no screen |
+| C7.7, C6.11 (M3) | Partial (unchanged) | QA-227 closed; other Majors remain |
+
+**Closed:** QA-227 (`check_b52_own_yes_no.ts` 52/52 on a fresh copy of main). **New:** QA-234. **M2: 58/60.** Left: C4.11, C10.1.
+
+## Records ~06:30 IST: QA-235 (Bug · Major, row B84)
+Confirmed by route on a checkpoint copy of main adc904436: generating IMM 5257 SCH1 answers 404 "No such form." (IMM 5257: 202). Tagged C7.7 only (M3, already Partial): no pack step generates SCH1, so no Works row is demoted. M2 unchanged.
+
+## Records ~06:35 IST: QA-236 (Bug · Minor)
+Reproduced by route on fresh copies of main 113532ac2: the order of applying Visitor visa's field maps changes the library (one UCI field or two). The duplicate needs the author to accept a proposal marked CONFLICT / Decide. qa's 1440 px walk confirms the page says so in words, as the first row to decide (`qa236-uci-conflict-1440.png`): the rating stays Minor. Tagged C3.2; M2 unchanged. The setup's accept-all with a tied `started_at` is the likely cause of flakes in packs that use `questionsBySteps`.
+
+## Records: QA-237 (Gap · Major, row B86)
+Reproduced by route and walked at 1440 px on a fresh six: an approved condition makes the draft refuse "Hiding a value a form reads", and the only other way out the message offers (a box under the same condition) cannot work, because box conditions are free text. Tagged C4.11; it cannot be Works while this is open. The guard itself is right. M2 unchanged, 58/60.
+
+## Records ~07:30 IST: QA-238 (Bug · Minor), from the verdict on #1040
+A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M2 unchanged. #1040's verdict: PASS as a Saved result (C4.11 24/24, C4.7 17/17 on its head; run 41951440360). C4.11 stays Partial (QA-234, QA-237).
