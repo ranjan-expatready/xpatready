@@ -108,3 +108,39 @@ I verified each fix myself rather than taking the builder's word. Isolated copy 
 **Round 2 journey score:** 8.5 / 10, now a pass with no criterion at 0. Plain words, correct data and error recovery each rise to 1; visual quality (pre-existing clipping) and trust (m6) stay at ½.
 
 **Verdict on c28c68923: Approve.** No Blocker or Major is open. Still open: m6 (Minor), a line for the PR body.
+
+## Round 3 (diff-only, merge 4003adfbc)
+Scope: only what the merge of origin/main (bf12209f1; old base 74aec1b58) changes for B104. I ran my own isolated copy, `rv_b104` on :4446, with live AI off (US$0), and stopped it afterwards.
+
+**1. Conflict resolution: clean.**
+* `git show 4003adfbc -- api/src/demo.ts` keeps both sides' imports (`setStageOne`, `section-names.ts`) and main's `SET_UP_FROM_FORMS = new Set(Object.keys(FORM_SETUP))`. The old three-key constant is dropped.
+* `git diff origin/main 4003adfbc -- prototype/studio/` lists exactly B104's five files plus demo.ts, and demo.ts differs by +3 lines: the import (demo.ts:42) and the comment plus the call (demo.ts:836-837).
+* B104's five files are byte-identical to c28c68923, the commit approved in round 2.
+* Outside the studio, only B104's own `screens/B104-checkpoint-stage-one/` evidence differs.
+
+**2. Semantic interactions.**
+* **Placement:** the call is still after row 8 and before `applySampleFormRoles` and release 1 (demo.ts:837-839).
+* **Other combinations:** main's larger `FORM_SETUP` (B79) does not widen the step. `stageOneOf` reads only the JSON's `vv.single`, and live L7 passes.
+* **Services the step calls:** `forms.setAccount` is unchanged, and so are `saveForm`'s `signedBy`/`baseRevision` path, the `SIGNED_BY`/`IRCC_ACCOUNTS` contracts and `checkGates`.
+* **Main's new release checks** (`conditionFactProblems`, withdrawn-field lines) read document lines and fields, not gates, so they do not touch B104's step.
+* **Main's new C10.1 row 9** now makes Visitor visa's release 2 (demo.ts:868-916). On the merged loader it succeeds with B104's APR Portal account, so the two do not clash.
+* **Release 1 in the database:** IMM 5257 `parent_for_minor`, IMM 5707 `person`, IMM 5476 `person_and_representative`, 2 gates. The four unset forms stay unset.
+* **Release 2:** it carries the IMM 5257 and IMM 5476 signers and the gates, retires IMM 5707 (demo.ts:881) and adds IMM 5645 with no signer. I found no duplicated or contradicting signer or account write.
+
+**3. Tests on the merged code.**
+* Offline `tests/check_b104_stage_one.ts`: 16/16 PASS.
+* Live `tests/check_b104_checkpoint.ts 4446 xr_studio_rv_b104`: **2 FAIL** (L3, L5); the other 7 pass.
+
+### Findings
+* **Major M1: B104's live test fails on the merged loader.**
+  * `tests/check_b104_checkpoint.ts:27` reads `config?mode=published` as if it were release 1. Since main's row 9, published is **release 2**.
+  * L3 (line 29) fails because IMM 5707 is retired in release 2. Observed: `{"IMM 5257":"parent_for_minor",…,"IMM 5476":"person_and_representative","IMM 5645":null,…}`, with no IMM 5707.
+  * L5 (line 35) fails on `released.release === 1`. Observed: `{"released":2,"gates":2,"judgement":4,"savedBy":"Configuration author"}`.
+  * The step itself is right; the test's reading of "release 1" is stale. CI runs this suite (round 2: `run-suites.sh`), so this commit would go red.
+  * Fix: read release 1 itself (for example the `config_release` row with version 1 through `sql`, or a route that serves it). For L5, either assert that the released gates are carried (release ≥ 1) or read release 1's gates.
+* **Minor m7: IMM 5645 has no signer and is not in the data's unset list.** Release 2 adds IMM 5645 with no signer, and `samples/checkpoint-stage-one.json` neither sets it nor lists it under `signers_not_set` (the readiness check reads that as "a signature is needed"). The data describes release 1 only. Record it in the JSON or the PR; this is not a new item.
+* **m6** (from round 2: the PR body does not say IMM 5257 loses its "Picked by AI · Sample" chip) is still open.
+
+**Round 3 journey score:** 8.5 / 10, unchanged. The merge leaves the product behaviour as it was; only the test evidence is broken (M1).
+
+Verdict: Changes requested on 4003adfbc
