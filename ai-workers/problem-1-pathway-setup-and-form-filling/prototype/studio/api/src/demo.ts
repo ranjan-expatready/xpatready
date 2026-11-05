@@ -260,7 +260,7 @@ export class Demo {
    *  as a proposal the content reviewer accepts (C3.6). Then each fact a line reads is added for that line's rule with its
    *  answer values (Questionnaires › "Facts a rule needs"), accepted by the content reviewer and approved into the library
    *  by the Approver, and asked per person beside the fact it is about (Library › Fields › placement). A step a rule
-   *  refuses is named in `refused`, never dropped. Returns how many lines went in. */
+   *  refuses is named in `refused`, never dropped. Returns how many lines went in and how many wait for their facts. */
   private async conditionalDocumentLines(author: Actor, reviewer: Actor, approver: Actor, workspaceId: string, combinationId: string, spec: ConditionalDocuments, parts: Awaited<ReturnType<typeof placeFromFormParts>>, placed: string[], refused: string[], say: (e: unknown) => string) {
     type Save = Parameters<Studio["saveRequirement"]>[3];
     let n = 0;
@@ -285,7 +285,7 @@ export class Demo {
       } catch (e) { refused.push(`${l.type}: ${say(e)}`); }
     }
     if (waiting.length) refused.push(`${waiting.length} conditional document line${waiting.length === 1 ? " waits" : "s wait"}: ${waiting.join("; ")}`);
-    if (!n) return n; // no line reads the facts, so they are not added (C3.6 adds a fact only for a rule that reads it)
+    if (!n) return { n, waiting: waiting.length }; // no line reads the facts, so they are not added (C3.6 adds a fact only for a rule that reads it)
     const needed = (await this.ruleFacts.list(combinationId)).facts;
     for (const f of spec.facts) {
       try {
@@ -317,7 +317,7 @@ export class Demo {
         catch (e) { refused.push(`${r.lineageKey}: ${say(e)}`); }
       }
     }
-    return n;
+    return { n, waiting: waiting.length };
   }
 
   /** G5 (C5.1, P-248; tech lead's ruling on #868, option 1): the configured checkpoint's With an LMIA gets its document
@@ -854,7 +854,7 @@ export class Demo {
           let conditional: ConditionalDocuments | string | undefined;
           try { conditional = (JSON.parse(readFileSync(CONDITIONAL_DOCUMENTS, "utf8")) as Record<string, ConditionalDocuments | string>)[keyOf.get(c.id) ?? ""]; }
           catch (e) { setUpRefused.push(`samples/conditional-documents.json could not be read, so no conditional document line was added: ${(e as Error).message.slice(0, 200)}`); }
-          if (conditional && typeof conditional === "object") { const d = await this.conditionalDocumentLines(author, sme, approver, workspaceId, c.id, conditional, p, placedFacts, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} conditional document lines and the facts they read (samples/conditional-documents.json; Sample, Unconfirmed: expert)`); }
+          if (conditional && typeof conditional === "object") { const d = await this.conditionalDocumentLines(author, sme, approver, workspaceId, c.id, conditional, p, placedFacts, setUpRefused, said); documentLines += d.n; log.push(`  ${keyOf.get(c.id)}: ${d.n} conditional document lines in, ${d.waiting} waiting for the facts their condition reads (samples/conditional-documents.json; Sample, Unconfirmed: expert; row 7 names them)`); }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "document_type" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (G5, a document line's type)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }
