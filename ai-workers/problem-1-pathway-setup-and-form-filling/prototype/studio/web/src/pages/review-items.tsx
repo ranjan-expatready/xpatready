@@ -362,11 +362,14 @@ function SetAside({ id }: { id: string }) {
  *  from a new edition's accepted impact. */
 export function FormFieldsPage() {
   const { id } = useParams(); const me = useMe();
+  // B83: this page is also reached with nothing undecided (Smart questionnaire's line): it says so.
+  const q = useApi<{ fields: { outcome: string; background?: boolean }[] }>(["edition-form-fields", id!], `/editions/${id}/form-fields`);
+  const undecided = (q.data?.fields ?? []).some((f) => f.outcome === "unresolved" || (!!f.background && (f.outcome === "not_a_fact" || f.outcome === "never_filled")));
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <Crumbs here="Form fields" />
-      <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." />
-      {me.has("review") ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
+      {undecided ? <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." /> : <Head title="Form fields" chip="Decided" tone="ok" sub="Every form field of this edition has a decision." />}
+      {me.has("review") || !undecided ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
       <FormFieldDecisions editionId={id!} readOnly={!me.has("review")} />
     </div>
   );
