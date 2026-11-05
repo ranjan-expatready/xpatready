@@ -105,6 +105,7 @@ export class ReviewProposals {
       reason: r.reason, lands_on: r.landsOn as "library" | "combination", reuse: { match: reuse.match, existing_key: reuse.existingKey }, origin: r.origin as "ai" | "rules", step: r.step,
       readings: { draft: readingOf(rounds?.draft), check: readingOf(rounds?.check) },
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,
+      form_fields: r.kind === "condition" && r.combinationId && (r.payload as { target?: { kind?: string } } | null)?.target?.kind === "question" ? { combination: r.combinationId, fact: String((r.payload as { target: { key: string } }).target.key) } : null, // B86
       rules: (r.rules as QueueProposal["rules"]) ?? [], near: id.near ?? [], near_reason: id.nearReason ?? null, basis: r.basis as "SAMPLE" | "EXPERT",
       bulk_why: bulkWhy(r) ?? (nearNeeded ? NEAR_BULK_WHY : null), near_reason_needed: nearNeeded,
       near_reason_needed_check: r.agreement === "differ" && (rounds?.check as { payload?: unknown } | undefined)?.payload ? needsNearReasonForEdit(r, (rounds!.check as { payload: unknown }).payload, pool, pending) : false, decide_on: ON_ITS_PAGE.has(r.step) && r.combinationId ? `/c/${r.combinationId}/jobs/${r.runId}` : null, created_at: r.createdAt.toISOString() };

@@ -202,16 +202,19 @@ export function askedInOrder(s: Snapshot): Problem[] {
   return reachability(s, placed, docFacts, derived, (f) => `"${factWords(s, f)}"`);
 }
 
+/** A condition without whose answer it is read from, to compare two of them; null for anything that is not a condition
+ *  (a form field's words are never one, B86). */
+export const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
+
 /** Grounding audit finding 3 (W1 3.4, 3.5): a question's condition must never hide a value that something applicable
  *  still reads, every value that decides a question must be obtainable, and questions must not decide each other in a
  *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible. */
 // C3.8: the messages name each question by its meaning (`words`), never by its field code.
 function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>, words: (fact: string) => string): Problem[] {
   const out: Problem[] = [];
-  const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
   const fieldsOf = (c: any) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
   const readers = new Map<string, { form: string; formCond: any; boxCond: any }[]>();
-  for (const m of s.field_maps) { const f = s.forms.find((x) => x.form_number === m.form_number); if (!f) continue; for (const e of m.entries) if (e.outcome === "mapped" && e.fact) readers.set(e.fact, [...(readers.get(e.fact) ?? []), { form: f.form_number, formCond: f.condition, boxCond: e.condition }]); }
+  for (const m of s.field_maps) { const f = s.forms.find((x) => x.form_number === m.form_number); if (!f) continue; for (const e of m.entries) if (e.outcome === "mapped" && e.fact) readers.set(e.fact, [...(readers.get(e.fact) ?? []), { form: f.form_number, formCond: f.condition, boxCond: e.condition_rule }]); }
   const conditions = [...s.rules.map((r) => ({ what: `rule ${r.id}`, tree: r.when })), ...s.document_requirements.map((d) => ({ what: `document "${d.document_type}"`, tree: d.condition })), ...s.forms.map((f) => ({ what: `form ${f.form_number}`, tree: f.condition })), ...(s.checks ?? []).filter((c) => c.condition && typeof c.condition === "object").map((c) => ({ what: `check ${c.id}`, tree: c.condition }))];
   for (const p of s.placements) {
     if (!p.condition) continue;
@@ -292,7 +295,16 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const a = boxes(prev), b = boxes(next);
   const byForm = new Map<string, { added: number; changed: number; removed: number; ai: number }>();
   const bump = (k: string, f: "added" | "changed" | "removed", ai: boolean) => { const form = k.split("|")[0]; const x = byForm.get(form) ?? { added: 0, changed: 0, removed: 0, ai: 0 }; x[f]++; if (ai) x.ai++; byForm.set(form, x); };
-  for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(a.get(k)) !== bare(e)) bump(k, "changed", e.origin === "AI_PROPOSAL");
+  // B86 BR-8: a form field's condition rule is named once, in words, for the immigration expert (what a case fills changes
+  // with it); a box whose only change is that rule is not counted again in its form's "Field map" line.
+  const noRule = (e: Record<string, unknown>) => { const { condition_rule: _r, ...rest } = e; return rest; };
+  const ruleWords = (k: string, e: { caption?: string | null; fact: string }, had: boolean) => `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
+  for (const [k, e] of b) {
+    const was = a.get(k), rule = e.condition_rule ?? null, wasRule = was?.condition_rule ?? null;
+    if (canonical(rule) !== canonical(wasRule)) out.push({ kind: "Form field condition", key: k, change: !wasRule ? "added" : !rule ? "removed" : "changed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, !rule) });
+  }
+  for (const [k, e] of a) if (e.condition_rule && !b.has(k)) out.push({ kind: "Form field condition", key: k, change: "removed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, true) });
+  for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(noRule(a.get(k))) !== bare(noRule(e))) bump(k, "changed", e.origin === "AI_PROPOSAL");
   for (const k of a.keys()) if (!b.has(k)) bump(k, "removed", false);
   for (const [form, x] of byForm) out.push({ kind: "Field map", key: form, change: x.added && !x.changed && !x.removed ? "added" : "changed", origin: x.ai ? "AI_PROPOSAL" : undefined, needs_sme: x.ai > 0, label: `${x.added} form fields added, ${x.changed} changed, ${x.removed} removed${x.ai ? ` (${x.ai} AI-proposed)` : ""}` });
 
