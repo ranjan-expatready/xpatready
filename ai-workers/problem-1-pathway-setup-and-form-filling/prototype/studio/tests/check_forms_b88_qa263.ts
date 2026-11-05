@@ -59,7 +59,7 @@ const MARK = "QA263-MARK", WHY = (n: number) => `Client A asked for it on file Q
   ok("pass: a client is refused the activity feed (403)", (await feed(CLIENT)).status === 403);
   ok("pass: the typed reason stays on the change, as its note", sql(`select coalesce(decision_note, '') from library_change where id = '${c1}'`) === WHY(1));
   const own = (await call("GET", "/library/changes?status=WITHDRAWN", undefined, AUTHOR)).body;
-  ok("pass: the change, read on To review, still carries the reason", JSON.stringify(own ?? "").includes(`${MARK}-1`) || sql(`select count(*) from library_change where id = '${c1}' and decision_note like '%${MARK}-1%'`) === "1");
+  ok("pass: the change, read on To review, still carries the reason", JSON.stringify(own ?? "").includes(`${MARK}-1`), own);
 
   // ---------------------------------------------------------------- 2. the document's line, when a change of its facts named the field
   const shared = sql(`select dr.document_type_key from document_requirement dr join combination c on c.id = dr.combination_id where c.combination_key = 'sp.outside' and dr.status = 'PUBLISHED' order by 1 limit 1`);
