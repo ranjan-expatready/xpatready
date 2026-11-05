@@ -30,20 +30,19 @@ const WORKED_OUT = "This Yes/No is worked out from other answers and must write 
 /** Lead's ruling 3 on #1053: what approving this holds elsewhere, in words: the other combinations that ask this question and
  *  their form fields that read it without this condition. A combination cannot be released until they agree (the rule). */
 export async function spreadOf(db: Client, workspaceId: string, fact: string, tree: unknown, except: string | null | undefined): Promise<{ combinations: number; form_fields: number; words: string | null }> {
-  const q = await db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: fact }, orderBy: { version: "desc" }, select: { sectionKey: true, status: true } });
-  const current = q.find((r) => r.status === "DRAFT") ?? q.find((r) => r.status === "PUBLISHED");
-  if (!current) return { combinations: 0, form_fields: 0, words: null };
-  const others = (await db.combination.findMany({ where: { workspaceId, retiredAt: null, sections: { some: { sectionKey: current.sectionKey } } }, select: { id: true } })).map((c) => c.id).filter((id) => id !== except);
-  if (!others.length) return { combinations: 0, form_fields: 0, words: null };
-  const lines = await db.combinationForm.findMany({ where: { workspaceId, combinationId: { in: others } }, orderBy: { version: "desc" }, select: { combinationId: true, lineageKey: true, status: true, govFormDefId: true } });
+  if (!(await db.sectionQuestion.count({ where: { workspaceId, lineageKey: fact } }))) return { combinations: 0, form_fields: 0, words: null };
+  // A combination asks a question its forms read (engine/snapshot.ts), not only one in a section it picked.
+  const rows = effective(await db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: fact }, include: { edition: { select: { govFormDefId: true } } } }), (m) => `${m.formEditionId}|${m.dataPath}`, "draft").filter((m) => m.outcome === "mapped" && !sameCondition(m.conditionRule, tree));
+  const forms = [...new Set(rows.map((r) => r.edition.govFormDefId))];
+  if (!forms.length) return { combinations: 0, form_fields: 0, words: null };
+  const open = new Set((await db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true } })).map((c) => c.id));
+  const lines = await db.combinationForm.findMany({ where: { workspaceId, govFormDefId: { in: forms } }, orderBy: { version: "desc" }, select: { combinationId: true, lineageKey: true, status: true, govFormDefId: true } });
   const newest = new Map<string, (typeof lines)[number]>();
   for (const l of lines) if (!newest.has(`${l.combinationId}|${l.lineageKey}`)) newest.set(`${l.combinationId}|${l.lineageKey}`, l);
-  const live = [...newest.values()].filter((l) => l.status !== "RETIRED");
-  const rows = effective(await db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: fact, edition: { govFormDefId: { in: [...new Set(live.map((l) => l.govFormDefId))] } } }, include: { edition: { select: { govFormDefId: true } } } }), (m) => `${m.formEditionId}|${m.dataPath}`, "draft").filter((m) => m.outcome === "mapped" && !sameCondition(m.conditionRule, tree));
-  const forms = new Set(rows.map((r) => r.edition.govFormDefId));
-  const held = new Set(live.filter((l) => forms.has(l.govFormDefId)).map((l) => l.combinationId));
+  const live = [...newest.values()].filter((l) => l.status !== "RETIRED" && l.combinationId !== except && open.has(l.combinationId));
+  const filed = new Set(live.map((l) => l.govFormDefId)), held = new Set(live.map((l) => l.combinationId)), fields = rows.filter((r) => filed.has(r.edition.govFormDefId)).length;
   if (!held.size) return { combinations: 0, form_fields: 0, words: null };
-  return { combinations: held.size, form_fields: rows.length, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(rows.length, "form field")} there ${rows.length === 1 ? "does" : "do"} not hold this condition: ${held.size === 1 ? "it" : "they"} cannot be released until ${rows.length === 1 ? "that form field holds" : "those form fields hold"} it, or the condition is removed.` };
+  return { combinations: held.size, form_fields: fields, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(fields, "form field")} there ${fields === 1 ? "does" : "do"} not hold this condition: ${held.size === 1 ? "it" : "they"} cannot be released until ${fields === 1 ? "that form field holds" : "those form fields hold"} it, or the condition is removed.` };
 }
 
 /** What the second person compares on To review. */

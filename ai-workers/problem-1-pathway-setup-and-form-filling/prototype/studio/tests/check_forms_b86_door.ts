@@ -24,8 +24,11 @@ run(async () => {
   const saved = async () => {
     const plan = (await call("POST", `/combinations/${vv}/draft/plan`, { steps: STEPS.map((step) => ({ step, mode: AI.has(step) ? "replay" : "rules" })) }, AUTHOR)).body;
     const r = await call("POST", `/combinations/${vv}/draft`, { planSha256: plan?.plan_sha256 ?? plan?.planSha256, idempotencyKey: randomUUID(), spendLimitUsd: 0 }, AUTHOR);
+    if (r.status >= 300) console.log(`DRAFT refused: ${r.status} ${words(r)}`);
     await until(async () => ["COMPLETED", "DONE", "FAILED", "STOPPED", "CANCELLED"].includes(String((await call("GET", `/runs/${r.body?.runId}`)).body?.status ?? "").toUpperCase()), 180_000);
-    return (await call("GET", `/runs/${r.body?.runId}`)).body;
+    const view = (await call("GET", `/runs/${r.body?.runId}`)).body;
+    console.log(`DRAFT ${view?.status}: ${(view?.steps ?? []).filter((s: { step: string }) => s.step === "conditions").map((s: { message?: string }) => s.message).join("")}`);
+    return view;
   };
   const changes = () => sql(`select count(*) from library_change where kind='form_field_condition'`);
   const ruleOf = (id: string, path: string) => sql(`select coalesce(condition_rule::text,'') from form_field_map where form_edition_id='${id}' and data_path='${path.replace(/'/g, "''")}' order by version desc limit 1`);

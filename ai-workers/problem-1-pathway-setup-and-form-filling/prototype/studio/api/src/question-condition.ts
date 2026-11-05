@@ -45,7 +45,7 @@ export async function proposeConditionChange(tx: Tx, l: { ws: string; actor: Act
   // B86 (ruling 3 on #1053): the second person is told what approving this holds elsewhere.
   const spread = await spreadOf(tx, l.ws, key, p.condition.tree, l.combinationId);
   const c = await tx.libraryChange.create({ data: { workspaceId: l.ws, kind: COND_KIND, key, label, action: COND_ACTION, reason: l.reason, status: "WAITING", proposedBy: l.actor.id, appliedBy: l.actor.id,
-    matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses, spread: spread.words } as Prisma.InputJsonValue,
+    matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses: Math.max(uses, spread.combinations + 1), spread: spread.words } as Prisma.InputJsonValue,
     sourceJobId: l.sourceJobId ?? null, combinationId: l.combinationId ?? null, proposalItemId: l.itemId, batchId: l.batchId } });
   return c.id;
 }
