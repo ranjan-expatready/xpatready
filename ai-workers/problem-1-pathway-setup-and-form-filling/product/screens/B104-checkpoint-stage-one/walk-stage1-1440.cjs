@@ -15,6 +15,8 @@ const base = `http://127.0.0.1:${port}`;
 fs.mkdirSync(out, { recursive: true });
 const steps = [];
 const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!seen, detail }); console.log(`${seen ? "SEEN   " : "MISSING"} J7 ${j7}  ${what}${detail ? ` — ${detail}` : ""}`); };
+// A step with no screen to check is written down as a note, never counted as seen (review m5 on #1084).
+const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, detail }); console.log(`NOTE    J7 ${j7}  ${what}${detail ? ` — ${detail}` : ""}`); };
 (async () => {
   // A copy whose Playwright differs from the installed browser names it (cloud: PW_CHROMIUM=/opt/pw-browsers/chromium).
   const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
@@ -75,7 +77,7 @@ const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!s
   await shot("1-2-forms-tab");
 
   // 1.8: no authoring screen yet (B106); the gates are read where a person meets them, at 4.1 below.
-  note("1.8", "Eligibility gates: no authoring screen (row B106); set by the checkpoint, read on the case at 4.1", true, "allow-listed route, tech lead's ruling on #1084");
+  aside("1.8", "Eligibility gates: no authoring screen (row B106); set by the checkpoint, read on the case at 4.1 below", "allow-listed route, tech lead's ruling on #1084");
 
   // Next capability's first step (P-348 (3)): the case officer opens a case on Visitor visa (2.1).
   await as("user-O", "/cases");
@@ -114,7 +116,8 @@ const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!s
   await shot("4-1-eligibility");
 
   fs.writeFileSync(path.join(out, "walk.json"), JSON.stringify({ port: Number(port), caseUrl, steps, errors }, null, 1));
-  console.log(`errors: ${errors.length}`); errors.slice(0, 10).forEach((e) => console.log("  " + e));
+  const counted = steps.filter((s) => !s.note);
+  console.log(`seen ${counted.filter((s) => s.seen).length}/${counted.length} steps, ${steps.length - counted.length} note; errors: ${errors.length}`); errors.slice(0, 10).forEach((e) => console.log("  " + e));
   await browser.close();
-  process.exit(steps.every((s) => s.seen) && !errors.length ? 0 : 1);
+  process.exit(counted.every((s) => s.seen) && !errors.length ? 0 : 1);
 })().catch(async (e) => { console.error("WALK STOPPED:", e.message); fs.writeFileSync(path.join(out, "walk.json"), JSON.stringify({ stopped: e.message, steps }, null, 1)); process.exit(1); });

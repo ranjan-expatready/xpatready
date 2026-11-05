@@ -20,7 +20,7 @@
         {
           "form": "IMM 5476",
           "signedBy": "person_and_representative",
-          "cite": "VV-R10. IMM 5476 (11-2025) (official-sources/ircc/forms/imm5476e.pdf), its captions: \"Signature of applicant or Parent/Legal Guardian for a person under 18 years of age\" and \"Signature of representative\"; IMM 5476 (11-2021), the edition the checkpoint's line files (official-sources/ircc/previous-editions/imm5476e-2021.pdf): \"Signature of representative\" and \"Signature of applicant\"; canada.ca IMM 5476 page (official-sources/ircc/canada/pages/imm5476.html, modified 2025-12-12): \"By signing, you authorize IRCC to complete your request for yourself and your dependent children under 18 years of age.\" QA-228."
+          "cite": "VV-R10. IMM 5476 (11-2025) (official-sources/ircc/forms/imm5476e.pdf), its captions: \"Signature of applicant or Parent/Legal Guardian for a person under 18 years of age\" and \"Signature of representative\"; IMM 5476 (11-2021), the edition the checkpoint's line files (official-sources/ircc/previous-editions/imm5476e-2021.pdf): \"Signature of representative\" and \"Signature of applicant\"; canada.ca IMM 5476 page (official-sources/ircc/canada/pages/imm5476.html, modified 2025-12-12): \"By signing, you authorize IRCC to complete your request for yourself and your dependent children under 18 years of age.\" Under 18 a parent or legal guardian signs (the applicant's box), and IMM 5476's dependent children aged 18 or older file their own copy: with who files it set as on main (each applicant, no age), a child under 18 on a represented case is listed as a signer until row C6.11's who and age for IMM 5476 land (#1072, VV-R10). QA-228."
         }
       ],
       "signers_not_set": [
