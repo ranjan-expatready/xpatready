@@ -14,7 +14,7 @@ import { slug } from "../../engine/import.ts";
 import { FORM_LINE_WORDS, formLineProblem, isFormLine, releaseLineProblems } from "../../engine/programs.ts";
 import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
-import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems, withdrawnFieldLines, withoutWithdrawnKeys } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -470,7 +470,10 @@ export class Studio {
     // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
     const tests = combinationId ? (gate ?? (await keyGateOf(this.db, combinationId, s, (await buildSnapshot(this.db, workspaceId, combinationId, "draft")).sha256))).problems : [];
-    const all = [...structure, ...filing, ...contentProblems(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests]; // L4: what IRCC accepts
+    // B83 (tech lead on breaker M5): a reader of a withdrawn new field holds Submit and release by name.
+    const live = new Set(lib.map((f) => f.key));
+    const gone = new Map(s.mode !== "draft" ? [] : (await this.db.libraryChange.findMany({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN" }, select: { key: true, label: true } })).filter((c) => !live.has(c.key)).map((c) => [c.key, c.label ?? "a withdrawn field"]));
+    const all = [...withdrawnFieldLines(s, gone), ...withoutWithdrawnKeys([...structure, ...filing, ...contentProblems(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests], gone)]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();

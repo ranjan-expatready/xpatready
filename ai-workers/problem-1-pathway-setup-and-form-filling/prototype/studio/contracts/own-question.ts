@@ -17,5 +17,7 @@ export const OwnQuestionUndo = z.object({ dataPath: z.string({ error: "Name the 
 export type AskedAs = { name: string; waiting: boolean; change_id: string | null };
 export type OwnQuestionRow = { dataPath: string; question: string | null; page: string | null; field: string | null; group: string; worked_out_from: string[]; worked_out_from_names: string[]; asked: boolean; asked_as: AskedAs | null; can_ask: boolean; why_not: string | null };
 export type OwnQuestionsView = { edition: { id: string; label: string; form: string }; fields: OwnQuestionRow[]; yes_no_fields: { key: string; name: string; meaning: string | null }[] };
+/** What undo did: `kept` says why a new field stays waiting, `still_asked` names the sections that still ask it (words only). */
+export type OwnQuestionUndone = { dataPath: string; field: string; withdrew: boolean; kept: string | null; still_asked: string | null };
 /** One edition of a combination that has Yes/No form fields a person can still ask (the Smart questionnaire's line). */
 export type OwnQuestionsToAsk = { editions: { id: string; form: string; label: string; to_ask: number }[] };

@@ -9,24 +9,25 @@
 // US$0. The shared placement step (api/src/form-part-placements.ts) then asks it in the section of its form field.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { cleanLabel, labelProblem, problemFromZod } from "../../contracts/programs.ts";
-import { OwnQuestion, OwnQuestionUndo, type OwnQuestionsToAsk, type OwnQuestionsView } from "../../contracts/own-question.ts";
+import { OwnQuestion, OwnQuestionUndo, type OwnQuestionUndone, type OwnQuestionsToAsk, type OwnQuestionsView } from "../../contracts/own-question.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
+import { current } from "../../engine/where-used.ts";
 import { factName } from "../../engine/fact-name.ts";
 import { manifest } from "../../engine/import.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, revise, SOLUTION, strip, type Actor } from "./core.ts";
-import { keyFor, sameName, withdrawChange } from "./library-changes.ts";
+import { isWorkedOutYesNo, keyFor, onlyThisAsk, sameName, withdrawChange } from "./library-changes.ts";
+import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { nearLabels } from "./rule-facts.ts";
 import { landField } from "./proposals.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { printedQuestion, type Box } from "./own-yes-no.ts";
 export { printedQuestion } from "./own-yes-no.ts";
+export { isWorkedOutYesNo } from "./library-changes.ts";
 
-/** A Yes/No form field worked out from whether other answers are recorded ("derived: … recorded -> yes_no_code"). */
-export const isWorkedOutYesNo = (transform: string | null | undefined) => !!recordedDerivation(transform) && /\byes_no_code\b/.test(transform ?? "");
 const YES_NO = new Set(["yes_no", "boolean"]);
 /** BR-1 (challenge B2): the QA-165 check needs the facts the "worked out" step names; a step that names none (IMM 5257's
  *  Questions 8 A and 9 A) cannot be checked: a confirmed No with rows recorded would be written N. */
@@ -44,6 +45,17 @@ function readingOf(file: string | null): Map<string, Box> | null {
 }
 /** The page a form field is on, from its XFA data path (form1[0].Page2[0]…): null when the path does not say. */
 const pageOf = (dataPath: string) => /(?:^|\.)Page(\d+)\[/.exec(dataPath)?.[1] ?? null;
+type MapRow = { id: string; version: number; status: string };
+/** Breaker B1: a draft row changes only while it is still a draft: a release may have published it since it was read, and a
+ *  released row is frozen. A published row gets a new draft (core.ts revise). */
+async function reviseUnreleased<T extends MapRow>(tx: Prisma.TransactionClient, rows: T[], changes: Record<string, unknown>, by: string, released: string) {
+  const newest = [...rows].sort((a, b) => b.version - a.version)[0];
+  if (newest.status !== "DRAFT") return revise(tx.formFieldMap, rows, changes, by, strip);
+  const done = await tx.formFieldMap.updateMany({ where: { id: newest.id, status: "DRAFT" }, data: { ...changes, updatedBy: by } });
+  if (!done.count) fail(released, HttpStatus.CONFLICT);
+}
+/** Undo's guard (breaker M2): raised under the field's lock when something reads it, so nothing is withdrawn. */
+class StillRead extends Error { constructor(readonly readers: FieldReader[]) { super("still read"); } }
 
 @Injectable()
 export class OwnQuestions {
@@ -72,7 +84,8 @@ export class OwnQuestions {
     const changes = new Map((await this.db.libraryChange.findMany({ where: { workspaceId: ed.workspaceId, kind: "field", action: "ADD", status: { in: ["WAITING", "RETURNED"] }, key: { in: rows.map((r) => r.canonicalFieldKey!).filter(Boolean) } }, select: { id: true, key: true } })).map((c) => [c.key, c.id]));
     const form = (await this.db.govFormDef.findUnique({ where: { id: ed.govFormDefId }, select: { formKey: true } }))?.formKey ?? ed.editionLabel;
     return { edition: { id: ed.id, label: ed.editionLabel, form }, yes_no_fields: [...fields.values()].filter((f) => YES_NO.has(f.valueType)).map(({ key, name, meaning }) => ({ key, name, meaning })),
-      fields: rows.map((r) => {
+      // Review F8: the rows stay in the form's order after each save: by page, then by data path.
+      fields: [...rows].sort((a, b) => Number(pageOf(a.dataPath) ?? 999) - Number(pageOf(b.dataPath) ?? 999) || a.dataPath.localeCompare(b.dataPath)).map((r) => {
         const from = recordedDerivation(r.transform)!.facts, question = printedQuestion(reading?.get(r.dataPath));
         const f = r.canonicalFieldKey ? fields.get(r.canonicalFieldKey) : undefined;
         const asked = !!f && YES_NO.has(f.valueType) && !from.includes(f.key);
@@ -130,6 +143,7 @@ export class OwnQuestions {
       if (!now2 || now2.id !== cur!.id || now2.version !== cur!.version || now2.canonicalFieldKey !== cur!.canonicalFieldKey) fail(`"${question}" was changed by someone else just now: look at it again.`, HttpStatus.CONFLICT);
       let key: string, created = false, name: string;
       if (b.field) {
+        await lockItem(tx, ws, "field", [b.field]); // Breaker M2: before it is read, so a withdrawal runs wholly before or after
         const f = await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: b.field, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" } });
         if (!f) { await refuseRetired(tx, ws, "field", [b.field]); fail("That is not a library field: choose one the library has, or name a new one.", HttpStatus.NOT_FOUND); }
         name = f!.label?.trim() || f!.meaning?.trim() || factName(f!.canonicalFieldKey);
@@ -141,6 +155,8 @@ export class OwnQuestions {
         const bad = labelProblem(label); if (bad) fail(bad);
         if (b.meaning!.length < 10) fail("Say what the field means, in a sentence (10 characters or more).");
         const twin = await sameName(tx, ws, group, label);
+        // Review F6: the picker holds only Yes/No fields, so a same-name field of another type cannot be chosen there.
+        if (twin?.valueType && !YES_NO.has(twin.valueType)) fail(`"${label}" is already a shared field (${twin.label}), answered as ${twin.valueType}, not Yes or No: give this one a different name.`, HttpStatus.CONFLICT);
         if (twin) fail(`"${label}" is already a shared field or waiting to be one (${twin.label}): choose it as the library field instead.`, HttpStatus.CONFLICT);
         // M6: a name close to a live field's needs a one-line reason, as C3.6's add does (P-149 (2)).
         const live = await tx.canonicalField.findMany({ where: { workspaceId: ws, status: { in: ["DRAFT", "PUBLISHED"] }, label: { not: null } }, select: { label: true } });
@@ -155,7 +171,7 @@ export class OwnQuestions {
       // The form field keeps its "worked out" transformation: it now reads its own question, and the facts it names
       // stay the cross-check (QA-165). Its evidence is the printed question only (review m1: it is the box's label on the
       // list before the file); the full citation is the new field's source and the history line.
-      await revise(tx.formFieldMap, fresh, { canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, strip);
+      await reviseUnreleased(tx, fresh, { canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
       return { key, created, name };
     }, { timeout: 30_000, maxWait: 10_000 });
     await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} asked ${source} as its own question (${res.key}${res.created ? ", a new shared field waiting for a second person" : ""}): ${b.reason}`);
@@ -164,8 +180,9 @@ export class OwnQuestions {
 
   /** BR-9 (EXPERIENCE §2.8, challenge B1): takes an ask back. The form field reads the first fact its step names again. A
    *  draft row that only held this ask over a released row goes, so the release sees no change. A new field still waiting,
-   *  proposed by this person, that nothing else reads is withdrawn with it; otherwise it stays, and the answer says why. */
-  async undo(actor: Actor, editionId: string, body: unknown) {
+   *  proposed by this person, that nothing else reads is withdrawn with it; otherwise it stays, and the answer says why. A
+   *  question already placed stays too (review F3), and the answer names its sections and how to remove it. */
+  async undo(actor: Actor, editionId: string, body: unknown): Promise<OwnQuestionUndone> {
     need(actor, "author");
     const p = OwnQuestionUndo.safeParse(body ?? {});
     if (!p.success) fail(problemFromZod(p.error).detail ?? "The request is not valid.");
@@ -174,46 +191,52 @@ export class OwnQuestions {
     const ws = ed.workspaceId;
     const question = printedQuestion(readingOf(ed.inventoryFile)?.get(b.dataPath));
     const words = (cap: string | null | undefined) => wordsOfRow(cap, question);
-    const { key, from } = await this.db.$transaction(async (tx) => {
+    const { key, from, name } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`own-question:${ed.id}:${b.dataPath}`}))`;
       const rows = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.dataPath } });
       const cur = effective(rows, (m) => m.dataPath, "draft")[0];
       if (!cur || cur.status === "RETIRED") fail(`${ed.editionLabel} has no form field by that name.`, HttpStatus.NOT_FOUND);
       const facts = isWorkedOutYesNo(cur!.transform) ? recordedDerivation(cur!.transform)!.facts : [];
       const key = cur!.canonicalFieldKey;
-      const field = key ? await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true } }) : null;
+      const field = key ? await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, label: true, meaning: true } }) : null;
       if (!key || !field || !YES_NO.has(field.valueType) || !facts.length || facts.includes(key)) fail(`"${words(cur!.caption)}" is not asked as its own question, so there is nothing to take back.`, HttpStatus.CONFLICT);
+      // Breaker m1: the same locks as an ask: the fact it goes back to takes no new use once retired.
+      await lockItem(tx, ws, "field", [facts[0]]); await refuseRetired(tx, ws, "field", [facts[0]]);
+      const released = `"${words(cur!.caption)}" was released just now: look at it again.`; // Breaker B1
       const under = cur!.supersedesId ? rows.find((r) => r.id === cur!.supersedesId) : undefined;
-      const onlyThisAsk = !!under && cur!.status === "DRAFT" && under.canonicalFieldKey === facts[0] && under.transform === cur!.transform && under.outcome === cur!.outcome && under.person === cur!.person && under.row === cur!.row && JSON.stringify(under.optionMap) === JSON.stringify(cur!.optionMap) && JSON.stringify(under.listPurpose) === JSON.stringify(cur!.listPurpose);
-      if (onlyThisAsk) await tx.formFieldMap.delete({ where: { id: cur!.id } });
-      else await revise(tx.formFieldMap, rows, { canonicalFieldKey: facts[0], origin: "HUMAN", reason: `Taken back by ${actor.name}: worked out from other answers again.`.slice(0, 500) }, actor.id, strip);
-      return { key: key!, from: facts };
+      if (onlyThisAsk(cur!, under, facts[0])) { if (!(await tx.formFieldMap.deleteMany({ where: { id: cur!.id, status: "DRAFT" } })).count) fail(released, HttpStatus.CONFLICT); }
+      else await reviseUnreleased(tx, rows, { canonicalFieldKey: facts[0], origin: "HUMAN", reason: `Taken back by ${actor.name}: worked out from other answers again.`.slice(0, 500) }, actor.id, released);
+      return { key: key!, from: facts, name: field!.label?.trim() || field!.meaning?.trim() || factName(key!) };
     }, { timeout: 30_000, maxWait: 10_000 });
     const change = await this.db.libraryChange.findFirst({ where: { workspaceId: ws, kind: "field", action: "ADD", key, status: { in: ["WAITING", "RETURNED"] } }, select: { id: true, proposedBy: true } });
     let withdrew = false, kept: string | null = null;
     if (change) {
-      const readers = await this.readers(ws, key);
       if (change.proposedBy !== actor.id) kept = "The new field stays waiting on To review: another person proposed it.";
-      else if (readers) kept = `The new field stays waiting on To review: ${readers} still read${readers === "a form field" ? "s" : ""} it.`;
-      else try { await withdrawChange(this.db, actor, change.id, "Withdrawn with the ask it was named for, which was taken back."); withdrew = true; } catch { kept = "The new field stays waiting on To review: it changed just now."; }
+      // Breaker M2: the check and the withdrawal are one step, under the field's lock.
+      else try { await withdrawChange(this.db, actor, change.id, "Withdrawn with the ask it was named for, which was taken back.", async (tx) => { const readers = await fieldReaders(tx, ws, key); if (readers.length) throw new StillRead(readers); }); withdrew = true; }
+      catch (e) { kept = e instanceof StillRead ? `The new field stays waiting on To review: ${readerWords(e.readers)} still ${e.readers.length === 1 ? "reads" : "read"} it.` : await this.whyKept(change.id); }
     }
-    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} took back ${ed.editionLabel}'s "${words(null)}": worked out from other answers again${withdrew ? "; its new field was withdrawn" : ""}`);
-    return { dataPath: b.dataPath, field: from[0], withdrew, kept };
+    const placed = withdrew ? [] : await this.sectionsAsking(ws, key);
+    const still = placed.length ? `"${name}" is still asked in ${placed.map((s) => `"${s}"`).join(", ")}. If no other form needs it, remove it there on the Smart questionnaire tab.` : null;
+    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} took back ${ed.editionLabel}'s "${words(null)}", asked as "${name}": worked out from other answers again${withdrew ? "; its new field was withdrawn" : ""}`);
+    return { dataPath: b.dataPath, field: from[0], withdrew, kept, still_asked: still };
   }
 
-  /** What else reads a field a taken-back ask may have added: another form field, a condition, or a waiting proposal. */
-  private async readers(ws: string, key: string): Promise<string | null> {
-    if (await this.db.formFieldMap.count({ where: { workspaceId: ws, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } } })) return "a form field";
-    const reads = (x: unknown) => JSON.stringify(x ?? null).includes(`"field":"${key}"`);
-    const conds = [
-      ...await this.db.sectionQuestion.findMany({ where: { workspaceId: ws, status: { not: "RETIRED" }, NOT: { predicateJson: { equals: Prisma.DbNull } } }, select: { predicateJson: true } }),
-      ...await this.db.combinationForm.findMany({ where: { workspaceId: ws, NOT: { predicateJson: { equals: Prisma.DbNull } } }, select: { predicateJson: true } }),
-      ...await this.db.documentRequirement.findMany({ where: { workspaceId: ws, NOT: { predicateJson: { equals: Prisma.DbNull } } }, select: { predicateJson: true } }),
-      ...await this.db.predicate.findMany({ where: { workspaceId: ws, status: { not: "RETIRED" } }, select: { predicateJson: true } }),
-    ];
-    if (conds.some((c) => reads(c.predicateJson))) return "a rule or condition";
-    const waiting = await this.db.proposalItem.findMany({ where: { workspaceId: ws, status: "waiting", kind: { in: ["condition", "check", "pqr_pick"] } }, select: { payload: true } });
-    return waiting.some((w) => JSON.stringify(w.payload ?? null).includes(key)) ? "a proposal on To review" : null;
+  /** Breaker m2: a withdrawal lost to someone else at the same moment says what really happened. */
+  private async whyKept(changeId: string) {
+    const now = (await this.db.libraryChange.findUnique({ where: { id: changeId }, select: { status: true } }))?.status;
+    if (now === "APPROVED" || now === "RELEASED") return "A second person approved the new field just now, so it stays in the library.";
+    if (now === "WITHDRAWN") return "The new field was withdrawn just now.";
+    return "The new field stays waiting on To review: it changed just now.";
+  }
+
+  /** The titles of the sections that still ask a field (review F3). */
+  private async sectionsAsking(ws: string, key: string) {
+    const rows = current(await this.db.sectionQuestion.findMany({ where: { workspaceId: ws, canonicalFieldKey: key }, select: { lineageKey: true, sectionKey: true, version: true, status: true } }), (q) => q.lineageKey);
+    if (!rows.length) return [];
+    const titles = await this.db.logicalSection.findMany({ where: { workspaceId: ws, sectionKey: { in: rows.map((q) => q.sectionKey) } }, orderBy: { version: "asc" }, select: { sectionKey: true, title: true } });
+    const of = new Map(titles.map((s) => [s.sectionKey, s.title]));
+    return [...new Set(rows.map((q) => of.get(q.sectionKey) ?? "a section"))].sort();
   }
 }
 

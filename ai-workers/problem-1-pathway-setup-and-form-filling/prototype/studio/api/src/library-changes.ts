@@ -12,7 +12,8 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { isRuleWhy } from "../../engine/near.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
-import { isItemLifecycle } from "./library-items.ts";
+import { isItemLifecycle, lockItem } from "./library-items.ts";
+import { fieldReaders } from "./where-used.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
@@ -52,11 +53,11 @@ export function keyFor(group: string, label: string, taken: Set<string>): string
 /** Same name in the same group, ignoring case, spaces and punctuation: an exact duplicate, refused without AI (BR-7).
  *  It looks at the library, at new fields still waiting or approved, and at names already decided in any open AI draft
  *  (break M1: two proposals of one draft could take the same name). */
-export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" | "proposalItem">, workspaceId: string, group: string, label: string, exceptItem?: string): Promise<{ label: string } | null> {
+export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" | "proposalItem">, workspaceId: string, group: string, label: string, exceptItem?: string): Promise<{ label: string; valueType?: string } | null> {
   const want = normalizeLabel(label);
-  const rows = await db.canonicalField.findMany({ where: { workspaceId, groupKey: group, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, aliases: true } });
+  const rows = await db.canonicalField.findMany({ where: { workspaceId, groupKey: group, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, aliases: true, valueType: true } });
   const lib = rows.find((r) => [r.label ?? "", ...r.aliases].some((x) => normalizeLabel(x) === want));
-  if (lib) return { label: lib.label ?? lib.canonicalFieldKey };
+  if (lib) return { label: lib.label ?? lib.canonicalFieldKey, valueType: lib.valueType };
   const open = await db.libraryChange.findMany({ where: { workspaceId, kind: "field", status: { in: ["WAITING", "APPROVED"] }, key: { startsWith: `${group}.` } }, select: { label: true } });
   const ch = open.find((c) => c.label && normalizeLabel(c.label) === want);
   if (ch) return { label: ch.label! };
@@ -204,9 +205,24 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
   });
 }
 
+/** A Yes/No form field worked out from whether other answers are recorded ("derived: … recorded -> yes_no_code"). */
+export const isWorkedOutYesNo = (transform: string | null | undefined) => !!recordedDerivation(transform) && /\byes_no_code\b/.test(transform ?? "");
+type AskedRow = { canonicalFieldKey: string | null; transform: string | null; outcome: string; person: string | null; row: number | null; optionMap: unknown; listPurpose: unknown; status: string };
+/** B83 (BR-9, breaker M3): a draft row over a released one that differs from it only by this ask: with the ask taken back
+ *  it is no change at all, so it goes, and the release sees none. */
+export const onlyThisAsk = (cur: AskedRow, under: AskedRow | null | undefined, fact: string) => !!under && cur.status === "DRAFT" && under.canonicalFieldKey === fact && under.transform === cur.transform && under.outcome === cur.outcome && under.person === cur.person && under.row === cur.row && JSON.stringify(under.optionMap) === JSON.stringify(cur.optionMap) && JSON.stringify(under.listPurpose) === JSON.stringify(cur.listPurpose);
+/** What a withdrawal leaves reading the field (tech lead on breaker M5): its form fields are not among them, they are
+ *  put right by the withdrawal itself. For To review's words before and after the press. */
+export async function readersLeftByWithdrawal(db: Parameters<typeof fieldReaders>[0], workspaceId: string, key: string) {
+  return (await fieldReaders(db, workspaceId, key)).filter((r) => r.kind !== "form_field");
+}
+
 /** B1 (break B1): an author withdraws a new field that is waiting or returned. It leaves the draft: the form fields that
- *  read it go back to "no decision" (K1), and its never-released draft rows are removed. Nothing released changes. */
-export async function withdrawChange(db: Db, actor: Actor, id: string, note?: string) {
+ *  read it go back to "no decision" (K1), and its never-released draft rows are removed. Nothing released changes.
+ *  B83 (breaker M2): the field's lock comes first, so an ask choosing it runs wholly before or wholly after; `guard` runs
+ *  under that lock and may refuse (Undo: nothing else may read it). Tech lead on breaker M5: To review's withdraw is never
+ *  refused for a reader: its answer names them, and each holds Submit by name (engine/validate.ts withdrawnFieldLines). */
+export async function withdrawChange(db: Db, actor: Actor, id: string, note?: string, guard?: (tx: Prisma.TransactionClient) => Promise<void>) {
   if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the author duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
@@ -233,21 +249,35 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     return changeView((await tx.libraryChange.findUnique({ where: { id } }))!);
   });
   return db.$transaction(async (tx) => {
+    await lockItem(tx, c.workspaceId, "field", [c.key]);
+    await guard?.(tx);
     if (await tx.canonicalField.count({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: { not: "DRAFT" } } })) throw problem(409, "Already released", "This field was released meanwhile; retire it in the library instead.");
     const done = await tx.libraryChange.updateMany({ where: { id, status: { in: ["WAITING", "RETURNED"] } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
     if (!done.count) throw problem(409, "Changed meanwhile", "Someone decided this at the same moment. Refresh to see it.");
+    const readers = await readersLeftByWithdrawal(tx, c.workspaceId, c.key);
     // BR-10 (B83, challenge M2): a form field asked as its own question goes back to worked out, keeping the QA-165 check;
     // "unresolved" would lose it and hold release. Its fact is not among the facts its step names (engine/runtime/forms.ts).
+    // Breaker B1, m3: only while it is still a draft. M3: a draft that only held this ask goes. m1: a named fact retired
+    // since leaves the row to "no decision", which To review lists.
+    let restored = 0;
     for (const m of await tx.formFieldMap.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } })) {
-      const named = recordedDerivation(m.transform)?.facts ?? [];
-      if (named.length && !named.includes(c.key)) await tx.formFieldMap.update({ where: { id: m.id }, data: { canonicalFieldKey: named[0], reason: `The new field "${c.label ?? c.key}" was withdrawn: worked out from other answers again.`.slice(0, 500), updatedBy: actor.id } });
+      const named = isWorkedOutYesNo(m.transform) ? recordedDerivation(m.transform)!.facts : [];
+      if (!named.length || named.includes(c.key)) continue;
+      if (!(await tx.canonicalField.count({ where: { workspaceId: c.workspaceId, canonicalFieldKey: named[0], status: { in: ["DRAFT", "PUBLISHED"] } } }))) continue;
+      const under = m.supersedesId ? await tx.formFieldMap.findUnique({ where: { id: m.supersedesId } }) : null;
+      const back = onlyThisAsk(m, under, named[0]) ? await tx.formFieldMap.deleteMany({ where: { id: m.id, status: "DRAFT" } })
+        : await tx.formFieldMap.updateMany({ where: { id: m.id, status: "DRAFT" }, data: { canonicalFieldKey: named[0], reason: `The new field "${c.label ?? c.key}" was withdrawn: worked out from other answers again.`.slice(0, 500), updatedBy: actor.id } });
+      if (!back.count) throw problem(409, "Changed meanwhile", "A form field reading it changed at the same moment. Refresh to see it.");
+      restored++;
     }
     const maps = await tx.formFieldMap.updateMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, data: { outcome: "unresolved", canonicalFieldKey: null, transform: null, person: null, reason: `The new field "${c.label ?? c.key}" was withdrawn: ${why}`.slice(0, 500), updatedBy: actor.id } });
     await tx.sectionQuestion.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT", version: 1 } });
     const lists = await tx.canonicalField.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, select: { answerListKey: true } });
     await tx.canonicalField.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } });
     for (const x of lists) await dropFieldList(tx, c.workspaceId, x.answerListKey); // C3.6: its own draft list goes with it
-    return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count };
+    // Breaker m8: BR-10 changes form fields, so the history says so.
+    await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "decided", entity: "shared field", entityKey: c.key, summary: `${actor.name} withdrew the new field "${c.label ?? c.key}": ${why}. ${restored} form field${restored === 1 ? "" : "s"} back to worked out, ${maps.count} to no decision${readers.length ? `; still read by ${readers.map((r) => r.name).join("; ")}` : ""}`.slice(0, 600) } });
+    return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count, form_fields_restored: restored, readers: readers.map((r) => r.name) };
   });
 }
 

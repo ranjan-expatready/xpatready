@@ -9,7 +9,7 @@ import { api, useApi, useSessionView } from "@/lib/api";
 import { Button, Field, Input, Select } from "@/components/ui/controls";
 import { Tip, TipProvider } from "@/components/status";
 import { useUndoToast } from "@/components/lifecycle";
-import type { OwnQuestionRow, OwnQuestionsToAsk, OwnQuestionsView } from "../../../contracts/own-question";
+import type { OwnQuestionRow, OwnQuestionUndone, OwnQuestionsToAsk, OwnQuestionsView } from "../../../contracts/own-question";
 
 type Choice = OwnQuestionsView["yes_no_fields"][number];
 const wordsIn = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
@@ -25,48 +25,64 @@ const same = (a: string, b: string) => a.toLowerCase().replace(/[^a-z0-9]/g, "")
 export function OwnQuestions({ editionId }: { editionId: string }) {
   const cache = ["own-questions", editionId];
   const q = useApi<OwnQuestionsView>(cache, `/editions/${editionId}/form-fields/own-questions`);
-  const { canAuthor } = useSessionView();
+  const { canAuthor, known, failed } = useSessionView();
   const qc = useQueryClient();
   const undoToast = useUndoToast();
   const [open, setOpen] = React.useState<string | null>(null);
   // BR-6: "Why" starts empty; after a save the next form field starts with what this person just typed.
   const [lastWhy, setLastWhy] = React.useState("");
   const [moveOn, setMoveOn] = React.useState(false);
+  // Review F2, F5, F7: what an undo or a refused save came to, on its row: the toast's own text goes when it closes.
+  const [said, setSaid] = React.useState<{ dataPath: string; text: string; bad: boolean } | null>(null);
+  const [backTo, setBackTo] = React.useState<string | null>(null);
   const box = React.useRef<HTMLElement>(null);
   const refresh = () => qc.invalidateQueries();
   // After a save the keyboard lands on the next form field to ask, or on the section when none is left.
   React.useEffect(() => { if (!moveOn || q.isFetching) return; setMoveOn(false); const next = box.current?.querySelector<HTMLElement>("[data-own-ask]"); (next ?? box.current)?.focus(); }, [moveOn, q.isFetching, q.data]);
+  // After an undo it lands on that row's own button (the new Ask, or its Undo when someone else changed it), or on the section.
+  React.useEffect(() => {
+    if (!backTo || q.isFetching) return;
+    setBackTo(null);
+    const row = [...(box.current?.querySelectorAll<HTMLElement>("[data-own-row]") ?? [])].find((r) => r.dataset.ownRow === backTo);
+    (row?.querySelector<HTMLElement>("[data-own-ask], [data-own-undo]") ?? box.current)?.focus();
+  }, [backTo, q.isFetching, q.data]);
   // The Smart questionnaire's line leads here: the section can sit below a long list of undecided form fields.
   const { hash } = useLocation();
   const hasFields = !!q.data?.fields.length;
   React.useEffect(() => { if (hash === "#own-questions" && hasFields) { box.current?.scrollIntoView({ block: "start" }); box.current?.focus({ preventScroll: true }); } }, [hash, hasFields]);
   const fields = q.data?.fields ?? [];
   if (!fields.length) return null;
+  // Never rejects: both Undo buttons end here, and the answer or the refusal is said on the row (the shared toast's run clears itself).
   const undo = async (row: OwnQuestionRow) => {
-    const r = await api<{ withdrew: boolean; kept: string | null }>(`/editions/${editionId}/form-fields/own-question/undo`, { method: "POST", json: { dataPath: row.dataPath } });
+    setSaid(null);
+    try {
+      const r = await api<OwnQuestionUndone>(`/editions/${editionId}/form-fields/own-question/undo`, { method: "POST", json: { dataPath: row.dataPath } });
+      setSaid({ dataPath: row.dataPath, bad: false, text: ["Taken back: worked out from other answers again.", r.withdrew ? "Its new field was withdrawn." : null, r.kept, r.still_asked].filter(Boolean).join(" ") });
+    } catch (e) { setSaid({ dataPath: row.dataPath, bad: true, text: (e as Error).message }); }
     await refresh();
-    undoToast.show(`Taken back: worked out from other answers again.${r.withdrew ? " Its new field was withdrawn." : ""}${r.kept ? ` ${r.kept}` : ""}`);
+    setBackTo(row.dataPath);
   };
   return (
     <TipProvider>
     <section ref={box} tabIndex={-1} aria-labelledby="own-q" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4 outline-none" data-own-questions>
       <div><Tip focusable tip="Yes/No form fields the field map fills from other answers. Asking one here puts the form's own question to the client."><h2 id="own-q" className="inline font-semibold">Yes/No form fields worked out from other answers ({fields.length})</h2></Tip>
-        <p className="text-sm text-text-muted">The form asks these itself, but its field map works the answer out from other answers, so nobody is asked and conditions cannot rest on them. Ask one as its own question: the form's words stay its source. It counts from the next release, once "Ask them in their forms' sections" has been pressed on the Smart questionnaire tab; a new field also needs a second person.</p>
-        {canAuthor ? null : <p className="mt-1 text-sm text-text-muted" data-own-read-only>A configuration author asks these.</p>}</div>
+        <p className="text-sm text-text-muted">The form asks these itself, but its field map works the answer out from other answers, so nobody is asked and conditions cannot rest on them. Ask one as its own question: the form's words stay its source. A form field not asked holds nothing. Once one is asked, press "Ask them in their forms' sections" on the Smart questionnaire tab, or release is held; a new field also holds release until a second person approves it.</p>
+        {known && !failed && !canAuthor ? <p className="mt-1 text-sm text-text-muted" data-own-read-only>A configuration author asks these.</p> : null}</div>
       <ul className="divide-y divide-border text-sm">{fields.map((row) => (
         <li key={row.dataPath} className="py-2" data-own-row={row.dataPath}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <span className="min-w-0 flex-1"><b className="font-medium">{row.page ? <span className="text-text-muted">p. {row.page} · </span> : null}{row.question ?? "This form field"}</b>
               {!row.asked && row.worked_out_from_names.length ? <span className="block text-xs text-text-muted">Worked out from: {row.worked_out_from_names.join(", ")}</span> : null}
               {row.why_not ? <span className="block text-xs text-text-muted" data-own-why-not>{row.why_not}</span> : null}
-              {row.asked_as ? <span className="mt-0.5 flex items-center gap-1 text-text" data-own-asked><CheckCheck className="size-4 shrink-0" aria-hidden /> Asked as "{row.asked_as.name}"{row.asked_as.waiting ? <span className="text-text-muted"> · a second person approves it on <Link className="underline" to="/review">To review</Link></span> : null}</span> : null}</span>
+              {row.asked_as ? <span className="mt-0.5 flex items-center gap-1 text-text" data-own-asked><CheckCheck className="size-4 shrink-0" aria-hidden /> <span>Asked as "{row.asked_as.name}"{row.asked_as.waiting ? <span className="text-text-muted"> · a second person approves it on To review; release is held until then</span> : null}</span></span> : null}</span>
             {canAuthor && row.can_ask ? <Button size="sm" variant="secondary" data-own-ask aria-expanded={open === row.dataPath} onClick={() => setOpen(open === row.dataPath ? null : row.dataPath)}>Ask as its own question</Button> : null}
             {canAuthor && row.asked_as ? <UndoButton onUndo={() => undo(row)} /> : null}
           </div>
-          {open === row.dataPath ? <AskForm editionId={editionId} row={row} choices={closest(q.data?.yes_no_fields ?? [], row)} startWhy={lastWhy} onDone={async (r, why) => {
-            setLastWhy(why); setOpen(null); await refresh(); setMoveOn(true);
-            undoToast.show(`Asked as "${r.name}". Next: Smart questionnaire › Ask them in their forms' sections.`, () => undo(row));
-          }} onChanged={refresh} /> : null}
+          {said?.dataPath === row.dataPath && !(open === row.dataPath && row.can_ask) ? <p role={said.bad ? "alert" : "status"} className={`mt-1 text-sm ${said.bad ? "text-text-danger" : "text-text"}`} data-own-said>{said.text}</p> : null}
+          {open === row.dataPath && row.can_ask ? <AskForm editionId={editionId} row={row} choices={closest(q.data?.yes_no_fields ?? [], row)} startWhy={lastWhy} onDone={async (r, why) => {
+            setLastWhy(why); setOpen(null); setSaid(null); await refresh(); setMoveOn(true);
+            undoToast.show(`Asked as "${r.name}". Next: Smart questionnaire › Ask them in their forms' sections, or release is held.`, () => undo(row));
+          }} onRefused={(text) => { setSaid({ dataPath: row.dataPath, bad: true, text }); void refresh(); }} /> : null}
         </li>))}</ul>
       {undoToast.node}
     </section>
@@ -75,11 +91,11 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
 }
 
 function UndoButton({ onUndo }: { onUndo: () => Promise<void> }) {
-  const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
-  return <span className="text-right"><Button size="sm" variant="secondary" busy={busy} data-own-undo onClick={() => { setBusy(true); setErr(null); onUndo().catch((e: Error) => setErr(e.message)).finally(() => setBusy(false)); }}>Undo</Button>{err ? <span role="alert" className="mt-1 block text-xs text-text-danger">{err}</span> : null}</span>;
+  const [busy, setBusy] = React.useState(false);
+  return <Button size="sm" variant="secondary" busy={busy} data-own-undo onClick={() => { setBusy(true); void onUndo().finally(() => setBusy(false)); }}>Undo</Button>;
 }
 
-function AskForm({ editionId, row, choices, startWhy, onDone, onChanged }: { editionId: string; row: OwnQuestionRow; choices: Choice[]; startWhy: string; onDone: (r: { name: string }, why: string) => Promise<void>; onChanged: () => void }) {
+function AskForm({ editionId, row, choices, startWhy, onDone, onRefused }: { editionId: string; row: OwnQuestionRow; choices: Choice[]; startWhy: string; onDone: (r: { name: string }, why: string) => Promise<void>; onRefused: (words: string) => void }) {
   const [mode, setMode] = React.useState<"library" | "new">(choices.length ? "library" : "new");
   const [field, setField] = React.useState(""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(`Whether: ${row.question ?? ""}`), [why, setWhy] = React.useState(startWhy), [near, setNear] = React.useState(""), [needNear, setNeedNear] = React.useState(false);
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
@@ -94,8 +110,8 @@ function AskForm({ editionId, row, choices, startWhy, onDone, onChanged }: { edi
     } catch (e) {
       const m = (e as Error).message;
       if (/is close to the library/.test(m)) setNeedNear(true);
-      if (/changed by someone else/.test(m)) onChanged();
       setErr(m);
+      onRefused(m); // Review F5: any refused save shows the list as it is now; if the row can no longer be asked, the words stay on it
     } finally { setBusy(false); }
   };
   const idBase = React.useId();

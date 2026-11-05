@@ -10,8 +10,8 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { backgroundWords, readingMissingWords } from "../../engine/form-completeness.ts";
 import { backgroundPathsOf } from "./background-questions.ts";
-import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, revise, strip, Workspace, type Actor } from "./core.ts";
-import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
+import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
+import { actionVerb, changeView, decideChange, readersLeftByWithdrawal, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { isLifecycleKind, Lifecycle } from "./lifecycle.ts";
 import { isItemLifecycle } from "./library-items.ts";
@@ -160,6 +160,8 @@ export class Screen02Controller {
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }
   @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "approve", noteOf(b)); }
   @Post("library/changes/:id/resubmit") resubmit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const o = obj(b); const str = (v: unknown) => (typeof v === "string" ? v : undefined); return this.s.resubmitLibraryChange(actorOf(a), id, { label: str(o.label), meaning: str(o.meaning), reason: str(o.reason) }); }
+  // B83 (tech lead on breaker M5): what a withdrawal would leave reading a new field, for To review's words before the press.
+  @Get("library/changes/:id/readers") async readers(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); const c = await this.s.db.libraryChange.findUnique({ where: { id }, select: { workspaceId: true, kind: true, action: true, status: true, key: true } }); return { readers: c && c.kind === "field" && c.action === "ADD" && ["WAITING", "RETURNED"].includes(c.status) ? (await readersLeftByWithdrawal(this.s.db, c.workspaceId, c.key)).map((r) => r.name) : [] }; }
   @Post("library/changes/:id/withdraw") withdraw(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return withdrawChange(this.s.db, actorOf(a), id, noteOf(b)); }
   // P-116 amended: Undo of an author's own-draft delete (structure names; the library kinds come with S6).
   @Post("library/changes/:id/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.undoDelete(actorOf(a), id); }

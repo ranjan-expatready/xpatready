@@ -53,6 +53,35 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
   return errs;
 }
 
+/** B83 (tech lead on breaker M5): withdrawing a new shared field is never refused while something reads it, but a reader is
+ *  never left broken silently: each one in this draft holds Submit and release by its name, the withdrawn field's name
+ *  beside it, never a key. `gone`: the keys of withdrawn fields no longer in the library, with their names. */
+export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Problem[] {
+  if (!gone.size) return [];
+  const out: Problem[] = [];
+  const say = (where: string, item: string, label: string, keys: Iterable<unknown>) => { for (const k of new Set(keys)) if (typeof k === "string" && gone.has(k)) out.push({ level: "error", where, item, label, message: `It reads "${gone.get(k)}", a new field that was withdrawn. Point it at another field, or remove it.` }); };
+  const conds = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+  const inText = (x: string | null | undefined) => [...gone.keys()].filter((k) => !!x && new RegExp(`(?<![\\w.])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w.])`).test(x));
+  const wordsOf = new Map((s.canonical_fields as { id: string; label?: string | null; meaning?: string | null }[]).map((f) => [f.id, f.label ?? f.meaning ?? "a question"]));
+  for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
+  for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
+  for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
+  for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.then_plain ?? r.when_plain ?? "with no words"}"`, conds(r.when));
+  for (const c of s.checks) say("Checks", c.id, `The check "${c.message ?? "with no message"}"`, conds(c.condition));
+  for (const m of s.field_maps) for (const e of m.entries) if (e.outcome === "mapped") say(`Field map ${m.form_edition}`, e.data_path, `${m.form_number}'s form field "${e.caption ?? e.heading ?? "with no caption"}"`, [e.fact, ...inText(e.transform)]);
+  for (const f of s.fact_sources ?? []) say("Questions", f.fact, `Where this answer comes from (${f.role})`, [f.fact]);
+  for (const t of s.document_types ?? []) say("Documents", t.key, `The document type "${t.name}"`, t.supplies_facts ?? []);
+  const read = derivedRead(s);
+  for (const d of s.derived_fields as { id: string; plain?: string | null; inputs?: string[] }[]) if (read.has(d.id)) say("Derived fields", d.id, `The worked-out value "${d.plain ?? "with no words"}"`, d.inputs ?? []);
+  return out;
+}
+/** The validator's own lines with no key of a withdrawn field: "not in the library" lines give way to the named lines above. */
+export const withoutWithdrawnKeys = (problems: Problem[], gone: Map<string, string>): Problem[] => {
+  const keys = [...gone.keys()];
+  if (!keys.length) return problems;
+  return problems.filter((p) => !keys.some((k) => p.message.includes(`reads ${k}, which is not in the library`))).map((p) => { let message = p.message; for (const k of keys) message = message.split(k).join(`"${gone.get(k)}"`); return { ...p, message, ...(gone.has(p.item) ? { label: gone.get(p.item) } : {}) }; });
+};
+
 export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const types = new Map(library.map((f) => [f.key, f.valueType]));
