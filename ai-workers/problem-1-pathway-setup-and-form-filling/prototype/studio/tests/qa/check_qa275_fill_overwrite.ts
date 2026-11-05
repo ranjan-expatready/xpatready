@@ -36,7 +36,7 @@ const first = artifact((firstResponse.body as { artifact_id: string }).artifact_
 const firstRead = await file(first.id);
 ok("QA-275 setup: the first artifact initially serves its own bytes", firstRead.status === 200 && firstRead.sha256 === first.sha256, { stored: first.sha256, served: firstRead.sha256 });
 const anonymous = await fetch(`http://localhost:${PORT}/api/artifacts/${first.id}/file`);
-ok("QA-279 fail (C4.6): an artifact download with no person is refused (401), not served to anyone holding its link", anonymous.status === 401, anonymous.status);
+ok("QA-270 fail (C4.6, the file route): an artifact download with no person is refused (401), not served to anyone holding its link", anonymous.status === 401, anonymous.status);
 
 const changed = sql("update sample_fact set value='\"QA_CHANGED_SAMPLE_NAME\"'::jsonb where canonical_field_key='person.family_name' and person_id='principal' and profile_id in (select id from sample_profile where profile_key='client-a-family') returning 1");
 ok("QA-275 setup: one Sample family-name fact changes between fills", changed.split("\n")[0] === "1", changed);
