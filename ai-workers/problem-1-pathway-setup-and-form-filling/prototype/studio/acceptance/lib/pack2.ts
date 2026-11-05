@@ -9,7 +9,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
-import { OWN_YES_NO } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
+import { OWN_YES_NO, OWN_YES_NO_NEAR } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
 import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
 
@@ -120,7 +120,7 @@ export function pack2(id: string) {
     for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath))) {
       const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
       const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
-      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning }) }, AUTHOR))) out.ownYesNo++;
+      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }) }, AUTHOR))) out.ownYesNo++;
     }
     // B71 (P-319, AGENTS rule 4): with the maps applied, the author sets each form line as IRCC's own words set it, on the
     // Forms tab's own routes: a rule in words becomes its rule; the family information form follows how the application

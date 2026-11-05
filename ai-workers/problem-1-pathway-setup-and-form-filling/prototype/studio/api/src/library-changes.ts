@@ -2,6 +2,7 @@
 // that a second person approves (LibraryChange), the one key generator (keyFor) and the one publisher both release paths
 // call inside their transaction (publishLibraryChanges). A combination whose draft uses an item whose ADD is still
 // waiting (or was returned) is not released: the item review cannot be skipped by releasing a combination.
+import { recordedDerivation } from "../../../p5/transforms.ts";
 import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
 import { acceptsWords, roleWords } from "../../contracts/form-library.ts";
 import { HttpException } from "@nestjs/common";
@@ -235,6 +236,12 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     if (await tx.canonicalField.count({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: { not: "DRAFT" } } })) throw problem(409, "Already released", "This field was released meanwhile; retire it in the library instead.");
     const done = await tx.libraryChange.updateMany({ where: { id, status: { in: ["WAITING", "RETURNED"] } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
     if (!done.count) throw problem(409, "Changed meanwhile", "Someone decided this at the same moment. Refresh to see it.");
+    // BR-10 (B83, challenge M2): a form field asked as its own question goes back to worked out, keeping the QA-165 check;
+    // "unresolved" would lose it and hold release. Its fact is not among the facts its step names (engine/runtime/forms.ts).
+    for (const m of await tx.formFieldMap.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } })) {
+      const named = recordedDerivation(m.transform)?.facts ?? [];
+      if (named.length && !named.includes(c.key)) await tx.formFieldMap.update({ where: { id: m.id }, data: { canonicalFieldKey: named[0], reason: `The new field "${c.label ?? c.key}" was withdrawn: worked out from other answers again.`.slice(0, 500), updatedBy: actor.id } });
+    }
     const maps = await tx.formFieldMap.updateMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, data: { outcome: "unresolved", canonicalFieldKey: null, transform: null, person: null, reason: `The new field "${c.label ?? c.key}" was withdrawn: ${why}`.slice(0, 500), updatedBy: actor.id } });
     await tx.sectionQuestion.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT", version: 1 } });
     const lists = await tx.canonicalField.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, select: { answerListKey: true } });
