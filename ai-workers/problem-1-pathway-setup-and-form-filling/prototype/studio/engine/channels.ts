@@ -4,7 +4,7 @@
 // engine/validate.ts, at review and release. W1-02 (P-102, P-107 as amended by P-114): Online stays a choice per line, filled by the browser
 // extension in a later wave; portals, online versions and screen maps are parked with it.
 import { CHANNEL_WORDS, accountSubject, throughAccount, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature } from "../contracts/forms.ts";
-import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
+import { codeAsksMore, hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { compareEditions, pdfMapInUse } from "./programs.ts";
@@ -13,7 +13,7 @@ import type { PrismaClient } from "@prisma/client";
 type Line = { form_number: string; channel?: string; signature?: string; signed_by?: string; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
-type FieldMap = { form_number: string; form_edition: string; channel?: string; entries: MapEntry[] };
+type FieldMap = { form_number: string; form_edition: string; channel?: string; inventory_file?: string | null; entries: MapEntry[] };
 type FieldDef = { id: string; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const mapsOf = (s: Snapshot) => s.field_maps as FieldMap[];
 
@@ -109,6 +109,24 @@ export function filingKind(lines: (Line & { form_kind?: string | null })[]): str
   return n("ONLINE") ? (n("PAPER") && n("PDF_UPLOAD") ? "Mixed: online, PDF and paper" : n("PAPER") ? "Mixed: online and paper" : "Mixed: online and PDF") : "Mixed: PDF and paper";
 }
 
+/** B81 (break M5, review R3-M2): a code saved on an answer the form prints as two or more choices blocks release: it would
+ *  write a guess on the form. The form's printed choices come from its field list, which the validator passes in. */
+export function askedChoiceProblems(s: Snapshot, fieldsOf: (m: { inventory_file?: string | null }) => { data_path?: string | null; options_resolved?: [string, string][] | null; options?: unknown; ui?: string | null }[]): Problem[] {
+  const listedOf = new Map((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values] as const] : [])));
+  const out: Problem[] = [];
+  for (const m of mapsOf(s).filter((x) => x.channel !== "ONLINE")) {
+    const coded = m.entries.filter((e) => e.outcome === "mapped" && e.fact && listedOf.has(e.fact) && e.option_map);
+    if (!coded.length) continue;
+    const box = new Map(fieldsOf(m).map((f) => [f.data_path, f]));
+    for (const e of coded) for (const key of Object.keys(e.option_map!.map)) {
+      const v = listedOf.get(e.fact!)!.find((x) => x.key === key);
+      const near = v ? codeAsksMore(key, listedOf.get(e.fact!)!, box.get(e.data_path) ?? {}, e.transform) : null;
+      if (near) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): "${v!.label}" has a code, but the form prints ${near.map((o) => `"${o.label}"`).join(" and ")}: the immigration expert decides. Decide this form field "filled by hand" on To review until then.` });
+    }
+  }
+  return out;
+}
+
 /** Channel and option-map problems of one combination's snapshot. */
 export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
@@ -130,12 +148,20 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
     }
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }
+  const listedOf = new Map((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values] as const] : [])));
   const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked
   for (const m of pdfMaps) for (const e of m.entries) {
     const values = e.outcome === "mapped" && e.fact ? lists.get(e.fact) : undefined;
     // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
     if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
-    for (const p of optionMapProblems(values, e.option_map)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
+    for (const p of optionMapProblems(values, e.option_map, listedOf.get(e.fact!))) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
+  }
+  // B81: a value a person marked not on this form is said once per form: it passes, and a case with that answer is refused.
+  const labels = new Map<string, string>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list?.values ?? []).map((v): [string, string] => [`${f.id}|${v.key}`, v.label])));
+  for (const m of pdfMaps) {
+    const marked = new Map<string, number>();
+    for (const e of m.entries) for (const v of e.outcome === "mapped" && e.fact && lists.has(e.fact) ? e.option_map?.notOnForm ?? [] : []) { const k = `${e.fact}|${v}`; marked.set(k, (marked.get(k) ?? 0) + 1); }
+    for (const [k, n] of marked) if (labels.has(k)) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${m.form_number}: "${labels.get(k) ?? k.split("|")[1]}" is marked not on this form on ${n} form field${n === 1 ? "" : "s"}: a case with that answer is refused at filling, in words, and a person decides.` });
   }
   // F1-P (Screen 02 Q3): a list's rows say what the list holds and where extra rows go; until then it is a warning,
   // never an error, so configurations released before F1-P stay releasable.
