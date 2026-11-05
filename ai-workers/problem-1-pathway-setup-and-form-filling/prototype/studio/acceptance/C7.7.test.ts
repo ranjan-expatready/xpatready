@@ -101,14 +101,19 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   // IMM 5409 as a line with no field map; its fingerprint is refitted with it (the pin is frozen by a trigger, lifted
   // for one statement as tests/check_vv_prepare_store_api.ts does), and all is put back in `finally`. Who and minimum
   // age are Sample (SCH1's are the checkpoint's, api/src/form-setup.ts VV_FORM_RULES; DEP's "each dependent child").
+  // The copies the steps make stay on the case (a copy is never deleted); only the release and its pins are put back.
   const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}'`);
   // The scaffolding is put back by removing exactly the lines it added (a whole snapshot is too long for one psql
   // argument), so none of them may be in the release before.
   const ADDED = ["IMM 5257 SCH1", "IMM 0008 DEP", "IMM 5409"], inList = ADDED.map((f) => `'${f}'`).join(",");
   const clean = sql(`select count(*) from config_release, jsonb_array_elements(snapshot->'forms' || snapshot->'field_maps') x where id='${rel}' and x->>'form_number' in (${inList})`) === "0", wasHash = sql(`select sha256 from config_release where id='${rel}'`);
   const esc = (x: string) => x.replace(/'/g, "''");
-  ok("C7.7-27a (setup): the case's release and its fingerprint are read, and it holds none of the scaffolding's forms", !!rel && clean && !!wasHash, { rel });
-  const pinHash = (h: string) => sql(`alter table pack_work_pin disable trigger trg_pack_work_pin_frozen; update pack_work_pin set content_hash='${h}' where config_release_id='${rel}'; alter table pack_work_pin enable trigger trg_pack_work_pin_frozen`);
+  // Review m3: each pin of this release keeps its own value, saved here and put back one by one.
+  const pinsOf = () => sql(`select coalesce(string_agg(id || '=' || content_hash, ',' order by id), '') from pack_work_pin where config_release_id='${rel}'`) ?? "";
+  const pinsBefore = rel ? pinsOf() : "";
+  const frozen = (set: string) => sql(`alter table pack_work_pin disable trigger trg_pack_work_pin_frozen; ${set}; alter table pack_work_pin enable trigger trg_pack_work_pin_frozen`);
+  const pinHash = (h: string) => frozen(`update pack_work_pin set content_hash='${h}' where config_release_id='${rel}'`);
+  ok("C7.7-27a (setup): the case's release, its fingerprint and its pins are read, and it holds none of the scaffolding's forms", !!rel && clean && !!wasHash && !!pinsBefore, { rel });
   const formLine = (form: string, title: string, who: string, extra = {}) => ({ form_number: form, title, who, origin: "HUMAN", status: "always", condition: null, condition_plain: null, form_kind: "data_form", item_version: 1, source_quote: `${form}: test scaffolding (Sample)`, ...extra });
   const entry = (data_path: string, fact: string) => ({ data_path, fact, person: "form_subject", outcome: "mapped", status: "PUBLISHED", origin: "HUMAN", transform: "as_is (max 100 chars)", caption: "", heading: null, condition: null, row: null, item_version: 1 });
   const map = (form: string, edition: string, file: string, sha: string, entries: object[]) => ({ form_number: form, form_edition: edition, official_file: file, form_sha256: sha, inventory_file: `prototype/p1/inventory/${file.replace(/\.pdf$/, "")}.inventory.json`, entries });
@@ -119,7 +124,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   ];
   const gen = (form: string, who: string) => call("POST", `/runtime/cases/${c.id}/forms/${encodeURIComponent(form)}/${who}/generate`, { idempotencyKey: `b84-${run}-${Math.random().toString(36).slice(2, 8)}` }, OFFICER);
   const done = async (id: string | undefined) => { if (!id) return null; await until(async () => ["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body?.status), 90_000); return (await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body; };
-  if (rel && clean && wasHash) try {
+  if (rel && clean && wasHash && pinsBefore) try {
     sql(`update config_release set snapshot = jsonb_set(jsonb_set(snapshot, '{forms}', (snapshot->'forms') || '${esc(JSON.stringify(lines))}'::jsonb), '{field_maps}', (snapshot->'field_maps') || '${esc(JSON.stringify(maps))}'::jsonb) where id='${rel}'`);
     const h = snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")); sql(`update config_release set sha256='${h}' where id='${rel}'`); pinHash(h);
     const listed = ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, OFFICER)).body?.forms ?? []) as { form: string; subject_id: string; applies: boolean }[];
@@ -140,7 +145,9 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
     ok("C7.7-31 fail: a form line the release lists with no PDF field map keeps its own words (404, \"has no PDF to fill\")", r.status === 404 && r.body?.detail === "IMM 5409 has no PDF to fill in this case's release.", { status: r.status, detail: r.body?.detail });
   } finally {
     const keep = (k: string) => `(select coalesce(jsonb_agg(x), '[]') from jsonb_array_elements(snapshot->'${k}') x where x->>'form_number' not in (${inList}))`;
-    sql(`update config_release set snapshot = jsonb_set(jsonb_set(snapshot, '{forms}', ${keep("forms")}), '{field_maps}', ${keep("field_maps")}), sha256='${wasHash}' where id='${rel}'`); pinHash(wasHash);
+    sql(`update config_release set snapshot = jsonb_set(jsonb_set(snapshot, '{forms}', ${keep("forms")}), '{field_maps}', ${keep("field_maps")}), sha256='${wasHash}' where id='${rel}'`);
+    frozen(pinsBefore.split(",").map((x) => { const [id, h] = x.split("="); return `update pack_work_pin set content_hash='${h}' where id='${id}'`; }).join("; "));
+    // Asserted here, so a crash in steps 27–31 still says whether the release was put back (review m3).
+    ok("C7.7-32 pass (scaffolding put back): the case's release is again exactly as released (its fingerprint matches) and each of its pins holds its own value again; the copies made stay on the case", sql(`select sha256 from config_release where id='${rel}'`) === wasHash && snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")) === wasHash && pinsOf() === pinsBefore, { pins: pinsOf() === pinsBefore });
   }
-  ok("C7.7-32 pass (scaffolding put back): the case's release is again exactly as released, its fingerprint matching", sql(`select sha256 from config_release where id='${rel}'`) === wasHash && snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")) === wasHash);
 });
