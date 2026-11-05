@@ -1,0 +1,29 @@
+# Records sweep (P-371 (4), founder 6 Nov): records-only PRs labelled "records" (set by ci.yml) and "review: approved"
+# with green ci merge outside Mergify's product queues, only while no merge-queue batch is checking (P-306 (3)), after
+# the records checks on main with each PR merged in (tools/records-merge.sh). ci.yml's job "records-merge" tries at once
+# (waiting up to 10 minutes for a free queue); this sweep takes what it left. "Run workflow" starts it by hand.
+# Measured 4-5 Nov: the queue had no batch checking 31% of the time, with 31 gaps of 5 minutes or more in 45 hours.
+name: records-merge
+on:
+  schedule:
+    - cron: "11,31,51 * * * *"
+  workflow_dispatch: {}
+permissions: { contents: write, pull-requests: write }
+concurrency: { group: records-merge, cancel-in-progress: false }
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: merge the waiting records PRs while no batch is checking
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: bash "$P/tools/records-merge.sh" sweep | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}
