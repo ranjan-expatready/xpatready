@@ -129,8 +129,16 @@ async function casePart() {
   const UNION_KEY = unionKey();
   if (!UNION_KEY) { console.log("STOP  setup missing: Visitor visa's release has no date of the union on this copy"); process.exit(2); }
   // Named scaffolding (P-33): the field is published by release 1, so the product refuses the scope (rule 4, -2 above);
-  // the test sets it in SQL, then releases again through the release's own steps, so the release carries the mark.
+  // the test sets it in SQL, then releases again through the release's own steps, so the release carries the mark. The
+  // setup places the date once per case and has the officer collect it (review m7 on #1054): the scaffolding also makes it
+  // a client question asked for each person, as the six place it, so the mark is what asks it once.
+  sql(`update section_question set repeats='per_person', collected_from='client_questionnaire' where lineage_key='${UNION_KEY}' and status in ('DRAFT','PUBLISHED')`);
+  const draftQs = async () => ((await preview(vv, { principal: 1, spouse_or_partner: 1, child: 1 }))?.questions ?? [] as PQ[]).filter((q: PQ) => q.fact === UNION_KEY).map((q: PQ) => q.about).sort();
+  const unmarked = await draftQs();
+  ok("C3.16-3 fail (review m7): without the mark, the draft asks the date of each person (answers that can differ)", unmarked.includes("principal") && unmarked.includes("spouse_or_partner") && !unmarked.includes("case"), unmarked);
   sql(`update canonical_field set scope='HOUSEHOLD' where canonical_field_key='${UNION_KEY}'`);
+  const marked = await draftQs();
+  ok("C3.16-3 pass: with the Household mark, the same draft asks it once, for the application", marked.length === 1 && marked[0] === "case", marked);
   const before = Number(sql(`select coalesce(max(version),0) from config_release where combination_id='${vv}'`));
   let r = await call("POST", `/combinations/${vv}/submit`, { note: "C3.16 case part: release again with the household scope (scaffolding, P-33)" }, AUTHOR);
   const items = ((r.body?.changeSummary ?? []) as { kind: string; key: string }[]).map((c) => `${c.kind}|${c.key}`);
@@ -147,7 +155,12 @@ async function casePart() {
   ok("C3.16-3 pass: tagged For the household, read for the two adults only (B2: never the child)", qs[0]?.scope_tag === "For the household" && (qs[0]?.read_for ?? []).map((x: { subjectId: string }) => x.subjectId).sort().join(",") === [c.subjects["Client A"], c.subjects["Client B"]].sort().join(","), qs[0]);
   r = await call("PUT", `/runtime/cases/${c.id}/answers/${c.subjects["Client B"]}/${UNION_KEY}`, { value: "2012-06-30", expectedId: null }, c.officer);
   ok("C3.16-3 fail: a save on the spouse's record is 422 in words", r.status === 422 && words(r) === "This is asked once for the household, not for a person.", [r.status, words(r)]);
-  r = await answer(c.id, c.caseSubject, UNION_KEY, "2012-06-30");
+  const sqr = (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=sqr`, undefined, "user-P")).body;
+  const cq = (sqr?.sections ?? []).flatMap((s: { questions: { subjectId: string; fact: string; scope_tag?: string }[] }) => s.questions).filter((q: { fact: string }) => q.fact === UNION_KEY);
+  ok("C3.16-3 pass (review m7): the client's own questionnaire asks it once, tagged For the household", cq.length === 1 && cq[0].subjectId === c.caseSubject && cq[0].scope_tag === "For the household", cq);
+  r = await answer(c.id, c.caseSubject, UNION_KEY, "2012-06-30", "user-P");
+  const mine = ((await agent(c.id))?.sections ?? []).flatMap((s: { questions: { fact: string; answer?: { confirmed?: boolean } }[] }) => s.questions).find((q: { fact: string }) => q.fact === UNION_KEY);
+  ok("C3.16-3 pass (m3): the client's one answer counts as confirmed once (an application fact, the client's own)", mine?.answer?.confirmed === true, mine?.answer);
   ok("C3.16-3 pass: one answer, stored once on the case's own record", r.status < 300 && Number(msql(`select count(*) from client_canonical_answer where canonical_field_key='${UNION_KEY}' and superseded_by_id is null and subject_id in (select subject_id from case_participant where case_id='${c.id}')`)) === 1, [r.status, words(r)]);
   r = await call("GET", `/combinations/${vv}/preview?mode=release&people=${encodeURIComponent(JSON.stringify({ principal: 1, spouse_or_partner: 1, child: 1 }))}&answers=${encodeURIComponent(JSON.stringify({ [`case|${UNION_KEY}`]: "2012-06-30" }))}`, undefined, AUTHOR);
   const bx = boxesOf(r.body, UNION_KEY);

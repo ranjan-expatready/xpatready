@@ -45,6 +45,8 @@ ok("C3.16-3: a household box about the form's subject or about nobody reads the 
 const emp = (person: string) => ({ fact: "organisation.employer_name", person });
 ok("C3.16-5 pass: a marked employer fact fills the principal's form from the case", R.aboutOf(family, "principal", emp("none"), org) === FILING && R.aboutOf(family, "principal", emp("form_subject"), org) === FILING);
 ok("C3.16-5 fail: it never fills another person's form (one employer per case: the principal's)", R.aboutOf(family, "spouse_or_partner", emp("none"), org) === null && R.aboutOf(family, "child-1", emp("form_subject"), org) === null);
+ok("C3.16-5 fail (review M1): on the principal's own form, an employer box about anyone else reads nothing (partner, child, parent, sibling)", ["subject_spouse_or_partner", "subject_child", "subject_parent_1", "subject_sibling"].every((p) => R.aboutOf(family, "principal", emp(p), org) === null) && R.aboutOf(alone, "principal", emp("subject_spouse_or_partner"), org) === null);
+ok("C3.16 fail (review M1, QA-152): a representative's box keeps its own reading for a marked employer or household fact", R.aboutOf(family, "principal", emp("representative"), org) === "representative" && R.aboutOf(family, "principal", box("representative"), hh) === "representative" && R.aboutOf(alone, "principal", emp("representative"), org) === "representative");
 ok("C3.16-5 (fail): unmarked, an organisation. fact is read on the form's subject as before", R.aboutOf(family, "spouse_or_partner", emp("none"), plain) === "spouse_or_partner");
 
 // ---- documents still supply a marked fact (challenge M4)

@@ -660,7 +660,6 @@ export class Studio {
     await refuseRetired(this.db, workspaceId, "section", [b.sectionKey]); // C11.9: a retired section takes no new question
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
-    { const no = placementRefusal((await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } }))?.scope, { repeats: b.repeats, condition: b.condition }); if (no) fail(no, HttpStatus.UNPROCESSABLE_ENTITY); } // C3.16 (#1054 M3, M1)
     const types = await this.libraryTypes(workspaceId);
     if (b.condition) { const errs = draftErrors(this.conditionErrors(b.condition, types)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
@@ -672,6 +671,7 @@ export class Studio {
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
       await lockItem(tx, workspaceId, "section", [b.sectionKey]); await refuseRetired(tx, workspaceId, "section", [b.sectionKey]); // round 3 Major 1
+      { const no = placementRefusal((await tx.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } }))?.scope, { repeats: b.repeats, condition: b.condition }); if (no) fail(no, HttpStatus.UNPROCESSABLE_ENTITY); } // C3.16 (#1054 M3, M1; review m1: under the field's lock)
       if (!rows.length) {
         const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
         return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });

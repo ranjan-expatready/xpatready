@@ -29,7 +29,7 @@ const nameOf = async (db: Pick<Tx, "canonicalField">, workspaceId: string, key: 
 async function refuseScoped(db: Pick<Tx, "canonicalField">, workspaceId: string, key: string) {
   const f = await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { scope: true } });
   const no = placementRefusal(f?.scope, { repeats: "per_person", condition: true });
-  if (no) throw problem(409, "Asked once", no);
+  if (no) throw problem(422, "Asked once", no); // the same status as placeField (review m2)
 }
 const sameTree = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 

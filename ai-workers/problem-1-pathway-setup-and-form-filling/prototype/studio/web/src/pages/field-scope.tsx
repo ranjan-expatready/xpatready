@@ -30,6 +30,8 @@ export function FieldScopePanel({ fieldKey, retired }: { fieldKey: string; retir
       <h2 id="field-scope-title" className="font-semibold">Asked about</h2>
       <p className="text-sm text-text-muted">Whom this fact is about. A case asks it once at that level, and every form that reads it gets the one value.</p>
       {d.published ? <Notice tone="info" title="Published">A published field's scope cannot change. Create a new field.</Notice> : null}
+      {!d.published && !canAuthor ? <Notice tone="info" title="Read only">The configuration author chooses whom a field is about; you can see it here.</Notice> : null}
+      {!d.published && canAuthor && retired ? <Notice tone="info" title="Read only">A retired or merged field takes no change.</Notice> : null}
       <fieldset className="grid gap-2 sm:grid-cols-2" disabled={locked}>
         <legend className="sr-only">Asked about</legend>
         {d.choices.map((c) => {

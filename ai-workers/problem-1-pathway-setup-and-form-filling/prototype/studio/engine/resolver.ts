@@ -93,9 +93,13 @@ export function aboutOf(people: PersonOnFiling[], subject: string, entry: { fact
   const fact: string = entry.fact ?? "";
   const scope = scopeOf(fact, placement), m = marked(placement);
   if (scope === "filing") return FILING;
+  // C3.16 (QA-152; review M1 on #1054): a representative's box keeps its own reading whatever the field's scope (a form
+  // field map added after the scope was set is never checked by the scope route, so the rule is here).
+  if (m && entry.person === "representative") return personReading(people, subject, entry);
   // C3.16 BR-4: a marked Organisation fact is the employer of the case's principal (one employer per case, the stand-in
-  // for the employer link, L-SA5): read once on the case for the principal's forms, never for anyone else's.
-  if (m === "organisation") return people.find((p) => p.id === subject)?.role === ROLE.principal ? FILING : null;
+  // for the employer link, L-SA5): read once on the case only by a box about the principal's own form or about nobody
+  // on it; a box about anyone else (partner, child, parent, sibling) and any other person's form read nothing.
+  if (m === "organisation") return people.find((p) => p.id === subject)?.role === ROLE.principal && (entry.person === "form_subject" || entry.person === "none" || entry.person == null) ? FILING : null;
   if (scope === "organisation") return subject; // unmarked: the prospective employer of the form's subject (P5 finding D33)
   const own = personReading(people, subject, entry);
   // C3.16 BR-4 (challenge B2): a marked Household fact replaces a person's own reading by the one value on the case, only

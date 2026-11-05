@@ -39,7 +39,7 @@ export const markOf = (stored: string | null | undefined): { scope?: ScopeMark }
 export const SCOPE_WORDS_REFUSED = {
   published: "A published field's scope cannot change. Create a new field.",
   caseKey: "This is about the application: choose Filing, Household or Organisation.",
-  filingKey: "Not built: a person's fact asked once for the application. Use a case. fact.",
+  filingKey: "Not built: a person's fact asked once for the application. Ask it as an application fact instead.",
   perRow: "A list is asked per person today; a household or employer list is not built.",
   representative: "A representative's box reads this field, so it stays about each person.",
   condition: "A household question cannot depend on one person's answer yet.",

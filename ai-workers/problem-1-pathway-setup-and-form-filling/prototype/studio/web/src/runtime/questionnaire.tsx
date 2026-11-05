@@ -403,7 +403,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
           <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{`About ${inSentence(label)}`}</h2>
-          <div className="mb-2"><HouseholdReads view={view} subjectId={id} /></div>
+          <div className="mb-2"><HouseholdReads view={view} subjectId={id} words={{ who: WHO, when, shown }} /></div>
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
               const st = partState(s, passed, view.checks);
@@ -659,7 +659,7 @@ function AgentView({ view }: { view: View }) {
       <div className="min-w-0 space-y-4">
         <p className="text-[13px] text-text-muted">Click Edit on any answer to change it. A change updates every form that uses it, with a message, and needs the section confirmed again.</p>
         {view.checks.filter((c) => c.subjectId === who && !c.section).map((c) => <Notice key={c.id} tone="warn" title="Check">{c.message}</Notice>)}
-        <HouseholdReads view={view} subjectId={who} onChange={setWho} />
+        <HouseholdReads view={view} subjectId={who} words={{ who: WHO, when, shown }} onChange={(to, fact) => { setWho(to); requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById(lineId(to, fact))?.focus())); }} />
         {mine.map((s) => <AgentSection key={`${s.subjectId}|${s.section}`} view={view} s={s} edit={openEdit} />)}
       </div>
     </TabsContent>
