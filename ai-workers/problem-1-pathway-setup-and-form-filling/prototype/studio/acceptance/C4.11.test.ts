@@ -146,12 +146,12 @@ run(async () => {
   const refused = await blocking();
   ok("C4.11-24 fail (QA-237): a condition accepted and approved, its form field not confirmed: Submit refuses, in the rule's words", second.status < 300 && refused.length > 0 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(refused[0]?.message ?? ""), refused[0]?.message ?? words(second));
   const boxes = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body?.rows ?? [];
-  const asked = boxes.filter((x: any) => x.can_confirm);
-  for (const x of asked) {
+  const toConfirm = boxes.filter((x: any) => x.can_confirm);
+  for (const x of toConfirm) {
     const c = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: FF, formEditionId: x.form_edition_id, dataPath: x.data_path }, AUTHOR);
     if (c.body?.id) await call("POST", `/library/changes/${c.body.id}/approve`, { note: "Approved by the C4.11 pack as the second person (QA-237)." }, APPROVER);
   }
   const left = await blocking();
-  ok("C4.11-25 pass (QA-237): the author confirms the form field that reads it, showing its own words, a second person approves, and Submit no longer refuses that question", asked.length > 0 && asked.every((x: any) => !!x.words) && left.length === 0, { confirmed: asked.length, left: left.map((e) => e.message) });
+  ok("C4.11-25 pass (QA-237): the author confirms the form field that reads it, showing its own words, a second person approves, and Submit no longer refuses that question", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0, { confirmed: toConfirm.length, left: left.map((e) => e.message) });
   T.done();
 });
