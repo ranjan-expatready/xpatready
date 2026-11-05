@@ -93,14 +93,14 @@ ROWS = [
   "QA-228 still open."),
  ("C8.2", "Filing records portal, reference, number, UCI", "Partial", "Partial", ["C8.2"],
   "1.5 (the combination's IRCC account: `portal` is null on the checkpoint)",
-  "the checkpoint setting \"Filed through APR Portal\" (J7 1.5); after it, Works is one step away",
+  "the checkpoint setting \"Filed through APR Portal\" (J7 1.5); with it, its pack has no other red step",
   "11/12 both rounds (fixture 12/12). Red only C8.2-7: the record's portal is not `APR_PORTAL` because the configured Visitor visa has no IRCC account (`/prepare` `portal: null`).",
   "Case page: \"Submission to IRCC · One submission for 4 people applying · Record the submission… Opens once every filing is Ready to file\", each filing Not started. The dialog could not be reached (no filing can be Ready to file on screen).",
   "Proposed new: N6 (no \"Filed through\" on the configured Visitor visa: J7 1.5)."),
  ("C9.2", "A changed fact marks signed/uploaded/submitted items stale", "Not built", "Partial (built in part)", ["C9.2"],
   "1.2 / 1.4 (needs IMM 5476 signed and an Online IMM 5707 on the checkpoint)",
   "N2, QA-228, release 2's channels; the row's own remaining steps",
-  "5/11 both rounds: an uploaded IMM 5257 goes Out of date naming the fact, old and new value and date (C9.2-3), it is a CRITICAL warning (-5), Undo restores (-8), answers are append-only (-11). Red: -2/-6/-10 need IMM 5476's signed scan, -9 an entered Online section, -4 the signed scan's checksum (no scan), -7 the spouse's IMM 5476 item. The table's \"Not built\" is stale.",
+  "5/11 both rounds (11/11 on its fixture today: built; the checkpoint lacks what it changes). An uploaded IMM 5257 goes Out of date naming the fact, old and new value and date (C9.2-3), it is a CRITICAL warning (-5), Undo restores (-8), answers are append-only (-11). Red: -2/-6/-10 need IMM 5476's signed scan, -9 an entered Online section, -4 the signed scan's checksum (no scan), -7 the spouse's IMM 5476 item. The table's \"Not built\" is stale.",
   "Not walked on screen (no Out of date banner without a generated, validated copy; `out-of-date.tsx` exists).",
   "None new."),
  ("C10.2", "The founder loads the finished story", "Not built", "Not built", ["C10.2"],
@@ -118,11 +118,15 @@ ROWS = [
  ("C11.6", "Each form's channel picked inside what IRCC accepts", "Partial", "Partial", ["C11.6"],
   "1.4 (every line PDF upload, signature NONE; no Online IMM 5707); 1.5 (no portal)",
   "the checkpoint's channels and signature per line (DEMO.md row 9, B81); N6",
-  "6/14 both rounds. Red: C11.6-1 no \"Filed through\" (`portal: null`); -3 every item PDF upload; -5 signature `NONE`; -8a Online on IMM 5257 is not refused (the checkpoint's library line accepts it), -8b/-9 Paper answers 409 on the checkpoint, -12. Green: IMM 5476 Online refused with IRCC's line (-6), unknown channel 400, stale version 409, audit.",
+  "6/14 both rounds (14/14 on its fixture today). Red: C11.6-1 no \"Filed through\" (`portal: null`); -3 every item PDF upload; -5 signature `NONE`; -8a Online on IMM 5257 is not refused (the checkpoint's library line accepts it), -8b/-9 Paper answers 409 on the checkpoint, -12. Green: IMM 5476 Online refused with IRCC's line (-6), unknown channel 400, stale version 409, audit.",
   "No Change channel on any form row on the case page.",
   "N6."),
 ]
 
+# Fixture, for context only (P-322: it does not count). Today: gate B on its fixture (runs-fixture.md); else the 4 Nov verdicts.
+FIX = {"C6.12": "24/24 (4 Nov)", "C6.4": "30/30 (4 Nov)", "C6.9": "15/15 (2 Nov)", "C7.6": "25/25 (4 Nov)", "C7.7": "26/26 (4 Nov)",
+       "C7.3": "13/13 (4 Nov)", "C8.1": "14/14 (4 Nov)", "C8.2": "12/12 (run 41850993463)", "C6.5": "engine 7/7 (today; gate B runs it --engine)",
+       "C6.11": "22/22 (today)", "C7.5": "9/16 (today)", "C9.2": "11/11 (today)", "C10.2": "0/11 (today)", "C11.6": "14/14 (today)"}
 PACKED = {}
 for r in ROWS:
     for p in r[4]: PACKED[p] = (count("cp-r1", p), count("cp-r2", p))
@@ -158,7 +162,7 @@ for (cid, cap, was, now, packs, j7, waits, verdict, walk, bugs) in ROWS:
 * **Evidence:** `qa/reports/2026-11-05-milestone-m3-cloud/` (README, `runs/cp-r1/*.out.txt`, `walk/`).
 
 ## Pack on the checkpoint (passed / steps · round 1 · round 2)
-{runs_txt(packs)}
+{runs_txt(packs)}{f"  ·  fixture, context only: {FIX[cid]}" if cid in FIX else ""}
 
 {verdict}
 
@@ -176,8 +180,8 @@ for (cid, cap, was, now, packs, j7, waits, verdict, walk, bugs) in ROWS:
     open(os.path.join(V, f"2026-11-05-M3-{cid}.md"), "w").write(body)
 
 # The table for README.md
-lines = ["| Row | Status (table → proposed) | Steps passed on the checkpoint (r1; r2 same unless named) | First red J7 step | Waits on |", "|---|---|---|---|---|"]
+lines = ["| Row | Status (table → proposed) | Steps passed on the checkpoint (both rounds) | Fixture (context, does not count) | First red J7 step | Waits on |", "|---|---|---|---|---|---|"]
 for (cid, cap, was, now, packs, j7, waits, *_ ) in ROWS:
-    lines.append(f"| {cid} | {was} → **{now}** | {main_steps(packs)} | {j7} | {waits} |")
+    lines.append(f"| {cid} | {was} → **{now}** | {main_steps(packs)} | {FIX.get(cid, '—')} | {j7} | {waits} |")
 open(os.path.join(HERE, "table.md"), "w").write("\n".join(lines) + "\n")
 print("\n".join(lines))

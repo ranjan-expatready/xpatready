@@ -1,0 +1,37 @@
+C6.5 — Documents read into proposed facts (Visitor visa, replayed, US$0)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.5-E1 pass: the reader reads a synthetic passport's coded lines into proposals about its holder, reader "mrz", page 1, with a confidence
+PASS  C6.5-E2 pass (P-243): number, date of birth and expiry, backed by passed check digits, are collapsed; names stay expanded; one review for the document (P-242)
+PASS  C6.5-E3 pass: place of birth is not proposed (not on the coded lines)
+PASS  C6.5-E4 fail: a bad check digit: no passport number is proposed, it is listed unreadable, and nothing is collapsed (P-243)
+PASS  C6.5-E5 fail: two people's passports on one document: nothing is proposed for either, every fact unreadable (never attributed by guess)
+PASS  C6.5-E6 pass (resolver R11): a two-person document on the principal's line supplies each fact to the person it is about (the spouse's to the spouse)
+PASS  C6.5-E7 fail (resolver R11): with no spouse on the case, the spouse's fact goes to nobody, never to the holder
+PASS  C6.5-1 pass: the synthetic passport is uploaded to Client A's passport line — 201
+FAIL  C6.5-2 pass (P-134 D4): an upload proposes and answers nothing by itself
+FAIL  C6.5-3 pass: "Fill this from documents" on the passport section proposes the coded-line facts — []
+FAIL  C6.5-4 pass (AG11-D4 shape): every proposal carries its document, page, reader "mrz" (rules) and a confidence
+FAIL  C6.5-5 pass: place of birth is not proposed (not on the coded lines; typed)
+FAIL  C6.5-6 pass (no AI): reading a passport made no model call
+FAIL  C6.5-7 pass: proposals are not answers: the answers are unchanged until a person accepts
+FAIL  C6.5-8 fail: a client cannot run Fill this from documents for the officer's view (403)
+FAIL  C6.5-9 pass (P-242, P-243): the passport is one review with one "Confirm & use"; number, date of birth and expiry are collapsed (check digits passed), names expanded
+PASS  C6.5-9b pass (P-242): the client's own typed answer is Declared and is the current answer at once
+FAIL  C6.5-9c fail (P-242): a client cannot Confirm & use a document's values (403; staff only) — 404
+FAIL  C6.5-10 pass (P-242): one Confirm & use writes the document's values with their provenance (document_read, document, page) and records who and when — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"Cannot POST /api/runtime/cases/b41b27c3-46da-49da-93f6-aa5141e0c882/documents/45146e92-0dcf-4bc7-81b4-20c2e835cc91/confirm-and-use","message":"Cannot POST /api/runtime/c
+FAIL  C6.5-11 pass (P-242, amends P-72): a value used by Confirm & use fills at once: the passport number is the current answer, not waiting for Confirm section
+FAIL  C6.5-12 pass (BR-7, P-242): the client typed SAMPLEDE, the passport reads SAMPLED: one open check for this person and fact, and the client's answer is not overwritten — []
+FAIL  C6.5-13 fail (BR-6): Confirm section is refused while a check is open (409 open_checks) — 201
+FAIL  C6.5-14 fail: resolving a check without a reason is refused (400) — 404
+FAIL  C6.5-15 pass: the officer keeps the document's value with a reason; the client's value stays on record
+FAIL  C6.5-16 fail (P-142 D3): a client cannot mark a value checked against the document (403) — 404
+FAIL  C6.5-17 pass: staff mark it checked against the document: VERIFIED with that evidence and who
+FAIL  C6.5-18 fail: a coded line whose check digit fails proposes no passport number; the field is flagged unreadable — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"Cannot POST /api/runtime/cases/b41b27c3-46da-49da-93f6-aa5141e0c882/sections/personal_details/fill-from-documents","message":"Cannot POST /api/runtime/cases/b41b27c3-46d
+FAIL  C6.5-18b fail (P-243): with a failed check digit nothing is collapsed: date of birth and expiry stay expanded — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"Cannot POST /api/runtime/cases/b41b27c3-46da-49da-93f6-aa5141e0c882/sections/personal_details/fill-from-documents","message":"Cannot POST /api/runtime/cases/b41b27c3-46d
+FAIL  C6.5-19a pass: a document with no checklist line (a letter of invitation, Sample) is uploaded to the case's documents — 404
+FAIL  C6.5-19 pass (P-110): the cost card comes first: a live read is priced above US$0 and not allowed without the founder's Go; replay US$0 — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"Cannot POST /api/runtime/cases/b41b27c3-46da-49da-93f6-aa5141e0c882/sections/details_of_visit_to_canada/fill-from-documents/plan","message":"Cannot POST /api/runtime/cas
+FAIL  C6.5-19b precondition (FQ-10): a saved AI read of this synthetic letter is recorded (one live read with the founder's Go; until then this and C6.5-20 stay red)
+FAIL  C6.5-20 pass: the replayed read of the synthetic letter of invitation proposes the contact's name, marked Replayed, cost US$0 — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"Cannot POST /api/runtime/cases/b41b27c3-46da-49da-93f6-aa5141e0c882/sections/details_of_visit_to_canada/fill-from-documents","message":"Cannot POST /api/runtime/cases/b4
+
+9/32 passed
