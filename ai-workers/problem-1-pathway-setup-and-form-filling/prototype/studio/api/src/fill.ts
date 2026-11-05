@@ -33,13 +33,15 @@ export function solutionFile(rel: string | null | undefined): string | null {
   return real.startsWith(`${root}${sep}`) && !real.split(sep).includes("node_modules") ? real : null;
 }
 
-export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, form: string, dir: string, base: string, opts: { notForFiling?: boolean } = {}) {
+export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, form: string, dir: string, base: string, opts: { notForFiling?: boolean; channel?: string } = {}) {
   // F1: the PDF edition. A line filed Online is never filled as a PDF, even when the library also has its PDF (review 18);
   // online filling needs the browser extension (later wave, W1-02, P-102).
   const line = (snapshot.forms as { form_number: string; channel?: string }[]).find((f) => f.form_number === form);
   // C-4: a Not needed line is never filled. P-145: an Online line is filled only as a "Copy, not for filing" (a case copy).
-  if (line?.channel === "NOT_NEEDED") fail(`${form} is Not needed here: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.CONFLICT);
-  if (line?.channel === "ONLINE" && !opts.notForFiling) fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
+  // C11.6: on a case, the channel the person's form item was moved to (inside what IRCC accepts) replaces the line's.
+  const channel = opts.channel ?? line?.channel;
+  if (channel === "NOT_NEEDED") fail(`${form} is Not needed here: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.CONFLICT);
+  if (channel === "ONLINE" && !opts.notForFiling) fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
   // P-32: the edition in use (the newest mapped PDF edition), never the first the snapshot lists (its oldest).
   const map = pdfMapInUse(snapshot.field_maps, form);
   // Breaker m2 (edition in use): the words name the edition in use, so a newer edition missing its file is said so.
