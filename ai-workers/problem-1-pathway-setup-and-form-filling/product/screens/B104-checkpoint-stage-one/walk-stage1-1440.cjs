@@ -16,7 +16,8 @@ fs.mkdirSync(out, { recursive: true });
 const steps = [];
 const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!seen, detail }); console.log(`${seen ? "SEEN   " : "MISSING"} J7 ${j7}  ${what}${detail ? ` — ${detail}` : ""}`); };
 (async () => {
-  const browser = await chromium.launch();
+  // A copy whose Playwright differs from the installed browser names it (cloud: PW_CHROMIUM=/opt/pw-browsers/chromium).
+  const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
   const errors = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
@@ -32,8 +33,11 @@ const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!s
   await page.getByRole("menuitem", { name: /Reset demo/ }).click();
   const dlg = page.getByRole("dialog");
   await dlg.getByLabel("Type RESET to confirm").fill("RESET", { timeout: 30000 });
+  // The reset's own answer ends the step (the dialog then shows its result, which a person closes by moving on).
+  const reset = page.waitForResponse((r) => r.url().endsWith("/api/demo/reset") && r.request().method() === "POST", { timeout: 300000 });
   await dlg.getByRole("button", { name: /Reset/ }).last().click();
-  await dlg.waitFor({ state: "detached", timeout: 300000 });
+  const rr = await reset;
+  if (rr.status() >= 300) throw new Error(`Reset demo answered ${rr.status()}`);
   await as("user-A", "/");
   await page.getByRole("button", { name: /^Demo/ }).click();
   await page.getByRole("menuitem", { name: /Load the configured checkpoint/ }).click();
@@ -46,11 +50,13 @@ const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!s
 
   // 1.1: Immigration programs › Visitor visa, release 1.
   await as("user-A", "/");
-  await page.getByRole("link", { name: /^Visitor visa/ }).first().click();
+  await page.getByRole("button", { name: "Visitor visa", exact: true }).first().click();
   await page.waitForURL(/\/c\/[^/]+/, { timeout: 30000 }); await page.waitForLoadState("networkidle");
   const combo = page.url().match(/\/c\/([^/?#]+)/)[1];
+  await page.getByRole("heading", { name: /Visitor visa/ }).first().waitFor({ timeout: 30000 });
+  await page.waitForLoadState("networkidle");
   const head = await text();
-  note("1.1", "Visitor visa opens, showing its release", /Visitor visa/.test(head) && /release 1|Release 1|Released/i.test(head), head.match(/[^.]{0,60}[Rr]elease[^.]{0,60}/)?.[0] ?? "");
+  note("1.1", "Visitor visa opens, showing its release", /In Release 1/.test(head) && /Released versions: Release 1/.test(head), head.match(/Released versions: Release 1[^·]{0,60}/)?.[0] ?? "");
   await shot("1-1-visitor-visa");
 
   // 1.2–1.3 and 1.5: the Forms tab.
@@ -64,6 +70,8 @@ const note = (j7, what, seen, detail = "") => { steps.push({ j7, what, seen: !!s
   const acct = page.getByRole("combobox", { name: "IRCC account this combination files through" });
   const chosen = (await acct.count()) ? await acct.evaluate((s) => s.options[s.selectedIndex]?.text ?? "") : "";
   note("1.5", "IRCC account: APR Portal", /APR Portal/.test(chosen), chosen);
+  const wide = await page.evaluate(() => ({ page: document.scrollingElement.scrollWidth, view: window.innerWidth }));
+  note("1.2w", "The Forms tab has no sideways page scroll at 1440 px (its table scrolls inside itself)", wide.page <= wide.view, `${wide.page} px wide in a ${wide.view} px window`);
   await shot("1-2-forms-tab");
 
   // 1.8: no authoring screen yet (B106); the gates are read where a person meets them, at 4.1 below.
