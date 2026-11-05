@@ -157,7 +157,7 @@ export async function applySupplies(db: Db, audit: Audit, actor: Actor, seen: Li
     await revise(tx.documentType, rows, { suppliesFacts: m.after, suppliesAbout: m.afterAbout && Object.keys(m.afterAbout).length ? (m.afterAbout as Prisma.InputJsonValue) : Prisma.DbNull }, actor.id, copyType);
     return c;
   }, { timeout: 30_000, maxWait: 10_000 });
-  if (!c) throw problem(409, "Changed meanwhile", "A field this change named was withdrawn at the same moment, so the change was not applied. Refresh to see what it does now.");
+  if (!c) throw problem(409, "Changed meanwhile", "This change, or a field it named, was withdrawn at the same moment, so nothing was applied. Refresh to see what it does now.");
   await audit.log(c.workspaceId, actor.id, "approved", "document type", c.key, `${actor.name} approved: ${c.label ?? c.key}. Every combination that names it has it in its draft now; it goes out with each one's next release.`);
 }
 
@@ -200,14 +200,15 @@ export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: {
     const after = m.after.filter((f) => f !== fact), afterAbout = Object.fromEntries(Object.entries(m.afterAbout ?? {}).filter(([k]) => k !== fact));
     const before = { facts: m.before ?? [], about: m.beforeAbout ?? {} }, nothingLeft = same({ facts: after, about: afterAbout }, before), wasApproved = c.status === "APPROVED";
     const n = after.length, document = m.document ?? c.label ?? "A document";
-    const said = `The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why.replace(/\.$/, "")}`.slice(0, 180); // room for the approver's note: both stay (breaker n15)
+    const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
+    const said = clip(`The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why.replace(/\.$/, "")}`, 180); // the note holds 300: this leaves room for the approver's (breaker n15); the full reason is on the field's own change
     if (wasApproved) {
       const draft = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 }))[0];
       const back = await throughMerges(tx, workspaceId, before.facts, before.about); // Break R2-M1: a merge since approval moved the keys
       if (draft) await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: back.facts, suppliesAbout: Object.keys(back.about).length ? (back.about as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
     }
     const matches = { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue;
-    const earlier = c.decisionNote ? `${wasApproved ? "Approved: " : ""}${c.decisionNote.replace(/\.$/, "")}. `.slice(0, Math.max(0, 298 - said.length)) : ""; // the withdrawal's words are never the part clipped
+    const earlier = c.decisionNote ? `${clip(`${wasApproved ? "Approved: " : ""}${c.decisionNote.replace(/\.$/, "")}`, 296 - said.length)}. ` : "";
     await tx.libraryChange.update({ where: { id }, data: nothingLeft ? { status: "WITHDRAWN", decisionNote: `${earlier}${said}`.slice(0, 300), matches }
       : { label: `${document} · ${n ? `supplies ${n} fact${n === 1 ? "" : "s"}` : "supplies no fact"}, for every combination`.slice(0, 300), matches, decisionNote: `${earlier}${said}`.slice(0, 300), ...(wasApproved ? { status: "WAITING", decidedBy: null, decidedAt: null } : {}) } });
     const proposer = ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person";

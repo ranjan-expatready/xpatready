@@ -74,6 +74,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   /** The content reviewer signs what needs signing (the release's own rule, not this row's). */
   const sign = async () => { const items = (((await call("GET", `/combinations/${vv}/review`)).body.submission?.changeSummary ?? []) as { kind: string; key: string; needs_sme?: boolean }[]).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`); if (items.length) await call("POST", `/combinations/${vv}/signoff`, { items, action: "signed" }, "user-C"); };
   const submit = async (note = "B83 check") => { const s = await call("POST", `/combinations/${vv}/submit`, { note }); if (s.status < 300) await sign(); return s; };
+  const newWaitingField = (label: string) => { const k = `person.${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`; const cs = sql("select string_agg(column_name, ',') from information_schema.columns where table_name = 'canonical_field' and column_name not in ('id','canonical_field_key','label','meaning','supersedes_id','status','version')"); sql(`insert into canonical_field (id, canonical_field_key, label, meaning, status, version, ${cs}) select gen_random_uuid(), ${lit(k)}, ${lit(label)}, ${lit(MEANS(label))}, 'DRAFT', 1, ${cs} from canonical_field where canonical_field_key = 'person.family_name' and status = 'PUBLISHED' limit 1`); sql(`insert into library_change (id, workspace_id, kind, key, label, action, status, proposed_by) values ('${randomUUID()}', '${ws}', 'field', ${lit(k)}, ${lit(label)}, 'ADD', 'WAITING', ${lit(AUTHOR)})`); return k; };
   const release = async () => { const s = await submit(); if (s.status >= 300) return s; return call("POST", `/combinations/${vv}/approve`, {}, APPROVER); };
 
   // ------------------------------------------------------------ the row's first state: a released row under a draft
@@ -373,7 +374,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   u = await addFact();
   ok("breaker M6 pass: with only its own rule reading it, the fact can be proposed for that rule", u.status < 300, u);
   const again = await addFact();
-  ok("review V1 fail test: the rule-fact route's own refusals stand after the withdrawn-key check: a second waiting item under one name is refused", again.status === 409 && /already waiting/.test(words(again)), again);
+  ok("review V1 fail test: the rule-fact route's own refusals stand after the withdrawn-key check: a second waiting item under one name is refused", again.status === 409 && /A proposal to add "/.test(words(again)), again);
   // Breaker M9: a reader that appears while the proposal waits is asked about again as it lands.
   const waitingFact = u.body?.proposalId as string;
   const dropLate = drop("predicate", insert("predicate", { ...rowCols, combination_id: lit(outside), predicate_key: lit(`b83_rf_late_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(rfKey)}::jsonb`, then_plain: "'B83 late rule'", for_whom: "'applicant'" }));
@@ -530,6 +531,16 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   u = await ask(NATID, { field: relKey });
   const placedAfter = await held();
   ok("BR-8: asking an approved, placed field needs no second person and no second press", u.status < 300 && placedAfter.length === 0, placedAfter);
+
+  // Review F1: a new document type's approved addition naming a new field still waiting never goes out on the shared release.
+  const heldField = newWaitingField("B83 pack held");
+  const typeCols = sql("select string_agg(column_name, ',') from information_schema.columns where table_name = 'document_type' and column_name not in ('id','document_type_key','name','status','version','supplies_facts','supersedes_id')");
+  sql(`insert into document_type (id, document_type_key, name, status, version, supplies_facts, ${typeCols}) select gen_random_uuid(), 'b83_pack_type', 'B83 pack type', 'DRAFT', 1, array[${lit(heldField)}], ${typeCols} from document_type where status = 'PUBLISHED' limit 1`);
+  const typeAdd = randomUUID();
+  sql(`insert into library_change (id, workspace_id, kind, key, label, action, status, proposed_by, decided_by, decided_at) values ('${typeAdd}', '${ws}', 'document_type', 'b83_pack_type', 'B83 pack type', 'ADD', 'APPROVED', ${lit(AUTHOR)}, ${lit(APPROVER)}, now())`);
+  const page = await call("GET", "/draft", undefined, APPROVER);
+  u = await call("POST", "/pack/release", { expectedChanges: page.body?.changes }, APPROVER);
+  ok("review F1 fail test: the shared release leaves the new document type out while a field it supplies waits: never published, its addition still approved", sql("select status from document_type where document_type_key = 'b83_pack_type'") === "DRAFT" && sql(`select status from library_change where id = '${typeAdd}'`) === "APPROVED", { u: u.status, words: words(u), type: sql("select status from document_type where document_type_key = 'b83_pack_type'"), change: sql(`select status from library_change where id = '${typeAdd}'`) });
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

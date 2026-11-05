@@ -339,6 +339,12 @@ export async function publishLibraryChanges(tx: Prisma.TransactionClient, worksp
   const approved: LibraryChange[] = await tx.libraryChange.findMany({ where: { workspaceId, status: "APPROVED", action: { in: ["ADD", "RETIRE", "RESTORE"] }, OR: [...(only.ids?.length ? [{ id: { in: only.ids } }] : []), ...(only.items ? (["field", "section", "document_type"] as const).filter((k) => only.items![k].length).map((k) => ({ kind: k, key: { in: only.items![k] } })) : [])] }, orderBy: { proposedAt: "asc" } });
   const out: { kind: string; key: string; label: string; action: string }[] = [];
   for (const c of approved) {
+    // B83 (review F1): a new document type never goes out supplying a new field still waiting: it waits for a later release,
+    // which is what withdrawing that field relies on. An approved change used by nothing released now waits too (break m15).
+    if (c.kind === "document_type" && c.action === "ADD") {
+      const supplied = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" }, select: { suppliesFacts: true } })).flatMap((d) => d.suppliesFacts);
+      if (supplied.length && await tx.libraryChange.count({ where: { workspaceId, kind: "field", action: "ADD", key: { in: supplied }, status: { in: ["WAITING", "RETURNED"] } } })) continue;
+    }
     const rows = await versionsOf(tx, c.kind, workspaceId, c.key);
     // W1-03 (P-116, api/src/lifecycle.ts): a structure name or a combination is retired or restored by this release.
     if (!rows && !(await publishLifecycle(tx, c))) continue;

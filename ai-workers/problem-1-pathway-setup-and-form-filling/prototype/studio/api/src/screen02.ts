@@ -137,7 +137,7 @@ export class Screen02 {
     if (decision === "approve") await this.lifecycle.afterApprove(actor, c).catch(async (e) => {
       await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: before?.decisionNote ?? null } }); // B83 (review): a note it came back with stays
       if (e instanceof HttpException) throw e;
-      fail(`Nothing was ${c.kind === "form_accepts" ? "applied" : "deleted"}: the database refused it. It still waits on To review; try again, or return it.`, HttpStatus.CONFLICT);
+      fail(`Nothing was ${c.action === "DELETE" ? "deleted" : "applied"}: the database refused it. It still waits on To review; try again, or return it.`, HttpStatus.CONFLICT);
     });
     // S4 round 2 N8: an approved delete that could not be applied comes back RETURNED: say that, not "approved".
     const now = decision === "approve" ? (await this.db.libraryChange.findUnique({ where: { id } }))! : c;

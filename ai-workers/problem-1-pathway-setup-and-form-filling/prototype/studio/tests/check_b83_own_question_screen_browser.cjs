@@ -227,7 +227,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await reader.goto(`${BASE}/review/change/${backChange.body?.id}`, { waitUntil: "networkidle" });
   const cameBack = reader.locator("[data-came-back]");
   await cameBack.waitFor({ timeout: 60_000 }).catch(() => {});
-  ok("review R1 fail test: the second person's page says why it is back, no key", (await cameBack.count()) === 1 && /Decide this again/.test(await cameBack.innerText()) && /"B83 came back" it named was withdrawn/.test(await cameBack.innerText()) && !/person\.[a-z_]+/.test(await cameBack.innerText()), await reader.locator("body").innerText().then((x) => x.slice(0, 300)));
+  ok("review R1 fail test: the second person's page says why it is back, no key", (await cameBack.count()) === 1 && /changed after it was proposed/.test(await cameBack.innerText()) && /"B83 came back" it named was withdrawn/.test(await cameBack.innerText()) && !/person\.[a-z_]+/.test(await cameBack.innerText()), await reader.locator("body").innerText().then((x) => x.slice(0, 300)));
   await axeOf(reader, "a change back for a second look", "[data-came-back]");
   await reader.close();
   await api("POST", `/library/changes/${backChange.body?.id}/withdraw`, { note: "Done with the walk" });
