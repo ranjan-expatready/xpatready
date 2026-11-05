@@ -166,6 +166,7 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B105 Approver written as the draft's author | Found by B86: `document-supplies.ts:149` and `who-fills.ts:94` can stop the Approver releasing (BR-14). **Done when:** both fixed, a pass and a fail test each, breaker run. Own small PR after #1053's label; jumps ahead only if qa's walk meets it. Owner: B86 | P-352 |
 | B106 Gate-authoring screen | From #1084: the eligibility gates route has no screen; allow-listed meanwhile. **Done when:** concept and challenge approved (P-223 (4)); a person saves gates by screen; the allow-list line is removed. Owner: none yet | P-351 |
 | B107 Representative facts on the forms | From #1072: IMM 5476's membership boxes by licensing body, seven required representative facts with no source, a designated-individual person for IMM 5475. **Done when:** gates are executable, each fact has a source or a question; IMM 5475 no longer reads `representative`. Owner: none yet | P-351 |
+| B108 Scale phase: the design | Founder P-353, P-336. **Done when:** `product/design/scale-phase-2026-11-05.md` says for each of the five changes what moves, the order, how the running factory keeps working during the switch, how each is measured, and which STANDARDS §1 gate applies; an independent Opus challenge is answered; no product file changed. Owner: cloud lane | P-353 |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
