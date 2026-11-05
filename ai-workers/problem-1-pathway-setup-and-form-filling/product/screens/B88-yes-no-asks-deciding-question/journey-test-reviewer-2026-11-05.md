@@ -47,3 +47,32 @@ How it was run: my own isolated copies on :4456 and :4457 (forms range), Chrome 
 
 ## Could not test
 A real screen reader; an intended user's unaided walk (D17/D20 stay with the founder); a full release record on the six; a client case filled end to end (journey 8, covered only by the pure fill test); real 200 % browser zoom (simulated as a 512 px viewport).
+
+## Round 2: re-walk on 7ce4a9630 (diff only), same day
+Fresh copies on :4456 and :4457. Re-runs: browser 47/47, spread 36/36, fill 31/31.
+
+Journeys re-walked:
+* **J2 (way back):** the author opens the new closed section "Form fields that follow a question's condition (2)" with the keyboard and presses "Undo: …". The approver returns it through the page with a reason. The ask goes back to APPROVED, and its chip reads "Approved · in the next release".
+* **Wrong words:** the change title is "Change the question a form field asks: … asks "Has used other name" (Y when Yes, N when No)".
+* **Accessibility:** WCAG 2.5.3 (`label-content-name-mismatch`) finds none; axe AA is clean; no sideways scroll at 1024, 512 and 400 px.
+* **Speed and console:** the followers section shows in 386 ms with no console errors.
+
+Break pass on the step-finding (tech lead's request; details in `review.md`): the 39 worked-out Yes/No form fields in the six's maps and the 147 Yes/No boxes in the readings.
+* On the case path, no wrong value: QA-165 refuses every No that has a named detail recorded.
+* **Major:** on the Studio's sample PDF fill (render coverage, no QA-165) the same step writes **Y** for a No. Shown with the fill test's made-up form. Not reachable today: Client A holds none of these facts.
+
+| Criterion | Round 1 | Round 2 | Evidence |
+|---|---|---|---|
+| Task completed | 1 | 1 | spread 36/36; the walk done through the page |
+| Next step obvious | ½ | 1 | Undo reachable once the problem is gone (followers section) |
+| Plain words | ½ | 1 | title in words; deciding question by its name |
+| Feedback and state | ½ | 1 | returned or withdrawn Undo leaves the ask "Approved · in the next release" |
+| Correct data | ½ | ½ | records true and race-safe; R2-M1 (Y for a No on the sample fill) |
+| Error recovery | ½ | ½ | refusals in words; a returned ask still lands on B86's "Correct it and send it again" form |
+| Accessibility and screen sizes | ½ | 1 | 2.5.3 and AA clean, 400–1440 px |
+| Speed | 1 | 1 | 386 ms |
+| Visual quality | 1 | 1 | team components, followers section matches |
+| Trust and sources | 1 | 1 | printed question, Sample, Unconfirmed: expert |
+| **Total** | **7** | **8½ / 10** | passes the bar of 8; no criterion at 0 |
+
+Round 2 verdict: **passes (8½/10)**. The review still blocks on R2-M1 (fixing it would raise "correct data" to 1).

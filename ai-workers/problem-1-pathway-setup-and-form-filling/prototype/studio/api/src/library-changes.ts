@@ -122,9 +122,9 @@ export async function decideChange(db: Pick<Db, "libraryChange" | "changeSet"> |
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
   if (c.status !== "WAITING") throw problem(409, "Already decided", `This change is already ${c.status.toLowerCase()}.`);
-  if (c.proposedBy === actor.id) throw problem(403, "A different person decides", `You proposed this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
+  if (c.proposedBy === actor.id) throw problem(403, "A different person decides", `You proposed this ${c.action === ASK_ACTION ? "change of the question a form field asks" : changeNoun(c.kind)}, so a different person approves or returns it.`);
   // Break M2: the person who applied the draft that created it is not the second person either.
-  if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
+  if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${c.action === ASK_ACTION ? "change of the question a form field asks" : changeNoun(c.kind)}, so a different person approves or returns it.`);
   if (decision === "return" && !note?.trim()) throw problem(400, "Say why", "Say why it goes back, so the author can correct it.");
   if ((note ?? "").length > 300) throw problem(400, "Too long", "Keep the reason under 300 characters.");
   const write = async (w: Pick<Db, "libraryChange" | "changeSet"> | Prisma.TransactionClient) => {

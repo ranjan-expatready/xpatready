@@ -13,6 +13,7 @@ import { printedQuestion } from "../api/src/own-yes-no.ts";
 import type { BoxRow } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import type { Answer, Participant } from "../engine/runtime/case.ts";
+import { runTransform } from "../../p5/transforms.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -61,6 +62,14 @@ const noted = snap({ asked: true, note: true });
 r = fill(noted, [say(GATE, false), say(NOTE, "kept a note")]);
 const yn = r.c.boxes.find((b) => b.box === YESNO) as BoxRow & { fix?: string };
 ok("C4.11 BR-4 fail guard (QA-165): No while a detail of its block is still recorded: the Yes/No is not written, and says which to correct", !r.v.values[YESNO] && /answered No, but/.test(yn?.fix ?? ""), { written: r.v.values[YESNO], fix: yn?.fix });
+// Review R2-M1: the filler's own step, so every path is safe, not only the case's (the Studio's sample PDF fill reads
+// render's coverage, which has no QA-165).
+const STEP = askedStep([NAME, NOTE], "yes_no_code:Y/N"), YN = { options_resolved: [["No", "N"], ["Yes", "Y"]] as [string, string][] };
+const at = (facts: Record<string, unknown>) => ({ fact: (f: string) => facts[f] });
+const o1 = runTransform(STEP, false, YN, at({ [NOTE]: "kept a note" }));
+ok("C4.11 BR-4 fail guard (review R2-M1): the filler itself never writes Y (or N) for a No while a detail it names is recorded: a person decides", !o1.ok && "hand" in o1, o1);
+const o2 = runTransform(STEP, false, YN, at({})), o3 = runTransform(STEP, true, YN, at({}));
+ok("C4.11 BR-6 pass: the filler writes N for No with nothing recorded, Y for Yes", o2.ok && o2.value === "N" && o3.ok && o3.value === "Y", { no: o2, yes: o3 });
 const before = fill(snap({ asked: false }), [say(GATE, true), say(NAME, "OLD NAME")]);
 ok("C4.11 BR-6: before, the AI's free-text step is not one the filler runs, so that Yes/No was never written by itself", !before.v.values[YESNO], before.v.values);
 

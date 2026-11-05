@@ -106,7 +106,11 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if (s.startsWith("select ")) return hand(`record selection "${s}" is not in the executable set`);
     // C7.2 cause 3: the "recorded" derivations give Yes or No (a missing value reaches here only when the caller passed it on purpose, see RECORDED).
     if ((m = RECORDED.exec(s))) {
-      const any = present(v) || (m[1] ?? "").split(",").map((f) => f.trim()).filter(Boolean).some((f) => present(ctx.fact?.(f)));
+      const named = (m[1] ?? "").split(",").map((f) => f.trim()).filter(Boolean);
+      // B88 (review R2-M1): a box asked as its own Yes/No reads the person's answer; an explicit No while a detail it names is
+      // still recorded contradicts itself, so it is never written as Y (or N) on any path: a person decides (QA-165's rule).
+      if (v === false && named.some((f) => present(ctx.fact?.(f)))) return hand("answered No, but a detail it vouches for is recorded: a person checks which is right");
+      const any = present(v) || named.some((f) => present(ctx.fact?.(f)));
       if (m[3] && any) return hand(`${m[3]} is recorded; whether it is still valid (not expired) is checked by a person`);
       v = any; continue;
     }

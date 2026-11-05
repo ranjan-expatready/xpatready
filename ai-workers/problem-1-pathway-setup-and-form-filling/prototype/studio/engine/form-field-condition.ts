@@ -91,7 +91,7 @@ export function yesNoStep(options: unknown): string | null {
 export function blockFacts(entries: Entry[], dataPath: string, deciding: string): string[] {
   const segs = dataPath.split(".");
   for (let n = segs.length - 1; n >= 2; n--) {
-    if (/^(?:Page|Part)\d+\[\d+\]$/.test(segs[n - 1]) || /^(?:Page|Part)\d+\[\d+\]$/.test(segs[n])) break;
+    if (/^(?:page|part)\d+\[\d+\]$/i.test(segs[n - 1]) || /^(?:page|part)\d+\[\d+\]$/i.test(segs[n])) break; // review R2-m2: page1[0] too
     const prefix = `${segs.slice(0, n).join(".")}.`;
     const facts = [...new Set(entries.filter((e) => e.outcome === "mapped" && e.fact && e.fact !== deciding && e.data_path !== dataPath && e.data_path.startsWith(prefix)).map((e) => e.fact!))].sort();
     if (facts.length) return facts;
