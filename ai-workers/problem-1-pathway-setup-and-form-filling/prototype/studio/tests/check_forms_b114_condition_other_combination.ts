@@ -54,6 +54,9 @@ async function fresh() {
   await T.people(vv);
   for (const f of ["IMM 5257", "IMM 5707"]) await call("POST", `/combinations/${vv}/forms`, { formKey: f }, AUTHOR);
   await T.needQuestions(vv);
+  // The saved run replays on this exact list (P-345): the fix must not move it, compared whole.
+  const list = (await call("POST", `/combinations/${vv}/pqr-picks/plan`, { mode: "replay" }, AUTHOR)).body?.guide?.questions;
+  ok("C4.11 pass: Visitor visa's question list is still vv.single-ae2133b8a398", String(list).endsWith("/vv.single-ae2133b8a398.questions.json"), list);
   return vv;
 }
 /** The saved conditions on Visitor visa; accepts and approves the cards `pick` chooses. */
