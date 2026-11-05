@@ -26,6 +26,7 @@ export const IMM5257_YES_NO: OwnYesNo[] = [
   { dataPath: "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", label: "Has national ID", meaning: "Whether the person has a national identity document (IMM 5257 p. 2, National identity document, Question 1)." },
   { dataPath: "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]", label: "US permanent resident", meaning: "Whether the person is a lawful permanent resident of the United States with a valid alien registration card (green card) (IMM 5257 p. 2, US PR card, Question 1)." },
 ];
+export const OWN_YES_NO_NEAR = "The form's own Yes/No question, not the detail it leads to (sample loader, B52; Sample)";
 export const OWN_YES_NO_REASON = "The form asks this Yes/No itself before its details: asked as its own question in the form's words (sample loader, B52; Sample)";
 /** Per combination: the application form whose Yes/No form fields are asked as their own questions. The checkpoint's
  *  table (api/src/demo.ts FORM_SETUP) reads its boxes from here, so the packs and the checkpoint ask the same ones. */
