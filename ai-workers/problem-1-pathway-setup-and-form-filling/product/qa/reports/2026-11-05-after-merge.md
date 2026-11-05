@@ -55,3 +55,11 @@ The checklist reading lands Visitor visa lines whose conditions read three facts
 | C4.1 (M2) | **Works** (was Partial) | `C4.1.test.ts` six 0 · 25/25 (run 41937658470), checkpoint 0 · 25/25 (run 41937673811) |
 
 **Closed:** QA-221. **M2: 58/60 confirmed** (was 57). Left: C4.11 and C7.7 (#967). Thin slice 7/8.
+
+## Batch 21 — #967 (B52, QA-227) · main adc904436 · ~05:50–06:15 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C4.11 (M2) | Partial, 23/24 on the six (run 41944044725) | G5 red (Ready gap, #865's lane); new QA-234 (Major): the own-question step has no screen |
+| C7.7, C6.11 (M3) | Partial (unchanged) | QA-227 closed; other Majors remain |
+
+**Closed:** QA-227 (`check_b52_own_yes_no.ts` 52/52 on a fresh copy of main). **New:** QA-234. **M2: 58/60.** Left: C4.11, C10.1.
