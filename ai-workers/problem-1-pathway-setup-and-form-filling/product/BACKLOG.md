@@ -139,6 +139,25 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B78 C10.1 row 7: name the unheaded sections | the configured checkpoint holds 29 sections that no printed heading names; a person names each through the Sections screen (product route), so the loader's row 7 completes; part of C10.1 "every row done" | P-343 (10), S2, #1009 |
 | B79 C10.1 row 10: Express Entry and Family sponsorship from their forms | QA-144 slices 4–5: both combinations set up from their forms through the people's steps, so Submit stops refusing 225 and 92 undecided form fields; several rows; the rest of C10.1 "every row done" | P-343 (10), S2, QA-144 |
 | B80 check_ai_launch_paths leaves no state behind | the usage line sets the live switch with the fake launcher; check whether it leaves library fields or shared files behind for later suites (follow-up of QA-193's root cause, #1006) | P-343 (8), Builder 1, #1006 |
+| B81 List value not on this form | a person marks a list value a form field does not print, so filling refuses it in words; whether two list values may share one printed code (IMM 5645); frees C10.1 row 9; 4a09bcd86 holds the steps that set release 2 in `demo.ts`, and B81 brings them back. Owner: Builder standby A | P-345 (1), #1009 |
+| B82 Checklist lines' deciding facts (QA-233, Major) | the checklist's saved reading proposes each fact its lines' conditions read; a person can release Visitor visa on the six after adding its documents; C2.6 step in its PR; C4.8 green on the six again. Owner: `local_b132d166` | P-345 (3) |
+| B83 Own-question screen (QA-234, Major) | screen action on To review › Form fields, undo, near-name check; draft #1036; list id must stay ae2133. Owner: `local_6c0fdf86` | P-345 (5) |
+| B84 Schedule copies refused (QA-235, Major, C7.7) | `fill-case.ts` `formOf` refuses "IMM 5257 SCH1" and "IMM 0008 DEP"; accept what a release writes, anything else not found, never echoed. No owner yet | QA-235 |
+| B85 Question order | placement puts a Yes/No after its details; a client meets the details first. Follow-up of B83 | P-345 (5) |
+| B86 Accepting a condition is a dead end (QA-237, Major, C4.11) | a form field's condition is free text, so the guard can never be met; concept first, migration, breaker; brief on #1037 comment 6647303529. Owner: `local_a4308bc5` | P-345 (6) |
+| B87 Checker-unresolved item never Ready (QA-238, Minor, C4.7) | `engine/pqr-picks.ts:102` reads `unresolved`; after it G5 still has 5 Ready; replay byte-equal. No owner yet | P-345 (9) |
+| B88 A condition holds other combinations (C4.11, M2 end to end) | an approved condition leaves other combinations Unreachable with removal the only way out; the worked-out Yes/No form fields and deciding questions on the other forms; qa logs the bug and rules for C4.11. After B86. No owner yet | P-346 (2) |
+| B89 Answer values for the 23 `code` fields | cited values from the forms (AGENTS rule 4); adds conditions that use B86's door. After B86. No owner yet | P-346 (2) |
+| B90 `married` on IMM 5645's Applicant and Spouse | one list value against two printed choices; off the map until the immigration expert answers; the expert's question. No owner yet | P-346 (4) |
+| B91 The sponsor's partner is the principal | on a combination with a sponsor, IMM 1344 and IMM 5532 read the sponsored spouse through the sponsor; 76 form fields resolve to nobody today, and the release check cannot see it; Sample, Unconfirmed: expert; with a fail test. No owner yet | P-346 (7) |
+| B92 "The sponsor" holder on document lines | status in Canada, income proof, IMM 5533 Part B. No owner yet | P-346 (7) |
+| B93 A conditional line drops "who" and "minimum age" | IMM 5476 applies to a child of 10; on all four combinations; forms lane; from the review of #1050. No owner yet | P-346 (9) |
+| B94 Two "membership" and two "military service" sections on Express Entry | IMM 5669 and IMM 5257 SCH1 each bring their own; from the review of #1050. No owner yet | P-346 (9) |
+| B95 `draftOptionMaps` keeps the lowest version of each answer list | matters once a list has more than one version; `forms.ts`; from #1009's builder. No owner yet | P-346 (9) |
+| B96 Shared `Tip` closes for a keyboard user | Radix closes the tooltip on the scroll event that follows keyboard focus (opens at 18 ms, closed at 33 ms, traced on #1051); `web/src/components/status.tsx`; screens area; the accessible name keeps the words; #1051's check works around it. No owner yet | P-347 |
+| B97 Release 2 back in `demo.ts` | through B81's step, so C10.1 row 9 goes green; 4a09bcd86 holds the old steps. Owner: Builder standby A after #1057's label | P-348 |
+| B98 CI check: routes with no screen | a mutating route a pack's set-up calls needs a caller in `web/src` or an allow-list line. Owner: cloud `route-screen-check` | P-348 (4) |
+| B99 C10.1 row 12b: a real validated IMM 5257 copy read back | P-343 (10) refuses a simulated Validate; needs a person's or computer-use Validate in Adobe Acrobat on the Mac; how it reaches the demo after Reset is the open question. No owner yet | P-348 |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |

@@ -115,6 +115,12 @@ export function copyOnlyForms(s: Snapshot): Set<string> {
   return new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file && online.has(m.form_number)).map((m) => m.form_number));
 }
 
+/** QA-235: every form number the release writes, as it writes it: its form lines and its field maps, schedules and
+ *  dependants included ("IMM 5257 SCH1", "IMM 0008 DEP"). */
+export function releaseForms(s: Pick<Snapshot, "forms" | "field_maps">): Set<string> {
+  return new Set([...(s.forms as { form_number: string }[]), ...(s.field_maps as { form_number: string }[])].map((f) => f.form_number));
+}
+
 /** The confirmed facts among a form's boxes, in form-field order. */
 export function factsOf(boxes: BoxRow[]): FormFact[] {
   return boxes.filter((b) => b.coverage === "confirmed fact" && b.fact).map((b) => ({ box: b.box, fact: b.fact!, about: b.about ?? "", row: b.row, value: b.value }))
