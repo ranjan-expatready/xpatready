@@ -18,6 +18,8 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
     n=$(grep -c '^current_lead: ' "$S")
     [ "$n" -eq 1 ] || echo "CURRENT LEAD: STATE.md has $n current_lead lines, needs exactly one (current_lead: <session id> <title>)"
     [ "$n" -eq 1 ] && ! grep -qE '^current_lead: [^ ]+ .*Lead [0-9]+' "$S" && echo "CURRENT LEAD: STATE.md's current_lead line needs a session id, then a title naming \"Lead N\""
+    # One page (6 Nov: it reached 34 KB and every Lead re-read it; test: check-state-page.sh).
+    b=$(wc -c < "$S"); [ "$b" -gt 12288 ] && echo "STATE TOO BIG ($((b / 1024)) KB > 12 KB): move the earlier page to product/history/STATE-<date>-<time>-<lead>.md and keep one page"
   fi
   for f in "$PH"/*.md "$PH"/domain/*.md "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md; do
     grep -o '`[A-Za-z0-9_./-]*\.md`' "$f" | tr -d '`' | sort -u | while read -r ref; do
@@ -28,4 +30,15 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
     done
   done
 } | sort -u > "$out"
+# Times are read, not guessed (6 Nov): a warning, never a failure, when STATE's "updated: YYYY-MM-DD HH:MM IST" is more
+# than 30 minutes from the time it was committed (now, while STATE.md has uncommitted changes). Test: check-state-page.sh.
+if [ -f "$PH/STATE.md" ]; then
+  u=$(sed -nE 's/^updated: ([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}) IST.*/\1/p' "$PH/STATE.md" | head -1)
+  c=$(cd "$PH" && git diff --quiet HEAD -- STATE.md 2>/dev/null && git log -1 --format=%ct -- STATE.md 2>/dev/null); [ -n "$c" ] || c=$(date +%s)
+  [ -n "$u" ] && python3 -I -c 'import sys, datetime as d
+ist = d.timezone(d.timedelta(hours=5, minutes=30))
+u = d.datetime.strptime(sys.argv[1], "%Y-%m-%d %H:%M").replace(tzinfo=ist); c = d.datetime.fromtimestamp(int(sys.argv[2]), ist)
+m = abs((c - u).total_seconds()) / 60
+if m > 30: print("WARN  STATE.md says updated %s IST, but it was committed %s IST (%d min apart): read the time with TZ=Asia/Kolkata date, never guess" % (sys.argv[1], c.strftime("%Y-%m-%d %H:%M"), m))' "$u" "$c"
+fi
 cat "$out"; [ -s "$out" ] && exit 1; echo "docs OK"; exit 0
