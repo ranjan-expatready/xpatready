@@ -26,6 +26,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  *  can never disagree with them: not those about the application, not a representative's, not one a condition hides. B78:
  *  a form's fact counts though its section is not chosen (Study permit: its one chosen section is about the application). */
 function personQuestions(s: Snapshot) {
+  if (!s.placements.length) return []; // nothing placed, nothing asked (render asks only a placed fact)
   const { people, r } = previewRender(s);
   const representative = new Set(people.filter((p) => p.role === "representative").map((p) => p.id));
   return r.questions.filter((q) => q.about !== FILING && !representative.has(q.about.split("/")[0]) && q.status !== "hidden by a condition");
