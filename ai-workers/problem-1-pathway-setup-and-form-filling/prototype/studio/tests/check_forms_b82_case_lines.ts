@@ -38,7 +38,8 @@ run(async () => {
     ok(`C2.6 B82 pass: no form field reads ${l.fact}, so it stays off the paid runs' question list`, sql(`select count(*) from form_field_map where canonical_field_key='${l.fact}'`) === "0");
   }
   const savedAfter = await replay();
-  ok("C2.6 B82 pass: asking those facts keeps the paid pairs' saved rounds usable (same input list: Conditions and PQR picks still replay)", savedBefore?.qd_conditions?.available === true && savedAfter?.qd_conditions?.available === true && savedAfter?.pqr_picks?.available === savedBefore?.pqr_picks?.available, { before: savedBefore?.qd_conditions, after: savedAfter?.qd_conditions });
+  const files = (x: any) => JSON.stringify(x?.files?.qd_conditions ?? []);
+  ok("C2.6 B82 pass: asking those facts keeps the paid pairs' saved rounds usable (the same saved runs replay on the same input list)", (savedBefore?.files?.qd_conditions ?? []).length > 0 && files(savedAfter) === files(savedBefore) && JSON.stringify(savedAfter?.files?.pqr_picks) === JSON.stringify(savedBefore?.files?.pqr_picks), { before: savedBefore?.files, after: savedAfter?.files, why: savedAfter?.why_none });
   const warnings = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).filter((x: any) => String(x.message).includes("which nobody is asked"));
   ok("C2.6 B82 pass: with the facts asked, Review has no warning about them", warnings.filter((x: any) => LINES.some((l) => String(x.message).toLowerCase().includes(l.fact))).length === 0 && !warnings.some((x: any) => /nonimmigrant|photos|legal status/i.test(x.message)), warnings.map((x: any) => x.message));
 
