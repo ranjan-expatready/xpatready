@@ -4,7 +4,7 @@ checkpoint rounds (runs/cp-r1, runs/cp-r2) and the walk. Run: python3 -I verdict
 import os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 V = os.path.normpath(os.path.join(HERE, "../../verdicts"))
-MAIN = "ffcfb45c8"
+MAIN = "344e08699"
 
 def count(rnd, pack):
     f = os.path.join(HERE, "runs", rnd, f"{pack}.out.txt")
@@ -97,7 +97,7 @@ ROWS = [
   "11/12 both rounds (fixture 12/12). Red only C8.2-7: the record's portal is not `APR_PORTAL` because the configured Visitor visa has no IRCC account (`/prepare` `portal: null`).",
   "Case page: \"Submission to IRCC · One submission for 4 people applying · Record the submission… Opens once every filing is Ready to file\", each filing Not started. The dialog could not be reached (no filing can be Ready to file on screen).",
   "Proposed new: N6 (no \"Filed through\" on the configured Visitor visa: J7 1.5)."),
- ("C9.2", "A changed fact marks signed/uploaded/submitted items stale", "Not built", "Partial (built in part)", ["C9.2"],
+ ("C9.2", "A changed fact marks signed/uploaded/submitted items stale", "Not built", "Partial (green on its fixture; 5/11 on the checkpoint)", ["C9.2"],
   "1.2 / 1.4 (needs IMM 5476 signed and an Online IMM 5707 on the checkpoint)",
   "N2, QA-228, release 2's channels; the row's own remaining steps",
   "5/11 both rounds (11/11 on its fixture today: built; the checkpoint lacks what it changes). An uploaded IMM 5257 goes Out of date naming the fact, old and new value and date (C9.2-3), it is a CRITICAL warning (-5), Undo restores (-8), answers are append-only (-11). Red: -2/-6/-10 need IMM 5476's signed scan, -9 an entered Online section, -4 the signed scan's checksum (no scan), -7 the spouse's IMM 5476 item. The table's \"Not built\" is stale.",
@@ -116,11 +116,11 @@ ROWS = [
   "Visitor visa case header: \"Relies on an employer case — Offered: the Visitor visa forms read 1 employer fact from a Corporate case, read-only.\" A visitor visa applicant reads an employer fact because the checkpoint's field maps put an organisation fact on a Visitor visa form (the same as QA-152's \"prospective employer\" question).",
   "Proposed new: N7 (Ambiguity: should Visitor visa ever offer the employer link?)."),
  ("C11.6", "Each form's channel picked inside what IRCC accepts", "Partial", "Partial", ["C11.6"],
-  "1.4 (every line PDF upload, signature NONE; no Online IMM 5707); 1.5 (no portal)",
+  "1.4 (every line PDF upload, signature No signature; no Online IMM 5707); 1.5 (no portal); the screen itself works (#1056)",
   "the checkpoint's channels and signature per line (DEMO.md row 9, B81); N6",
   "6/14 both rounds (14/14 on its fixture today). Red: C11.6-1 no \"Filed through\" (`portal: null`); -3 every item PDF upload; -5 signature `NONE`; -8a Online on IMM 5257 is not refused (the checkpoint's library line accepts it), -8b/-9 Paper answers 409 on the checkpoint, -12. Green: IMM 5476 Online refused with IRCC's line (-6), unknown channel 400, stale version 409, audit.",
-  "No Change channel on any form row on the case page.",
-  "N6."),
+  "After #1056 (main 344e08699): the case page has \"How each form is filed\": per person, each form's channel, signature and what IRCC accepts, and Change channel. The dialog offers Online, PDF upload, Paper and Not needed with the refused ones greyed and the Form library's reason (\"Not accepted here: …\"); it changes one person's item only (cancelled, nothing saved). On the checkpoint every line reads \"Channel: PDF upload · Signature: No signature\" and there is no \"Filed through\" line (screenshots `walk-h/5-2-change-channel-*.png`). No browser error.",
+  "N6; QA-228 (No signature everywhere)."),
 ]
 
 # Fixture, for context only (P-322: it does not count). Today: gate B on its fixture (runs-fixture.md); else the 4 Nov verdicts.
@@ -155,7 +155,7 @@ for (cid, cap, was, now, packs, j7, waits, verdict, walk, bugs) in ROWS:
 
 **Verdict: {now}** (table: {was}). {cap}.
 
-* **Commit tested:** main {MAIN} (5 Nov, after #1055 and #1009).
+* **Commit tested:** main ffcfb45c8 (rounds `cp-r1`, `cp-r2`), then main {MAIN} after #1056 (C11.6 and C7.7 twice, `cp-h1`, `cp-h2`; every other pack once, `cp-h3`). The same numbers on both commits.
 * **Tester:** the independent cloud qa for M3 (`/qa milestone`, cloud machine). It built none of this; it fixes nothing.
 * **Data (P-322, P-344 (2)):** the configured checkpoint. Each pack ran **alone** (no fixture setup) on a fresh isolated copy after Demo › Reset demo and Demo › Load the configured checkpoint as the author (`/api/demo/reset`, `/api/demo/load {{sample:"configured"}}`, 81–100 s), twice (`run-checkpoint.mjs`; rounds `cp-r1`, `cp-r2`). Live AI off (every `*_LIVE` switch and AI key removed), US$0, no priced button, no live switch. Each copy was stopped and its database dropped.
 * **Walk:** a fresh copy, Demo menu › Reset demo › Load the configured checkpoint on screen (89 s), then the case officer at 1440 px, headless Playwright (`walk-1440.cjs`, `walk-solo.cjs`; no display on this cloud machine for a headed browser). No browser error on any page.

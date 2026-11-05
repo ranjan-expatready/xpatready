@@ -13,7 +13,7 @@
 | C7.3 | Partial → **Partial** | 2/13 | 13/13 (4 Nov) | 1.4 (no Online line in release 1: IMM 5707 is PDF upload) | release 2's channels (DEMO.md row 9, waiting for B81); QA-153 |
 | C8.1 | Partial → **Partial** | 0/14 | 14/14 (4 Nov) | 1.2 (signer rules absent; IMM 5476 not on the case) | QA-228 (signer rules on the checkpoint); N2 (IMM 5476); the sign-steps screen |
 | C8.2 | Partial → **Partial** | 11/12 | 12/12 (run 41850993463) | 1.5 (the combination's IRCC account: `portal` is null on the checkpoint) | the checkpoint setting "Filed through APR Portal" (J7 1.5); with it, its pack has no other red step |
-| C9.2 | Not built → **Partial (built in part)** | 5/11 | 11/11 (today) | 1.2 / 1.4 (needs IMM 5476 signed and an Online IMM 5707 on the checkpoint) | N2, QA-228, release 2's channels; the row's own remaining steps |
+| C9.2 | Not built → **Partial (green on its fixture; 5/11 on the checkpoint)** | 5/11 | 11/11 (today) | 1.2 / 1.4 (needs IMM 5476 signed and an Online IMM 5707 on the checkpoint) | N2, QA-228, release 2's channels; the row's own remaining steps |
 | C10.2 | Not built → **Not built** | 0/11 | 0/11 (today) | 7.6 (last step; every earlier stage is red on the checkpoint) | everything above; `POST /api/demo/checkpoints/finished-story` is not built (404) |
 | C11.5 | Partial → **Partial** | — | — | 2.1 (Open a case and the case header offer the employer link on a Visitor visa case) | #1051 (C1.3 + C11.5); the pre-fill (BR-13, SI-10) |
-| C11.6 | Partial → **Partial** | 6/14 | 14/14 (today) | 1.4 (every line PDF upload, signature NONE; no Online IMM 5707); 1.5 (no portal) | the checkpoint's channels and signature per line (DEMO.md row 9, B81); N6 |
+| C11.6 | Partial → **Partial** | 6/14 | 14/14 (today) | 1.4 (every line PDF upload, signature No signature; no Online IMM 5707); 1.5 (no portal); the screen itself works (#1056) | the checkpoint's channels and signature per line (DEMO.md row 9, B81); N6 |

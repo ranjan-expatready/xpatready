@@ -6,7 +6,10 @@
 
 **Next in the order:** give the checkpoint J7 Stage 1 (1.2 to 1.8) through the product's own steps.
 
-* **Commit:** main ffcfb45c8 (after #1055 and #1009). This branch is head to head with it: no app code changed.
+* **Commits:**
+  * main ffcfb45c8: all packs, twice (`cp-r1`, `cp-r2`), and the walk.
+  * main 344e08699, after #1056 (C11.6's screen and `fill-case.ts`): C11.6 and C7.7 twice (`cp-h1`, `cp-h2`), every other pack once (`cp-h3`), and the channel walk (`walk-h/`).
+  * The numbers are the same on both commits. This branch has main 344e08699 merged in and changes no app code.
 * **Tester:** the independent cloud qa (`/qa milestone`, this cloud machine, to spare the Mac). It built none of this and fixed nothing.
 * **Records:** the Mac qa lane stays the one writer of `qa/CAPABILITIES.md` and `qa/BUGS.md`. This PR only proposes: new bugs N1–N7 and the status moves are listed below for it to copy.
 * **Cost:** live AI off (every `*_LIVE` switch and AI key removed from each copy's environment), US$0. No priced button was pressed and no live switch was turned, the fake launcher included.
@@ -38,10 +41,10 @@
 | C7.3 | Partial → **Partial** | 2/13 | 13/13 (4 Nov) | 1.4 (no Online line in release 1: IMM 5707 is PDF upload) | release 2's channels (DEMO.md row 9, waiting for B81); QA-153 |
 | C8.1 | Partial → **Partial** | 0/14 | 14/14 (4 Nov) | 1.2 (signer rules absent; IMM 5476 not on the case) | QA-228 (signer rules on the checkpoint); N2 (IMM 5476); the sign-steps screen |
 | C8.2 | Partial → **Partial** | 11/12 | 12/12 (run 41850993463) | 1.5 (the combination's IRCC account: `portal` is null on the checkpoint) | the checkpoint setting "Filed through APR Portal" (J7 1.5); with it, its pack has no other red step |
-| C9.2 | Not built → **Partial (built in part)** | 5/11 | 11/11 (today) | 1.2 / 1.4 (needs IMM 5476 signed and an Online IMM 5707 on the checkpoint) | N2, QA-228, release 2's channels; the row's own remaining steps |
+| C9.2 | Not built → **Partial (green on its fixture; 5/11 on the checkpoint)** | 5/11 | 11/11 (today) | 1.2 / 1.4 (needs IMM 5476 signed and an Online IMM 5707 on the checkpoint) | N2, QA-228, release 2's channels; the row's own remaining steps |
 | C10.2 | Not built → **Not built** | 0/11 | 0/11 (today) | 7.6 (last step; every earlier stage is red on the checkpoint) | everything above; `POST /api/demo/checkpoints/finished-story` is not built (404) |
 | C11.5 | Partial → **Partial** | — | — | 2.1 (Open a case and the case header offer the employer link on a Visitor visa case) | #1051 (C1.3 + C11.5); the pre-fill (BR-13, SI-10) |
-| C11.6 | Partial → **Partial** | 6/14 | 14/14 (today) | 1.4 (every line PDF upload, signature NONE; no Online IMM 5707); 1.5 (no portal) | the checkpoint's channels and signature per line (DEMO.md row 9, B81); N6 |
+| C11.6 | Partial → **Partial** | 6/14 | 14/14 (today) | 1.4 (every line PDF upload, signature No signature; no Online IMM 5707); 1.5 (no portal); the screen itself works (#1056) | the checkpoint's channels and signature per line (DEMO.md row 9, B81); N6 |
 
 **By the person's journey (for the tech lead's order; first red step in J7 order):**
 * **Stage 1 on the checkpoint.** One gap, the configured Visitor visa's setup, holds ten rows:
@@ -54,7 +57,7 @@
   These come from C10.1's loader and DEMO.md rows (row 9 waits for B81), and they need P-322's "through the product's steps". So this is the first item to do. It is not a row of M3's own.
 * **Stage 2 on screen:** C6.12 (Will be created as, date of birth, filings and fees on the case page), C11.5 and C1.3 (employer link; #1051).
 * **Stage 3:** C6.4's checklist on the case page; C6.5 part 2 (fill-from-documents, Confirm & use).
-* **Stages 5–6 on screen:** the readiness panel, pass, Ready to file, review, sign steps, channel change and answer sheet (QA-229). None of these has a screen; see the routes below. C7.5 part 2 (run card; replay needs FQ-10's paid run, the founder's Go).
+* **Stages 5–6 on screen:** the readiness panel, pass, Ready to file, review, sign steps and answer sheet (QA-229). None of these has a screen; see the routes below. Channel change (5.2) has one since #1056 and works on the checkpoint. C7.5 part 2 (run card; replay needs FQ-10's paid run, the founder's Go).
 * **Stage 7, then the rest:** C8.2, C9.2, C10.2 (last).
 * **No J7 step:** C3.16 (#1054) is a foundation under 3.9 and 5.1.
 
