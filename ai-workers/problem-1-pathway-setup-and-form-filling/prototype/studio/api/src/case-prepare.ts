@@ -28,7 +28,7 @@ const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
-import { partsInFormOrder, sectionHash, sheetOf as layOut, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
+import { partsInFormOrder, sectionHash, sheetOf as layOut, tickRefusal, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { formPartsOf } from "./form-parts.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { render, type Role } from "../../engine/render.ts";
@@ -467,6 +467,8 @@ export class CasePrepare {
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
     const b = parse(EnteredBody, body);
+    const unnamed = tickRefusal(sec!); // challenge M5: a part not named yet is never ticked (its key changes on naming)
+    if (unnamed) refuse(409, "section", unnamed);
     // Review n1: a stale tick says what changed: this section's answers.
     if (b.version !== sec!.version) throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: `The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then tick again.` }, HttpStatus.CONFLICT);
     const made = await this.db.$transaction(async (tx) => {

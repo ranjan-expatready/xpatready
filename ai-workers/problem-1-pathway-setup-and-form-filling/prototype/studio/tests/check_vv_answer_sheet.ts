@@ -3,7 +3,7 @@
 // copy; what is not confirmed is listed as waited for; "Entered in the portal" ticks go out of date when an answer they
 // froze changes (P-65). Each rule has a passing and a failing case. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_vv_answer_sheet.ts
-import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sourceOf, type FormPart } from "../engine/runtime/answer-sheet.ts";
+import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sourceOf, tickRefusal, type FormPart } from "../engine/runtime/answer-sheet.ts";
 import type { BoxRow } from "../engine/render.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -78,6 +78,9 @@ ok("C7.3: the source says Document for a document read, Client for the questionn
   ok("C7.3 (fail): a part with nothing to type for this person (a signature block) is not a step on the sheet", !s.sections.some((x) => x.key === "sign"));
   const tick = new Map([["sign", { at: "2026-11-01T10:00:00Z", by: "user-O", hash: sectionHash([]) }]]);
   ok("C7.3: a ticked part stays on the sheet with its tick even with nothing to type", sheetOf({ basis: "form_parts", parts: inOrder }, boxes, origin, labels, tick).sections.find((x) => x.key === "sign")?.entered?.by === "user-O");
+  const unnamedPart = s.sections.find((x) => x.key === "part_1")!;
+  ok("C7.3 (challenge M5, fail): a part not named yet cannot be ticked, in words that say why and what to wait for", /not named in this release's configuration yet/.test(tickRefusal(unnamedPart) ?? "") && /Unnamed section 1/.test(tickRefusal(unnamedPart) ?? ""));
+  ok("C7.3 (challenge M5, pass): a named part, and every twin section, can be ticked", tickRefusal(s.sections[0]) === null && answerSheet(SECTIONS, boxes, origin, labels, new Map()).sections.every((x) => tickRefusal(x) === null));
   ok("C7.3 (fail): no part key can take the key of \"Other questions\" (a library key never starts with _)", OTHER_PART.startsWith("_"));
 }
 

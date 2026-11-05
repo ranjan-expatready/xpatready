@@ -24,6 +24,13 @@ export type Layout = { basis: "form_parts"; parts: FormPart[] } | { basis: "pdf_
 /** The key of the section that holds the form fields no part groups. */
 export const OTHER_PART = "_other";
 
+/** Challenge M5 (#1075): a part not named yet has a key of its own until it is named, when it takes the library key; a
+ *  tick on it would then match nothing and be lost without a word. So it is refused until the part is named (the
+ *  form's Done waits for that), in words for the case officer, who does not name parts. null: the tick may go ahead. */
+export function tickRefusal(sec: Pick<SheetSection, "title" | "named">): string | null {
+  return sec.named === false ? `"${sec.title}" is not named in this release's configuration yet, so it cannot be ticked: tick it once the configuration people have named it.` : null;
+}
+
 /** The form's own parts in the order the form prints them: by the first of their form fields in the edition's field
  *  map (`order`, its data paths in the form's order); a part none of whose fields is in it goes last, in the order
  *  given. Two parts that group the same first field are one part (the first kept): a part is never shown twice. */

@@ -32,3 +32,15 @@ Only the two refusals pass (C7.3-2 and C7.3-8: a client gets 403). Every other c
    parents, whom no question asks) and QA-165 (IMM 5257's mandatory boxes still empty).
 5. **No screen.** The sheet is `GET /runtime/items/:id/answer-sheet` only: no person can open it, copy an answer or
    tick "Entered in the portal". That is a new screen part (P-223 (4)): concept and an independent challenge first.
+
+## After this PR (#1075): 13/13 on the checkpoint
+Same method, branch `claude/eloquent-volta-l2h9rj` (sheet laid out from the form's own parts; pack follows the
+case's Online line): two fresh isolated copies (`rt_c73cp`, :4431), each Demo › Reset then Load the configured
+checkpoint (72.2 s and 70.3 s, `cost_usd: 0`, the same three releases), then
+`tsx studio/acceptance/C7.3.test.ts 4431 xr_studio_rt_c73cp`: **exit 0 · 13/13, both runs** (commit dcc7e0c0c), and
+again after the challenge's M5 fix (exit 0 · 13/13). Setup inside the pack, asserted: release 1 has no Online line,
+so the officer files IMM 5257 Online on the case (C11.6, `PATCH /runtime/items/:id/channel`, 200). The sheet then
+reads `order_basis: "form_parts"`: Personal details · Contact information · US PR card · National identity document ·
+Background information · Details of visit to Canada · Education · Employment (the release's own names, the form's
+order). Fixture (setup_visitor_visa + setup_vv_m3, 44/46 as on main): C7.3 13/13, C7.7 26/26;
+`check_vv_prepare_api.ts` 40/40; gate B (`tools/gate-b.mjs`) passed.

@@ -43,7 +43,9 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   if (!item) {
     const app = itemsOf(p, P, APPLICATION)[0];
     const moved = await call("PATCH", `/runtime/items/${app?.id}/channel`, { channel: "ONLINE", version: (p as { version?: string } | null)?.version }, OFFICER);
-    console.log(`      no Online line on this release: the officer files ${APPLICATION} Online on the case (C11.6) → ${moved.status}`);
+    // Challenge m9: the setup step is asserted, never only logged: a refused change stops the pack (not a C7.3 result).
+    if (moved.status !== 200) { console.log(`STOP  setup: the officer could not file ${APPLICATION} Online on the case (C11.6): ${moved.status} ${JSON.stringify(moved.body).slice(0, 200)}`); process.exit(2); }
+    console.log(`      setup: no Online line on this release, so the officer filed ${APPLICATION} Online on the case (C11.6, 200)`);
     p = (await prepare(c.id)).p;
     item = itemsOf(p, P, APPLICATION)[0];
   }
