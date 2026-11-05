@@ -81,4 +81,10 @@ ok "no label: nothing is removed or posted" "$(kept)" "$out / $log"
 W="$(cd "$TOOLS/../../../.." && pwd)/.github/workflows/label-guard.yml"
 grep -q 'pull_request_target' "$W" && grep -q 'synchronize' "$W" && grep -q 'tools/label-guard.sh' "$W"
 ok "the workflow runs main's label-guard.sh on every push (pull_request_target, synchronize)" "$([ $? = 0 ] && echo 1)" "$W"
+# GitHub refuses a workflow it cannot parse, silently for pull_request_target (#1136's first push: "if: ... 'review: approved'"
+# unquoted, so the guard would never have run). Parsed here the way GitHub reads it: a YAML mapping with on/jobs.
+for wf in label-guard.yml guards.yml; do W2="${W%/*}/$wf"
+y=$(python3 -c 'import sys, yaml; d = yaml.safe_load(open(sys.argv[1])); print("ok" if isinstance(d, dict) and (True in d or "on" in d) and "jobs" in d else "bad")' "$W2" 2>&1 || ruby -ryaml -e 'd = YAML.load_file(ARGV[0]); puts(d.is_a?(Hash) ? "ok" : "bad")' "$W2" 2>&1)
+ok "$wf is valid YAML (GitHub cannot run a workflow it cannot parse)" "$([ "$y" = ok ] && echo 1)" "$y"
+done
 finish
