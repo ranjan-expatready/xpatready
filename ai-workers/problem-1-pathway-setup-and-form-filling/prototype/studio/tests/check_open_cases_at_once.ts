@@ -1,18 +1,19 @@
-// Opening cases at once (POST /api/runtime/cases; tech lead's ruling on #1116): several people opening cases together queue
-// for a connection. The route's transaction waited Prisma's default 2 s, and past that answered a 500 (P2028, "Unable to start
-// a transaction in the given time"), with nothing a person could act on. Now it waits as long as its neighbours do. Each
-// part runs on a small connection pool, so the queue a slower machine has shows here too: 12 at once on 2 connections (1 to 7
-// of 120 opens answered 500 before the fix, so this part alone can miss it), 24 at once on 5 (28 to 69 of 96). It restarts its own copy to set the pool. It checks the
-// answer only, never the time. It does not claim every load is safe: 48 at once on 5 connections still answers 500. US$0.
+// Opening cases at once (POST /api/runtime/cases; tech lead's ruling on #1116): when the connections are all busy, opening a
+// case waits for one. The route's transaction waited Prisma's default 2 s, and past that answered a 500 (P2028, "Unable to
+// start a transaction in the given time"), with nothing a person could act on. Now it waits as long as its neighbours do.
+// So the check does not depend on how fast the machine is, it makes the wait itself: from its own session it holds a lock
+// that stops new cases being written, until the connections really are all stuck on it (the pool holds 10; PrismaPg ignores a
+// connection_limit in the URL), then 4 s more. That is past the old 2 s every time and far below the new 10 s. It says
+// nothing about load in general: with no lock, 48 at once on the Mac still answers 500 (the PR's out-of-scope list). US$0.
 //   zsh studio/tools/isolated.sh runtime_ocw 4484 start && tsx studio/tests/check_open_cases_at_once.ts 4484 xr_studio_runtime_ocw
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { join } from "node:path";
 import { client, recorder } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4484), DB = process.argv[3] ?? "xr_studio_runtime_ocw";
-const { call, sql } = client(PORT, DB);
+const { call, sql, until } = client(PORT, DB);
 const { ok, summary } = recorder();
-const OFFICER = "user-O", CLIENT = "user-P";
+const OFFICER = "user-O", CLIENT = "user-P", POOL = 10, HOLD_MS = 4000;
 const STUDIO = join(import.meta.dirname, ".."), run = Date.now().toString(36);
 
 (async () => {
@@ -22,24 +23,29 @@ const STUDIO = join(import.meta.dirname, ".."), run = Date.now().toString(36);
     ok("setup: the Visitor visa released on this copy by setup_visitor_visa.ts", released());
   }
   const vv = sql("select id from combination where combination_key='vv.single'");
-  const pool = async (n: number) => {
-    execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart", `DATABASE_URL=postgresql://xr_studio@127.0.0.1:54329/${DB}?connection_limit=${n}`], { cwd: STUDIO, stdio: ["ignore", "ignore", "pipe"] });
-    let up = false; for (let i = 0; i < 240 && !up; i++) { up = (await call("GET", "/session").catch(() => ({ status: 0 }))).status === 200; if (!up) await new Promise((res) => setTimeout(res, 500)); }
-    if (!up) throw new Error("the copy did not come back after the restart");
-  };
   const open = (reference: string) => call("POST", "/runtime/cases", { combinationId: vv, reference, clientActor: CLIENT, principal: { displayName: "Sample Client A" } }, OFFICER);
   const made = () => [Number(sql("select count(*) from pack_work_pin")), Number(sql("select count(*) from audit_event where action='opened' and entity='case'"))];
   const statuses = (rs: { status: number }[]) => rs.reduce<Record<number, number>>((t, x) => ({ ...t, [x.status]: (t[x.status] ?? 0) + 1 }), {});
+  const stuck = () => Number(sql("select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'"));
 
-  for (const { connections, atOnce, rounds } of [{ connections: 2, atOnce: 12, rounds: 10 }, { connections: 5, atOnce: 24, rounds: 4 }]) {
-    await pool(connections);
-    const before = made(), all: { status: number; body: any }[] = [];
-    for (let round = 0; round < rounds; round++) all.push(...await Promise.all(Array.from({ length: atOnce }, (_, i) => open(`OCW-${connections}-${round}-${i}-${run}`))));
+  for (const atOnce of [12, 16]) {
+    const before = made();
+    // SHARE stops the writes of a new case and lets the reads before them through; the connection it holds is the check's own.
+    const holder = spawn("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-X", "-q"], { stdio: ["pipe", "ignore", "inherit"] });
+    holder.stdin.write("begin; lock table party in share mode; select pg_advisory_lock(hashtext('check_open_cases_at_once'));\n");
+    const locked = await until(async () => sql("select count(*) from pg_locks where locktype = 'advisory' and granted") !== "0", 15_000);
+    const answers = Promise.all(Array.from({ length: atOnce }, (_, i) => open(`OCW-${atOnce}-${i}-${run}`)));
+    const full = await until(async () => stuck() >= POOL, 60_000);
+    ok(`setup: ${atOnce} at once, every connection is stuck waiting`, locked && full, { locked, stuck: stuck() });
+    await new Promise((res) => setTimeout(res, HOLD_MS));
+    holder.stdin.end("commit;\n");
+    const all = await answers;
     const bad = all.find((r) => r.status !== 201);
-    ok(`pass: ${atOnce} cases opened at once on ${connections} connections, ${rounds} rounds: every one answers 201`, !bad, { statuses: statuses(all), first_refusal: bad?.body });
+    ok(`pass: ${atOnce} cases opened at once with the connections busy for ${HOLD_MS / 1000} s: every one answers 201`, !bad, { statuses: statuses(all), first_refusal: bad?.body });
     ok("pass: each answer is its own case, with its people", new Set(all.map((r) => r.body?.id)).size === all.length && all.every((r) => r.body?.people?.some((p: { role: string }) => p.role === "principal")));
     const after = made();
     ok("pass (data): one pin and one audit line per case, nothing half made", after[0] - before[0] === all.length && after[1] - before[1] === all.length, { cases: all.length, pins: after[0] - before[0], audit: after[1] - before[1] });
+    await until(async () => stuck() === 0, 15_000);
   }
 
   // Waiting longer never lets a second case through under one reference.
