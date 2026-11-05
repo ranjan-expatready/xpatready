@@ -1,6 +1,6 @@
 {
-  "about": "B78 (C10.1 row 7; P-343 (10), P-319): the names a person gives the 29 sections the rules pass holds because it read no printed heading over their form fields. The configured checkpoint's loader gives each through the same naming edit a person uses on To review (POST /api/review/proposals/decide, action edit). Each entry is one section: its form edition and its first form field. A section with no entry here stays waiting on To review and is listed on row 7.",
-  "basis": "printed: the words the form itself prints above or beside these form fields, read from its XFA template on 5 Nov 2026 (official-sources/ircc/forms; the banner is on the page but not in the part the heading reader looks in). sample: a person's wording built from the form's own captions, Sample, Unconfirmed: expert. A section whose name the library already holds is rejected and that section reused, as for any twin.",
+  "about": "B78 (C10.1 row 7; P-343 (10), P-319): the names a person gives the 29 sections the rules pass holds because it read no printed heading over their form fields. The configured checkpoint's loader gives each through the same naming edit a person uses on To review (POST /api/review/proposals/decide, action edit). Each entry is one section: its form edition and its first form field. A name the library already holds lands on that section. A section with no entry here stays waiting on To review and is listed on row 7.",
+  "basis": "printed: the words the form itself prints above or beside these form fields, read from its XFA template on 5 Nov 2026 (official-sources/ircc/forms, IMM 5476 (11-2021) from its previous-editions folder; page is the page of the form's template that prints the words; the banner is on the page but not in the part the heading reader looks in). sample: a person's wording built from the form's own captions, Sample, Unconfirmed: expert.",
   "read_on": "2026-11-05",
   "sections": [
     {
@@ -8,7 +8,7 @@
       "first_field": "form1[0].Page3[0].PhoneNumbers[0].Phone[0].Type[0]",
       "name": "Contact information",
       "printed": "CONTACT INFORMATION",
-      "page": 3,
+      "page": 2,
       "basis": "printed"
     },
     {
@@ -16,7 +16,7 @@
       "first_field": "form1[0].Page3[0].FaxEmail[0].Phone[0].CanadaUS[0]",
       "name": "Contact information",
       "printed": "CONTACT INFORMATION",
-      "page": 3,
+      "page": 2,
       "basis": "printed"
     },
     {

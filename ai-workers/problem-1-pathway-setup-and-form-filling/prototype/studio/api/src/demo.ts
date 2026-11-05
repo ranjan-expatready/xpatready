@@ -30,7 +30,8 @@ import { draftSourceProblems, seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
 import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.ts";
-import { decide } from "./proposals.ts";
+import { decide, sameInLibrary } from "./proposals.ts";
+import type { ProposalPayload } from "../../contracts/proposal-item.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { OwnQuestions } from "./own-question.ts";
 import { OWN_YES_NO_REASON } from "./own-yes-no.ts";
@@ -39,7 +40,7 @@ import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime } from "./runtime.ts";
 import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
-import { namedReason, nameOfHeld, readHeldSectionNames } from "./section-names.ts";
+import { type HeldSectionName, namedReason, nameOfHeld, readHeldSectionNames } from "./section-names.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
 const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
@@ -656,7 +657,7 @@ export class Demo {
     const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [], sectionsHeld: string[] = [];
     // B78: the name a person gives a section no heading was read over (samples/section-names.json), through the same edit.
     const heldNames = readHeldSectionNames();
-    let namedByPerson = 0;
+    const namedByPerson: HeldSectionName[] = [];
     let maritalList: string | null = null;
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
@@ -678,14 +679,16 @@ export class Demo {
           const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
           const given = held?.unnamed && !held.heading ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
           if (held?.unnamed && !held.heading && !given) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
-          if (given) namedByPerson++;
+          // A name the library already holds lands on that section, so it is reused, not added.
+          const twin = given ? await sameInLibrary(this.db, workspaceId, { ...(p.payload as object), label: given.name } as ProposalPayload) : null;
           try {
             const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], given
               ? { action: "edit", payload: { ...(p.payload as object), label: given.name }, reason: namedReason(given) }
               : held?.unnamed
               ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
               : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
-            if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
+            if (given) namedByPerson.push(given);
+            if (p.kind === "section") (twin ? sectionsReused : sectionsMade).push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
           } catch (e) {
             // The card's own words: a section the library already holds is rejected here and that section reused (the
             // placement step reads its boxes into it).
@@ -806,7 +809,7 @@ export class Demo {
     // QA-206 (tech lead on #883): each held section is named in one line, so the row says all of them, not the first six.
     const heldLine = sectionsHeld.length ? `${sectionsHeld.length} section${sectionsHeld.length === 1 ? "" : "s"} held on To review for a person to name (the form prints no heading over their form fields): ${sectionsHeld.join(", ")}` : null;
     row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length || sectionsHeld.length ? "partial" : "done",
-      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}${namedByPerson ? `; ${namedByPerson} of them with no heading read over their form fields named by a person from the form's own words (Sample)` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
+      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}${namedByPerson.length ? `; ${namedByPerson.length} sections with no heading read over their form fields named by a person from the form's own words (Sample${namedByPerson.some((x) => x.basis === "sample") ? `; ${namedByPerson.filter((x) => x.basis === "sample").length} in a person's wording, Unconfirmed: expert` : ""})` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
       why: [...(heldLine ? [heldLine] : []), ...[...sectionsRefused, ...setUpRefused].slice(0, 6)].join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
