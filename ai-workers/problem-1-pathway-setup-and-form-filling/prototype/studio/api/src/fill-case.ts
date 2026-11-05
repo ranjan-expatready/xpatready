@@ -78,9 +78,10 @@ export function plainWhy(why: string | null | undefined): string {
  *  never counts as validated, and the person sends the validated file again (the copy view, `lock` and `file` alike). */
 export const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
 const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
-/** QA-165 part 2: a form's field list, read once per file (the release's field map names it). */
+/** QA-165 part 2: a form's field list, read once per file (the release's field map names it). Also C7.3's order of a
+ *  form's parts (api/src/case-prepare.ts). */
 const inventories = new Map<string, { at: number; inv: Inventory }>();
-const inventoryOf = (file: string): Inventory | null => {
+export const inventoryOf = (file: string): Inventory | null => {
   const abs = solutionFile(file); // never outside the solution folder (Devin on #592)
   if (!abs) return null;
   // Break m-5 on #592: a file that is not a field list (no `fields` array) is no field list; never a 500 for the case.

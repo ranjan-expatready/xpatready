@@ -28,7 +28,7 @@ const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
-import { partsInFormOrder, sectionHash, sheetOf as layOut, tickRefusal, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
+import { partsInFormOrder, sectionHash, sheetOf as layOut, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { formPartsOf } from "./form-parts.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { render, type Role } from "../../engine/render.ts";
@@ -36,7 +36,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, formPassed } from "./fill-case.ts";
+import { CaseForms, formPassed, inventoryOf } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -194,7 +194,7 @@ export class CasePrepare {
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
     const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true, factsJson: true } } } });
     const enteredBy = new Map<string, typeof enteredRows>();
-    const parts = await partsOfRelease(this.db, c.workspaceId, s); // C7.3: each Online form's own parts
+    const parts = await partsOfRelease(this.db, c); // C7.3: each Online form's own parts, as released
     for (const e of enteredRows) enteredBy.set(e.itemId, [...(enteredBy.get(e.itemId) ?? []), e]);
     const wantedOf = (i: Item) => wanted.find((w) => w.subject === i.subjectId && w.kind === i.kind && w.key === i.itemKey);
     // C8.1: who signs each form item (SH3 R7, in words) and the steps done on a form signed by hand and scanned.
@@ -467,8 +467,6 @@ export class CasePrepare {
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
     const b = parse(EnteredBody, body);
-    const unnamed = tickRefusal(sec!); // challenge M5: a part not named yet is never ticked (its key changes on naming)
-    if (unnamed) refuse(409, "section", unnamed);
     // Review n1: a stale tick says what changed: this section's answers.
     if (b.version !== sec!.version) throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: `The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then tick again.` }, HttpStatus.CONFLICT);
     const made = await this.db.$transaction(async (tx) => {
@@ -497,8 +495,8 @@ export class CasePrepare {
     const channel = item!.channel ?? channelOf(line, undefined, null, null).line_channel;
     if (channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[channel as keyof typeof CHANNEL_WORDS]}: its PDF is the deliverable, so it has no answer sheet.`);
     // C7.3 (P-319): laid out from the form's own parts in the release's configuration, else the twin's Sample sections.
-    const parts = await partsOfRelease(this.db, c.workspaceId, this.r.snapshotOf(c));
-    if (!layoutOf(item!.itemKey, this.r.snapshotOf(c), parts)) refuse(409, "item", `${item!.itemKey} has no parts in this release's configuration yet (the Sections step names them from the form's printed headings), so its answer sheet cannot be laid out.`);
+    const parts = await partsOfRelease(this.db, c);
+    if (!layoutOf(item!.itemKey, this.r.snapshotOf(c), parts)) refuse(409, "item", `${item!.itemKey}'s parts are not set up in this case's release, so its answer sheet cannot be laid out yet. Ask the Lead.`);
     return { c, item: item!, parts };
   }
 
@@ -552,18 +550,24 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
 }
 
 /** C7.3: the release's field map for a form (its edition and its form fields in the form's order). */
-type FieldMap = { form_number: string; form_edition?: string; entries?: { data_path: string }[] };
+type FieldMap = { form_number: string; form_edition?: string; inventory_file?: string; entries?: { data_path: string }[] };
 const fieldMapOf = (s: ReturnType<Runtime["snapshotOf"]>, form: string) => (s.field_maps as FieldMap[]).find((m) => m.form_number === form);
-/** The parts of every form edition the release maps, read once per request. */
-async function partsOfRelease(db: Db, workspaceId: string, s: ReturnType<Runtime["snapshotOf"]>) {
-  return formPartsOf(db, workspaceId, (s.field_maps as FieldMap[]).map((m) => m.form_edition ?? ""));
+/** The parts of every form edition the release maps, as they stood when it was released (review M3 on #1075: released
+ *  means frozen), titled by the release's own section titles; read once per request. */
+async function partsOfRelease(db: Db, c: Reached) {
+  const rel = c.pins[0].release, s = rel.snapshot as unknown as ReturnType<Runtime["snapshotOf"]>;
+  const titles = new Map([...((s.section_titles ?? []) as { id: string; title: string }[]), ...((s.sections ?? []) as { id: string; title: string }[])].map((x) => [x.id, x.title] as const));
+  return formPartsOf(db, c.workspaceId, (s.field_maps as FieldMap[]).map((m) => m.form_edition ?? ""), rel.releasedAt, titles);
 }
 /** How a form's sheet is laid out: its own parts for the release's edition, in the form's order (P-319: from the
  *  configuration); a form whose edition has none takes the twin's Sample sections; neither: null (no sheet yet). */
 function layoutOf(form: string, s: ReturnType<Runtime["snapshotOf"]>, parts: Map<string, FormPart[]>): Layout | null {
   const m = fieldMapOf(s, form);
   const own = m?.form_edition ? parts.get(m.form_edition) ?? [] : [];
-  if (own.length) return { basis: "form_parts", parts: partsInFormOrder(own, (m?.entries ?? []).map((e) => e.data_path)) };
+  // Review M1 on #1075: the order the form prints its fields is its field list's (the snapshot's entries are sorted by
+  // data path, which is alphabetical); the entries' own order only when the field list cannot be read.
+  const listed = m?.inventory_file ? (inventoryOf(m.inventory_file)?.fields ?? []).map((f) => f.data_path).filter((p): p is string => !!p) : [];
+  if (own.length) return { basis: "form_parts", parts: partsInFormOrder(own, listed.length ? listed : (m?.entries ?? []).map((e) => e.data_path)) };
   const twin = (PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[form];
   return twin ? { basis: "pdf_twin", sections: twin } : null;
 }

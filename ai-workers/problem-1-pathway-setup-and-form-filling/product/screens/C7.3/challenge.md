@@ -83,6 +83,6 @@ make C7.3 Works.
 3. **M5: refuse a tick on an unnamed part (recommended), or carry ticks across naming by proposal id?** Refusing is one check and honest
    (Done waits for the name); carrying needs a key map the API does not hold.
 ## Lead response
-**Builder (runtime lane), concept r2:** M1–M4 and m1–m7, m9 taken into `concept.md` r2; M5 built in #1075 (server refuses a tick on an unnamed part, `tickRefusal`, pass and fail in `check_vv_answer_sheet.ts`); m8 recorded in `checkpoint-diagnosis.md`; m10 a follow-up row. The tech lead's ruling goes below.
+**Builder (runtime lane), concept r2:** M1–M4 and m1–m7, m9 taken into `concept.md` r2; M5 built in #1075, then superseded by review round 1's M3 fix: the release now freezes its parts, so an unnamed part keeps its key and its tick when it is named later (`tests/check_c73_parts_checkpoint.ts`), and the refusal, which would only have kept such a form from Done, was removed; m8 recorded in `checkpoint-diagnosis.md`; m10 a follow-up row. The tech lead's ruling goes below.
 ## Agreement
 ## Build discoveries

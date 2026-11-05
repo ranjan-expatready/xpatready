@@ -44,3 +44,10 @@ reads `order_basis: "form_parts"`: Personal details · Contact information · US
 Background information · Details of visit to Canada · Education · Employment (the release's own names, the form's
 order). Fixture (setup_visitor_visa + setup_vv_m3, 44/46 as on main): C7.3 13/13, C7.7 26/26;
 `check_vv_prepare_api.ts` 40/40; gate B (`tools/gate-b.mjs`) passed.
+
+## After review round 1 (#1075): parts in the form's order, frozen at release
+Fresh copy again (load 84.6 s, `cost_usd: 0`): `C7.3.test.ts` exit 0 · 13/13; the sheet's IMM 5257 parts now read
+Personal details · National identity document · US PR card · Contact information · Details of visit to Canada ·
+Education · Employment · Background information (the form's field list order; before, the data paths' alphabet).
+`tests/check_c73_parts_checkpoint.ts` exit 0 · 6/6 (order; a part named on To review after the release keeps its
+key, title and tick). Fixture: C7.3 13/13, C7.7 26/26, `check_vv_prepare_api.ts` 40/40, unit 24/24.

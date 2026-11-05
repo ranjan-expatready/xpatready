@@ -1,6 +1,6 @@
 # C7.3 Portal sheet: concept for the screen part (runtime lane, 5 Nov 2026, #1075)
 
-Status: **concept r2 after the independent challenge (`challenge.md`: Build after these changes; M1–M5 taken), waiting
+Status: **concept r2 after the independent challenge (`challenge.md`: Build after these changes; M1–M5 taken; review round 1 on #1075 froze the parts at release), waiting
 for the tech lead's approval (P-223 (4)).** The API it reads passes its pack on the configured checkpoint (13/13, two
 fresh copies: `checkpoint-diagnosis.md` "After this PR").
 
@@ -27,8 +27,9 @@ fresh copies: `checkpoint-diagnosis.md` "After this PR").
 * BR-4 A tick sends the section's `version`; a changed sheet answers 409 → "Reload" notice, nothing ticked.
 * BR-5 A changed answer after a tick: the section reads Out of date, shows the new value, and asks to re-enter and
   tick again (FQ-6, warns only; never blocks the filing).
-* BR-6 A part not named yet (`named: false`, B78) shows its placeholder, "Not named yet in the configuration", and no
-  tick: the server refuses one (409, challenge M5, built in #1075), so the form's Done waits for the name.
+* BR-6 A part not named yet (`named: false`, B78) shows its placeholder name and "Not named yet in this release". It
+  can be ticked: the release freezes its parts (review M3 on #1075), so its key holds for the case's life and a
+  later naming never moves or drops its tick (the challenge's M5 refusal was built, then removed once that held).
 * BR-8 (challenge M1) Done is the server's: every section entered, current **and waiting for nothing**. A tick with
   answers still to confirm is accepted, so the section reads "Entered · n still to confirm" (warn) and progress counts
   only complete sections; "Still to confirm" is open when n > 0, and the tick says "n answers still to confirm: tick

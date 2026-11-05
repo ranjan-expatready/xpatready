@@ -23,22 +23,18 @@ export type FormPart = { key: string; title: string; named: boolean; fieldKeys: 
 export type Layout = { basis: "form_parts"; parts: FormPart[] } | { basis: "pdf_twin"; sections: Record<string, string> };
 /** The key of the section that holds the form fields no part groups. */
 export const OTHER_PART = "_other";
+/** The length the C3.4 rules pass keeps of a form field's data path in a part (api/src/form-masters.ts). */
+const KEY_CUT = 120;
 
-/** Challenge M5 (#1075): a part not named yet has a key of its own until it is named, when it takes the library key; a
- *  tick on it would then match nothing and be lost without a word. So it is refused until the part is named (the
- *  form's Done waits for that), in words for the case officer, who does not name parts. null: the tick may go ahead. */
-export function tickRefusal(sec: Pick<SheetSection, "title" | "named">): string | null {
-  return sec.named === false ? `"${sec.title}" is not named in this release's configuration yet, so it cannot be ticked: tick it once the configuration people have named it.` : null;
-}
-
-/** The form's own parts in the order the form prints them: by the first of their form fields in the edition's field
- *  map (`order`, its data paths in the form's order); a part none of whose fields is in it goes last, in the order
- *  given. Two parts that group the same first field are one part (the first kept): a part is never shown twice. */
+/** The form's own parts in the order the form prints them: by the first of their form fields in the form's field list
+ *  (`order`, its data paths in the form's order); a part none of whose fields is in it goes last, in the order given.
+ *  Two parts that group the same first field are one part, a named one kept before one still waiting (review m5 on
+ *  #1075), else the first: a part is never shown twice. */
 export function partsInFormOrder(parts: FormPart[], order: string[]): FormPart[] {
   const at = new Map(order.map((k, i) => [k, i] as const));
   const first = (p: FormPart) => Math.min(...p.fieldKeys.map((k) => at.get(k) ?? Number.MAX_SAFE_INTEGER), Number.MAX_SAFE_INTEGER);
   const seen = new Set<string>();
-  return parts.map((p, i) => ({ p, i, f: first(p) })).sort((a, b) => a.f - b.f || a.i - b.i).map((x) => x.p)
+  return parts.map((p, i) => ({ p, i, f: first(p) })).sort((a, b) => a.f - b.f || Number(b.p.named) - Number(a.p.named) || a.i - b.i).map((x) => x.p)
     .filter((p) => { const k = p.fieldKeys[0] ?? `#${p.key}`; if (seen.has(k) || seen.has(`#${p.key}`)) return false; seen.add(k); seen.add(`#${p.key}`); return true; });
 }
 /** Where an answer came from, by the channel that first gave it. */
@@ -76,11 +72,14 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
   const byKey = new Map(out.map((x) => [x.key, x]));
   const partOf = new Map(parts.flatMap((p) => p.fieldKeys.map((k) => [k, p.key] as const)).reverse()); // the first part wins
   let other: SheetSection | null = null;
+  // Review m3 on #1075: "Other questions" never takes a part's key.
+  let otherKey = OTHER_PART; while (byKey.has(otherKey)) otherKey = `${otherKey}_`;
   const sectionOf = (box: string): SheetSection | undefined => {
     if (layout.basis === "pdf_twin") return byKey.get(sectionGroupOf(box.split(".").slice(1).join(".")) ?? "");
-    const k = partOf.get(box);
+    // Review m1 on #1075: the rules pass keeps a form field's data path to 120 characters, so a longer one is found by them.
+    const k = partOf.get(box) ?? (box.length > KEY_CUT ? partOf.get(box.slice(0, KEY_CUT)) : undefined);
     if (k) return byKey.get(k);
-    if (!other) { other = { key: OTHER_PART, title: "Other questions", version: "", entered: null, out_of_date: false, answers: [], waiting: [] }; out.push(other); byKey.set(OTHER_PART, other); }
+    if (!other) { other = { key: otherKey, title: "Other questions", version: "", entered: null, out_of_date: false, answers: [], waiting: [] }; out.push(other); byKey.set(otherKey, other); }
     return other;
   };
   for (const b of boxes) {

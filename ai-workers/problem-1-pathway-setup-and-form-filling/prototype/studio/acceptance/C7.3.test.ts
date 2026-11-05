@@ -20,17 +20,24 @@ type Sheet = { order_basis: string; form?: string; sections: { key: string; titl
 const TWINS = JSON.parse(readFileSync(join(import.meta.dirname, "..", "contracts", "pdf-sections.json"), "utf8")) as Record<string, Record<string, string>>;
 /** The application form a visitor visa case files Online when its release has no Online line (VV-R02). */
 const APPLICATION = "IMM 5257";
-/** The form's own parts as the database holds them for the release's edition, in the form's order (independent of the
- *  route: titles from the section proposals and the library sections they became; order by the first form field in the
- *  release's field map). */
-function ownParts(caseId: string, form: string): string[] {
-  const snap = JSON.parse(sql(`select r.snapshot::text from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${caseId}'`) ?? "{}") as { field_maps?: { form_number: string; form_edition?: string; entries?: { data_path: string }[] }[] };
-  const m = snap.field_maps?.find((x) => x.form_number === form);
-  if (!m?.form_edition) return [];
-  const order = new Map((m.entries ?? []).map((e, i) => [e.data_path, i] as const));
-  const rows = (sql(`select coalesce((select l.title from logical_section l where l.workspace_id = p.workspace_id and l.section_key = p.decided_key and p.status = 'accepted' order by l.version desc limit 1), p.payload->>'label') || chr(9) || (p.payload->'fieldKeys')::text from proposal_item p where p.kind = 'section' and p.status in ('accepted', 'waiting') and p.form_edition = '${m.form_edition.replace(/'/g, "''")}' order by p.created_at, p.id`) ?? "").split("\n").filter(Boolean);
-  const parts = rows.map((r) => { const [title, keys] = r.split("\t"); const ks = JSON.parse(keys) as string[]; return { title, first: Math.min(...ks.map((k) => order.get(k) ?? Number.MAX_SAFE_INTEGER)) }; });
-  return [...new Set(parts.sort((a, b) => a.first - b.first).map((x) => x.title))];
+/** The form's own parts as the database held them when the case's release was released, in the order the form's own
+ *  field list prints them (review M4 on #1075: read apart from the route, from the field list, not the field map's
+ *  order): each part's title is the release's own title for its library key, else its proposal's name; `facts` is
+ *  whether any of its form fields carries a fact in the release's field map (a part with none is nothing to type). */
+function ownParts(caseId: string, form: string): { title: string; facts: boolean }[] {
+  const rel = JSON.parse(sql(`select json_build_object('snap', r.snapshot, 'at', r.released_at)::text from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${caseId}'`) ?? "{}") as { at?: string; snap?: { field_maps?: { form_number: string; form_edition?: string; inventory_file?: string; entries?: { data_path: string; fact?: string | null }[] }[]; sections?: { id: string; title: string }[]; section_titles?: { id: string; title: string }[] } };
+  const m = rel.snap?.field_maps?.find((x) => x.form_number === form);
+  if (!m?.form_edition || !rel.at) return [];
+  const list = m.inventory_file ? (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", m.inventory_file), "utf8")) as { fields: { data_path?: string | null }[] }).fields.map((f) => f.data_path).filter((x): x is string => !!x) : [];
+  const at = new Map(list.map((k, n) => [k, n] as const));
+  const withFact = new Set((m.entries ?? []).filter((e) => e.fact).map((e) => e.data_path.slice(0, 120)));
+  const titles = new Map([...(rel.snap?.section_titles ?? []), ...(rel.snap?.sections ?? [])].map((x) => [x.id, x.title] as const));
+  const rows = (sql(`select (case when p.decided_at <= '${rel.at}'::timestamptz then p.status else 'waiting' end) || chr(9) || coalesce(p.decided_key, '') || chr(9) || coalesce(case when p.decided_at <= '${rel.at}'::timestamptz then null else p.work->'beforeEdit'->>'label' end, p.payload->>'label', '') || chr(9) || coalesce(case when p.decided_at <= '${rel.at}'::timestamptz then null else p.work->'beforeEdit'->'fieldKeys' end, p.payload->'fieldKeys')::text from proposal_item p where p.kind = 'section' and p.form_edition = '${m.form_edition.replace(/'/g, "''")}' and p.created_at <= '${rel.at}'::timestamptz order by p.created_at, p.id`) ?? "").split("\n").filter(Boolean);
+  const parts = rows.map((r) => { const [status, key, label, keys] = r.split("\t"); const ks = JSON.parse(keys) as string[]; const named = (status === "accepted" || status === "edited") && !!key;
+    return { status, title: (named ? titles.get(key) : null) ?? label, first: Math.min(...ks.map((k) => at.get(k) ?? [...at.keys()].findIndex((x) => x.startsWith(k)) ?? -1).map((n) => (n < 0 ? Number.MAX_SAFE_INTEGER : n))), facts: ks.some((k) => withFact.has(k.slice(0, 120))) }; })
+    .filter((x) => x.status !== "rejected");
+  const seen = new Set<string>();
+  return parts.sort((a, b) => a.first - b.first).filter((x) => (seen.has(x.title) ? false : (seen.add(x.title), true)));
 }
 
 await main("C7.3", "Answer sheet for an Online line", async () => {
@@ -54,10 +61,11 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   let { r, s } = await sheet();
   ok("C7.3-1 pass: an Online form item has an answer sheet for the officer", r.status === 200 && item?.channel === "ONLINE", r.status);
   ok("C7.3-2 fail: a client cannot read the answer sheet (403)", (await sheet(CLIENT)).r.status === 403);
-  // Until W6: the form's own parts as the release's configuration names them, in the form's order; else the twin's.
-  const want = s?.order_basis === "form_parts" ? ownParts(c.id, FORM) : Object.values(TWINS[FORM] ?? {});
-  const shown = s?.sections.map((x) => x.title) ?? [];
-  ok("C7.3-3 pass: the sheet follows the form's own sections in order (the release's parts, else the PDF twin's) until W6", shown.length > 0 && (s?.order_basis === "form_parts" ? shown.every((t) => want.includes(t)) && JSON.stringify(shown) === JSON.stringify(want.filter((t) => shown.includes(t))) : s?.order_basis === "pdf_twin" && JSON.stringify(shown) === JSON.stringify(want)), { basis: s?.order_basis, shown, want });
+  // Until W6: the form's own parts as the release held them, in the order the form's field list prints them (required
+  // whenever the release holds parts for the form: review M4), else the twin's (the fixture).
+  const own = ownParts(c.id, FORM), shown = s?.sections.map((x) => x.title) ?? [];
+  const want = own.length ? own.filter((x) => x.facts).map((x) => x.title) : Object.values(TWINS[FORM] ?? {});
+  ok("C7.3-3 pass: the sheet follows the form's own sections in order (the release's parts, else the PDF twin's) until W6", shown.length > 0 && (own.length ? s?.order_basis === "form_parts" : s?.order_basis === "pdf_twin") && JSON.stringify(shown.filter((t) => t !== "Other questions")) === JSON.stringify(want), { basis: s?.order_basis, shown, want });
   ok("C7.3-4 pass: before confirmation the sheet shows no values, only what it waits for (only confirmed facts fill, P-72)", (s?.sections ?? []).every((x) => x.answers.length === 0) && (s?.sections ?? []).some((x) => (x.waiting ?? []).length > 0));
 
   await fillEverything(c.id);

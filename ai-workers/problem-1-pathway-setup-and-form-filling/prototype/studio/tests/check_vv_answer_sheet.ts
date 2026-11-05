@@ -3,7 +3,7 @@
 // copy; what is not confirmed is listed as waited for; "Entered in the portal" ticks go out of date when an answer they
 // froze changes (P-65). Each rule has a passing and a failing case. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_vv_answer_sheet.ts
-import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sourceOf, tickRefusal, type FormPart } from "../engine/runtime/answer-sheet.ts";
+import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sourceOf, type FormPart } from "../engine/runtime/answer-sheet.ts";
 import type { BoxRow } from "../engine/render.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -78,10 +78,13 @@ ok("C7.3: the source says Document for a document read, Client for the questionn
   ok("C7.3 (fail): a part with nothing to type for this person (a signature block) is not a step on the sheet", !s.sections.some((x) => x.key === "sign"));
   const tick = new Map([["sign", { at: "2026-11-01T10:00:00Z", by: "user-O", hash: sectionHash([]) }]]);
   ok("C7.3: a ticked part stays on the sheet with its tick even with nothing to type", sheetOf({ basis: "form_parts", parts: inOrder }, boxes, origin, labels, tick).sections.find((x) => x.key === "sign")?.entered?.by === "user-O");
-  const unnamedPart = s.sections.find((x) => x.key === "part_1")!;
-  ok("C7.3 (challenge M5, fail): a part not named yet cannot be ticked, in words that say why and what to wait for", /not named in this release's configuration yet/.test(tickRefusal(unnamedPart) ?? "") && /Unnamed section 1/.test(tickRefusal(unnamedPart) ?? ""));
-  ok("C7.3 (challenge M5, pass): a named part, and every twin section, can be ticked", tickRefusal(s.sections[0]) === null && answerSheet(SECTIONS, boxes, origin, labels, new Map()).sections.every((x) => tickRefusal(x) === null));
-  ok("C7.3 (fail): no part key can take the key of \"Other questions\" (a library key never starts with _)", OTHER_PART.startsWith("_"));
+  const clash = sheetOf({ basis: "form_parts", parts: [{ key: OTHER_PART, title: "A part keyed like Other", named: true, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] }] }, boxes, origin, labels, new Map());
+  ok("C7.3 (review m3, fail): \"Other questions\" never takes a part's key, even one keyed like it", new Set(clash.sections.map((x) => x.key)).size === clash.sections.length && clash.sections.some((x) => x.title === "Other questions" && x.key !== OTHER_PART));
+  const dup = partsInFormOrder([{ key: "part_old", title: "Unnamed section 1", named: false, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] }, { key: "applicant", title: "Applicant", named: true, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] }], order);
+  ok("C7.3 (review m5, fail): of two parts with the same first form field, the named one is kept, never the one still waiting", dup.length === 1 && dup[0].key === "applicant");
+  const long = `${F}SectionA[0].Applicant[0].${"X".repeat(130)}[0]`;
+  const cut = sheetOf({ basis: "form_parts", parts: [{ key: "applicant", title: "Applicant", named: true, fieldKeys: [long.slice(0, 120)] }] }, [{ ...boxes[0], box: long }], origin, labels, new Map());
+  ok("C7.3 (review m1): a form field whose data path is longer than the 120 characters the rules pass keeps still goes in its part", cut.sections[0].key === "applicant" && cut.sections[0].answers.length === 1 && !cut.sections.some((x) => x.key === OTHER_PART));
 }
 
 process.exitCode = summary() ? 1 : 0;
