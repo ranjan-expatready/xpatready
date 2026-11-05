@@ -39,11 +39,12 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   // A proposal rejected (or still waiting) because the library already holds a section of that name reuses that
   // section, as its card says ("reuse that item").
   const byTitle = new Map((await db.logicalSection.findMany({ where: { workspaceId: c.workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, title: true } })).map((x) => [x.title.trim().toLowerCase(), x.sectionKey]));
+  // B78 (review M1): a section a person named (the naming edit on To review) landed under its key, as an accepted one did.
   // In a fixed order (QA-206 on #883): one draft's proposals share an instant, and the nearest-box fallback below keeps the
   // first of equally near sections, so the order must not depend on how the database returns ties.
-  for (const p of await db.proposalItem.findMany({ where: { runId: { in: runs }, kind: "section", status: { in: ["accepted", "waiting", "rejected"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }, { id: "asc" }] })) {
+  for (const p of await db.proposalItem.findMany({ where: { runId: { in: runs }, kind: "section", status: { in: ["accepted", "edited", "waiting", "rejected"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }, { id: "asc" }] })) {
     const pay = p.payload as { fieldKeys?: string[]; label?: string };
-    const section = p.status === "accepted" ? p.decidedKey : byTitle.get(String(pay.label ?? "").trim().toLowerCase());
+    const section = p.status === "accepted" || p.status === "edited" ? p.decidedKey : byTitle.get(String(pay.label ?? "").trim().toLowerCase());
     if (!section) continue;
     const ed = editionOfRun.get(p.runId ?? "") ?? p.formEdition ?? "";
     groups.set(ed, [...(groups.get(ed) ?? []), { section, boxes: pay.fieldKeys ?? [] }]);
