@@ -1,0 +1,128 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-qd-conditions-temporary-residence-visitors-visitor-vis-83a49fd2-live-20261105t011135673z-307128",
+  "idempotency_key": "4d087af6ab0eac173e7da77b2476f7bd38bb16d02b06266ae9b1ded06ec1b3cd",
+  "contract_version": "drafting-run/v0",
+  "kind": "qd_conditions",
+  "output_sha256": "30f96d8a2f26c43e0047297a5e25d382a0e36f516d6ee7826bd9978969686a2d",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    },
+    {
+     "file": "prototype/p2/question-lists/vv.single-ae2133b8a398.questions.json",
+     "sha256": "ae2133b8a398df5f5d4f1fa06f33d7071577f36259318248b38c1eb3f51bc018"
+    }
+   ],
+   "configuration_version": "c411-conditions"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1.24,
+   "max_output_tokens": 6000,
+   "prompt_version": "conditions.v2.md",
+   "prompt_sha256": "3f55b668291b0ebec35de7b5185c1cc9e0bd475283f3f23d04530d7b6da7f95d"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 28983,
+    "output_tokens": 1359,
+    "duration_ms": 14458
+   }
+  ],
+  "usage": {
+   "input_tokens": 28983,
+   "output_tokens": 1359,
+   "cost_usd": 0.143112,
+   "duration_ms": 14458
+  },
+  "started_at": "2026-11-05T01:11:35.675Z",
+  "ended_at": "2026-11-05T01:11:50.386Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "3f65d802dbd92c96f679f3c6b363877b9d0e80c3343eb751da2bd285e3c0ace7",
+  "template_sha256": "5cf39bfe6103d4f2b65ac5f7991a477e03cc6af62cc004bf0c15f884c2d78e05",
+  "schema_file": "conditions-output.v2.schema.json",
+  "schema_sha256": "5365a75dbe7334f24a879a4091be2b88756f1a2fb96994a514e12d5548f27678",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "30f96d8a2f26c43e0047297a5e25d382a0e36f516d6ee7826bd9978969686a2d",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "846a1b2f905e0de4715f7e8d16d12eab7aa51d07ff30a147241965f413ac0115",
+  "request_bytes": 98143,
+  "stub_calls": null,
+  "ledger": {
+   "file": "<main copy>/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 71.38029999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p2/question-lists/vv.single-ae2133b8a398.questions.json",
+    "sha256": "ae2133b8a398df5f5d4f1fa06f33d7071577f36259318248b38c1eb3f51bc018",
+    "kind": "question_list"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "1de1501baaba17ee1520e2212c7a8857f35691733eb0e68d9327f7d7866d690e",
+   "digest_made_at": "2026-11-05T01:11:35.674Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "874f86aee7c9148c3916347003052472",
+   "ticket_expires_at": "2026-11-05T01:13:35.674Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"conditions\":[{\"role\":\"principal\",\"asks\":\"person.other_family_name\",\"depends_on\":\"person.has_used_other_name\",\"when\":\"yes\",\"quote\":\"If you checked “Yes”, type any other family name that you have ever used.\",\"why\":\"Other family names are asked only if the person has used another name.\"},{\"role\":\"principal\",\"asks\":\"person.other_given_names\",\"depends_on\":\"person.has_used_other_name\",\"when\":\"yes\",\"quote\":\"If you checked “Yes”, type any other given name (first, second, or more) that you have ever used.\",\"why\":\"Other given names are asked only if the person has used another name.\"},{\"role\":\"principal\",\"asks\":\"person.criminal_history_details\",\"depends_on\":\"person.criminal_history\",\"when\":\"yes\",\"quote\":\"been charged with or convicted of any criminal offence in any country or territory.\",\"why\":\"Details of criminal history are needed only if the person answered yes.\"},{\"role\":\"principal\",\"asks\":\"person.military_service_details\",\"depends_on\":\"person.has_military_or_security_service\",\"when\":\"yes\",\"quote\":\"If you answered “Yes” to question 4a), please provide your dates of service and the countries or territories where you served.\",\"why\":\"Service dates and countries are asked only if the person has served.\"},{\"role\":\"case\",\"asks\":\"case.visit_purpose_other\",\"depends_on\":\"case.visit_purpose\",\"when\":\"other\",\"quote\":\"Note: If you selected “other” in question 1a), provide details in 1b)\",\"why\":\"A description is needed only when the visit purpose is 'other'.\"},{\"role\":\"principal\",\"asks\":\"person.current_residence_status_other\",\"depends_on\":\"person.current_residence_status\",\"when\":\"other\",\"quote\":\"Other: You must fill out this section if you chose “Other” as a status.\",\"why\":\"A description is needed only when the residence status is 'other'.\"}],\"unresolved\":[{\"passage\":\"been charged with or convicted of any criminal offence in any country or territory.\",\"reason\":\"The guide's criminal history question does not explicitly say 'if yes, give details'; the dependency of person.criminal_history_details is inferred and needs expert confirmation.\"},{\"passage\":\"If you checked “Yes” to one of the above questions, provide details.\",\"reason\":\"person.immigration_history_details depends on three questions (overstayed_or_unauthorized_in_canada, refused_visa_entry_or_removed, previously_applied_to_canada); more than one deciding answer.\"},{\"passage\":\"If you checked “Yes” to any of the above questions, provide details and the name of the family member, if applicable.\",\"reason\":\"Depends on two questions (tuberculosis, which is not in the list, and health_condition_requiring_services) and no matching details key exists.\"},{\"passage\":\"Check the box to tell us if you have ever been married or in a common-law relationship. If you checked “Yes”, enter the following information:\",\"reason\":\"The question list has no former-spouse name, birth date or dates keys to make conditional.\"},{\"passage\":\"Enter the date (year, month and day) you were married or you entered into your current common-law relationship.\",\"reason\":\"relationship.union_start_date depends on marital_status being married or common-law: two deciding answers.\"},{\"passage\":\"If you checked “Yes”, choose the correct information:\",\"reason\":\"Question 8 previous-residence fields depend on a 'lived elsewhere' question that is not in the list.\"},{\"passage\":\"If you checked “No”, choose the correct information:\",\"reason\":\"Applying-from fields depend on an 'applying from country of residence' question that is not in the list.\"},{\"passage\":\"Other: You must fill out this section if you chose “Other” as a status;\",\"reason\":\"This sentence appears for both previous residence and applying-from status; the quote is ambiguous across two conditions (previous_residence_status_other and applying_from_status_other).\"},{\"passage\":\"Check “Yes” or “No” to tell us if you have a national identity document.\",\"reason\":\"The guide does not state that national ID details are asked only on yes; dependency of national_id fields on has_national_id is implied but not explicit.\"},{\"passage\":\"If you checked “Yes”, give us full details of your highest level of post-secondary education:\",\"reason\":\"The deciding question (has post-secondary education) is not in the question list.\"}]}"
+}
