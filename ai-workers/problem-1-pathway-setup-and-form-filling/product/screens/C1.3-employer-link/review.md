@@ -114,3 +114,23 @@ Re-run either fix 5+ times on a fresh copy. The three Minors stay listed in the 
 Open below Major: the three Minors listed in the PR (tech lead's ruling).
 
 **Verdict: Approve** for commit e59093d61.
+
+## Round 5 — diff only, `e59093d61..d2e569597`
+**Runs** (fresh copy `rv_c13` on :4433): `acceptance/C1.3.test.ts` **55/55**; the new hold test waited 2030 ms, then 201. The browser check passed **28/28 five runs in a row**. The shared Postgres server had stopped, so I started it alone with `pg_ctl` (as `start.sh` does), without the :4400 app.
+**The outside review's fix: correct.** In READ COMMITTED, a save that commits while the link waits supersedes the locked row. That row then drops out of the lock set, the link's next statement sees the new answer, and it refuses as "Changed since you looked". A save that comes later waits on the row the link holds; if the link superseded that row, the save is refused by its own updateMany (count 0).
+**Lock order (the tech lead's question).** Only four places write answers: `putAnswer` and `confirmSection` (runtime.ts:321-322 and :452-454), the undo (`case-changes.ts:53-64`), and the link.
+* **No path takes an answer row lock and then the case row lock.**
+  * The undo takes `runtime_case … FOR NO KEY UPDATE` first, so it queues behind the link's `FOR UPDATE`.
+  * `putAnswer` and `confirmSection` never lock `runtime_case`.
+  * An answer insert takes key-share locks on `answer_subject` and `canonical_field` only (its foreign keys). Its trigger only reads `answer_subject`.
+  * `fill-case`, `case-prepare`, submission, filing-record and team lock the case row but never write answers.
+* **Two `link()` calls cannot deadlock:** both take the case row `FOR UPDATE` before any answer row.
+* **`putAnswer` cannot deadlock with the link:** it locks one answer row and only ever waits on that row or on the unique index.
+* **Residual, Minor (Should): answer against answer with `confirmSection`.** The link locks up to three answer rows in one statement in scan order. `confirmSection` supersedes a person's rows one by one, with no case lock and no `ORDER BY`. If the two lock the same two rows in opposite orders, Postgres aborts one. I forced the opposite order with a psql session (name, then address): the link got **500 after 1.5 s** (`40P01 deadlock detected` in the API log), and nothing was written.
+  * Today both queries scan the same `(subject_id, canonical_field_key)` index, so they lock in the same order. The deadlock needs plan divergence; I could not produce it with the real confirm.
+  * Fix:
+    * add `ORDER BY subject_id, canonical_field_key` to the link's `FOR UPDATE` (this file);
+    * map `40P01` to a 409 ("saved at the same moment, try again");
+    * the full guarantee is `confirmSection` taking the case row lock first, as the undo does (runtime.ts: the tech lead's call).
+
+**Verdict: Approve** for commit d2e569597. Open below Major: the deadlock Minor above, plus the three Minors listed in the PR.
