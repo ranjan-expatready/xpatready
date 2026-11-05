@@ -107,6 +107,8 @@ type Question = { fact: string; about: string; why?: string };
   const opened = await call("POST", "/runtime/cases", { combinationId: sp, reference: `B78-sp-${Date.now()}`, clientActor: "user-P", principal: { displayName: "Sample Client (Sample)" } }, "user-O");
   ok("B78 pass (review M3): a case opens on the study permit's release: no false \"No questions yet for Student\"", opened.status < 300 && !!opened.body?.id, opened.body?.missing ?? opened.status);
   const pvSp = (await call("GET", `/combinations/${sp}/preview`)).body;
+  // QA-144 review M2, kept with no placement guard: nobody is asked a person's question only because a section is chosen.
+  ok("B78 fail-guard (QA-144 review M2): the Student is asked no question no form of theirs reads", !((pvSp?.questions ?? []) as { about: string; why?: string }[]).some((q) => q.about === "principal" && /a section this row selects/.test(q.why ?? "")), ((pvSp?.questions ?? []) as { about: string; fact: string; why?: string }[]).filter((q) => /a section this row selects/.test(q.why ?? "")).slice(0, 4).map((q) => q.fact));
   ok("B78 pass (review M3): the Student really is asked: Preview lists the principal's questions", ((pvSp?.questions ?? []) as { about: string }[]).filter((q) => q.about === "principal").length > 50);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;

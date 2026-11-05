@@ -6,6 +6,8 @@ import { sharedStep, type MissingItem, type NextAction, type Status } from "../c
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { isFilingFact } from "./resolver.ts";
+import { previewRender } from "./coverage.ts";
+import { FILING } from "../contracts/resolver.ts";
 import { STATUS_WORDS } from "../contracts/status-words.ts";
 import { waitsForMap } from "./setup-checklist.ts";
 import { libraryType } from "./form-type.ts";
@@ -20,11 +22,13 @@ const applicants = (ps: Participant[]) => ps.filter((p) => p.role !== "represent
 const isCaseLevel = (p: { repeats: string; fact: string }) => isFilingFact(p.fact, p); // SH3 R5
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** Questions a person is asked: the snapshot's placements (a chosen section's, or a fact a form or rule reads: engine/
- *  snapshot.ts) that are asked of each person. B78: a section need not be chosen: its fact goes out because a form reads it,
- *  as Preview and a case ask it (Study permit: 90 questions for the Student, its one chosen section the application's). */
+/** Questions a person is asked, from the one list Preview and a case show (engine/render.ts through previewRender), so BR-8
+ *  can never disagree with them: not those about the application, not a representative's, not one a condition hides. B78:
+ *  a form's fact counts though its section is not chosen (Study permit: its one chosen section is about the application). */
 function personQuestions(s: Snapshot) {
-  return (s.placements as Placement[]).filter((p) => !p.rule_only && !isCaseLevel(p));
+  const { people, r } = previewRender(s);
+  const representative = new Set(people.filter((p) => p.role === "representative").map((p) => p.id));
+  return r.questions.filter((q) => q.about !== FILING && !representative.has(q.about.split("/")[0]) && q.status !== "hidden by a condition");
 }
 
 /** Where the row's setup stands (draft): forms attached as sources and not set up yet, and what moves them on. */
