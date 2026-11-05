@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import { NOT_APPLICABLE_FROM, REQUEST_FROM, UPLOAD_FROM, type LineState, type StoredDocument } from "../../../contracts/documents";
 import type { PersonChecklist, PersonLine } from "../../../engine/runtime/case-checklist";
-import { noRetryOnRefusal } from "./questionnaire";
+import { lineId, noRetryOnRefusal } from "./questionnaire";
 
 /** A line as the API answers it (api/src/case-checklist.ts StoredLine). */
 export type ChecklistLine = Omit<PersonLine, "state" | "documents"> & { state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null;
@@ -27,8 +27,6 @@ const HAVE: readonly LineState[] = ["received", "being_checked", "approved"];
 const TONE: Partial<Record<LineState, string>> = { requested: "info", received: "ok", being_checked: "info", approved: "ok", rejected: "danger", not_applicable: "neutral" };
 const ROLE: Record<string, string> = { principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-/** The Agent view's anchor for a person's question (web/src/runtime/questionnaire.tsx lineId). */
-const questionAnchor = (subjectId: string, fact: string) => `a-${subjectId}-${fact.replace(/[^a-z0-9_]/gi, "-")}`;
 /** "n of m received": m the lines needed now (required), n those of them received, being checked or approved. */
 export const received = (lines: ChecklistLine[]) => { const need = lines.filter((l) => l.required); return { n: need.filter((l) => HAVE.includes(l.state)).length, m: need.length }; };
 
@@ -79,8 +77,9 @@ function PersonDocuments({ caseId, p, nameOf }: { caseId: string; p: Person; nam
             <li key={l.id} className="rounded-lg border border-dashed border-border px-3 py-2 text-sm" data-waiting-line={l.lineage}>
               <span className="font-medium">{l.label}</span> <span className="text-xs text-text-muted">{l.who_words}</span>
               <p className="text-[13px] text-text-muted">{l.reason}</p>
-              {l.missing.length ? <p className="text-[13px]">Answer first: {l.missing.map((x, i) => <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${questionAnchor(p.subject, x.key)}`} data-answer-first={x.key}
-                onClick={(e) => { const el = document.getElementById(questionAnchor(p.subject, x.key)); if (el) { e.preventDefault(); el.scrollIntoView({ block: "center" }); el.focus(); } }}>{x.question}</a></React.Fragment>)}</p> : null}
+              {l.missing.length ? <p className="text-[13px]">Answer first, in the Agent view: {l.missing.map((x, i) => <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${lineId(p.subject, x.key)}`} data-answer-first={x.key}
+                // The Agent view opens the person's tab on the address change; the same link twice is announced again.
+                onClick={() => { if (window.location.hash === `#${lineId(p.subject, x.key)}`) window.dispatchEvent(new HashChangeEvent("hashchange")); }}>{x.question}</a></React.Fragment>)}</p> : null}
             </li>))}</ul>
         </div>) : null}
       {p.not_needed.length ? (
