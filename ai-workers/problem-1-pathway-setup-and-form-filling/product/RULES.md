@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-341**, 4 Nov 23:35 IST; the section "Added 4 Nov" below wins over older lines here)
+# Rules in force — one page (the tech lead keeps it; as of **P-348**, 5 Nov 11:00 IST; the sections "Added 5 Nov", then "Added 4 Nov", win over older lines here)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
@@ -63,6 +63,14 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 * **ETA board (P-338):** every report names the next 3–6 capabilities to reach Works with an IST time, the step each waits on, and on time or late by N minutes and why.
 * **Warm lanes (P-341):** a lane whose PR is labelled may take one more M2 row that builds on what it knows, while working sessions stay about 8 and the burn under 2.5%/h; otherwise it ends. Questions to the founder one at a time, with a recommendation.
 * **App view and prompt answers (P-339):** each check reads the claude.ai Code list and the archived list; the Lead answers a lane's prompt only inside its brief and the rules; blocks go to the founder at once ("go" resets the Lead's 10-message cap). qa marks Works only after the pack is green on main's head on GitHub's runners on the data its verdict counts on (six or checkpoint, P-322); the protected set runs each row on that data (B77), and until then a checkpoint row is held from the six run, not demoted.
+
+## Added 5 Nov (P-344, P-347, P-348): these win over everything above
+* **Budget (P-344, replaces P-331's stop):** use the plan to its limit; lanes push after each step; `RESUME-ON-NEW-ACCOUNT.md` is the page for a switch. M3 runs alongside M2's last rows.
+* **M3 by a person's journey (P-348 (1)):** C6.11, C11.6 → C6.4, C6.12 → C7.7, C7.3, C7.6 → C8.1, C8.2, C9.2 → C7.5, C6.5 → C3.16, C1.3/C11.5 → C10.2.
+* **M2's finish line is one list (P-348 (2)):** qa's one walk of Visitor visa by screens, Reset to release. Report "58, of which N reach a dead end".
+* **Gate A's walk ends at the next capability's first step, by screens only (P-348 (3)).** A mutating route a pack's set-up calls needs a caller in `web/src` or an allow-list line (P-348 (4)).
+* **Cloud first (P-348 (5)):** the Mac runs the Lead, the demo, qa and at most two builders with test copies; one copy at a time, at a 1-minute load of 16 or under. No standby builders on the Mac; two standby Leads stay. Hand over at about 400k (P-314).
+* **Stacked `demo.ts` PRs may land in one batch (P-348 (8)).** Two PRs carrying a migration take different stamps.
 
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.
