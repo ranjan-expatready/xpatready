@@ -48,3 +48,10 @@
 
 ## Records ~04:45 IST: QA-233 (Gap · Major, no capability)
 The checklist reading lands Visitor visa lines whose conditions read three facts not in the library; Submit rightly refuses them. No acceptance step breaks today, so it holds no row (detail in `bugs-open-detail.md`). Not fixed by #967 (by code). C4.1's pack (#1022) runs the passport step after Submit, the order a person meets it.
+
+## Batch 20 — #973 (QA-221), #1022 (qa's C4.1 pack) · main c5608bb37 · ~05:20–05:45 IST
+| Row | Verdict | Evidence |
+|---|---|---|
+| C4.1 (M2) | **Works** (was Partial) | `C4.1.test.ts` six 0 · 25/25 (run 41937658470), checkpoint 0 · 25/25 (run 41937673811) |
+
+**Closed:** QA-221. **M2: 58/60 confirmed** (was 57). Left: C4.11 and C7.7 (#967). Thin slice 7/8.
