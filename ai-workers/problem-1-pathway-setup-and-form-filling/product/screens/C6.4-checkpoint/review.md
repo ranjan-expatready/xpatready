@@ -185,3 +185,46 @@ The next Tab goes to the following control ("Source"), not "Cases home".
 * D13: 3 → 4. D10: 3 → 4. D16: 4, with the new engine word tests.
 
 **Verdict: Approve** (ca2db0311).
+
+## Round 3: diff-only re-review of `git diff ca2db0311 ecec14a69` (5 Nov; covers 66086a31d and ecec14a69)
+**Verdict for ecec14a69: Approve.** There is no open Blocker or Major. The same verdict holds for 66086a31d; ecec14a69 adds only one class.
+
+**What I ran** (own copy rev64 on :4472; stopped and dropped after; live AI off, US$0):
+* **At 66086a31d:**
+  * Reset, then Load configured: 74.6 s, `cost_usd` 0. Visitor visa, Study permit and With an LMIA released.
+  * The load log now reads "vv.single: 0 conditional document lines in, 5 waiting for the facts their condition reads (… row 7 names them)", and row 7 still names the five. This closes my round 2 note on Minor 5.
+  * `check_vv_checklist` **67/67**.
+  * `product/tools/typecheck.mjs`: "no new type errors (15 known, 0 fixed)"; web has 0 errors.
+* **At ecec14a69** (copy restarted, web bundle rebuilt; it holds the new class):
+  * `C6.4-screen` **17/17**; C6.4-38 focus holds after Request, Not applicable and History.
+  * `C6.4` **19/30**, the same red steps as before.
+  * My focus probe is unchanged from round 2: focus returns to the line's ⋯ button after every action, there is no sideways scroll at 200 % zoom, and History fits its dialog.
+  * **Spinner probe** (the request held back 1.5 s):
+    * while it runs, the ⋯ button shows the spinner, keeps focus, is `aria-busy="true"` and is not disabled;
+    * the animation is `spin`, and `none` under `prefers-reduced-motion: reduce`;
+    * afterwards the spinner is gone and focus is still on the button.
+
+**Code read of the diff:**
+* **`demo.ts`:** `conditionalDocumentLines` returns `{ n, waiting }` on both returns. `documentLines += d.n`, so the count is unchanged.
+* **`checklist.tsx:15-23`: the line types are declared in the panel.** This drops the engine import that pulled Node modules into the web check.
+  * The types match the API fields the panel reads (`missing[].subject` included). C6.4-31 compares the screen with the API, so a dropped field shows up as a failed check.
+  * **Minor (new):** this is a second copy of `PersonLine`'s shape. An engine rename would not fail the web type check, only the browser pack. *Fix later:* move the line types to a Node-free file that both sides import (not hot).
+* **Devin (a):**
+  * `toAsk` sets `subject: about` for a person's question and `null` for the application's. A fact about the filing now counts as the application's, which closes a wrong "person" case.
+  * The panel builds the link from `x.subject ?? p.subject`.
+  * Pass/fail in `check_vv_checklist`: the principal's employment letter waiting on the spouse's answer names subject B, never A and never the case.
+* **Devin (b):**
+  * `whyWaiting` strips only `": answer … first."`. The engine's "check … together they do not give an answer" words stay whole.
+  * When every question is answered, the links' lead-in reads "Check, in the Agent view".
+  * I read this in the code only; today's checkpoint data has no such line.
+* **Spinner:** it replaces the icon inside the button, and `aria-label` stays. `motion-reduce:animate-none` matches `components/ui/spinner.tsx:25`.
+* **review.md:** the committed copy at 66086a31d and ecec14a69 equals my round 2 record.
+
+**Still open (Minor; listed in the PR):**
+* Round 1 Minors 4 and 8, and the breaker's m1.
+* The removed "Kept" pill, to be named in the PR (round 2).
+* The duplicated line types above.
+
+**Journey score: 9½/10** (as in round 2, nothing changed).
+
+**Verdict: Approve** (ecec14a69).
