@@ -1,7 +1,10 @@
 // QA-144, P-319 (moved out of demo.ts for B71, so a pack's setup can read it without the loader's Nest services): the
 // one per-combination table of what IRCC's own words set on a combination's form lines, read by the configured
 // checkpoint's loader (api/src/demo.ts) and by the six's people's steps in the packs (acceptance/lib/pack2.ts). Each
-// value is Sample, "Unconfirmed: expert" (AGENTS rule 4). No decorators and no imports, on purpose.
+// value is Sample, "Unconfirmed: expert" (AGENTS rule 4). No decorators and no Nest imports, on purpose. From QA-144
+// slice 4 (B79, P-319) a combination's words are data: samples/form-setup.json, read below into the same table.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { OWN_YES_NO, type OwnYesNo } from "./own-yes-no.ts";
 /** QA-227 (Major): IMM 5476's and IMM 5475's rules read "exists" on the form's own choice (appointing, updating, cancelling
  *  a representative; authorizing or withdrawing a release), which only IMM 5476 or IMM 5475 itself asks: unanswered,
@@ -79,43 +82,6 @@ export const SP_FORM_RULES: FormRule[] = [
 export const MINOR_FACT = { fact: "person.minor_studying_without_parent", rule: "IMM 5646", cite: "Guide 5269, Custodians", label: "Minor studying without a parent or guardian", valueType: "yes_no",
   meaning: "Whether the person is 17 years of age or less and comes to Canada to study without an accompanying parent or legal guardian, so a custodian in Canada must care for them (Guide 5269, Custodians; IMM 5646).",
   beside: ["person.date_of_birth"] };
-/** QA-144 slice 5 (B79b): Family sponsorship › Spouse or common-law partner's form lines as IRCC's own words set them,
- *  each Sample, "Unconfirmed: expert" (AGENTS rule 4). Guide 5289 is official-sources/ircc/instructions/guide-5289.html
- *  (canada.ca, modified 2026-04-23, saved 27 Oct 2026); IMM 5533 (09-2022), the document checklist for a spouse, is
- *  official-sources/ircc/checklists/imm5533e.pdf (checked 21 Oct 2026). Its people are the sponsored spouse or partner
- *  (the principal applicant), the sponsor, children and a representative. The saved field maps of IMM 1344 and IMM 5532
- *  read the sponsor as the form's subject (their "Sponsor" boxes), so both lines are the sponsor's. Neither source names
- *  IMM 5409 for this application (IMM 5532 asks about the relationship), so no IMM 5409 line is added. IMM 1283 (only
- *  when a sponsored child has a child of their own) and IMM 5562 ("if it applies to you") are not in the six's sample
- *  (samples/wave1.json): for the expert. */
-const IMM5533 = "IMM 5533 (09-2022)";
-const GUIDE5289_ONLINE = "Guide 5289, Filling out your forms: \"The principal applicant must fill out these digital forms online: Generic Application Form for Canada (IMM 0008) [...] Schedule A – Background/Declaration (IMM 5669) [...] Additional Family Information (IMM 5406)\"";
-export const FS_FORM_RULES: FormRule[] = [
-  { form: "IMM 1344", who: "sponsor",
-    cite: `${IMM5533} p. 1, Part A, Sponsor, item 2: "Application to Sponsor, Sponsorship Agreement and Undertaking (IMM 1344) To be completed and signed by you, the sponsor and the person you are sponsoring."; Guide 5289: "The sponsor must download and complete these forms digitally sign, along with the principal applicant (PA) Application to Sponsor, Sponsorship Agreement and Undertaking [IMM 1344] [...] Relationship Information and Sponsorship Evaluation Form [IMM 5532]"` },
-  { form: "IMM 5532", who: "sponsor",
-    cite: `${IMM5533} p. 3, Part A, Both the sponsor and principal applicant, item 10: "Relationship Information and Sponsorship Evaluation (IMM 5532) The sponsor and principal applicant should complete the form and sign the declarations where indicated."; Guide 5289: "If you're sponsoring a spouse or partner (with or without dependent children), you must fill out Sponsorship Evaluation and Relationship Questionnaire [IMM 5532]"` },
-  { form: "IMM 0008", who: "principal_applicant", channel: "ONLINE",
-    cite: `${IMM5533} p. 2, Part A, item 6: "Generic Application Form for Canada (IMM 0008) You (the principal applicant) must complete this form for yourself and your dependents, when applying online. [...] This form is now digital and can be completed online."; ${GUIDE5289_ONLINE}` },
-  // The form's words name the principal applicant at any age and family members from 18 (QA-221's "who").
-  { form: "IMM 5406", who: "principal_partner_adult_children", minAge: 18, channel: "ONLINE",
-    cite: `${IMM5533} p. 2, Part A, item 8: "Additional Family Information (IMM 5406) The following person(s) must fill out their own copy of this form when applying online: You (the principal applicant), and any of your family members 18 years of age or older (who are not already Canadian citizens or permanent residents). [...] This form is now digital and can be completed online."; ${GUIDE5289_ONLINE}` },
-  { form: "IMM 5669", who: "principal_partner_adult_children", minAge: 18, channel: "ONLINE",
-    cite: `${IMM5533} p. 3, Part A, item 9: "Schedule A - Background / Declaration (IMM 5669) When applying online, you (the principal applicant) and any of your family members 18 years of age or older (who are not already Canadian citizens or permanent residents) must complete this form. This form is now digital and can be completed online."; ${GUIDE5289_ONLINE}` },
-  { form: "IMM 5604", who: "each_dependent_child", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.minor_other_parent_not_sponsor", value: true },
-    cite: `${IMM5533} p. 6, Part B, item 3: "For Minor Child(ren): If any child(ren) under 18 will be issued an immigrant visa as part of this application, and your sponsor is not their other legal parent, you must complete the Declaration from non-accompanying parent/guardian for minors immigration to Canada (IMM5604) form [...] for each child"; Guide 5289: "If sponsoring a dependent child (under the age of 18) and they have another parent who is not immigrating to Canada, the parent/guardian applying from Canada must submit a signed copy of the Declaration From Non-Accompanying Parent/Guardian For Minors Immigrating to Canada [IMM 5604]"` },
-  { form: "IMM 5476", condition: REPRESENTED,
-    cite: `${IMM5533} p. 3, Part A, item 11: "Use this form if you (the sponsor, the principal applicant, and/or any dependants 18 years of age or older) want to name a representative (such as an immigration consultant, lawyer, friend or family member) to represent you."` },
-  { form: "IMM 5475", condition: RELEASES,
-    cite: `${IMM5533} p. 3, Part A, item 12: "Use this form if you want to authorize IRCC to give your personal information to someone who will not act as your representative."` },
-];
-/** QA-144 slice 5 (B79b): IMM 5604's rule reads a fact no form asks (a child's other parent is not on any form of this
- *  application), added through C3.6's door for its rule and asked of each person beside their date of birth. Sample,
- *  Unconfirmed: expert. */
-export const OTHER_PARENT_FACT = { fact: "person.minor_other_parent_not_sponsor", rule: "IMM 5604", cite: `${IMM5533} p. 6, Part B, item 3`, label: "Child under 18 whose other parent is not the sponsor", valueType: "yes_no",
-  meaning: "Whether the person is a child under 18 who will be issued an immigrant visa with this application and whose other legal parent is not the sponsor, so that parent or guardian signs IMM 5604 (IMM 5533 p. 6; Guide 5289).",
-  beside: ["person.date_of_birth"] };
-
 /** G5 (C5.1, P-248; tech lead's ruling on #868, Lead 8, 20:5x IST): a document line the checkpoint sets from an official
  *  checklist's own words, cited (P-170): the document type (an existing library name is reused), whose it is, and the
  *  page and quote. Sample, Unconfirmed: expert (AGENTS rule 4). `reuse`: the type must already be in the library (the
@@ -132,19 +98,6 @@ export const SP_DOCUMENT_LINES: CitedDocumentLine[] = [
   { type: "Letter of acceptance", who: "principal_applicant",
     quote: `${IMM5483}, p. 2, documents list item 4: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert)` },
 ];
-/** QA-144 slice 5 (B79b): Family sponsorship › Spouse or common-law partner's always-needed documents, from IMM 5533
- *  (09-2022), the document checklist for a spouse: official-sources/ircc/checklists/imm5533e.pdf (the PDF dated
- *  2022-09-21). The sponsor's own documents (status in Canada, income) need a "the sponsor" document line: not in this
- *  table's line shape yet, for a follow-up row. */
-const IMM5533_PDF = `${IMM5533}, canada.ca PDF dated 2022-09-21`;
-export const FS_DOCUMENT_LINES: CitedDocumentLine[] = [
-  { type: "Fee payment receipt", who: "principal_applicant", reuse: true,
-    quote: `${IMM5533_PDF}, p. 1, Part A, item 3: "Attach a single receipt with the sponsorship fee, the application fee, and the biometric fee for the principal applicant you are sponsoring and the application fee and biometric fee for any other dependents on the application." (Sample, Unconfirmed: expert)` },
-  { type: "Passport information page copy", who: "each_applicant", reuse: true,
-    quote: `${IMM5533_PDF}, p. 5, Part B, Supporting documents for sponsored persons, item 1: "Most recently issued passport or travel document for you and all family members (who will accompany you to Canada) • Include only copies of pages showing the passport or travel document number, date of issue and expiration, photo, name, surname, date and place of birth of holder." (Sample, Unconfirmed: expert)` },
-  { type: "Birth or baptismal certificate", who: "each_applicant",
-    quote: `${IMM5533_PDF}, p. 6, Part B, item 1: "Birth certificates or baptismal certificates for yourself (and all your dependents, if applicable – whether they are accompanying you to Canada or not)." (Sample, Unconfirmed: expert)` },
-];
 /** QA-227: the two Yes/No questions IMM 5476's and IMM 5475's rules read, in the checklists' words (IMM 5484 (05-2026),
  *  official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; IMM 5556 (03-2024) for With an LMIA). Asked once
  *  for the application, beside its language of service (the application form's first case question). Sample,
@@ -154,23 +107,39 @@ export const REP_FACT = { fact: "case.uses_representative", rule: "IMM 5476", ci
 export const RELEASE_FACT = { fact: "case.authorizes_release_to_designated_individual", rule: "IMM 5475", cite: "IMM 5484 (05-2026) p. 1: \"Complete this form only if you authorize … (IRCC) and … (CBSA) to release information from your case file to someone other than yourself.\"", label: "Authorizes release of information to a designated individual", valueType: "yes_no",
   meaning: "Whether the applicant authorizes IRCC and the CBSA to release information from their case file to someone other than themselves (IMM 5484 p. 1; IMM 5475).", beside: ["case.service_language", "case.visa_type_requested"] };
 type RuleFact = typeof GENDER_FACT & { beside?: string[] };
+/** One combination's setup. `family`: why each person 18 or older fills the family information form that the application
+ *  form's channel picks (FAMILY_FORM_BY_CHANNEL); absent, no family form is picked by channel (a permanent residence
+ *  application names its own family form among its rules, QA-144 slice 4). */
+export type FormSetup = { application: string; rules: FormRule[]; family?: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] };
+/** QA-144 slice 4 (B79, P-319): samples/form-setup.json, each combination's words as data. A fact only a rule reads is
+ *  named there by its key and taken from the facts above; an unknown key fails the read, never a rule without its fact. */
+/** B79b (P-319): a fact only a rule reads is named by its key when this file holds it, or given whole in the data (its
+ *  label, meaning and the form whose rule reads it), as Family sponsorship's IMM 5604 fact is; and a combination's
+ *  always-needed document lines, cited, may be data too (`documentsCited`). */
+type SetupData = { combinations: Record<string, { application: string; rules: FormRule[]; ruleFacts?: (string | RuleFact)[]; familyByChannel?: string; documentsCited?: CitedDocumentLine[] }> };
+const RULE_FACTS: RuleFact[] = [GENDER_FACT, REP_FACT, RELEASE_FACT, MINOR_FACT];
+/** B79b: a rule fact given whole in the data is checked as C3.6's door would take it, so a bad entry fails the read. */
+const ruleFactOf = (key: string, f: RuleFact): RuleFact => {
+  if (!/^(person|case)\.[a-z0-9_]+$/.test(f.fact ?? "") || !f.rule || !f.label || !f.meaning || !f.cite || f.valueType !== "yes_no") throw new Error(`samples/form-setup.json, ${key}: the rule fact ${f.fact ?? "(no key)"} needs a person. or case. key, its rule's form, a label, a meaning, a cite and valueType yes_no`);
+  return f;
+};
+const fromData = (): Record<string, FormSetup> => {
+  const d = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "form-setup.json"), "utf8")) as SetupData;
+  return Object.fromEntries(Object.entries(d.combinations).map(([key, c]) => [key, { application: c.application, rules: c.rules,
+    ...(c.familyByChannel ? { family: c.familyByChannel } : {}),
+    ...(c.documentsCited ? { documentsCited: c.documentsCited } : {}),
+    ruleFacts: (c.ruleFacts ?? []).map((k) => typeof k === "object" ? ruleFactOf(key, k) : RULE_FACTS.find((f) => f.fact === k) ?? (() => { throw new Error(`samples/form-setup.json, ${key}: no rule fact ${k} in api/src/form-setup.ts`); })()) }]));
+};
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps.
- *  `familyInRules`: the combination's family information form is one of its rules (a permanent residence application's
- *  IMM 5406), so the temporary residence one (FAMILY_FORM_BY_CHANNEL) is not added (familyFormFor). */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; familyInRules?: true; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] }> = {
+ *  The configured checkpoint sets up from its forms exactly the combinations this table holds (api/src/demo.ts). */
+export const FORM_SETUP: Record<string, FormSetup> = {
   "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], ownYesNo: OWN_YES_NO["vv.single"].boxes, documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
   "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true,
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
   "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFacts: [MINOR_FACT, REP_FACT, RELEASE_FACT], documentsCited: SP_DOCUMENT_LINES,
     family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
-  // QA-144 slice 5 (B79b): the sponsor's application (IMM 1344) is the one every case files; IMM 5406 is the family form.
-  "fs.spouse": { application: "IMM 1344", rules: FS_FORM_RULES, familyInRules: true, ruleFacts: [OTHER_PARENT_FACT, REP_FACT, RELEASE_FACT], documentsCited: FS_DOCUMENT_LINES,
-    family: `${IMM5533} p. 2, Part A, item 8: "Additional Family Information (IMM 5406) The following person(s) must fill out their own copy of this form when applying online: You (the principal applicant), and any of your family members 18 years of age or older"` },
+  ...fromData(),
 };
-/** The family information form a combination of FORM_SETUP adds by its application form's channel (`filed`), or null
- *  when its own rules name it (familyInRules). Read by the checkpoint (demo.ts) and the packs (acceptance/lib/pack2.ts). */
-export const familyFormFor = (setup: { familyInRules?: true } | undefined, filed: string | null | undefined) =>
-  !setup || setup.familyInRules ? null : FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
