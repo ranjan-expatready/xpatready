@@ -155,6 +155,9 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B94 Two "membership" and two "military service" sections on Express Entry | IMM 5669 and IMM 5257 SCH1 each bring their own; from the review of #1050. No owner yet | P-346 (9) |
 | B95 `draftOptionMaps` keeps the lowest version of each answer list | matters once a list has more than one version; `forms.ts`; from #1009's builder. No owner yet | P-346 (9) |
 | B96 Shared `Tip` closes for a keyboard user | Radix closes the tooltip on the scroll event that follows keyboard focus (opens at 18 ms, closed at 33 ms, traced on #1051); `web/src/components/status.tsx`; screens area; the accessible name keeps the words; #1051's check works around it. No owner yet | P-347 |
+| B97 Release 2 back in `demo.ts` | through B81's step, so C10.1 row 9 goes green; 4a09bcd86 holds the old steps. Owner: Builder standby A after #1057's label | P-348 |
+| B98 CI check: routes with no screen | a mutating route a pack's set-up calls needs a caller in `web/src` or an allow-list line. Owner: cloud `route-screen-check` | P-348 (4) |
+| B99 C10.1 row 12b: a real validated IMM 5257 copy read back | P-343 (10) refuses a simulated Validate; needs a person's or computer-use Validate in Adobe Acrobat on the Mac; how it reaches the demo after Reset is the open question. No owner yet | P-348 |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
