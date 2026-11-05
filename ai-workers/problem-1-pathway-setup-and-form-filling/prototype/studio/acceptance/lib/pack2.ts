@@ -104,7 +104,7 @@ export function pack2(id: string) {
       if (!done) out.refused.push(`replay ${item.file}: not finished in 180 s`);
     }
     // B74: the first map applied decides the library's fields and labels, and a saved AI answer replays only on the exact
-    // question list, so maps started in the same millisecond take a fixed order.
+    // question list, so maps started in the same millisecond take a fixed order (a form before its schedule, by file name).
     for (const j of ids(`select j.id from drafting_job j join source_attachment a on a.id=j.attachment_id where j.combination_id='${comboId}' and j.kind='field_map' and j.status='COMPLETED' order by j.started_at, a.file_name desc`)) {
       await call("POST", `/jobs/${j}/recompare`, {}, AUTHOR); // a draft compared with an older library is compared again first (refused when it is current)
       for (const it of ids(`select id from proposal_item where run_id='${j}' and status='waiting' order by identity_key`)) if (say("accept", await call("POST", `/jobs/${j}/items/${it}`, { decision: "ACCEPTED", note: "Accepted by a test as the saved AI answer proposed it (QA-144 part 1 setup)." }, AUTHOR))) out.accepted++;
