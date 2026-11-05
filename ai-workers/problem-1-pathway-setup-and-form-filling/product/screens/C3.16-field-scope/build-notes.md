@@ -17,7 +17,7 @@ Concept r4 (`concept.md`) approved by the tech lead on #1054 (Lead 11's ruling, 
 ## Files
 | Part | File |
 |---|---|
-| Migration (two `ADD VALUE`, no backfill) | `prisma/migrations/20261105090000_c316_field_scope/migration.sql`, `prisma/schema.prisma` |
+| Migration (two `ADD VALUE`, no backfill) | `prisma/migrations/20261105100000_c316_field_scope/migration.sql`, `prisma/schema.prisma` |
 | The one reader and the refusals | `engine/field-scope.ts` (new) |
 | Release mark (hot, approved) | `engine/snapshot.ts`: one conditional spread |
 | Resolver | `engine/resolver.ts` `scopeOf`, `isFilingFact`, `aboutOf` |
