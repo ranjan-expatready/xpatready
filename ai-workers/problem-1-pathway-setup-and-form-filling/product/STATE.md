@@ -29,7 +29,7 @@ See the hand-over note, critical path first. Bottleneck: rework at review on dep
 
 ## Lessons of 5 Nov
 * A founder's word typed while the Lead is mid-turn does not reset the app's 10-message cap, nor does an AskUserQuestion answer: end the turn and ask for a typed turn.
-* A standby can be archived without anyone saying so: check before telling a lane it is being replaced (qa standby, 13:24 IST; restored, and it took over).
+* A standby can be archived without anyone saying so: check before telling a lane it is being replaced (qa standby, found 13:24 IST; restored, take-over message sent).
 * Green packs hid dead ends (QA-233, QA-237): a row needs one walk of a person's full journey before it counts. Proposed; not yet a rule.
 * A row waited 3 h 20 min for a typed turn when typing into claude.ai/code or a standby would have done (P-344 (3)).
 * Auto-archive closed working lanes and standby Leads; now off. `ListAgents` does not show an unarchived session until it runs: message it by its id.
