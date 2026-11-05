@@ -1,0 +1,26 @@
+PASS  C10.1 fail: an unknown checkpoint name is refused with words naming "configured", nothing loaded — {"status":400,"message":"Say which sample to load: \"six\" or \"configured\"."}
+PASS  C10.1 fail: a second load sent while the first runs is refused (409), and only one checkpoint is loaded — {"second":409}
+PASS  C10.1: the configured checkpoint loads (2xx) and answers its checkpoint rows — {"status":201}
+PASS  C10.1: one row per DEMO.md mechanism of the M2 gate (1–12 and 17), each saying what it shows — ["1 done","2 out","3 done","4 done","5 done","6 done","7 partial","8 done","9 waiting","10 partial","11 done","12 partial","17 done"]
+PASS  C10.1: a row that is not done (other than the Parked row 2, status out) says why for a person (no field codes, no error names)
+PASS  C10.1 row 1: the six's official files are read through the form intake (code, edition, checksum)
+PASS  C10.1 row 1 (P-80): an off-list file was held, then approved by a second person (not its uploader) — 1
+PASS  C10.1 rows 3–4 (P-138): saved AI answers replayed (REPLAY), and every replayed proposal decided by a named person with a reason
+PASS  C10.1 row 5 fail (P-80, two people): no library item is approved by the person who proposed it
+PASS  C10.1 row 10: at least one combination is released, and every release went through submit by the author, SME sign-off and approval by a different person
+PASS  C10.1 (R-143, P-175): no live AI call, US$0
+PASS  C10.1 part B (DEMO.md checkpoint 2): Visitor visa (A) has release 1 with every form line PDF upload — [["PDF_UPLOAD","PDF_UPLOAD","PDF_UPLOAD","PDF_UPLOAD","PDF_UPLOAD","PDF_UPLOAD","PDF_UPLOAD"]]
+FAIL  C10.1 R9 part B (DEMO.md row 9, P-143): Visitor visa release 2: IMM 5257 Online, so IMM 5645 (not IMM 5707), IMM 5476 PDF upload signed by hand and scanned — []
+PASS  C10.1 B10 part B (DEMO.md checkpoint 2, row 10): With an LMIA (B) is released too (its reuse of A's facts, row 18, is C10.2's checkpoint 3) — 1
+PASS  C10.1 S10 row 10: the Study permit (outside Canada) has release 1, submitted by the author and approved by the Approver after the SME's sign-off — 1
+PASS  C10.1 part B (DEMO.md row 10): each release is approved by the Approver after the SME's sign-off, never by the author
+PASS  C10.1 R11a part B (DEMO.md row 11): a family case on Visitor visa release 1: principal applicant, travelling spouse, a child under 18 and a child 18 or over — [["principal","1990-04-12"],["spouse_or_partner","1991-09-03"],["child","2016-05-20"],["child","2007-03-14"]]
+PASS  C10.1 R11b part B (DEMO.md row 11): the case's answers come from the one Sample family and every name is labelled Sample
+PASS  C10.1 R12a part B (DEMO.md row 12, C7.1): IMM 5257 is generated for each applicant of the case, on release 1 — {"applicants":4,"filled":4}
+FAIL  C10.1 R12b part B (DEMO.md row 12, C7.2): each IMM 5257 copy has a validated copy read back (Validate, P-171) — {"filled":4,"readBack":0}
+FAIL  C10.1 part B (rows 7, 9, 11, 12, 17): every row of the gate except the Parked row 2 (P-102) is done — ["2 out","7 partial","9 waiting","10 partial","12 partial"]
+PASS  C10.1 fail: a case officer, a client or the Approver cannot load or reset (403), nothing changed — [403,403,403]
+PASS  C10.1 fail: loading the checkpoint twice is refused (Reset first), nothing doubled — "The Structure already has names in this workspace. Reset the demo first to load the sample inputs."
+PASS  C10.1 checkpoint 1: Reset after the checkpoint returns to a blank workspace (no configuration or case row left) — []
+
+21/24 passed

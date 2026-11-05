@@ -1,0 +1,28 @@
+// gate A on #1084: J7 4.2 by screens: Client A › Background information › the criminal-history question: Yes; Run again with a reason.
+const { chromium } = require("playwright"); const path = require("path");
+const [caseUrl, out] = process.argv.slice(2);
+(async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+  const errs = []; p.on("pageerror", (e) => errs.push(e.message));
+  const T = async (l) => (await l.innerText()).replace(/\s+/g, " ");
+  await p.goto(caseUrl); await p.evaluate(() => localStorage.setItem("xr-actor", "user-O")); await p.goto(caseUrl + "#agent-view"); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1000);
+  const av = p.locator("#agent-view");
+  await av.getByRole("tab", { name: /Sample Client A/ }).first().click(); await p.waitForTimeout(500);
+  await av.getByText(/^Background information/).first().click(); await p.waitForTimeout(800);
+  const q = av.getByText(/criminal|convicted/i).first(); await q.scrollIntoViewIfNeeded();
+  const row = q.locator("xpath=ancestor::*[.//button[normalize-space()='Add' or normalize-space()='Edit']][1]");
+  console.log("question:", (await T(row)).slice(0, 300));
+  console.log("buttons:", await row.getByRole("button").evaluateAll((bs) => bs.map((x) => (x.getAttribute("aria-label") || x.innerText).trim()))); await row.getByRole("button").first().click(); await p.waitForTimeout(500);
+  await p.waitForTimeout(800); await p.screenshot({ path: path.join(out, "4-2-editor.png") });
+  const dlg = p.getByRole("dialog"); const scope = (await dlg.count()) ? dlg : av;
+  console.log("editor:", (await T(scope)).slice(0, 400));
+  const yes = scope.getByRole("radio", { name: /^Yes$/i }); const yb = scope.getByRole("button", { name: /^Yes$/ }); const cb = scope.getByRole("combobox");
+  if (await yes.count()) await yes.first().check(); else if (await yb.count()) await yb.first().click(); else await cb.first().selectOption({ label: "Yes" });
+  const save = scope.getByRole("button", { name: /^Save/ }); if (await save.count()) await save.first().click();
+  await p.waitForLoadState("networkidle"); await p.waitForTimeout(1200); console.log("saved:", (await T(av.getByText(/criminal offence/).first().locator("xpath=.."))).slice(0, 300));
+  await p.screenshot({ path: path.join(out, "4-2-answered-yes.png") });
+  await p.goto(caseUrl + "/eligibility"); await p.waitForLoadState("networkidle"); await p.waitForTimeout(800);
+  console.log("before run:", (await T(p.locator("main"))).slice(0, 500));
+  await p.getByRole("button", { name: "Run again" }).first().click(); const d = p.getByRole("dialog"); await d.getByLabel("Reason").fill("Criminal history answered (Sample)"); await d.getByRole("button", { name: "Run again" }).click(); await d.waitFor({ state: "detached" }).catch(() => {}); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1000);
+  console.log("4.2 result:", (await T(p.locator("main"))).slice(0, 1600));
+  await p.screenshot({ path: path.join(out, "4-2-run-again.png"), fullPage: true }); console.log("errors", errs); await b.close();
+})().catch((e) => { console.error("STOPPED", e.message.slice(0, 300)); process.exit(1); });

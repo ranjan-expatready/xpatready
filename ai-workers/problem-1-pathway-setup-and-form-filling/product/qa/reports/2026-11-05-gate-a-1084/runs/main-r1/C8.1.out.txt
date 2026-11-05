@@ -1,0 +1,19 @@
+C8.1 — Signed PDFs: steps, signed scans and who signs (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FAIL  C8.1-1 pass (VV-R09): a child's IMM 5257 is signed by a parent; an adult's by the person — [["person"],["person"]]
+FAIL  C8.1-2 pass (VV-R10): IMM 5476 is signed by the person and the representative
+FAIL  C8.1-3 pass: a "signed by hand and scanned" line has the steps print → signed → scan received → uploaded to IRCC
+FAIL  C8.1-4 fail: "signed" before "print" is refused in words (409) — "No such item."
+FAIL  C8.1-5 fail: printing needs a generated copy of IMM 5476 first (409) — 404
+FAIL  C8.1-6 pass: printed, with who and when, naming the copy printed
+FAIL  C8.1-7 pass: marked signed by hand
+FAIL  C8.1-8 fail: a scan that is not a PDF or image is refused (422), nothing recorded — 404
+FAIL  C8.1-9 fail: a client cannot upload the signed scan here (403; the client's own upload is the client portal, after M3) — 404
+FAIL  C8.1-10 pass: the signed scan is stored with its checksum; step "scan received" done; the item is Ready — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"No such item.","message":"No such item."}
+FAIL  C8.1-11 fail (BR-21): "Uploaded to IRCC" before the filing is Ready to file is refused (409) — "No such item."
+FAIL  C8.1-12 fail: there is no "sign for the client" action (404 or 405)
+FAIL  C8.1-13 pass: after Ready to file, "Uploaded to IRCC" is ticked; the item is Done — {"ready":["8bc80284-58c4-49b9-894c-f7689690e1da"],"status":404}
+FAIL  C8.1-14 pass (data): the scan is never changed in place (append-only signed_scan)
+
+0/14 passed

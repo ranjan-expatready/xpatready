@@ -1,0 +1,34 @@
+PASS  setup: Visitor visa carries the official IMM 5484 checklist
+PASS  setup: Visitor visa's Who can be is set (principal, spouse or partner, child, representative)
+PASS  C2.6 pass: the checklist is drafted from the saved run (replay accepted) — "REPLAY"
+PASS  C2.6 pass: the draft cost US$0
+PASS  C2.6 pass: drafting again returns the same open draft (one per checklist), not a second set
+PASS  C2.6 fail: only an author drafts (approver 403) — 403
+PASS  C2.6 fail: a form is refused as a checklist (400, in words) — "Only an approved official document checklist is drafted into requirements."
+PASS  C2.6 pass: the draft's document lines wait in the review queue under Visitor visa (one door, P-149) — 9
+PASS  C2.6 pass: every item rests on IMM 5484: file named, IRCC's quote found in the file — []
+PASS  C2.6 pass: each quote is IMM 5484's own words (checked here against the official file too) — ["Photocopy of your current immigration status: If your country of residence differs from the country of citizenship listed on your passport, you must provide proof of legal status in your country of residence.","Two photos meeting the requirements of the Visa
+PASS  C2.6 pass: IMM 5484 line information page of your valid passport is proposed as required — {"band":"check","always":true}
+PASS  C2.6 pass: IMM 5484 line Proof of Financial Support is proposed as required — {"band":"check","always":true}
+PASS  C2.6 pass: IMM 5484 line Proof of payment is proposed as required — {"band":"check","always":true}
+PASS  C2.6 pass: IMM 5484 line Two photos is proposed as conditional — {"band":"check","always":false,"condition":"Two paper photos, with the name and date of birth written on the back. Only if the applicant is not required to provide biometric fingerprints and photo."}
+PASS  C2.6 pass: IMM 5484 line current immigration status is proposed as conditional — {"band":"check","always":false,"condition":"Only if the applicant's country of residence differs from the country of citizenship on their passport. This is a derived comparison of two country fields."}
+PASS  C2.6 pass: IMM 5484 line US nonimmigrant visa is proposed as conditional — {"band":"check","always":false,"condition":"Only if the applicant holds a valid US nonimmigrant visa (drafted from the 'if applicable' note)."}
+PASS  C2.6 pass: IMM 5484 line Minors travelling alone is proposed as for a person to decide (visa office) — {"band":"decide","always":false,"condition":"Only if the applicant is a minor travelling alone or with one parent. Acceptable documents are custody documents, a letter of authorization from the non-accompanying parent, or a letter signed by both parents or leg
+PASS  C2.6 pass: IMM 5484 line Marriage License|Marriage Certificate is proposed as for a person to decide (visa office) — {"band":"decide","always":false,"condition":"The applicant is married."}
+PASS  C2.6 pass: IMM 5484 line Purpose of Travel is proposed as for a person to decide (visa office) — {"band":"decide","always":false}
+PASS  C2.6 fail: no IRCC form of the checklist's Forms list is proposed as a document (forms are form lines, not documents) — ["Proof of legal status in country of residence · each applicant","Visa application photos · each applicant","Passport information page copy · each applicant","Proof of financial support · each applicant","Fee payment receipt · each applicant","US nonimmigrant
+PASS  C2.6 fail: nothing from page 2 (the Super visa's documents) is proposed for Visitor visa — []
+PASS  C2.6 pass: 'Any additional documents required by the responsible visa office' is never a Ready document line (it names no document) — []
+PASS  C2.6 pass: the checklist's document types the library lacks are proposed to the library, each saying what it proves — ["Purpose of travel evidence","Minor custody or parental authorization","Marriage certificate copy","Proof of legal status in country of residence","Fee payment receipt","Proof of financial support","Passport information page copy","US nonimmigrant visa copy",
+PASS  C2.6 pass: the passport is an identity document read by its coded lines, never AI vision (P-134) — {"kind":"document_type","name":"Passport information page copy","proves":"What IMM 5484 (05-2026) asks for: \"A copy of the information page of your valid passport or travel document which includes:\"","category":"client","readerKind":"coded_lines","suppliesFa
+PASS  C2.6 data: every item is Sample until the immigration expert confirms
+PASS  C2.6 data: items name the people they apply to (roles of Who can be)
+PASS  C2.6 pass: accepting a requirement line works through the queue's one door (a lander exists)
+PASS  C2.6 pass: it lands as a DRAFT document line of Visitor visa, carrying IMM 5484 and its quote — "COMBINATION_MANDATORY|imm5484e.pdf|A copy of the information page of your valid passport or travel document which includes:|DRAFT"
+PASS  C2.6 fail: the same item cannot be accepted twice (409 in words) — "A proposal is already decided (accepted); an approved item changes only as a revision."
+PASS  C2.6 fail: rejecting needs a reason (400 in words) — "Say why it is rejected (3 characters or more): the producer learns from it."
+PASS  C2.6 fail: the old apply-checklist door is closed (410 or 409, saying to use the review queue) and adds no line — {"status":410,"words":"A checklist's document lines are decided one by one on the review queue now (To review › this combination), where accepting one writes it to the draft. Nothing was written here."}
+PASS  C2.6 pass: the whole test spent US$0
+
+32/32 passed

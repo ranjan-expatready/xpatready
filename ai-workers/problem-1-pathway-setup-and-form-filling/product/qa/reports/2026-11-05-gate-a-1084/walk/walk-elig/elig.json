@@ -1,0 +1,36 @@
+{
+ "log": [
+  [
+   "case",
+   "http://127.0.0.1:4478/cases/0a124c85-1e72-4daf-a81e-282083a5f4e7"
+  ],
+  [
+   "4.1 result",
+   "Cases › GATEA-1084-2 › Eligibility Eligibility · GATEA-1084-2 Stand-in Visitor visa · release 1 · rules as at 5 Nov 2026 · staff only: the client never sees a verdict Run again People Sample Client A Possibly needs Passport number, Passport expiry date, Criminal history Sample Client A — Visitor visa Possibly eligible — needs 3 facts Score: none (this application has no points score) Rules checked Not answered Passport number and expiry date answered (Sample) Passport number: not answered · Passport expiry date: not answered Passport number, Passport expiry date → Answer in the Agent view Not answered Answered no to the criminal history question (Sample) Criminal history: not answered Criminal history → Answer in the Agent view Officer's judgement, not checked by rules Has enough money for the stay Is in good health Ties that will take the person back home Will leave Canada at the end of the visit Disclaimer Indicative only. This check compares the answers on file with this application's rules as at the date shown. It is not a guarantee of approval: an IRCC officer decides, including on money, health, ties and leaving Canada. Run by Case officer · 5 Nov 2026, 10:01 · release 1 Override result… Mark reviewed… History (1 run)"
+  ],
+  [
+   "4.4 override dialog",
+   "Override the result The rules' result stays visible; your label and reason sit beside it, with your name. Result being overridden Label Up to 80 characters. Reason Required. Cancel Keep the override"
+  ],
+  [
+   "4.4 override, no reason",
+   "Override the result The rules' result stays visible; your label and reason sit beside it, with your name. Result being overridden Label Give a label for the override. Reason Give a reason for the override. Cancel Keep the override"
+  ],
+  [
+   "4.4 after override",
+   "Cases › GATEA-1084-2 › Eligibility Eligibility · GATEA-1084-2 Stand-in Visitor visa · release 1 · rules as at 5 Nov 2026 · staff only: the client never sees a verdict Run again People Sample Client A Possibly needs Passport number, Passport expiry date, Criminal history Sample Client A — Visitor visa Possibly eligible — needs 3 facts Score: none (this application has no points score) Rules checked Not answered Passport number and expiry date answered (Sample) Passport number: not answered · Passport expiry date: not answered Passport number, Passport expiry date → Answer in the Agent view Not answered Answered no to the criminal history question (Sample) Criminal history: not answered Criminal history → Answer in the Agent view Officer's judgement, not checked by rules Has enough money for the stay Is in good health Ties that will take the person back home Will leave Canada at the end of the visit Disclaimer Indicative only. This check compares the answers on file with this application's rules as at the date shown. It is not a guarantee of approval: an IRCC officer decides, including on money, health, ties and leaving Canada. Run by Case officer · 5 Nov 2026, 10:01 · release 1 Override result… Mark reviewed… History (1 run)"
+  ],
+  [
+   "4.4 after review",
+   "Cases › GATEA-1084-2 › Eligibility Eligibility · GATEA-1084-2 Stand-in Visitor visa · release 1 · rules as at 5 Nov 2026 · staff only: the client never sees a verdict Run again People Sample Client A Possibly needs Passport number, Passport expiry date, Criminal history Sample Client A — Visitor visa Possibly eligible — needs 3 facts Score: none (this application has no points score) Officer's override: Likely, on the documents (Sample) — Sample: the officer read the documents (gate A) (Case officer (Sample), 5 Nov 2026, 10:01; the result above is the rules' own) Rules checked Not answered Passport number and expiry date answered (Sample) Passport number: not answered · Passport expiry date: not answered Passport number, Passport expiry date → Answer in the Agent view Not answered Answered no to the criminal history question (Sample) Criminal history: not answered Criminal history → Answer in the Agent view Officer's judgement, not checked by rules Has enough money for the stay Is in good health Ties that will take the person back home Will leave Canada at the end of the visit Disclaimer Indicative only. This check compares the answers on file with this application's rules as at the date shown. It is not a guarantee of approval: an IRCC officer decides, including on money, health, ties and leaving Canada. Run by Case officer · 5 Nov 2026, 10:01 · release 1 Override result… Mark reviewed… History (1 run)"
+  ],
+  [
+   "client on eligibility",
+   "This page is for the firm's staff Eligibility checks are seen by the firm's staff only."
+  ]
+ ],
+ "errs": [
+  "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+  "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+ ]
+}

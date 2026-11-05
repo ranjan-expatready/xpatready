@@ -1,0 +1,18 @@
+# main-r1
+
+* C6.9: exit 1 · PASS 2 · FAIL 13 (load 197 s, run 3 s)
+* C11.6: exit 1 · PASS 6 · FAIL 8 (load 196 s, run 6 s)
+* C8.2: exit 1 · PASS 11 · FAIL 1 (load 203 s, run 94 s)
+* C1.3: exit 0 · PASS 54 · FAIL 0 (load 145 s, run 6 s)
+* C8.1: exit 1 · PASS 0 · FAIL 14 (load 145 s, run 36 s)
+* C6.12: exit 0 · PASS 24 · FAIL 0 (load 118 s, run 9 s)
+* C6.12-breadth: exit 1 · PASS 1 · FAIL 3 (load 115 s, run 7 s)
+* C6.4: exit 1 · PASS 18 · FAIL 12 (load 117 s, run 6 s)
+* C6.5: exit 1 · PASS 9 · FAIL 23 (load 119 s, run 3 s)
+* C6.11: exit 1 · PASS 22 · FAIL 3 (load 121 s, run 3 s)
+* C7.3: exit 1 · PASS 2 · FAIL 11 (load 125 s, run 49 s)
+* C7.5: exit 1 · PASS 9 · FAIL 7 (load 123 s, run 30 s)
+* C7.6: exit 1 · PASS 19 · FAIL 6 (load 116 s, run 33 s)
+* C10.2: exit 1 · PASS 0 · FAIL 11 (load 116 s, run 2 s)
+* C9.2: exit 1 · PASS 5 · FAIL 6 (load 111 s, run 58 s)
+* C7.7: exit 1 · PASS 18 · FAIL 15 (load 111 s, run 169 s)
