@@ -6,13 +6,15 @@
 // W1-02 (P-102): portal capture, online versions and their screen maps, the portal choice and online drafting are parked
 // with the browser extension on branch lead/parked-extension-2026-10-26; forms come in only as PDFs.
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Prisma, type FormEdition } from "@prisma/client";
-import { ACCOUNT_WORDS, CHANNEL_WORDS, SetAccount, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, SetAccount, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature, SetOptionMap, SetOptionMaps, type OptionMapGroup, type OptionMapsView, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
 import { acceptsOf, allowedChannels, channelProblems, channelsView, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { compareEditions } from "../../engine/programs.ts";
-import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
+import { formCombinations } from "./where-used.ts";
+import { asksMore, choiceRows, draftOptionMap, hasCodes, optionMapProblems, pdfOptions, printedNear, type FormOption, type ListValue, type OptionMap } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { normLabel } from "../../engine/twin.ts";
 import { Sources } from "./sources.ts";
@@ -228,7 +230,7 @@ export class Forms {
     need(actor, "author");
     const ed = await this.pdfEdition(editionId);
     const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const lists = new Map((await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } })).map((l) => [l.answerListKey, l]));
+    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
     const all = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } });
     const optionsOf = this.formOptions(ed, effective(all, (x) => x.dataPath, "draft"));
     const out: ({ form_field: string; caption: string | null; fact: string | null; list: string } & ReturnType<typeof draftOptionMap>)[] = [];
@@ -236,7 +238,7 @@ export class Forms {
       const list = m.outcome === "mapped" && m.canonicalFieldKey ? lists.get(lib.get(m.canonicalFieldKey)?.answerListKey ?? "") : undefined;
       const opts = optionsOf.get(m.dataPath);
       if (!list || !opts?.length) continue;
-      const d = draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), opts);
+      const d = draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), opts, m.optionMap as OptionMap | null); // B81 (challenge M6): a person's marks and codes survive a new draft
       if (JSON.stringify(m.optionMap) !== JSON.stringify(d.optionMap)) await revise(this.db.formFieldMap, all.filter((x) => x.dataPath === m.dataPath), { optionMap: json(d.optionMap) }, actor.id, strip);
       out.push({ form_field: m.dataPath, caption: m.caption, fact: m.canonicalFieldKey, list: list.answerListKey, ...d });
     }
@@ -244,26 +246,126 @@ export class Forms {
     return { edition: ed.editionLabel, channel: ed.channel, option_maps: out };
   }
 
-  /** A person sets or corrects one form field's option map (the drafted one left a value or a code open). Every value
-   *  must be on the field's answer list and every code among the form field's own choices. */
-  async setOptionMap(actor: Actor, editionId: string, body: unknown) {
-    need(actor, "author");
-    const b = parse(SetOptionMap, body), dataPath = b.dataPath;
+  /** What Submit would list for one PDF edition's option maps if its form were filed, as drafted by code and read only:
+   *  nothing is saved (C10.1 row 9, a waiting row that leaves the draft as it is). The same rule as engine/channels.ts. */
+  async optionMapProblemsIfFiled(editionId: string) {
     const ed = await this.pdfEdition(editionId);
+    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
+    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
+    const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
+    const optionsOf = this.formOptions(ed, maps);
+    return maps.flatMap((m) => {
+      const list = m.outcome === "mapped" && m.canonicalFieldKey ? lists.get(lib.get(m.canonicalFieldKey)?.answerListKey ?? "") : undefined;
+      if (!list) return [];
+      const opts = optionsOf.get(m.dataPath), values = list.values.map((v) => ({ key: v.valueKey, label: v.label }));
+      const map = opts?.length ? draftOptionMap(values, opts, m.optionMap as OptionMap | null).optionMap : m.optionMap as OptionMap | null; // B81: a person's marks count
+      if (!map && !hasCodes(m.transform)) return [];
+      return optionMapProblems(values.map((v) => v.key), map, values).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
+    });
+  }
+
+  /** B81: the option-map step of one PDF edition for a person: every form field on an answer list with its own printed
+   *  choices, grouped when they print the same choices and read the same list. Reads only: an unsaved group shows what the
+   *  rules suggest, and nothing is written until a person saves. */
+  async optionMapsView(editionId: string): Promise<OptionMapsView> {
+    const ed = await this.pdfEdition(editionId);
+    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
+    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
+    const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
+    const optionsOf = this.formOptions(ed, maps);
+    const groups = new Map<string, OptionMapGroup>(), revisionRows = new Map<string, RevisionRow[]>(), partOf = this.formParts(ed);
+    for (const m of maps) {
+      const list = m.outcome === "mapped" && m.canonicalFieldKey ? lists.get(lib.get(m.canonicalFieldKey)?.answerListKey ?? "") : undefined;
+      const choices = optionsOf.get(m.dataPath);
+      if (!list || !choices?.length) continue;
+      const listed = list.values.map((v) => ({ key: v.valueKey, label: v.label })), saved = m.optionMap as OptionMap | null;
+      const { values, problems } = choiceRows(listed, saved, choices, hasCodes(m.transform));
+      const key = JSON.stringify([list.answerListKey, m.canonicalFieldKey, choices, values, !!saved, problems]); // the same problems, or they read apart
+      const g = groups.get(key) ?? { list: list.answerListKey, list_label: list.label ?? null, fact: m.canonicalFieldKey!, revision: "", form_fields: [], choices, saved: !!saved, values, problems };
+      g.form_fields.push({ data_path: m.dataPath, caption: m.caption, person: m.person, row: m.row, part: printedPart(partOf.get(m.dataPath)) });
+      revisionRows.set(key, [...(revisionRows.get(key) ?? []), m]);
+      groups.set(key, g);
+    }
+    for (const [key, g] of groups) g.revision = optionMapRevision(revisionRows.get(key)!);
+    const def = await this.db.govFormDef.findUnique({ where: { id: ed.govFormDefId }, select: { formKey: true } });
+    return { edition: ed.editionLabel, edition_id: ed.id, combinations: def ? (await formCombinations(this.db, ed.workspaceId, def.formKey)).map((c) => c.label).sort() : [], groups: [...groups.values()] };
+  }
+
+  /** What one form field's option map is checked against: its answer list and its own printed codes. */
+  private async optionMapTarget(ed: { id: string; workspaceId: string; inventoryFile: string | null }, dataPath: string) {
     const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath } });
     const m = effective(rows, (x) => x.dataPath, "draft")[0];
     if (!m || m.outcome !== "mapped" || !m.canonicalFieldKey) fail("That form field is not mapped to a shared field.", HttpStatus.NOT_FOUND);
     const field = (await this.libraryRows(ed.workspaceId)).find((r) => r.canonicalFieldKey === m!.canonicalFieldKey);
-    const list = field?.answerListKey ? await this.db.answerList.findFirst({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: true }, orderBy: { version: "desc" } }) : null;
+    const list = field?.answerListKey ? effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: true } }), (l) => l.answerListKey, "draft")[0] : null;
     if (!list) fail(`${m!.canonicalFieldKey} has no answer list.`, HttpStatus.CONFLICT);
-    const codes = (this.formOptions(ed, [m!]).get(dataPath) ?? []).map((o) => o.code);
-    const values = new Set(list!.values.map((v) => v.valueKey));
-    const bad = [...Object.keys(b.map).filter((k) => !values.has(k)).map((k) => `"${k}" is not on the answer list ${list!.answerListKey}`), ...[...Object.values(b.map), ...b.unused].filter((c) => !codes.includes(c)).map((c) => `"${c}" is not one of this form field's codes`)];
+    return { rows, m: m!, list: list!, options: this.formOptions(ed, [m!]).get(dataPath) ?? [] };
+  }
+
+  /** Why these choices cannot be saved on this form field: every value on its answer list, every code among its printed
+   *  codes, one value per code (B81: the form prints one choice for one answer; a value it does not print is marked, not
+   *  given the nearest code), and a mark only on a value the form prints nothing for. */
+  private optionMapRefusals(list: { answerListKey: string; values: { valueKey: string; label: string }[] }, options: FormOption[], b: { map: Record<string, string>; unused: string[]; notOnForm: string[] }) {
+    const codes = options.map((o) => o.code), values = new Map(list.values.map((v) => [v.valueKey, v.label]));
+    const bad = [...[...Object.keys(b.map), ...b.notOnForm].filter((k) => !values.has(k)).map((k) => `"${k}" is not on the answer list ${list.answerListKey}`), ...[...Object.values(b.map), ...b.unused].filter((c) => !codes.includes(c)).map((c) => `"${c}" is not one of this form field's codes`)];
     if (new Set(Object.values(b.map)).size !== Object.values(b.map).length) bad.push("two values share one code");
+    const asks = (v: ListValue) => `"${v.label}" is on this form as ${printedNear(v, options).map((o) => `"${o.label}"`).join(" and ")}: which one holds is a further fact the answer does not say, so the immigration expert decides. Until then decide this form field "filled by hand" on To review`;
+    for (const k of Object.keys(b.map).filter((x) => values.has(x))) { const v = { key: k, label: values.get(k)! }; if (asksMore(v, options)) bad.push(asks(v)); }
+    for (const k of b.notOnForm.filter((x) => values.has(x))) {
+      const v = { key: k, label: values.get(k)! }, near = printedNear(v, options);
+      if (Object.hasOwn(b.map, k)) bad.push(`"${v.label}" cannot have a code and be marked not on this form`);
+      else if (!options.length) bad.push(`"${v.label}" cannot be marked not on this form: this form field's printed choices were not read`);
+      else if (asksMore(v, options)) bad.push(asks(v));
+      else if (near.length) bad.push(`"${v.label}" is on this form: it prints ${near.map((o) => `"${o.label}"`).join(" and ")}`);
+    }
+    return bad;
+  }
+
+  /** B81 (challenge M4, review M6, break M1, M2; STANDARDS §4): one save at a time and never over someone else's unseen. The
+   *  form fields' rows are locked first, so a second save waits, then reads what the first wrote and is refused. */
+  private async writeOptionMaps(tx: Prisma.TransactionClient, ed: { id: string }, dataPaths: string[], optionMap: object, baseRevision: string | undefined, actor: Actor, needsRevision: (now: RevisionRow[]) => boolean) {
+    await tx.$queryRaw`SELECT id FROM form_field_map WHERE form_edition_id = ${ed.id}::uuid AND data_path = ANY(${dataPaths}) ORDER BY id FOR UPDATE`;
+    const all = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: dataPaths } } });
+    const now = effective(all, (x) => x.dataPath, "draft");
+    if ((baseRevision !== undefined || needsRevision(now)) && baseRevision !== optionMapRevision(now)) {
+      const last = [...now].sort((x, y) => y.updatedAt.getTime() - x.updatedAt.getTime())[0];
+      fail(`${nameOf(last.updatedBy)} changed these choices since you opened them (at ${last.updatedAt.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })} IST). Nothing was saved. Look at them again, then save.`, HttpStatus.CONFLICT);
+    }
+    for (const p of dataPaths) await revise(tx.formFieldMap, all.filter((x) => x.dataPath === p), { optionMap: json(optionMap) }, actor.id, strip);
+  }
+
+  /** A person sets or corrects one form field's option map (the drafted one left a value or a code open). Every value
+   *  must be on the field's answer list and every code among the form field's own choices. */
+  async setOptionMap(actor: Actor, editionId: string, body: unknown) {
+    need(actor, "author");
+    const b0 = parse(SetOptionMap, body), b = { ...b0, notOnForm: [...new Set(b0.notOnForm)] }, dataPath = b.dataPath;
+    const ed = await this.pdfEdition(editionId);
+    const { m, list, options } = await this.optionMapTarget(ed, dataPath);
+    const bad = this.optionMapRefusals(list, options, b);
     if (bad.length) fail(`${bad.join("; ")}.`);
-    await revise(this.db.formFieldMap, rows, { optionMap: json({ map: b.map, unused: b.unused, codes }) }, actor.id, strip);
-    await this.audit.log(ed.workspaceId, actor.id, "changed", "option map", dataPath, `${actor.name} set the option map of ${m!.caption ?? dataPath} on ${ed.editionLabel} (${Object.keys(b.map).length} values)`);
-    return { form_field: dataPath, option_map: { map: b.map, unused: b.unused, codes } };
+    const optionMap = { map: b.map, unused: b.unused, codes: options.map((o) => o.code), ...(b.notOnForm.length ? { notOnForm: b.notOnForm, printed: options } : {}) };
+    // Break M2: this field's other route. A person's marks are never overwritten unseen; a save with no marks to lose needs no revision (the API's older callers).
+    await this.db.$transaction((tx) => this.writeOptionMaps(tx, ed, [dataPath], optionMap, b.baseRevision, actor, (now) => !!(now[0]?.optionMap as OptionMap | null)?.notOnForm?.length), CHANNEL_TX);
+    await this.audit.log(ed.workspaceId, actor.id, "changed", "option map", dataPath, `${actor.name} set the option map of ${m.caption ?? dataPath} on ${ed.editionLabel} (${Object.keys(b.map).length} values${b.notOnForm.length ? `; not on this form: ${labelsOf(list, b.notOnForm)}` : ""})`);
+    return { form_field: dataPath, option_map: optionMap };
+  }
+
+  /** B81: the same choices saved on every form field of one group, all or none: each must read the same answer list and
+   *  print the same codes, so a mark never lands on a form field that prints the value. Codes no value fills are unused. */
+  async setOptionMaps(actor: Actor, editionId: string, body: unknown) {
+    need(actor, "author");
+    const b0 = parse(SetOptionMaps, body), b = { ...b0, notOnForm: [...new Set(b0.notOnForm)] }, ed = await this.pdfEdition(editionId), dataPaths = [...new Set(b.dataPaths)];
+    const targets: Awaited<ReturnType<Forms["optionMapTarget"]>>[] = [];
+    for (const p of dataPaths) targets.push(await this.optionMapTarget(ed, p)); // one at a time: a group can be large
+    const same = (t: (typeof targets)[number]) => JSON.stringify([t.list.answerListKey, t.options]) === JSON.stringify([targets[0].list.answerListKey, targets[0].options]);
+    if (!targets.every(same)) fail("These form fields do not print the same choices or read the same answer list: save them apart.", HttpStatus.CONFLICT);
+    const codes = targets[0].options.map((o) => o.code), used = new Set(Object.values(b.map));
+    const optionMap = { map: b.map, unused: codes.filter((c) => !used.has(c)), codes, ...(b.notOnForm.length ? { notOnForm: b.notOnForm, printed: targets[0].options } : {}) };
+    const bad = this.optionMapRefusals(targets[0].list, targets[0].options, { ...b, unused: optionMap.unused });
+    if (bad.length) fail(`${bad.join("; ")}.`);
+    await this.db.$transaction((tx) => this.writeOptionMaps(tx, ed, dataPaths, optionMap, b.baseRevision, actor, () => true), CHANNEL_TX);
+    await this.audit.log(ed.workspaceId, actor.id, "changed", "option map", targets[0].list.answerListKey, `${actor.name} set the choices of ${dataPaths.length} form field${dataPaths.length === 1 ? "" : "s"} on ${ed.editionLabel} (${targets[0].list.label}: ${Object.keys(b.map).length} answers${b.notOnForm.length ? `; not on this form: ${labelsOf(targets[0].list, b.notOnForm)}` : ""})`);
+    return { form_fields: dataPaths, option_map: optionMap };
   }
 
   /** F1-P (Screen 02 Q3): a person sets what a list on a form holds and what happens to rows the form has no room
@@ -288,10 +390,17 @@ export class Forms {
   private formOptions(ed: { inventoryFile: string | null }, maps: { dataPath: string; transform: string | null }[]) {
     const out = new Map<string, FormOption[]>();
     if (!ed.inventoryFile) return out;
-    const inv = JSON.parse(readFileSync(join(SOLUTION, ed.inventoryFile), "utf8")) as { fields?: { data_path?: string; options_resolved?: [string, string][] | null; options?: unknown }[] };
+    const inv = JSON.parse(readFileSync(join(SOLUTION, ed.inventoryFile), "utf8")) as { fields?: { data_path?: string; options_resolved?: [string, string][] | null; options?: unknown; ui?: string | null }[] };
     const box = new Map((inv.fields ?? []).filter((f) => f.data_path).map((f) => [f.data_path!, f]));
     for (const m of maps) { const o = pdfOptions(box.get(m.dataPath) ?? {}, m.transform); if (o.length) out.set(m.dataPath, o); }
     return out;
+  }
+
+  /** B81: each form field's part as the form prints it, so a person can tell identical captions apart. */
+  private formParts(ed: { inventoryFile: string | null }) {
+    if (!ed.inventoryFile) return new Map<string, string>();
+    const inv = JSON.parse(readFileSync(join(SOLUTION, ed.inventoryFile), "utf8")) as { fields?: { data_path?: string; heading?: string | null }[] };
+    return new Map((inv.fields ?? []).filter((f) => f.data_path && f.heading).map((f) => [f.data_path!, f.heading!]));
   }
 
   // ───────────────────────────────────────────────────────────── reviewed merges (P-65)
@@ -420,6 +529,15 @@ export class Forms {
 
 type H = string | undefined;
 
+/** A printed heading without its long instructions ("SECTION B - CHILDREN (Include ALL …)" → "SECTION B - CHILDREN"). */
+const printedPart = (h: string | undefined) => (h ? h.split(/\s*\(/)[0].trim() || null : null);
+const labelsOf = (list: { values: { valueKey: string; label: string }[] }, keys: string[]) => keys.map((k) => list.values.find((v) => v.valueKey === k)?.label ?? k).join(", ");
+type RevisionRow = { dataPath: string; version: number; optionMap: unknown; updatedAt: Date };
+/** B81 (challenge M4): what a person saw of a group of form fields: a save against anything else is refused. */
+function optionMapRevision(rows: RevisionRow[]) {
+  return createHash("sha256").update(JSON.stringify([...rows].sort((x, y) => x.dataPath.localeCompare(y.dataPath)).map((m) => [m.dataPath, m.version, m.updatedAt.toISOString(), m.optionMap]))).digest("hex").slice(0, 16);
+}
+
 @Controller("api")
 export class FormsController {
   constructor(@Inject(Forms) private readonly f: Forms, @Inject(Db) private readonly db: Db, @Inject(Intake) private readonly intake: Intake, @Inject(Sources) private readonly sources: Sources, @Inject(Checklists) private readonly checklists: Checklists) {}
@@ -429,7 +547,9 @@ export class FormsController {
   }
   @Get("library/forms/:code/editions") editions(@Param("code") code: string) { return this.f.editions(code); }
   @Post("editions/:id/option-maps/draft") optionMaps(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.draftOptionMaps(actorOf(a), id); }
+  @Get("editions/:id/option-maps") optionMapsView(@Param("id") id: string) { return this.f.optionMapsView(id); }
   @Patch("editions/:id/option-maps") setOptionMap(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMap(actorOf(a), id, b); }
+  @Patch("editions/:id/option-maps/group") setOptionMaps(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMaps(actorOf(a), id, b); }
   @Patch("editions/:id/list-purposes") setListPurpose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setListPurpose(actorOf(a), id, b); }
   @Get("combinations/:id/channels") channels(@Param("id") id: string) { return this.f.channels(id); }
   @Patch("combinations/:id/account") account(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setAccount(actorOf(a), id, b); }

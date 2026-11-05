@@ -15,6 +15,7 @@ import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
+import { releaseTwoWords } from "./checkpoint-words.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -825,16 +826,33 @@ export class Demo {
     row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", status: !released.length ? "waiting" : blocked.length ? "partial" : "done", shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
       why: blocked.length ? blocked.join(" · ") : null });
     const visitor = released.some((l) => /Visitor visa/.test(l));
+    // Row 11 (QA-231, P-67; C10.1 rows 11–12, #1009): the family of four's Sample case opens on the Visitor visa's release 1
+    // through the case officer's own steps, answered from the one Sample record, each form's copy made (C7.1), before
+    // row 17, so the case is seen staying on its release (api/src/sample-case.ts). Validate is a person's
+    // step in Adobe Reader (P-46, P-171): never simulated here, so the read-back waits for a person.
+    const fam = visitor && vvId ? await timed("sample family case (rows 11, 12)", () => openSampleFamilyCase(this.db, this.runtime, this.caseForms, vvId)) : null;
+
+    // C10.1 row 9 (Lead 10's ruling (c') on #1009, and its direction of 5 Nov): release 2 waits for row B81, and a waiting
+    // row leaves the checkpoint's draft as it is: nothing is set on Visitor visa's draft, and the row says what Submit
+    // would refuse, read without writing from the family form IMM 5257 filed Online needs (api/src/checkpoint-words.ts).
+    // The steps that set release 2 come with B81 (they stood here at #1009's 4a09bcd86).
+    const onlineFamily = FAMILY_FORM_BY_CHANNEL.online.form;
+    // Every PDF edition, as the validator reads them; a form that cannot be read is said on the row, it never stops the load.
+    const wouldRefuse = !visitor ? null : await (async () => {
+      const editions = await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: onlineFamily }, channel: "PDF" }, select: { id: true } });
+      return editions.length ? (await Promise.all(editions.map((ed) => this.forms.optionMapProblemsIfFiled(ed.id)))).flat() : null;
+    })().catch((e) => { console.error(`[demo] row 9 could not read ${onlineFamily}:`, e); return null; });
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
-      why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
-    // Row 11 (QA-231, P-67): a Sample family case opens on the Visitor visa's release 1 through the case officer's own
-    // steps, before row 17 holds the new edition, so the case is seen staying on its release (api/src/sample-case.ts).
-    const fam = visitor && vvId ? await timed("sample family case (row 11)", () => openSampleFamilyCase(this.db, this.runtime, this.caseForms, vvId)) : null;
-    // Partial, never done: DEMO.md row 11 also wants each person answering once (the family of four, C10.1 part B).
-    row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : "partial",
-      shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} (Sample, ${fam.people} people) on release ${fam.release}: ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made (${fam.copies.join(", ")})` : "The case area is built (Demo › Open the case area)",
-      why: !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, "Nobody has answered yet: each person answers once on the case (C10.1 part B, a family of four)."].join(" · ") });
-    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
+      why: visitor ? releaseTwoWords({ application: FORM_SETUP["vv.single"].application, form: onlineFamily }, wouldRefuse) : "Waits for the Visitor visa's release 1: its channels change for release 2." });
+    const rowEleven = !!fam?.caseId && fam.people === 4 && fam.births === 4 && fam.fromRecord > 0;
+    row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : rowEleven ? "done" : "partial",
+      shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} on release ${fam.release}: ${fam.people} people (principal applicant, travelling spouse, a child under 18, a child 18 or over; Sample names); ${fam.fromRecord} answers from the Sample record and ${fam.madeUp} made up (Sample: the second child's name and both children's dates of birth)${fam.notTaken ? `; ${fam.notTaken} of the record's facts not asked by this release or not on its lists` : ""}; ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made` : "The case area is built (Demo › Open the case area)",
+      why: !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, ...(rowEleven ? [] : [`${fam.births} of the 4 people have a date of birth on the case.`])].join(" · ") || null });
+    // Row 12: a copy generated for each applicant; the read-back needs a person's Validate in Adobe Reader (P-46, P-171).
+    const allFilled = !!fam && fam.applicants > 0 && fam.imm5257 === fam.applicants;
+    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: allFilled ? "partial" : "waiting",
+      shows: fam?.imm5257 ? `IMM 5257 generated for ${fam.imm5257} of ${fam.applicants} applicants on release 1 (C7.1)` : "The fill is built (C7.1)",
+      why: allFilled ? ["Validate each copy in Adobe Reader and upload the validated copy on the case's Forms tab: the checkpoint cannot press Validate (P-46, P-171), so the read-back waits for a person.", ...(fam?.copiesRefused.length ? [`Other forms' copies not made: ${fam.copiesRefused.slice(0, 4).join(" · ")}`] : [])].join(" ") : !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, ...fam.copiesRefused].join(" · ") || "IMM 5257 was not generated for every applicant." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
     // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The
     // Visitor visa's form finder may already have held it (its replay attaches the page's forms): then this send answers
