@@ -23,7 +23,7 @@ const MADE_UP: Record<string, [string, unknown][]> = {
 };
 // B99 (C10.1 row 12b): the IMM 5257 answers of the one Sample family (Sample, Unconfirmed: expert), so every copy carries
 // values. Brackets are refused in a name, so the made-up second child is "SECOND CHILD", labelled Sample by its person.
-type FamilyFile = { case: Record<string, unknown>; everyone: Record<string, unknown>; people: Record<string, Record<string, unknown> & { job?: Record<string, unknown> }>; job_place: Record<string, unknown>; not_answered?: Record<string, string> };
+type FamilyFile = { case: Record<string, unknown>; everyone: Record<string, unknown>; people: Record<string, Record<string, unknown> & { job?: Record<string, unknown> }>; job_place: Record<string, unknown>; not_answered?: Record<string, string>; none_apply?: { groups: string[]; why: string } };
 export const sampleFamilyFile = (): FamilyFile => JSON.parse(readFileSync(join(STUDIO, "samples", "sample-family-imm5257.json"), "utf8"));
 
 export type SampleCase = { caseId: string | null; release: number | null; people: number; copies: string[]; refused: string[]; copiesRefused: string[];
@@ -119,10 +119,12 @@ async function answerFromFile(runtime: Runtime, officer: (typeof RUNTIME_ACTORS)
       } catch (e) { out.answerRefused.push(`${pid} job: ${said(e)}`); }
     }
   }
-  // Every other repeating group of a person with no entry: "none apply", as the officer says it on screen.
+  // The repeating groups the Sample file says have none, for each person with no entry: "none apply", as the officer
+  // says it on screen (review on #1123, m2: never a group the file does not name).
   v = await view();
+  const noneGroups = new Set(file.none_apply?.groups ?? []);
   for (const s of v.sections) {
-    if (s.subjectId === subjects.case || !s.group || s.group.rows || s.group.none_apply) continue;
+    if (s.subjectId === subjects.case || !s.group || s.group.rows || s.group.none_apply || !noneGroups.has(s.section)) continue;
     try { await runtime.noneApply(officer, caseId, s.subjectId, s.section, { noneApply: true, expectedId: null }); out.noneApply++; }
     catch (e) { out.answerRefused.push(`${s.section} none apply: ${said(e)}`); }
   }

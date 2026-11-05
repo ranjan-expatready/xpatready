@@ -121,5 +121,16 @@
  "not_answered": {
   "person.applying_from_status": "Asked only when the applying-from country differs from the country of residence (the question's own help). IMM 5257's Validate empties 'Same as current country of residence? Yes' when its row holds a status (validateCWA, 5 Nov rehearsal).",
   "person.preferred_official_language": "IMM 5257 keeps 'In which language are you most at ease?' only when the person can communicate in both English and French; its Validate empties it otherwise (validateLanguageSection, 5 Nov rehearsal). This family speaks English."
+ },
+ "none_apply": {
+  "groups": [
+   "personal_details",
+   "education",
+   "government_positions",
+   "membership_or_association_with_organizations",
+   "military_service",
+   "previous_travel"
+  ],
+  "why": "Sample: the family has no other names, no post-secondary education, no government position, no organization membership, no military service and no earlier travel to list (review on #1123: every value a copy writes is traced to this file). Only these groups are said to have none; a group of a person not listed stays unanswered."
  }
 }

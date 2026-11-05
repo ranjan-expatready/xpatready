@@ -24,3 +24,18 @@
 **Tests.** `tests/check_forms_b116_own_unmapped.ts`: 16 checks covering the pass case (release map, every applicant asked, copies), the fail case (words not in the form's text, a box with no Yes/No, a quote on a worked-out box), and undo.
 
 **Not done here (follow-ups).** The Form fields page's "own questions" list still shows only worked-out Yes/No boxes, so a person cannot yet start this ask from that screen. The route takes it, and the checkpoint uses it. The field list's wrong captions for the consent, Taiwan and Israel boxes come from the reading (`p1/inventory/imm5257e.inventory.json`), and the reading itself is unchanged.
+
+**Reviews (Opus, P-303).**
+* **Round 1 (`741e920a2`):** changes requested. M1 (undo could roll back a later change) and M2 (the quote check was too loose) were fixed in `418ed9fa1`, along with m3, m5 and m6.
+* **Round 2 (`decf90095`):** changes requested.
+  * M1: a saved Validate was matched on answers only. Now the hash of the values the copy writes must match too (`valuesHash`).
+  * m2: "none apply" is said only for the groups `samples/sample-family-imm5257.json` lists.
+  * m3: only rows after the "Same as" question, in the form's own order, are emptied.
+  * Evidence: on two fresh loads, the family facts hash and the values hash are identical per person, and identical to the round-2 copies under Validate.
+* **Left as follow-ups:**
+  * an undo after the ask was released has no test;
+  * a field withdrawn on To review sends its box to "no decision", not back to "by hand";
+  * Yes/No codes containing "/" or ";" are not checked;
+  * a resolver role such as `subject/parent_1` keeps its id in the family hash (this fails safe: it is never counted);
+  * `samples/validated-imm5257.json` is evidence and is reviewed as such;
+  * a question quoted after a caption that has no "?" can still pass the quote check.

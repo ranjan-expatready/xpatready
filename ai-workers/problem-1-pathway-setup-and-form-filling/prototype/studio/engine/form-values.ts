@@ -68,16 +68,21 @@ export function rowOfBox(path: string): string {
  *  "A equals B" and written as the same answer (Yes) means the form asks A's own row only when the answer is No. The
  *  form's Validate clears the Yes when that row holds anything ("Is the country from where you are applying the same…":
  *  `validateCWA`; "Is your residential address the same as your mailing address?": `validateResidentialAddress`), so a
- *  required box comes back empty and Validate fails. So every form field in the rows that A's own form fields sit in is
- *  left empty, with the reason in words. A row that holds the "Same as" field itself is never emptied. Pure. */
+ *  required box comes back empty and Validate fails. So every form field in the rows that A's own form fields sit in, after
+ *  the "Same as" field in the form's order, is left empty, with the reason in words. A row that holds the "Same as" field
+ *  itself is never emptied. Pure. */
 export function sameAsLeavesRowEmpty(boxes: BoxResult[], values: Record<string, string>, inv: Map<string, InventoryBox>): BoxResult[] {
   const rows = new Map<string, string>(); // row data path → why
+  // Review on #1123 (m3): only a row the form asks after its "Same as" question (in the form's own order, its field list)
+  // is the one that question stands for; the side named first in "A equals B" is the AI's wording, never trusted alone.
+  const order = new Map([...inv.keys()].map((k, i) => [k, i]));
   for (const b of boxes) {
     const m = /(?:^|;|->)\s*derived:([\w.]+) equals ([\w.]+)\s*(?=;|->)/.exec(b.transform ?? ""), yes = /yes_no_code:([^/;\s]+)\//.exec(b.transform ?? "");
     if (b.result !== "written" || !m || !yes || values[b.box] === undefined || values[b.box] !== inFormFormat(inv.get(b.box) ?? {}, yes[1])) continue;
     const caption = (inv.get(b.box)?.caption ?? "").replace(/^\s*Question\s+\d+(?:\s*[A-Z]\b\.?)?\s*/i, "").trim() || "Same as";
     for (const a of boxes) {
       if (a.fact !== m[1] || a.about !== b.about || a.box === b.box) continue;
+      if (!(order.has(a.box) && order.has(b.box) && order.get(a.box)! > order.get(b.box)!)) continue;
       const row = rowOfBox(a.box);
       if (row && !b.box.startsWith(`${row}.`)) rows.set(row, `Not needed: "${caption}" is Yes, and the form asks this only when it is No (its own Validate clears the Yes otherwise).`);
     }

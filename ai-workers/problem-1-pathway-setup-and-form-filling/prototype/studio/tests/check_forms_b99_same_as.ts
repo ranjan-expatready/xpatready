@@ -54,4 +54,8 @@ ok("B99 pass: nothing else changes: the current country of residence and the mai
 const other = run("United States", { ...HOME, street_number: "99" }, "03");
 ok("B99 fail: applying from another country: N, and the applying-from country and status are written", other.values[SAME_COR] === "N" && other.values[`${CWA}.Country[0]`] === "061" && other.values[`${CWA}.Status[0]`] === "03", Object.fromEntries(Object.entries(other.values).filter(([k]) => k.startsWith(CWA) || k === SAME_COR)));
 ok("B99 fail: a different home: N, and the residential address is written", other.values[SAME_MAIL] === "N" && other.values[`${C}.ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]`] === "99");
+// Review on #1123 (m3): the side named first in "A equals B" is the AI's wording; only rows after the "Same as" question in
+// the form's order are emptied, so the operands written the other way round never empty the mailing address.
+const flip = formValues(snap, map, inv, boxes("India", HOME, null).map((x) => x.box === SAME_MAIL ? { ...x, fact: "person.mailing_address", transform: "derived:person.mailing_address equals person.residential_address -> yes_no_code:Y/N" } : x));
+ok("B99 fail: operands the other way round: the mailing address (before the question) is still written", flip.values[SAME_MAIL] === "Y" && flip.values[`${C}.AddressRow1[0].StreetNum[0].StreetNum[0]`] === "12", Object.keys(flip.values).filter((k) => k.includes("AddressRow")));
 process.exit(summary() ? 1 : 0);

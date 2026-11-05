@@ -21,7 +21,8 @@ for (const copy of await copiesWithHash(db, c.id)) {
   const reads = await db.validatedCopy.findMany({ where: { formInstanceId: copy.id }, orderBy: { readAt: "desc" } });
   const passed = reads.find((r) => (r.readBack as { ok?: boolean; validation?: { passed?: boolean } }).ok === true && (r.readBack as { validation?: { passed?: boolean } }).validation?.passed === true);
   if (!passed || passed.factsHash !== copy.snapshot!.inputHash) { missing.push(copy.person); continue; }
-  out.push({ person: copy.person, family_facts_hash: copy.familyHash, copy_sha256: copy.sha256!, validated_sha256: passed.sha256, read_back: passed.readBack as SavedReadBack["read_back"], read_at: passed.readAt.toISOString(),
+  if (!copy.valuesHash) { missing.push(`${copy.person} (its values cannot be read)`); continue; }
+  out.push({ person: copy.person, family_facts_hash: copy.familyHash, values_sha256: copy.valuesHash, copy_sha256: copy.sha256!, validated_sha256: passed.sha256, read_back: passed.readBack as SavedReadBack["read_back"], read_at: passed.readAt.toISOString(),
     source: `Validate in Adobe by ${by}; read back through the product's upload door and tools/read_validated.py on the Mac. The validated PDF stays on the Mac.` });
 }
 const applicants = await db.caseParticipant.count({ where: { caseId: c.id, applies: true, role: { in: ["principal", "spouse_or_partner", "child"] } } });
@@ -29,6 +30,6 @@ await db.$disconnect();
 if (missing.length || out.length !== applicants) { console.error(`Not written: no passed read-back with the copy's current facts for ${missing.join(", ") || `${applicants - out.length} applicant(s)`}.`); process.exit(1); }
 writeFileSync(join(STUDIO, VALIDATED_FILE), JSON.stringify({
   label: "Sample: the read-backs of the one Sample family's four IMM 5257 copies, validated in Adobe (B99, C10.1 row 12b). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
-  basis: "Each copy was made by the product from the configured checkpoint, validated with the form's own Validate button in Adobe on the Mac (never simulated), saved, and read back through the product's upload door. The checkpoint loader (api/src/sample-validated.ts) writes a validated_copy row only when a copy's family facts hash equals the one here.",
+  basis: "Each copy was made by the product from the configured checkpoint, validated with the form's own Validate button in Adobe on the Mac (never simulated), saved, and read back through the product's upload door. The checkpoint loader (api/src/sample-validated.ts) writes a validated_copy row only when a copy's family facts hash and the hash of the values it writes equal the ones here.",
   copies: out.sort((a, b) => a.person.localeCompare(b.person)) }, null, 1) + "\n");
 console.log(JSON.stringify({ written: out.length, file: VALIDATED_FILE, people: out.map((x) => x.person) }));
