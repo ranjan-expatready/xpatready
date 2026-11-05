@@ -150,6 +150,23 @@ export function notOnFormValue(value: unknown, m: OptionMap, values: ListValue[]
   return (m.notOnForm ?? []).includes(hit.key) ? hit : null;
 }
 
+/** QA-272: a mapping may name its codes as a range ("code_list:imm5257.immigration_status (01..09)"): a note about the
+ *  form's list, not the list. */
+export const isCodeRange = (note: string) => /^\s*\d+\s*\.\.\s*\d+\s*$/.test(note);
+
+/** QA-272: the same mapping with the range written as the form's own list, "(Citizen=01, Permanent resident=02, …)", the
+ *  shape every other short list has, so a person is offered the form's words. Unchanged when the transform has no range,
+ *  the form lists no choice in it, or a label could not be read back from that shape (a comma, "=", ";" or bracket). */
+export function spellOutCodeRange(transform: string | null | undefined, box: Parameters<typeof pdfOptions>[0] | null | undefined): string | null {
+  if (!transform) return transform ?? null;
+  const m = /^(code_list:\S+) \(([^)]*)\)$/.exec(transform.trim());
+  if (!m || !isCodeRange(m[2]) || !box) return transform;
+  const [from, to] = m[2].split("..").map(Number);
+  const inRange = pdfOptions(box, null).filter((o) => /^\d+$/.test(o.code) && Number(o.code) >= from && Number(o.code) <= to);
+  if (!inRange.length || inRange.some((o) => /[,=;()]/.test(o.label) || !o.label.trim())) return transform;
+  return `${m[1]} (${inRange.map((o) => `${o.label.trim()}=${o.code}`).join(", ")})`;
+}
+
 /** A PDF form field's own choices (label, code): its inventory's resolved options, else the drop-down it prints (two
  *  columns: words, then codes; B81: the form's own words come before anything an earlier reading wrote about it), else
  *  the inline code list of its field map ("code_list:imm5707.marital_status (Common-law=1, Single=2, …; note)"), as the

@@ -15,8 +15,8 @@ let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const n = (q: string) => Number(sql(q));
-const call = async (method: string, path: string, body?: unknown) => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": "user-A", "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
+  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   return { status: r.status, body: await r.json().catch(() => null) };
 };
 // QA-90: the one shared spend ledger (p2/policy.ts LEDGER_DIR); not there yet = nothing spent.
@@ -151,6 +151,38 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 11 fail (review M1): no copy is refused for the case's limit of copies at once (\"being generated\")", !/being generated|did not finish|failed/.test(`${r("11").why ?? ""} ${r("12").why ?? ""}`), `${r("11").why ?? ""} ${r("12").why ?? ""}`.slice(0, 300));
   // #1009 (Lead 9's ruling) replaces "no answer by the loader": DEMO.md's story is answered once, from the one Sample record.
   ok("C10.1 row 11 (#1009): the case's answers come from the one Sample record, and each of the 4 people has a date of birth (a child under 18 and a child 18 or over)", fam !== "" && n(`select count(*) from client_canonical_answer a join case_participant p on p.subject_id = a.subject_id where p.case_id = '${fam}' and a.superseded_by_id is null`) > 4 && n(`select count(distinct a.subject_id) from client_canonical_answer a join case_participant p on p.subject_id = a.subject_id where p.case_id = '${fam}' and a.canonical_field_key = 'person.date_of_birth' and a.superseded_by_id is null`) === 4, r("11").shows?.slice(0, 200));
+  // QA-272: the released IMM 5257 status question offers its own nine choices, not the mapping note "01..09". Save one
+  // through the case officer's answer route, confirm its section, and prove a newly generated copy writes code 01.
+  if (fam) {
+    type Q = { subjectId: string; fact: string; section: string; answer: { id: string; problems?: string[] } | null; options: { key: string; label: string }[] | null; rows: { answer: { id: string } | null }[] };
+    type Sec = { subjectId: string; section: string; questions: Q[]; group: { none_apply?: { id: string } | null } | null };
+    const view = async (): Promise<Sec[]> => (await call("GET", `/runtime/cases/${fam}/questionnaire?mode=agent`, undefined, "user-O")).body.sections;
+    const principal = sql(`select subject_id from case_participant where case_id = '${fam}' and role = 'principal'`);
+    const status = (await view()).flatMap((s) => s.questions).find((q) => q.subjectId === principal && q.fact === "person.current_residence_status");
+    const words = ["Citizen", "Permanent resident", "Visitor", "Worker", "Student", "Other", "Protected Person", "Refugee Claimant", "Foreign National"];
+    ok("QA-272 integration pass: the configured question lists Citizen through Foreign National", JSON.stringify(status?.options?.map((o) => o.label)) === JSON.stringify(words), status?.options);
+    if (status) {
+      const bad = await call("PUT", `/runtime/cases/${fam}/answers/${principal}/person.current_residence_status`, { value: "01..09", expectedId: status.answer?.id ?? null }, "user-O");
+      ok("QA-272 integration fail: the old range text is refused as a choice", bad.status === 200 && (bad.body.answer?.problems ?? []).some((p: string) => /Choose one of: Citizen/.test(p)), bad.body.answer?.problems);
+      const good = await call("PUT", `/runtime/cases/${fam}/answers/${principal}/person.current_residence_status`, { value: "Citizen", expectedId: bad.body.answer?.id ?? null }, "user-O");
+      ok("QA-272 integration pass: Citizen saves with no problem", good.status === 200 && !(good.body.answer?.problems ?? []).length, good.body.answer);
+      const section = (await view()).find((s) => s.subjectId === principal && s.section === status.section);
+      const seen = [...(section?.questions ?? []).flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), section?.group?.none_apply?.id].filter(Boolean);
+      const confirmed = await call("POST", `/runtime/cases/${fam}/sections/${status.section}/confirm`, { subjectId: principal, seen }, "user-O");
+      ok("QA-272 integration pass: the officer confirms the answered section", confirmed.status === 201 && confirmed.body?.confirmed > 0, confirmed.body);
+      const made = await call("POST", `/runtime/cases/${fam}/forms/IMM%205257/${principal}/generate`, { idempotencyKey: `qa272-${Date.now()}` }, "user-O");
+      const copy = made.body?.id as string | undefined;
+      let copyStatus = "";
+      for (let i = 0; copy && i < 120; i++) {
+        copyStatus = (await call("GET", `/runtime/form-copies/${copy}`, undefined, "user-O")).body?.status ?? "";
+        if (["GENERATED", "FAILED"].includes(copyStatus)) break;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      const stored = copy ? sql(`select path from form_instance where id = '${copy}'`) : "";
+      const values = stored ? (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "..", "..", stored.replace(/\.pdf$/, ".request.json")), "utf8")).values as Record<string, string>) : {};
+      ok("QA-272 integration pass: a generated IMM 5257 writes CurrentCOR.Row2.Status as 01", copyStatus === "GENERATED" && values["form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]"] === "01", { copyStatus, value: values["form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]"] });
+    }
+  } else ok("QA-272 integration: the Sample family case exists", false);
   ok("C10.1 (R-143): no live AI call, US$0, the spend ledger unchanged", ledger() === before && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && n(`select count(*) from ai_batch where mode = 'LIVE'`) === 0 && l.body.cost_usd === 0);
   ok("C10.1: the load reports its time step by step", ["form intake (read code, edition, checksum)", "form read (form fields)", "field-map review and apply", "review and release"].every((k) => typeof l.body.timings[k] === "number"), l.body.timings);
   const again = await call("POST", "/demo/load", { sample: "configured" });
