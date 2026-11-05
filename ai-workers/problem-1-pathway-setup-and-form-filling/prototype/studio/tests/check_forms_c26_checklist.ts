@@ -7,12 +7,14 @@
 //   C2.6 R4  a second replay returns the open one (no duplicates); the stub pass and live keep their own answers
 //   C2.6 R5  each line is accepted on the review queue (the one door, P-149; QA-157), whose lander writes it as a draft
 //            row with the checklist's quote; the old apply door and the checklist page's own decide answer 410
+//   C2.6 R6  B82 (QA-233): the facts the lines' conditions read and the library lacks are proposed with them; one that
+//            cannot be is said in words; a fact already held or already proposed is left alone
 //   zsh studio/tools/isolated.sh forms_c26 4458 start && tsx studio/tests/check_forms_c26_checklist.ts 4458 xr_studio_forms_c26
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { docTypeOf, linesOf, savedReading, treeOf, wordsOf } from "../api/src/checklist.ts";
+import { conditionFacts, docTypeOf, linesOf, savedReading, treeOf, wordsOf } from "../api/src/checklist.ts";
 
 const PORT = Number(process.argv[2] ?? 4458), DB = process.argv[3] ?? "xr_studio_forms_c26";
 const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
@@ -54,6 +56,31 @@ async function main() {
   ok("C2.6 P-134: a passport is proposed as an identity document read by its coded lines", pp.identityDocument === true && pp.readerKind === "coded_lines" && pp.name === "Passport information page copy", pp);
   const ls = docTypeOf(lineOf("proof_of_legal_status_in_country_of_residence", "If your country of residence differs from the country of citizenship listed on your passport"), "IMM 5484");
   ok("C2.6 P-134 fail: a document whose quote only mentions a passport is not an identity document", ls.identityDocument === false && ls.readerKind === "letter_or_record", ls);
+  // ─────────────────────────────── R6 (B82, QA-233; no database): the facts a line's condition reads
+  const reads = (field: string, value: unknown, op = "eq", office = false) => ({ ...lineOf(`doc_${field.replace(/\W/g, "_")}`, "a quote"), base_or_conditional: "conditional" as const, condition_plain: `Only when ${field} holds, in words.`, condition_tree: { subjectKind: "EACH_APPLICANT", op, field, value }, office });
+  const nothing = { live: new Set<string>(), retired: new Set<string>(), named: new Map<string, string>(), waitingKeys: new Set<string>(), waitingNames: new Set<string>() };
+  const asked = conditionFacts([reads("person.has_visa", true)], [{ id: "person.has_visa", meaning: "Whether the person holds a visa", plain: "Whether the person holds a visa", valueType: "yes_no", derived: false }], nothing);
+  ok("C2.6 R6: a fact the reading defined is proposed with its meaning and answer type, under the key the condition reads", asked.propose.length === 1 && asked.propose[0].fact === "person.has_visa" && asked.propose[0].meaning === "Whether the person holds a visa" && asked.propose[0].valueType === "yes_no" && asked.propose[0].label === "Has visa", asked);
+  const worked = conditionFacts([reads("person.differs", true)], [{ id: "person.differs", meaning: "True when two countries differ.", plain: "True when two countries differ. This compares two fields.", valueType: null, derived: true }], nothing);
+  ok("C2.6 R6: a fact the reading works out is proposed as a yes or no, from how the condition tests it", worked.propose[0]?.valueType === "yes_no" && worked.propose[0]?.defined?.derived === true, worked);
+  const undefinedOne = conditionFacts([reads("person.days_left", 180, "gte")], [], nothing);
+  ok("C2.6 R6: a fact the reading never defined takes the condition's words, and its type from the test", undefinedOne.propose[0]?.valueType === "number" && /in words/.test(undefinedOne.propose[0]?.meaning ?? ""), undefinedOne);
+  const twoLines = conditionFacts([reads("person.a_fact", true), { ...reads("person.a_fact", true), document_type: "doc_other" }], [], nothing);
+  ok("C2.6 R6: two lines reading one fact propose it once, naming both", twoLines.propose.length === 1 && twoLines.propose[0].lines.length === 2, twoLines.propose.length);
+  ok("C2.6 R6 fail: a fact in the library, or a derived one, is not proposed", conditionFacts([reads("person.has_visa", true)], [], { ...nothing, live: new Set(["person.has_visa"]) }).propose.length === 0);
+  const waitingAlready = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, waitingKeys: new Set(["person.has_visa"]) });
+  ok("C2.6 R6 fail: a fact a form's draft or another checklist already proposes is not proposed again, and is no problem", waitingAlready.propose.length === 0 && waitingAlready.held.length === 0, waitingAlready);
+  const retiredOne = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, retired: new Set(["person.has_visa"]) });
+  ok("C2.6 R6 fail: a retired fact is not added again; the job says to restore it", retiredOne.propose.length === 0 && /restore it/.test(retiredOne.held[0] ?? ""), retiredOne);
+  const sameName = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, named: new Map([["hasvisa", "case.has_visa"]]) });
+  ok("C2.6 R6 fail: a fact with a library field's name is not a second field; the job names the field to read", sameName.propose.length === 0 && /case\.has_visa/.test(sameName.held[0] ?? ""), sameName);
+  const nameWaiting = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, waitingNames: new Set(["hasvisa"]) });
+  ok("C2.6 R6 fail: a name already waiting on To review is decided there first", nameWaiting.propose.length === 0 && /already waiting/.test(nameWaiting.held[0] ?? ""), nameWaiting);
+  const badKey = conditionFacts([reads("no_group", true)], [], nothing);
+  ok("C2.6 R6 fail: a key that is not group.name is not proposed; the job says to correct the condition", badKey.propose.length === 0 && /not a fact key/.test(badKey.held[0] ?? ""), badKey);
+  const twoNames = conditionFacts([reads("person.has_visa", true), reads("case.has_visa", true)], [], nothing);
+  ok("C2.6 R6 fail: two facts with one name in a reading: the first is proposed, the other is said (one bad item never stops the draft)", twoNames.propose.length === 1 && twoNames.held.length === 1, twoNames);
+
   // QA-195 (break B2): the checklist reads the same identity list as the masters step; only a passport or travel document
   // is read by its coded lines, any other identity document by a person, never by AI; a passport-size photo by a person.
   const byName = ["copy_of_passports", "national_identity_card", "birth_certificate", "permanent_resident_card", "citizenship_certificate", "drivers_licence", "proof_of_identity"].map((t) => ({ t, d: docTypeOf(lineOf(t, "As the checklist asks"), "IMM 5484") }));
