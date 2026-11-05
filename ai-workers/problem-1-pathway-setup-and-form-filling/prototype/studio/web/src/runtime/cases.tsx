@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
+import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
 import { SubmissionPanel } from "./submission"; // C8.2
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
@@ -196,6 +197,7 @@ function CasePage() {
         </ul>
       </section>
       <EligibilityCard caseId={c.id} people={c.people} />
+      <ItemChannels caseId={c.id} />
       <FormsPanel caseId={c.id} />
       <FindingsPanel caseId={c.id} people={c.people} />
       <SubmissionPanel caseId={c.id} />
