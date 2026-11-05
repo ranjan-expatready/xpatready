@@ -95,6 +95,7 @@ Rows reaching Works · median approved-to-merged time · batch failure rate (tar
 ## Tech lead housekeeping (moved from the lead skill word for word, 6 Nov, to keep the skill under 10 KB, P-203)
 * Sidebar: nested sessions move only with their parent and cannot be moved alone. A finished session (PR merged, nothing unpushed) is archived directly by the Lead (founder, 2 Nov: "whatever it can archive, it can archive"). Simplest rule (founder, 3 Nov): when every lane under a parent session (an old Lead) has merged or been replaced, the Lead tells the founder **in chat**, in one line, "Archive <parent title> now"; archiving the parent archives its finished nested sessions with it. Until then, nothing is archived and the founder reads no file for it.
 * Disk (founder, 2 Nov): after archiving, remove that session's worktrees (`git worktree list`, including scratchpad `wt-*` copies); first commit any uncommitted record (reviews) to a records branch and check the head is on origin; never remove `demo-main` or a running session's copy; `git worktree prune`; report free disk.
+* Before saying "55 by tonight", sort the open rows: likely Works on re-score, one small PR, waits on a fix or paid run, several PRs or held. Give the forecast from that.
 
 ## Where things live
 The file map is in `PRODUCT.md`; the bar is `STANDARDS.md`, `EXPERIENCE.md`, `QUALITY.md`. `lanes/` and `history/` are history.
