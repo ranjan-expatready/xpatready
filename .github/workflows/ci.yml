@@ -96,6 +96,12 @@ jobs:
         if: matrix.shard == 1
         env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}" }
         run: bash "$P/tools/m3-guard.sh" "$RANGE"
+      - name: every route a pack's set-up calls has a screen (part 1 only; tools/route-has-screen.mjs, under a second)
+        # Founder 5 Nov (P-348; QA-234): green packs hid dead ends, because a pack's set-up calls routes and a person has
+        # only screens. A mutating route acceptance/lib/ calls needs a caller in web/src or a reasoned line in
+        # tools/route-has-screen-allow.txt. The self-test first proves a new route with neither fails.
+        if: matrix.shard == 1
+        run: node "$P/tools/route-has-screen.mjs" --self-test && node "$P/tools/route-has-screen.mjs"
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
