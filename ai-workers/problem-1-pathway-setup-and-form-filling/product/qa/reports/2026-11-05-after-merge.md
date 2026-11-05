@@ -110,3 +110,6 @@ One condition approved on Visitor visa adds release-refusing Hiding errors on th
 ## Gate A results ~11:30–11:50 IST (no row moves)
 * #1051 (C1.3, C11.5) on 130a0e62a: PASS; C1.3 54/54 on the checkpoint (run 41976449342); new QA-243 (Minor).
 * #1058 (B82) on 501291a27: FAIL for the label, journey score 7/10; packs green (run 41978442688); new QA-242 (Major, C6.4): the condition lines never reach a case.
+
+## Records ~12:11 IST: cloud qa's M3 re-score copied (#1069)
+**M3: 0/17 Works on the checkpoint** (C6.9 Partial, 2/15; C9.2 Partial). New: QA-244, QA-245 (N2, narrowed by qa with reasons), QA-246, QA-247, QA-248, QA-249, QA-250, QA-251 (Lead 11's route sweep). QA-226 fixed in part. C6.9 needs no hold: the regression set is M2 only.
