@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-348**, 5 Nov 11:00 IST; the sections "Added 5 Nov", then "Added 4 Nov", win over older lines here)
+# Rules in force — one page (the tech lead keeps it; as of **P-353**, 5 Nov 13:05 IST; the sections "Added 5 Nov", then "Added 4 Nov", win over older lines here)
 
 Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
 
@@ -71,6 +71,8 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 * **Gate A's walk ends at the next capability's first step, by screens only (P-348 (3)).** A mutating route a pack's set-up calls needs a caller in `web/src` or an allow-list line (P-348 (4)).
 * **Cloud first (P-348 (5)):** the Mac runs the Lead, the demo, qa and at most two builders with test copies; one copy at a time, at a 1-minute load of 16 or under. No standby builders on the Mac; two standby Leads stay. Hand over at about 400k (P-314).
 * **Stacked `demo.ts` PRs may land in one batch (P-348 (8)).** Two PRs carrying a migration take different stamps.
+
+* **Added after P-348 (P-349 to P-353):** row 12b is a real Adobe Validate, saved, after C4.11 (P-349). M3 runs by its shared cause in the cloud, 3-4 lanes, cloud qa for its gate A, M2 first on `demo.ts` and the Mac qa (P-351, replacing P-350's pause in part). New rows walk a person's journey by screens before the first Opus review; checked 10 Nov (P-352). Scale work: design now, build after M2, before M3 grows (P-353). Questions to the founder in AskUserQuestion, one at a time; every report carries the factory view; read the app view, not only PRs (founder, 5 Nov).
 
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.
