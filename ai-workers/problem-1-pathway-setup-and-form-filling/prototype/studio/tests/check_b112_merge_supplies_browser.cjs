@@ -1,6 +1,6 @@
 // B112 (QA-256, C4.5) walked at 1440 px as people do it: the second person approves a merge on its card on To review, and the
 // document type's panel still says the fact is about the holder's spouse; a merge that would make one fact about two people
-// is refused on the card in words. The facts and the merges are proposed through the routes those screens call. No AI, US$0.
+// is refused on the card in words. The merges are proposed through the route the field page calls. No AI, US$0.
 //   zsh studio/tools/isolated.sh forms_b112b 4411 start && node studio/tests/check_b112_merge_supplies_browser.cjs 4411 xr_studio_forms_b112b
 const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -18,8 +18,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const api = async (pth, data, actor = "user-A", method = "POST") => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, data, timeout: 400000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const as = async (who) => { await p.goto(BASE); await p.evaluate((w) => { try { localStorage.setItem("xr-actor", w); } catch { /* ignore */ } }, who); };
   const shot = async (name) => { if (SHOTS) await p.screenshot({ path: `${SHOTS}/${name}.png` }); };
-  const today = new Date().toISOString().slice(0, 10);
-  const supplies = async (key, facts) => { const r = await api(`/library/document-types/${key}/supplies`, { reason: "Test: whom each fact is about (B112).", facts: facts.map(([fact, about]) => ({ fact, about, source: "Test words (fixture), page 1", quote: `Test: the document shows ${fact}`, readOn: today })) }); return (await api(`/library/changes/${r.body.id}/approve`, { note: "Second person (B112 walk)." }, "user-B")).status; };
+  // Setup on this test copy only: a released document type with these facts. A release takes minutes, and while a change is
+  // open the panel shows that change's own words instead of the type's, which would prove nothing here.
+  const supplies = async (key, facts) => { const about = Object.fromEntries(facts.filter(([, a]) => a !== "holder")); sql(`update document_type set supplies_facts = array[${facts.map(([f]) => `'${f}'`).join(",")}], supplies_about = '${JSON.stringify(about)}'::jsonb where document_type_key = '${key}' and status = 'PUBLISHED'`); return 200; };
   const propose = async (keep, merge) => (await api("/library/merges", { keep, merge, reason: "Test: these two mean the same for this walk only (B112)." })).body.id;
   await as("user-A");
   step("setup: the fixture loads", (await api("/demo/load")).status === 201);
