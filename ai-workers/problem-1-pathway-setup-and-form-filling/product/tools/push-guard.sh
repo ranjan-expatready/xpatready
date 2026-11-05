@@ -32,7 +32,7 @@ check_range() {
   local tip pdf_dir manifest_list
   tip=$(echo "$commits" | head -1)
   pdf_dir='ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/'
-  manifest_list="/tmp/guard-manifests.$$"
+  manifest_list="${TMPDIR:-/tmp}/guard-manifests.$$"
   git ls-tree -r --name-only "$tip" -- "$pdf_dir" 2>/dev/null | grep '/manifest\.json$' | while read -r m; do
     git show "$tip:$m" 2>/dev/null | grep -oE '"sha256"[[:space:]]*:[[:space:]]*"[0-9a-f]{64}"' | grep -oE '[0-9a-f]{64}'
   done | sort -u > "$manifest_list"
@@ -54,11 +54,11 @@ check_range() {
   done < <(echo "$commits" | while read -r c; do git diff-tree --no-commit-id -r --diff-filter=AMRC --name-only "$c" | sed "s/^/$c\t/"; done)
   rm -f "$manifest_list"
   # Added lines only: secrets and personal names.
-  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > /tmp/guard-secrets.$$
-  [ -s /tmp/guard-secrets.$$ ] && { cat /tmp/guard-secrets.$$; bad=1; }
-  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > /tmp/guard-names.$$
-  [ -s /tmp/guard-names.$$ ] && { cat /tmp/guard-names.$$; bad=1; }
-  rm -f /tmp/guard-secrets.$$ /tmp/guard-names.$$
+  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > ${TMPDIR:-/tmp}/guard-secrets.$$
+  [ -s ${TMPDIR:-/tmp}/guard-secrets.$$ ] && { cat ${TMPDIR:-/tmp}/guard-secrets.$$; bad=1; }
+  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > ${TMPDIR:-/tmp}/guard-names.$$
+  [ -s ${TMPDIR:-/tmp}/guard-names.$$ ] && { cat ${TMPDIR:-/tmp}/guard-names.$$; bad=1; }
+  rm -f ${TMPDIR:-/tmp}/guard-secrets.$$ ${TMPDIR:-/tmp}/guard-names.$$
 }
 
 if [ "${1:-}" = "--unpushed" ]; then
