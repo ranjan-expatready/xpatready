@@ -24,18 +24,13 @@ out by position top to bottom, a flowing part in its own order):
    questions (a question number, or a lettered item "a) ..."). A part with no question of its own (a consent, a
    declaration, a signature) is not given it, and ends the carry. Never across a page; never the form's first banner,
    which is its title.
-6. titled before (B79b): on a page where none of the rules above names any part, each part, and each box straight on the
-   page, takes the numbered title printed just before it on that page ("7. Education", then IMM 5669's education boxes
-   and table), or its own numbered caption ("3. Date of birth"), those words without the number: the boxes after one
-   title are one section ("from": that title's text). A page that gives one name to two parts is not read this way.
-   A numbered text too long to be a title (a question) ends it, so the boxes after it have no heading. A part's own
-   first text is left alone: only the page's own texts between its parts are read. An office part never takes it.
-A form whose pages sit inside one unnamed wrapper (IMM 5669's "#subform") is read from those pages, as the inventory's
-parts are read (api/src/form-masters.ts WRAPPER).
 A banner printed "(CONTINUED)" is marked "continues": its boxes are one section with the part of that heading before it.
 A child part whose first text is its own bold banner is listed under "sub" with that heading: its boxes are a section
 of their own (IMM 1295 prints "EMPLOYMENT" inside the wrapper that starts with "EDUCATION"), unless it splits into
 two or more parts that each print their own banner (rows of people: the first row's label does not name the others).
+On a page inside the form's unnamed wrapper (IMM 5669: IMM_5669 > #subform > page2), each bold numbered heading of at
+most 60 characters ("7. Education", "8. Personal history") names the boxes and parts printed after it, up to the next
+numbered text, listed under "sub" with the heading's "group" (one section per heading; QA-144 slice 4, B79a).
 Anything else has no printed heading: the rules pass then says the name must be changed before Accept.
 
 A banner is put in sentence case by the form's own spelling of each word: a word the form prints in small letters
@@ -95,6 +90,31 @@ def title_of(v):
         return None
     t = words(filled[0]).rstrip(":").strip()
     return t if 4 <= len(t) <= 60 and len(t.split()) <= 8 and sum(c.isalpha() for c in t) >= 4 else None
+
+
+def numbered_heading(d, ns):
+    """QA-144 slice 4: a printed text's numbered heading, from its first paragraph ("7. Education" over "Give the number
+    of years …"): (heading, printed, the text's name) when that paragraph is bold, numbered and at most 60 characters;
+    () when it is numbered but is not such a heading (a question: it ends the heading before it); None when it is not
+    numbered at all."""
+    v = d.find(ns + "value")
+    if v is None or v.find(ns + "image") is not None:
+        return None
+    f = d.find(ns + "font")
+    bold = f is not None and f.get("weight") == "bold"
+    body = next((b for b in v.iter() if b.tag == XHTML + "body"), None)
+    if body is not None:
+        paras = [p for p in body if p.tag == XHTML + "p" and " ".join("".join(p.itertext()).split())]
+        if not paras:
+            return None
+        first, style = " ".join("".join(paras[0].itertext()).split()), (paras[0].get("style") or "").replace(" ", "")
+        bold = "font-weight:bold" in style or (bold and "font-weight:normal" not in style)
+    else:
+        first = " ".join((inv.text_of(v, ns) or "").split())
+    m = NUMBERED.match(first)
+    if not m:
+        return None
+    return (m.group(1)[0].upper() + m.group(1)[1:], first, d.get("name") or "") if bold and len(first) <= 60 else ()
 
 
 def texts(el, ns):
@@ -216,71 +236,6 @@ def sentence_case(banner, seen):
     return WORD.sub(one, banner)
 
 
-def pages_of(root, ns):
-    """The form's pages: the root's parts, except that an unnamed part holding named pages ("#subform" over page1,
-    page2, …: IMM 5669) is not a page itself, its pages are (B79b)."""
-    for page in root:
-        if page.tag.replace(ns, "") in PARTS and not page.get("name") and any(
-                c.tag.replace(ns, "") in PARTS and re.match(r"(?i)^page\d*$", c.get("name") or "") for c in page):
-            yield from page
-        else:
-            yield page
-
-
-def numbered_title(d, ns):
-    """A draw's numbered title ("7. Education" -> "Education"), "" for a numbered text too long to be one (a question,
-    which ends the title before it), or None for any other draw (B79b, rule 6)."""
-    v = d.find(ns + "value")
-    if v is None or v.find(ns + "image") is not None:
-        return None
-    t = " ".join((inv.text_of(v, ns) or "").split())
-    if not re.match(r"^\d{1,2}\s*[.)]\s", t):
-        return None
-    f = d.find(ns + "font")
-    bold = f is not None and f.get("weight") == "bold"
-    # Rich text: the title is its first filled paragraph, printed bold (its own style, or the draw's bold font not undone
-    # there): IMM 5669's "7. Education" over the normal-weight question. Plain text: the whole text, bold.
-    body = next((b for b in v.iter() if b.tag == XHTML + "body"), None)
-    paras = [(" ".join("".join(q.itertext()).split()), (q.get("style") or "").replace(" ", "")) for q in (body if body is not None else []) if q.tag == XHTML + "p"]
-    paras = [x for x in paras if x[0]]
-    first, style = paras[0] if paras else (t, "")
-    m = NUMBERED.match(first) if len(first) <= 60 and ("font-weight:bold" in style or (bold and "font-weight:normal" not in style)) else None
-    return m.group(1) if m and lettered(m.group(1)) else ""
-
-
-def titled_before(page, pname, ns, seen):
-    """Rule 6 (B79b): each part and each box straight on the page under the numbered title printed just before it."""
-    kids = [c for c in page if c.tag.replace(ns, "") in ("draw", "field") + PARTS]
-    if (page.get("layout") or "position") == "position":
-        kids = sorted(kids, key=y_of)
-    # A page that gives one name to two boxes or parts (IMM 5532's four "Table1" tables) is not read: the inventory cannot
-    # tell them apart, and a few named parts would draw the page's other boxes into them (the placement step's
-    # nearest-box rule, api/src/form-part-placements.ts). Its parts stay held for a person to name.
-    if any(k > 1 for k in collections.Counter(c.get("name") for c in kids if c.tag.replace(ns, "") != "draw").values()):
-        return {}
-    out, at = {}, None
-    for c in kids:
-        tag = c.tag.replace(ns, "")
-        if tag == "draw":
-            n = numbered_title(c, ns)
-            if n is not None:
-                at = (n, " ".join(inv.text_of(c.find(ns + "value"), ns).split())[:300], f"{pname}.{c.get('name') or '#draw'}") if n else None
-            continue
-        # A box that prints its own numbered caption ("3. Date of birth") starts its own title, from its own words.
-        cap = c.find(ns + "caption") if tag == "field" else None
-        cv = cap.find(ns + "value") if cap is not None else None
-        ct = " ".join((inv.text_of(cv, ns) or "").split()) if cv is not None else ""
-        cm = NUMBERED.match(ct) if len(ct) <= 60 else None
-        if cm and lettered(cm.group(1)):
-            at = (cm.group(1), ct, f"{pname}.{c.get('name')}")
-        if not at or not c.get("name"):
-            continue
-        if tag in PARTS and (not fills(c, ns) or OFFICE.search(next((t for t, _, _ in texts(c, ns) if lettered(t)), ""))):
-            continue
-        out.setdefault(f"{pname}.{c.get('name')}", {"heading": sentence_case(at[0], seen), "printed": at[1], "how": "titled_before", "from": at[2]})
-    return out
-
-
 def read(fname):
     parts, _ = inv.xfa_parts(inv.official(fname))
     tpl = ET.fromstring(parts["template"])
@@ -289,7 +244,7 @@ def read(fname):
     out = {}
     # The form's first banner is its title: it names the form, so it is never carried to the parts after it.
     title = None
-    for page in pages_of(tpl.find(ns + "subform"), ns):
+    for page in tpl.find(ns + "subform"):
         if page.tag.replace(ns, "") not in PARTS:
             continue
         pname = page.get("name") or f"#{page.tag.replace(ns, '')}"
@@ -343,13 +298,28 @@ def read(fname):
                 rows = sum(1 for g in c if g.tag.replace(ns, "") in PARTS and first_banner(g))
                 if cb and cb != b and rows < 2 and (c.get("name") or "") and c.get("name") not in sub:
                     sub[c.get("name")] = {"heading": sentence_case(cb, seen), "printed": cb}
+            # QA-144 slice 4 (B79a): a page inside the form's unnamed wrapper (IMM 5669: IMM_5669 > #subform > page2) is a
+            # page, not a part: its boxes sit under the numbered questions it prints between them ("7. Education",
+            # "8. Personal history", "12. Addresses"). Each bold numbered heading of at most 60 characters names the boxes
+            # and parts printed after it on that page, up to the next numbered text; a longer numbered text (a question,
+            # "6. Have you, or, ...") ends it. The boxes under one heading share its "group": one section.
+            if pname.startswith("#") and re.fullmatch(r"page\d*", part.get("name") or "", re.I):
+                kids = [c for c in part if c.tag.replace(ns, "") in ("draw", "field") + PARTS]
+                if (part.get("layout") or "position") == "position":
+                    kids = sorted(kids, key=y_of)
+                under = None
+                for c in kids:
+                    if c.tag.replace(ns, "") == "draw":
+                        nh = numbered_heading(c, ns)
+                        if nh is not None:
+                            under = nh or None
+                        continue
+                    if under and (c.get("name") or "") and c.get("name") not in sub:
+                        sub[c.get("name")] = {"heading": under[0], "printed": under[1], "group": under[2]}
             if sub:
                 entry = {**(entry or {"heading": None, "how": "none"}), "sub": sub}
             if entry and key not in out:
                 out[key] = entry
-        # Rule 6 (B79b): a page none of the rules above named a part of reads the numbered titles between its parts.
-        if not any(k.startswith(f"{pname}.") for k in out):
-            out.update(titled_before(page, pname, ns, seen))
     # A form that prints no heading over any of its parts (IRM 0002, a one-page statement): every field sits under the
     # form's own printed title, its largest bold all-capital text (tech lead on #883: names only from print). The parts
     # are one section under it. Never when any part has a heading of its own.
@@ -363,7 +333,7 @@ def read(fname):
         tops = [(z, as_title(t)) for t, bold, z in texts_all(tpl, ns) if bold and z and z >= 10 and as_title(t)]
         if tops:
             ft = max(tops, key=lambda x: x[0])[1]
-            for page in pages_of(tpl.find(ns + "subform"), ns):
+            for page in tpl.find(ns + "subform"):
                 if page.tag.replace(ns, "") not in PARTS:
                     continue
                 pname = page.get("name") or f"#{page.tag.replace(ns, '')}"

@@ -28,8 +28,6 @@ export { printedChoices }; // QA-196: moved to the engine (proposals.ts reads it
  *  name only ("Five", "Seven") is a real part a person fills: it stays, named from its printed heading or, with none,
  *  held for a person to name (re-review M2, QA-206). */
 const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
-/** B79b: the unnamed wrapper some forms put their pages in, read off the start of a box's part path. */
-export const WRAPPER = /^#subform(\[\d+\])?\.(?=page\d*(\[\d+\])?\.)/i;
 const MACHINE_PART = /^(#?subform\d*|text ?field\d*|header|buttons?( ?header)?|page\d*|fragment\d*|row\d*)$/i;
 
 /** "MaritalStatusList" → "Marital status"; "PersonalDetails" → "Personal details". */
@@ -92,9 +90,7 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
     const at = own ? key : keyOf(key)!;
     // A part's name, the same part on every page; parts carried from one banner, or under the form's own printed title
     // (a form with no heading over any part: IRM 0002), are one section.
-    // B79b: the boxes under one numbered title printed between a page's parts ("titled_before": IMM 5669's "7. Education")
-    // are one section too.
-    let anchor = ((h.how === "carried" || h.how === "form_title" || h.how === "titled_before") && h.from ? h.from : at).split(".")[1];
+    let anchor = ((h.how === "carried" || h.how === "form_title") && h.from ? h.from : at).split(".")[1];
     const label = h.heading.trim().toLowerCase();
     if (h.continues && anchors.has(label)) anchor = anchors.get(label)!;
     if (!anchors.has(label)) anchors.set(label, anchor);
@@ -103,17 +99,19 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
   const sections = new Map<string, Draft>();
   for (const f of fields) {
     if (!f.data_path || !f.section || hidden(f)) continue;
-    // B79b: a form whose pages sit inside one unnamed wrapper ("#subform.page2.educationTable": IMM 5669's) is read from
-    // its pages as every other form is ("page2.educationTable"); the wrapper is not a part of the form.
-    const path = f.section.replace(WRAPPER, "");
-    const part = path.split(".").slice(0, 2);
-    if (part.length < 2 || MACHINE_PART.test(part[1].replace(/\[\d+\]$/, ""))) continue;
+    const part = f.section.split(".").slice(0, 2);
+    if (part.length < 2) continue;
+    // QA-144 slice 4 (B79a): a page inside the form's unnamed wrapper (IMM 5669's "#subform.page2") is no part of its own,
+    // but the numbered heading it prints over a child names that child (headings "sub" with a "group"), so it is read.
+    const grouped = f.section.split(".")[2] ? headings?.[part.join(".")]?.sub?.[f.section.split(".")[2]]?.group : undefined;
+    if (!grouped && MACHINE_PART.test(part[1].replace(/\[\d+\]$/, ""))) continue;
     // A page's part with no heading of its own takes the one printed over the part of the same name on another page
     // (IMM 5257's marital status continues under "PERSONAL DETAILS (CONTINUED)" on page 2).
     // A child part with its own printed banner is a section of its own (review r2 M4: IMM 1295's "EMPLOYMENT" inside the
     // wrapper that starts with "EDUCATION"); the same child name on another page is the same section.
-    const child = path.split(".")[2], own = headings?.[part.join(".")], subH = child ? own?.sub?.[child] : undefined;
-    const { anchor, h } = subH ? { anchor: `s:${part[1]}.${child}`, h: { heading: subH.heading, printed: subH.printed } } : anchorOf(part.join("."));
+    const child = f.section.split(".")[2], own = headings?.[part.join(".")], subH = child ? own?.sub?.[child] : undefined;
+    // The children under one numbered heading are one section (its group, QA-144 slice 4).
+    const { anchor, h } = subH ? { anchor: `s:${part[1]}.${subH.group ?? child}`, h: { heading: subH.heading, printed: subH.printed } } : anchorOf(part.join("."));
     const s = sections.get(anchor) ?? { label: h ? h.heading.trim().slice(0, 120) : null, part: part[1], printed: h ? (h.printed ?? h.heading).slice(0, 300) : null, fieldKeys: [], captions: [], quote: caption(f) };
     if (s.fieldKeys.length < 400) s.fieldKeys.push(f.data_path.slice(0, 120));
     if (caption(f) && s.captions.length < 3 && !s.captions.includes(caption(f).slice(0, 80))) s.captions.push(caption(f).slice(0, 80));
@@ -141,7 +139,7 @@ export function draftFromInventory(fields: InvField[], headings: PartHeadings | 
  *  the headings file beside its inventory ("…/imm5257e.inventory.json" → "…/imm5257e.headings.json"), only when it was
  *  read from exactly the same file (its checksum). Null when not read (no such file, or read from another file): every
  *  section of that form is then proposed unnamed, and says its headings were not read (not that the form has none). */
-export type PartHeadings = Record<string, { heading: string; printed?: string; how?: string; from?: string; continues?: boolean; sub?: Record<string, { heading: string; printed: string }> }>;
+export type PartHeadings = Record<string, { heading: string; printed?: string; how?: string; from?: string; continues?: boolean; sub?: Record<string, { heading: string; printed: string; group?: string }> }>;
 export function headingsFor(inventoryFile: string | null | undefined, sha256: string | null | undefined): PartHeadings | null {
   if (!inventoryFile || !sha256 || !/\.inventory\.json$/.test(inventoryFile)) return null;
   try {

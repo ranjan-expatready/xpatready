@@ -3,179 +3,169 @@
  "sha256": "4bdc23bb6a9dfa3731927f9b93295fb14008ee504d02b3037e349c4cda421f7a",
  "read_by": "prototype/p1/xfa_headings.py (the form's own XFA template: the text printed in each part; no AI)",
  "parts": {
-  "page1.familyName": {
-   "heading": "Your full name",
-   "printed": "1. Your full name",
-   "how": "titled_before",
-   "from": "page1.CompletName1"
+  "#subform.page1": {
+   "heading": "Schedule abackground / declaration",
+   "printed": "SCHEDULE ABACKGROUND / DECLARATION",
+   "how": "banner",
+   "sub": {
+    "familyName": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "givenName": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "OriginalLanguage2": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "birthDate3": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "fathersFamilyName": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersGivenName": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersBirthDate": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "FathersBirthCity": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersBirthCountry": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersDeathDate": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "mothersBirthFamilyName": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersGivenName": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersBirthDate": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersBirthCity": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersBirthCountry": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersDeathDate": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    }
+   }
   },
-  "page1.givenName": {
-   "heading": "Your full name",
-   "printed": "1. Your full name",
-   "how": "titled_before",
-   "from": "page1.CompletName1"
+  "#subform.page2": {
+   "heading": null,
+   "how": "none",
+   "sub": {
+    "elementary": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "secondary": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "university": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "trade": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "educationTable": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "personalHistoryTable": {
+     "heading": "Personal history",
+     "printed": "8. Personal history",
+     "group": "personalHistory8"
+    },
+    "membershipTable": {
+     "heading": "Membership of association with organizations",
+     "printed": "9. Membership of association with organizations",
+     "group": "membership9"
+    },
+    "governmentPositionsTable": {
+     "heading": "Government positions",
+     "printed": "10. Government positions",
+     "group": "governmentPositions10"
+    }
+   }
   },
-  "page1.OriginalLanguage2": {
-   "heading": "Your full name",
-   "printed": "1. Your full name",
-   "how": "titled_before",
-   "from": "page1.CompletName1"
-  },
-  "page1.birthDate3": {
-   "heading": "Your date of birth (yyyy-mm-dd)",
-   "printed": "3. Your date of birth (YYYY-MM-DD)",
-   "how": "titled_before",
-   "from": "page1.birthDate3"
-  },
-  "page1.fathersFamilyName": {
-   "heading": "Personal details of your father",
-   "printed": "4. Personal details of your father",
-   "how": "titled_before",
-   "from": "page1.fatherDetails4"
-  },
-  "page1.fathersGivenName": {
-   "heading": "Personal details of your father",
-   "printed": "4. Personal details of your father",
-   "how": "titled_before",
-   "from": "page1.fatherDetails4"
-  },
-  "page1.fathersBirthDate": {
-   "heading": "Personal details of your father",
-   "printed": "4. Personal details of your father",
-   "how": "titled_before",
-   "from": "page1.fatherDetails4"
-  },
-  "page1.FathersBirthCity": {
-   "heading": "Personal details of your father",
-   "printed": "4. Personal details of your father",
-   "how": "titled_before",
-   "from": "page1.fatherDetails4"
-  },
-  "page1.fathersBirthCountry": {
-   "heading": "Personal details of your father",
-   "printed": "4. Personal details of your father",
-   "how": "titled_before",
-   "from": "page1.fatherDetails4"
-  },
-  "page1.fathersDeathDate": {
-   "heading": "Personal details of your father",
-   "printed": "4. Personal details of your father",
-   "how": "titled_before",
-   "from": "page1.fatherDetails4"
-  },
-  "page1.mothersBirthFamilyName": {
-   "heading": "Personal details of your mother",
-   "printed": "5. Personal details of your mother",
-   "how": "titled_before",
-   "from": "page1.mothersdetails5"
-  },
-  "page1.mothersGivenName": {
-   "heading": "Personal details of your mother",
-   "printed": "5. Personal details of your mother",
-   "how": "titled_before",
-   "from": "page1.mothersdetails5"
-  },
-  "page1.mothersBirthDate": {
-   "heading": "Personal details of your mother",
-   "printed": "5. Personal details of your mother",
-   "how": "titled_before",
-   "from": "page1.mothersdetails5"
-  },
-  "page1.mothersBirthCity": {
-   "heading": "Personal details of your mother",
-   "printed": "5. Personal details of your mother",
-   "how": "titled_before",
-   "from": "page1.mothersdetails5"
-  },
-  "page1.mothersBirthCountry": {
-   "heading": "Personal details of your mother",
-   "printed": "5. Personal details of your mother",
-   "how": "titled_before",
-   "from": "page1.mothersdetails5"
-  },
-  "page1.mothersDeathDate": {
-   "heading": "Personal details of your mother",
-   "printed": "5. Personal details of your mother",
-   "how": "titled_before",
-   "from": "page1.mothersdetails5"
-  },
-  "page2.elementary": {
-   "heading": "Education",
-   "printed": "7. Education Give the number of years of school you successfully completed for each of the following levels of education.",
-   "how": "titled_before",
-   "from": "page2.Education7"
-  },
-  "page2.secondary": {
-   "heading": "Education",
-   "printed": "7. Education Give the number of years of school you successfully completed for each of the following levels of education.",
-   "how": "titled_before",
-   "from": "page2.Education7"
-  },
-  "page2.university": {
-   "heading": "Education",
-   "printed": "7. Education Give the number of years of school you successfully completed for each of the following levels of education.",
-   "how": "titled_before",
-   "from": "page2.Education7"
-  },
-  "page2.trade": {
-   "heading": "Education",
-   "printed": "7. Education Give the number of years of school you successfully completed for each of the following levels of education.",
-   "how": "titled_before",
-   "from": "page2.Education7"
-  },
-  "page2.educationTable": {
-   "heading": "Education",
-   "printed": "7. Education Give the number of years of school you successfully completed for each of the following levels of education.",
-   "how": "titled_before",
-   "from": "page2.Education7"
-  },
-  "page2.personalHistoryTable": {
-   "heading": "Personal history",
-   "printed": "8. Personal history Provide the details of your personal history since the age of 18, or the past 10 years, whichever is most recent. Start with the most recent information. Under \"Activity\", write your occupation or job title if you were working. If you were not working, provide information on what",
-   "how": "titled_before",
-   "from": "page2.personalHistory8"
-  },
-  "page2.membershipTable": {
-   "heading": "Membership of association with organizations",
-   "printed": "9. Membership of association with organizations What organizations have you supported, been a member of or been associated with? Include any political, social, youth or student organization, trade unions and professional associations. Do not use abbreviations. Indicate the city and country or territ",
-   "how": "titled_before",
-   "from": "page2.membership9"
-  },
-  "page2.governmentPositionsTable": {
-   "heading": "Government positions",
-   "printed": "10. Government positions List any government positions (such as civil servant, judge, police officer, employee in a security organization) you have held. Include positions you have held before or after your retirement. Do not use abbreviations. Write \"NONE\" in the box if you have not held any govern",
-   "how": "titled_before",
-   "from": "page2.governmentPositions10"
-  },
-  "page3.country1": {
-   "heading": "Military and/or paramilitary service",
-   "printed": "11. Military and/or paramilitary service Provide below complete details of military and/or paramilitary service for each of the countries in whose armed forces you served. Write \"NONE\" in the box if you have not undertaken military and/or paramilitary service. Do not leave any gaps in time.",
-   "how": "titled_before",
-   "from": "page3.militaryService11"
-  },
-  "page3.militaryServiceTable1": {
-   "heading": "Military and/or paramilitary service",
-   "printed": "11. Military and/or paramilitary service Provide below complete details of military and/or paramilitary service for each of the countries in whose armed forces you served. Write \"NONE\" in the box if you have not undertaken military and/or paramilitary service. Do not leave any gaps in time.",
-   "how": "titled_before",
-   "from": "page3.militaryService11"
-  },
-  "page3.country2": {
-   "heading": "Military and/or paramilitary service",
-   "printed": "11. Military and/or paramilitary service Provide below complete details of military and/or paramilitary service for each of the countries in whose armed forces you served. Write \"NONE\" in the box if you have not undertaken military and/or paramilitary service. Do not leave any gaps in time.",
-   "how": "titled_before",
-   "from": "page3.militaryService11"
-  },
-  "page3.militaryServiceTable2": {
-   "heading": "Military and/or paramilitary service",
-   "printed": "11. Military and/or paramilitary service Provide below complete details of military and/or paramilitary service for each of the countries in whose armed forces you served. Write \"NONE\" in the box if you have not undertaken military and/or paramilitary service. Do not leave any gaps in time.",
-   "how": "titled_before",
-   "from": "page3.militaryService11"
-  },
-  "page3.addressTable": {
-   "heading": "Addresses",
-   "printed": "12. Addresses List all addresses where you have lived since your 18th birthday or the past 10 years, whichever is most recent. Do not use P.O. box addresses.",
-   "how": "titled_before",
-   "from": "page3.addresses12"
+  "#subform.page3": {
+   "heading": null,
+   "how": "none",
+   "sub": {
+    "country1": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "militaryServiceTable1": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "country2": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "militaryServiceTable2": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "addressTable": {
+     "heading": "Addresses",
+     "printed": "12. Addresses",
+     "group": "addresses12"
+    }
+   }
   }
  }
 }
