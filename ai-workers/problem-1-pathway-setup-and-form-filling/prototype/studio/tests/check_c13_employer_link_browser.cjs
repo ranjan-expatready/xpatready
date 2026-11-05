@@ -108,16 +108,16 @@ const LMIA = "case.lmia_or_offer_number";
     await value.waitFor(T);
     const row = value.locator("xpath=..");
     ok("C1.3 BR-5: the copied employer name reads \"To confirm\" beside the \"Employer case\" source", await row.getByText("To confirm").count() === 1 && await row.getByText("Employer case").count() === 1, await row.innerText());
+    const source = row.getByRole("button", { name: /^Source: employer case\. Copied from Sample employer case: Sample Employer Ltd \(Sample\) on / });
+    await source.focus();
+    await p.getByRole("tooltip").filter({ hasText: "Changes there are not copied" }).first().waitFor({ state: "attached", timeout: 20000 });
+    ok("C1.3 (review m2): the source label opens its tooltip from the keyboard and names the employer case", true);
     await value.scrollIntoViewIfNeeded();
     await shot(p, "5-agent-view-employer-case-source");
     await tabs.getByRole("tab", { name: /^The application/ }).click(T);
     await p.locator("#agent-view").getByText("A123", { exact: true }).first().waitFor(T);
     ok("C1.3 BR-4: the officer's LMIA number is still on the case (The application)", true);
     await axe(p, "the case page after the link");
-    const source = row.getByRole("button", { name: /^Source: employer case\. Copied from Sample employer case: Sample Employer Ltd \(Sample\) on / });
-    await source.focus();
-    await p.getByRole("tooltip").filter({ hasText: "Changes there are not copied" }).first().waitFor({ state: "attached", timeout: 20000 });
-    ok("C1.3 (review m2): the source label opens its tooltip from the keyboard and names the employer case", true);
     for (const w of [1440, 1024, 390]) { await p.setViewportSize({ width: w, height: 900 }); await noSideways(p, "the linked case page"); }
     await p.setViewportSize({ width: 1440, height: 1000 });
 
