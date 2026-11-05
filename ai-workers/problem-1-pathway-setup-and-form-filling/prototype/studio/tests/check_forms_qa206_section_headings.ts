@@ -125,6 +125,19 @@ run(async () => {
   r = await call("POST", "/review/proposals/decide", { ids: [named?.id ?? NONE], action: "accept" }, AUTHOR);
   ok("QA-206 pass: a section named from its printed heading is accepted as it is", !!named && r.status < 300 && waiting() === w0 + 2, r.status >= 300 ? words(r) : undefined);
   const rej = unnamed[1];
+  // B78 (review M1): a name the library already holds is that section: the person's name is kept, its boxes are asked there
+  // (the placement step reads an edited item's key), no second section is made; Undo puts the section back waiting for a name.
+  const landedOn = sql(`select section_key from logical_section where title='Applicant and application details' limit 1`), w1 = waiting(), secs = sql("select count(*) from logical_section");
+  r = await call("POST", "/review/proposals/decide", { ids: [rej?.id ?? NONE], action: "edit", payload: { ...rej?.readings?.draft?.payload, label: "Applicant and application details" } }, AUTHOR);
+  const twinRow = sql(`select status || '|' || decided_key || '|' || (payload->>'label') || '|' || (reuse->>'match') from proposal_item where id = '${rej?.id ?? NONE}'`);
+  ok("B78 pass (review M1): a held section named what the library holds lands on that section under the person's name, adding nothing", r.status < 300 && r.body?.items?.[0]?.joined === true && twinRow === `edited|${landedOn}|Applicant and application details|reuse` && waiting() === w1 && sql("select count(*) from logical_section") === secs, r.status >= 300 ? words(r) : twinRow);
+  const batch = r.body?.batchId;
+  r = await call("POST", `/review/proposals/undo/${batch}`, {}, AUTHOR);
+  const backRow = sql(`select status || '|' || (payload->>'label') || '|' || (reuse->>'match') from proposal_item where id = '${rej?.id ?? NONE}'`);
+  ok("B78 pass (review M1): Undo puts it back waiting for a name, and takes nothing from the section it landed on", r.status < 300 && backRow === `waiting|${rej?.title}|new` && sql(`select count(*) from logical_section where section_key = '${landedOn}'`) === "1", r.status >= 300 ? words(r) : backRow);
+  const notHeld = sql(`select id from proposal_item where kind = 'section' and status = 'waiting' and reuse->>'match' = 'new' and coalesce(work->>'unnamed', 'false') <> 'true' order by identity_key limit 1`);
+  r = await call("POST", "/review/proposals/decide", { ids: [notHeld || NONE], action: "edit", payload: { ...JSON.parse(sql(`select payload::text from proposal_item where id = '${notHeld || NONE}'`) || "{}"), label: "Applicant and application details" } }, AUTHOR);
+  ok("B78 fail: a section with its own printed name, edited to what the library holds, is still refused (409): only a held section lands so", !!notHeld && r.status === 409 && /already in the library as/.test(words(r)) && waiting() === w1, words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [rej?.id ?? NONE], action: "reject", reason: "Not a section of its own" }, AUTHOR);
   ok("QA-206 pass: an unnamed section can still be rejected", !!rej && r.status < 300, r.status >= 300 ? words(r) : undefined);
   // Devin review on #883: a rules-pass section drafted before printed headings were read (no "printed_heading" result;
