@@ -14,7 +14,7 @@ import { ACCOUNT_WORDS, CHANNEL_WORDS, SetAccount, SIGNATURE_FITS, SIGNATURE_WOR
 import { acceptsOf, allowedChannels, channelProblems, channelsView, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { compareEditions } from "../../engine/programs.ts";
 import { formCombinations } from "./where-used.ts";
-import { asksMore, draftOptionMap, hasCodes, optionMapProblems, pdfOptions, printedNear, type FormOption, type ListValue, type OptionMap } from "../../engine/options.ts";
+import { asksMore, choiceRows, draftOptionMap, hasCodes, optionMapProblems, pdfOptions, printedNear, type FormOption, type ListValue, type OptionMap } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { normLabel } from "../../engine/twin.ts";
 import { Sources } from "./sources.ts";
@@ -260,7 +260,7 @@ export class Forms {
       const opts = optionsOf.get(m.dataPath), values = list.values.map((v) => ({ key: v.valueKey, label: v.label }));
       const map = opts?.length ? draftOptionMap(values, opts, m.optionMap as OptionMap | null).optionMap : m.optionMap as OptionMap | null; // B81: a person's marks count
       if (!map && !hasCodes(m.transform)) return [];
-      return optionMapProblems(values.map((v) => v.key), map).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
+      return optionMapProblems(values.map((v) => v.key), map, values).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
     });
   }
 
@@ -279,12 +279,9 @@ export class Forms {
       const choices = optionsOf.get(m.dataPath);
       if (!list || !choices?.length) continue;
       const listed = list.values.map((v) => ({ key: v.valueKey, label: v.label })), saved = m.optionMap as OptionMap | null;
-      const shown = saved ?? draftOptionMap(listed, choices).optionMap;
-      const printedCodes = new Set(choices.map((o) => o.code));
-      const values = listed.map((v) => { const code = Object.hasOwn(shown.map, v.key) ? shown.map[v.key] : undefined; return { ...v, code: code !== undefined && printedCodes.has(code) && !asksMore(v, choices) ? code : null, not_on_form: (shown.notOnForm ?? []).includes(v.key), printed: printedNear(v, choices).map((o) => o.label), asks_more: asksMore(v, choices) }; });
-      const key = JSON.stringify([list.answerListKey, m.canonicalFieldKey, choices, values, !!saved, hasCodes(m.transform)]);
-      // The same words Submit lists: a form field with codes and no saved map blocks release, however good the suggestion.
-      const g = groups.get(key) ?? { list: list.answerListKey, list_label: list.label ?? null, fact: m.canonicalFieldKey!, revision: "", form_fields: [], choices, saved: !!saved, values, problems: saved || hasCodes(m.transform) ? [...optionMapProblems(listed.map((v) => v.key), saved, listed.map((v) => v)), ...(saved ? listed.filter((v) => Object.hasOwn(saved.map, v.key) && asksMore(v, choices)).map((v) => `"${v.label}" has a code, but the form prints two or more choices for it: the immigration expert decides`) : [])] : [] };
+      const { values, problems } = choiceRows(listed, saved, choices, hasCodes(m.transform));
+      const key = JSON.stringify([list.answerListKey, m.canonicalFieldKey, choices, values, !!saved, problems]); // the same problems, or they read apart
+      const g = groups.get(key) ?? { list: list.answerListKey, list_label: list.label ?? null, fact: m.canonicalFieldKey!, revision: "", form_fields: [], choices, saved: !!saved, values, problems };
       g.form_fields.push({ data_path: m.dataPath, caption: m.caption, person: m.person, row: m.row, part: printedPart(partOf.get(m.dataPath)) });
       revisionRows.set(key, [...(revisionRows.get(key) ?? []), m]);
       groups.set(key, g);

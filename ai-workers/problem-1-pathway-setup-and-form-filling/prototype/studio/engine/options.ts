@@ -125,6 +125,24 @@ export function choiceEditionsOf(maps: { form_number: string; form_edition: stri
   return maps.filter((m) => m.form_number === form && m.channel !== "ONLINE").sort((x, y) => Number(y.form_edition === inUse) - Number(x.form_edition === inUse)).flatMap((m) => { const id = idOf(m.form_edition); return id ? [{ id, label: m.form_edition }] : []; });
 }
 
+/** B81 (break M5, review R3-M2): what the release check and the fill hold against a saved code: a value the form prints as
+ *  two or more choices has no one code, whatever an earlier draft saved (ruling (b) on #1009: no content guess). */
+export function codeAsksMore(value: unknown, values: ListValue[], box: Parameters<typeof pdfOptions>[0], transform: string | null | undefined): FormOption[] | null {
+  const v = String(value ?? "").trim(), hit = values.find((x) => x.key === v || n(x.label) === n(v));
+  if (!hit) return null;
+  const options = pdfOptions(box, transform);
+  return asksMore(hit, options) ? printedNear(hit, options) : null;
+}
+
+/** B81: one form field as the choices step shows it: what is saved, or (nothing saved) what the rules suggest, with the same
+ *  problems Submit lists: a form field with codes and no saved map blocks however good the suggestion. Pure, read only. */
+export function choiceRows(listed: ListValue[], saved: OptionMap | null, choices: FormOption[], hasOwnCodes: boolean) {
+  const shown = saved ?? draftOptionMap(listed, choices).optionMap, printedCodes = new Set(choices.map((o) => o.code));
+  const values = listed.map((v) => { const code = Object.hasOwn(shown.map, v.key) ? shown.map[v.key] : undefined; return { ...v, code: code !== undefined && printedCodes.has(code) && !asksMore(v, choices) ? code : null, not_on_form: (shown.notOnForm ?? []).includes(v.key), printed: printedNear(v, choices).map((o) => o.label), asks_more: asksMore(v, choices) }; });
+  const problems = saved || hasOwnCodes ? [...optionMapProblems(listed.map((v) => v.key), saved, listed), ...(saved ? listed.filter((v) => Object.hasOwn(saved.map, v.key) && asksMore(v, choices)).map((v) => `"${v.label}" has a code, but the form prints two or more choices for it: the immigration expert decides`) : [])] : [];
+  return { values, problems };
+}
+
 /** The value a person marked not on this form, when `value` is one: filling refuses it in the value's own words (B81). */
 export function notOnFormValue(value: unknown, m: OptionMap, values: ListValue[]): ListValue | null {
   const v = String(value ?? "").trim();

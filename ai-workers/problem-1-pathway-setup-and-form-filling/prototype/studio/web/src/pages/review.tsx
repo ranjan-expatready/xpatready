@@ -22,7 +22,7 @@ const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? role
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
 
 /** B81 (challenge M3): a problem on a form's option map says where it is fixed: the form's panel on the Forms tab. */
-const choicesAt = (p: { where?: unknown; message?: unknown }): string | null => { const m = /^Field map ((.+) \([^)]*\))$/.exec(String(p.where ?? "")); return m && /no code for|no option map yet|neither mapped|not on this form|the answer list does not have/.test(String(p.message ?? "")) ? `choices=${encodeURIComponent(m[2])}&edition=${encodeURIComponent(m[1])}` : null; };
+const choicesAt = (p: { where?: unknown; message?: unknown }): string | null => { const m = /^Field map ((.+) \([^)]*\))$/.exec(String(p.where ?? "")); return m && /no code for|no option map yet|neither mapped|not on this form|the answer list does not have|has a code, but the form prints/.test(String(p.message ?? "")) ? `choices=${encodeURIComponent(m[2])}&edition=${encodeURIComponent(m[1])}` : null; };
 
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */

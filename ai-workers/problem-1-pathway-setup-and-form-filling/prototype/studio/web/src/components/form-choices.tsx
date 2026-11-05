@@ -66,10 +66,11 @@ function ChoiceGroup({ group: g, editionId, combinationId, onChanged }: { group:
   const initial = React.useCallback(() => Object.fromEntries(g.values.map((v) => [v.key, v.not_on_form ? NOT_ON_FORM : v.code ?? ""])), [g.revision]); // eslint-disable-line react-hooks/exhaustive-deps -- a save or someone else's change starts it again
   const [picked, setPicked] = React.useState<Record<string, string>>(initial);
   // Break m1: someone else's save never takes away what this person has picked: the save then says it is stale.
-  const touched = React.useRef(false);
-  React.useEffect(() => { if (!touched.current) setPicked(initial()); }, [initial]);
+  // Review R3-M1: and a save is against what these picks were based on, so that person is told, never overwritten.
+  const touched = React.useRef(false), basedOn = React.useRef(g.revision);
+  React.useEffect(() => { if (!touched.current) { setPicked(initial()); basedOn.current = g.revision; } }, [initial]); // eslint-disable-line react-hooks/exhaustive-deps -- initial follows g.revision
   const [busy, setBusy] = React.useState(false), [refused, setRefused] = React.useState<string | null>(null), [stale, setStale] = React.useState(false);
-  const lookAgain = () => { touched.current = false; setRefused(null); setStale(false); setPicked(initial()); refresh(); };
+  const lookAgain = () => { touched.current = false; basedOn.current = g.revision; setRefused(null); setStale(false); setPicked(initial()); refresh(); };
   const refresh = () => { for (const k of [["option-maps", editionId], ["combination", combinationId], ["combination-summary", combinationId], ["config", combinationId]]) void qc.invalidateQueries({ queryKey: k }); };
   // Break M3: a problem Submit lists can always be saved away, even with every row looking right.
   const edited = g.values.some((v) => picked[v.key] !== (v.not_on_form ? NOT_ON_FORM : v.code ?? "")), dirty = !g.saved || edited || g.problems.length > 0;
@@ -81,7 +82,7 @@ function ChoiceGroup({ group: g, editionId, combinationId, onChanged }: { group:
     const map = Object.fromEntries(Object.entries(picked).filter(([, c]) => c && c !== NOT_ON_FORM));
     const notOnForm = Object.entries(picked).filter(([, c]) => c === NOT_ON_FORM).map(([k]) => k);
     try {
-      await api(`/editions/${editionId}/option-maps/group`, { method: "PATCH", json: { dataPaths: g.form_fields.map((f) => f.data_path), map, notOnForm, baseRevision: g.revision } });
+      await api(`/editions/${editionId}/option-maps/group`, { method: "PATCH", json: { dataPaths: g.form_fields.map((f) => f.data_path), map, notOnForm, baseRevision: basedOn.current } });
       touched.current = false; toast.push({ tone: "ok", text: `Choices saved on ${plural(g.form_fields.length, "form field")}` }); refresh();
     } catch (e) { const err = e as ApiError; setRefused(err.message); if (err.status === 409) setStale(true); } finally { setBusy(false); }
   };
@@ -93,7 +94,7 @@ function ChoiceGroup({ group: g, editionId, combinationId, onChanged }: { group:
         {g.saved ? null : <p className="text-xs text-text-muted" data-not-saved>Nothing saved yet: the choices shown are suggested from the form's own words. Check them and save.</p>}
       </div>
       {refused ? <Notice tone="danger" title="Not saved" action={stale ? <Button size="sm" variant="secondary" onClick={lookAgain}>Look again</Button> : undefined}>{refused}</Notice> : null}
-      {g.saved && g.problems.length ? <ul className="space-y-0.5 text-sm text-text-danger [overflow-wrap:anywhere]" data-choice-problems>{g.problems.map((p) => <li key={p}>{p}. Saving these choices clears what no longer holds.</li>)}</ul> : null}
+      {g.saved && g.problems.length ? <ul className="space-y-0.5 text-sm text-text-danger [overflow-wrap:anywhere]" data-choice-problems>{g.problems.map((p) => <li key={p}>{p}.</li>)}</ul> : null}
       <Table dense head={["Answer on the list", "This form prints"]}>
         {g.values.map((v) => (
           <tr key={v.key} data-choice-value={v.key}>

@@ -66,8 +66,37 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const wide = await p.evaluate(() => { const d = document.querySelector("[data-choices-dialog]"); return !!d && d.scrollWidth <= d.clientWidth + 1; });
   step("B81: at 1024 px the dialog does not scroll sideways", wide);
   await p.setViewportSize({ width: 1440, height: 900 });
-  await group.locator("[data-choice-fields] summary").click();
-  step("B81 (review M5): the group lists each form field, told apart in the form's words", (await group.locator("[data-choice-fields] li").count()) === Number(/Save (\d+) form field/.exec(await group.locator("[data-save-choices]").innerText())?.[1]) , await group.locator("[data-choice-fields]").innerText());
+  // Review R3-M1, R3-M3, break M3: someone else's save under an unsaved pick; a problem that can always be saved away.
+  const second = dlg.locator("[data-choice-group]").nth(1);
+  if (await second.count()) {
+    const view = async () => (await api(`/editions/${sql("select id from form_edition where edition_label like 'IMM 5707 (%' limit 1")}/option-maps`)).body;
+    const edId = (await view()).edition_id, g0 = (await view()).groups.find((g) => g.values.some((v) => v.key === "sample_no_choice" && v.not_on_form));
+    await row("sample_no_choice").getByRole("combobox").selectOption("");
+    const other = await api(`/editions/${edId}/option-maps/group`, { method: "PATCH", data: { dataPaths: g0.form_fields.map((f) => f.data_path), map: Object.fromEntries(g0.values.filter((v) => v.code).map((v) => [v.key, v.code])), notOnForm: ["sample_no_choice"], baseRevision: g0.revision } });
+    step("setup: someone else saves the same choices", other.status < 300, JSON.stringify(other.body).slice(0, 200));
+    await second.locator("[data-save-choices]").click(); await second.locator("[data-not-saved]").waitFor({ state: "detached", timeout: 20000 });
+    step("B81 (break m1): someone else's save leaves this person's unsaved pick in place", (await row("sample_no_choice").getByRole("combobox").inputValue()) === "");
+    await group.locator("[data-save-choices]").click();
+    const notice = group.getByText(/changed these choices since you opened them/);
+    step("B81 fail (review R3-M1): the save after that is told, never overwrites", await notice.waitFor({ timeout: 20000 }).then(() => true).catch(() => false));
+    await group.getByRole("button", { name: "Look again" }).click();
+    await notice.waitFor({ state: "detached", timeout: 20000 });
+    step("B81 (break m2): Look again clears the notice and shows what is saved", (await row("sample_no_choice").getByRole("combobox").inputValue()) === "__not_on_form");
+    // A list value gone under a mark: named on the group, and Save clears it with every row looking right.
+    const paths0 = g0.form_fields.map((f) => `'${f.data_path}'`).join(",");
+    sql(`update form_field_map set option_map = jsonb_set(option_map, '{notOnForm}', option_map->'notOnForm' || '["gone_value"]'::jsonb) where form_edition_id = '${edId}' and status = 'DRAFT' and data_path in (${paths0})`);
+    await p.reload(); await p.getByRole("button", { name: "Change IMM 5707" }).click(); await p.locator("[data-set-choices]").click();
+    const g2 = p.locator("[data-choices-dialog] [data-choice-group]").first(), probs = g2.locator("[data-choice-problems]");
+    const named = await probs.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    step("B81 (review R3-M3, break M3): a stale mark is named on the group and Save stays open", named && /gone_value/.test(await probs.innerText()) && !(await g2.locator("[data-save-choices]").isDisabled()), named ? await g2.innerText() : "no problems list");
+    await g2.locator("[data-save-choices]").click();
+    step("B81 (review R3-M3, break M3): saving clears it", await probs.waitFor({ state: "detached", timeout: 20000 }).then(() => true).catch(() => false));
+    await axe("the dialog after the problem", "[data-choices-dialog]");
+  } else step("the fixture has a second group for the stale-save steps", false);
+  const group3 = p.locator("[data-choices-dialog] [data-choice-group]").first();
+  await group3.locator("[data-choice-fields] summary").click();
+  step("B81 (review M5): the group lists each form field, told apart in the form's words", (await group3.locator("[data-choice-fields] li").count()) === Number(/Save (\d+) form field/.exec(await group3.locator("[data-save-choices]").innerText())?.[1]), await group3.locator("[data-choice-fields]").innerText());
+  await axe("the dialog with the form fields listed", "[data-choices-dialog]");
   await p.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
   step("B81 (review M4): after a save nothing is asked on closing", asked === 1 && (await p.locator("[data-choices-dialog]").count()) === 0, String(asked));
   await p.locator("[data-set-choices]").and(p.locator(":focus")).waitFor({ timeout: 5000 }).then(() => step("B81 (break m9): focus goes back to Set choices", true)).catch(() => step("B81 (break m9): focus goes back to Set choices", false));
