@@ -118,3 +118,41 @@ A real screen reader, an intended user's unaided walk (D17 and D20 stay with the
 Same method and limits as the af40bed8a section. Journey 10 (case officer opens a case on the Study permit) still **fails**, now in words: 409, "No questions yet for Student" (`check_b52_own_yes_no.ts`, run 41991481778). Journeys 1 and 2 held. The criteria table is unchanged.
 
 **Score: 6.5 / 10. Below the pass of 8 (no criterion at 0).** It reads 7 once M3 is fixed.
+
+---
+
+# Round 5: commit 3c2c72115
+
+**Method limits:** no walk by me. Judged from `walk/` and GitHub runs 41996774643, 41996767037, 41996762812. Shards 1, 2 and 5 were cancelled. No break-it pass.
+
+| # | Journey | Result |
+|---|---|---|
+| 1 | Author: load the checkpoint, row 7 done | **Held** on GitHub |
+| 2 | Author: name a section what the library holds, by keyboard in the panel | **Held:** browser check 15/15 on GitHub; the panel is opened by a click |
+| 10 | Case officer: open a case on the Study permit | **Held:** `check_b78_sp_case_browser.cjs` 8/8, `check_b52_own_yes_no.ts` 52/52 on GitHub; image 7 |
+| 11 | Client: their own questionnaire on that case | **Held to the first page:** image 9, 0 of 20 parts, named sections shown. Not answered through |
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Names reach the questionnaire; a case opens on the Study permit by screens |
+| Next step obvious | ½ | 7 named sections show 0 questions and no step |
+| Plain words | ½ | The join's words are right; a raw key in one toast, a fragment name, a study heading for a Worker, a visit heading for a Student |
+| Feedback and state | ½ | A join is told; "waiting" stays on approved items (pre-existing) |
+| Correct data | 1 | Preview and the case ask the Student one list on GitHub |
+| Error recovery | 1 | No entry stays waiting; Undo of a join tested |
+| Accessibility and screen sizes | ½ | Keyboard inside the panel; 200 % on Sections only |
+| Speed | ½ | Not measured on these pages |
+| Visual quality | 1 | Same components in every image |
+| Trust and sources | ½ | Source on each decision; the row still says "No source recorded" and "AI-proposed" |
+
+**Score: 7 / 10. Below the pass of 8 (no criterion at 0).** Next most valuable: say why a named section holds no question, then the row's source and origin words, then a whole keyboard path and a speed reading.
+
+**Could not test:** a real screen reader, an intended user's unaided walk (D17, D20), and a client answering through to the end.
+
+---
+
+# Round 5, finished: commit 529806b38
+
+Same method, limits and criteria table as the 3c2c72115 section. Its one new line does not change what a person sees. The case journeys' evidence is from 3c2c72115: shards 1, 3, 4, 5 and 6 were cancelled at this commit.
+
+**Score: 7 / 10. Below the pass of 8 (no criterion at 0).**

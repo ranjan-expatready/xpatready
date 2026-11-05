@@ -294,3 +294,88 @@ None.
 **6.5/10 at 77af3c360, re-judged from images and CI, not walked by me;** below the bar of 8, no criterion at 0. Unchanged from af40bed8a: task completed stays ½ because of M3. Still unproved: the Study permit in a browser, a client's own questionnaire screen, the whole path by keyboard, and speed.
 
 **Verdict: Block** (changes needed). Merge main (M4), measure and fix M3, and get all shards to finish with `check_b52_own_yes_no.ts` and `check_qa144_sp_release.ts` both read as passing. Reviewed: 77af3c360. Any later push needs a new look.
+
+---
+
+# Round 5: 3c2c72115 (diff 77af3c360..3c2c72115; B78's part read against the merge base eba213457)
+
+**Commit reviewed: 3c2c72115.** **Method:** code read, the walk's images, GitHub runs 41996774643 (CI), 41996767037 and 41996762812 (nightly) with their logs. No server, no other copy's database. **Verdict: Block** (changes needed). The product fix holds on GitHub; the block is two tests the rule change breaks, one measured and one by reading. Both look like one-line fixes. This goes to the tech lead under the ruling.
+
+## Blockers
+None.
+
+## Majors
+- **M3: fixed, on GitHub.** `check_b52_own_yes_no.ts` 52/52 at this commit. `check_b78_sp_case_browser.cjs` 8/8: a case officer opens the Student's case through the screens, and the client's questionnaire loads.
+- **M4: fixed.** Main is merged; `git merge-tree` against origin/main at 91a62168e, 2 commits ahead, reports no conflict.
+- **M5 (new): CI is red on `check_c1112_modes.ts`.** Run 41996774643, shard 6: `TypeError: Cannot read properties of undefined (reading 'participants')`. `personQuestions` now always calls `previewRender`, which reads `s.combination.participants` (`engine/coverage.ts`), and that suite's snapshots (`:68`, `:70`) have no `combination`. Real snapshots carry it, so this is the test's data meeting the new call, not a product fault. Fix: `s.combination?.participants` in `previewRender`, which changes no test. Shards 1, 2 and 5 were cancelled by this failure.
+- **M6 (new, by reading; its shard was cancelled): `check_w1_programs_s2.cjs:86` will fail.** Its setup is the one `check_w1_s1s2_fix.cjs` had: IMM 1295 on Spouse of a student, released, and a line that needs `ssRow?.status === "NOT_READY"`. Under the new rule that row is Live, which is why `check_w1_s1s2_fix.cjs` needed its SQL line. Fix: the same setup line.
+
+## The five conditions
+1. **One calculation: met, with a difference to say.** `personQuestions` reads `previewRender(s).r.questions`, with no second list. The calculation is one (`render`), but the inputs are not. BR-8 uses the largest household with no answers, Preview a chosen Sample family, and a case its real people and answers. So Preview and a case can differ by family and answers. On the checkpoint they do not: the browser check requires none only on Preview and none only on the case, and passes on GitHub; your 90 and 90 are from the Mac. The check compares Preview with the case; it does not compare either with BR-8's own read.
+2. **A person with no questions is refused: met for a row where nobody has any, not for one role.** The three lines in `check_screen01_rules.ts` are real pass and fail lines; they have no GitHub result at this commit (Mac 70/70). See "any person" below.
+3. **Suites keep their assertions: met as worded, and incomplete.** `check_screen01_api.ts` and `check_w1_s1s2_fix.cjs` change only setups, and the one moved line keeps its words; I compared the diff.
+   - **Plainly:** the setups reach Not ready by rewriting a release's `snapshot` in SQL, and in `check_screen01_api.ts` also by changing an audit line's time so the catalogue reads it again. A person cannot make that state through a screen. It proves the Not ready words and refusals, not that a real release gets there.
+   - **Other suites:** `check_w1_programs_s2.cjs` was missed (M6). `check_screen01_browser.cjs:86` and `:100` and `check_w1_visual_system.cjs` still call this row Not ready, while it is now Live. They pass because they never read the status, so those titles are false (m15).
+   - `check_screen01_api.ts` runs on no PR; your 135/135 is the Mac's and I could not read it. The next scheduled nightly is its first GitHub result.
+4. **A case opens by screens after main is merged: met.** GitHub 8/8, shard 4, walk images 7 and 9.
+5. **Guard dropped, QA-144 review M2 holds: met by reading; no GitHub result at this commit.** `form-part-placements.ts` differs from main only in the `edited` lines, so `keepChosenEveryones` is main's. The new line is a true test: `why` reads "a section this row selects" only when no form asked first (`render.ts`). It covers the Student only. `check_qa144_sp_release.ts` was in a cancelled shard. m12, m13 and m14 closed with the guard, apart from their general lesson.
+
+## Your other questions
+- **Import cycle: no break.** `render` uses `pdfMapInUse` (a function declaration) only inside functions, and neither `coverage` nor `programs` calls into the cycle at load. `programs`-first entry reached run time on GitHub (`check_qa180_one_rule.ts` 27/27; `check_c1112_modes.ts` loaded, then hit M5). The web does not import these files.
+- **Catalogue cost: no measured harm, one new cost.** `previewRender` caches per snapshot object, and `validate` already renders mapped snapshots, so those cost nothing more. A row with nothing mapped used to skip the render (`anyMapped`, STANDARDS §9) and now does one per rebuild. `check_screen01_browser.cjs` reads cold 1010 ms, first view 135 ms (217 ms at 77af3c360). `check_catalogue_scale.cjs` has no result at this commit, so scale is unproved. m16.
+- **Person's questions only behind a condition: a false refusal, in a narrow case.** With no answers, a `SHOW` condition reads hidden. So a role whose every person question is conditional is refused "No questions yet", though a case could ask them. The old rule let a chosen one through. It errs towards refusing, and no row on today's checkpoint is shown doing it. m17.
+- **"Any person" against BR-8's words: yes, a gap, and this change widens it.** BR-8 says "every person role has questions"; the code tests one list for all roles (`engine/programs.ts:75`). Before, a chosen person question went to every applicant, so the words mostly held. Now a row with Principal and Spouse, whose forms read only the Principal, is Ready with the Spouse asked nothing. By reading; no row today. `r.questions` has each person's `about`, so it can now be asked per role, though that may turn real rows Not ready and needs measuring. For the tech lead to rule on; I would not hold this PR for it alone. m18.
+- **Stale images: replaced.** `walk/7-study-permit-open-a-case` and `walk/9-study-permit-client-questionnaire` are from the new check; the old two are gone. Image 9 still shows "Details of visit to Canada", the same follow-up as (b).
+
+## New minors
+- **m15.** False "Not ready" titles and comments, as in condition 3.
+- **m16.** A row with nothing placed could skip the render.
+- **m17.** A conditional-only role gets "No questions yet".
+- **m18.** BR-8 per role, for a ruling.
+
+Follow-ups (a) and (b) stand, for the tech lead. m10 and m11 stay fixed. The keyboard step is still part: the panel opens by a click.
+
+## Other CI
+- **Passing at this commit:** types, shard 3 (`check_s4_startable.ts` 10/10), shard 4 (`check_w1_s1s2_fix.cjs` 30/30, `check_setup_card_browser.cjs` 44, `check_qa144_place_step.ts` 23/23), and in shard 6 `check_c10_1_configured.ts` 38/38, `check_screen01_browser.cjs` 116, `check_forms_qa206_name_browser.cjs` 15/15, `check_w1_visual_system.cjs` 24.
+- **Nightly:** 41996767037 passes (C4.1, C3.4, C4.7). 41996762812: C4.8, C4.1, C9.1, C4.7 pass; C10.1 is 21/24 on the same three lines, non-done `2 out, 9 waiting, 10 partial, 12 partial`, so row 7 is done.
+
+## Could not read
+- Shards 1, 2, 5 (cancelled): the suites with no result include `check_qa144_sp_release.ts`, `check_qa144_vv_release.ts`, `check_qa144_lmia_release.ts`, `check_forms_qa206_section_headings.ts`, `check_b78_section_names.ts`, `check_c10_1_browser.cjs`, `check_w1_programs_s2.cjs`, `check_screen01_rules.ts`, `check_catalogue_scale.cjs`. They may hold more failures from the rule change.
+- `check_screen01_api.ts`: quarantined on PR CI.
+- `evidence/screen01/api-checks.json` is changed and uncommitted in this copy; not reviewed.
+
+## Journey
+**7/10 at 3c2c72115, re-judged from images and CI, not walked by me;** below the bar of 8, no criterion at 0. Task completed rises to 1: a case opens on the Study permit by screens and the client's screen loads. The rest is unchanged. Still unproved: the whole path by keyboard, and speed on these pages. Report: `journey-test-reviewer-2026-11-05.md`, Round 5.
+
+**Verdict: Block** (changes needed). Fix M5 and M6, then let all shards finish and read the suites listed above. Reviewed: 3c2c72115. Any later push needs a new look.
+
+---
+
+# Round 5, finished: 529806b38 (diff 77af3c360..529806b38; new since 3c2c72115: one line in `engine/programs.ts`)
+
+**Commit reviewed: 529806b38** (`git rev-parse HEAD`). **Method:** as Round 5, plus GitHub run 42000262713. Everything in the 3c2c72115 section above applies unless changed here. **Verdict: Block** (changes needed): M6 is now measured.
+
+## Majors
+- **M5: fixed, by reading.** `if (!s.placements.length) return []` is right: `render` asks only a placed fact (`pushQ`, `if (!p) return`), so the answer is the same and the render is not needed. `check_c1112_modes.ts`'s two snapshots have empty placements. Its shard was cancelled, so it has no GitHub result at this commit. A snapshot with placements and no `combination` would still throw; real snapshots carry it.
+- **M6: open, now measured.** Run 42000262713, shard 2, `check_w1_programs_s2.cjs`: `FAIL setup: … Spouse of a student is released but Not ready — 84 proposals; READY`. Also `FAIL C11.10 (fail case): the counts are per person, not one number for everyone — user-A 1,0,0 · user-B 1,0,0 · user-C 1,0,0`. By reading, the second follows from the first: the Not ready row is what made the counts differ by person. Fix: the same setup line as `check_w1_s1s2_fix.cjs`, keeping the assertions word for word, under the same ruling. Shards 1, 3, 4, 5 and 6 were cancelled.
+
+## The conditions at this commit
+Unchanged from the 3c2c72115 section, with this correction to condition 3: `check_w1_programs_s2.cjs` is a third suite that needs its setup changed, so "only two suites" did not hold. The third fail line in `check_screen01_rules.ts` still goes through the render; the "nothing placed" line now stops at the new line, and it still proves the refusal.
+
+## Minors
+**m16: fixed** by the new line: a row with nothing placed skips the render. m15, m17, m18 stay open. Follow-ups (a) and (b) stand.
+
+## Merge and CI
+- **Merge:** clean with origin/main at 64b67d056 (`git merge-tree`, no conflict).
+- **Passing at this commit:** types; `check_qa144_vv_release.ts` 34/34 in shard 2.
+- **From 3c2c72115, one engine line earlier, by run conclusion and by log where I noted counts:** see that section. Your pack counts I read only as job conclusions, apart from C10.1 21/24.
+
+## Could not read
+- Shards 1, 3, 4, 5, 6 at this commit: cancelled, no results. No nightly on this commit was listed when I looked.
+- **Since the rule changed, no finished GitHub result yet for:** `check_qa144_sp_release.ts`, `check_qa144_lmia_release.ts`, `check_forms_qa206_section_headings.ts`, `check_b78_section_names.ts`, `check_c10_1_browser.cjs`, `check_screen01_rules.ts`, `check_catalogue_scale.cjs`. Each red so far has cancelled the others, so more may be waiting.
+- `check_screen01_api.ts`: quarantined on PR CI.
+
+## Journey
+**7/10 at 529806b38,** unchanged from 3c2c72115, re-judged from images and CI, not walked by me; below the bar of 8, no criterion at 0. Its product evidence comes from 3c2c72115, one line earlier: `check_b78_sp_case_browser.cjs` and `check_b52_own_yes_no.ts` have no result at this commit.
+
+**Verdict: Block** (changes needed). Fix M6, then get every shard to finish and read the suites listed above. Reviewed: 529806b38. Any later push needs a new look.
