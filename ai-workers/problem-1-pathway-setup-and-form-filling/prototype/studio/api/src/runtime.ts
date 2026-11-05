@@ -15,7 +15,7 @@ import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from 
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
-import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
+import { openingTeam, representativeAnswers, USES_REPRESENTATIVE, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { Programs } from "./programs.ts";
 
@@ -255,9 +255,12 @@ export class Runtime {
     const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
     const groups: GroupAnswer[] = groupRows.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? gFirsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, group: x.groupKey, noneApply: x.noneApply, status: x.status as GroupAnswer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     // C7.7 (G25): IMM 5476's representative block reads the representative of record from the firm record (never asked).
-    const f = firmByKey(c.firmKey);
-    if (f) a.push(...representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] }))));
-    return { answers: a, rows: r, groups };
+    // C6.11: so do its licence part and firm name, and "Uses a representative" for the application (the case has a
+    // representative of record), which replaces any answer typed before.
+    const f = firmByKey(c.firmKey), caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
+    const fromFirm = f ? representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] })), caseSubject) : [];
+    const firmGives = new Set(fromFirm.map((x) => `${x.subjectId}|${x.field}`));
+    return { answers: [...a.filter((x) => !firmGives.has(`${x.subjectId}|${x.field}`)), ...fromFirm], rows: r, groups };
   }
 
   async view(actor: Actor, caseId: string, mode: Mode) {
@@ -295,6 +298,8 @@ export class Runtime {
     const s = this.snapshotOf(c), officer = isOfficer(actor);
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
+    // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed.
+    if (fieldKey === USES_REPRESENTATIVE && who!.role === "case" && firmByKey(c.firmKey)) fail("Uses a representative comes from the case team: this case has a representative of record. Change the team, not the answer.", HttpStatus.UNPROCESSABLE_ENTITY);
     const field = (s.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === fieldKey);
     const place = (s.placements as { fact: string; repeats: string; section_id: string; collected_from: string }[]).find((p) => p.fact === fieldKey);
     if (!field || !place) fail(`The release this case works from does not ask for ${fieldKey}.`, HttpStatus.NOT_FOUND);
