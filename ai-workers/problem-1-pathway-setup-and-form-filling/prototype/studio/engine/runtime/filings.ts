@@ -27,7 +27,13 @@ export const FEE_BASES = ["per_application", "per_person_by_role", "per_position
 export type FeeBasis = (typeof FEE_BASES)[number];
 type TableLine = { key: string; label: string; status: string; basis: FeeBasis; per_person_cad: number; family_max?: { cad: number; from_people: number } | null; roles?: string[];
   exempt?: { under_age: number; over_age: number; source: FeeSource } | null; source: FeeSource };
-type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string };
+/** C6.12-22 (P-171 (4); M3 design rows.md C6.12 "Done when"; board frame 7b): a combination whose table modes co-file a
+ *  role (the sponsor) says where that filing's fees are charged, in words with their source. "principal": the table's
+ *  lines are charged on the sponsored person's application (spouse sponsorship's CAD 1,260 bundles the sponsorship,
+ *  processing and right of permanent residence fees), and the co-filed sponsorship filing carries none, so nothing is
+ *  charged twice. Without it, a co-filing combination is not priced from the table (break on #500 M2). */
+type CoFiledFees = { on: "principal"; why: string };
+type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string; co_filed_fees?: CoFiledFees };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
 export const FEE_TABLE = FEES as unknown as FeeTable;
 // A line removed from the table leaves these undefined; the module never throws on load (break r1 B: a deleted line
@@ -48,6 +54,10 @@ export const BIOMETRICS_EXEMPT_SOURCE = line("biometrics")?.exempt?.source as Fe
  *  (a typo such as "spouse") would charge nobody in silence. */
 const ROLE_LIB = (ROLES as { roles: { key: string; takesPartInCase: boolean; mayBeApplicant: boolean }[] }).roles;
 const APPLICANT_ROLES = new Set(ROLE_LIB.filter((r) => r.mayBeApplicant).map((r) => r.key));
+/** The role that may co-file, as the studio's save rule BR-4 says it (engine/people.ts: "only the sponsor files the
+ *  sponsorship"), and only while the role library has it as taking part without applying. A table may name it co-filing
+ *  only with its fees placed (co_filed_fees). */
+const CO_FILING_ROLES = new Set(ROLE_LIB.filter((r) => r.key === "sponsor" && r.takesPartInCase && !r.mayBeApplicant).map((r) => r.key));
 export function soundLine(l: TableLine | undefined): l is TableLine {
   if (!l || typeof l !== "object" || typeof l.key !== "string" || !FEE_BASES.includes(l.basis) || l.basis === "per_position") return false;
   // Break on #500 m1: a line without its words or its source would throw while it is priced; refused instead.
@@ -72,6 +82,8 @@ export type AgeExempt = { underAge: number; overAge: number; source: FeeSource }
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
 export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
 type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; groupWhy?: string;
+  /** C6.12-22: where a co-filed filing's fees are charged (the table says so in words), else none is priced. */
+  coFiledFees?: { why: string };
   /** The table these rules were priced from (outside check on #455: the basis names that table, never the shipped one). */
   table?: { as_of: string; read: string } };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
@@ -98,7 +110,12 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   // on a role that may apply. M2: the table cannot price a sponsorship (no basis reaches the co-filing sponsor, so a
   // sponsorship line would land on the sponsored person), so a combination whose table modes co-file is not derived from
   // the table; its filings still come from its release, with "Fees not worked out yet".
-  if (modes.some(([role, m]) => m === "co_files" || !APPLICANT_ROLES.has(role))) return undefined;
+  // C6.12-22: a co-filing role is priced only when the table says where its fees go (co_filed_fees, in words), and only
+  // on a role that takes part in a case without applying (the sponsor); an applicant role never co-files (BR-4).
+  const coFiled = c.co_filed_fees;
+  const coFiledSound = !!coFiled && typeof coFiled === "object" && coFiled.on === "principal" && typeof coFiled.why === "string" && !!coFiled.why.trim();
+  if (coFiled !== undefined && !coFiledSound) return undefined;
+  if (modes.some(([role, m]) => (m === "co_files" ? !(coFiledSound && CO_FILING_ROLES.has(role)) : !APPLICANT_ROLES.has(role)))) return undefined;
   // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
   // (per_position), a family maximum without its cap, or a per-role line naming no role.
   const fees = (lines as TableLine[]).map((l): FeeRule => ({
@@ -106,12 +123,19 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
     familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
     source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
-  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, table: { as_of: table.as_of, read: table.read } };
+  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, ...(coFiledSound ? { coFiledFees: { why: coFiled!.why } } : {}), table: { as_of: table.as_of, read: table.read } };
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
 /** C11.12 review M2: the built-in filing mode a case falls back to for a role its release gives none (Sample). */
-export const defaultModeOf = (combinationKey: string, role: string) => RULES.get(combinationKey)?.modes.get(role);
+export const defaultModeOf = (combinationKey: string, role: string) => tableDefault(RULES.get(combinationKey), role);
+/** A role's built-in mode from the table, when its release gives none. Never co_files (C6.12-22): a sponsorship is filed
+ *  only when the release says so (the author's co-filing line, BR-4); the table's co_files says only how it is priced,
+ *  so the studio's preview and a case never gain a sponsorship filing nobody set. */
+function tableDefault(rules: Rules | undefined, role: string): LineMode | undefined {
+  const m = rules?.modes.get(role);
+  return m === "co_files" ? undefined : m;
+}
 /** C11.12: whether a combination's fees are worked out at all (else its words say "not worked out yet"). */
 export const hasFeeRules = (combinationKey: string) => !!RULES.get(combinationKey)?.fees.length;
 /** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
@@ -187,7 +211,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const label = rules?.label ?? opts.label ?? combinationKey;
   const fees0 = rules?.fees ?? [];
   // BR-2: the principal always files their own application, whatever a table or release says.
-  const modeOf = (role: string): LineMode | null | undefined => (role === "principal" ? "files_own" : opts.modes?.get(role) ?? rules?.modes.get(role));
+  const modeOf = (role: string): LineMode | null | undefined => (role === "principal" ? "files_own" : opts.modes?.get(role) ?? tableDefault(rules, role));
   const persons = people.filter((p) => p.role !== "case");
   const notFiling: NotFiling[] = [];
   const planned: PlanPerson[] = [];
@@ -208,8 +232,11 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // Review on #500 M1 (break M2 through the release): with a co-filed sponsorship on the case, no table line is charged.
   // No basis reaches the co-filing sponsor, and the table cannot say which of its lines are the sponsorship's, so a
   // sponsorship fee would land on the sponsored person. The filings stand; the fees are "not worked out yet" (BR-10).
+  // C6.12-22: priced when the table places the co-filed filing's fees (on the sponsored person's application) and that
+  // application is on the case; a sponsorship with no principal's application to be charged on is never priced.
   const coFiling = filings.some((f) => f.mode === "co_filed");
-  const priced = coFiling ? [] : fees0;
+  const coPriced = coFiling && !!rules?.coFiledFees && !!principal;
+  const priced = coFiling && !coPriced ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
@@ -260,7 +287,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const body = { filings, groups, fees, not_filing: notFiling };
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : coFiling && fees0.length ? `Fees not worked out yet for ${label} with a sponsorship: who pays the sponsorship's fees is not built, so no fee line is charged; nothing is guessed.` : notWorkedOut(label),
-    basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules!, !!opts.ages)} Paying is not built.`
+    basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${coPriced ? `${rules!.coFiledFees!.why} ` : ""}${ageWords(rules!, !!opts.ages)} Paying is not built.`
       : `Filings from the release's filing modes (Sample until the immigration expert confirms). ${notWorkedOut(label)} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };
