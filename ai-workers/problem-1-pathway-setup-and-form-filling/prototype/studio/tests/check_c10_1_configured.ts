@@ -95,12 +95,8 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // its release right after the load: no "Form changed" line nobody made.
   const releasedIds = sql("select distinct combination_id from config_release").split("\n").filter(Boolean);
   const drifted: string[] = [];
-  // #1009 (Lead 10's ruling (c')): while release 2 waits for row B81, the Visitor visa's draft keeps release 2's changes,
-  // and row 9 says so; those are not changes nobody made. Every other release's draft still matches, and row 9 must say it.
-  const vvKept = sql(`select id from combination where combination_key = 'vv.single'`);
-  const keptSaid = /draft keeps the release-2 changes/.test(r("9").why ?? "");
-  for (const id of releasedIds) if (!(id === vvKept && keptSaid) && (await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
-  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load (the Visitor visa's only while row 9 does not say it keeps release 2's changes)", drifted.length === 0, { released: releasedIds.length, drifted, keptSaid }); // none released (a blocked checkpoint) has nothing to drift
+  for (const id of releasedIds) if ((await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
+  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load", drifted.length === 0, { released: releasedIds.length, drifted }); // none released (a blocked checkpoint) has nothing to drift
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
@@ -119,9 +115,11 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // Slice 2 moves this example to Express Entry, a combination no slice sets up yet.
   ok("C10.1 row 10 fail: a combination the validator refuses stays a draft and its row gives the validator's words", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Express Entry stream'`) === 0 && /Express Entry stream: Fix \d+ problems? before submitting/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   // Rows 9, 12: wait for release 2 of the Visitor visa and for the paid IMM 5257 run.
-  // #1009 (Lead 9's and Lead 10's rulings): row 9 waits for B81 with Submit's own count, in plain words; row 12's copies are
-  // generated and only a person's Validate in Adobe Reader is left (P-46, P-171), so a simulated copy is never made.
-  ok("C10.1 row 9: release 2's channels are set on the Forms tab; Submit's refusal is counted in plain words, the draft's state said, and it waits for row B81", r("9").status === "waiting" && /Submit refused it with \d+ problems/.test(r("9").why ?? "") && /not submitted/.test(r("9").why ?? "") && /row B81/.test(r("9").why ?? "") && !/\[0\]|person\./.test(r("9").why ?? ""), r("9").why?.slice(0, 200));
+  // #1009 (Lead 9's and Lead 10's rulings): row 9 waits for B81 and leaves the draft as it is (the drift step above), with
+  // the count Submit would refuse, in plain words; row 12's copies are generated and only a person's Validate in Adobe
+  // Reader is left (P-46, P-171), so a simulated copy is never made.
+  const vvKey = "vv.single", family = sql(`select distinct lineage_key from combination_form f join combination c on c.id = f.combination_id where c.combination_key = '${vvKey}' and f.status <> 'RETIRED' and f.lineage_key in ('IMM 5645', 'IMM 5707')`);
+  ok("C10.1 row 9: release 2 is not set on Visitor visa's draft (only release 1's family form is on it, IMM 5257 is not Online), said in plain words with what Submit would refuse; it waits for row B81", r("9").status === "waiting" && family === "IMM 5707" && n(`select count(*) from combination_form f join combination c on c.id = f.combination_id where c.combination_key = '${vvKey}' and f.channel = 'ONLINE'`) === 0 && /left as released/.test(r("9").why ?? "") && /Submit would refuse it with \d+ problems/.test(r("9").why ?? "") && /row B81/.test(r("9").why ?? "") && !/\[0\]|person\./.test(r("9").why ?? ""), { why: r("9").why?.slice(0, 200), family });
   ok("C10.1 row 12: IMM 5257 generated for each applicant on release 1; partial, the read-back waits for a person's Validate (the stale paid-run reason is gone)", r("12").status === "partial" && /generated for 4 of 4 applicants/.test(r("12").shows) && /Validate each copy in Adobe Reader/.test(r("12").why ?? "") && !/paid run/.test(r("12").why ?? ""), { shows: r("12").shows, why: r("12").why?.slice(0, 120) });
   // Row 11 (QA-231, P-67; #1009): one Sample family case of four on the Visitor visa's release 1, opened by the case
   // officer's own steps and answered from the one Sample record, with a copy asked for of each form it files for each person.
