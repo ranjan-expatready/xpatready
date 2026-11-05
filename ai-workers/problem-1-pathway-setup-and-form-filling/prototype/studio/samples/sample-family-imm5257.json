@@ -1,0 +1,120 @@
+{
+ "label": "Sample: made-up answers for the one Sample family's IMM 5257 copies (B99, C10.1 row 12b). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "source": "The household shape of evidence lane E1's checked IMM 5257 fill (prototype/evidence-lane/E1/imm5257/values.complete.json, Adobe Validate passed 23 Oct 2026), written as this family's answers on the release's questions.",
+ "case": {
+  "case.visa_type_requested": "VisitorVisa",
+  "case.visit_purpose": "Family Visit",
+  "case.intended_stay_from": "2027-06-01",
+  "case.intended_stay_to": "2027-08-31",
+  "case.funds_available_cad": 5000,
+  "case.visit_contact_name": "SAMPLE RELATIVE",
+  "case.visit_contact_relationship": "BROTHER",
+  "case.visit_contact_address_in_canada": {
+   "street_number": "100",
+   "street_name": "SAMPLE STREET",
+   "city": "TORONTO",
+   "province": "ON",
+   "postal_code": "M5V 0A1",
+   "country": "Canada"
+  }
+ },
+ "everyone": {
+  "person.has_national_id": false,
+  "person.us_permanent_resident": false,
+  "person.has_used_other_name": false,
+  "person.citizenship": "India",
+  "person.birth_country": "India",
+  "person.birth_city": "NEW DELHI",
+  "person.current_residence_country": "India",
+  "person.current_residence_status": "01",
+  "person.applying_from_country": "India",
+  "person.applying_from_status": "01",
+  "relationship.previously_married_or_common_law": false,
+  "person.passport_country_of_issue": "IND",
+  "person.passport_issue_date": "2019-05-10",
+  "person.passport_expiry_date": "2029-05-09",
+  "person.native_language": "Hindi",
+  "person.official_language_ability": "English",
+  "person.preferred_official_language": "English",
+  "person.language_test_taken": false,
+  "person.mailing_address": {
+   "street_number": "12",
+   "street_name": "EXAMPLE ROAD",
+   "city": "NEW DELHI",
+   "postal_code": "110001",
+   "country": "India"
+  },
+  "person.residential_address": {
+   "street_number": "12",
+   "street_name": "EXAMPLE ROAD",
+   "city": "NEW DELHI",
+   "postal_code": "110001",
+   "country": "India"
+  },
+  "person.telephone_type": "Cellular",
+  "person.telephone_number": {
+   "country_code": "91",
+   "number": "9800000001"
+  },
+  "person.health_condition_requiring_services": false,
+  "person.previously_applied_to_canada": false,
+  "person.overstayed_or_unauthorized_in_canada": false,
+  "person.refused_visa_entry_or_removed": false,
+  "person.criminal_history": false,
+  "person.military_service": false,
+  "person.violent_organization_association": false
+ },
+ "people": {
+  "principal": {
+   "person.sex": "Male",
+   "person.marital_status": "married",
+   "person.passport_number": "Z7000001",
+   "person.email": "client.a@example.com",
+   "relationship.union_start_date": "2014-02-14",
+   "job": {
+    "person.occupation_title": "ACCOUNTANT",
+    "person.occupation_employer": "EXAMPLE TRADERS",
+    "person.occupation_from_date": "2018-07"
+   }
+  },
+  "spouse_or_partner": {
+   "person.sex": "Female",
+   "person.marital_status": "married",
+   "person.passport_number": "Z7000002",
+   "person.email": "partner@example.com",
+   "relationship.union_start_date": "2014-02-14",
+   "job": {
+    "person.occupation_title": "TEACHER",
+    "person.occupation_employer": "EXAMPLE SCHOOL",
+    "person.occupation_from_date": "2016-06"
+   }
+  },
+  "child-1": {
+   "person.sex": "Male",
+   "person.marital_status": "single",
+   "person.passport_number": "Z7000003",
+   "person.email": "client.a@example.com",
+   "job": {
+    "person.occupation_title": "STUDENT",
+    "person.occupation_employer": "EXAMPLE PRIMARY SCHOOL",
+    "person.occupation_from_date": "2022-04"
+   }
+  },
+  "child-2": {
+   "person.given_names": "SECOND CHILD",
+   "person.sex": "Female",
+   "person.marital_status": "single",
+   "person.passport_number": "Z7000004",
+   "person.email": "child.two@example.com",
+   "job": {
+    "person.occupation_title": "STUDENT",
+    "person.occupation_employer": "EXAMPLE COLLEGE",
+    "person.occupation_from_date": "2025-07"
+   }
+  }
+ },
+ "job_place": {
+  "person.occupation_city": "NEW DELHI",
+  "person.occupation_country": "India"
+ }
+}
