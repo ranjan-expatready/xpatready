@@ -84,8 +84,8 @@ try {
   await press(panel().getByRole("button", { name: "Change channel: IMM 5476 for Sample Client A" }));
   await dialog().waitFor();
   const online5476 = dialog().locator('[data-option="ONLINE"]');
-  ok("C11.6-6 (screen): IMM 5476's Online is greyed and says why, with IRCC's line \"Upload this form along with your online application\"",
-    await online5476.locator("input").isDisabled() && /IRCC does not accept it here/.test(await online5476.innerText()) && /Upload this form along with your online application/.test(await online5476.innerText()), await online5476.innerText());
+  ok("C11.6-6 (screen): IMM 5476's Online is greyed, \"Not accepted here\", and the dialog says once what IRCC accepts, with IRCC's line \"Upload this form along with your online application\"",
+    await online5476.locator("input").isDisabled() && /Not accepted here/.test(await online5476.innerText()) && /IRCC accepts IMM 5476 here only as PDF upload/.test(await dialog().locator("[data-accepts-record]").innerText()) && /Upload this form along with your online application/.test(await dialog().locator("[data-accepts-record]").innerText()), await dialog().locator("[data-accepts-record]").innerText());
   ok("a11y: focus starts on the chosen way (PDF upload), not on a greyed one", await p.evaluate(() => (document.activeElement as HTMLInputElement | null)?.value === "PDF_UPLOAD"));
   await state("imm5476-online-greyed", "[role=dialog]");
   await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
@@ -94,14 +94,14 @@ try {
   // 3. IMM 5257: Online greyed (C11.6-8a); Paper needs the reason (C11.6-8b), then saves for this person only (C11.6-9).
   await press(panel().getByRole("button", { name: "Change channel: IMM 5257 for Sample Client A" }));
   await dialog().waitFor();
-  ok("C11.6-8a (screen): IMM 5257's Online is greyed on the APR Portal, with the reason", await dialog().locator('[data-option="ONLINE"] input').isDisabled() && /IRCC does not accept it here: the Form library records PDF upload · Paper/.test(await dialog().locator('[data-option="ONLINE"]').innerText()));
+  ok("C11.6-8a (screen): IMM 5257's Online is greyed on the APR Portal, with the reason", await dialog().locator('[data-option="ONLINE"] input').isDisabled() && /Not accepted here/.test(await dialog().locator('[data-option="ONLINE"]').innerText()) && /IRCC accepts IMM 5257 here only as PDF upload · Paper/.test(await dialog().locator("[data-accepts-record]").innerText()));
   ok("pass: Paper is offered (accepted, Sample record FQ-2, FQ-3)", await choose("PAPER"));
   ok("pass: choosing Paper asks why on paper", await dialog().getByLabel("Why on paper").isVisible());
   await press(dialog().getByRole("button", { name: "Save" }));
   await dialog().getByRole("alert").filter({ hasText: /Give the reason for IMM 5257 on paper/ }).waitFor({ timeout: 10_000 });
   await p.waitForTimeout(150);
   ok("C11.6-8b (screen): Paper without a reason is refused on the reason field in the server's words, focus on it, nothing saved",
-    await p.evaluate(() => document.activeElement?.tagName === "TEXTAREA" && document.activeElement.getAttribute("aria-invalid") === "true") && sql(`select coalesce(channel::text, '') from filing_item where id='${item(P, "IMM 5257")?.id}'`) === "");
+    await p.evaluate(() => document.activeElement?.tagName === "INPUT" && document.activeElement.getAttribute("aria-invalid") === "true") && sql(`select coalesce(channel::text, '') from filing_item where id='${item(P, "IMM 5257")?.id}'`) === "");
   await state("paper-needs-a-reason", "[role=dialog]");
   await p.keyboard.type("Cannot apply online: accommodation (Sample)");
   await press(dialog().getByRole("button", { name: "Save" }));
@@ -134,6 +134,54 @@ try {
   await row(P, "IMM 5707").and(p.locator('[data-channel="PDF_UPLOAD"]')).waitFor({ timeout: 15_000 });
   ok("pass (screen): after Reload the change saves: Client A's IMM 5707 reads PDF upload, changed from Online", /Changed from Online \(the combination’s default\)/.test(await row(P, "IMM 5707").innerText()));
   await state("after-reload");
+
+  // 5. Below it, Prepare application follows the item's channel (review M2): Client A's IMM 5707 is now a PDF to file.
+  const forms = (await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body as { forms: { form: string; subject_id: string; channel: string; for_filing: boolean }[]; online: { form: string; people: string[] }[] };
+  const f5707 = forms.forms.find((x) => x.form === "IMM 5707" && x.subject_id === P);
+  ok("C11.6 (review M2, API): /forms gives Client A's IMM 5707 as PDF upload, for filing; the Online list no longer names Client A",
+    f5707?.channel === "PDF_UPLOAD" && f5707.for_filing === true && !(forms.online.find((x) => x.form === "IMM 5707")?.people ?? []).includes("Sample Client A"), { f5707, online: forms.online });
+  const k5707 = forms.forms.find((x) => x.form === "IMM 5707" && x.subject_id === K);
+  ok("pass (API): a child's forms are untouched by the change (no IMM 5707 for Child A1)", !k5707);
+  const formsPanel = p.locator("section[aria-labelledby=forms-h]");
+  const rowText = await formsPanel.locator("li").filter({ hasText: /IMM 5707 for Sample Client A/ }).first().innerText();
+  ok("C11.6 (review M2, screen): Prepare application no longer marks Client A's IMM 5707 \"Copy, not for filing\"", !/Copy, not for filing/.test(rowText) && !/filed Online/.test(rowText), rowText);
+
+  // 6. Back to the default (review M1): the row reads "The combination's default", with no "Changed from".
+  await press(panel().getByRole("button", { name: "Change channel: IMM 5707 for Sample Client A" }));
+  await dialog().waitFor();
+  ok("pass: Online is offered again", await choose("ONLINE"));
+  await press(dialog().getByRole("button", { name: "Save" }));
+  await dialog().waitFor({ state: "detached", timeout: 15_000 });
+  await row(P, "IMM 5707").and(p.locator('[data-channel="ONLINE"]')).waitFor({ timeout: 15_000 });
+  ok("C11.6 (review M1, screen): back on Online the row reads \"The combination's default.\" and no \"Changed from\"", /The combination’s default\./.test(await row(P, "IMM 5707").innerText()) && !/Changed from/.test(await row(P, "IMM 5707").innerText()) && !/\.\./.test(await row(P, "IMM 5707").innerText()), await row(P, "IMM 5707").innerText());
+
+  // 7. The dialog works from the latest read (break M2): someone moves Child A1's IMM 5257 to Paper while it is open.
+  await press(panel().getByRole("button", { name: "Change channel: IMM 5257 for Sample Child A1" }));
+  await dialog().waitFor(); await settle();
+  const n7 = (await prepare(c.id)).p!;
+  ok("setup: someone else moves Child A1's IMM 5257 to Paper meanwhile", (await call("PATCH", `/runtime/items/${item(K, "IMM 5257")?.id}/channel`, { channel: "PAPER", reason: "Parent cannot apply online (Sample)", version: n7.version }, officer)).status === 200);
+  ok("pass: Paper is chosen in the open dialog", await choose("PAPER"));
+  await dialog().getByLabel("Why on paper").fill("Another reason (Sample)");
+  await press(dialog().getByRole("button", { name: "Save" }));
+  await dialog().getByText("Changed since you read it").waitFor({ timeout: 10_000 });
+  await press(dialog().getByRole("button", { name: "Reload" }));
+  await dialog().locator('[data-option="PAPER"]').getByText("filed this way now").waitFor({ timeout: 10_000 });
+  ok("C11.6 (break M2, screen): after Reload the dialog shows Paper as filed now and Save waits for another choice",
+    await dialog().getByRole("button", { name: "Save" }).isDisabled() && /Choose another way to file/.test(await dialog().innerText()));
+  await dialog().locator('[data-option="PDF_UPLOAD"] input').focus(); await p.keyboard.press("Space");
+  await press(dialog().getByRole("button", { name: "Save" }));
+  await dialog().waitFor({ state: "detached", timeout: 15_000 });
+  await row(K, "IMM 5257").and(p.locator('[data-channel="PDF_UPLOAD"]')).waitFor({ timeout: 15_000 });
+  ok("C11.6 (break M1, data): moved off Paper, no Paper reason is left on the item", sql(`select channel::text || '|' || coalesce(channel_reason, '') from filing_item where id='${item(K, "IMM 5257")?.id}'`) === "PDF_UPLOAD|", sql(`select channel::text || '|' || coalesce(channel_reason, '') from filing_item where id='${item(K, "IMM 5257")?.id}'`));
+
+  // 8. A long reason with no spaces (break M3) wraps; a channel IRCC does not accept reads red (review m5).
+  const n8 = (await prepare(c.id)).p!;
+  ok("setup: the spouse's IMM 5257 on Paper with a 400-character reason without spaces", (await call("PATCH", `/runtime/items/${item(S, "IMM 5257")?.id}/channel`, { channel: "PAPER", reason: "x".repeat(400), version: n8.version }, officer)).status === 200);
+  sql(`update filing_item set channel='NOT_NEEDED' where id='${item(P, "IMM 5476")?.id}'`); // a library change after the case moved it (fixture)
+  await open();
+  ok("C11.6 (review m5, screen): a channel IRCC does not accept reads red with \"choose a way it accepts\"", (await row(P, "IMM 5476").locator("[data-not-accepted]").count()) === 1 && /choose a way it accepts/.test(await row(P, "IMM 5476").innerText()));
+  ok("C11.6 (break M3): 1440 px: a 400-character reason does not push the page sideways", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await state("long-reason-and-not-accepted");
   ok("no page errors", errs.length === 0, errs);
 } catch (e) {
   ok(`the walk ran to its end (stopped: ${(e as Error).message.split("\n")[0]})`, false);
