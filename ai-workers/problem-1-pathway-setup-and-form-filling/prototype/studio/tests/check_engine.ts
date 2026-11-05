@@ -3,6 +3,8 @@
 //   node --experimental-strip-types studio/tests/check_engine.ts   (or tsx)
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+// FLOW-FIX TEST ONLY (throwaway branch, never merged; a second draft push): red on a run's first attempt, so "Re-run failed jobs" re-runs one part.
+if (process.env.GITHUB_HEAD_REF?.endsWith("-flowtest2-code") && process.env.GITHUB_RUN_ATTEMPT === "1") { console.log("FAIL flow-fix test: red on attempt 1 only"); process.exit(1); }
 import { normalize, partOf } from "../engine/normalize.ts";
 import { aboutOf, kkey, peopleFor, render, type Known } from "../engine/render.ts";
 import { effective, type Snapshot } from "../engine/snapshot.ts";
