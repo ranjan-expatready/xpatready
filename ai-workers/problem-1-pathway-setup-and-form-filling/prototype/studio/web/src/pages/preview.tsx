@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronDown, ChevronRight, Download, FileCheck2, RotateCcw } from "lucide-react";
-import { api, useAction, useApi } from "@/lib/api";
+import { api, getActor, useAction, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Select, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -144,8 +144,19 @@ function Forms({ v, id, mode, profile }: { v: any; id: string; mode: string; pro
 function FillResult({ r, onClose }: { r: any; onClose: () => void }) {
   const rep = r.report;
   const ok = rep.intact;
+  const toast = useToast();
+  // QA-270 (file half): the filled PDF is a configuration read, so the download sends the person, as a case's copy does
+  // (runtime/forms.tsx); a plain link carries no person and is refused.
+  async function download() {
+    try {
+      const f = await fetch(`/api/artifacts/${r.artifact_id}/file`, { headers: { "x-actor": getActor() } });
+      if (!f.ok) throw new Error((await f.json().catch(() => null))?.detail ?? `${f.status} ${f.statusText}`);
+      const url = URL.createObjectURL(await f.blob()), a = document.createElement("a");
+      a.href = url; a.download = /filename="?([^";]+)/.exec(f.headers.get("content-disposition") ?? "")?.[1] ?? `${r.form}.pdf`; a.click(); URL.revokeObjectURL(url);
+    } catch (e) { toast.push({ tone: "danger", text: `The checked PDF could not be downloaded: ${(e as Error).message}` }); }
+  }
   return (
-    <Dialog wide open onOpenChange={(o) => !o && onClose()} title={`${r.form} for ${r.person_label}: filled and checked`} description={`${r.label} · configuration ${r.configuration_sha256.slice(0, 12)} · only confirmed facts are written`} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button asChild><a href={`/api/artifacts/${r.artifact_id}/file`}><Download /> Download the checked PDF</a></Button></>}>
+    <Dialog wide open onOpenChange={(o) => !o && onClose()} title={`${r.form} for ${r.person_label}: filled and checked`} description={`${r.label} · configuration ${r.configuration_sha256.slice(0, 12)} · only confirmed facts are written`} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button onClick={() => void download()}><Download aria-hidden /> Download the checked PDF</Button></>}>
       <div className="space-y-3">
         <Notice tone={ok ? "ok" : "danger"} title={ok ? "The file is intact and every written value reads back" : "The file did not pass every check"}>Written {rep.written} values; read back equal {rep.read_back_equal}; other form data changed: {rep.other_data_leaves_changed ? "yes" : "none"}; original bytes kept: {rep.original_bytes_kept ? "yes" : "no"}; IRCC signatures: {Object.entries(rep.signatures ?? {}).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}; PDF syntax errors: {rep.poppler_syntax_errors}.</Notice>
         <div className="grid grid-cols-4 gap-3"><Stat label="Written" value={r.counts.written} tone="ok" /><Stat label="By hand" value={r.counts.by_hand} sub="format not executable" tone={r.counts.by_hand ? "warn" : undefined} /><Stat label="Blank" value={r.counts.blank} /><Stat label="Not written" value={r.counts.not_written} sub="no confirmed fact yet" /></div>
