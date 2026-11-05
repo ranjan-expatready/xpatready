@@ -24,7 +24,7 @@ Every Claude session, Mac and cloud. **Assume none carries over**; a session tha
 1. **Connection checklist (P-326 (5)):** no "Connect GitHub" on claude.ai/code; `gh auth status`; Mergify sees the repo; Drive read works; the nightly ran. A cloud canary that cloned and pushed comes before any cloud lane is counted as running (20 of 20 cloud lanes died unseen on 4 Nov because this was missed).
 2. Read `RULES.md`, the newer `DECISIONS.md` rows, `STATE.md`, per the `lead` skill.
 3. Create the 30-minute check; start two standby Leads in the founder's typed turn (P-286).
-4. **Restart lanes from the board, one per row, critical path first.** Mac memory is full, so cloud first unless a row needs `sources/` or `code/`.
+4. **Restart lanes from `STATE.md` "In flight" plus the board, one per row, critical path first** (the board lists only rows with a PR; a row with no PR yet is only in STATE). Mac memory is full, so cloud first unless a row needs `sources/` or `code/`.
    Brief for each: "Row <id>, PR #<n>, branch <b>. Continue from its last push. Read the PR's comments, including the Lead's rulings. Standard rules (lead skill, Sessions and tokens). Done when: <the row's Done when>."
 5. Check for unpushed Mac work before reusing a copy: `git -C .claude/worktrees/<copy> status -s` and `git -C … log @{u}..`. Commit and push any to its own branch first. Never delete a copy until that is done.
 6. qa first if its re-scores are behind: the qa lane is the one writer of `qa/CAPABILITIES.md` and `qa/BUGS.md`.
