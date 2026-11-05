@@ -38,10 +38,10 @@ import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime } from "./runtime.ts";
 import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
-/** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
- *  The others follow, one slice each. */
-const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
 import { type CitedDocumentLine, FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
+/** QA-144 slices 1–4 (tech lead on #798; B79): the combinations the configured checkpoint sets up from their forms' own
+ *  parts are the ones the form setup table holds (P-319: no combination key here). The others follow, one slice each. */
+const SET_UP_FROM_FORMS = new Set(Object.keys(FORM_SETUP));
 export { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES }; // B71: kept for the callers that read them from here
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
@@ -98,10 +98,11 @@ export class Demo {
   /** B52: the form-field step a person takes on To review › Form fields, as the same service (no extra provider). */
   private get ownQuestions() { return new OwnQuestions(this.db, this.audit); }
 
-  /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
+  /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel; none when
+   *  its setup names its own family form among its rules (slice 4: Express Entry's IMM 5406). */
   private async familyForm(combinationId: string, key: string | undefined) {
     const setup = FORM_SETUP[key ?? ""];
-    if (!setup) return null;
+    if (!setup?.family) return null;
     const filed = (await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: setup.application }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
     return FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
   }
@@ -711,9 +712,9 @@ export class Demo {
         if (setup) {
           // A form IRCC's words name for the combination with no line yet is added from the Form library, as the Forms
           // tab's "add one from the Form library" does (QA-144 slice 2: With an LMIA's IMM 5707, 5409, 5476 and 5475).
-          const family = (await this.familyForm(c.id, keyOf.get(c.id)))!;
+          const family = await this.familyForm(c.id, keyOf.get(c.id));
           const has = new Set((await this.db.combinationForm.findMany({ where: { combinationId: c.id }, select: { lineageKey: true } })).map((x) => x.lineageKey));
-          for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) {
+          for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f))) {
             try { await this.formLibrary.attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           for (const r of setup.rules) {
@@ -724,7 +725,7 @@ export class Demo {
           if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); maritalList = null; } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
           // The family information form by how the application form is filed (paper or PDF upload: IMM 5707; online:
           // IMM 5645); the other one is taken off only where it is a line.
-          for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const) {
+          for (const [form, body] of family ? [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const : []) {
             try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           // Each fact only a rule reads (IRM 0002's, IMM 5476's, …), added for its rule (C3.6), accepted by the author; the
