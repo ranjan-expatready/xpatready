@@ -245,8 +245,9 @@ export class Demo {
       if (missing.length) { await reject(l.id, label, `its condition reads ${missing.join(", ")}, which this library does not hold and ask yet`); continue; }
       try { await decide(this.db, this.audit, author, workspaceId, [l.id], { action: "accept", reason: `Accepted by the sample loader: a document line ${checklist} asks for, in its own words (Sample; P-248).` }); n++; } catch (e) { await reject(l.id, label, `not accepted: ${say(e)}`); }
     }
-    for (const t of await this.db.proposalItem.findMany({ where: { runId: job.id, kind: "document_type", status: "waiting" }, select: { id: true, payload: true } }))
-      await reject(t.id, String((t.payload as { name?: unknown }).name ?? "a document type"), "no accepted line uses it");
+    // B82: a fact the reading proposed goes with its line: an accepted line here reads only facts the library holds and asks.
+    for (const t of await this.db.proposalItem.findMany({ where: { runId: job.id, kind: { in: ["document_type", "field"] }, status: "waiting" }, select: { id: true, kind: true, payload: true } }))
+      await reject(t.id, String((t.payload as { name?: unknown; label?: unknown }).name ?? (t.payload as { label?: unknown }).label ?? t.kind), t.kind === "field" ? "no accepted line reads it" : "no accepted line uses it");
     return { n, rejected };
   }
 

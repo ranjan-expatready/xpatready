@@ -8,9 +8,9 @@
 // QA-144 part 1 (P-318 (6), P-322): the Smart questionnaire tab's step runs it for a person (POST
 // /api/combinations/:id/place-from-form-parts, below); the configured checkpoint calls the same function (api/src/demo.ts).
 import { Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from "@nestjs/common";
-import { coverageGaps, previewRender } from "../../engine/coverage.ts";
 import { roleOf } from "../../engine/resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
+import { conditionFactsToAsk, formGapFacts, previewRender } from "../../engine/coverage.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { MASTERS_STEP } from "./form-masters.ts";
@@ -23,12 +23,7 @@ const shared = (a: string, b: string) => { let n = 0; while (n < a.length && n <
 export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, combinationId: string): Promise<PlacedFromParts> {
   const c = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
   const { snapshot } = await buildSnapshot(db, c.workspaceId, combinationId, "draft");
-  // What to place: every fact a coverage gap names, and every other mapped fact asked of nobody that no document type
-  // supplies (the validator's own two readings: engine/coverage.ts and engine/validate.ts "unplaced").
-  const placedNow = new Set((snapshot.placements as { fact: string }[]).map((p) => p.fact));
-  const docFacts = new Set(((snapshot.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
-  const gaps = new Set(coverageGaps(snapshot).map((g) => g.fact));
-  for (const m of snapshot.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]) for (const e of m.entries) if (e.outcome === "mapped" && e.fact && !placedNow.has(e.fact) && !docFacts.has(e.fact)) gaps.add(e.fact);
+  const gaps = formGapFacts(snapshot); // what to place (engine/coverage.ts)
   // The accepted section proposals of the rules passes: edition → [section key, the boxes it groups]. A rules pass is one
   // per edition in the workspace (P-138), so an edition another combination's pass read counts here too (QA-144 slice 2:
   // With an LMIA files the Visitor visa's IMM 5707, 5409, 5476 and 5475); only this combination's editions are looked up.
@@ -87,6 +82,21 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
     if (!pick) { out.noSection.push(fact); continue; }
     try { await studio.placeField(author, fact, { sectionKey: pick, collectedFrom: "client_questionnaire", repeats, tier: "case" }); out.placed.push({ fact, section: pick, repeats }); }
     catch (err) { out.refused.push(`${fact}: ${String((err as Error).message).slice(0, 200)}`); }
+  }
+  // B82 (tech lead's ruling on #1058): a fact only a document line's condition reads has no form field to group it. It is
+  // asked beside the fact it is about, as a fact only a rule reads is (api/src/demo.ts), so the line can reach a person.
+  // No form reads it, so it stays off the question list a paid run replays on (api/src/pqr-drafts.ts questionList).
+  const conditionFacts = conditionFactsToAsk(snapshot);
+  if (conditionFacts.length) {
+    const at = ["person.sex", "person.gender", "person.date_of_birth"];
+    const near = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: { in: at }, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: [{ version: "desc" }, { sectionKey: "asc" }], select: { canonicalFieldKey: true, sectionKey: true } });
+    const beside = at.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean)?.sectionKey;
+    for (const { fact } of conditionFacts) {
+      if (!beside) { out.noSection.push(fact); continue; }
+      const repeats = fact.startsWith("case.") ? "once_per_case" : "per_person";
+      try { await studio.placeField(author, fact, { sectionKey: beside, collectedFrom: "client_questionnaire", repeats, tier: "case" }); out.placed.push({ fact, section: beside, repeats }); }
+      catch (err) { out.refused.push(`${fact}: ${String((err as Error).message).slice(0, 200)}`); }
+    }
   }
   // A section is chosen on the combination (so the author can order it: C4.1 Move up / Move down) only when choosing it
   // asks nobody anything a form does not already ask (review M2): every question in it, from the shared library, is a
