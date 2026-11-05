@@ -109,7 +109,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Ruling 3: the form lines from IRCC's words, as rules a case can read.
   const line = (form: string) => sql(`select f.attach_mode || '|' || f.status || '|' || coalesce(f.min_age::text, '') || '|' || coalesce(f.predicate_json::text, '') from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${vv}' and g.form_key = '${form}' order by f.version desc limit 1`);
   ok("QA-144 rule IMM 5409 (Guide 5256, Question 10): only for an applicant in a common-law union", /^ANSWER_CONDITIONAL\|PUBLISHED\|\|.*"field": "person\.marital_status".*"value": "common_law"/.test(line("IMM 5409")), line("IMM 5409"));
-  ok("QA-144 rule IMM 5476 and IMM 5475 (IMM 5484 p. 1): only when the case says so", /case\.representative_form_action/.test(line("IMM 5476")) && /case\.release_authorization_action/.test(line("IMM 5475")));
+  ok("QA-144 rule IMM 5476 and IMM 5475 (IMM 5484 p. 1): only when the case says so (QA-227: its Yes/No question answered Yes)", /"field": ?"case\.uses_representative", ?"value": ?true/.test(line("IMM 5476")) && /"field": ?"case\.authorizes_release_to_designated_individual", ?"value": ?true/.test(line("IMM 5475")));
   // The family information form by how the combination files (tech lead, 4 Nov; IRCC-P2-04a): the sample files IMM 5257
   // as a PDF upload, so IMM 5707 (IMM 5484, the paper checklist); filed online it would be IMM 5645 (canada.ca APPLY).
   const filed = sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${vv}' and g.form_key = 'IMM 5257' order by f.version desc limit 1`);

@@ -31,6 +31,9 @@ import { Forms } from "./forms.ts";
 import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.ts";
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
+import { OwnQuestions } from "./own-question.ts";
+import { OWN_YES_NO_REASON } from "./own-yes-no.ts";
+import { normalizeLabel } from "../../contracts/programs.ts";
 import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime } from "./runtime.ts";
@@ -92,6 +95,8 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 @Injectable()
 export class Demo {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02, @Inject(FormMasters) private readonly masters: FormMasters, @Inject(Forms) private readonly forms: Forms, @Inject(RuleFacts) private readonly ruleFacts: RuleFacts, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ReviewProposals) private readonly proposals: ReviewProposals, @Inject(Runtime) private readonly runtime: Runtime, @Inject(CaseForms) private readonly caseForms: CaseForms, @Inject(Checklists) private readonly checklists: Checklists) {}
+  /** B52: the form-field step a person takes on To review › Form fields, as the same service (no extra provider). */
+  private get ownQuestions() { return new OwnQuestions(this.db, this.audit); }
 
   /** QA-144: the family information form a combination of FORM_SETUP files, by its application form's channel. */
   private async familyForm(combinationId: string, key: string | undefined) {
@@ -722,12 +727,22 @@ export class Demo {
           for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const) {
             try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
-          // A fact only a rule reads (IRM 0002's), added for its rule (C3.6), accepted by the author; the Approver approves it below.
-          const rf = setup.ruleFact;
-          if (rf) try {
-            const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType });
-            await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` });
-          } catch (e) { setUpRefused.push(`${rf.label}: ${said(e)}`); }
+          // Each fact only a rule reads (IRM 0002's, IMM 5476's, …), added for its rule (C3.6), accepted by the author; the
+          // Approver approves it below. One another combination added already is read as it is.
+          for (const rf of setup.ruleFacts ?? []) {
+            if (await this.db.canonicalField.count({ where: { workspaceId, canonicalFieldKey: rf.fact, status: { in: ["DRAFT", "PUBLISHED"] } } })) continue;
+            try {
+              const { proposalId } = await this.ruleFacts.add(author, c.id, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType });
+              await decide(this.db, this.audit, author, workspaceId, [proposalId], { action: "accept", reason: `Accepted by the sample loader: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` });
+            } catch (e) { setUpRefused.push(`${rf.label}: ${said(e)}`); }
+          }
+          // B52: the application form's Yes/No form fields worked out from other answers, each asked as its own question in
+          // the form's words (To review › Form fields), with the library's field of the same name when it has one.
+          for (const y of setup.ownYesNo ?? []) {
+            const ed = await this.db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true } });
+            const same = (await this.db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, valueType: "yes_no", groupKey: "person" }, select: { canonicalFieldKey: true, label: true } })).find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(y.label));
+            try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await this.ownQuestions.ask(author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning }) }); } catch (e) { setUpRefused.push(`${y.label}: ${said(e)}`); }
+          }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }
@@ -736,13 +751,14 @@ export class Demo {
         placedFacts.push(...p.placed.map((x) => x.fact));
         // A fact only a rule reads is asked beside the fact it is about (IRM 0002's, beside the person's sex or gender as
         // the forms read it, else their date of birth; IMM 5646's, beside the date of birth).
-        const rf = FORM_SETUP[keyOf.get(c.id) ?? ""]?.ruleFact;
-        if (rf) {
+        for (const rf of FORM_SETUP[keyOf.get(c.id) ?? ""]?.ruleFacts ?? []) {
+          // QA-227: a fact another combination asked already keeps its one placement (the library's questions are shared).
+          if (await this.db.sectionQuestion.count({ where: { workspaceId, canonicalFieldKey: rf.fact, status: { not: "RETIRED" } } })) continue;
           const at = rf.beside ?? ["person.sex", "person.gender", "person.date_of_birth"];
           const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: at } }, select: { canonicalFieldKey: true, sectionKey: true } });
           const beside = at.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
           // R2-m1 after it too (review R1-m4): its section may be a chosen one, and only a conditional form reads the fact.
-          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }); placedFacts.push(rf.fact); await keepChosenEveryones(this.db, this.studio, author, c.id, new Set([beside.sectionKey]), p); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
+          if (beside) { try { await this.studio.placeField(author, rf.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: rf.fact.startsWith("case.") ? "once_per_case" : "per_person", tier: "case" }); placedFacts.push(rf.fact); await keepChosenEveryones(this.db, this.studio, author, c.id, new Set([beside.sectionKey]), p); } catch (e) { setUpRefused.push(`${rf.fact}: ${said(e)}`); } }
           else setUpRefused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
         }
         setUpRefused.push(...p.refused, ...p.noSection.map((f) => `${f}: no section groups a form field that reads it`));

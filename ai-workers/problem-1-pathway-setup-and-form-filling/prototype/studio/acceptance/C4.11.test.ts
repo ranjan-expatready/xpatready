@@ -32,6 +32,9 @@ run(async () => {
   const vv = T.combo("vv.single");
   await T.people(vv);
   for (const f of ["IMM 5257", "IMM 5707"]) await call("POST", `/combinations/${vv}/forms`, { formKey: f }, AUTHOR);
+  // P-322 (QA-144 part 1, B52): on the six the questions come from the people's own steps (acceptance/lib/pack2.ts
+  // questionsBySteps), as C4.7's pack does; on the fixture they are there already.
+  await T.needQuestions(vv);
   const before = T.spent();
 
   // ---------------------------------------------------------------- the plan

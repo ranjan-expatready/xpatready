@@ -54,6 +54,13 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const NOTHING_CHARGED = /[,:;]? *(so )?nothing (was|is) (sent and nothing was )?charged\.?/i;
 type Guide = Awaited<ReturnType<PqrDrafts["guide"]>>;
 type StepOut = { status: string; message: string; proposed: number; detail: Record<string, unknown>; usd?: number; offerSaved?: boolean };
+/** QA-162 (C4.11 step 5): what the run card lists under the step, one line each: every condition left out with its reason,
+ *  then every passage of the guide the AI did not turn into one condition, with its reason (a person sets those by hand). */
+export function conditionDetails(res: { dropped: { asks: string; why: string }[]; unresolved: { passage: string; reason: string }[] }): string | null {
+  const lines = [...res.dropped.map((x) => `Left out: ${x.asks}: ${x.why}`), ...res.unresolved.map((u) => `Not one condition in the guide: "${u.passage.trim().slice(0, 160)}" ${u.reason.trim()} A person sets it by hand if it is needed.`)];
+  return lines.length ? lines.join("\n") : null;
+}
+
 export const QdBody = z.object({ mode: z.enum(["rules", "replay", "live"]), planSha256: z.string().regex(/^[0-9a-f]{64}$/).optional() }).strict();
 
 @Injectable()
@@ -159,7 +166,9 @@ export class DraftQd {
       return { status: wasStopped ? "CANCELLED" : "FAILED", message, proposed: 0, detail: {}, usd, offerSaved };
     }
     const r = (x: typeof d & { ok: true }): CondRound => ({ output: x.output, from: x.from, runFile: x.runFile, costUsd: x.costUsd });
-    const res = conditionsFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: jobId, combinationId: c.id }, await factNames(this.db, c.workspaceId, snapshot));
+    // QA-162: the forms library, so a condition that names a form (not a question) is left out saying which form it is.
+    const library = (await this.db.govFormDef.findMany({ where: { workspaceId: c.workspaceId, retiredAt: null, formKind: "data_form" }, select: { formKey: true, displayName: true } })).map((f) => ({ form_number: f.formKey, title: f.displayName }));
+    const res = conditionsFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: jobId, combinationId: c.id }, await factNames(this.db, c.workspaceId, snapshot), library);
     let fresh: typeof res.items = [], already = 0, removed = 0;
     await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `qd_conditions:${c.id}`);
@@ -172,7 +181,7 @@ export class DraftQd {
     });
     const ready = fresh.filter((x) => x.confidence === "ready").length;
     const message = `${fresh.length} condition${fresh.length === 1 ? "" : "s"} for To review (Ready ${ready} · Check ${fresh.filter((x) => x.confidence === "check").length} · Decide ${fresh.filter((x) => x.confidence === "decide").length})${already ? `; ${already} already waiting there` : ""}${removed ? `; ${removed} a person removed or accepted before are not proposed again` : ""}${res.dropped.length ? `; ${res.dropped.length} left out with the reason` : ""}. ${mode === "live" ? `Live, US$${usd.toFixed(2)}` : "Saved, US$0"}.`;
-    return { status: "COMPLETED", message, proposed: fresh.length, usd, detail: { dropped: res.dropped, unresolved: res.unresolved, run_files: [d.runFile, k.runFile], details: res.dropped.length ? res.dropped.map((x) => `${x.asks}: ${x.why}`).join("\n") : null } };
+    return { status: "COMPLETED", message, proposed: fresh.length, usd, detail: { dropped: res.dropped, unresolved: res.unresolved, run_files: [d.runFile, k.runFile], details: conditionDetails(res) } };
   }
 
   private async combination(id: string) {
@@ -214,7 +223,9 @@ export class DraftQd {
         : mode === "replay" ? "Saved: each AI step replays both rounds of one earlier Live run for this guide (US$0); a step with none saved says so and proposes nothing. The other steps are worked out by the rules."
         : "Live: steps 5 and 6 each run a first AI round and a blind checker round now; step 2 uses its saved checklist reading. The other steps are worked out by the rules.",
       live: { approved: aiLive(), why: aiLive() ? null : LIVE_WAITING },
-      saved: saved ? { available: anySaved, why: anySaved ? null : saved.qd_conditions.why ?? saved.pqr_picks.why ?? "No saved AI answer for this combination yet.", steps: { qd_documents: saved.qd_documents, qd_conditions: saved.qd_conditions.available, pqr_picks: saved.pqr_picks.available } } : null,
+      saved: saved ? { available: anySaved, why: anySaved ? null : saved.qd_conditions.why ?? saved.pqr_picks.why ?? "No saved AI answer for this combination yet.", steps: { qd_documents: saved.qd_documents, qd_conditions: saved.qd_conditions.available, pqr_picks: saved.pqr_picks.available },
+        // C4.11 (QA-162 pack): which saved runs steps 5 and 6 replay (their first and checker rounds), and the guide they read.
+        files: { qd_conditions: saved.qd_conditions.files, pqr_picks: saved.pqr_picks.files }, why_none: { qd_conditions: saved.qd_conditions.why, pqr_picks: saved.pqr_picks.why }, guide: g ? g.code : null } : null,
       plan_sha256: sha(fingerprint) };
   }
 

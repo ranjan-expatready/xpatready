@@ -9,6 +9,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
+import { OWN_YES_NO } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
 import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
 
@@ -67,7 +68,7 @@ export function pack2(id: string) {
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
   async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
-    const out = { accepted: 0, applied: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
+    const out = { accepted: 0, applied: 0, ownYesNo: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     // Review m6: only what the author's own steps put on To review, never another person's waiting change.
@@ -110,6 +111,17 @@ export function pack2(id: string) {
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
     }
+    // B52: on To review › Form fields the author asks the application form's Yes/No form fields worked out from other
+    // answers as their own questions, in the form's words (api/src/own-yes-no.ts), the library's field of the same
+    // name when it has one.
+    const own = OWN_YES_NO[sql(`select combination_key from combination where id='${comboId}'`)];
+    const ed = own?.boxes.length ? sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${own.application}' and e.channel='PDF' order by e.edition_label desc limit 1`) : "";
+    const asked = new Set<string>(ed ? ((await call("GET", `/editions/${ed}/form-fields/own-questions`, undefined, AUTHOR)).body?.fields ?? []).filter((f: { asked: boolean }) => f.asked).map((f: { dataPath: string }) => f.dataPath) : []);
+    for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath))) {
+      const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
+      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning }) }, AUTHOR))) out.ownYesNo++;
+    }
     // B71 (P-319, AGENTS rule 4): with the maps applied, the author sets each form line as IRCC's own words set it, on the
     // Forms tab's own routes: a rule in words becomes its rule; the family information form follows how the application
     // form is filed and the other one is taken off; a fact only a rule reads is added for its rule (C3.6) and approved by a
@@ -120,8 +132,9 @@ export function pack2(id: string) {
         await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
       await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
       if (lineForms().has(family.other)) await set(family.other, { retire: true });
-      const rf = setup.ruleFact;
-      if (rf) {
+      // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
+      for (const rf of setup.ruleFacts ?? []) {
+        if (sql(`select count(*) from canonical_field where canonical_field_key = '${rf.fact}' and status in ('DRAFT', 'PUBLISHED')`) !== "0") continue;
         const added = await call("POST", `/combinations/${comboId}/rule-facts`, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType }, AUTHOR);
         if (say(`rule fact ${rf.fact}`, added) && added.body?.proposalId) say("accept the rule fact", await call("POST", "/review/proposals/decide", { ids: [added.body.proposalId], action: "accept", reason: `Accepted by a test: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` }, AUTHOR));
         await approveAll();
@@ -155,11 +168,12 @@ export function pack2(id: string) {
     const placed = await call("POST", `/combinations/${comboId}/place-from-form-parts`, {}, AUTHOR);
     if (say("place", placed)) out.placed = placed.body?.placed?.length ?? 0;
     // B71: a fact only a rule reads is asked beside the fact it is about (as the checkpoint asks IRM 0002's).
-    const rf = FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)]?.ruleFact;
-    if (rf) {
+    for (const rf of FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)]?.ruleFacts ?? []) {
+      // QA-227: a fact another combination asked already keeps its one placement (the library's questions are shared).
+      if (sql(`select count(*) from section_question where canonical_field_key = '${rf.fact}' and status <> 'RETIRED'`) !== "0") continue;
       const at = rf.beside ?? ["person.sex", "person.gender", "person.date_of_birth"]; // as the checkpoint (demo.ts) places it
       const sec = at.map((k) => sql(`select section_key from section_question where canonical_field_key = '${k}' order by version desc limit 1`)).find(Boolean);
-      if (sec) say(`place ${rf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(rf.fact)}/placement`, { sectionKey: sec, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }, AUTHOR));
+      if (sec) say(`place ${rf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(rf.fact)}/placement`, { sectionKey: sec, collectedFrom: "client_questionnaire", repeats: rf.fact.startsWith("case.") ? "once_per_case" : "per_person", tier: "case" }, AUTHOR));
       else out.refused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
     }
     await approveAll();

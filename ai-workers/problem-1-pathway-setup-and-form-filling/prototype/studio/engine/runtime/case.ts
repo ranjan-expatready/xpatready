@@ -275,7 +275,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
     // question fills the box too (P-62: every question asked fills a box or decides something).
     const d = recordedDerivation(b.transform);
-    for (const g of new Set(d ? [b.fact, ...d.facts].map((f) => gateOf(s.placements as GatePlacement[], f)).filter((x): x is string => !!x) : [])) {
+    for (const g of new Set(d ? [b.fact, ...d.facts].map((f) => gateOf(s.placements as GatePlacement[], f)).filter((x): x is string => !!x && x !== b.fact) : [])) { // B52: a box asked as its own question counts once
       const gk = `${b.about}|${g}`, gm = fills.get(gk) ?? new Map(); const ge = gm.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; ge.boxes++; gm.set(`${c.form}|${c.person}`, ge); fills.set(gk, gm);
     }
   }
