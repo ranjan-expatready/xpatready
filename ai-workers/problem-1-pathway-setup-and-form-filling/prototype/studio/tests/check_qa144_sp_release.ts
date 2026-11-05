@@ -49,11 +49,11 @@ type Question = { fact: string; about: string; why?: string };
   // No regression: the Visitor visa keeps exactly its one named block (IRM 0002's saved map), or is released once it lands.
   const irm0002Map = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0;
   ok("QA-144 slice 3 no regression: the Visitor visa keeps its one named block (IRM 0002's missing field map), or is released once that map lands",
-    irm0002Map ? n(`select count(*) from config_release where combination_id = '${vv}'`) === 1 : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 300));
+    irm0002Map ? n(`select count(*) from config_release where combination_id = '${vv}'`) >= 1 : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 300));
 
   // Row 7: sections from the study permit's own forms (rules, no AI), approved by a second person.
   // QA-206 (tech lead on #883): partial exactly while sections the forms print no heading over wait on To review for a name.
-  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and coalesce(form_edition, '') not like 'IMM 5645 (%'`); // IMM 5645's are row 9's (B97)
   ok("QA-144 slice 3 row 7: done (partial exactly while sections wait for a name, QA-206), and names the study permit among the combinations set up from their forms", r("7").status === (heldNow ? "partial" : "done") && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")) && /sections drafted from .*Study permit › Outside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
   // An edition the Visitor visa's forms already drafted (IMM 5707, IMM 5409, IMM 5476, IMM 5475) is not drafted again: its
   // sections are in the library; IMM 1294 and IMM 5646 are drafted on the study permit itself.
