@@ -40,7 +40,9 @@ export function evalCondition(s: Snapshot, known: Known, tree: any, about: strin
 }
 
 
-export type Coverage = "confirmed fact" | "answered on screen" | "document reading" | "client question" | "client profile" | "staff working view" | "unresolved";
+export type Coverage = "confirmed fact" | "answered on screen" | "document reading" | "client question" | "client profile" | "staff working view" | "unresolved"
+  /** B86: set on a case's copy only (engine/runtime/forms.ts formCoverage), never by render. */
+  | "not needed";
 export type BoxRow = { box: string; caption: string; fact: string | null; meaning: string | null; about: string | null; about_label: string; row: number | null; coverage: Coverage; detail: string; value?: unknown; transform?: string | null; origin?: string;
   /** C7.2 cause 3 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded): a derived "is anything recorded?"
    *  Yes/No whose facts sit in a repeating group with no entries and a confirmed "none apply". */

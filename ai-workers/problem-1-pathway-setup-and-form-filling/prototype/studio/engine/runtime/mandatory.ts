@@ -52,6 +52,7 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     if (!f.required || !path || f.ui === "button" || byAPerson(inv.fields, f)) continue;
     if ((values[path] ?? "") !== "") continue; // written from a fact
     const e = entryOf.get(path), b = boxOf.get(path);
+    if (b?.coverage === "not needed") continue; // B86 BR-5: its own condition is not true, so the form leaves it empty
     // Review M-1 on #592: a line a question fills is named by that question, as the case asks it; only a field no
     // question fills keeps the form's own words.
     const asked = e?.fact ? words.labelOf?.(e.fact) : undefined;
