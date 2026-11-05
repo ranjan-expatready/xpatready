@@ -138,7 +138,7 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
     for (const p of optionMapProblems(values, e.option_map)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
   }
   // B81: a value a person marked not on this form is said once per form: it passes, and a case with that answer is refused.
-  const labels = new Map((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list?.values ?? []).map((v) => [`${f.id}|${v.key}`, v.label] as const)));
+  const labels = new Map<string, string>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list?.values ?? []).map((v): [string, string] => [`${f.id}|${v.key}`, v.label])));
   for (const m of pdfMaps) {
     const marked = new Map<string, number>();
     for (const e of m.entries) for (const v of e.outcome === "mapped" && e.fact && lists.has(e.fact) ? e.option_map?.notOnForm ?? [] : []) { const k = `${e.fact}|${v}`; marked.set(k, (marked.get(k) ?? 0) + 1); }
