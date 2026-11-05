@@ -99,6 +99,10 @@ A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M
 | 8 | Accepting any condition | **not done in this walk, to reach the end**: refused at Submit | QA-237, B86, C4.11 | Yes, if any is accepted |
 | 9 | The same, on other combinations | not done here; by route: Hiding errors on the 4 others | QA-239, B88, C4.11 | Yes, for those combinations |
 
+**Limits of this list, plainly:** QA-239 (row 9) and QA-237 (row 8) were proven by route, not walked. The 191 accepts and 185 approvals (row 2, QA-241) were run by the pack's route, not by screens. The 3 document lines were removed by qa on screen, so this release does not hold them. It is one combination.
+
+**Of the 58 Works rows, 1 is shown to reach a dead end: C2.6 (QA-233), now Partial; M2 is 57/60 until B82 lands.** The other three dead ends sit on C4.11, which is not among the 58. That 1 is a floor, not a clean bill for the other 57: this walk did not exercise them one by one.
+
 **B89 is not a stop:** nothing is refused without it. It only adds conditions, which then need B86. **Not in this walk:** the other four combinations, the pack-route clicks in row 2, and anything after release (QA-235, B84, is at the case).
 ## Batch 23 ~10:44 IST: QA-239 (Gap · Major, row B88); C10.1 after #1009
 One condition approved on Visitor visa adds release-refusing Hiding errors on the four other combinations reading it (run 41972242603). "Unreachable" did not appear by route; concept §8 simulated it. C4.11 cannot be Works while this is open. C10.1: 21/24 on the checkpoint (run 41969024051). M2 58/60.
