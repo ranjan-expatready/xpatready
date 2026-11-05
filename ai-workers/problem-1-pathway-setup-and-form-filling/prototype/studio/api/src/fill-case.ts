@@ -162,7 +162,7 @@ export class CaseForms implements OnModuleInit {
         const channel = chosen(s, items, form, p.subjectId);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(form, channel),
           draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channel === "ONLINE")) });
+          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channelIn(s, form) === "ONLINE")) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case
@@ -178,6 +178,8 @@ export class CaseForms implements OnModuleInit {
   }
 
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
+  /** `notForFiling`: for a copy made before C11.6 recorded its stamp (`result_json.not_for_filing`), whether its release
+   *  line was Online when it was made (the same fallback as `lock`). */
   private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false): FormCopy {
     // C-10: a validated copy is current while the form's facts are what they were when it was read back.
     const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && formPassed(v) && v.factsHash === inputHash(today);
@@ -287,7 +289,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const labels = new Map(view.sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
-    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), chosen(s, await this.itemChannels(c.id), x.formNumber, x.subjectId) === "ONLINE");
+    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), channelIn(s, x.formNumber) === "ONLINE");
   }
 
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
@@ -419,7 +421,7 @@ export class CaseForms implements OnModuleInit {
     }
     const bytes = this.checkedFile(x, HttpStatus.NOT_FOUND);
     // P-145: a copy of a form filed Online is named for what it is.
-    const online = (x.resultJson as { not_for_filing?: boolean } | null)?.not_for_filing ?? channel === "ONLINE";
+    const online = (x.resultJson as { not_for_filing?: boolean } | null)?.not_for_filing ?? channelIn(s, x.formNumber) === "ONLINE";
     return { bytes, name: `${form}-${online ? "copy-not-for-filing" : "copy"}-${short(x.id)}.pdf` };
   }
 }

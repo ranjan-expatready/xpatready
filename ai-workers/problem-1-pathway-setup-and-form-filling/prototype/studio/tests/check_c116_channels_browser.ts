@@ -60,6 +60,8 @@ async function state(name: string, scope = "[data-item-channels]") {
   ok(`1024 px: ${name} has no sideways page scroll`, await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await p.setViewportSize({ width: 1440, height: 900 }); await p.waitForTimeout(150);
 }
+/** Focus comes back a frame after a dialog closes (review R2 n3): wait for it, at most 5 s, and say false on a timeout. */
+const focusOn = (label: string) => p.waitForFunction((l) => document.activeElement?.getAttribute("aria-label") === l, label, { timeout: 5_000 }).then(() => true, () => false);
 /** Arrow keys move a radio group's choice to the next enabled option; press until `want` is checked. */
 async function choose(want: string) {
   for (let i = 0; i < 4 && !(await dialog().locator(`[data-option="${want}"] input`).isChecked()); i++) await p.keyboard.press("ArrowDown");
@@ -89,7 +91,7 @@ try {
   ok("a11y: focus starts on the chosen way (PDF upload), not on a greyed one", await p.evaluate(() => (document.activeElement as HTMLInputElement | null)?.value === "PDF_UPLOAD"));
   await state("imm5476-online-greyed", "[role=dialog]");
   await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
-  ok("a11y: Escape closes and gives focus back to the row's Change channel", await p.evaluate(() => document.activeElement?.getAttribute("aria-label") === "Change channel: IMM 5476 for Sample Client A"));
+  ok("a11y: Escape closes and gives focus back to the row's Change channel", await focusOn("Change channel: IMM 5476 for Sample Client A"));
 
   // 3. IMM 5257: Online greyed (C11.6-8a); Paper needs the reason (C11.6-8b), then saves for this person only (C11.6-9).
   await press(panel().getByRole("button", { name: "Change channel: IMM 5257 for Sample Client A" }));
@@ -110,7 +112,7 @@ try {
   const r5257 = await row(P, "IMM 5257").innerText();
   ok("C11.6-9 (screen): Client A's IMM 5257 reads Paper, changed from PDF upload (the combination's default) by the case officer, with the reason", /Paper/.test(r5257) && /Changed from PDF upload \(the combination’s default\) by .+: “Cannot apply online: accommodation \(Sample\)”/.test(r5257), r5257);
   ok("C11.6-9 (screen): the spouse's IMM 5257 keeps PDF upload", await row(S, "IMM 5257").getAttribute("data-channel") === "PDF_UPLOAD");
-  ok("a11y: focus is back on the row's Change channel after saving", await p.evaluate(() => document.activeElement?.getAttribute("aria-label") === "Change channel: IMM 5257 for Sample Client A"));
+  ok("a11y: focus is back on the row's Change channel after saving", await focusOn("Change channel: IMM 5257 for Sample Client A"));
   ok("data: the item holds Paper with its reason; the spouse's item holds no change", sql(`select channel::text || '|' || channel_reason from filing_item where id='${item(P, "IMM 5257")?.id}'`) === "PAPER|Cannot apply online: accommodation (Sample)" && sql(`select coalesce(channel::text, '') from filing_item where id='${item(S, "IMM 5257")?.id}'`) === "");
   ok("C11.6-10 (data): the change is audited with who, from and to, without the reason's text", /changed how IMM 5257 is filed .* from PDF upload to Paper \(reason given\)/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${item(P, "IMM 5257")?.id}'`) ?? "") && !/accommodation/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${item(P, "IMM 5257")?.id}'`) ?? ""));
   ok("C11.6-12 (data): the combination's own IMM 5257 line is unchanged by the case change", lineChannel() === line0 && line0 === "PDF_UPLOAD", [line0, lineChannel()]);
@@ -182,6 +184,17 @@ try {
   ok("C11.6 (review m5, screen): a channel IRCC does not accept reads red with \"choose a way it accepts\"", (await row(P, "IMM 5476").locator("[data-not-accepted]").count()) === 1 && /choose a way it accepts/.test(await row(P, "IMM 5476").innerText()));
   ok("C11.6 (break M3): 1440 px: a 400-character reason does not push the page sideways", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await state("long-reason-and-not-accepted");
+
+  // 9. A colleague's change since the page was read (review R2-M1): the dialog opens on what the case holds now.
+  const n9 = (await prepare(c.id)).p!;
+  ok("setup: a colleague moves the spouse's IMM 5257 back to PDF upload after the page was read", (await call("PATCH", `/runtime/items/${item(S, "IMM 5257")?.id}/channel`, { channel: "PDF_UPLOAD", version: n9.version }, officer)).status === 200);
+  ok("pass: the page still shows the spouse's IMM 5257 on Paper (it was read before)", await row(S, "IMM 5257").getAttribute("data-channel") === "PAPER");
+  await press(panel().getByRole("button", { name: "Change channel: IMM 5257 for Sample Spouse A" }));
+  await dialog().waitFor(); await settle();
+  ok("C11.6 (review R2-M1, screen): the dialog opens on PDF upload, checked and \"filed this way now\", and Save waits for another choice; nothing is sent over the colleague's change",
+    await dialog().locator('[data-option="PDF_UPLOAD"] input').isChecked() && /filed this way now/.test(await dialog().locator('[data-option="PDF_UPLOAD"]').innerText()) && await dialog().getByRole("button", { name: "Save" }).isDisabled()
+    && sql(`select channel::text from filing_item where id='${item(S, "IMM 5257")?.id}'`) === "PDF_UPLOAD");
+  await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
   ok("no page errors", errs.length === 0, errs);
 } catch (e) {
   ok(`the walk ran to its end (stopped: ${(e as Error).message.split("\n")[0]})`, false);

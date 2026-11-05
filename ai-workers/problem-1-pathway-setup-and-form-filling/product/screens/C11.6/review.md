@@ -80,3 +80,48 @@ Not met:
 * A real screen reader, and an intended user's unaided walk (D17, D20).
 * The submitted, read-only state and the "no longer accepted" state on screen.
 * A visible browser pane (headless only).
+
+---
+
+## Round 2: diff only, `git diff ef188a489..17a3dcd87` (code in 6fa23cb99, notes in 17a3dcd87)
+
+**Verdict: Block (commit 17a3dcd87).** Every round-1 Major is fixed. One new Major (R2-M1) came in with the break M2 fix; fix it and ask for a re-review.
+
+**Ran on :4450** (bundle index-RDTCjf77, restarted on 6fa23cb99):
+* `check_c116_channels_browser.ts`: 51/51 three times, 50/51 once. The one failure was the Escape focus-return step (n3).
+* `check_c116_item_channel_forms.ts` 12/12. `acceptance/C11.6.test.ts` 14/14. `m3-guard.sh` passes (no M2-hot file).
+* Committed screenshots put back with `git checkout` after each run.
+* My walk: scratch scripts walk2 and walk3, on new family cases.
+* Journey score, re-scored on this commit: **8/10**. Next step 1 and correct data ½ (R2-M1). Feedback ½ (R2-M1). Plain words ½ and trust ½ (FQ ids still quoted). The rest 1.
+
+**Round-1 Majors and the breaker's Majors**
+* **Review M1, fixed.** Back on Online, the row reads "The combination's default." (`item-channels.tsx`, `onDefault`). The date now reads "5 Nov, 03:46", with no double stop.
+* **Review M2, fixed.** The API diff is careful and consistent:
+  * `chosen()` is one read of the case's moved items (`itemChannels`, one query per list or action, not per row). The list, generate, the worker's stamp, lock, Validate and the download now all follow the person's item.
+  * `writeForm` takes the item's channel (`fill.ts`). Other callers are unchanged, because `opts.channel` is optional.
+  * A copy records `not_for_filing`. A stamped copy is refused at lock with "Generate a new copy" (`fill-case.ts:305`), and the forms panel says why (`forms.tsx:118`).
+  * Walk: with IMM 5707 on PDF upload, Prepare application drops "Copy, not for filing" and offers "Generate a copy". The Online list names only Spouse A. Back on Online, both return.
+* **Break M1, fixed.** The reason goes only with Paper. Walk: Paper plus a typed reason, then PDF upload and Save, leaves `PDF_UPLOAD|null` in the database.
+* **Break M2, fixed for Reload.** After "Changed since you read it" and Reload, Save is disabled with "Choose another way to file to save a change". Then Online saves.
+* **Break M3, fixed.** A 400-character unbroken reason gives 0 px sideways scroll at 1440, 1024, 720 and 400 px. axe on the panel: 0 violations.
+
+**New Major**
+* **R2-M1. Opening the dialog after a colleague's change preselects the old channel, and one Save silently overwrites the colleague. No 409.** Reproduced (walk3, shot `e-preselect-stale.png`):
+  * The steps: the page shows IMM 5707 as Online. A colleague moves it to PDF upload. The officer opens Change channel.
+  * The dialog shows **Online checked** while "PDF upload · filed this way now" sits beside it, and Save is enabled.
+  * Pressing Save, with no choice made, sets it back to Online with the fresh version. The toast says "now filed as Online". The database reads ONLINE.
+  * Cause: the open now refetches (`item-channels.tsx:77`), so `version` is fresh, but `to` keeps the pre-refetch channel (`useState(item.channel)`, `:102`). The stale choice is sent with a current version, so the C11.6-11 guard no longer catches it. On ef188a489 the same click got the 409.
+  * Fix: mount or initialise the dialog only from the refetched item (wait for the refetch, or reset `to` while untouched when `item.channel` changes), so the chosen way is always "filed this way now". Add the step to the browser check.
+
+**Minor (new)**
+* n1. **Copies made before 6fa23cb99 are judged three different ways.** For a copy with no `not_for_filing` field:
+  * `copyOf` (`fill-case.ts:190`) falls back to the *current* channel, and so does the download name (`:422`).
+  * Lock (`:305`) falls back to the *release line*.
+  * So an old stamped copy of a line-Online form now on PDF upload shows as lockable and is named "copy", yet lock refuses it.
+  * This only affects data from before this commit. Use the line fallback in all three.
+* n2. **The Online list matches people by label, not subject** (`fill-case.ts:173`). Two people with the same label move together. Use `subject_id`.
+* n3. **Flaky focus check.** "Escape gives focus back" failed once in four runs: focus is restored in `requestAnimationFrame`, and the check reads it right after the dialog detaches. Wait for the focus in the check.
+* n4. **Dialog left half-open.** If the item leaves the view while the dialog is open (`open` undefined, `:91`), the dialog unmounts without `close()`. `editing` stays set and focus is lost.
+* Still open from round 1, accepted as Minor with the reason given in the build notes: m1 (the Sample record's FQ ids, now shown once as "The Form library's record") and m7 (no retrofit map). m4 (placement) is now recorded.
+
+**To approve:** fix R2-M1 (n1–n4 are optional), then a re-review of that commit.

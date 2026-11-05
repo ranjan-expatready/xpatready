@@ -48,6 +48,11 @@ export function ItemChannels({ caseId }: { caseId: string }) {
   const readOnly = new Set((v?.filings ?? []).filter((f) => f.read_only).map((f) => f.id));
   const people = (v?.people ?? []).filter((p) => forms.some((f) => f.subject === p.subject));
   const open = forms.find((f) => f.id === editing);
+  const [opening, setOpening] = React.useState<string | null>(null);
+  // Review R2-M1: the dialog opens only on a fresh read of its item, so its first choice is what the case holds now.
+  async function openFresh(id: string) { setOpening(id); try { await q.refetch(); } finally { setOpening(null); } setEditing(id); }
+  // Review R2 n4: an item that leaves the view while its dialog is open closes the dialog properly.
+  React.useEffect(() => { if (editing && v && !open) close(); }, [editing, v, open]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <section aria-labelledby="channels-h" className="rounded-xl border border-border bg-surface-raised" data-item-channels>
       <header className="space-y-1 border-b border-border px-4 py-3">
@@ -73,8 +78,8 @@ export function ItemChannels({ caseId }: { caseId: string }) {
                         <span className="text-text-muted"><span className="sr-only">Signature: </span>{SIGNATURE_WORDS[f.signature] ?? f.signature}</span>
                         <span className="text-text-muted">IRCC accepts: {f.accepts.length ? words(f.accepts) : "nothing recorded yet"}</span>
                         <span className="flex-1" />
-                        <Button ref={(b) => { buttons.current[f.id] = b; }} size="sm" variant="secondary" disabled={recorded} aria-describedby={recorded ? `ch-ro-${f.id}` : undefined}
-                          aria-label={`Change channel: ${f.form} for ${p.label}`} onClick={() => { setEditing(f.id); void q.refetch(); }}>Change channel</Button>
+                        <Button ref={(b) => { buttons.current[f.id] = b; }} size="sm" variant="secondary" disabled={recorded} busy={opening === f.id} aria-describedby={recorded ? `ch-ro-${f.id}` : undefined}
+                          aria-label={`Change channel: ${f.form} for ${p.label}`} onClick={() => void openFresh(f.id)}>Change channel</Button>
                         <p className="min-w-0 basis-full text-text-muted [overflow-wrap:anywhere]" data-channel-why>
                           {onDefault || !f.channel_changed ? <>The combination’s default.</>
                             : <>Changed from {CHANNEL_WORDS[f.line_channel]} (the combination’s default) by {nameOf(f.channel_changed.by)} on {day(f.channel_changed.at)}{f.channel_changed.reason ? <>: “{f.channel_changed.reason}”</> : null}.</>}
@@ -88,7 +93,7 @@ export function ItemChannels({ caseId }: { caseId: string }) {
               </div>
             ))}
           </div>}
-      {editing && v && open ? <ChannelDialog key={editing} caseId={caseId} item={open} recorded={readOnly.has(open.filing)} portal={v.portal} version={v.version} reload={() => q.refetch()} close={close} /> : null}
+      {editing && v && open ? <ChannelDialog key={editing} caseId={caseId} item={open} recorded={readOnly.has(open.filing)} portal={v.portal} version={v.version} reload={async () => (await q.refetch()).data?.version ?? v.version} close={close} /> : null}
     </section>
   );
 }
@@ -97,8 +102,11 @@ type Errors = { channel?: string; reason?: string; refused?: { title: string; de
 
 /** `item` is always the latest read (the parent passes it from its query), so after Reload the dialog compares against
  *  what the case holds now, not what it held when the dialog opened (break M2, review m6). */
-function ChannelDialog({ caseId, item, recorded, portal, version, reload, close }: { caseId: string; item: ChannelItem; recorded: boolean; portal: string | null; version: string; reload: () => unknown; close: () => void }) {
+function ChannelDialog({ caseId, item, recorded, portal, version, reload, close }: { caseId: string; item: ChannelItem; recorded: boolean; portal: string | null; version: string; reload: () => Promise<string>; close: () => void }) {
   const qc = useQueryClient(), toast = useToast();
+  // The version this dialog read (when it opened, or at its own Reload): a change made by anyone since is refused (409,
+  // C11.6-11), even when a background refresh already shows it, so a choice is never saved over a change not yet seen.
+  const [read, setRead] = React.useState(version);
   const [to, setTo] = React.useState<Channel>(item.channel);
   const saved = item.channel === "PAPER" ? item.channel_changed?.reason ?? "" : "";
   const [reason, setReason] = React.useState(saved);
@@ -113,7 +121,7 @@ function ChannelDialog({ caseId, item, recorded, portal, version, reload, close 
     setBusy(true); setErrors({});
     try {
       // The reason goes only with Paper (break M1): a reason typed for Paper and left behind is never saved on another way.
-      const r = await api<{ changed: boolean }>(`/runtime/items/${item.id}/channel`, { method: "PATCH", json: { channel: to, version, ...(to === "PAPER" ? { reason: reason.trim() } : {}) } });
+      const r = await api<{ changed: boolean }>(`/runtime/items/${item.id}/channel`, { method: "PATCH", json: { channel: to, version: read, ...(to === "PAPER" ? { reason: reason.trim() } : {}) } });
       toast.push(r.changed ? { tone: "ok", text: `${item.form} for ${item.person} is now filed as ${CHANNEL_WORDS[to]}. The combination’s line is unchanged.` }
         : { tone: "info", text: `Nothing changed: ${item.form} for ${item.person} was already filed as ${CHANNEL_WORDS[to]}.` });
       await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
@@ -131,7 +139,7 @@ function ChannelDialog({ caseId, item, recorded, portal, version, reload, close 
       description={<>For {item.person} only. The combination files it as {CHANNEL_WORDS[item.line_channel]}; its line stays as released.</>}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} disabled={same || recorded} aria-describedby={same ? "ch-same" : undefined} onClick={() => void save()}>Save</Button></>}>
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }} data-channel-form>
-        {errors.refused ? <Notice tone="warn" title={errors.refused.title} action={recorded ? undefined : <Button size="sm" variant="secondary" onClick={() => { void reload(); setErrors({}); }}>Reload</Button>}>{errors.refused.detail}</Notice> : null}
+        {errors.refused ? <Notice tone="warn" title={errors.refused.title} action={recorded ? undefined : <Button size="sm" variant="secondary" onClick={() => { void reload().then((v) => { setRead(v); setErrors({}); }); }}>Reload</Button>}>{errors.refused.detail}</Notice> : null}
         {recorded ? <Notice tone="info" title="Submitted to IRCC">How {item.form} is filed for {item.person} no longer changes.</Notice> : null}
         {errors.other ? <Notice tone="danger" title="Not saved">{errors.other}</Notice> : null}
         <fieldset className="space-y-2" aria-describedby={`ch-accepts-${item.id}${errors.channel ? " ch-refused" : ""}`}>
