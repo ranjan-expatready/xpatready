@@ -186,7 +186,7 @@ run(async () => {
   const GATE = "person.has_used_other_name", OLD = "Sample Old Name";
   // What a copy wrote, read back from its own record (the view holds no values): each form field's result and the facts frozen with it.
   const written = (id: string) => {
-    const facts = JSON.parse(T.sql(`select s.facts_json::text from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${id}'`) || "[]") as any[];
+    const facts = (JSON.parse(T.sql(`select s.facts_json::text from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${id}'`) || "{}").facts ?? []) as any[];
     const boxes = (JSON.parse(T.sql(`select result_json::text from form_instance where id = '${id}'`) || "{}").boxes ?? []) as any[];
     return { name: facts.find((x) => x.fact === FF)?.value, gate: facts.find((x) => x.fact === GATE)?.value, box: boxes.find((x) => x.fact === FF), yesNo: boxes.find((x) => x.fact === GATE) };
   };
