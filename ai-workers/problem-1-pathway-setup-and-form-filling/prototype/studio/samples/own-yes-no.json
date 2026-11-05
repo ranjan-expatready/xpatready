@@ -1,0 +1,14 @@
+{
+ "basis": "B52 (P-334 (5)); moved from api/src/own-yes-no.ts to data by B88 (P-319). Per combination, the application form whose Yes/No form fields worked out from other answers are each asked as their own question, in the form's words: IMM 5257 (09-2023) p. 1 Question 2 A \"Have you ever used any other name such as a nickname, maiden name or alias?\"; p. 2 \"Do you have a national identity document?\"; p. 2 \"Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?\". The library field of the same name is used when there is one (IMM 0008's and IMM 1294's field maps name them so). Sample, Unconfirmed: expert.",
+ "reason": "The form asks this Yes/No itself before its details: asked as its own question in the form's words (sample loader, B52; Sample)",
+ "combinations": {
+  "vv.single": {
+   "application": "IMM 5257",
+   "boxes": [
+    { "dataPath": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", "label": "Has used other name", "meaning": "Whether the person has ever used any other name, such as a nickname, maiden name or alias (IMM 5257 p. 1, Question 2 A)." },
+    { "dataPath": "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", "label": "Has national ID", "meaning": "Whether the person has a national identity document (IMM 5257 p. 2, National identity document, Question 1)." },
+    { "dataPath": "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]", "label": "US permanent resident", "meaning": "Whether the person is a lawful permanent resident of the United States with a valid alien registration card (green card) (IMM 5257 p. 2, US PR card, Question 1)." }
+   ]
+  }
+ }
+}

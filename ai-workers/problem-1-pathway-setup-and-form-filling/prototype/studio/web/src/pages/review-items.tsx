@@ -83,7 +83,8 @@ export function LibraryChangePage() {
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-form-field>
           <dt className="text-text-muted">Form field</dt><dd className="font-semibold">{x.form_field.edition} · {x.form_field.caption || "A form field with no printed name"}</dd>
           <dt className="text-text-muted">Its own words</dt><dd className="[overflow-wrap:anywhere]">{x.form_field.words ? `“${x.form_field.words}”` : "None"}</dd>
-          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.form_field.clear ? "Filled whenever the form applies" : `Filled only when ${x.form_field.sentence}`}</dd>
+          {x.form_field.ask ? <><dt className="text-text-muted">The form asks</dt><dd className="[overflow-wrap:anywhere]">“{x.form_field.ask.printed}”</dd></> : null}
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.form_field.ask ? (x.form_field.clear ? `Worked out from other answers again, not asked as “${x.form_field.ask.deciding}”` : `Asked as “${x.form_field.ask.deciding}”: writes ${x.form_field.ask.writes}`) : x.form_field.clear ? "Filled whenever the form applies" : `Filled only when ${x.form_field.sentence}`}</dd>
           <dd className="col-span-2 text-xs text-text-muted">For every combination that files this form. Approving says these say the same, not that the condition is correct: Sample, Unconfirmed: expert.</dd>
         </dl>
       ) : null}
