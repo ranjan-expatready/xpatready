@@ -1,0 +1,36 @@
+# A label never outlives a review (founder, 6 Nov ~03:00 IST: "fix it so that it becomes a hard rule and it never messes
+# up"; on 5 Nov #1052 kept `review: approved` across a new fix commit). On every push to a labelled pull request,
+# product/tools/label-guard.sh removes the label unless the reviewer's Approve names the new head, or the push is a pure
+# merge of main touching none of the PR's files (P-318 (1)), and comments why. pull_request_target runs main's copy of
+# this file and the script; the PR's commits are fetched as data and never run. Test: product/tools/check-label-guard.sh.
+name: label-guard
+on:
+  pull_request_target:
+    types: [synchronize]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+concurrency:
+  group: label-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  guard:
+    if: contains(github.event.pull_request.labels.*.name, 'review: approved')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: fetch the pull request's commits (data only)
+        run: git fetch --no-tags origin "+refs/pull/${{ github.event.pull_request.number }}/head:refs/remotes/pr/head"
+      - name: label guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/label-guard.sh
