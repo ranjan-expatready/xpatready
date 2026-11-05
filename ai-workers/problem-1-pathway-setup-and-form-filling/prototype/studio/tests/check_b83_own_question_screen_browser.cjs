@@ -217,7 +217,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   // Review R1 on the screen: an approved change of a document's facts a withdrawal sent back tells the second person why.
   await askThrow("B83 came back");
   const backKey = sql("select canonical_field_key from canonical_field where label = 'B83 came back'");
-  const backDoc = sql(`select document_type_key from document_type where status = 'PUBLISHED' and document_type_key not in (select document_type_key from document_requirement where combination_id = '${vv}') order by 1 limit 1`);
+  const backDoc = sql(`select document_type_key from document_type where status in ('PUBLISHED','DRAFT') order by (document_type_key in (select document_type_key from document_requirement where combination_id = '${vv}')), 1 limit 1`);
   const addFact = sql("select canonical_field_key from canonical_field where group_key = 'person' and status = 'PUBLISHED' order by 1 limit 1");
   const citeWalk = (fact) => ({ fact, about: "holder", source: "Test words (walk), page 1", quote: "Test: B83 walk, Sample", readOn: new Date().toISOString().slice(0, 10) });
   const backChange = await api("POST", `/library/document-types/${backDoc}/supplies`, { facts: [citeWalk(addFact), citeWalk(backKey)], reason: "A B83 walk of a document's facts." });
@@ -227,7 +227,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await reader.goto(`${BASE}/review/change/${backChange.body?.id}`, { waitUntil: "networkidle" });
   const cameBack = reader.locator("[data-came-back]");
   await cameBack.waitFor({ timeout: 60_000 }).catch(() => {});
-  ok("review R1 fail test: the second person's page says why it is back, no key", (await cameBack.count()) === 1 && /changed after it was proposed/.test(await cameBack.innerText()) && /"B83 came back" it named was withdrawn/.test(await cameBack.innerText()) && !/person\.[a-z_]+/.test(await cameBack.innerText()), await reader.locator("body").innerText().then((x) => x.slice(0, 300)));
+  ok("review R1 fail test: the second person's page says why it is back, no key", (await cameBack.count()) === 1 && /changed after it was proposed/.test(await cameBack.innerText()) && /"B83 came back" it named was withdrawn/.test(await cameBack.innerText()) && !/person\.[a-z_]+/.test(await cameBack.innerText()), { doc: backDoc, change: backChange.status, words: backChange.body?.detail, status: sql(`select status from library_change where id = ${backChange.body?.id ? `'${backChange.body.id}'` : "null"}`) });
   await axeOf(reader, "a change back for a second look", "[data-came-back]");
   await reader.close();
   await api("POST", `/library/changes/${backChange.body?.id}/withdraw`, { note: "Done with the walk" });
