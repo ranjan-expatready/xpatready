@@ -57,10 +57,17 @@ function savedRunsOf(combinationKeys: string[]): { combination: string; job: str
 export class FieldScopes {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
 
-  private async combinationsAsking(workspaceId: string, sections: string[]) {
-    if (!sections.length) return [];
-    const rows = await this.db.combination.findMany({ where: { workspaceId, retiredAt: null, sections: { some: { sectionKey: { in: sections } } } }, select: { combinationKey: true, label: true } });
-    return rows.sort((a, b) => a.combinationKey.localeCompare(b.combinationKey));
+  /** The combinations that ask this field: a section they select places it, or a form line of theirs has a form field
+   *  that reads it (a box asks what it reads, P-62). */
+  private async combinationsAsking(workspaceId: string, key: string, sections: string[]) {
+    const rows = await this.db.$queryRaw<{ combination_key: string }[]>`
+      SELECT DISTINCT c.combination_key FROM combination c
+      WHERE c.workspace_id = ${workspaceId}::uuid AND c.retired_at IS NULL AND (
+        EXISTS (SELECT 1 FROM sqr_section_selection s WHERE s.combination_id = c.id AND s.section_key = ANY(${sections}::text[]))
+        OR EXISTS (SELECT 1 FROM combination_form f JOIN form_edition e ON e.gov_form_def_id = f.gov_form_def_id JOIN form_field_map m ON m.form_edition_id = e.id
+                   WHERE f.combination_id = c.id AND f.status <> 'RETIRED' AND m.canonical_field_key = ${key} AND m.status IN ('DRAFT', 'PUBLISHED')))
+      ORDER BY 1`;
+    return rows.map((r) => r.combination_key);
   }
 
   async view(key: string) {
@@ -69,8 +76,7 @@ export class FieldScopes {
     const f = await factsOf(this.db, workspaceId, key);
     if (!f) throw problem(404, "Not in the library", `${key} is not in the shared library (it may have been deleted or reset).`);
     const scope = scopeOfStored(f.current.scope);
-    const combos = await this.combinationsAsking(workspaceId, f.sections);
-    const saved = savedRunsOf(combos.map((c) => c.combinationKey));
+    const saved = savedRunsOf(await this.combinationsAsking(workspaceId, key, f.sections));
     return {
       key, name: f.name, scope, words: SCOPE_WORDS[scope], published: f.facts.published,
       choices: SCOPES.map((s) => ({ scope: s, ...SCOPE_WORDS[s], current: s === scope, refused: s === scope ? null : scopeRefusal(f.facts, s)?.message ?? null })),
