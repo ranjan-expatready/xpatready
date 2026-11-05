@@ -19,9 +19,9 @@ const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const n = (q: string) => Number(sql(q));
 // node:http, not fetch: the load can take more than fetch's 300 s header wait on a busy machine.
-const call = (method: string, path: string, body?: unknown) => new Promise<{ status: number; body: any }>((done, failed) => {
+const call = (method: string, path: string, body?: unknown, actor = "user-A") => new Promise<{ status: number; body: any }>((done, failed) => {
   const data = body === undefined ? undefined : JSON.stringify(body);
-  const rq = request({ host: "localhost", port: PORT, path: `/api${path}`, method, headers: { "x-actor": "user-A", "content-type": "application/json", ...(data ? { "content-length": Buffer.byteLength(data) } : {}) } }, (r) => {
+  const rq = request({ host: "localhost", port: PORT, path: `/api${path}`, method, headers: { "x-actor": actor, "content-type": "application/json", ...(data ? { "content-length": Buffer.byteLength(data) } : {}) } }, (r) => {
     let t = ""; r.setEncoding("utf8"); r.on("data", (c) => (t += c)); r.on("end", () => { let b: any = null; try { b = JSON.parse(t); } catch { /* not JSON */ } done({ status: r.statusCode ?? 0, body: b }); });
   });
   rq.on("error", failed); if (data) rq.write(data); rq.end();
@@ -51,8 +51,9 @@ const EE = "Provincial nominees › Express Entry stream";
   // IMM 0008 DEP prints no "Unknown" marital status (the shared list has it; IMM 0008 prints 00): B81's Not on this form,
   // set by the loader through the option map's own route (tech lead on #1050), so Express Entry is released.
   ok("QA-144 slice 4 pass (E10b): Express Entry is released: release 1, submitted by the author, approved by the Approver", released && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${ee}' order by version desc limit 1`) === "1|user-B|user-A", errors.map((e) => e.message.slice(0, 160)));
-  const marks = sql(`select e.edition_label || '|' || (m.option_map->'notOnForm')::text || '|' || (select count(*) from jsonb_object_keys(m.option_map->'map')) from form_field_map m join form_edition e on e.id = m.form_edition_id where m.option_map ? 'notOnForm' and m.status <> 'RETIRED' order by 1`).split("\n").filter(Boolean);
-  ok("QA-144 slice 4 B81 mark: only IMM 0008 DEP's marital status, only \"unknown\", with the 7 drafted codes kept", marks.length >= 1 && marks.every((x) => x === 'IMM 0008 DEP (10-2024)|["unknown"]|7'), marks);
+  const marks = sql(`select e.edition_label || '|' || (m.option_map->'notOnForm')::text || '|' || (select count(*) from jsonb_object_keys(m.option_map->'map')) from form_field_map m join form_edition e on e.id = m.form_edition_id where m.option_map ? 'notOnForm' and m.status <> 'RETIRED' and e.gov_form_def_id in (select gov_form_def_id from combination_form where combination_id = '${ee}' and status <> 'RETIRED') order by 1`).split("\n").filter(Boolean);
+  // On Express Entry's own forms (B97, #1085, marks IMM 5645's for the Visitor visa's release 2: not Express Entry's).
+  ok("QA-144 slice 4 B81 mark: on Express Entry's forms only IMM 0008 DEP's marital status, only \"unknown\", with the 7 drafted codes kept", marks.length >= 1 && marks.every((x) => x === 'IMM 0008 DEP (10-2024)|["unknown"]|7'), marks);
   ok("QA-144 slice 4 B81 mark fail: no code is invented for \"unknown\" on IMM 0008 DEP", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 0008 DEP (10-2024)' and m.option_map->'map' ? 'unknown' and m.status <> 'RETIRED'`) === 0);
   ok("QA-144 slice 4 B81 mark: set by the author through the option map's route (its audit line names it)", n(`select count(*) from audit_event where entity = 'option map' and actor = 'user-A' and summary like '%IMM 0008 DEP (10-2024)%not on this form: Unknown%'`) >= 1);
   ok("QA-144 slice 4 fail: Express Entry's form editions keep no form field without a decision", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id join combination_form f on f.gov_form_def_id = e.gov_form_def_id where f.combination_id = '${ee}' and f.status <> 'RETIRED' and e.channel = 'PDF' and m.outcome = 'unresolved' and m.status = 'DRAFT'`) === 0);
@@ -89,6 +90,17 @@ const EE = "Provincial nominees › Express Entry stream";
   ok("QA-144 slice 4 preview fail: no IMM 5476 without a representative", !(pv?.forms ?? []).some((f) => f.form === "IMM 5476" && f.applies === true), (pv?.forms ?? []).filter((f) => f.form === "IMM 5476").map((f) => `${f.person}:${f.applies}`));
   const rep = await preview({ ...family, "case|case.uses_representative": true });
   ok("QA-144 slice 4 preview pass: IMM 5476 once the application uses a representative", (rep?.forms ?? []).some((f) => f.form === "IMM 5476" && f.applies === true), (rep?.forms ?? []).filter((f) => f.form === "IMM 5476").map((f) => `${f.person}:${f.applies}`));
+  // Ruling m19 (Lead 13 on #1050): BR-8's "every role that files has questions" (engine/programs.ts rolesWithoutQuestions)
+  // reads applicants without filingMode; Express Entry's Spouse and Child are on_principal. Through the product's routes:
+  // the catalogue row is startable with no "No questions yet", a case opens on its release, and both roles are asked.
+  const cat = (await call("GET", "/catalogue?pathway=INDIVIDUAL")).body as { rows?: { combinationId?: string; status?: string; missing?: { code: string; text: string }[] }[] } | null;
+  const eeRow = (cat?.rows ?? []).find((x) => x.combinationId === ee);
+  ok("QA-144 slice 4 m19 pass: Express Entry's catalogue row is startable, with no \"No questions yet\" for any role", eeRow?.status === "READY" && !(eeRow.missing ?? []).some((m) => m.code === "role_without_questions" || /No questions yet/.test(m.text)), eeRow ? { status: eeRow.status, missing: eeRow.missing } : "no row");
+  const opened = await call("POST", "/runtime/cases", { combinationId: ee, reference: `B79a-ee-${Date.now()}`, clientActor: "user-P", principal: { displayName: "Sample Client (Sample)" } }, "user-O");
+  ok("QA-144 slice 4 m19 pass: a case opens on Express Entry's release 1 (no false \"No questions yet\")", opened.status < 300 && !!opened.body?.id && !/No questions yet/.test(JSON.stringify(opened.body ?? "")), opened.body?.missing ?? opened.status);
+  const asked = (pvq: { questions?: { about: string }[] } | null, who: string) => (pvq?.questions ?? []).filter((q) => q.about === who).length;
+  const pvq = (await call("GET", `/combinations/${ee}/preview?people=${encodeURIComponent(JSON.stringify({ spouse_or_partner: 1, child: 2 }))}&answers=${encodeURIComponent(JSON.stringify(family))}`)).body as { questions?: { about: string }[] } | null;
+  ok("QA-144 slice 4 m19 fail-guard: the on_principal Spouse and the child of 19 really are asked (so BR-8 has nothing to say of them)", asked(pvq, "spouse_or_partner") > 20 && asked(pvq, "child-1") > 20, { spouse: asked(pvq, "spouse_or_partner"), child19: asked(pvq, "child-1"), child10: asked(pvq, "child-2") });
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();
