@@ -95,3 +95,14 @@ The builder's 27/27 depends on that timing; on my copy it failed 2 of 2. Nothing
 **New Minor (Should):** `employer-link.ts:86` copies `refuseIfCaseRecorded`'s query to change its words (`submission-record.ts:32-35`). Better to give the shared helper the detail text as a parameter than to keep two copies of the rule.
 
 **Verdict: Block** for commit 011bc9769. One fix: Major R2-1, a single line in the browser check. Re-run it on a fresh copy. With that line I would approve; nothing else is open above Minor.
+
+## Round 3 — diff only, `011bc9769..3c83686a2` (only the browser check's tooltip step changed)
+**Runs** (fresh copy `rv_c13` on :4433, configured checkpoint): the unmodified `check_c13_employer_link_browser.cjs` passed **6 of 8** (28/28), and **failed 2 of 8** (runs 1 and 4) at the same step. Focus is on the label ("the source label takes keyboard focus" PASS), but `waitFor(tooltip)` times out after 20 s.
+**Cause, measured** (scratch copy of the check that logs scroll, focus and `data-state`, 1 failure in 10 runs): `instant-open` at 18 ms after focus, then a document `scroll` event at 24 ms with scrollY unchanged (1642), then `closed` at 33 ms. So a scroll event still arrives after the two-frame settle check, and Radix closes the tooltip on it. My round-2 "one line, then approve" rested on one passing run; that was not enough proof, and the step is still racy. The product is unchanged and correct: the tooltip does open from the keyboard every time. A stray scroll event is what closes it: the shared Tip behaviour now on the tech lead's follow-up list.
+**R2-1 stays open (Major, Must): the commit's own browser check fails about 1 run in 4–10** on an independent copy, above the 10 % batch-failure bar (WAY-OF-WORKING), and would land on `main`. Deterministic fixes, either one:
+* (a) Install a `MutationObserver` on the label before `focus()`, then wait until its `data-state` was ever `open`/`instant-open`, and read the tooltip text while it is open. This asserts "opens from the keyboard", which is the claim under test.
+* (b) Retry `blur()` + `focus()` up to 3 times, each waiting ≤ 1 s for the tooltip.
+
+Re-run either fix 5+ times on a fresh copy. The three Minors stay listed in the PR, per the tech lead's ruling.
+
+**Verdict: Block** for commit 3c83686a2. Only R2-1 is open: make the tooltip step deterministic. Nothing else is open above Minor.

@@ -109,14 +109,21 @@ const LMIA = "case.lmia_or_offer_number";
     const row = value.locator("xpath=..");
     ok("C1.3 BR-5: the copied employer name reads \"To confirm\" beside the \"Employer case\" source", await row.getByText("To confirm").count() === 1 && await row.getByText("Employer case").count() === 1, await row.innerText());
     const source = row.getByRole("button", { name: /^Source: employer case\. Copied from Sample employer case: Sample Employer Ltd \(Sample\) on / });
-    // Review R2-1 (root cause measured: 4/4 open once the scroll has settled, 1/4 when focused in the scroll's frame):
-    // the scroll event of bringing the label into view arrives a frame later and Radix closes a tooltip on scroll. So the
-    // label is put in view, the page's scroll position is read steady over two frames, then it is focused.
+    // Review R2-1 / round 3 (measured): the tooltip opens on keyboard focus every time (18 ms), but a stray document
+    // scroll event can close it a few ms later (the shared Tip's Radix close-on-scroll, on the tech lead's follow-up
+    // list). So the check records, from before the focus, whether it ever opened and what it said while open, instead of
+    // relying on it staying open.
     await source.scrollIntoViewIfNeeded();
-    await p.waitForFunction(() => new Promise((done) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => done(scrollY === y))); }), undefined, T);
+    await source.evaluate((el) => {
+      const seen = { opened: false, text: "" };
+      window.__c13tip = seen;
+      const look = () => { if (/open/.test(el.getAttribute("data-state") ?? "")) seen.opened = true; const t = document.querySelector('[role="tooltip"]'); if (t && t.textContent) seen.text = t.textContent; };
+      new MutationObserver(look).observe(el, { attributes: true, attributeFilter: ["data-state"] });
+      new MutationObserver(look).observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
     await source.focus();
     ok("C1.3: the source label takes keyboard focus", await source.evaluate((el) => el === document.activeElement));
-    await p.getByRole("tooltip").filter({ hasText: "Changes there are not copied" }).first().waitFor({ state: "attached", timeout: 20000 });
+    await p.waitForFunction(() => window.__c13tip?.opened && /Copied from Sample employer case: Sample Employer Ltd \(Sample\) on .*Changes there are not copied/.test(window.__c13tip.text), undefined, T);
     ok("C1.3 (review m2): the source label opens its tooltip from the keyboard and names the employer case", true);
     await value.scrollIntoViewIfNeeded();
     await shot(p, "5-agent-view-employer-case-source");
