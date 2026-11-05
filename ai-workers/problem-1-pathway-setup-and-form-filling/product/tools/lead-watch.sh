@@ -5,6 +5,8 @@
 # Usage: bash product/tools/lead-watch.sh [minutes since last check, default 30]
 set -uo pipefail
 SINCE="${1:-30}"
+# gh through gh.sh: on a TLS failure the same reads go through curl with gh auth token (P-363; founder, 6 Nov).
+TOOLS="$(cd "$(dirname "$0")" && pwd)"; gh() { bash "$TOOLS/gh.sh" "$@"; }
 ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT" || exit 99
 STATE_DIR="/private/tmp/claude-$(id -u)/lead-watch"; mkdir -p "$STATE_DIR"
 act=0; say() { echo "$1"; }; ACT() { act=$((act+1)); echo "ACT   $1"; }

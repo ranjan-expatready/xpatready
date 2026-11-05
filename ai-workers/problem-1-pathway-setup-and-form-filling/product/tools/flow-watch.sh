@@ -4,6 +4,7 @@
 # and acts on each RED line in that check. Exit code = number of RED lines (0 = flowing).
 # Usage: bash product/tools/flow-watch.sh
 set -uo pipefail
+TOOLS="$(cd "$(dirname "$0")" && pwd)"; gh() { bash "$TOOLS/gh.sh" "$@"; }   # TLS fallback through curl (P-363)
 REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 python3 -I - "$REPO" "$DIR" <<'EOF'
@@ -12,7 +13,7 @@ from datetime import datetime, timezone
 repo, tools = sys.argv[1], sys.argv[2]
 now = datetime.now(timezone.utc)
 def gh(*a):
-    r = subprocess.run(["gh", *a], capture_output=True, text=True)
+    r = subprocess.run(["bash", tools + "/gh.sh", *a], capture_output=True, text=True)   # TLS fallback (P-363)
     return r.stdout
 def mins(t): return int((now - datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)).total_seconds() // 60)
 red = []
