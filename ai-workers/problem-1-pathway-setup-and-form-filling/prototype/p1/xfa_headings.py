@@ -26,7 +26,8 @@ out by position top to bottom, a flowing part in its own order):
    which is its title.
 6. titled before (B79b): on a page where none of the rules above names any part, each part, and each box straight on the
    page, takes the numbered title printed just before it on that page ("7. Education", then IMM 5669's education boxes
-   and table), those words without the number: the boxes after one title are one section ("from": that title's text).
+   and table), or its own numbered caption ("3. Date of birth"), those words without the number: the boxes after one
+   title are one section ("from": that title's text). A page that gives one name to two parts is not read this way.
    A numbered text too long to be a title (a question) ends it, so the boxes after it have no heading. A part's own
    first text is left alone: only the page's own texts between its parts are read. An office part never takes it.
 A form whose pages sit inside one unnamed wrapper (IMM 5669's "#subform") is read from those pages, as the inventory's
@@ -252,9 +253,11 @@ def titled_before(page, pname, ns, seen):
     kids = [c for c in page if c.tag.replace(ns, "") in ("draw", "field") + PARTS]
     if (page.get("layout") or "position") == "position":
         kids = sorted(kids, key=y_of)
-    # A name the page gives two boxes or parts is not one place on the form (IMM 5532's four "Table1" tables), and the
-    # inventory cannot tell them apart: it takes no title.
-    twice = {n for n, k in collections.Counter(c.get("name") for c in kids if c.tag.replace(ns, "") != "draw").items() if k > 1}
+    # A page that gives one name to two boxes or parts (IMM 5532's four "Table1" tables) is not read: the inventory cannot
+    # tell them apart, and a few named parts would draw the page's other boxes into them (the placement step's
+    # nearest-box rule, api/src/form-part-placements.ts). Its parts stay held for a person to name.
+    if any(k > 1 for k in collections.Counter(c.get("name") for c in kids if c.tag.replace(ns, "") != "draw").values()):
+        return {}
     out, at = {}, None
     for c in kids:
         tag = c.tag.replace(ns, "")
@@ -270,7 +273,7 @@ def titled_before(page, pname, ns, seen):
         cm = NUMBERED.match(ct) if len(ct) <= 60 else None
         if cm and lettered(cm.group(1)):
             at = (cm.group(1), ct, f"{pname}.{c.get('name')}")
-        if not at or not c.get("name") or c.get("name") in twice:
+        if not at or not c.get("name"):
             continue
         if tag in PARTS and (not fills(c, ns) or OFFICE.search(next((t for t, _, _ in texts(c, ns) if lettered(t)), ""))):
             continue
