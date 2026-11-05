@@ -1,0 +1,31 @@
+C7.7 — Deliverables list per filing (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FAIL  C7.7-1 pass: adults get IMM 5257, IMM 5476 and IMM 5707 (VV-R07, VV-R09, VV-R10) — [["IMM 5257","IMM 5257 SCH1","IMM 5409","IMM 5475","IMM 5476","IMM 5707","IRM 0002"],["IMM 5257","IMM 5257 SCH1","IMM 5409","IMM 5475","IMM 5476","IMM 5707","IRM 0002"]]
+FAIL  C7.7-2 pass: children under 18 get only their own IMM 5257 (IMM 5707 and IMM 5476 are 18 or older) — [["IMM 5257","IMM 5409","IMM 5475","IMM 5476","IRM 0002"],["IMM 5257","IMM 5409","IMM 5475","IMM 5476","IRM 0002"]]
+PASS  C7.7-3 pass: biometrics is an IRCC step for the principal, the spouse and the child of 15, none for the child of 10 (VV-R15)
+PASS  C7.7-4 pass: the biometrics step is tagged "needed after filing" (IRCC's instruction letter comes after you apply, VV-R17)
+PASS  C7.7-5 pass: document items come from the checklist (each person's passport; the principal's proof of financial support)
+PASS  C7.7-6 pass: every item has exactly one state from the row words, and every item belongs to a filing of this case
+PASS  C7.7-7 pass: stage 1 counts the facts to confirm per filing, before any item — [{"filing":"fe91e51c-3e82-44f3-be5b-3fb050bf1669","to_confirm":141,"confirmed":0},{"filing":"c18ef705-f5e0-4b64-86aa-d0ab58119323","to_confirm":141,"confirmed":0},{"filing":"e738c0c5-f684-4865-8ee1-26b7b5a34681","to_confirm":111,"confirmed":0},{"filing":"83884
+PASS  C7.7-8 pass: before facts are confirmed, PDF form items say what they wait for ("Waiting for N facts") and are To do, never Ready
+FAIL  C7.7-9 pass: with every fact confirmed, stage 1 shows nothing left to confirm — [{"filing":"fe91e51c-3e82-44f3-be5b-3fb050bf1669","to_confirm":1,"confirmed":0},{"filing":"c18ef705-f5e0-4b64-86aa-d0ab58119323","to_confirm":1,"confirmed":0},{"filing":"e738c0c5-f684-4865-8ee1-26b7b5a34681","to_confirm":1,"confirmed":0},{"filing":"838843e2-30
+FAIL  C7.7-10 pass: "Download PDF copy" on the Online IMM 5707 is a job (202) — 409
+FAIL  C7.7-11 pass: the copy is IRCC's own IMM 5707 PDF filled from the same confirmed facts, marked "Copy, not for filing" — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"No such copy.","message":"No such copy."}
+FAIL  C7.7-12 pass: the copy is never counted: no new item, readiness unchanged
+FAIL  C7.7-13 fail: a "Copy, not for filing" cannot be locked as filed or uploaded (409, in words) — "No such copy."
+PASS  C7.7-14 fail: a PDF upload line has no separate "PDF copy" (its own PDF is the deliverable): 409 or 422 — 409
+FAIL  C7.7-15 pass (data): one filing per person, items keyed by filing × person × form
+FAIL  C7.7-16 pass (G25): the principal's IMM 5707 copy leaves nothing by hand that the case holds ("has any children" is written from the children on the case) — []
+PASS  C7.7-17 pass (G24, QA-139): every "To write by hand" line is in plain words: no engine step names — [{"label":"How the child is related to the subject: natural son or daughter, stepchild or adopted child.","why":"The product cannot work this form field out from the case's answers yet: write it by hand."}]
+FAIL  C7.7-18 pass: any line still to write by hand shows on the filing as a warning naming the form and the line (BR-9: everything else warns) — [{"code":"missing_signature","item":"17e783d4-56c9-4dbc-85af-9e1af9fb3ea1","subject":"cee2012b-60b5-4454-8ad8-7008f5a8f76e","owes":"staff","words":"CRITICAL: IMM 5707 for Sample Client A must be signed (how it is signed is not set on the form line yet; until i
+PASS  C7.7-19 pass: the principal's IMM 5257 on Paper lists its barcode page and its steps in order: Validate in Adobe (adds the barcode page), print with the barcode page on top, signed in pen, mailed after Ready to file — {"status":200,"line":{"id":"81223725-3d13-4471-8ca5-3be85e7ae5d7","kind":"form","filing":"fe91e51c-3e82-44f3-be5b-3fb050bf1669","subject":"cee2012b-60b5-4454-8ad8-7008f5a8f76e","person":"Sample Client A","version":2,"form":"IMM 5257","channel":"PAPER","line_ch
+FAIL  C7.7-20 pass: before its validated copy is read back the Paper line is To do and says to Validate in Adobe and read it back — "Waiting for 1 fact to answer or confirm."
+PASS  C7.7-21 fail: the spouse's IMM 5257, still a PDF upload, carries no Paper steps or barcode page line — {"id":"cdcba607-18ff-412f-bfa9-c93849ef1b33","kind":"form","filing":"c18ef705-f5e0-4b64-86aa-d0ab58119323","subject":"d6379393-1fbc-4091-b376-2dbe8df55c44","person":"Sample Spouse A","version":1,"form":"IMM 5257","channel":"PDF_UPLOAD","line_channel":"PDF_UPLO
+PASS  C7.7-22 fail: the copy sent back unchanged (Validate never pressed, so no barcode page) is refused (422) and the line stays To do with no validated copy — {"status":422,"state":"to_do"}
+FAIL  C7.7-23 pass: once its validated copy is read back for today's facts the line is In progress, its Validate step done, naming that copy — {"id":"81223725-3d13-4471-8ca5-3be85e7ae5d7","kind":"form","filing":"fe91e51c-3e82-44f3-be5b-3fb050bf1669","subject":"cee2012b-60b5-4454-8ad8-7008f5a8f76e","person":"Sample Client A","version":2,"form":"IMM 5257","channel":"PAPER","line_channel":"PDF_UPLOAD","
+PASS  C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (those steps are not recorded yet: C8.1)
+FAIL  C7.7-25 fail: IMM 5476 cannot go on Paper here (IRCC accepts it only as a PDF upload): refused (422) with IRCC's line, and its line carries no Paper steps — {"status":404,"detail":"No such item."}
+PASS  C7.7-26 pass (P-171 (1)): a fact on IMM 5257 changed after the read-back makes the Paper line Out of date, asking for Validate again — {"put":200,"line":"out_of_date","reason":"The validated copy of IMM 5257 read back 5 Nov 2026 is out of date: family name as shown on passport or travel document of Sample Client A changed from \"SAMPLE\" to \"SAMPLE-CHANGED\" (not confirmed yet) on 5 Nov 2026
+
+13/26 passed

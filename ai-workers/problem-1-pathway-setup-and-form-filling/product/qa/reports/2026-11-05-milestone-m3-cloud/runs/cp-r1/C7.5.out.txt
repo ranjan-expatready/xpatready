@@ -1,0 +1,21 @@
+C7.5 — Independent review: rules cross-checks and the replayed AI review
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C7.5-1 pass: a rules cross-check finds the passport expiring before the visit ends: one MAJOR Rules finding quoting both facts — [{"id":"9036d1d5-72de-410a-aab7-077d72599421","filing":"b6b6e4a3-421c-4418-a8d1-86eaac7c8062","subject":"4f56d812-7157-4ae9-b4c9-8713834a7018","person":"Sample Client A","form":"IMM 5257","field":"person.passport_expiry_date","fact_label":"Passport expiry date
+PASS  C7.5-2 pass: rules checks made no model call (US$0)
+PASS  C7.5-3 fail: a client cannot read findings (403)
+PASS  C7.5-4 pass: a rule finding resolves itself when the fact is fixed — {"id":"9036d1d5-72de-410a-aab7-077d72599421","filing":"b6b6e4a3-421c-4418-a8d1-86eaac7c8062","subject":"4f56d812-7157-4ae9-b4c9-8713834a7018","person":"Sample Client A","form":"IMM 5257","field":"person.passport_expiry_date","fact_label":"Passport expiry date"
+FAIL  C7.5-5 pass (P-110): the run card shows the cost first: live estimate above US$0, replay US$0, and the SI-6 stand-in — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"Cannot POST /api/runtime/cases/e5cfdc3f-141a-40a1-9a6d-6e9ca6c5904c/review-runs/plan","message":"Cannot POST /api/runtime/cases/e5cfdc3f-141a-40a1-9a6d-6e9ca6c5904c/revi
+FAIL  C7.5-6 pass: the card says a live review is not allowed without the founder's Go
+FAIL  C7.5-6b precondition (FQ-10): a saved AI review of IMM 5257 for these fixed values is recorded (the one live trial, about US$1, SI-6, with the founder's Go; until then C7.5-7…13 stay red); replay is keyed on the form edition and its field values, not the PDF checksum
+FAIL  C7.5-7 pass: the replayed review returns its saved findings, each marked Replayed, quoting its source and field, with High or Low agreement (P-121) — []
+FAIL  C7.5-8 pass: the saved run has a Low finding, and every Low finding carries both rounds' reasons
+FAIL  C7.5-9 pass (P-71, P-168): an open AI finding warns and never blocks Ready to file
+PASS  C7.5-10 fail: acknowledging without a reason is refused (400) — 400
+PASS  C7.5-11 pass: acknowledged with a reason, recorded with who and when
+PASS  C7.5-12 fail: waiving anything below CRITICAL is refused (422); the saved run needs a non-CRITICAL finding — 422
+PASS  C7.5-13 pass: a dismissed finding does not return for the same source on the next run (the saved run needs two findings)
+PASS  C7.5-14 pass: staff add a finding by hand (source Added by hand)
+FAIL  C7.5-15 pass: the whole review stayed at US$0 (replay only)
+
+9/16 passed

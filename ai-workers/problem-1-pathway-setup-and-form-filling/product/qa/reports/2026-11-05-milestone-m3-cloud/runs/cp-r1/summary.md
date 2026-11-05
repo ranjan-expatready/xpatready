@@ -1,0 +1,17 @@
+# Round 1 on the checkpoint (exit · PASS · FAIL), main ffcfb45c8
+
+* C6.4: exit 1 · PASS 18 · FAIL 12 (load 99 s, run 6 s)
+* C6.12-breadth: exit 1 · PASS 1 · FAIL 3 (load 99 s, run 7 s)
+* C6.12: exit 0 · PASS 24 · FAIL 0 (load 100 s, run 8 s)
+* C6.9: exit 1 · PASS 2 · FAIL 13 (load 85 s, run 1 s)
+* C6.5: exit 1 · PASS 9 · FAIL 23 (load 86 s, run 2 s)
+* C6.11: exit 1 · PASS 22 · FAIL 3 (load 85 s, run 2 s)
+* C7.5: exit 1 · PASS 9 · FAIL 7 (load 85 s, run 25 s)
+* C7.6: exit 1 · PASS 19 · FAIL 6 (load 85 s, run 27 s)
+* C8.1: exit 1 · PASS 0 · FAIL 14 (load 81 s, run 22 s)
+* C7.3: exit 1 · PASS 2 · FAIL 11 (load 81 s, run 32 s)
+* C7.7: exit 1 · PASS 13 · FAIL 13 (load 84 s, run 139 s)
+* C10.2: exit 1 · PASS 0 · FAIL 11 (load 86 s, run 2 s)
+* C8.2: exit 1 · PASS 11 · FAIL 1 (load 86 s, run 47 s)
+* C9.2: exit 1 · PASS 5 · FAIL 6 (load 87 s, run 43 s)
+* C11.6: exit 1 · PASS 6 · FAIL 8 (load 83 s, run 2 s)
