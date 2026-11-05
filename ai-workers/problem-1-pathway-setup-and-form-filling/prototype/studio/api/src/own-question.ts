@@ -36,7 +36,8 @@ const groupWords = (g: string) => (g === "person" ? "a person" : g === "case" ? 
 const wordsOfRow = (caption: string | null | undefined, question: string | null) => question || caption?.trim() || "This form field";
 
 const readings = new Map<string, Map<string, Box>>();
-function readingOf(file: string | null): Map<string, Box> | null {
+/** A form edition's reading, by form field (B88 reads the printed question and the options of a worked-out Yes/No from it). */
+export function readingOf(file: string | null): Map<string, Box> | null {
   if (!file) return null;
   if (!readings.has(file)) {
     try { readings.set(file, new Map(((JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fields?: Box[] }).fields ?? []).filter((x) => x.data_path).map((x) => [x.data_path!, x]))); } catch { return null; }
