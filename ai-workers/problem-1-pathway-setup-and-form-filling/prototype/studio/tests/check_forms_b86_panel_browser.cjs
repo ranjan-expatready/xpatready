@@ -75,6 +75,24 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const first = await p.locator("[data-problem]").first().innerText();
   step("BR (m5): \"Hiding a value\" sorts first, so it is never behind Show all", /Hiding a value a form reads/.test(first), first);
 
+  // ---------------------------------------------------------------- the way back (review M1), and a returned change (review M2)
+  await p.locator(under).getByRole("button", { name: "Says the same as this condition" }).click();
+  await p.locator(`${under} [data-state="waiting"]`).waitFor({ timeout: 60_000 });
+  const backId = (await p.locator(`${under} a`).getAttribute("href")).split("/").pop();
+  await api(`/library/changes/${backId}/approve`, "POST", { note: "Approved by a test (B86)." }, "user-B");
+  await p.reload();
+  await p.locator("[data-form-fields-held] summary").click();
+  await check("Review and release, a form field holding a condition", "[data-form-fields-held]", "held");
+  const undo = p.locator(`[data-form-fields-held] ${under}`).getByRole("button", { name: /take the condition off/i }); // B88 (WCAG 2.5.3): the name starts with its visible "Undo:"
+  step("BR-7 pass (review M1): once approved, Undo is on the screen", await undo.count() === 1);
+  await undo.focus(); await p.keyboard.press("Enter");
+  await p.locator(`[data-form-fields-held] ${under} [data-state="waiting"]`).waitFor({ timeout: 60_000 });
+  const undoId = (await p.locator(`[data-form-fields-held] ${under} a`).getAttribute("href")).split("/").pop();
+  await api(`/library/changes/${undoId}/return`, "POST", { note: "Returned by a test: keep it for now (B86)." }, "user-B");
+  await p.goto(`${BASE}/review/change/${undoId}`);
+  await p.getByRole("button", { name: "Withdraw it" }).waitFor({ timeout: 60_000 });
+  const pg = await p.locator("main").innerText();
+  step("review M2: a returned change offers Withdraw, and no form to correct a name it does not have", /withdraw it, then confirm the form field again/.test(pg) && (await p.getByLabel("Name").count()) === 0 && (await p.getByLabel("Meaning").count()) === 0, pg.slice(0, 200));
   step("no error in the page's console", errs.length === 0, errs.join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);

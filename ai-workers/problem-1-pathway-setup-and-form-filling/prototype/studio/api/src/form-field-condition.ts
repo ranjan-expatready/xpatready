@@ -6,6 +6,7 @@
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import { Prisma, type LibraryChange } from "@prisma/client";
 import { z } from "zod";
+import type { FormFieldRow, FormFieldState, FormFieldsOfCombination, FormFieldsOfQuestion } from "../../contracts/form-field-conditions.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { askedStep, blockFacts, decidingYes, isWorkedOutYesNo, plainWords, showCondition, whenWords, yesNoStep } from "../../engine/form-field-condition.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
@@ -21,14 +22,13 @@ export const ASK_ACTION = "SET_FORM_FIELD_QUESTION";
 type Step = { fact: string | null; transform: string | null; origin?: string | null; evidence?: string | null };
 /** BR-7: an approved change never blocks a new one, so a mistake can be undone before any release. */
 const BLOCKING = ["WAITING", "RETURNED"];
-type Client = Pick<Db, "formFieldMap" | "combination" | "combinationForm" | "sectionQuestion">;
+type Client = Pick<Prisma.TransactionClient, "formFieldMap" | "combination" | "combinationForm" | "sectionQuestion">;
 const problem = (status: number, title: string, detail: string) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const sameCondition = (a: unknown, b: unknown) => bareCond(a) !== null && bareCond(a) === bareCond(b);
 const keyOf = (formEditionId: string, dataPath: string) => `${formEditionId}:${dataPath}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-export type FormFieldState = "not_confirmed" | "waiting" | "returned" | "confirmed" | "different" | "no_words" | "worked_out" | "asked";
 const NO_WORDS = "This form field's map has no words about when it is filled, so nothing says it is conditional, and it cannot be confirmed. This combination stays held until the form can carry the condition, or the condition is removed.";
 const WORKED_OUT = "This Yes/No is worked out from other answers and must write No when the answer is No, so it cannot be filled only under this condition. This combination stays held until the form can carry the condition, or the condition is removed.";
 /** B88: why a worked-out Yes/No can be asked as its condition's deciding question, or why not (BR-1, BR-2), in words. */
@@ -42,20 +42,19 @@ function cannotAsk(why: "shape" | "type" | "group" | "printed" | "codes" | "bloc
 /** Lead's ruling 3 on #1053: what approving this holds elsewhere, in words: the other combinations that ask this question and
  *  their form fields that read it without this condition. A combination cannot be released until they agree (the rule). */
 export async function spreadOf(db: Client, workspaceId: string, fact: string, tree: unknown, except: string | null | undefined): Promise<{ combinations: number; form_fields: number; words: string | null }> {
-  const q = await db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: fact }, orderBy: { version: "desc" }, select: { sectionKey: true, status: true } });
-  const current = q.find((r) => r.status === "DRAFT") ?? q.find((r) => r.status === "PUBLISHED");
-  if (!current) return { combinations: 0, form_fields: 0, words: null };
-  const others = (await db.combination.findMany({ where: { workspaceId, retiredAt: null, sections: { some: { sectionKey: current.sectionKey } } }, select: { id: true } })).map((c) => c.id).filter((id) => id !== except);
-  if (!others.length) return { combinations: 0, form_fields: 0, words: null };
-  const lines = await db.combinationForm.findMany({ where: { workspaceId, combinationId: { in: others } }, orderBy: { version: "desc" }, select: { combinationId: true, lineageKey: true, status: true, govFormDefId: true } });
+  if (!(await db.sectionQuestion.count({ where: { workspaceId, lineageKey: fact } }))) return { combinations: 0, form_fields: 0, words: null };
+  // A combination asks a question its forms read (engine/snapshot.ts), not only one in a section it picked.
+  const rows = effective(await db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: fact }, include: { edition: { select: { govFormDefId: true } } } }), (m) => `${m.formEditionId}|${m.dataPath}`, "draft").filter((m) => m.outcome === "mapped" && !sameCondition(m.conditionRule, tree));
+  const forms = [...new Set(rows.map((r) => r.edition.govFormDefId))];
+  if (!forms.length) return { combinations: 0, form_fields: 0, words: null };
+  const open = new Set((await db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true } })).map((c) => c.id));
+  const lines = await db.combinationForm.findMany({ where: { workspaceId, govFormDefId: { in: forms } }, orderBy: { version: "desc" }, select: { combinationId: true, lineageKey: true, status: true, govFormDefId: true } });
   const newest = new Map<string, (typeof lines)[number]>();
   for (const l of lines) if (!newest.has(`${l.combinationId}|${l.lineageKey}`)) newest.set(`${l.combinationId}|${l.lineageKey}`, l);
-  const live = [...newest.values()].filter((l) => l.status !== "RETIRED");
-  const rows = effective(await db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: fact, edition: { govFormDefId: { in: [...new Set(live.map((l) => l.govFormDefId))] } } }, include: { edition: { select: { govFormDefId: true } } } }), (m) => `${m.formEditionId}|${m.dataPath}`, "draft").filter((m) => m.outcome === "mapped" && !sameCondition(m.conditionRule, tree));
-  const forms = new Set(rows.map((r) => r.edition.govFormDefId));
-  const held = new Set(live.filter((l) => forms.has(l.govFormDefId)).map((l) => l.combinationId));
+  const live = [...newest.values()].filter((l) => l.status !== "RETIRED" && l.combinationId !== except && open.has(l.combinationId));
+  const filed = new Set(live.map((l) => l.govFormDefId)), held = new Set(live.map((l) => l.combinationId)), fields = rows.filter((r) => filed.has(r.edition.govFormDefId)).length;
   if (!held.size) return { combinations: 0, form_fields: 0, words: null };
-  return { combinations: held.size, form_fields: rows.length, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(rows.length, "form field")} there ${rows.length === 1 ? "does" : "do"} not hold this condition: ${held.size === 1 ? "it" : "they"} cannot be released until ${rows.length === 1 ? "that form field holds" : "those form fields hold"} it, or the condition is removed.` };
+  return { combinations: held.size, form_fields: fields, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(fields, "form field")} there ${fields === 1 ? "does" : "do"} not hold this condition: ${held.size === 1 ? "it" : "they"} cannot be released until ${fields === 1 ? "that form field holds" : "those form fields hold"} it, or the condition is removed.` };
 }
 
 /** What the second person compares on To review. */
@@ -98,9 +97,12 @@ export async function applyFormFieldCondition(db: Db, audit: Audit, actor: Actor
   if (!now || now.outcome !== "mapped" || now.canonicalFieldKey !== m.fact || (now.condition ?? null) !== (m.rawWords ?? null)) throw problem(HttpStatus.CONFLICT, "Changed since", "This form field or its words changed after this was proposed, so nothing was changed. Return it; it can be proposed again.");
   if (JSON.stringify(now.conditionRule ?? null) !== JSON.stringify(m.before ?? null)) throw problem(HttpStatus.CONFLICT, "Changed since", "What this form field holds changed after this was proposed, so nothing was changed. Return it; it can be proposed again.");
   if (m.after && isWorkedOutYesNo(now.transform)) throw problem(HttpStatus.CONFLICT, "Changed since", `${WORKED_OUT} Nothing was changed. Return it.`);
-  await revise(db.formFieldMap, rows, { conditionRule: m.after ? (m.after as Prisma.InputJsonValue) : Prisma.DbNull }, actor.id, strip);
-  // BR-7: an earlier approved change this one replaces is closed, not left open for the next release.
-  await db.libraryChange.updateMany({ where: { workspaceId: c.workspaceId, kind: FORM_FIELD_KIND, key: c.key, status: "APPROVED", id: { not: c.id } }, data: { status: "WITHDRAWN", decisionNote: "Replaced by a later change of this form field." } });
+  // Break m3: a question whose condition changed since is said now, not left as a rule that does nothing.
+  const q = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, lineageKey: m.fact }, orderBy: { version: "desc" } });
+  const own = q.find((r) => r.status === "DRAFT") ?? q.find((r) => r.status === "PUBLISHED");
+  if (m.after && own?.predicateJson && !sameCondition(own.predicateJson, m.after)) throw problem(HttpStatus.CONFLICT, "Changed since", "The question's condition changed after this was proposed, so nothing was changed. Return it; it can be proposed again.");
+  // Break M1: the draft is the proposer's, not the approver's: approving is not authoring, or the second person, the one who holds the release duty, could never release it (BR-14).
+  await revise(db.formFieldMap, rows, { conditionRule: m.after ? (m.after as Prisma.InputJsonValue) : Prisma.DbNull }, c.proposedBy, strip);
   await audit.log(c.workspaceId, actor.id, "approved", "form field", m.form, `${actor.name} approved: ${c.label ?? c.key}. It goes out with the next release that carries ${m.edition}.`, undefined, c.combinationId ?? undefined);
 }
 
@@ -120,7 +122,7 @@ async function applyAsk(db: Db, audit: Audit, actor: Actor, c: LibraryChange) {
     if (askedStep(blockFacts(map, m.dataPath, m.after.fact ?? ""), codes) !== m.after.transform) throw problem(HttpStatus.CONFLICT, "Changed since", "The details in this Yes/No's printed block changed after this was proposed, so nothing was changed. Return it; it can be proposed again.");
     if (!cur || (cur.conditionEffect ?? "SHOW") !== "SHOW" || decidingYes(cur.predicateJson) !== m.after.fact || !["yes_no", "boolean"].includes(yesNo?.valueType ?? "")) throw problem(HttpStatus.CONFLICT, "Changed since", "The question's condition changed after this was proposed, so this form field is no longer its deciding question's: nothing was changed. Return it.");
   }
-  await revise(db.formFieldMap, rows, { canonicalFieldKey: m.after.fact, transform: m.after.transform, origin: (m.after.origin ?? "HUMAN") as "HUMAN", confidence: null, evidenceQuote: m.clear ? m.after.evidence ?? null : m.printed.slice(0, 500), reason: `${c.label ?? c.key} (approved by ${actor.name})`.slice(0, 500) }, actor.id, strip);
+  await revise(db.formFieldMap, rows, { canonicalFieldKey: m.after.fact, transform: m.after.transform, origin: (m.after.origin ?? "HUMAN") as "HUMAN", confidence: null, evidenceQuote: m.clear ? m.after.evidence ?? null : m.printed.slice(0, 500), reason: `${c.label ?? c.key} (approved by ${actor.name})`.slice(0, 500) }, c.proposedBy, strip); // as B86 (break on #1053): approving is not authoring
   await db.libraryChange.updateMany({ where: { workspaceId: c.workspaceId, kind: FORM_FIELD_KIND, key: c.key, status: "APPROVED", id: { not: c.id } }, data: { status: "WITHDRAWN", decisionNote: "Replaced by a later change of this form field." } });
   await audit.log(c.workspaceId, actor.id, "approved", "form field", m.form, `${actor.name} approved: ${c.label ?? c.key}. It goes out with the next release that carries ${m.edition}.`, undefined, c.combinationId ?? undefined);
 }
@@ -159,9 +161,9 @@ export class FormFieldConditions {
   private async conditionOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, item?: string): Promise<{ tree: unknown; sentence: string | null; why: string | null }> {
     const placed = (s.placements as { fact: string; condition?: unknown; condition_effect?: string | null }[]).find((p) => p.fact === fact);
     const own = showCondition(s.placements as never, fact);
-    if (placed?.condition && !own) return { tree: null, sentence: null, why: "This question's condition does not hide it (it is not \"asked only when\"), so no form field needs to hold it." };
+    if (placed?.condition && !own) return { tree: null, sentence: null, why: placed.condition_effect === "HIDE" ? "This question is hidden under its condition, and a form field cannot be filled only then. Change the condition to \"asked only when\", or remove it." : "This question's condition does not hide it (it is not \"asked only when\"), so no form field needs to hold it." };
     if (item) {
-      const it = await this.db.proposalItem.findUnique({ where: { id: item } });
+      const it = typeof item === "string" && /^[0-9a-f-]{36}$/i.test(item) ? await this.db.proposalItem.findUnique({ where: { id: item } }) : null;
       if (!it || it.workspaceId !== workspaceId) throw problem(404, "Not found", "That proposal does not exist (it may have been removed by a reset).");
       const p = it.payload as { kind?: string; target?: { kind?: string; key?: string }; condition?: { tree?: unknown; sentence?: string } } | null;
       if (it.combinationId !== combinationId || it.kind !== "condition" || p?.target?.key !== fact || !p.condition?.tree) throw problem(409, "Not this question", "That proposal is not a condition on this question of this combination, so nothing was changed.");
@@ -189,7 +191,7 @@ export class FormFieldConditions {
 
   /** The form fields of this combination's forms that read the answer, each with its own words (every edition, as the rule);
    *  B88: also those a person had ask this question's deciding question, so that can be undone. */
-  private async rowsOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, tree: unknown) {
+  private async rowsOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, tree: unknown): Promise<(FormFieldRow & { step: string | null; field: string | null })[]> {
     type Entry = { data_path: string; caption?: string | null; outcome?: string; fact?: string | null; condition?: string | null; transform?: string | null; condition_rule?: unknown };
     const all = s.field_maps as { form_number: string; form_edition: string; entries: Entry[] }[];
     const eds = await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: all.map((m) => m.form_edition) } }, select: { id: true, editionLabel: true, inventoryFile: true, form: { select: { formKey: true } } } });
@@ -234,24 +236,27 @@ export class FormFieldConditions {
     }));
   }
 
-  /** Breaker M2: the questions of this combination whose form fields already hold or ask their condition (or wait to), so
-   *  Review and release can show their panel, and its Undo, once no "Hiding a value" problem shows it. */
-  async followers(combinationId: string) {
+  /** Review and release's one request: every question of this combination with a SHOW condition that a form reads, or read
+   *  by a form field holding a condition. */
+  async listAll(combinationId: string): Promise<FormFieldsOfCombination> {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     const { snapshot: s } = await buildSnapshot(this.db, workspaceId, combinationId, "draft");
-    const out: { fact: string; question: string; form_fields: number }[] = [];
-    for (const p of s.placements as { fact: string }[]) {
-      const own = showCondition(s.placements as never, p.fact);
-      if (!own) continue;
-      const n = (await this.rowsOf(workspaceId, combinationId, p.fact, s, own)).filter((r) => ["confirmed", "asked", "waiting", "returned", "different"].includes(r.state)).length;
-      if (n) out.push({ fact: p.fact, question: factWords(s, p.fact), form_fields: n });
+    const entries = (s.field_maps as { entries: { fact?: string | null; outcome?: string; condition_rule?: unknown }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.fact));
+    // B88 (breaker M2): a question whose only reader was asked as its deciding question is still listed, so its Undo stays reachable.
+    const asked = (s.placements as { fact: string }[]).filter((p) => showCondition(s.placements as never, p.fact)).map((p) => p.fact);
+    const facts = [...new Set([...entries.filter((e) => e.condition_rule || showCondition(s.placements as never, e.fact!)).map((e) => e.fact!), ...asked])].sort();
+    const questions: FormFieldsOfQuestion[] = [];
+    for (const fact of facts) {
+      const cond = await this.conditionOf(workspaceId, combinationId, fact, s);
+      const spread = cond.tree ? await spreadOf(this.db, workspaceId, fact, cond.tree, combinationId) : null;
+      questions.push({ fact, question: factWords(s, fact), sentence: cond.sentence, why: cond.why, rows: (await this.rowsOf(workspaceId, combinationId, fact, s, cond.tree)).map(({ step: _s, field: _f, ...r }) => r), spread: spread?.words ?? null });
     }
-    return { questions: out };
+    return { questions };
   }
 
-  async list(combinationId: string, fact: string, item?: string) {
+  async list(combinationId: string, fact: string, item?: string): Promise<FormFieldsOfQuestion> {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
@@ -287,13 +292,16 @@ export class FormFieldConditions {
     const rawRows = await this.db.formFieldMap.findMany({ where: { formEditionId: b.formEditionId, dataPath: b.dataPath } });
     const raw = effective(rawRows, (x) => x.dataPath, "draft")[0];
     if (b.ask || (b.clear && row.state === "asked")) return this.proposeAsk(actor, workspaceId, c.id, b, row, raw, s, !!b.clear);
-    const spread = cond.tree ? await spreadOf(this.db, workspaceId, b.fact, cond.tree, c.id) : { words: null };
+    // Break m8: taking a rule off holds whoever asks this question under its condition, so the second person is told that too.
+    const spread = cond.tree ? await spreadOf(this.db, workspaceId, b.fact, cond.tree, c.id) : { words: showCondition(s.placements as never, b.fact) ? `Taking it off holds every combination that asks this question and files ${row.form}: they cannot be released until the form field holds the condition again, or the condition is removed.` : null };
     const name = factWords(s, b.fact), field = row.caption || "a form field";
     const label = (b.clear ? `${row.form} · ${field}: filled whenever the form applies again` : `${row.form} · ${field}: filled only when ${cond.sentence ?? "its question is asked"}`).slice(0, 300);
     const key = keyOf(b.formEditionId, b.dataPath);
     return this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `form_field_condition:${workspaceId}:${key}`);
       if (await tx.libraryChange.findFirst({ where: { workspaceId, kind: FORM_FIELD_KIND, key, status: { in: BLOCKING } } })) throw problem(409, "Already waiting", "A change of this form field already waits on To review. Decide or withdraw it first.");
+      // BR-7 (break B1 on #1053; B88 review M3): the approved change it replaces is closed here, and put back if this one is
+      // returned or withdrawn (restoreReplaced); what it applied stays on the form field until this one is approved.
       const replaces = await closeReplaced(tx, workspaceId, key);
       const change = await tx.libraryChange.create({ data: { workspaceId, kind: FORM_FIELD_KIND, key, label, action: FORM_FIELD_ACTION, reason: b.reason ?? null, status: "WAITING", proposedBy: actor.id, appliedBy: actor.id, combinationId: c.id,
         matches: { fact: b.fact, question: name, formEditionId: b.formEditionId, dataPath: b.dataPath, form: row.form, edition: row.edition, caption: row.caption, words: row.words, rawWords: raw?.condition ?? null, before: raw?.conditionRule ?? null, after: (cond.tree ?? null) as Prisma.InputJsonValue, sentence: cond.sentence, clear: !!b.clear, spread: spread.words, replaces } as unknown as Prisma.InputJsonValue } });
@@ -328,7 +336,7 @@ export class FormFieldConditions {
 @Controller("api")
 export class FormFieldConditionsController {
   constructor(@Inject(FormFieldConditions) private readonly f: FormFieldConditions) {}
-  @Get("combinations/:id/form-field-followers") followers(@Headers("x-actor") a: string | undefined, @Param("id") id: string) { readerOf(a); return this.f.followers(id); }
+  @Get("combinations/:id/form-field-conditions") listAll(@Headers("x-actor") a: string | undefined, @Param("id") id: string) { readerOf(a); return this.f.listAll(id); }
   @Get("combinations/:id/questions/:fact/form-fields") list(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Param("fact") fact: string, @Query("item") item?: string) { readerOf(a); return this.f.list(id, fact, item); }
   @Post("library/form-field-conditions") propose(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.f.propose(actorOf(a), b); }
 }

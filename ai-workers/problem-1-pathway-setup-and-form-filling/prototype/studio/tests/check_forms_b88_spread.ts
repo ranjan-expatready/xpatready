@@ -138,8 +138,10 @@ run(async () => {
   ok("C4.11 B88 review M4 pass: with nothing changed, the same change is approved", r.status < 300 && /^person\.has_national_id\|derived:any\(/.test(mapOf(nidRow!)), [r.status, mapOf(nidRow!)]);
 
   // ---------------------------------------------------------------- breaker M2: Undo stays reachable once no problem shows the panel
-  const fol = (await call("GET", `/combinations/${sp}/form-field-followers`, undefined, AUTHOR)).body?.questions ?? [];
-  ok("C4.11 B88 breaker M2 pass: Review and release lists the questions whose form fields follow their condition, so their Undo is reachable", fol.some((x: { fact: string }) => x.fact === NAME) && fol.some((x: { fact: string }) => x.fact === NID) && !JSON.stringify(fol.map((x: { question: string }) => x.question)).includes("person."), fol);
+  // B86's one route for Review and release (GET /combinations/:id/form-field-conditions) lists every question with its rows.
+  const fol = ((await call("GET", `/combinations/${sp}/form-field-conditions`, undefined, AUTHOR)).body?.questions ?? []) as { fact: string; question: string; rows: Row[] }[];
+  const askedIn = (f: string) => fol.find((x) => x.fact === f)?.rows.some((r) => r.state === "asked" && r.can_undo) ?? false;
+  ok("C4.11 B88 breaker M2 pass: Review and release's list holds each asked Yes/No with its Undo, so it is reachable once no problem shows it", askedIn(NAME) && askedIn(NID) && !JSON.stringify(fol.map((x) => x.question)).includes("person."), fol.map((x) => ({ fact: x.fact, states: x.rows.map((r) => r.state) })));
 
   // ---------------------------------------------------------------- breaker M3: a new edition carries the step; its history is found by form and form field (DB)
   const key0 = sql(`select key from library_change where id='${again}'`);

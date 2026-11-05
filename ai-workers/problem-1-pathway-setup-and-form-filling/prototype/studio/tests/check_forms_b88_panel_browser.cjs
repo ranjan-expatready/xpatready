@@ -83,11 +83,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(`${BASE}/c/${sp}/review`);
   await p.waitForLoadState("networkidle");
   step("Review and release no longer shows that problem", (await p.locator("[data-problem]", { hasText: "Hiding a value a form reads" }).count()) === 0);
-  // Breaker M2: once no problem shows the panel, its Undo stays reachable under "Form fields that follow a question's condition".
-  const fol = p.locator("[data-form-field-followers]");
+  // Breaker M2: once no problem shows the panel, its Undo stays reachable under "Form fields holding a question's condition".
+  const fol = p.locator("[data-form-fields-held]");
   await fol.waitFor({ timeout: 60_000 });
   await fol.locator("summary").focus(); await p.keyboard.press("Enter");
-  text = await check("Review and release, form fields that follow a condition", "[data-form-field-followers]", "review-release-followers");
+  text = await check("Review and release, form fields holding a question's condition", "[data-form-fields-held]", "review-release-followers");
   step("breaker M2: the asked Yes/No and the confirmed name are listed there, each with Undo", /Asks its deciding question/.test(text) && /Confirmed: same condition/.test(text) && (await fol.getByRole("button", { name: /^Undo: / }).count()) === 2, text);
   await p.screenshot({ path: path.join(SHOTS, "review-release-cleared-1440.png") });
 

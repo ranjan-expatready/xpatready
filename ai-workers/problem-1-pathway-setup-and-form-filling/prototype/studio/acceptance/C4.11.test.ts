@@ -136,22 +136,26 @@ run(async () => {
   ok("C4.11-22 pass: Stop stops a run (its state says stopped or finished, in words)", !!stopRun && st.status < 300 && /stop|complet|finish|done/i.test(String(after?.status ?? "")), { stop: st.status, status: after?.status });
   // The run view gives its cost as { spent, worst } (US$).
   ok("C4.11-23 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd?.spent ?? view?.usd ?? NaN) === 0, view?.usd);
-  // QA-237, B86 (P-322; step agreed with qa): a person accepts a condition, a second person approves it, and the way out of
-  // "Hiding a value a form reads" works through the product's own routes, on the question this run proposes and both rounds agree on.
+  // QA-237, B86 (P-322; qa's wording on #1053, P-334 (4)): a person accepts a condition, a second person approves it, and the way
+  // out of "Hiding a value a form reads" works through the product's own routes. The draft's problems, not a full Submit, until
+  // B82 is on main (Submit on the six is still refused for other reasons, QA-233), naming the exact question.
   const FF = "person.other_family_name", held = (await T.queued(vv)).find((x: any) => x.kind === "condition" && x.form_fields?.fact === FF);
-  const blocking = async () => (((await call("POST", `/combinations/${vv}/submit`, { note: "C4.11 pack (QA-237)" }, AUTHOR)).body?.errors ?? []) as any[]).filter((e) => e.item === FF && /^Hiding a value a form reads/.test(e.message ?? ""));
+  const hidingOf = async () => (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as any[]).filter((p) => p.item === FF && /^Hiding a value a form reads/.test(p.message ?? ""));
+  const asSecond = { note: "Approved by the C4.11 pack as the second person (QA-237)." };
   r = await call("POST", "/review/proposals/decide", { ids: [held?.id ?? randomUUID()], action: "accept" }, AUTHOR);
-  const cond = T.sql(`select id from library_change where kind='placement_condition' and key='${FF}' and status='WAITING'`);
-  const second = cond ? await call("POST", `/library/changes/${cond}/approve`, { note: "Approved by the C4.11 pack as the second person (QA-237)." }, APPROVER) : { status: 0, body: null };
-  const refused = await blocking();
-  ok("C4.11-24 fail (QA-237): a condition accepted and approved, its form field not confirmed: Submit refuses, in the rule's words", second.status < 300 && refused.length > 0 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(refused[0]?.message ?? ""), refused[0]?.message ?? words(second));
+  const accepted = r;
+  const change = (((await call("GET", "/library/changes?status=WAITING", undefined, APPROVER)).body ?? []) as any[]).find((c) => c.kind === "placement_condition" && c.key === FF);
+  const second = change ? await call("POST", `/library/changes/${change.id}/approve`, asSecond, APPROVER) : { status: 0, body: null };
+  const refused = await hidingOf();
+  ok("C4.11-24 fail (QA-237): a condition accepted and approved, its form field not confirmed: the draft holds \"Hiding a value a form reads\" for that question, in the rule's words", accepted.status < 300 && second.status < 300 && refused.length > 0 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(refused[0]?.message ?? ""), refused[0]?.message ?? { accepted: words(accepted), second: words(second as any), change: change?.id ?? null });
   const boxes = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body?.rows ?? [];
   const toConfirm = boxes.filter((x: any) => x.can_confirm);
   for (const x of toConfirm) {
     const c = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: FF, formEditionId: x.form_edition_id, dataPath: x.data_path }, AUTHOR);
-    if (c.body?.id) await call("POST", `/library/changes/${c.body.id}/approve`, { note: "Approved by the C4.11 pack as the second person (QA-237)." }, APPROVER);
+    if (c.body?.id) await call("POST", `/library/changes/${c.body.id}/approve`, asSecond, APPROVER);
   }
-  const left = await blocking();
-  ok("C4.11-25 pass (QA-237): the author confirms the form field that reads it, showing its own words, a second person approves, and Submit no longer refuses that question", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0, { confirmed: toConfirm.length, left: left.map((e) => e.message) });
+  const left = await hidingOf();
+  const inForce = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body;
+  ok("C4.11-25 pass (QA-237): the author confirms the form field through the new route, showing its own words, a second person approves: that error is gone for that question and the condition is still in force in the draft", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0 && !!inForce?.sentence && (inForce?.rows ?? []).length > 0 && inForce.rows.every((x: any) => x.state === "confirmed"), { confirmed: toConfirm.length, left: left.map((e) => e.message), rows: inForce?.rows?.map((x: any) => x.state) });
   T.done();
 });

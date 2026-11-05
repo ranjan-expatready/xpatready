@@ -6,6 +6,7 @@ import { formCoverage, factsOf, inputHash } from "../engine/runtime/forms.ts";
 import { answerSheet } from "../engine/runtime/answer-sheet.ts";
 import { mandatoryOpen } from "../engine/runtime/mandatory.ts";
 import { formValues } from "../engine/form-values.ts";
+import { plainWords, ruleInForce } from "../engine/form-field-condition.ts";
 import { render, type BoxRow } from "../engine/render.ts";
 import { askedInOrder } from "../engine/validate.ts";
 import { diff } from "../engine/validate.ts";
@@ -36,6 +37,7 @@ const people: Participant[] = [{ subjectId: "p1", role: "principal" as Participa
 const say = (field: string, value: unknown): Answer => ({ id: `${field}-${String(value)}`, subjectId: "p1", field, rowKey: null, value, status: "VERIFIED", channel: "questionnaire", actor: "user-P", at: "2026-11-05T00:00:00Z" });
 const cover = (s: Snapshot, answers: Answer[], form = FORM) => formCoverage(s, people, answers, [], form, "p1", new Date("2026-11-05T00:00:00Z"))!;
 const box = (c: ReturnType<typeof cover>, path: string) => c.boxes.find((b) => b.box === path) as BoxRow & { fix?: string };
+const hides = (s: Snapshot) => askedInOrder(s).filter((p) => /^Hiding a value a form reads/.test(p.message)).map((p) => p.message);
 const NAMEBOX = "form1[0].Name[0]", YESNO = "form1[0].Indicator[0]";
 const inv = { fields: [{ data_path: NAMEBOX, required: true, ui: "text" }, { data_path: YESNO, required: true, ui: "radio" }] } as never;
 const valuesOf = (s: Snapshot, c: ReturnType<typeof cover>) => formValues(s, s.field_maps[0] as never, inv, c.boxes as BoxRow[]);
@@ -70,10 +72,20 @@ ok("Done when 5: the name is never written with that No", !v.values[NAMEBOX], v.
 c = cover(on, [say(GATE, true), say(NAME, "OLD NAME")]);
 v = valuesOf(on, c);
 ok("Done when 5: with Yes the form writes Y and the name", v.values[YESNO] === "Y" && v.values[NAMEBOX] === "OLD NAME", v.values);
+const reads = snap({ rule: SHOW }); (reads.field_maps[0] as unknown as { entries: unknown[] }).entries[1] = { ...yesNoBox, fact: NAME };
+c = cover(reads, [say(GATE, false), say(NAME, "OLD NAME")]);
+ok("review m2: a worked-out Yes/No reading the hidden answer itself is never written Y from it", /answered No, but/.test(box(c, YESNO).fix ?? "") && !valuesOf(reads, c).values[YESNO], { fix: box(c, YESNO).fix, written: valuesOf(reads, c).values[YESNO] });
 const req = snap({ effect: "REQUIRE" });
 c = cover(req, [say(GATE, false), say(NAME, "OLD NAME")]);
 ok("QA-165 unchanged: under REQUIRE (the question stays visible) a No with a name recorded is still never written", /answered No, but/.test(box(c, YESNO).fix ?? ""), box(c, YESNO).fix);
 
+// ---------------------------------------------------------------- review m3: a question placed twice
+const twice = snap({ rule: SHOW }); (twice.placements as unknown[]).unshift({ lineage: `${NAME}:2`, fact: NAME, section_id: "s1", order: 0, repeats: "none", collected_from: "client_questionnaire", required: true });
+ok("review m3: with an unconditioned twin first, the rule is still in force, as the guard reads it", ruleInForce(twice.placements as never, NAME, SHOW) && hides(twice).length === 0);
+const worded = (w: string) => plainWords(w, [{ data_path: "form1[0].natIDIndicator[0]", outcome: "mapped", fact: GATE }], () => "Has used another name", NAME);
+ok("no field codes: a form field's own name reads as its question", worded("Only when natIDIndicator = Y; max 20 characters").text === 'Only when "Has used another name" = Y; max 20 characters');
+ok("no field codes (break m6): a path and snake_case read \"another form field\"", worded("Only when form1[0].Page1[0].Other[0] and alias_name_indicator").text === "Only when another form field and another form field", worded("Only when form1[0].Page1[0].Other[0] and alias_name_indicator").text);
+ok("no field codes: other codes read \"another form field\", plain words stay", worded("Only when PCRIndicator = Y and representative.is_compensated = yes and uncompensated[0] = 4 and RadioButtonList[0] = 1, purpose Other (03), 3a, IDs").text === "Only when another form field = Y and another form field = yes and another form field = 4 and another form field = 1, purpose Other (03), 3a, IDs", worded("Only when PCRIndicator = Y and representative.is_compensated = yes and uncompensated[0] = 4 and RadioButtonList[0] = 1, purpose Other (03), 3a, IDs").text);
 // ---------------------------------------------------------------- the readers that must not list it
 const noVal = cover(on, [say(GATE, false), say(NAME, "OLD NAME")]);
 const nv = valuesOf(on, noVal);
@@ -91,7 +103,6 @@ const rows = (s: Snapshot) => JSON.stringify(render(s, asPeople, new Map(), { to
 ok("M2: the preview's coverage is the same with and without a rule, so the question list cannot move", rows(snap({ rule: SHOW })) === rows(snap()));
 
 // ---------------------------------------------------------------- BR-4: the rule stays as strict (Done when 2)
-const hides = (s: Snapshot) => askedInOrder(s).filter((p) => /^Hiding a value a form reads/.test(p.message)).map((p) => p.message);
 ok("Done when 2 fail: not confirmed: refused, in today's words", hides(snap()).length === 1 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(hides(snap())[0]), hides(snap()));
 ok("Done when 2 fail: text on a box is never read, however close its words", hides(snap({ rule: undefined })).length === 1);
 ok("Done when 2 fail: a different condition on the box: refused", hides(snap({ rule: ANOTHER })).length === 1);

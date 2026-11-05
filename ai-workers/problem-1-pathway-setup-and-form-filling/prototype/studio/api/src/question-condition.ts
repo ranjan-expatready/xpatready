@@ -43,9 +43,9 @@ export async function proposeConditionChange(tx: Tx, l: { ws: string; actor: Act
   const uses = await tx.combination.count({ where: { workspaceId: l.ws, retiredAt: null, sections: { some: { sectionKey: current.sectionKey } } } });
   const label = `${name} · ${p.condition.sentence.replace(/^"[^"]*" is /, "").replace(/\.$/, "")}, for every combination that asks it`.slice(0, 300);
   // B86 (ruling 3 on #1053): the second person is told what approving this holds elsewhere.
-  const spread = await spreadOf(tx as never, l.ws, key, p.condition.tree, l.combinationId);
+  const spread = await spreadOf(tx, l.ws, key, p.condition.tree, l.combinationId);
   const c = await tx.libraryChange.create({ data: { workspaceId: l.ws, kind: COND_KIND, key, label, action: COND_ACTION, reason: l.reason, status: "WAITING", proposedBy: l.actor.id, appliedBy: l.actor.id,
-    matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses, spread: spread.words } as Prisma.InputJsonValue,
+    matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses: Math.max(uses, spread.combinations + 1), spread: spread.words } as Prisma.InputJsonValue,
     sourceJobId: l.sourceJobId ?? null, combinationId: l.combinationId ?? null, proposalItemId: l.itemId, batchId: l.batchId } });
   return c.id;
 }
@@ -62,7 +62,7 @@ export async function applyCondition(db: Db, audit: Audit, actor: Actor, c: Libr
   const { rows, current } = await placementOf(db, c.workspaceId, c.key);
   if (!current || !m.after) throw problem(409, "Not placed", "The question is no longer placed in the library, so nothing was changed. Return the change.");
   if (!sameTree(current.predicateJson, m.before)) throw problem(HttpStatus.CONFLICT, "Changed since", "When this question is asked changed after it was proposed, so nothing was changed. Return it; it can be drafted again.");
-  await revise(db.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, actor.id, strip);
+  await revise(db.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, c.proposedBy, strip); // B86 (break M1): approving is not authoring, or the second person could never release it (BR-14)
   await audit.log(c.workspaceId, actor.id, "approved", "placement", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the question goes out with the next release.`);
 }
 
