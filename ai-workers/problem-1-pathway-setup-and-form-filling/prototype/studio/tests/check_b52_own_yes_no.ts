@@ -135,7 +135,7 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
 
   // C6.11 (#1072): every firm case has a representative of record, so "Uses a representative" is Yes from the case team
   // (never typed: 422) and IMM 5476 is listed on each; IMM 5475 still follows its typed question.
-  let typedRep: { status: number; detail?: string } | null = null;
+  let typedRep = null as { status: number; detail?: string } | null; // set inside caseFor (a closure), so TS must not narrow it to null
   const caseFor = async (ref: string, answer: boolean | null, combinationId = vv) => {
     const id = (await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER)).body?.id as string;
     const people = (await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[];
