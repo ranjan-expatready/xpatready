@@ -110,7 +110,7 @@ export class Runtime {
         await tx.caseTeamMember.createMany({ data: [{ workspaceId, caseId: c.id, userId: representative, role: "LEAD_REPRESENTATIVE", assignedBy: actor.id }, ...officers.map((u) => ({ workspaceId, caseId: c.id, userId: u, role: "OFFICER", assignedBy: actor.id }))] });
         await tx.packWorkPin.create({ data: { workspaceId, caseId: c.id, combinationId: b.combinationId, partyId: party.id, packVersionId: release!.packVersionId, configReleaseId: release!.id, contentHash: release!.sha256, actorId: actor.id } });
         return c.id;
-      });
+      }, { timeout: 15_000, maxWait: 10_000 }); // Several opening at once queue for a connection; the default 2 s answered a 500 (P2028)
     } catch (e) {
       if (!unique(e)) throw e;
       const same = await replay(); // a simultaneous create with the same key won: answer with its case
