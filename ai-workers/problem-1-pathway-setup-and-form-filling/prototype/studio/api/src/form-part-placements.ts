@@ -9,7 +9,7 @@
 // /api/combinations/:id/place-from-form-parts, below); the configured checkpoint calls the same function (api/src/demo.ts).
 import { Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from "@nestjs/common";
 import { coverageGaps, previewRender } from "../../engine/coverage.ts";
-import { roleOf } from "../../engine/resolver.ts";
+import { isFilingFact, roleOf } from "../../engine/resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
@@ -106,7 +106,7 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
  *  checkpoint's fact only a rule reads, review R1-m4). */
 export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor, combinationId: string, touched: Set<string>, out: Pick<PlacedFromParts, "refused" | "selected" | "unselected">) {
   const { workspaceId } = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
-  const live = await db.sectionQuestion.findMany({ where: { workspaceId: workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } });
+  const live = await db.sectionQuestion.findMany({ where: { workspaceId: workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true, repeats: true } });
   const others = await db.sqrSectionSelection.findMany({ where: { sectionKey: { in: [...touched] }, workspaceId: workspaceId, combinationId: { not: combinationId }, combination: { retiredAt: null } }, select: { combinationId: true } });
   // Each unchosen section is reported with its combination's own label, from one source (review R2-m2).
   const nameOf = new Map((await db.combination.findMany({ where: { id: { in: [combinationId, ...others.map((x) => x.combinationId)] } }, select: { id: true, label: true } })).map((x) => [x.id, x.label]));
@@ -121,6 +121,15 @@ export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor,
     for (const sec of touched) {
       if (chosen.has(sec) || !qualifies(sec)) continue;
       try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
+    }
+    // B78 (review M3): BR-8 opens a case only when a chosen section asks each person something (engine/programs.ts). Its
+    // person facts may already sit in sections another combination's run placed them in, which this run did not touch, and
+    // then only sections about the application are chosen here: the first section everyone answers anyway is chosen too.
+    const nowChosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId }, select: { sectionKey: true } })).map((x) => x.sectionKey));
+    const asksEachPerson = (sec: string) => live.some((q) => q.sectionKey === sec && !isFilingFact(q.canonicalFieldKey, q));
+    if (![...nowChosen].some(asksEachPerson)) {
+      const sec = [...new Set(live.map((q) => q.sectionKey))].sort().find((x) => asksEachPerson(x) && qualifies(x));
+      if (sec) { try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); } }
     }
   }
 }

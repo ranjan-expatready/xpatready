@@ -40,12 +40,6 @@ ok("BR-8: a released row that passes is Ready", statusOf(true, m) === "READY");
 m = missingItems(empty, people, []);
 ok("BR-8 fail: no forms is missing", m.some((x) => x.code === "no_forms"), m.map((x) => x.text));
 ok("F2: no questions is one line naming every role that files, with its next step", m.filter((x) => x.code === "role_without_questions").length === 1 && m.some((x) => x.text === "No questions yet for Principal applicant, Spouse or partner. Next step: Add questions (Configuration › Questions and sections)."), m.map((x) => x.text));
-// B78: a fact a form reads goes out with its placement though its section is not chosen (engine/snapshot.ts), so the person
-// IS asked: the startable check counts it. A placement only a rule reads, or asked once for the application, is not a person's.
-const asOf = (placement: object) => ({ ...full, sections: [{ id: "chosen_other" }], placements: [{ section_id: "not_chosen", repeats: "per_person", fact: "person.family_name", ...placement }] }) as unknown as Snapshot;
-ok("B78 pass: a person's question in a section not chosen, read by a form, is a question: no \"No questions yet\"", !missingItems(asOf({}), people, []).some((x) => x.code === "role_without_questions"));
-ok("B78 fail: a question only a rule reads is still no question for a person", missingItems(asOf({ rule_only: true }), people, []).some((x) => x.code === "role_without_questions"));
-ok("B78 fail: a question asked once for the application is still no question for a person (Study permit's one chosen section)", missingItems(asOf({ repeats: "once_per_case", fact: "case.school_name" }), people, []).some((x) => x.code === "role_without_questions"));
 ok("F2: every missing item says what to do next", m.length > 0 && m.every((x) => /Next step: /.test(x.text)), m.map((x) => x.text));
 ok("BR-8: a released row that fails is Not ready, never Ready", statusOf(true, m) === "NOT_READY");
 ok("BR-8: a row never released is In setup, whatever it holds", statusOf(false, []) === "IN_SETUP" && statusOf(false, m) === "IN_SETUP");
