@@ -67,7 +67,7 @@ export function pack2(id: string) {
    *  form's own parts (rules) and accepts them one at a time on To review (a section the library holds already is
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
-  async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
+  async function questionsBySteps(comboId: string, o: { place?: boolean; applyOnly?: boolean } = {}) {
     const out = { accepted: 0, applied: 0, ownYesNo: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
@@ -111,6 +111,7 @@ export function pack2(id: string) {
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
     }
+    if (o.applyOnly) { await approveAll(); return out; } // B83: a walk asks the Yes/No form fields on the screen next, then calls this again
     // B52: on To review › Form fields the author asks the application form's Yes/No form fields worked out from other
     // answers as their own questions, in the form's words (api/src/own-yes-no.ts), the library's field of the same
     // name when it has one.

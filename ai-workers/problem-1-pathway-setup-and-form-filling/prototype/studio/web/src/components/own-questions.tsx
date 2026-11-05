@@ -2,12 +2,12 @@
 // other answers is asked as its own question, in the form's words, by a person: on the Form fields page and an applied
 // draft's page, with one line on the Smart questionnaire tab that leads there. Rules only: no AI, US$0. The author only.
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { CheckCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, useApi, useSessionView } from "@/lib/api";
 import { Button, Field, Input, Select } from "@/components/ui/controls";
-import { Tip } from "@/components/status";
+import { Tip, TipProvider } from "@/components/status";
 import { useUndoToast } from "@/components/lifecycle";
 import type { OwnQuestionRow, OwnQuestionsToAsk, OwnQuestionsView } from "../../../contracts/own-question";
 
@@ -36,6 +36,10 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
   const refresh = () => qc.invalidateQueries();
   // After a save the keyboard lands on the next form field to ask, or on the section when none is left.
   React.useEffect(() => { if (!moveOn || q.isFetching) return; setMoveOn(false); const next = box.current?.querySelector<HTMLElement>("[data-own-ask]"); (next ?? box.current)?.focus(); }, [moveOn, q.isFetching, q.data]);
+  // The Smart questionnaire's line leads here: the section can sit below a long list of undecided form fields.
+  const { hash } = useLocation();
+  const hasFields = !!q.data?.fields.length;
+  React.useEffect(() => { if (hash === "#own-questions" && hasFields) { box.current?.scrollIntoView({ block: "start" }); box.current?.focus({ preventScroll: true }); } }, [hash, hasFields]);
   const fields = q.data?.fields ?? [];
   if (!fields.length) return null;
   const undo = async (row: OwnQuestionRow) => {
@@ -44,8 +48,9 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
     undoToast.show(`Taken back: worked out from other answers again.${r.withdrew ? " Its new field was withdrawn." : ""}${r.kept ? ` ${r.kept}` : ""}`);
   };
   return (
+    <TipProvider>
     <section ref={box} tabIndex={-1} aria-labelledby="own-q" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4 outline-none" data-own-questions>
-      <div><Tip tip="Yes/No form fields the field map fills from other answers. Asking one here puts the form's own question to the client."><h2 id="own-q" className="inline font-semibold">Yes/No form fields worked out from other answers ({fields.length})</h2></Tip>
+      <div><Tip focusable tip="Yes/No form fields the field map fills from other answers. Asking one here puts the form's own question to the client."><h2 id="own-q" className="inline font-semibold">Yes/No form fields worked out from other answers ({fields.length})</h2></Tip>
         <p className="text-sm text-text-muted">The form asks these itself, but its field map works the answer out from other answers, so nobody is asked and conditions cannot rest on them. Ask one as its own question: the form's words stay its source. It counts from the next release, once "Ask them in their forms' sections" has been pressed on the Smart questionnaire tab; a new field also needs a second person.</p>
         {canAuthor ? null : <p className="mt-1 text-sm text-text-muted" data-own-read-only>A configuration author asks these.</p>}</div>
       <ul className="divide-y divide-border text-sm">{fields.map((row) => (
@@ -65,6 +70,7 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
         </li>))}</ul>
       {undoToast.node}
     </section>
+    </TipProvider>
   );
 }
 
@@ -121,5 +127,5 @@ export function OwnQuestionsLine({ combinationId }: { combinationId: string }) {
   const q = useApi<OwnQuestionsToAsk>(["own-questions-to-ask", combinationId], canAuthor ? `/combinations/${combinationId}/own-questions` : null);
   const eds = q.data?.editions ?? [];
   if (!canAuthor || !eds.length) return null;
-  return <div className="mt-2 space-y-1 text-sm" data-own-line>{eds.map((e) => <p key={e.id}>{e.form} works out {e.to_ask} Yes/No answer{e.to_ask === 1 ? "" : "s"} from other answers. <Link className="underline" to={`/review/form-fields/${e.id}`}>Ask {e.to_ask === 1 ? "it as its own question" : "them as their own questions"}</Link>.</p>)}</div>;
+  return <div className="mt-2 space-y-1 text-sm" data-own-line>{eds.map((e) => <p key={e.id}>{e.form} works out {e.to_ask} Yes/No answer{e.to_ask === 1 ? "" : "s"} from other answers. <Link className="underline" to={`/review/form-fields/${e.id}#own-questions`}>Ask {e.to_ask === 1 ? "it as its own question" : "them as their own questions"}</Link>.</p>)}</div>;
 }
