@@ -103,7 +103,9 @@ export function pack2(id: string) {
       const done = await until(async () => ["COMPLETED", "APPLIED", "FAILED"].includes(sql(`select status from drafting_job where attachment_id = '${att}' and kind = 'field_map' order by started_at desc limit 1`)), 180_000);
       if (!done) out.refused.push(`replay ${item.file}: not finished in 180 s`);
     }
-    for (const j of ids(`select id from drafting_job where combination_id='${comboId}' and kind='field_map' and status='COMPLETED' order by started_at`)) {
+    // B74: the first map applied decides the library's fields and labels, and a saved AI answer replays only on the exact
+    // question list, so maps started in the same millisecond take a fixed order.
+    for (const j of ids(`select j.id from drafting_job j join source_attachment a on a.id=j.attachment_id where j.combination_id='${comboId}' and j.kind='field_map' and j.status='COMPLETED' order by j.started_at, a.file_name desc`)) {
       await call("POST", `/jobs/${j}/recompare`, {}, AUTHOR); // a draft compared with an older library is compared again first (refused when it is current)
       for (const it of ids(`select id from proposal_item where run_id='${j}' and status='waiting' order by identity_key`)) if (say("accept", await call("POST", `/jobs/${j}/items/${it}`, { decision: "ACCEPTED", note: "Accepted by a test as the saved AI answer proposed it (QA-144 part 1 setup)." }, AUTHOR))) out.accepted++;
       // A busy machine can still run past the apply's room (503, nothing written): pressed again once.
