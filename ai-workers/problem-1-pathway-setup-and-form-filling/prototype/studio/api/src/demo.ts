@@ -38,11 +38,11 @@ import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime } from "./runtime.ts";
 import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
-/** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
- *  The others follow, one slice each. */
-const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
-import { type CitedDocumentLine, FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
+import { type CitedDocumentLine, FAMILY_FORM_BY_CHANNEL, FORM_SETUP, familyFormFor, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
 export { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES }; // B71: kept for the callers that read them from here
+/** QA-144 slices 1–5 (tech lead on #798; B79b): the combinations the configured checkpoint sets up from their forms' own
+ *  parts are the ones the table of IRCC's words has a row for (P-319: no combination key in the steps). */
+const SET_UP_FROM_FORMS = new Set(Object.keys(FORM_SETUP));
 /** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
 export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
 /** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5257's previous edition (the
@@ -102,8 +102,9 @@ export class Demo {
   private async familyForm(combinationId: string, key: string | undefined) {
     const setup = FORM_SETUP[key ?? ""];
     if (!setup) return null;
+    if (setup.familyInRules) return null; // B79b: its own rules name its family information form (IMM 5406)
     const filed = (await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: setup.application }, orderBy: { version: "desc" }, select: { channel: true } }))?.channel;
-    return FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
+    return familyFormFor(setup, filed);
   }
 
   async status() {
@@ -711,20 +712,23 @@ export class Demo {
         if (setup) {
           // A form IRCC's words name for the combination with no line yet is added from the Form library, as the Forms
           // tab's "add one from the Form library" does (QA-144 slice 2: With an LMIA's IMM 5707, 5409, 5476 and 5475).
-          const family = (await this.familyForm(c.id, keyOf.get(c.id)))!;
+          const family = await this.familyForm(c.id, keyOf.get(c.id)); // null: one of its rules names it (B79b)
           const has = new Set((await this.db.combinationForm.findMany({ where: { combinationId: c.id }, select: { lineageKey: true } })).map((x) => x.lineageKey));
-          for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) {
+          for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f))) {
             try { await this.formLibrary.attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           for (const r of setup.rules) {
-            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
-            try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
+            // B79b: whose form it is is kept on a conditional line too (IMM 5604: each child, when the rule says so).
+            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
+            try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); continue; }
+            // B79b: a form IRCC's words say is filled in its portal is set Online on the Forms tab's channel route.
+            if (r.channel) { try { await this.forms.setChannel(author, c.id, r.form, { channel: r.channel }); } catch (e) { setUpRefused.push(`${r.form} channel: ${said(e)}`); } }
           }
           // The shared field takes the list once (the first combination's), for every combination after it.
           if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); maritalList = null; } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
           // The family information form by how the application form is filed (paper or PDF upload: IMM 5707; online:
           // IMM 5645); the other one is taken off only where it is a line.
-          for (const [form, body] of [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const) {
+          for (const [form, body] of family ? [[family.form, { attachMode: "COMBINATION_MANDATORY" as const, minAge: 18 }], ...(has.has(family.other) ? [[family.other, { retire: true }]] as const : [])] as const : []) {
             try { await this.studio.saveForm(author, c.id, form, body); lines++; } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           // Each fact only a rule reads (IRM 0002's, IMM 5476's, …), added for its rule (C3.6), accepted by the author; the

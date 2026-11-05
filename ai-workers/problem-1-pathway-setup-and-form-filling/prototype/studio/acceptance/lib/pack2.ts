@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
 import { OWN_YES_NO } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
-import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
+import { FORM_SETUP, familyFormFor } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
 
 export const AUTHOR = "user-A", APPROVER = "user-B", REVIEWER = "user-C";
 /** The official checklist and instructions the Visitor visa sample carries (official-sources/ircc, committed, P-83). */
@@ -81,8 +81,8 @@ export function pack2(id: string) {
     const newest = `f.version = (select max(v.version) from combination_form v where v.combination_id = f.combination_id and v.lineage_key = f.lineage_key)`;
     const lineForms = () => new Set(ids(`select g.form_key from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and ${newest} and f.status <> 'RETIRED'`));
     const filed = setup ? sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and g.form_key = '${setup.application}' and ${newest} limit 1`) : "";
-    const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
-    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
+    const family = familyFormFor(setup, filed); // null: one of its rules names it (B79b, IMM 5406)
+    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
     // B71: a form line of this combination whose form has no field map and no file here (IRM 0002 on Visitor visa of the six)
     // gets its official file through the form intake's sample door (the same intake an upload takes, as the configured
     // checkpoint does; no screen calls this door) and its saved field-map answer replayed (US$0); never a live run: with
@@ -130,10 +130,15 @@ export function pack2(id: string) {
     // second person. Sample, "Unconfirmed: expert".
     if (setup) {
       const set = async (form: string, body: object) => say(`set ${form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(form)}`, body, AUTHOR));
-      for (const r of setup.rules)
-        await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
-      await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
-      if (lineForms().has(family.other)) await set(family.other, { retire: true });
+      for (const r of setup.rules) {
+        if (!(await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) }))) continue;
+        // B79b: a form IRCC's words say is filled in its portal is set Online on the Forms tab's channel route.
+        if (r.channel) say(`channel ${r.form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(r.form)}/channel`, { channel: r.channel }, AUTHOR));
+      }
+      if (family) {
+        await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
+        if (lineForms().has(family.other)) await set(family.other, { retire: true });
+      }
       // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
       for (const rf of setup.ruleFacts ?? []) {
         if (sql(`select count(*) from canonical_field where canonical_field_key = '${rf.fact}' and status in ('DRAFT', 'PUBLISHED')`) !== "0") continue;
