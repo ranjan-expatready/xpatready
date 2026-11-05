@@ -120,5 +120,10 @@
     "**/Xpatready/code/**",
     "**/Xpatready/sources/**",
     "**/Xpatready/archive/**"
-  ]
+  ],
+  "sandbox": {
+    "network": {
+      "allowLocalBinding": true
+    }
+  }
 }
