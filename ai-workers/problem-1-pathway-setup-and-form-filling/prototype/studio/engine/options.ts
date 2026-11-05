@@ -105,7 +105,13 @@ export function asksMore(v: ListValue, options: FormOption[]): boolean {
 /** A new edition's form field keeps its option map only when it prints exactly the same choices: the codes and marks were
  *  decided against those words (B81, challenge M2). */
 export function samePrintedChoices(before: Parameters<typeof pdfOptions>[0], after: Parameters<typeof pdfOptions>[0]): boolean {
-  return JSON.stringify(pdfOptions(before, null)) === JSON.stringify(pdfOptions(after, null));
+  const printed = (b: Parameters<typeof pdfOptions>[0]) => JSON.stringify([pdfOptions(b, null), printedChoices(b)]); // a Yes/No group's choices too
+  return printed(before) === printed(after);
+}
+
+/** What a new edition's form field carries of an old option map: all of it, or nothing when the form prints other choices. */
+export function carriedOptionMap<T>(optionMap: T | null, before: Parameters<typeof pdfOptions>[0], after: Parameters<typeof pdfOptions>[0]): T | null {
+  return optionMap !== null && samePrintedChoices(before, after) ? optionMap : null;
 }
 
 /** The value a person marked not on this form, when `value` is one: filling refuses it in the value's own words (B81). */

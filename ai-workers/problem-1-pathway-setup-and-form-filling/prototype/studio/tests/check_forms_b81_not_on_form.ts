@@ -3,9 +3,10 @@
 // Unconfirmed: expert. Offline (no database, no AI): engine/options.ts, engine/form-values.ts. The routes, the group
 // save and the validator are checked on an isolated copy by tests/check_forms_b81_routes.ts.
 //   tsx studio/tests/check_forms_b81_not_on_form.ts
-import { asksMore, codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedNear, samePrintedChoices } from "../engine/options.ts";
+import { asksMore, carriedOptionMap, codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedNear, samePrintedChoices } from "../engine/options.ts";
 import { channelProblems } from "../engine/channels.ts";
-import { formValues } from "../engine/form-values.ts";
+import { formValues, notOnFormLines } from "../engine/form-values.ts";
+import { optionsOf } from "../engine/runtime/case.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { readFileSync } from "node:fs";
 
@@ -66,6 +67,12 @@ const fill = (value: string) => formValues(snapshot, { entries: [entry] }, { fie
 const refused = fill("unknown"), written = fill("married");
 ok("B81 fail: a fill with a marked value writes nothing and says why in words, naming the answer; never a code or a nearest choice", refused.boxes[0].result === "not on this form" && !(path in refused.values) && /no choice for "Unknown"/.test(refused.boxes[0].why ?? "") && /nothing is guessed/.test(refused.boxes[0].why ?? "") && /leave it blank or change the answer/.test(refused.boxes[0].why ?? "") && !/option_map|person\.marital/.test(refused.boxes[0].why ?? ""), refused.boxes[0]);
 ok("B81 pass: a printed value on the same form field is written as the form's own code", written.boxes[0].result === "written" && written.values[path] === "5", written.boxes[0]);
+const lines = notOnFormLines([{ fact: "person.marital_status", about_label: "Mother (Sample)", result: "not on this form", why: refused.boxes[0].why ?? null }, { fact: "person.sex", result: "by hand", why: "x" }], (f) => (f === "person.marital_status" ? "Marital status" : undefined));
+ok("B81 (review M7): the officer's line names the answer and whose it is, apart from what is written by hand", lines.length === 1 && lines[0].label === "Marital status" && lines[0].person === "Mother (Sample)" && /leave it blank or change the answer/.test(lines[0].why), lines);
+const mapOld = { map: { married: "5" }, unused: [], codes: ["5"] };
+ok("B81 (review M7): a new edition carries the map only when the form prints the same choices; else nothing, so \"no option map yet\" blocks", carriedOptionMap(mapOld, box("Mother"), box("Father")) === mapOld && carriedOptionMap(mapOld, box("Mother"), box("Applicant")) === null && carriedOptionMap(null, box("Mother"), box("Father")) === null);
+const asked = optionsOf(snapshot, "person.marital_status");
+ok("B81 (review M7): a case's question keeps every answer and the list's own words: a mark takes nothing off it", asked?.length === list.length && asked?.find((o) => o.key === "unknown")?.label === "Unknown" && asked?.find((o) => o.key === "married")?.label === "Married", asked);
 const probs = channelProblems(snapshot), marks = probs.filter((p) => /not on this form/.test(p.message));
 ok("B81: the release check blocks nothing for a marked value and warns once per form and value, in the answer's words", !probs.some((p) => p.level === "error") && marks.length === 1 && marks[0].level === "warning" && /"Unknown" is marked not on this form on 2 form fields/.test(marks[0].message), probs);
 const unmarked = { ...snapshot, field_maps: [{ form_number: "IMM 5645", form_edition: "IMM 5645 (01-2021)", channel: "PDF", entries: [{ ...entry, option_map: d.optionMap }] }] } as unknown as Snapshot;

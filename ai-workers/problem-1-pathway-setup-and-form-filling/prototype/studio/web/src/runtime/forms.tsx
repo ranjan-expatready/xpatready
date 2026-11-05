@@ -217,7 +217,7 @@ function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, w
       {!compact && (c.out_of_date || c.stale) ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>{c.stale ? "Facts changed after this copy was locked; the locked file is kept as it was." : "Facts changed since this copy was made; generate a new copy to file it."} Added, changed or removed: <Few items={c.changed} />.</span></p> : null}
       {!compact && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
       {/* B81: not "by hand": the form has no such choice to write. Who it is about comes first (the same words on many form fields). */}
-      {!compact && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}`)} />. {c.not_on_form[0].why}</p> : null}
+      {!compact && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
       {!compact && c.status === "FAILED" ? <p className="text-[13px] text-text-danger">{c.error}</p> : null}
       {!compact && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
     </div>

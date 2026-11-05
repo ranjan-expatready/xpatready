@@ -23,7 +23,7 @@ import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Cha
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
-import { formValues, type Inventory } from "../../engine/form-values.ts";
+import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
 import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
@@ -174,7 +174,7 @@ export class CaseForms implements OnModuleInit {
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
     const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: plainWhy(b.why) }));
     // B81 (challenge M1): apart from "by hand": the form has no such choice to write by hand; it names whose answer it is.
-    const notOnForm = (result?.boxes ?? []).filter((b) => b.result === "not on this form").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", person: b.about_label ?? null, why: plainWhy(b.why) }));
+    const notOnForm = notOnFormLines(result?.boxes ?? [], (f) => labels.get(f));
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: notForFiling, source: "ircc_pdf",

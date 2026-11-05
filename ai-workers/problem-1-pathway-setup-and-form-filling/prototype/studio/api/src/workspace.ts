@@ -75,7 +75,7 @@ export class WorkspaceViews {
       const { channels: accepted, record } = allowedChannels(accepts.get(f.form_number), account);
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };
       return {
-        line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null, libraryEdition: libraryEdition.get(f.form_number) ?? null, editionId: map ? editionIdOf.get(`${f.form_number}|${map.form_edition}`) ?? null : null,
+        line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null, libraryEdition: libraryEdition.get(f.form_number) ?? null, choiceEditions: maps.filter((m) => m.form_number === f.form_number && (m as { channel?: string }).channel !== "ONLINE").sort((x, y) => Number(y.form_edition === map?.form_edition) - Number(x.form_edition === map?.form_edition)).flatMap((m) => { const eid = editionIdOf.get(`${f.form_number}|${m.form_edition}`); return eid ? [{ id: eid, label: m.form_edition }] : []; }),
         boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, copies: f.copies ?? 1, onlyIf, condition: f.condition ?? null,
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(signature), signatureKind: signature,
         // P-143 (C-2): the signatures that fit the line's channel; C-3, C-4: each channel, offered or refused with its reason.

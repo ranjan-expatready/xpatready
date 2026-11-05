@@ -1,5 +1,5 @@
-// B81 (C10.1 row 9; concept screens/b81-not-on-form/concept.md): the choices step walked like a person at 1440 px and 1024 px,
-// keyboard included: the section on the form's panel, the dialog, a mark saved, a release problem's link, read-only for
+// B81 (C10.1 row 9; concept screens/b81-not-on-form/concept.md): the choices step walked like a person at 1440 px and 1024 px:
+// the section on the form's panel, the dialog, a mark saved, a release problem's link, read-only for
 // others. No AI, no priced button, US$0.
 //   zsh studio/tools/isolated.sh forms_b81b 4413 start && node studio/tests/check_forms_b81_browser.cjs 4413 xr_studio_forms_b81b
 const { execFileSync } = require("node:child_process");
@@ -46,8 +46,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("B81 (challenge m2): a choice another answer uses is greyed and names it", opts.some((o) => /\(used by /.test(o.t) && o.d), JSON.stringify(opts));
   await shot("b81-02-dialog-1440");
   await select.focus(); await select.selectOption("__not_on_form");
-  step("B81: choosing Not on this form takes the keyboard's focus path (the select is reachable and labelled)", (await select.getAttribute("aria-label")) === "Sample answer no form prints: what this form prints");
-  await group.locator("[data-save-choices]").click();
+  step("B81: the answer's choice is labelled with the answer", (await select.getAttribute("aria-label")) === "Sample answer no form prints: what this form prints");
+  // Review M4: an edit is asked about however the dialog is closed; dismissing keeps it open with the edit in place.
+  let asked = 0; const ask = (d) => { asked++; void d.dismiss(); }; p.on("dialog", ask);
+  await p.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+  step("B81 (review M4): closing with an unsaved edit asks first, and No keeps the edit", asked === 1 && (await select.inputValue()) === "__not_on_form", String(asked));
+  // Review m8: Save from the keyboard.
+  await group.locator("[data-save-choices]").focus(); await p.keyboard.press("Enter");
   await group.locator("[data-not-saved]").waitFor({ state: "detached", timeout: 20000 });
   step("B81 pass: saved through the step, the mark reads back on the group, and it no longer blocks", (await row("sample_no_choice").getByRole("combobox").inputValue()) === "__not_on_form" && !/Blocks release/.test(await group.innerText()), await group.innerText());
   step("B81: the mark is stored on the form's draft field map", Number(sql(`select count(*) from form_field_map where status = 'DRAFT' and option_map -> 'notOnForm' ? 'sample_no_choice'`)) >= 1);
@@ -56,7 +61,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const wide = await p.evaluate(() => { const d = document.querySelector("[data-choices-dialog]"); return !!d && d.scrollWidth <= d.clientWidth + 1; });
   step("B81: at 1024 px the dialog does not scroll sideways", wide);
   await p.setViewportSize({ width: 1440, height: 900 });
+  await group.locator("[data-choice-fields] summary").click();
+  step("B81 (review M5): the group lists each form field, told apart in the form's words", (await group.locator("[data-choice-fields] li").count()) === Number(/Save (\d+) form field/.exec(await group.locator("[data-save-choices]").innerText())?.[1]) , await group.locator("[data-choice-fields]").innerText());
   await p.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+  step("B81 (review M4): after a save nothing is asked on closing", asked === 1 && (await p.locator("[data-choices-dialog]").count()) === 0, String(asked));
+  p.off("dialog", ask);
 
   // A release problem leads to the step.
   await p.goto(`${BASE}/c/${id}/review`);
@@ -67,11 +76,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("B81 (challenge M3): a release problem on a form's choices links to the step", hasLink);
   if (hasLink) { await link.click(); await p.locator("[data-choices-dialog]").waitFor({ timeout: 20000 }); step("B81 (challenge M3): the link lands on that form's panel with the choices open", /Choices: /.test(await p.getByRole("dialog").last().innerText())); await shot("b81-04-from-review-1440"); }
 
-  // Someone without the duty reads, and is told why.
+  // Review M3: the panel is the author's, whatever the way in.
   await as("user-B");
-  await openPanel().catch(() => {});
-  const canOpen = await p.getByRole("button", { name: "Change IMM 5707" }).count();
-  if (!canOpen) step("B81: the Approver has no way in: the line's Change is the author's", true);
+  await p.goto(`${BASE}/c/${id}/review`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  const moreB = p.getByRole("button", { name: /^Show all/ }); if (await moreB.count()) await moreB.click();
+  await p.locator("[data-problem]").first().waitFor({ timeout: 20000 });
+  step("B81 fail (review M3): the Approver has no link to the author's step", (await p.locator("[data-choices-link]").count()) === 0);
+  await p.goto(`${BASE}/c/${id}/forms?choices=IMM%205707`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await p.waitForTimeout(1500);
+  step("B81 fail (review M3): the Approver's address to it opens nothing", (await p.locator("[data-form-choices]").count()) === 0 && !/choices=/.test(p.url()), p.url());
   step("B81: no page error on the walk", errors.length === 0, errors.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);

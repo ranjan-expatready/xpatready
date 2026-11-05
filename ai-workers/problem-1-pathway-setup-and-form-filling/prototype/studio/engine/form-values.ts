@@ -18,6 +18,11 @@ export type BoxResult = BoxRow & { result: "written" | "by a person" | "not writ
 type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
 type Def = { id: string; answer_list?: { values: ListValue[] } };
 
+/** B81: what the officer reads of a copy's refused answers: whose they are and why, apart from what is written by hand. */
+export function notOnFormLines(boxes: { fact: string | null; about_label?: string; result: string; why: string | null }[], labelOf: (fact: string) => string | undefined): { label: string; person: string | null; why: string }[] {
+  return boxes.filter((b) => b.result === "not on this form").map((b) => ({ label: (b.fact && labelOf(b.fact)) || "A form field", person: b.about_label ?? null, why: b.why ?? "" }));
+}
+
 /** The value step of one form: `map` is the snapshot's field map of the PDF edition, `inv` its form field list. */
 export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: Inventory, covBoxes: (BoxRow & { fix?: string })[]): { boxes: BoxResult[]; values: Record<string, string> } {
   const entryOf = new Map<string, Entry>(map.entries.map((e) => [e.data_path, e]));
