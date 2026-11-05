@@ -5,7 +5,11 @@
 import { sharedStep, type MissingItem, type NextAction, type Status } from "../contracts/programs.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { isFilingFact } from "./resolver.ts";
+import { isFilingFact, roleOf } from "./resolver.ts";
+import { previewRender } from "./coverage.ts";
+import { compareEditions, editionMonth, newestEdition } from "./editions.ts";
+export { compareEditions, editionMonth, newestEdition };
+import { FILING } from "../contracts/resolver.ts";
 import { STATUS_WORDS } from "../contracts/status-words.ts";
 import { waitsForMap } from "./setup-checklist.ts";
 import { libraryType } from "./form-type.ts";
@@ -20,10 +24,16 @@ const applicants = (ps: Participant[]) => ps.filter((p) => p.role !== "represent
 const isCaseLevel = (p: { repeats: string; fact: string }) => isFilingFact(p.fact, p); // SH3 R5
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** Questions a person is asked: placements in the questionnaire's sections that are asked of each person. */
-function personQuestions(s: Snapshot) {
-  const selected = new Set((s.sections as { id: string }[]).map((x) => x.id));
-  return (s.placements as Placement[]).filter((p) => selected.has(p.section_id) && !p.rule_only && !isCaseLevel(p));
+/** BR-8, "every person role has questions" (B78; Lead 13, P-294): the roles that file and have none, from the one list Preview
+ *  and a case show (engine/render.ts through previewRender), so it can never disagree with them. A question about the
+ *  application is no role's, and one a condition hides is not asked yet. A form's fact counts though its section is not
+ *  chosen (Study permit: its one chosen section is about the application). A role the release does not hold is not asked. */
+function rolesWithoutQuestions(s: Snapshot, participants: Participant[]) {
+  const filing = applicants(participants);
+  if (!s.placements.length) return filing; // nothing placed, nothing asked (render asks only a placed fact)
+  const { people, r } = previewRender(s);
+  const asked = new Set(r.questions.filter((q) => q.about !== FILING && q.status !== "hidden by a condition").map((q) => roleOf(people, q.about)));
+  return filing.filter((p) => people.some((x) => x.role === p.role) && !asked.has(p.role));
 }
 
 /** Where the row's setup stands (draft): forms attached as sources and not set up yet, and what moves them on. */
@@ -67,7 +77,7 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
   const unmapped = formsWithoutFieldMap(s).map((f) => f.form_number); // QA-180: the rule release reads too
   if (unmapped.length) out.push(line("form_without_edition", `No form fields mapped yet for ${unmapped.join(", ")}.`, "Draft setup", " (AI maps the form fields from the form)"));
   // Founder finding F2: one cause, one line, with what to do next (not one line per person role).
-  const roles = personQuestions(s).length ? [] : applicants(participants).map((p) => p.label);
+  const roles = rolesWithoutQuestions(s, participants).map((p) => p.label);
   // With its forms set up, questions come from the library's placements for the fields the forms read; AI drafting maps
   // boxes and never writes questions (api/src/ai.ts), so the step is a person's: add them on the Configuration tab.
   if (roles.length) out.push(line("role_without_questions", `No questions yet for ${roles.join(", ")}.`, "Add questions", " (Configuration › Questions and sections)"));
@@ -130,20 +140,6 @@ export function nextActionOf(r: SetupState & { status: Status; changes: number; 
   if (r.changes) return { kind: "release", label: "Review and release" };
   return null;
 }
-
-/** Edition order (review #5, P-32): an IRCC edition is the month and year printed on the form, "IMM 5476 (11-2025)",
- *  so "12-2021" is older than "11-2025" (text order says the opposite). The printed date is the edition's identity and
- *  is always present (a file without one is held by the intake); the PDF's "date modified" only breaks a tie, since any
- *  re-save changes it. A label with no readable date sorts oldest. */
-export function editionMonth(label: string | null | undefined): number {
-  const m = /\b(\d{1,2})-(\d{4})\b/.exec(label ?? "");
-  return m && Number(m[1]) >= 1 && Number(m[1]) <= 12 ? Number(m[2]) * 12 + Number(m[1]) - 1 : -1;
-}
-export function compareEditions(a: { editionLabel: string; published?: string | null }, b: { editionLabel: string; published?: string | null }) {
-  return editionMonth(a.editionLabel) - editionMonth(b.editionLabel) || String(a.published ?? "").localeCompare(String(b.published ?? "")) || a.editionLabel.localeCompare(b.editionLabel);
-}
-/** The newest edition of a list (by compareEditions), or undefined. */
-export const newestEdition = <T extends { editionLabel: string; published?: string | null }>(list: T[]): T | undefined => [...list].sort((a, b) => compareEditions(b, a))[0];
 
 /** P-32 (the newest printed edition is the one in use): a form's PDF field map in use in a snapshot. A snapshot carries
  *  every mapped PDF edition of a form (engine/snapshot.ts, oldest first; an answer key may test an older one), so a

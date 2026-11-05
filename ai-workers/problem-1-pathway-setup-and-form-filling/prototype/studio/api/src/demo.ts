@@ -15,7 +15,7 @@ import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
-import { releaseTwoWords } from "./checkpoint-words.ts";
+import { type Listed, type ReleaseTwoStep, releaseTwoWords } from "./checkpoint-words.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -39,6 +39,7 @@ import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime } from "./runtime.ts";
 import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
+import { type HeldSectionName, namedReason, nameOfHeld, readHeldSectionNames } from "./section-names.ts";
 import { type CitedDocumentLine, FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
 /** QA-144 slices 1–4 (tech lead on #798; B79): the combinations the configured checkpoint sets up from their forms' own
  *  parts are the ones the form setup table holds (P-319: no combination key here). The others follow, one slice each. */
@@ -246,8 +247,9 @@ export class Demo {
       if (missing.length) { await reject(l.id, label, `its condition reads ${missing.join(", ")}, which this library does not hold and ask yet`); continue; }
       try { await decide(this.db, this.audit, author, workspaceId, [l.id], { action: "accept", reason: `Accepted by the sample loader: a document line ${checklist} asks for, in its own words (Sample; P-248).` }); n++; } catch (e) { await reject(l.id, label, `not accepted: ${say(e)}`); }
     }
-    for (const t of await this.db.proposalItem.findMany({ where: { runId: job.id, kind: "document_type", status: "waiting" }, select: { id: true, payload: true } }))
-      await reject(t.id, String((t.payload as { name?: unknown }).name ?? "a document type"), "no accepted line uses it");
+    // B82: a fact the reading proposed goes with its line: an accepted line here reads only facts the library holds and asks.
+    for (const t of await this.db.proposalItem.findMany({ where: { runId: job.id, kind: { in: ["document_type", "field"] }, status: "waiting" }, select: { id: true, kind: true, payload: true } }))
+      await reject(t.id, String((t.payload as { name?: unknown; label?: unknown }).name ?? (t.payload as { label?: unknown }).label ?? t.kind), t.kind === "field" ? "no accepted line reads it" : "no accepted line uses it");
     return { n, rejected };
   }
 
@@ -654,39 +656,54 @@ export class Demo {
     const fromForms = six.combinations.filter((c) => SET_UP_FROM_FORMS.has(keyOf.get(c.id) ?? ""));
     // sectionsHeld (QA-206): sections the forms print no heading over, left waiting on To review for a person to name.
     const sectionsMade: string[] = [], sectionsReused: string[] = [], sectionsRefused: string[] = [], sectionsHeld: string[] = [];
+    // B78: the name a person gives a section no heading was read over (samples/section-names.json), through the same edit.
+    const heldNames = readHeldSectionNames();
+    const namedByPerson: HeldSectionName[] = [];
     let maritalList: string | null = null;
+    // The sections of some of a combination's forms, drafted from their own parts by the rules pass and accepted one at a
+    // time (C10.1 row 9 runs it again for the family information form release 2 files).
+    const sectionsFrom = async (c: { id: string }, forms: { id: string; fileName: string; edition: string | null }[], o: { lists?: boolean } = {}) => {
+      for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
+      // Only these forms' own rules runs (review m2 on #1009: release 2 reads IMM 5645's, never release 1's leftovers).
+      const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition", attachmentId: { in: forms.map((f) => f.id) } }, select: { id: true } })).map((j) => j.id);
+      // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
+      const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true, work: true, reason: true, formEdition: true } }))
+        .filter((p) => p.kind === "section" || (o.lists !== false && (p.payload as { label?: string }).label === "Marital status"));
+      // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
+      for (const p of take) {
+        // QA-206 (tech lead on #883; AGENTS rule 4: Sample, never guessed): a section the rules pass holds for a name is
+        // named only by print, through the same naming edit a person uses: with the heading that edition prints over it
+        // (another part prints it too). With no printed heading it takes the name a person gives it (B78); with none of
+        // those either it stays waiting on To review and is listed as refused.
+        const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
+        const given = held?.unnamed && !held.heading ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
+        if (held?.unnamed && !held.heading && !given) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
+        try {
+          const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], given
+            ? { action: "edit", payload: { ...(p.payload as object), label: given.name }, reason: namedReason(given) }
+            : held?.unnamed
+            ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
+            : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string; joined?: boolean } | undefined;
+          if (given) namedByPerson.push(given);
+          // A name the library already holds lands on that section, so it is reused, not added.
+          if (p.kind === "section") (landed?.joined ? sectionsReused : sectionsMade).push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
+        } catch (e) {
+          // The card's own words: a section the library already holds is rejected here and that section reused (the
+          // placement step reads its boxes into it).
+          const same = /already in the library as (\S+?)[ )]/.exec(said(e))?.[1];
+          if (!same) { sectionsRefused.push(`${(p.payload as { label?: string }).label ?? p.kind}: ${said(e)}`); continue; }
+          await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "reject", reason: `The library already holds this ${p.kind === "section" ? "section" : "list"} (${same}): reused, not added again.` });
+          if (p.kind === "section") sectionsReused.push(same);
+        }
+      }
+    };
     await timed("sections from the forms' parts (rules)", async () => {
       for (const c of fromForms) {
         // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
         const notFiled = (await this.familyForm(c.id, keyOf.get(c.id)))?.other ?? null;
         const forms = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
           .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
-        for (const a of forms) { try { await this.masters.draft(author, a.id, { mode: "rules" }); } catch (e) { sectionsRefused.push(`${a.fileName}: ${said(e)}`); } }
-        const runs = (await this.db.draftingJob.findMany({ where: { combinationId: c.id, kind: "masters_edition" }, select: { id: true } })).map((j) => j.id);
-        // The sections, and the marital status list IMM 5409's rule reads (ruling 3); the other answer lists stay on To review.
-        const take = (await this.db.proposalItem.findMany({ where: { runId: { in: runs }, status: "waiting", kind: { in: ["section", "answer_list"] } }, orderBy: [{ createdAt: "asc" }, { identityKey: "asc" }], select: { id: true, kind: true, payload: true, work: true, reason: true } }))
-          .filter((p) => p.kind === "section" || (p.payload as { label?: string }).label === "Marital status");
-        // One at a time, as on its own page: a rules item is not Ready, so it is never accepted in a batch.
-        for (const p of take) {
-          // QA-206 (tech lead on #883; AGENTS rule 4: Sample, never guessed): a section the rules pass holds for a name is
-          // named only by print, through the same naming edit a person uses: with the heading that edition prints over it
-          // (another part prints it too). With no printed heading it stays waiting on To review and is listed as refused.
-          const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
-          if (held?.unnamed && !held.heading) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
-          try {
-            const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], held?.unnamed
-              ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
-              : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
-            if (p.kind === "section") sectionsMade.push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
-          } catch (e) {
-            // The card's own words: a section the library already holds is rejected here and that section reused (the
-            // placement step reads its boxes into it).
-            const same = /already in the library as (\S+?)[ )]/.exec(said(e))?.[1];
-            if (!same) { sectionsRefused.push(`${(p.payload as { label?: string }).label ?? p.kind}: ${said(e)}`); continue; }
-            await decide(this.db, this.audit, author, workspaceId, [p.id], { action: "reject", reason: `The library already holds this ${p.kind === "section" ? "section" : "list"} (${same}): reused, not added again.` });
-            if (p.kind === "section") sectionsReused.push(same);
-          }
-        }
+        await sectionsFrom(c, forms);
       }
     });
 
@@ -811,7 +828,7 @@ export class Demo {
     // QA-206 (tech lead on #883): each held section is named in one line, so the row says all of them, not the first six.
     const heldLine = sectionsHeld.length ? `${sectionsHeld.length} section${sectionsHeld.length === 1 ? "" : "s"} held on To review for a person to name (the form prints no heading over their form fields): ${sectionsHeld.join(", ")}` : null;
     row({ row: "7", title: "Sections and questions from the forms' own parts (rules, US$0)", status: !fromForms.length ? "waiting" : sectionsRefused.length || setUpRefused.length || sectionsHeld.length ? "partial" : "done",
-      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
+      shows: `${sectionsMade.length} sections drafted from ${fromForms.map((c) => c.label).join(", ")}'s forms and approved by the ${approver.name}${sectionsReused.length ? ` (${sectionsReused.length} more already in the library, reused)` : ""}${namedByPerson.length ? `; ${namedByPerson.length} sections with no heading read over their form fields named by a person from the form's own words (Sample${namedByPerson.some((x) => x.basis === "sample") ? `; ${namedByPerson.filter((x) => x.basis === "sample").length} in a person's wording, Unconfirmed: expert` : ""})` : ""}; ${placedFacts.length} facts asked in the section of their form field; ${byHand} form fields no saved answer proposed are filled by hand; ${lines} form lines set from IRCC's words (Sample, Unconfirmed: expert)${unchosen.length ? `; ${unchosen.length} chosen section${unchosen.length === 1 ? "" : "s"} unchosen again where a shared placement made ${unchosen.length === 1 ? "it" : "them"} not everyone's (${[...new Set(unchosen.map((x) => /\(on (.*)\)$/.exec(x)?.[1] ?? ""))].join(", ")})` : ""}`,
       why: [...(heldLine ? [heldLine] : []), ...[...sectionsRefused, ...setUpRefused].slice(0, 6)].join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
@@ -845,18 +862,65 @@ export class Demo {
     // step in Adobe Reader (P-46, P-171): never simulated here, so the read-back waits for a person.
     const fam = visitor && vvId ? await timed("sample family case (rows 11, 12)", () => openSampleFamilyCase(this.db, this.runtime, this.caseForms, vvId)) : null;
 
-    // C10.1 row 9 (Lead 10's ruling (c') on #1009, and its direction of 5 Nov): release 2 waits for row B81, and a waiting
-    // row leaves the checkpoint's draft as it is: nothing is set on Visitor visa's draft, and the row says what Submit
-    // would refuse, read without writing from the family form IMM 5257 filed Online needs (api/src/checkpoint-words.ts).
-    // The steps that set release 2 come with B81 (they stood here at #1009's 4a09bcd86).
-    const onlineFamily = FAMILY_FORM_BY_CHANNEL.online.form;
-    // Every PDF edition, as the validator reads them; a form that cannot be read is said on the row, it never stops the load.
-    const wouldRefuse = !visitor ? null : await (async () => {
-      const editions = await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: onlineFamily }, channel: "PDF" }, select: { id: true } });
-      return editions.length ? (await Promise.all(editions.map((ed) => this.forms.optionMapProblemsIfFiled(ed.id)))).flat() : null;
-    })().catch((e) => { console.error(`[demo] row 9 could not read ${onlineFamily}:`, e); return null; });
-    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
-      why: visitor ? releaseTwoWords({ application: FORM_SETUP["vv.single"].application, form: onlineFamily }, wouldRefuse) : "Waits for the Visitor visa's release 1: its channels change for release 2." });
+    // C10.1 row 9 (Lead 9, 5 Nov; P-143): release 2 of Visitor visa with mixed channels, set on its Forms tab's own routes:
+    // IMM 5257 filed Online, so the family information form is IMM 5645 (FAMILY_FORM_BY_CHANNEL); IMM 5476 a PDF upload
+    // signed by hand and scanned. Then the same review as release 1: submit, the SME's sign-off, a different person approves.
+    let r2Why: string | null = visitor ? null : "Waits for the Visitor visa's release 1: its channels change for release 2.";
+    const r2Marks = new Map<string, number>(), r2Sections: string[] = [];
+    if (visitor && vvId) await timed("release 2 (mixed channels)", async () => {
+      let step: ReleaseTwoStep = "forms"; // review R2 m1: the words name the step that refused it
+      try {
+        await this.forms.setChannel(author, vvId, "IMM 5257", { channel: "ONLINE" });
+        const fam = (await this.familyForm(vvId, "vv.single"))!;
+        const has = new Set((await this.db.combinationForm.findMany({ where: { combinationId: vvId, status: { not: "RETIRED" } }, select: { lineageKey: true } })).map((x) => x.lineageKey));
+        if (!has.has(fam.form)) await this.formLibrary.attach(author, vvId, { formKey: fam.form });
+        await this.studio.saveForm(author, vvId, fam.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
+        if (has.has(fam.other)) await this.studio.saveForm(author, vvId, fam.other, { retire: true });
+        // The family form now filed: its form fields no saved answer proposed are filled by hand, as on release 1.
+        for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, form: { formKey: fam.form }, channel: "PDF" }, select: { id: true } })) {
+          for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved"))
+            await this.library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON });
+          await this.forms.draftOptionMaps(author, ed.id);
+          // B97 (B81's step, as a person uses it): each form field takes the choices the form prints; an answer it prints
+          // nothing for is marked not on this form (AGENTS.md rule 4; Sample, Unconfirmed: expert). Anything that could be a
+          // printed choice stays open, so Submit refuses it in words.
+          for (const g of (await this.forms.optionMapsView(ed.id)).groups.filter((x) => x.problems.length)) {
+            const notOnForm = g.values.filter((v) => !v.code && !v.asks_more && !v.printed.length);
+            await this.forms.setOptionMaps(author, ed.id, { dataPaths: g.form_fields.map((f) => f.data_path), map: Object.fromEntries(g.values.filter((v) => v.code).map((v) => [v.key, v.code])), notOnForm: notOnForm.map((v) => v.key), baseRevision: g.revision });
+            for (const v of notOnForm) r2Marks.set(v.label, (r2Marks.get(v.label) ?? 0) + g.form_fields.length);
+          }
+        }
+        // Its sections drafted from its own parts (as on release 1, where the channel took it off), its facts asked in the
+        // section of their form field (the Smart questionnaire tab's step), and
+        // any new library item it adds approved by the second person.
+        const heldBefore = sectionsHeld.length, refusedBefore = sectionsRefused.length; // row 7 is written: what this pass leaves, row 9 says
+        await sectionsFrom({ id: vvId }, (await this.db.sourceAttachment.findMany({ where: { combinationId: vvId, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } })).filter((a) => (a.edition ?? "").startsWith(`${fam.form} (`)), { lists: false });
+        r2Sections.push(...sectionsHeld.slice(heldBefore).map((x) => `waiting for a name: ${x}`), ...sectionsRefused.slice(refusedBefore));
+        for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true } }))
+          await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
+        await placeFromFormParts(this.db, this.studio, author, vvId);
+        for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true } }))
+          await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
+        await this.forms.setChannel(author, vvId, "IMM 5476", { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" });
+        await seedSampleSources(this.db, vvId);
+        step = "submit";
+        const sub = await this.studio.submit(author, vvId, "Release 2 with mixed channels, submitted by the sample loader (C10.1 checkpoint, row 9).");
+        step = "signoff";
+        const items = (sub.changeSummary as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`);
+        if (items.length) await this.studio.signoff(sme, vvId, { items, action: "signed", note: "Signed by the sample loader as the SME (C10.1 checkpoint, release 2)." });
+        step = "approve";
+        await this.studio.approve(approver, vvId);
+      } catch (e) {
+        // Lead 10's ruling on #1009 (c'): Submit's own refusal, counted and said in plain words (api/src/checkpoint-words.ts),
+        // with where the draft stands.
+        // Review R2-1: Submit's text names only its first three problems; its errors[] lists every one.
+        const listed = e instanceof HttpException ? (e.getResponse() as { errors?: Listed[] }).errors : undefined;
+        r2Why = releaseTwoWords(step, { detail: said(e), errors: Array.isArray(listed) ? listed : undefined });
+      }
+    });
+    const vvReleases = vvId ? await this.db.configRelease.count({ where: { combinationId: vvId } }) : 0;
+    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: !r2Why && vvReleases >= 2 ? "done" : "waiting",
+      shows: !r2Why && vvReleases >= 2 ? `Visitor visa release 2: IMM 5257 Online, IMM 5645 as the family information form, IMM 5476 a PDF upload signed by hand and scanned (Forms tab, reviewed and approved)${r2Marks.size ? `; marked not on this form, Sample, Unconfirmed: expert: ${[...r2Marks].map(([label, n]) => `"${label}" on ${n} form field${n === 1 ? "" : "s"}`).join(", ")}` : ""}${r2Sections.length ? `; IMM 5645's sections left for a person: ${r2Sections.slice(0, 3).join(" · ")}${r2Sections.length > 3 ? ` · and ${r2Sections.length - 3} more` : ""}` : ""}` : "The channel route and the signed-scan lines are built (Forms tab)", why: r2Why });
     const rowEleven = !!fam?.caseId && fam.people === 4 && fam.births === 4 && fam.fromRecord > 0;
     row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : rowEleven ? "done" : "partial",
       shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} on release ${fam.release}: ${fam.people} people (principal applicant, travelling spouse, a child under 18, a child 18 or over; Sample names); ${fam.fromRecord} answers from the Sample record and ${fam.madeUp} made up (Sample: the second child's name and both children's dates of birth)${fam.notTaken ? `; ${fam.notTaken} of the record's facts not asked by this release or not on its lists` : ""}; ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made` : "The case area is built (Demo › Open the case area)",

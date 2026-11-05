@@ -53,7 +53,7 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
 
   // Row 7: its forms' sections by rules (no AI), approved by a second person.
   // QA-206 (tech lead on #883): partial exactly while sections the forms print no heading over wait on To review for a name.
-  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and coalesce(form_edition, '') not like 'IMM 5645 (%'`); // IMM 5645's are row 9's (B97)
   ok("QA-144 slice 2 row 7: done (partial exactly while sections wait for a name, QA-206), and names With an LMIA among the combinations set up from their forms", r("7").status === (heldNow ? "partial" : "done") && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")) && /sections drafted from .*With an LMIA – inside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
   // One rules pass per edition in the workspace (P-138): IMM 5710's is With an LMIA's own; the forms it shares with the
   // Visitor visa reuse that pass, and the placement step reads it for both.
