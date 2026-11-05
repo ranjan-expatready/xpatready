@@ -117,3 +117,49 @@ Run on isolated copy `rvfs` on :4436, six loaded, live AI off, US$0; the copy is
 * 200 % zoom;
 * a real screen reader;
 * an intended user's unaided walk (D17 and D20 stay with the founder).
+
+## Round 2 (diff only, 7890073b3)
+Re-reviewed `git diff e2b458813..7890073b3` (commits 73b3be71d and 7890073b3), checked against the round 1 findings above and
+`break-report.md`. Probes ran on an extracted copy of 7890073b3, and isolated copy `rvfs2` ran on :4437 (six loaded; now stopped).
+
+**Verdict: Approve** on 7890073b3. No Blocker or Major is open.
+
+| Round 1 finding | Status at 7890073b3 | Evidence |
+|---|---|---|
+| M1 studio words | Fixed (option b) | Studio words are back to round 0: `hasFeeRules("fs.spouse")` is false (`filings.ts:142`), and the table no longer defaults the child. Seen on :4437 as the author: every fee cell and both preview filings say "Fees not worked out yet", and no family maximum is named at 1440, 1024 or 400 px. Keyboard reaches the card, axe finds 0 violations, nothing scrolls sideways. The case-vs-studio difference is recorded as a follow-up row (build notes, "Left as Minors") |
+| M2 co-filing through the release | Fixed | `coMissing` (`filings.ts:245-251`) prices only one co-filed filing, owned by the sponsor. A child co-filing, a representative co-filing, and two sponsors now get no lines, `fees_worked_out: false` and a reason |
+| m1 bundle with no sponsorship | Fixed | No modes, no sponsor mode, or no sponsor person now give no lines and the reason "no sponsorship is filed on this case yet (add the sponsor …)" |
+| m2 reason with no principal | Fixed | The reason is now "no sponsored person's application is on this case", and its test checks the words |
+| m3 free applicant | Fixed | A spouse on the principal's application blocks pricing and is named in the words |
+| m4 build notes | Fixed | `build-notes.md` "Why -22 stays red after B79b" |
+| Breaker m6, m3 split | Fixed | A table with `co_filed_fees` but no `co_files` mode is refused. A split-out submission gets no price |
+
+Mutation check (on my copy; each rule removed in turn, then restored):
+* Each of these makes its own new test fail (98/99):
+  * the `hasFeeRules` guard;
+  * the one-sponsorship check;
+  * the sponsor-owner check;
+  * the split check;
+  * the free-applicant check;
+  * the m6 guard;
+  * the no-principal check.
+* With every rule in place, `check_r2_fee_table` passes 99/99. On 7890073b3, `check_vv_filings` 55/55, `check_c1112_modes` 44/44 and `check_vv_prepare` 32/32 also pass.
+
+What still holds:
+* Base case: CAD 1,260 plus CAD 180 per travelling child, all on the PR filing. Two children make CAD 1,620; a declared-only child pays nothing.
+* `vv.single` is unchanged: CAD 370 for a family of two.
+* A family wholly in one separate group is still priced once.
+* No hot file is touched, no explicit `any` is added, and no other reader of `hasFeeRules` exists (only `api/src/workspace.ts`).
+
+New findings (both Minor; neither holds the PR):
+* **r2-m1, plain words.** The `coMissing` sentence (`filings.ts:247`) reads "Fees not worked out yet for …: its fees are worked out with the sponsor's sponsorship filed beside …", which sounds as if they are worked out. Fix: "its fees are worked out only when the sponsor's sponsorship is filed beside …".
+* **r2-m2, untested path.** A release that co-files the sponsor but sets no child mode now gives the child no filing, explained in `not_filing`, and prices CAD 1,260 as worked out. The table's child default is gone, so this follows. The release check (`FILING_NOT_SET_BLOCKS`, BR-7) refuses a new release without the child's mode, so only a pinned older release could reach it, and no `fs.spouse` release exists yet. Fix: a test that pins it.
+
+**Journey score, round 2: 8.5/10 (pass, no criterion at 0).** J1 was re-walked on 7890073b3.
+* Plain words ½ (r2-m1).
+* Correct data 1 (M1 and M2 fixed).
+* Trust and sources ½ (the studio does not yet say where a sponsorship's fees go: the follow-up row).
+* Task completed ½ (J2 needs B79b).
+* Every other criterion as in round 1.
+
+Not checked: the case page and `/prepare` on a released `fs.spouse` (B79b); the acceptance packs.
