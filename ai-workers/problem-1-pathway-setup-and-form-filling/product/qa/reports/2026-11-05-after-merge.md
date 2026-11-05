@@ -84,5 +84,32 @@ A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M
 
 **M2: 58/60.** Left: C4.11 (B83, B86), C10.1 (#1009).
 
+## Visitor visa, Reset to release on the six: M2's end-to-end list (main ffcfb45c8, ~10:50–11:12 IST, one Mac copy, 1440 px, US$0)
+**Result: released as Release 1, Live, Demo release, but with no conditional question and only 3 of its 6 document lines.**
+
+| # | Where | What happened | Bug · row · capability | Blocks release? |
+|---|---|---|---|---|
+| 1 | Overview, next step | "Choose the checklist page" has no control | QA-240, no row yet, C11.10 | No |
+| 2 | Forms › Review AI proposals, apply each map; To review, second person | 191 accepted, 185 approved, one at a time by design (P-296); **done by the pack's setup route, not clicked** | none | No |
+| 3 | To review › Form fields | IMM 5257's Yes/No fields as their own questions: no screen; pack's route | QA-234, B83, C4.11 | Yes, for conditions |
+| 4 | Documents | 3 of 6 lines read facts not in the library; refused until **removed by qa on screen** | QA-233, B82 (#1058), no capability until its C2.6 step | Yes |
+| 5 | Forms › Who can be in this application | Filing for Spouse and Child, set by screen | none | Yes, cleared by a person |
+| 6 | Review › Sources | "From age: 18" on IMM 5257 SCH1 and IMM 5707: Add source, "None published", by screen | none | Yes, cleared by a person |
+| 7 | Submit, expert's Sign 356, Approve and release | by screen | none | No |
+| 8 | Accepting any condition | **not done in this walk, to reach the end**: refused at Submit | QA-237, B86, C4.11 | Yes, if any is accepted |
+| 9 | The same, on other combinations | not done here; by route: Hiding errors on the 4 others | QA-239, B88, C4.11 | Yes, for those combinations |
+
+**Limits of this list, plainly:** QA-239 (row 9) and QA-237 (row 8) were proven by route, not walked. The 191 accepts and 185 approvals (row 2, QA-241) were run by the pack's route, not by screens. The 3 document lines were removed by qa on screen, so this release does not hold them. It is one combination.
+
+**Of the 58 Works rows, 1 is shown to reach a dead end: C2.6 (QA-233), now Partial; M2 is 57/60 until B82 lands.** The other three dead ends sit on C4.11, which is not among the 58. That 1 is a floor, not a clean bill for the other 57: this walk did not exercise them one by one.
+
+**B89 is not a stop:** nothing is refused without it. It only adds conditions, which then need B86. **Not in this walk:** the other four combinations, the pack-route clicks in row 2, and anything after release (QA-235, B84, is at the case).
 ## Batch 23 ~10:44 IST: QA-239 (Gap · Major, row B88); C10.1 after #1009
 One condition approved on Visitor visa adds release-refusing Hiding errors on the four other combinations reading it (run 41972242603). "Unreachable" did not appear by route; concept §8 simulated it. C4.11 cannot be Works while this is open. C10.1: 21/24 on the checkpoint (run 41969024051). M2 58/60.
+
+## Gate A results ~11:30–11:50 IST (no row moves)
+* #1051 (C1.3, C11.5) on 130a0e62a: PASS; C1.3 54/54 on the checkpoint (run 41976449342); new QA-243 (Minor).
+* #1058 (B82) on 501291a27: FAIL for the label, journey score 7/10; packs green (run 41978442688); new QA-242 (Major, C6.4): the condition lines never reach a case.
+
+## Records ~12:11 IST: cloud qa's M3 re-score copied (#1069)
+**M3: 0/17 Works on the checkpoint** (C6.9 Partial, 2/15; C9.2 Partial). New: QA-244, QA-245 (N2, narrowed by qa with reasons), QA-246, QA-247, QA-248, QA-249, QA-250, QA-251 (Lead 11's route sweep). QA-226 fixed in part. C6.9 needs no hold: the regression set is M2 only.
