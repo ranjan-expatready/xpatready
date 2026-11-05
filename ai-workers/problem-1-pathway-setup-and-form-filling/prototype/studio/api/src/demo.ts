@@ -802,8 +802,8 @@ export class Demo {
       why: [...(heldLine ? [heldLine] : []), ...[...sectionsRefused, ...setUpRefused].slice(0, 6)].join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
-    // B104 (P-351): J7 Stage 1's parts the rows above do not make (who signs, the IRCC account), from samples/checkpoint-stage-one.json.
-    for (const c of six.combinations) { const s = await timed("J7 Stage 1 setup", () => setStageOne({ db: this.db, studio: this.studio, forms: this.forms }, author, c.id, keyOf.get(c.id), said)); if (s.done.length || s.refused.length) log.push(`  ${keyOf.get(c.id)} J7 Stage 1: ${[...s.done, ...s.refused.map((x) => `refused: ${x}`)].join("; ")}`); }
+    // B104 (P-351): J7 Stage 1's parts the rows above do not make (who signs, the IRCC account, eligibility gates), from samples/checkpoint-stage-one.json.
+    for (const c of six.combinations) { const s = await timed("J7 Stage 1 setup", () => setStageOne({ db: this.db, audit: this.audit, studio: this.studio, forms: this.forms }, author, c.id, keyOf.get(c.id), said)); if (s.done.length || s.refused.length) log.push(`  ${keyOf.get(c.id)} J7 Stage 1: ${[...s.done, ...s.refused.map((x) => `refused: ${x}`)].join("; ")}`); }
     await applySampleFormRoles(this.db, workspaceId); // breaker M2: the demo's form roles before any release is made
     // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
     // different person's approval. A combination the validator refuses stays a draft, with the validator's words.

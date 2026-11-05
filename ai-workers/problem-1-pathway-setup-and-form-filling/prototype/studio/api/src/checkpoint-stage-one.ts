@@ -2,22 +2,25 @@
 // not yet make (#1069's re-score: QA-228 signers, QA-247 the IRCC account), set before its release is made, as the
 // author, through the same services the Forms tab calls (who signs: PATCH /api/combinations/:id/forms/:code, the line
 // editor in web/src/pages/workspace/forms.tsx; the IRCC account: PATCH /api/combinations/:id/account, AccountPicker in
-// web/src/components/channels.tsx). The values are data (samples/checkpoint-stage-one.json, P-319), each cited (P-170)
+// web/src/components/channels.tsx). The eligibility gates (QA-244) go through the service of PUT
+// /api/combinations/:id/eligibility-gates, which no screen calls yet: allow-listed (product/tools/route-has-screen-allow.txt),
+// the gate-authoring screen is row B106, and C6.9 is not Works on this route alone (tech lead's ruling on #1084). The values are data (samples/checkpoint-stage-one.json, P-319), each cited (P-170)
 // and Sample, Unconfirmed: expert (AGENTS rule 4). A step a rule refuses stays undone and is said in the rule's words.
 // No model call (US$0).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Actor, type Db, STUDIO } from "./core.ts";
+import { type Actor, type Audit, type Db, STUDIO } from "./core.ts";
+import { EligibilityGates } from "./eligibility.ts";
 import type { Forms } from "./forms.ts";
 import type { Studio } from "./studio.ts";
 
-export type StageOne = { account?: { value: string; cite: string }; signers?: { form: string; signedBy: string; cite: string }[] };
+export type StageOne = { account?: { value: string; cite: string }; signers?: { form: string; signedBy: string; cite: string }[]; eligibility?: { gates: unknown[]; judgement: string[]; cite: string } };
 export const STAGE_ONE_FILE = join(STUDIO, "samples", "checkpoint-stage-one.json");
 export const stageOneOf = (key: string | undefined, file = STAGE_ONE_FILE): StageOne | null =>
   (JSON.parse(readFileSync(file, "utf8")) as { combinations: Record<string, StageOne> }).combinations[key ?? ""] ?? null;
 
 /** Sets one combination's Stage 1 parts on its draft. Returns what was set and what a rule refused, in words. */
-export async function setStageOne(svc: { db: Db; studio: Studio; forms: Forms }, author: Actor, combinationId: string, key: string | undefined, said: (e: unknown) => string) {
+export async function setStageOne(svc: { db: Db; audit: Audit; studio: Studio; forms: Forms }, author: Actor, combinationId: string, key: string | undefined, said: (e: unknown) => string) {
   const setup = stageOneOf(key);
   const done: string[] = [], refused: string[] = [];
   if (!setup) return { done, refused };
@@ -37,6 +40,15 @@ export async function setStageOne(svc: { db: Db; studio: Studio; forms: Forms },
     if (line.signedBy === s.signedBy) continue;
     try { await svc.studio.saveForm(author, combinationId, s.form, { signedBy: s.signedBy }); done.push(`${s.form} signed by ${s.signedBy}`); }
     catch (e) { refused.push(`${s.form}: ${said(e)}`); }
+  }
+  // The gates as data on the draft, saved once over the version read (BR-3); gates already saved are left as they are.
+  if (setup.eligibility) {
+    const gates = new EligibilityGates(svc.db, svc.audit);
+    const now = await gates.get(combinationId);
+    if (!now.gates.length) {
+      try { const v = await gates.put(author, combinationId, { gates: setup.eligibility.gates, judgement: setup.eligibility.judgement, version: now.version }); done.push(`${v.gates.length} eligibility gates and ${v.judgement.length} officer's judgement lines`); }
+      catch (e) { refused.push(`eligibility gates: ${said(e)}`); }
+    }
   }
   return { done, refused };
 }
