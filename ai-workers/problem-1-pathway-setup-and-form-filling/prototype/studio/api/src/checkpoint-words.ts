@@ -26,14 +26,14 @@ export function releaseTwoWords(step: ReleaseTwoStep, refusal: Refusal): string 
   const all = refusal.errors;
   const noCode = all.filter((p) => /no code for/.test(p.message)), noMap = all.filter((p) => /no option map yet/.test(p.message));
   const other = all.filter((p) => !noCode.includes(p) && !noMap.includes(p));
-  const forms = [...new Set([...noCode, ...noMap].map((p) => /IMM[_ ]?(\d{4})/.exec(`${p.item ?? ""} ${p.message}`)?.[1]).filter(Boolean))];
+  const forms = [...new Set([...noCode, ...noMap].map((p) => { const m = /(IMM|IRM)[_ ]?(\d{4})/.exec(`${p.item ?? ""} ${p.message}`); return m ? `${m[1]} ${m[2]}` : null; }).filter(Boolean))];
   const parts = [
     noCode.length ? `${plural(noCode.length, "form field has", "form fields have")} no code for some values of the answer list ${noCode.length === 1 ? "it reads" : "they read"} (filling would refuse them)` : null,
     noMap.length ? `${noMap.length} ${noMap.length === 1 ? "has" : "have"} no option map yet` : null,
     // Review R2 m2: any other problem keeps its own words (at most three, then how many more).
     other.length ? `${plural(other.length, "other problem", "other problems")}: ${other.slice(0, 3).map((p) => p.message).join(" · ")}${other.length > 3 ? ` · and ${other.length - 3} more` : ""}` : null,
   ].filter(Boolean);
-  const on = forms.length && !other.length ? ` on ${forms.map((f) => `IMM ${f}`).join(" and ")}'s choice boxes` : "";
+  const on = forms.length && !other.length ? ` on ${forms.join(" and ")}'s choice boxes` : "";
   const where = `Visitor visa's draft keeps the release-2 changes (${RELEASE_TWO_CHANGES}), not submitted; its Review and release tab lists each problem.`;
   const waits = noCode.length ? " Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words." : "";
   return `Release 2 was not made: Submit refused it with ${plural(all.length, "problem", "problems")}${on}: ${parts.join("; ")}. ${where}${waits}`;
