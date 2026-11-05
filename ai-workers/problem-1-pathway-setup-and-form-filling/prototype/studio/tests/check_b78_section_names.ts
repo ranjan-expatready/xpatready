@@ -13,7 +13,7 @@ const entry: HeldSectionName = { form: "Form A (01-2026)", first_field: "a.b", n
 
 const names = readHeldSectionNames();
 const raw = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "section-names.json"), "utf8")) as { sections: HeldSectionName[] }).sections;
-ok("B78 pass: the sample file names the 29 held sections, one entry each", names.size === 29 && raw.length === 29, { size: names.size });
+ok("B78 pass: the sample file names the 59 held sections, one entry each (29 from B78, 30 from B79b: IMM 5532 and IMM 5604, Family sponsorship)", names.size === 59 && raw.length === 59, { size: names.size });
 ok("B78 pass: every entry says where its words come from, with the printed words and the page", raw.every((s) => ["printed", "sample"].includes(s.basis) && s.printed.trim().length > 1 && s.page >= 1));
 ok("B78 fail-guard: no name is a placeholder or the PDF's internal part name", raw.every((s) => !/unnamed|table\d|wrapper|^five$|^seven$/i.test(s.name)));
 ok("B78 pass: a held section with an entry takes its name", nameOfHeld(heldSectionNames({ sections: [entry] }), entry.form, entry.first_field)?.name === "Your visit");
