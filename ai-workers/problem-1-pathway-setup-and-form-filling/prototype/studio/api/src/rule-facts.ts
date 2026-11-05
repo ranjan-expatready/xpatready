@@ -179,6 +179,15 @@ export class RuleFacts {
     const ruleValues = ruleValuesKnown(rules.filter((r) => factsRead(r.tree).includes(b.fact)), b.fact, values);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
     await refuseTakingOverReaders(this.db, c.workspaceId, b.fact, c.id, b.rule); // Breaker M6 on B83
+    // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
+    if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
+      fail(`${b.fact} is a retired library field: restore it in Library › Fields, and the rule can read it again.`, HttpStatus.CONFLICT);
+    // m7 (review c36 r3): one waiting item per name across the workspace, as on the add by a rule's key.
+    if (await this.db.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", identityKey: normalizeLabel(b.label) }, select: { id: true } }))
+      fail(`A proposal to add "${b.label}" is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
+    if (!missing.some((m) => m.fact === b.fact)) fail(`${b.fact} is a derived fact, worked out from others: it is not asked.`, HttpStatus.CONFLICT);
+    if (!FACT_KEY.test(b.fact)) fail(`The rule reads "${b.fact}", which is not a fact key (group.name): correct the rule first.`);
+    if (waitingFor.has(b.fact)) fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     const subject = b.fact.split(".")[0];
     const sha256 = createHash("sha256").update(canonical(rule!.tree as Json)).digest("hex");
     // M2 (review c36): parallel adds of one fact make one proposal. The waiting check and the write run under one lock

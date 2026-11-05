@@ -1,99 +1,72 @@
-# B83 review: "Ask as its own question" (independent reviewer, 5 Nov 2026, head 0509b0910c, diff since f5a4743d5)
+# B83 review: "Ask as its own question" (independent reviewer, 5 Nov 2026, head 4bcf2ae14b, diff since 0509b0910c)
 
-**Verdict: Block.** Skill verdict: Ship after fixes. N3 (a), (c) and (e) are closed, and breaker M6, M7 and n8 are closed. Five Majors remain, all small except R5. R1 to R3 are parts of N3 that did not close. R4 and R5 are items the brief lists as follow-ups, which fail the ruling's test for a follow-up. **Journey score: 8 / 10, provisional: scored by reading, not walked** (table below). No copy started (P-348 (5)), no new journey report, as asked.
+**Verdict: Block.** Skill verdict: Ship after fixes. R1 to R5, M8 and M9 are closed. One new Major, V1, which this diff causes: moving M6's check into a shared function also deleted five other refusals from the rule-fact route. It is one small fix. **Journey score: 8 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, as asked.
 
-**Ran, no database, US$0:** `graph.mjs` without `--write` (G1 0, G2 0, G4 0, G5 0; G3 13, G6 5); a static count of the suite's checks (`/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready--claude-worktrees-qa2-2026-11-04-e3ae2d/555d5da1-189e-4917-97a7-e0d4053a6810/scratchpad/count.py`). G3's entry for this screen, `GET /combinations/:id/own-questions`, is a false alarm: `web/src/components/own-questions.tsx:143` calls it. **Read:** the whole diff, both suites' changes, and the propose, approve, withdraw and release paths around them. **Taken from the builder, not re-run:** route suite 156/156 on this head; browser check 54/54 on d418cbfee. `library-item-actions.tsx`, `review-items.tsx` and a browser check line changed after d418cbfee, so it must run again.
+**Severity rule:** the tech lead's later ruling on PR #1036 replaces the brief's. A Major this diff causes or reaches is a Major and holds the PR. Nothing here is called old on reading alone: what I think is on main is marked "main: not run", with why.
 
-**How I applied the ruling.** Follow-up: on main without this PR and reached only by another route, or off the undo and withdraw paths. Major: on those paths, with wrong data, a wrong or silent outcome, or a named test that does not run. On those paths with only misleading words and the right outcome: Minor, not a follow-up. The ruling has no carve-out for likelihood; if the tech lead wants one for R3 or R4, that is his to rule.
+**Ran, no database, US$0:** `graph.mjs` without `--write` (G1 0, G2 0, G4 0, G5 0; G3 13, G6 5, as last time); `tsc -p api/tsconfig.json --noEmit` (no error in the six API files this diff touches, filtered by name). **On main (`origin/main` d236e3e28), git only, nothing run:** `rule-facts.ts:181-189` still holds the five refusals; `library-items.ts`, `forms.ts` and `engine/snapshot.ts` are unchanged against this PR. **Read:** the whole diff, and the propose, approve, withdraw, undo, release and suite code around it. **Taken from the builder, not re-run:** route suite 168/168. The browser check and packs have not run on this head.
 
 ## Major
-**R1. The second person is never told why an approved change came back.** `web/src/pages/review-items.tsx:113`, `api/src/review-queue.ts:277`. By reading; N3 (b) and challenge 1.
-* `dropFactFromChanges` writes its note (`api/src/document-supplies.ts:202`), but the change page shows `decision_note` only for RETURNED, and the queue row adds it only for RETURNED (`review-queue.ts:276`). The supplies panel shows no note while WAITING (`supplies-panel.tsx:80`).
-* **What the approver sees:** "Needs you", the true before and after, the proposer's old reason. Nothing says it was approved, what came out or why. A swap reads "No fact · removes r", with a reason arguing for the field that is gone, so they can approve a removal on words about something else.
-* Author A, whose change another author's withdrawal edited, sees nothing either. The next decision overwrites the note (`library-changes.ts`, `decideChange`), so no person ever reads it on the change; only History has the words.
-* **Fix:** a Notice on the change page when WAITING with a note, and the note on the queue row as `:276` does. Fail test: the swap's `what` and the page carry the field's name.
-
-**R2. Two of N3's named fail tests never run, and one could not pass.** `tests/check_b83_undo_withdraw.ts:246,279,282`. By counting, not run; N3 (g), (d). STANDARDS §7.
-* Both sit under `if (startFacts.length)`. The document is `sp.outside`'s first, and every type of the six has no facts (`api/src/checklist.ts:151`, `document-supplies.ts:2`), so `startFacts` is empty.
-* **The count settles it:** the same count gives 145 at f5a4743d5, the builder's figure. At this head it gives 159 with those three checks and **156 without them**, the figure reported. To confirm in a second: grep the suite's output for "N3 fail test (swap)".
-* **`:282` cannot pass if it runs:** `"spouse"` is not an allowed value (`contracts/resolver.ts:151`: `holder.spouse`), so the proposal answers 400.
-* So putting `sameFacts` back in `nothingLeft` (N3 (d)) leaves the suite green. The behaviour held when the breaker ran it by hand (S6, S7, S8, on b837987e2); the evidence in the suite is what is missing.
-* **Fix:** give the document facts in setup by SQL, as the suite does elsewhere; replace both `if`s with a setup check that fails on none; use `holder.spouse`.
-
-**R3. Approval racing the withdrawal still leaves the draft naming a gone field (breaker n7, the other half of N3 (f)).** `api/src/document-supplies.ts:140-149`, reached from `api/src/screen02.ts` `decideLibraryChange`. Breaker ran it, forced; I read it.
-* N3 (f) said: "an approval landing in between leaves its draft holding F". The withdrawal now re-reads under the lock, but `applySupplies` takes no lock and writes the `c` it read earlier. In that window: change WAITING with `after` [a], draft [a, F], F gone, approve answered 201 with WAITING.
-* Every combination listing the document is then held for a field it does not read, the M2 symptom. Re-approve answers 409; the proposer's withdraw leaves the draft (`library-changes.ts:275`). Only a new proposal clears it, and the panel shows a raw key (`document-supplies.ts:65`).
-* **Which:** Major. `dropFactFromChanges` is this row's and on the withdraw path, so it is not a follow-up. Not silent, rare, and small to fix.
-* **Fix:** in `applySupplies`, a transaction, the same advisory lock, re-read `c`; not APPROVED or a different `after`: write nothing. Add a check that every fact still has a row: a propose racing the withdrawal lands in the same state (`:95` reads outside the lock).
-
-**R4. A waiting change keyed on the field is missing from the one list (q2).** `api/src/where-used.ts:147,151-152`, with `who-fills.ts:41`, `question-condition.ts:44`. By reading; not run.
-* `placement_fills` is not in `open`, and `placement_condition` is matched only on what its condition reads, not on its own key. With a who-fills or when-asked change open on a placed waiting field, Undo withdraws it, `readers` is empty, and BR-9's "waiting changes" is not met.
-* **Result:** a dead row stays in the second person's queue, with no word to anyone (approve answers 409 "Return the change"). After a re-ask under the same name, `freeKey` gives the same key, and approving applies it to the new meaning.
-* **Which:** Major. It is reached by Undo and the withdraw, not by another route. The state needs a placed waiting field, so it is narrow.
-* **Fix:** in that loop, a `c.key === key` match for both kinds, as a `waiting_change` reader; one row more in `READERS`.
-
-**R5. Undo records an AI proposal as a person's decision, and it can drop a sign-off (breaker m6).** `api/src/own-question.ts:208` (with `:174`, `:54`), `engine/validate.ts:294-296`. Breaker ran the record; the effect is by reading.
-* On an unreleased AI row, the ask overwrites origin, confidence and quote in place. Undo puts the key back and writes `origin: "HUMAN"`; the others are not restored. Not reached when the draft sits over a released row, because that draft is deleted.
-* **The earlier review did not weigh this:** `validate.ts:296` sets `needs_sme: x.ai > 0` for a form's field map, counting `origin === "AI_PROPOSAL"`. So ask then Undo takes one row out of "(N AI-proposed)". If it was the form's only changed AI row, that form's field map line no longer needs a sign-off (`api/src/studio.ts:92`). The row now holds exactly what the AI proposed.
-* **Which:** Major. Undo is this row's route, not on main, and BR-9 says it takes the ask back. The reason line does name the person, so the record is not wholly false.
-* **Fix (needs a choice):** no migration: the ask's audit line keeps the old origin, confidence and quote in its detail, and Undo restores from the newest one. Or the tech lead rules in BR-9 that an Undo is a person's act, and the row stays counted as AI some other way. Listing it in the PR alone does not settle the sign-off.
-
-## Your four challenges
-1. **Approved back to WAITING with the draft restored: it fits, but the approver is not told (R1).** The mechanics are right. `screen02.ts:138` already puts an approved change back this way; `decidedBy` and `decidedAt` are cleared; `decideChange` still refuses the proposer and the applier; `applySupplies` passes "changed since" against the restored draft, and with a merge since it refuses with words. The set shown is the set that goes out, removals named. If the withdrawing author also holds review they may approve another author's narrowed change: acceptable, since they only removed from it.
-2. **`unapprovedOf` at four call sites: nothing changes with no waiting field.** `out` is `unapprovedAdds`' answer, and `waitingSupplied` returns `[]` with no supplied key outside the snapshot's fields or no waiting row. Cost: at most one read per call, at sites already reading per row. A combination listing a type that supplies a waiting field is now held even if it reads nothing of it, which is M7's point; the words "it uses" are close enough.
-3. **M6: accepted, with one Minor.** The words carry no key, name the readers and say why. Letting the rule's own re-add through is right: C3.6 exists for it, and the second person reads "Needed by" that rule. A second rule on the same combination is refused (`r.ref` must match). The gap: form, document line and question conditions carry no `ref` (`where-used.ts:140-142`), so a condition's own re-add is refused naming itself. Safe side; see Minors.
-4. **Left open, each:**
-
-| Item | Which | Why |
-|---|---|---|
-| m6 | **Major (R5)** | Undo path; this row's route; a wrong record with a sign-off effect |
-| q2 who-fills | **Major (R4)** | Reached by Undo and withdraw |
-| n7 | **Major (R3)** | Withdraw path; this row's function; rest of N3 (f) |
-| F11 near names | Follow-up | The ask form, off the paths; the limit of C3.6's check |
-| False "was retired", dead merge | Follow-up | Merge approval's words, `api/src/forms.ts:348`, on main. The merge is named before the press; 409 is right, and "reject" is the right step |
-| n6 own Delete | Follow-up | `library-items.ts:248,255`, not in this diff, route only: the row offers Withdraw |
-| n9 approve 409 with a key | Follow-up | `document-supplies.ts:49`, on main for any waiting change with a merged fact; a narrowing is not needed to reach it |
-| n11 preview and audit key | Follow-up | `rule-facts.ts:250`. Caused by this row's `freeKey`, but off the paths, words only, hold kept |
-| New: approved field, supplied only | Follow-up | Read, not run. `snapshot.ts:179-194` and `itemsOf` leave out a supplied fact; `waitingSupplied` covers WAITING and RETURNED. A release can publish a type naming an APPROVED field whose rows stay draft. On main, another route |
+**V1. The rule-fact route lost five refusals (this diff; not on main).** `api/src/rule-facts.ts:181`. By reading; not run.
+* **Cause:** the M6 block became `refuseTakingOverReaders`, but the edit also removed the seven lines after it (`git show 0509b0910c:…/rule-facts.ts`, or main `:181-189`). `missing`, `waitingFor` and `FACT_KEY` are now unused in `add`, the sign of it.
+* **What is gone from `POST /combinations/:id/rule-facts`:**
+  * MA3, retired field: `library` holds only DRAFT and PUBLISHED (`:147`), so the add answers 201 with a proposal the lander always refuses (`proposals.ts:588`). Reachable from the screen: the fact is still listed as missing.
+  * m7, one waiting item per name across the workspace: a second waiting item under one name, from the screen.
+  * Derived fact: a worked-out key can be proposed, and landing makes a library field of it (`taken` reads only `canonical_field`). Route only.
+  * `FACT_KEY`: a key that is not group.name can be proposed and land. Route only.
+  * `waitingFor`: covered by the check in the transaction, so no effect.
+* **A named test fails:** `tests/check_forms_c36_rule_facts.ts:142-143` expects 409 with "retired" and "restore"; by reading it now gets 201. That suite is in `run-suites.sh` and not quarantined, so CI should go red. The B83 suite cannot see this; 168/168 is true and does not cover it.
+* **Fix:** put the seven lines back under the call at `:181`, unchanged. Run `check_forms_c36_rule_facts.ts` and `check_forms_c36_answer_values.ts` on the final head.
 
 ## Closure, checked for myself
 | | State | Evidence |
 |---|---|---|
-| N3 (a) set nobody approved | **Closed** | `document-supplies.ts:191,197,202`; mixed test `:266` is live. Swap only by the breaker (R2) |
-| N3 (b) another's change | **Partly: R1** | Audit names the proposer, test `:296`; no person sees it |
-| N3 (c) Fields door | **Closed** | `library-item-actions.tsx:45,71,98`. No browser check reads the taken-out words (Minor) |
-| N3 (d) whom-about | **Code closed; test dead: R2** | `same` at `:191`, draft `about` back at `:197` |
-| N3 (e) record | **Closed**, one clip (Minor) | Approver's note kept, actor and field named; audit names field and proposer, test `:243` |
-| N3 (f) stale read | **Withdrawal's side closed; R3** | Re-read under the lock `:187` |
-| N3 (g) tests | **Partly: R2** | Live: ended, mixed, waiting, another proposer. Dead: swap, whom-about |
-| q1 | Closed | `proposals.ts:595`. Breaker ran it (SQL state); no suite test (Minor) |
-| q4 | **Half** | Failure state yes (`library-item-actions.tsx:98`). Loading no: the button is live, To review's is disabled (Minor) |
-| q3, q5, q6, q7, q9 | Closed | Words at every "stays waiting", chip label `to-review.tsx:18`; words `own-question.ts:150,159`; regex and tests `:44-46`; `where-used.ts:151`. q9 has no test |
-| q8 | **Partly** | BR-11 now records `freeKey` and the taken-out step; see Minors |
-| Breaker M6 | **Closed** | `rule-facts.ts:183-186`, fail and pass `:323,326`, live |
-| Breaker M7 | **Closed** | `library-changes.ts:233-244`, all four call sites, fail test `:310`, live. S15's state cannot now be made by a release |
-| Breaker n8 | Closed by reading | `throughMerges` at `:196`, as `:165`. No test (needs three things at once) |
-| Breaker n10 | **Partly** | Toast and `said`'s double stop closed. "The change on To review" for an approved change is still at `where-used.ts:151`, and To review lists only WAITING and RETURNED (`review-queue.ts:96`) |
+| R1 approver told | **Closed**, one false word (Minor 1) | Queue `review-queue.ts:275`, page `review-items.tsx:114`. `what` reaches both the second person and the proposer. Tests: route `check_b83_undo_withdraw.ts:259`, browser `check_b83_own_question_screen_browser.cjs:228`. Note is words, no key; ".." cannot occur (`said` drops the stop) |
+| R2 tests run | **Closed: setup cannot skip them** | Both `if (startFacts.length)` are now bare blocks. Setup seeds two facts by SQL and `ok` at `:232` fails unless there are exactly two. `holder.spouse` is valid. `ok` only counts, nothing exits. **168 adds up by hand:** the 159 I counted last time (swap and whom-about included) + R1 1 + R3 1 + R5 2 + M8 1 + M9 1 + the who-fills reader's 3 |
+| R3 race | **Closed**, one record (Minor 3) | `applySupplies` re-reads under the withdrawal's lock (`document-supplies.ts:144-146`), not APPROVED writes nothing, `:153-154` refuses a fact with no row. No lock cycle: withdrawal takes field then supplies locks, approval only supplies. Test `:313` fails if `live` goes (`refuseUnusable` and `refuseRetired` pass a key with no rows). The status branch has no test: race only |
+| R4 who-fills | **Closed** | `where-used.ts:148-156`. Key is the placement's lineage (`who-fills.ts`, `question-condition.ts`); the set takes the field's key and the lineages asking it. Test: new reader row, route suite |
+| R5 undo | **Closed for the case asked**; BR-9 edge (Minor 2) | Ask records `{ edition, undo }` in the same step's audit line (`own-question.ts:178`); undo's own line and `screen02.ts:65` carry no `edition`, so the newest match is the ask. Older asks fall back to a person's change. Test `:327` fails if restoring goes. `needs_sme` counts origin, so the sign-off stays owed |
+| M8 check | **Closed on any route that exists** (Minor 4) | `library-changes.ts:235` reads `checks[].condition`, `fact_sources[].fact`: both are real snapshot names (`snapshot.ts:213-214`), so the optional types hide no mismatch. All four `unapprovedOf` sites pass a whole snapshot. Test `:349` |
+| M9 lander | **Closed** | `proposals.ts:592`, same function as the route. `field` is not in `READING_DRAFTS`, so a proposal never reads as its own reader and the own-rule re-add still lands (by reading; Minor 5). Test `:371` |
+| q4 loading, n10 words, note clip, lock order, M6 no-key test, q8 concept | **Closed** | `library-item-actions.tsx:98`; `where-used.ts:153`, `library-changes.ts:320`, "goes back to a second person" at both doors; `document-supplies.ts:209`; `:194` `orderBy`, `peek` gone; test `:363`; BR-8, BR-11 updated |
 
-## Minors (worth fixing with the above)
-* **q4 loading:** `library-item-actions.tsx:97`: hold the send while `asking.isLoading`, as To review does. One expression.
-* **n10 rest:** `where-used.ts:151`: words for an approved change that are true, and say before the press that it goes back to a second person (`review-items.tsx:224`, `library-item-actions.tsx:98`). `library-changes.ts:312` still gives ".." when a reason ends in a full stop.
-* **The note can lose the field:** `document-supplies.ts:201-202`: `${earlier}${said}` clipped at 300; a long approver's note drops the field's name and the reason. Clip `earlier`, not `said`. A failed re-approve also clears it (`screen02.ts:138` writes `decisionNote: null`), so R1's Notice would vanish after "Changed since": keep it.
-* **Lock order:** `document-supplies.ts:183`: no `orderBy`, and every open change is now locked, not only those naming the fact. Two withdrawals seeing different orders could deadlock (breaker: 5 rounds, no 5xx). Add `orderBy: { id: "asc" }`, `select` the key, drop the `peek` read.
-* **M6:** a condition's own re-add is refused naming itself (challenge 3): give those readers a `ref`, or say so in BR-11. The fail test has no `noKey`. The check is at the proposal only, not at accept (`proposals.ts:587`); a reader arriving in between needs a rule on a key the library does not hold.
-* **q8 concept (STANDARDS §10):** BR-11's "never takes a withdrawn field's key while something still reads it" is false for M6's own-rule re-add. M7's hold is not in BR-8 or §2. **Tests:** q1 and n8 have none; no browser check reads the taken-out words: add them with R1's.
+## Left open: which, and is it right to leave
+None is a Major by my reading. "main: not run": for you to run on main; I ran nothing there.
+
+| Item | Which | Why, and why I think it is on main |
+|---|---|---|
+| F11 near names | Minor, this PR | The ask form; the limit of C3.6's check. Right to list |
+| False "was retired" on a dead merge | Minor, words. **main: not run** | `forms.ts:348`, file unchanged against main. Right outcome, 409, "reject" is the right step |
+| n6 own Delete | Minor, route only. **main: not run** | `library-items.ts:248,255`, file unchanged. The outcome is bad (false Submit block), but no screen offers it: the row offers Withdraw. Right to list; it would be Major if a screen reached it |
+| n9 approve 409 with a key | Minor, words. **main: not run** | `document-supplies.ts:49`, for any waiting change with a merged fact. Key in words to a second person (STANDARDS §3) |
+| n11 preview and audit key | Minor, this PR | `freeKey` causes the mismatch, so it is not old. Words only, hold kept |
+| n12 own condition refused | Minor, this PR | The false "unseen" is gone in the new words; BR-11 now records it. Right to list |
+| Tests for q1, n8 | Minor, this PR | STANDARDS §7 unmet for two rules, both run by the breaker by hand. Cheap; I would add them, and I do not hold on them |
+| `screen02.ts:138` | Minor. **main: not run** for the line | Line unchanged, but **this diff makes it matter**: it now wipes R1's Notice after a failed re-approve. The approver still gets the 409's words. `before.decisionNote` is in scope, so keeping it is one expression. I would fix it now |
+
+**Breaker's follow-ups from the third pass, which the PR list leaves out; add them:**
+* **F1, new document type's approved ADD naming a waiting field: not settled, and it could be a Major.** `publishLibraryChanges` (`library-changes.ts:329-347`) publishes the type's draft with no look at what it supplies. Withdraw then answers 201 and a published type names a gone field: M7's result, through the release page. The breaker built it by SQL and tried no route. By reading one looks possible: accept a new type (draft, facts `[]`), propose and approve its facts naming K, approve the ADD, release through `pack/release`. Not run. **The running breaker should try that route before the label: if it holds, it is a Major.** main: not run (I think so because the release path has no such check on main, but this PR's field is what makes the withdraw step reachable).
+* F2, approved field supplied only (`snapshot.ts:179-194`, unchanged): stays DRAFT. Withdraw 409, so off the path. **main: not run.**
+* F3, raw key in the Release page's why; F4, a merge moves facts, not `supplies_about` (`forms.ts:391`, unchanged). **main: not run.**
+
+## Minors (worth fixing with V1)
+1. **"Decided" is false on a change nobody decided.** `review-items.tsx:114`, `review-queue.ts:275`. `dropFactFromChanges` also writes the note on a WAITING change, narrowed before any approval. It then reads "Decide this again: it changed after it was decided" and "Back for a second look". Right outcome, false words. Say "it changed after it was proposed", true in both cases. The browser check's `/Decide this again/` needs the same edit if that part changes.
+2. **BR-9: a draft over a released ask is restored as if unreleased.** `own-question.ts:212` tests only `cur.status === "DRAFT"`. Ask released, then a draft over it (merge `forms.ts:377`, options `:264`, list purpose `:280`), then undo: `onlyThisAsk` is false, so the row goes back to the pre-release AI origin and words, where BR-9 and your brief say a person's change. By reading, not run. Minor because it errs toward a sign-off and the words do describe the mapping. Fix: also require `under?.canonicalFieldKey !== key`.
+3. **A lost approval says approved.** `document-supplies.ts:146` returns null, then `screen02.ts:145` writes "approved" in History and answers 201 with WAITING. Forced race only; the state is right, the line false. Fix: on approve with `now.status === "WAITING"`, 409 in words and no audit line.
+4. **M8's reading is narrower than the hold's.** `library-changes.ts:235` reads `"field"` only; `validate.ts:71` scans the whole condition, because a validity rule names its date in `before`. No API route writes one (`issued_within_months` is not in `api/src`), so no way round today. The fact source half has no test. A field map's `transform` and `condition` (`validate.ts:73`) are in neither: I found only the draft flow writing them, not settled. main: not run.
+5. **Tests:** no pass test that an own rule's re-add lands (BR-11's exception); M6's pass stops at the proposal, and M9's new check sits on the landing, so this is the regression to guard. No browser check reads the taken-out words (`data-withdraw-taken-out`).
 
 ## [M] lines (met unless named)
-EXPERIENCE: §2.5 next action met for authors; **not met for the second person on a change sent back (R1).** §2.8 undo: **not fully (R5).** §2.10 met. §2.12 builder's at d418cbfee; to re-run. §4 states: q4 loading. §5 words: n10. STANDARDS: §2 governance: set approved is the set released, met; second person's information **not met (R1)**. §3 no typed key, second person met. §5 no new per-row class; `peek` adds one read per open change. §6 authorisation and contract met. §7 "a rule's test fails when removed": **not met for N3 (d) and the swap (R2)**. §10 q8.
+EXPERIENCE: §2.5 met, second person now told. §2.8 undo met, Minor 2. §2.10 met. §2.12 to re-run on the final head. §4 states met. §5 words: Minor 1, n9. STANDARDS: §2 governance met, except F1 if it holds. §3 no typed key, second person: n9, n11. §5 no new per-row class. §6 met. **§7 "a rule's test fails when removed": met for R1 to R5, M8, M9; not for q1, n8, Minor 5. The C3.6 suite's test exists and would catch V1, if run.** §10 met.
 
 ## Scores and journey (1–5 and out of 10; by reading)
-D1 4 M6, M7 closed; R4 · D2 4 N3's set fixed; R3 · D3 4 F11 · D4 3 R1, R5 · D5 5 · D6 3 R1 note unseen, R5 · D7 3 AI mark lost on Undo (R5) · D8 4 · D9 5 · D10 4 n10 · D11 4 q4 · D12 4 · D13 4 not re-run · D14 5 · D15 5 · D16 3 strong suite; R2 · D17 simulated only · D18 5 · D19 4 · D20 simulated only.
-**Journey (provisional, by reading):** task completed 1 · next step obvious 1 · plain words 1 · feedback and state ½ (R1) · correct data ½ (R3, R5) · error recovery 1 · accessibility and sizes 1 (builder's, d418cbfee) · speed ½ (not measured) · visual 1 (`walk/7`) · trust and sources ½ (R5). **8.0.** With R1 and R5 fixed, 9.
+D1 4 V1 · D2 4 V1 · D3 4 F11 · D4 4 Minor 1 · D5 5 · D6 4 V1 retired dead end · D7 4 Minor 2 · D8 4 · D9 5 · D10 4 Minor 1 · D11 5 · D12 4 · D13 4 not re-run · D14 5 · D15 5 · D16 4 B83 suite strong, other suite not run · D17 simulated only · D18 5 · D19 4 · D20 simulated only.
+**Journey (provisional, by reading):** task completed 1 · next step obvious 1 · plain words ½ (Minor 1, n9) · feedback and state 1 (R1) · correct data ½ (V1) · error recovery ½ (V1's proposal that can never land) · accessibility and sizes 1 (builder's on an earlier head; to re-run) · speed ½ (not measured) · visual 1 · trust and sources 1 (R5). **8.0.** With V1 fixed, 9.
 
 ## Could not check
-R2 by running: the count is strong and one grep of the suite's output settles it. R1, R4, R5's sign-off effect and R3's fix by running: read-only here. No walk, keyboard pass or 200 % zoom of my own at this head; no real screen reader or intended user. Retrofit mapping: none needed (no migration).
+V1 by running, and any behaviour here by running: read-only (P-348 (5)). No walk, keyboard pass or 200 % zoom of my own at this head; no real screen reader or intended user. Nothing on main run. The new browser lines have not run. Retrofit mapping: none needed (no migration).
 
 ## Fix list
-R1, R2, R3, R4 with their tests; R5 by the fix or the tech lead's ruling. The Minors above are cheap, in the same files. Then a clean route suite, confirming the swap and whom-about checks ran (159 or more), and the browser check and packs on the final head. In the PR: F11, the dead merge's words, n6, n9, n11, the approved supplied field.
+V1, then `check_forms_c36_rule_facts.ts`, the route suite and the browser check and packs on the final head. The breaker tries F1's route. Minors 1 to 3 and `screen02.ts:138` are one line each. In the PR: the items above with their "main: not run" marks, plus F1 to F4.
 
-**Verdict: Block** (head 0509b0910c): open Majors R1, R2, R3, R4, R5.
+**Verdict: Block** (head 4bcf2ae14b): open Major V1, `api/src/rule-facts.ts:181`; F1 to be settled by the breaker before the label.

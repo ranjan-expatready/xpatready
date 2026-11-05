@@ -135,7 +135,7 @@ export class Screen02 {
     const c = (await this.db.libraryChange.findUnique({ where: { id } }))!;
     // An approved delete is applied at once; if applying fails, nothing was deleted, so the change waits again (R3-4).
     if (decision === "approve") await this.lifecycle.afterApprove(actor, c).catch(async (e) => {
-      await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: null } });
+      await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: before?.decisionNote ?? null } }); // B83 (review): a note it came back with stays
       if (e instanceof HttpException) throw e;
       fail(`Nothing was ${c.kind === "form_accepts" ? "applied" : "deleted"}: the database refused it. It still waits on To review; try again, or return it.`, HttpStatus.CONFLICT);
     });

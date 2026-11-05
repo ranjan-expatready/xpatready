@@ -209,7 +209,7 @@ export class OwnQuestions {
       else {
         // Review R5 (m6): a draft goes back to what the ask replaced, an AI proposal's sign-off included (`needs_sme` counts
         // its origin): taking an ask back is not a person's decision about the mapping. A released ask is a change of its own.
-        const asked = cur!.status === "DRAFT" ? await tx.auditEvent.findFirst({ where: { workspaceId: ws, entity: "form field", entityKey: b.dataPath, action: "decided", detail: { path: ["edition"], equals: ed.id } }, orderBy: { at: "desc" }, select: { detail: true } }) : null;
+        const asked = cur!.status === "DRAFT" && under?.canonicalFieldKey !== key ? await tx.auditEvent.findFirst({ where: { workspaceId: ws, entity: "form field", entityKey: b.dataPath, action: "decided", detail: { path: ["edition"], equals: ed.id } }, orderBy: { at: "desc" }, select: { detail: true } }) : null;
         const was = (asked?.detail as { undo?: { origin: Origin; confidence: string | null; evidenceQuote: string | null; reason: string | null } } | null)?.undo;
         await reviseUnreleased(tx, rows, { canonicalFieldKey: facts[0], ...(was ?? { origin: "HUMAN", reason: `Taken back by ${actor.name}: worked out from other answers again.`.slice(0, 500) }) }, actor.id, released);
       }

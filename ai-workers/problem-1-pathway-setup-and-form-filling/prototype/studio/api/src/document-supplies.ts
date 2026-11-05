@@ -157,7 +157,8 @@ export async function applySupplies(db: Db, audit: Audit, actor: Actor, seen: Li
     await revise(tx.documentType, rows, { suppliesFacts: m.after, suppliesAbout: m.afterAbout && Object.keys(m.afterAbout).length ? (m.afterAbout as Prisma.InputJsonValue) : Prisma.DbNull }, actor.id, copyType);
     return c;
   }, { timeout: 30_000, maxWait: 10_000 });
-  if (c) await audit.log(c.workspaceId, actor.id, "approved", "document type", c.key, `${actor.name} approved: ${c.label ?? c.key}. Every combination that names it has it in its draft now; it goes out with each one's next release.`);
+  if (!c) throw problem(409, "Changed meanwhile", "A field this change named was withdrawn at the same moment, so the change was not applied. Refresh to see what it does now.");
+  await audit.log(c.workspaceId, actor.id, "approved", "document type", c.key, `${actor.name} approved: ${c.label ?? c.key}. Every combination that names it has it in its draft now; it goes out with each one's next release.`);
 }
 
 /** Break M2: an approved change no release has carried yet (a type no released combination names would otherwise keep

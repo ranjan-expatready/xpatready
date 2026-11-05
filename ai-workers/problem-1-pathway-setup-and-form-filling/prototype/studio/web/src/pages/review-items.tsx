@@ -111,7 +111,7 @@ export function LibraryChangePage() {
         {x.with_combination ? <p data-with-combination><b>Its combination</b> is {x.action === "RESTORE" ? "restored" : "retired"} with it, in the same release.</p> : null}
         {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
-        {x.status === "WAITING" && x.supplies && x.decision_note ? <div data-came-back><Notice tone="warn" title="Decide this again: it changed after it was decided">{x.decision_note}. What it does now is above; the reason was written for what it did before.</Notice></div> : null}
+        {x.status === "WAITING" && x.supplies && x.decision_note ? <div data-came-back><Notice tone="warn" title="This changed after it was proposed: decide what it does now">{x.decision_note}. What it does now is above; the reason was written for what it did before.</Notice></div> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>

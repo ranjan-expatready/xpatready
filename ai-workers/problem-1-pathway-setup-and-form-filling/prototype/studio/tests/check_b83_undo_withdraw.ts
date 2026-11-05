@@ -256,7 +256,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     row = changeRow(sup.body?.id);
     ok("review N3 fail test (swap): the draft goes back to what was released, and the narrowed change waits for a second person again", ap.status < 300 && u.status < 300 && JSON.stringify(factsNow().sort()) === JSON.stringify([...startFacts].sort()) && row[0] === "WAITING" && row[1] === "", { row, f: factsNow(), startFacts });
     const backRow = ((await call("GET", "/review-queue?filter=needs", undefined, APPROVER)).body?.items ?? []).find((i: { id: string }) => i.id === `change:${sup.body?.id}`) as { what: string } | undefined;
-    ok("review R1 fail test: To review tells the second person why it is back, in words, no key", /Back for a second look: .*The new field "B83 supplied swap" it named was withdrawn/.test(backRow?.what ?? "") && noKey(backRow?.what ?? ""), backRow);
+    ok("review R1 fail test: To review tells the second person why it is back, in words, no key", /Changed since it was proposed: .*The new field "B83 supplied swap" it named was withdrawn/.test(backRow?.what ?? "") && noKey(backRow?.what ?? ""), backRow);
     ok("review N3: the change now proposes only what remains", !sql(`select matches->>'after' from library_change where id = '${sup.body?.id}'`).includes(sk));
     await call("POST", `/library/changes/${sup.body?.id}/withdraw`, { note: "Done with this B83 check." });
     await plain(USCARD);
@@ -308,9 +308,9 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   sk = keyOf("B83 supplied race");
   sup = await proposeFacts([...startFacts.map((f) => citeOf(f)), citeOf(sk)]);
   const gonePatch = JSON.stringify({ after: [...startFacts, "person.b83_gone_field"] });
-  sql(`update library_change set matches = matches || ${lit(gonePatch)}::jsonb where id = '${sup.body?.id}'`);
+  sql(`update library_change set matches = matches || ${lit(gonePatch)}::jsonb, decision_note = 'B83 earlier note' where id = '${sup.body?.id}'`);
   ap = await approve(sup.body?.id);
-  ok("review R3 fail test: approving a change that names a field no longer in the library writes nothing to the draft, in words", ap.status === 409 && noKey(words(ap)) && !factsNow().includes("person.b83_gone_field"), { ap, f: factsNow() });
+  ok("review R3 fail test: approving a change that names a field no longer in the library writes nothing to the draft, in words, and the note it came back with stays", ap.status === 409 && noKey(words(ap)) && !factsNow().includes("person.b83_gone_field") && changeRow(sup.body?.id)[2] === "B83 earlier note", { ap, f: factsNow(), row: changeRow(sup.body?.id) });
   sql(`update library_change set status = 'WITHDRAWN' where id = '${sup.body?.id}'`);
   await plain(USCARD);
   sql(`update document_type set supplies_facts = '{}' where document_type_key = ${lit(shared)} and status = 'PUBLISHED'`);
@@ -364,14 +364,18 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   dropOther();
   u = await addFact();
   ok("breaker M6 pass: with only its own rule reading it, the fact can be proposed for that rule", u.status < 300, u);
+  const again = await addFact();
+  ok("review V1 fail test: the rule-fact route's own refusals stand after the withdrawn-key check: a second waiting item under one name is refused", again.status === 409 && /already waiting/.test(words(again)), again);
   // Breaker M9: a reader that appears while the proposal waits is asked about again as it lands.
   const waitingFact = u.body?.proposalId as string;
   const dropLate = drop("predicate", insert("predicate", { ...rowCols, combination_id: lit(outside), predicate_key: lit(`b83_rf_late_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(rfKey)}::jsonb`, then_plain: "'B83 late rule'", for_whom: "'applicant'" }));
   u = await call("POST", "/review/proposals/decide", { ids: [waitingFact], action: "accept" }, "user-C");
   ok("breaker M9 fail test: accepting refuses while another rule reads the withdrawn key, by name, and nothing lands", u.status >= 400 && /the rule "B83 late rule" on /.test(words(u)) && sql(`select count(*) from canonical_field where canonical_field_key = ${lit(rfKey)}`) === "0", u);
   dropLate();
-  sql(`update proposal_item set status = 'rejected' where id = ${lit(waitingFact)}`);
+  u = await call("POST", "/review/proposals/decide", { ids: [waitingFact], action: "accept" }, "user-C");
+  ok("breaker M6 pass: with only its own rule reading it, accepting lands the fact on the key the rule reads", u.status < 300 && u.body?.items?.[0]?.landedAs === rfKey && sql(`select count(*) from canonical_field where canonical_field_key = ${lit(rfKey)}`) !== "0", u);
   dropThis();
+  sql(`delete from section_question where canonical_field_key = ${lit(rfKey)}`); sql(`delete from canonical_field where canonical_field_key = ${lit(rfKey)}`); sql(`update library_change set status = 'WITHDRAWN' where key = ${lit(rfKey)} and status in ('WAITING','APPROVED')`);
   await plain(USCARD);
 
   // Another form field reading it, the first reader there is.
