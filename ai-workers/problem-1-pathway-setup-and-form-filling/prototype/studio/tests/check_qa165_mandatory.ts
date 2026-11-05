@@ -55,6 +55,14 @@ ok("pass: a value with no code in the form → \"filled by hand\", with why", o5
 const o6 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { coverage: "answered on screen" })], one);
 const o9 = mandatoryOpen(inv, [{ data_path: a, fact: "person.other_family_name", outcome: "mapped" }], [box(a, { transform: "derived:any(person.other_family_name, person.other_given_names) recorded -> yes_no_code:Y/N" })], one);
 ok("fail: a derived \"recorded\" Yes/No is not \"needs an answer\" (an answer only makes it Yes) → \"no question asks it yet\"", o9[0]?.reason === "no question asks it yet" && /no question records a No/.test(o9[0]?.why ?? ""), o9);
+// B52 review M1 on #967: the API always passes the case's question words (labelOf). A box still reading a detail keeps
+// "no question asks it yet"; only a box asked as its own question (its fact is not among the facts its step names) needs
+// that question's answer.
+const REC = "derived:any(person.other_family_name, person.other_given_names) recorded -> yes_no_code:Y/N";
+const o9b = mandatoryOpen(inv, [{ data_path: a, fact: "person.other_family_name", outcome: "mapped" }], [box(a, { transform: REC, coverage: "client question" })], one, { labelOf: (f) => (f === "person.other_family_name" ? "Other family name" : undefined) });
+ok("B52 fail (review M1 on #967): a worked-out Yes/No still reading a detail, with the case's words given, is never \"needs an answer\" naming the detail", o9b[0]?.reason === "no question asks it yet" && /no question records a No/.test(o9b[0]?.why ?? ""), o9b);
+const o9c = mandatoryOpen(inv, [{ data_path: a, fact: "person.has_used_other_name", outcome: "mapped" }], [box(a, { fact: "person.has_used_other_name", transform: REC, coverage: "client question" })], one, { labelOf: (f) => (f === "person.has_used_other_name" ? "Has used other name" : undefined) });
+ok("B52 pass: a Yes/No asked as its own question needs that question's answer, naming it", o9c[0]?.reason === "needs an answer" && /^answer "Has used other name" and confirm it/.test(o9c[0]?.why ?? ""), o9c);
 ok("pass: answered and not confirmed → \"needs an answer\", saying so", o6.length === 1 && /not confirmed/.test(o6[0].why), o6);
 // Words: the map's evidence quote first (the inventory caption can be another question's: IMM 5257's US card box).
 const us = mandatory.find((p) => /usCardIndicator/.test(p))!;

@@ -272,9 +272,9 @@ async function landAnswerList(tx: Tx, ws: string, actorId: string, label: string
   return key;
 }
 
-export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; answerListKey?: string | null; sourceRef: string }) {
+export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: string; valueType: string; label?: string | null; answerListKey?: string | null; sourceRef: string; origin?: "HUMAN" }) {
   const made = await tx.canonicalField.create({ data: { workspaceId: l.ws, canonicalFieldKey: f.key, version: 1, status: "DRAFT", meaning: f.meaning, valueType: f.valueType, dataType: (VALUE_TYPE_TO_DATA_TYPE as Record<string, string>)[f.valueType] ?? "STRING",
-    scope: f.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(f.key), origin: "AI_PROPOSAL", sourceRef: f.sourceRef, updatedBy: l.actor.id,
+    scope: f.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(f.key), origin: f.origin ?? "AI_PROPOSAL", sourceRef: f.sourceRef, updatedBy: l.actor.id,
     ...(f.answerListKey ? { answerListKey: f.answerListKey } : {}),
     ...(f.label ? { label: f.label, groupKey: f.key.split(".")[0], labelChecked: true } : {}) } as Prisma.CanonicalFieldUncheckedCreateInput });
   await waitingAdd(tx, l, "field", f.key, f.label ?? made.label ?? null);

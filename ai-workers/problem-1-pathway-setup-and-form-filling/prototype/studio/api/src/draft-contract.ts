@@ -40,6 +40,9 @@ const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 type Planned = { combinationId: string; mode: "rules" | "replay" | "live"; engineSha: string; worst: number | null; at: number };
 const PLAN_TTL_MS = 60 * 60_000;
 
+/** What the engine's plan says of the saved runs steps 5 and 6 replay (api/src/draft-qd.ts plan). */
+type EngineSaved = { files?: { qd_conditions?: string[]; pqr_picks?: string[] }; why_none?: { qd_conditions?: string | null; pqr_picks?: string | null }; guide?: string | null };
+
 @Injectable()
 export class DraftContract {
   private readonly plans = new Map<string, Planned>();
@@ -81,7 +84,7 @@ export class DraftContract {
       const cost = s.mode !== "live" ? { usual: 0, worst: 0, currency: "USD" }
         : !open ? { usual: null, worst: null, currency: "USD", why: "Not estimated: Live is not open on this copy." }
         : { usual: null, worst: e?.worst_usd ?? 0, currency: "USD", why: (e?.worst_usd ?? 0) > 0 ? "The most its two AI rounds can reserve; the usual cost is not estimated yet." : step === "documents" ? "US$0: in a Live run this step uses its saved checklist reading (the checklist's Live reading is on its page)." : step === "checker" ? "US$0 here: the blind checker rounds are counted under conditions and pqr_picks; the rest is rules." : "US$0: worked out without an AI call." };
-      return { step, n, label: e?.label ?? step, mode: s.mode, uses_ai: AI_STEPS.has(step) && s.mode !== "rules", cost, saved: s.mode === "replay" || (open && step === "documents") ? this.saved(step, checklists) : null };
+      return { step, n, label: e?.label ?? step, mode: s.mode, uses_ai: AI_STEPS.has(step) && s.mode !== "rules", cost, saved: s.mode === "replay" || (open && step === "documents") ? this.saved(step, checklists, engine.saved) : null };
     });
     const worst = live.length && !open ? null : Math.round(steps.reduce((a, s) => a + (s.cost.worst ?? 0), 0) * 100) / 100;
     const plan_sha256 = sha(JSON.stringify({ engine: engine.plan_sha256, steps: steps.map((s) => [s.step, s.mode]) }));
@@ -92,7 +95,7 @@ export class DraftContract {
 
   /** A replayed step's saved result, as far as it is known before the run: the documents step reads the saved checklist
    *  readings now; the others are looked up when the step runs (a step with none says so then and proposes nothing). */
-  private saved(step: ContractStep, checklists: { edition: string | null; fileName: string; officialFile: string | null }[]) {
+  private saved(step: ContractStep, checklists: { edition: string | null; fileName: string; officialFile: string | null }[], engineSaved?: EngineSaved | null) {
     if (step === "documents") {
       const found = checklists.map((a) => ({ a, r: savedReading(a.officialFile) })).filter((x) => x.r);
       // BR-10: a saved reading of an older text of this checklist is out of date: named, never offered as Replay.
@@ -102,6 +105,16 @@ export class DraftContract {
       const date = /(\d{8})t/i.exec(found[0].r!.runFile)?.[1];
       return { usd: 0, state: "current", date: date ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : null, edition: found[0].a.edition ?? found[0].a.fileName, run_file: found[0].r!.runFile };
     }
+    // C4.11 (QA-162 pack): steps 5 and 6 name the saved run they replay (both rounds of one Live run, matched to this
+    // combination's guide and prompt now, as the run will); step 7's blind checker is those runs' second rounds plus the rules.
+    const files = (k: "qd_conditions" | "pqr_picks") => engineSaved?.files?.[k] ?? [];
+    const own = step === "conditions" ? files("qd_conditions") : step === "pqr_picks" ? files("pqr_picks") : step === "checker" ? [...files("qd_conditions").slice(1), ...files("pqr_picks").slice(1)] : [];
+    if (engineSaved?.files && own.length) {
+      const date = /(\d{8})t/i.exec(own[0])?.[1];
+      return { usd: 0, state: "current", date: date ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : null, edition: engineSaved.guide ?? null, run_file: own[0], run_files: own,
+        ...(step === "checker" ? { why: "The independent checker: the saved second (blind) readings of steps 5 and 6, then the four rules. US$0." } : {}) };
+    }
+    if (engineSaved?.files) return { usd: 0, state: "none", date: null, edition: engineSaved.guide ?? null, why: (step === "conditions" ? engineSaved.why_none?.qd_conditions : step === "pqr_picks" ? engineSaved.why_none?.pqr_picks : null) ?? "No saved AI answer for this step yet: the step says so when it runs and proposes nothing (US$0)." };
     return { usd: 0, state: "looked_up_at_run", date: null, edition: null, why: "Its saved answer is matched to the exact guide, prompt and combination when the step runs; with none, the step says so and proposes nothing (US$0)." };
   }
 

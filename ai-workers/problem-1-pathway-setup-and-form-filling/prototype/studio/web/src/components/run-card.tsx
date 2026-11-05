@@ -11,7 +11,7 @@ import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { costWords } from "../../../contracts/start-setup";
 
-type RunStep = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: string | null; finished_at: string | null; counts: { done: number; total: number; unit: string } | null };
+type RunStep = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: string | null; finished_at: string | null; details?: string | null; counts: { done: number; total: number; unit: string } | null };
 export type RunView = { id: string; operation: string; label: string; scope: string | null; status: string; status_word: string; message: string | null; step: { n: number; m: number; label: string } | null; steps: RunStep[];
   elapsed_ms: number; usual_ms: number | null; usd: { spent: number; worst: number; usual: number | null; about?: number | null }; can_stop: boolean; error: { what: string; next: { label: string; href: string } | null } | null; href: string };
 
@@ -70,6 +70,9 @@ export function RunCard({ runId, className, onEnded, onDismiss }: { runId: strin
                 {s.counts ? <span className="ml-2 tabular-nums text-text-muted">{s.counts.done} of {s.counts.total} {s.counts.unit}</span> : null}
                 {s.usd > 0 ? <span className="ml-2 tabular-nums text-text-muted">US${s.usd.toFixed(2)}</span> : null}</p>
               {s.message && s.status !== "WAITING" ? <p className="text-text-muted">{s.message}</p> : null}
+              {/* QA-162 (C4.11): what a finished step left out, each with its reason and what to do, is shown, never only
+                  counted. Review m3: a failed step's message says why; its details (a request id) are not shown. */}
+              {s.details && s.status === "COMPLETED" ? <StepDetails text={s.details} /> : null}
             </div>
           </li>
         ))}
@@ -77,6 +80,18 @@ export function RunCard({ runId, className, onEnded, onDismiss }: { runId: strin
       {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={r.error.next ? <Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link> : undefined}>{r.error.what}</Notice> : null}
       {!active && !r.error && r.message ? <p className="text-sm">{r.message}</p> : null}
     </section></TipProvider>
+  );
+}
+
+/** A step's reasons, one per line, folded under its message (QA-162: "14 left out with the reason" shows each reason). */
+function StepDetails({ text }: { text: string }) {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  return (
+    <details className="mt-1" data-step-details>
+      <summary className="cursor-pointer text-text-link underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">See {lines.length === 1 ? "the reason" : `the ${lines.length} reasons`}</summary>
+      <ul className="mt-1 list-disc space-y-1 pl-5 text-text-muted">{lines.map((l, i) => <li key={i} className="break-words">{l}</li>)}</ul>
+    </details>
   );
 }
 
