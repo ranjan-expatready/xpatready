@@ -132,8 +132,11 @@ export function pack2(id: string) {
     // second person. Sample, "Unconfirmed: expert".
     if (setup) {
       const set = async (form: string, body: object) => say(`set ${form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(form)}`, body, AUTHOR));
-      for (const r of setup.rules)
-        await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
+      for (const r of setup.rules) {
+        if (!(await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) }))) continue;
+        // B79b: a form IRCC's words say is filled in its portal is set Online on the Forms tab's channel route.
+        if (r.channel) say(`channel ${r.form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(r.form)}/channel`, { channel: r.channel }, AUTHOR));
+      }
       if (family) { await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 }); if (lineForms().has(family.other)) await set(family.other, { retire: true }); }
       // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
       for (const rf of setup.ruleFacts ?? []) {

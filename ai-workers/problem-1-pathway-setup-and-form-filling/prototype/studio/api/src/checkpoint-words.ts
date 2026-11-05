@@ -38,3 +38,16 @@ export function releaseTwoWords(step: ReleaseTwoStep, refusal: Refusal): string 
   const waits = noCode.length ? " A person sets it on the form's panel on the Forms tab (Choices this form prints): an answer the form does not print is marked there, so filling refuses it in words." : "";
   return `Release 2 was not made: Submit refused it with ${plural(all.length, "problem", "problems")}${on}: ${parts.join("; ")}. ${where}${waits}`;
 }
+
+/** C10.1 row 10 (Lead 14's ruling on #1052, option A; DEMO.md row 10 "A release 1, release 2; B"; P-239, the POC builds
+ *  no Corporate configuration): the row's status and words from the loader's release pass. A combination with forms that
+ *  is refused makes the row partial; one with no form on it is never what row 10 asks, so it does not, but it stays named
+ *  in the row's words, in its own sentence, so nothing goes silent. Nothing released: waiting. */
+export function releaseRowTen(released: string[], refused: string[], noForm: string[]): { status: "waiting" | "partial" | "done"; shows: string; why: string | null } {
+  const why = [...refused, ...noForm.map((l) => `${l}: not submitted, no form is on it yet (the form finder has no saved answer for its canada.ca page, or none was confirmed).`)];
+  return {
+    status: !released.length ? "waiting" : refused.length ? "partial" : "done",
+    shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
+    why: why.length ? why.join(" · ") : null,
+  };
+}

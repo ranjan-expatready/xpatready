@@ -98,8 +98,14 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   for (const id of releasedIds) if ((await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
   ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load", drifted.length === 0, { released: releasedIds.length, drifted }); // none released (a blocked checkpoint) has nothing to drift
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
-  ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
-  ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
+  // B79b (QA-144 slice 5): with Family sponsorship released, every combination with a form is released, so row 10 may carry
+  // no validator words at all; the X9a caption rule is then proved on its own data by C9.1 (K1, its fail line on IMM 5476).
+  // Here: when row 10 gives the validator's words they name a form field by caption, and it never prints a raw PDF path.
+  const k1Words = /\(K1\)/.test(r("10").why ?? "");
+  ok("C10.1 row 10 / X9a (standing guard, review r2-m2: no planted case here; C9.1 plants one): row 10 never names a form field by its PDF path (IMM_5707[0].page1[0]…)", !/[A-Za-z0-9_]+\[\d+\]\./.test(`${r("10").shows} ${r("10").why ?? ""}`), r("10").why?.slice(0, 200));
+  ok(k1Words ? "C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption" : "C10.1 row 10 / X9a: no combination is refused for an undecided form field (K1), so no live form field map is left undecided (a superseded one is history; C9.1 proves the caption rule)",
+    k1Words ? /for example "/.test(r("10").why ?? "") && n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0
+      : n(`select count(*) from form_field_map where outcome = 'unresolved' and status <> 'SUPERSEDED'`) === 0, { k1Words, why: r("10").why?.slice(0, 200) });
   // QA-144 slice 1: the Visitor visa is released; the combinations not set up yet stay drafts with the validator's words.
   // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the Visitor visa is released (review m2), unless
   // sections wait for a name (QA-206; tech lead on #883): then its release check names the blocks (check_qa144_vv_release.ts
@@ -114,8 +120,16 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // QA-144 slice 4 (B79a, #1050): Express Entry is set up from its forms and released (tests/check_qa144_ee_release.ts).
   ok("C10.1 row 10: Provincial nominees › Express Entry stream is released (QA-144 slice 4), release 1 approved by the Approver", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'pnp.express_entry' and r.approver_id = 'user-B'`) === 1 && /Express Entry stream/.test(r("10").shows), r("10").shows);
-  // Slice 4 moves this example to Family sponsorship's spouse or partner, a combination no slice sets up yet (slice 5, B79b).
-  ok("C10.1 row 10 fail: a combination the validator refuses stays a draft and its row gives the validator's words", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'fs.spouse'`) === 0 && /Spouse or common-law partner: Fix \d+ problems? before submitting/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
+  // QA-144 slice 5 (B79b, #1052): Family sponsorship is set up from its forms and released (tests/check_qa144_fs_release.ts).
+  ok("C10.1 row 10: Family sponsorship › Spouse or common-law partner is released (QA-144 slice 5), release 1 approved by the Approver", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'fs.spouse' and r.approver_id = 'user-B'`) === 1 && /Family sponsorship › Spouse or common-law partner/.test(r("10").shows), r("10").shows);
+  // Slice 5 moves this example to "any draft the checkpoint leaves": each is named on row 10 with its words (today only
+  // High-wage position, which has no form, P-113), and none has a release.
+  const drafts = sql(`select c.label from combination c where not exists (select 1 from config_release r where r.combination_id = c.id) order by c.label`).split("\n").filter(Boolean);
+  ok("C10.1 row 10 fail: every combination the checkpoint leaves a draft is named on row 10 with its words (not submitted, or Fix N problems), and has no release", drafts.length > 0 && drafts.every((l) => { const at = (r("10").why ?? "").indexOf(`${l}: `); return at >= 0 && /^(not submitted, |Fix \d+ problems? before submitting)/.test((r("10").why ?? "").slice(at + l.length + 2)); }), { drafts, why: r("10").why?.slice(0, 200) });
+  // Lead 14 on #1052 (option A; tests/check_c101_row_ten.ts both ways): a draft with no form (High-wage position, P-239)
+  // does not keep row 10 partial; a combination with forms that is refused would.
+  const refusedWithForms = n(`select count(*) from combination c where exists (select 1 from combination_form f where f.combination_id = c.id) and not exists (select 1 from config_release r where r.combination_id = c.id)`);
+  ok("C10.1 row 10 (option A): done exactly when every combination with forms is released; a formless draft stays named on the row", r("10").status === (refusedWithForms ? "partial" : "done") && drafts.every((l) => (r("10").why ?? "").includes(`${l}: `)), { status: r("10").status, refusedWithForms, drafts });
   // B97: row 9 through B81's step: release 2 is made by the product's own duties, with only what the form does not print
   // marked; row 12's copies are generated and only a person's Validate in Adobe Reader is left (P-46, P-171).
   const vvKey = "vv.single", vvId = sql(`select id from combination where combination_key = '${vvKey}'`);
