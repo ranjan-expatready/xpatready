@@ -1,18 +1,18 @@
 {
  "port": 4435,
- "caseUrl": "http://127.0.0.1:4435/cases/464b57f0-125d-48ad-bbae-f2223f7441bd",
+ "caseUrl": "http://127.0.0.1:4435/cases/bb170684-4b7c-428d-8426-5f0c65b7f53b",
  "steps": [
   {
    "j7": "0.1",
    "what": "Demo › Reset, then Load the configured checkpoint, through the menu",
    "seen": true,
-   "detail": "81 s"
+   "detail": "92 s"
   },
   {
    "j7": "1.1",
    "what": "Visitor visa opens, showing its release",
    "seen": true,
-   "detail": "Released versions: Release 1, today at 7:58 a.m., approved by Approver "
+   "detail": "Released versions: Release 1, today at 8:28 a.m., approved by Approver "
   },
   {
    "j7": "1.2",
@@ -52,8 +52,8 @@
   },
   {
    "j7": "1.8",
-   "what": "Eligibility gates: no authoring screen (row B106); set by the checkpoint, read on the case at 4.1",
-   "seen": true,
+   "what": "Eligibility gates: no authoring screen (row B106); set by the checkpoint, read on the case at 4.1 below",
+   "note": true,
    "detail": "allow-listed route, tech lead's ruling on #1084"
   },
   {
@@ -66,7 +66,7 @@
    "j7": "2.1b",
    "what": "The case opens on Visitor visa",
    "seen": true,
-   "detail": "http://127.0.0.1:4435/cases/464b57f0-125d-48ad-bbae-f2223f7441bd"
+   "detail": "http://127.0.0.1:4435/cases/bb170684-4b7c-428d-8426-5f0c65b7f53b"
   },
   {
    "j7": "2.3",
