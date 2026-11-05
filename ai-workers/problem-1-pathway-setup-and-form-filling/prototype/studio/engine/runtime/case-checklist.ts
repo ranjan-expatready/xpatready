@@ -13,6 +13,7 @@ import { lineCondition, lineHolders, type Known, type Person } from "../render.t
 import type { Snapshot } from "../snapshot.ts";
 import { isFilingFact } from "../resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
+import { WHO_WORDS } from "../../contracts/lines-bulk.ts";
 import type { Participant } from "./case.ts";
 import { FEE_TABLE } from "./filings.ts";
 
@@ -46,7 +47,9 @@ export type Missing = { key: string; question: string; answered: boolean };
  *  `not_needed` with the answer that decided it. */
 export type PersonLine = { id: string; document_type: string; label: string; state: "not_requested"; reason: string; required: boolean; documents: never[];
   need: Need; lineage: string; also_from: string[]; document: { key: string; name: string }; missing: Missing[]; base: boolean;
-  provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null };
+  provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null;
+  /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
+  who: string; who_words: string };
 export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number };
 export type CaseChecklist =
   | { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string }
@@ -149,7 +152,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     // A person not applying has no filing on a Visitor visa (C6.12), so no lines of their own.
     const holders = [...new Set(lineHolders(persons, r.who).map((h) => (h === "case" ? principal : h)))].filter((h): h is string => !!h && applying.has(h));
     for (const h of holders) {
-      const plain = r.condition_plain ?? null;
+      const plain = inSentence(r.condition_plain);
       let state: Need = "needed", missing: Missing[] = [];
       let why = r.base_or_conditional === "base" ? "Always needed for this application." : `Needed: ${plain ?? "its condition holds"}.`;
       if (r.who === "each_adult_18_plus") {
@@ -173,7 +176,8 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       }
       const line: PersonLine = { id: `${h}:${r.lineage}`, document_type: document.key, label: document.name, state: "not_requested", reason: why, required: state === "needed", documents: [],
         need: state, lineage: r.lineage, also_from: [], document, missing, base: r.base_or_conditional === "base", provided_by: r.provided_by,
-        alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null };
+        alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null,
+        who: r.who, who_words: whoWords(r.who) };
       // Minor: two requirements for the same document on one person (e.g. a case line and the principal's own) are one
       // line: the strongest state wins and the other requirement is named in also_from.
       // Break m7: the merged line is "always" when either requirement is.
@@ -191,6 +195,23 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     }) };
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
+
+/** C6.4 (a), challenge r2 M1: a release's plain condition as it reads inside a sentence ("Needed: …."): its last full stop
+ *  removed and a capitalised first word lower-cased ("The applicant is married." → "the applicant is married"), so the
+ *  reason never reads "married.." or "the case that The applicant". A word in capitals (IMM, IRCC) is kept. */
+export function inSentence(plain: string | null | undefined): string | null {
+  const t = (plain ?? "").trim().replace(/[.\s]+$/, "");
+  if (!t) return null;
+  return /^[A-Z][a-z]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
+}
+/** Whose line it is, in the words of the Forms and Documents tabs (contracts/lines-bulk.ts WHO_WORDS), as a note
+ *  ("For each applicant", "Once for the couple"); an unknown "who" is named as it is, never hidden. */
+export function whoWords(who: string): string {
+  if (who === "couple_once") return "Once for the couple";
+  if (who === "case") return "Once for the application";
+  const w = WHO_WORDS[who];
+  return w ? `For ${w}` : `For: ${who}`;
+}
 
 /** A condition decided on its own subject, by the one rule Preview and the Documents tab use (render.ts lineCondition;
  *  Q2 on #325), with the case checklist's words for "nobody on the case". */
