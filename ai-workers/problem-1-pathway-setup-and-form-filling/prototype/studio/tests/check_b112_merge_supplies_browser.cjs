@@ -49,15 +49,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await shot("b112-2-panel-after-merge-1440");
   await p.keyboard.press("Escape");
 
-  step("setup: another document supplies both fields, about different people", (await supplies(types[1], [[keepB, "holder"], [goneB, "holder.spouse"]])) < 300);
+  // A proposal made before the facts changed: the card says it before anyone approves (review M1).
   const m2 = await propose(keepB, goneB);
+  step("setup: then a document comes to supply both fields, about different people", (await supplies(types[1], [[keepB, "holder"], [goneB, "holder.spouse"]])) < 300);
   await as("user-B");
   await p.goto(`${BASE}/review/merge/${m2}`);
-  const yes2 = p.getByRole("button", { name: "Approve the merge" }); await yes2.waitFor({ timeout: 30000 });
-  await p.waitForFunction(() => { const x = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Approve the merge")); return x && x.getAttribute("aria-disabled") !== "true" && !x.disabled; }, null, { timeout: 30000 });
-  await yes2.click();
-  const refused = p.getByText(/about different people, so merging them would lose whom one is about/).first();
-  step("B112 fail: the card says in words why the merge is refused, and nothing is merged", await refused.waitFor({ timeout: 30000 }).then(() => true).catch(() => false) && sql(`select status from field_merge where id = '${m2}'`) === "PROPOSED");
+  const says = p.getByText(/about different people, so merging them would lose whom one is about/).first();
+  step("B112 fail (review M1): the card says why before anyone approves, and never \"Checks passed\"", await says.waitFor({ timeout: 30000 }).then(() => true).catch(() => false) && (await p.getByText("Checks passed.").count()) === 0);
   await shot("b112-3-refused-1440");
   step("B112: no page error on the walk", errors.length === 0, errors.join(" | "));
   await b.close();

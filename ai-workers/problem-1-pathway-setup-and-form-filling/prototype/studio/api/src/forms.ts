@@ -498,11 +498,12 @@ export class Forms {
       const types = await tx.documentType.findMany({ where: { workspaceId: ws } });
       const tHit = new Set(types.filter((t) => t.suppliesFacts.includes(from)).map((t) => t.documentTypeKey));
       // QA-256 (B112): whom each fact is about moves with the fact, or a fact about a spouse would read as the holder's own.
-      // A document that supplies both, about different people, would make one fact about two people: refused, nothing moved.
+      // A document that supplies both, about different people, would make one fact about two people: the merge's check says
+      // so before (engine/change-set.ts); this is its guard for a change that lands in between. Refused, nothing moved.
       await moveLineages("document supplies", tx.documentType, types.filter((t) => tHit.has(t.documentTypeKey)), (t) => t.documentTypeKey, (t) => {
         if (!t.suppliesFacts.includes(from)) return { suppliesFacts: t.suppliesFacts };
         const about = { ...((t.suppliesAbout ?? {}) as Record<string, string>) }, whom = about[from] ?? "holder";
-        if (t.suppliesFacts.includes(to) && (about[to] ?? "holder") !== whom) conflict(`${t.name} supplies both of these fields, about different people, so merging them would lose whom one is about. Change what it supplies first, then merge. Nothing was merged.`);
+        if (t.suppliesFacts.includes(to) && (about[to] ?? "holder") !== whom) conflict(`${t.name} supplies both of these fields, about different people, so merging them would lose whom one is about. Change what it supplies first, or withdraw or release its approved change, then merge. Nothing was merged.`);
         delete about[from];
         if (whom !== "holder") about[to] = whom;
         return { suppliesFacts: [...new Set(t.suppliesFacts.map((f: string) => (f === from ? to : f)))], suppliesAbout: Object.keys(about).length ? (about as Prisma.InputJsonValue) : Prisma.DbNull };

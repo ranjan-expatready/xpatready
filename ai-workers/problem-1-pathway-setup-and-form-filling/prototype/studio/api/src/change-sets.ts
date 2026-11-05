@@ -4,6 +4,7 @@
 // "What this change touches" with its fingerprint. `POST /api/change-sets/check` writes nothing. The flows that write
 // (rename and merge in B2, AI proposals in B3) call `guard` before they write and record a change_set row (`record`) in
 // their own transaction.
+import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Post } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
@@ -36,11 +37,13 @@ export type ChangeSetStatus = "applied" | "waiting" | "rolled_back" | "undone";
 
 /** The newest version of every library item, as the engine's check reads them. */
 export async function libraryOf(db: Client, workspaceId: string): Promise<Library> {
-  const [fields, sections, lists, types] = await Promise.all([
+  const [fields, sections, lists, types, approved] = await Promise.all([
     db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, groupKey: true, label: true, aliases: true, valueType: true, answerListKey: true, status: true, mergedIntoKey: true, version: true } }),
     db.logicalSection.findMany({ where: { workspaceId }, select: { sectionKey: true, title: true, status: true, version: true } }),
     db.answerList.findMany({ where: { workspaceId }, select: { answerListKey: true, status: true, version: true, values: { select: { valueKey: true } } } }),
-    db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, readerProfile: true, status: true, version: true } }),
+    db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, readerProfile: true, status: true, version: true, suppliesFacts: true, suppliesAbout: true } }),
+    // B112: an approved change of a document's facts goes back to what it replaced if it is withdrawn.
+    db.libraryChange.findMany({ where: { workspaceId, kind: SUPPLIES_KIND, status: "APPROVED" }, select: { key: true, matches: true } }),
   ]);
   // Review B1 M1: every live version's names count, as today's doors read them (library-sources.ts, proposals.ts).
   const liveNames = new Map<string, string[]>(); for (const f of fields) if (isLive(f.status) && !f.mergedIntoKey) liveNames.set(f.canonicalFieldKey, [...(liveNames.get(f.canonicalFieldKey) ?? []), f.label ?? "", ...f.aliases].filter(Boolean));
@@ -52,7 +55,8 @@ export async function libraryOf(db: Client, workspaceId: string): Promise<Librar
     fields: newestBy(fields, (f) => f.canonicalFieldKey).map((f) => ({ key: f.canonicalFieldKey, group: f.groupKey ?? f.canonicalFieldKey.split(".")[0], label: f.label, aliases: f.aliases, valueType: f.valueType, answerListKey: f.answerListKey, status: f.status, mergedInto: f.mergedIntoKey, names: liveNames.get(f.canonicalFieldKey) ?? [] })),
     sections: newestBy(sections, (x) => x.sectionKey).map((x) => ({ key: x.sectionKey, title: x.title, status: x.status, liveTitles: liveTitles.get(x.sectionKey) ?? [] })),
     answerLists: newestBy(lists, (l) => l.answerListKey).map((l) => ({ key: l.answerListKey, values: l.values.map((v) => v.valueKey), status: l.status, liveIds: listIds.get(l.answerListKey) ?? [] })),
-    documentTypes: newestBy(types, (t) => t.documentTypeKey).map((t) => ({ key: t.documentTypeKey, name: t.name, proves: proves(t), status: t.status, liveIds: docIds.get(t.documentTypeKey) ?? [] })),
+    documentTypes: newestBy(types, (t) => t.documentTypeKey).map((t) => ({ key: t.documentTypeKey, name: t.name, proves: proves(t), status: t.status, liveIds: docIds.get(t.documentTypeKey) ?? [],
+      supplies: [{ facts: t.suppliesFacts, about: (t.suppliesAbout ?? {}) as Record<string, string> }, ...approved.filter((c) => c.key === t.documentTypeKey).map((c) => { const m = c.matches as { before?: string[]; beforeAbout?: Record<string, string> }; return { facts: m.before ?? [], about: m.beforeAbout ?? {} }; })] })),
   };
 }
 

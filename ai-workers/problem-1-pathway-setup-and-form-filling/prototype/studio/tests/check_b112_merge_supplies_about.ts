@@ -31,10 +31,10 @@ const merge = async (keep: string, gone: string) => {
 
 const load = await call("POST", "/demo/load");
 if (load.status >= 300) { console.error("STOP  the fixture did not load", load.body); process.exit(2); }
-const types = sql(`select distinct document_type_key from document_type where status = 'PUBLISHED' order by 1 limit 2`).split("\n");
-const fields = sql(`select distinct f.canonical_field_key from canonical_field f where f.status = 'PUBLISHED' and f.merged_into_key is null and f.canonical_field_key like 'person.%' and f.value_type = 'text' and f.answer_list_key is null and not exists (select 1 from document_type t where f.canonical_field_key = any(t.supplies_facts)) order by 1 limit 4`).split("\n");
-if (types.length < 2 || fields.length < 4) { console.error("STOP  the fixture has too few document types or fields", { types, fields }); process.exit(2); }
-const [typeA, typeB] = types, [keepA, goneA, keepB, goneB] = fields;
+const types = sql(`select distinct document_type_key from document_type where status = 'PUBLISHED' order by 1 limit 5`).split("\n");
+const fields = sql(`select distinct f.canonical_field_key from canonical_field f where f.status = 'PUBLISHED' and f.merged_into_key is null and f.canonical_field_key like 'person.%' and f.value_type = 'text' and f.answer_list_key is null and not exists (select 1 from document_type t where f.canonical_field_key = any(t.supplies_facts)) order by 1 limit 10`).split("\n");
+if (types.length < 5 || fields.length < 10) { console.error("STOP  the fixture has too few document types or fields", { types, fields }); process.exit(2); }
+const [typeA, typeB, typeC, typeD, typeE] = types, [keepA, goneA, keepB, goneB, keepC, goneC, keepD, goneD, keepE, goneE] = fields;
 
 // A fact about the spouse, merged into a field this document does not supply yet.
 await supplies(typeA, [{ fact: goneA, about: "holder.spouse" }]);
@@ -49,9 +49,27 @@ ok("B112: whom-it-is-about is stored under the field that stays, and nothing is 
 // The document supplies both, about different people: the merge would lose whom one is about.
 await supplies(typeB, [{ fact: keepB, about: "holder" }, { fact: goneB, about: "holder.spouse" }]);
 const before = newest(typeB);
-r = await merge(keepB, goneB);
-ok("B112 fail: a merge that would make one fact about two people is refused in words, naming the document", r.status === 409 && /about different people/.test(r.body?.message ?? ""), r);
+const proposed = await call("POST", "/library/merges", { keep: keepB, merge: goneB, reason: "Test: these two mean the same for this check only (B112)." });
+ok("B112 fail (review M1): the merge's own check says so when it is proposed, in words naming the document, never green and then refused", proposed.status >= 400 && proposed.status < 500 && /about different people/.test(JSON.stringify(proposed.body)), proposed);
 ok("B112 fail: the refused merge changes nothing", newest(typeB) === before && sql(`select count(*) from canonical_field where canonical_field_key = '${goneB}' and merged_into_key is not null`) === "0", newest(typeB));
+
+// Review M2: an approved change that would go back to both, about different people, if it is withdrawn.
+sql(`update document_type set supplies_facts = array['${keepC}','${goneC}'], supplies_about = '{"${goneC}": "holder.spouse"}'::jsonb where document_type_key = '${typeC}' and status = 'PUBLISHED'`);
+await supplies(typeC, [{ fact: keepC, about: "holder" }]);
+r = await merge(keepC, goneC);
+ok("B112 fail (review M2): a merge is refused while an approved change holds both about different people: withdrawing it would make the holder's fact the spouse's", r.status >= 400 && r.status < 500 && /about different people/.test(JSON.stringify(r.body)), r);
+
+// A change that lands between the proposal and the approval.
+const late = await call("POST", "/library/merges", { keep: keepD, merge: goneD, reason: "Test: these two mean the same for this check only (B112)." });
+await supplies(typeD, [{ fact: keepD, about: "holder" }, { fact: goneD, about: "holder.spouse" }]);
+r = await call("POST", `/library/merges/${late.body?.id ?? late.body?.merge?.id}/approve`, { note: "Second person (B112 check)." }, "user-B");
+ok("B112 fail: a change that lands after the proposal is caught when the merge is approved, and nothing is merged", r.status >= 400 && r.status < 500 && /about different people/.test(JSON.stringify(r.body)) && sql(`select count(*) from canonical_field where canonical_field_key = '${goneD}' and merged_into_key is not null`) === "0", r);
+
+// Both about the same person: one fact, still about that person.
+await supplies(typeE, [{ fact: keepE, about: "holder.parent" }, { fact: goneE, about: "holder.parent" }]);
+r = await merge(keepE, goneE);
+const same = newest(typeE);
+ok("B112 pass: two fields about the same person merge into one fact about that person", r.status < 300 && same.startsWith(`${keepE}|`) && same.includes(`"${keepE}": "holder.parent"`) && !same.includes(goneE), { status: r.status, same });
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
