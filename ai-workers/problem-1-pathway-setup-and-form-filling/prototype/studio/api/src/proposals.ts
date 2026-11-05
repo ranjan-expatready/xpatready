@@ -599,7 +599,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? keyFor(f.subject ?? "case", proposedName ?? f.label, used);
     // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list, checked again here so an edit on To
     // review passes the add's rules (break M2); the list rides with the field (api/src/answer-values.ts).
-    const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact" || typeof ruleFact === "string"); // both add routes (review m-r2a), and a fact a checklist line reads (B82)
+    const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact"); // both add routes (review m-r2a)
     // Review m-r3a: an edit cannot drop a value the rule compares the fact with.
     const ruleValues = (r.work as { ruleValues?: unknown } | null)?.ruleValues;
     const lacking = values && Array.isArray(ruleValues) ? ruleValues.filter((v): v is string => typeof v === "string" && !values.some((x) => x.code === v)) : [];

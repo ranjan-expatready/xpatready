@@ -79,6 +79,19 @@ async function main() {
   ok("C2.6 R6 fail: a name already waiting on To review is decided there first", nameWaiting.propose.length === 0 && /already waiting/.test(nameWaiting.held[0] ?? ""), nameWaiting);
   const badKey = conditionFacts([reads("no_group", true)], [], nothing);
   ok("C2.6 R6 fail: a key that is not group.name is not proposed; the job says to correct the condition", badKey.propose.length === 0 && /not a fact key/.test(badKey.held[0] ?? ""), badKey);
+  const dated = conditionFacts([reads("person.issued_on", "2026-01-01", "lt")], [], nothing);
+  ok("C2.6 R6: an ordered test against a date makes a date, not a number", dated.propose[0]?.valueType === "date", dated.propose[0]?.valueType);
+  const goesWith = [{ id: "person.goes_with", meaning: "With whom the person travels", plain: "With whom the person travels", valueType: "code", derived: false }];
+  const twoValues = conditionFacts([{ ...reads("person.goes_with", "alone"), condition_tree: { subjectKind: "EACH_APPLICANT", op: "in", field: "person.goes_with", value: ["alone", "one_parent"] } }], goesWith, nothing);
+  ok("C2.6 R6: a choice the conditions test against two or more values is proposed with them", twoValues.propose.length === 1 && twoValues.propose[0].compared.length === 2, twoValues);
+  const oneValue = conditionFacts([reads("person.goes_with", "alone")], goesWith, nothing);
+  ok("C2.6 R6 fail: a choice with one tested value is not proposed (no card takes values); the job names the route that does", oneValue.propose.length === 0 && /Smart questionnaire › Add the fact this rule needs/.test(oneValue.held[0] ?? ""), oneValue);
+  const notCodes = conditionFacts([{ ...reads("person.province", "QC"), condition_tree: { subjectKind: "EACH_APPLICANT", op: "in", field: "person.province", value: ["QC", "ON"] } }], [], nothing);
+  ok("C2.6 R6 fail: tested values that are not codes are not proposed, so one item never stops the draft", notCodes.propose.length === 0 && notCodes.held.length === 1, notCodes);
+  const retiredName = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, retiredNames: new Map([["person|hasvisa", "person.old_visa"]]) });
+  ok("C2.6 R6 fail: a fact with a retired field's name in its group is not proposed; the job says to restore it", retiredName.propose.length === 0 && /retired library field person\.old_visa/.test(retiredName.held[0] ?? ""), retiredName);
+  const otherGroup = conditionFacts([reads("case.has_visa", true)], [], { ...nothing, retiredNames: new Map([["person|hasvisa", "person.old_visa"]]) });
+  ok("C2.6 R6: a retired name in another group does not hold it", otherGroup.propose.length === 1, otherGroup);
   const twoNames = conditionFacts([reads("person.has_visa", true), reads("case.has_visa", true)], [], nothing);
   ok("C2.6 R6 fail: two facts with one name in a reading: the first is proposed, the other is said (one bad item never stops the draft)", twoNames.propose.length === 1 && twoNames.held.length === 1, twoNames);
 

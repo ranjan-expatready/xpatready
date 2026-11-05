@@ -145,11 +145,13 @@ export class Checklists {
 type DocTypePayload = Extract<ProposalPayload, { kind: "document_type" }>;
 type FieldPayload = Extract<ProposalPayload, { kind: "field" }>;
 /** What the library and the queue already hold, by fact key and by name. */
-type FactsKnown = { live: Set<string>; retired: Set<string>; named: Map<string, string>; waitingKeys: Set<string>; waitingNames: Set<string> };
+type FactsKnown = { live: Set<string>; retired: Set<string>; named: Map<string, string>; retiredNames?: Map<string, string>; waitingKeys: Set<string>; waitingNames: Set<string> };
 /** One fact a checklist's lines read and the library lacks. */
 export type ConditionFact = { fact: string; lines: ReadLine[]; label: string; meaning: string; valueType: string; compared: string[]; defined: SavedFact | null };
 /** A fact key as the rules write it (rule-facts.ts). */
 const FACT_KEY = /^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/;
+/** An answer value's code, as the queue's contract takes it. */
+const VALUE_CODE = /^[a-z][a-z0-9_]{0,60}$/;
 
 async function factsKnown(tx: Parameters<typeof insertProposals>[0], ws: string): Promise<FactsKnown> {
   const [fields, derived, waiting] = await Promise.all([
@@ -158,20 +160,22 @@ async function factsKnown(tx: Parameters<typeof insertProposals>[0], ws: string)
     tx.proposalItem.findMany({ where: { workspaceId: ws, kind: "field", status: "waiting" }, select: { identityKey: true, work: true } }),
   ]);
   const usable = fields.filter((f) => f.status !== "RETIRED" && !f.mergedIntoKey);
-  return { live: new Set([...usable.map((f) => f.canonicalFieldKey), ...derived.map((d) => d.derivedKey)]), retired: new Set(fields.filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey)),
+  const gone = fields.filter((f) => f.status === "RETIRED");
+  return { live: new Set([...usable.map((f) => f.canonicalFieldKey), ...derived.map((d) => d.derivedKey)]), retired: new Set(gone.map((f) => f.canonicalFieldKey)),
+    retiredNames: new Map(gone.filter((f) => f.label && !f.mergedIntoKey).map((f) => [`${f.canonicalFieldKey.split(".")[0]}|${normalizeLabel(f.label!)}`, f.canonicalFieldKey])), // a retired field keeps its name in its group
     named: new Map(usable.flatMap((f) => [f.label ?? "", ...f.aliases].filter(Boolean).map((n) => [normalizeLabel(n), f.canonicalFieldKey] as [string, string]))), // as the door's sameInLibrary
     waitingKeys: new Set(waiting.map((w) => (w.work as { ruleFact?: unknown; proposedKey?: unknown } | null)).flatMap((w) => [w?.ruleFact, w?.proposedKey]).filter((k): k is string => typeof k === "string")),
     waitingNames: new Set(waiting.map((w) => w.identityKey).filter((k): k is string => !!k)) };
 }
 
-/** An answer type from how the condition tests the fact, when the reading gave none (true/false: yes or no; a number or
- *  an ordered test: a number; a word: a choice). */
+/** An answer type from how the condition tests the fact, when the reading gave none (true/false: yes or no; a date: a
+ *  date; a number or an ordered test: a number; a word: a choice). */
 function typeFromTests(lines: ReadLine[], fact: string): string {
   let found = "text";
   const walk = (n: unknown) => {
     if (!n || typeof n !== "object") return;
     const o = n as { field?: unknown; op?: unknown; value?: unknown; args?: unknown; arg?: unknown };
-    if (o.field === fact) found = typeof o.value === "boolean" ? "yes_no" : typeof o.value === "number" || ["gt", "gte", "lt", "lte"].includes(String(o.op)) ? "number" : "code";
+    if (o.field === fact) found = typeof o.value === "boolean" ? "yes_no" : typeof o.value === "string" && /^\d{4}-\d{2}-\d{2}/.test(o.value) ? "date" : typeof o.value === "number" || ["gt", "gte", "lt", "lte"].includes(String(o.op)) ? "number" : "code";
     (Array.isArray(o.args) ? o.args : []).forEach(walk); if (o.arg) walk(o.arg);
   };
   lines.forEach((l) => walk(l.condition_tree));
@@ -193,11 +197,16 @@ export function conditionFacts(lines: ReadLine[], defined: SavedFact[], known: F
     const label = typeName(fact.split(".").slice(1).join(" ")).replace(/\bus\b/gi, "US").slice(0, 120), name = normalizeLabel(label);
     const twin = known.named.get(name);
     if (twin) { held.push(`${fact} has the name of the library's ${twin}: correct the condition to read it`); continue; }
+    const retiredTwin = known.retiredNames?.get(`${fact.split(".")[0]}|${name}`);
+    if (retiredTwin) { held.push(`${fact} has the name of the retired library field ${retiredTwin}: restore it in Library › Fields, or correct the condition`); continue; }
     if (known.waitingNames.has(name) || names.has(name)) { held.push(`${fact}: a proposal named "${label}" is already waiting on To review, so decide that first`); continue; }
     names.add(name);
     const type = def?.valueType && RULE_FACT_TYPES.includes(def.valueType) ? def.valueType : typeFromTests(read, fact);
     const words = def?.meaning ?? read.map((l) => l.condition_plain).find((c) => c && c.length >= 10) ?? `Read by the condition of ${typeName(read[0].document_type)}.`;
-    propose.push({ fact, lines: read, label, meaning: words.slice(0, 500), valueType: type, compared: [...new Set(read.flatMap((l) => valuesCompared(l.condition_tree, fact)))], defined: def });
+    const compared = [...new Set(read.flatMap((l) => valuesCompared(l.condition_tree, fact)))];
+    // No card takes answer values, so a choice is proposed only when the conditions give at least two that land as they are.
+    if (isChoice(type) && (compared.length < 2 || !compared.every((v) => VALUE_CODE.test(v)))) { held.push(`${fact} is a choice whose answer values the reading does not give: accept its line, then add it with its values under Smart questionnaire › Add the fact this rule needs`); continue; }
+    propose.push({ fact, lines: read, label, meaning: words.slice(0, 500), valueType: type, compared, defined: def });
   }
   return { propose, held };
 }
@@ -207,10 +216,9 @@ export function conditionFacts(lines: ReadLine[], defined: SavedFact[], known: F
 function factItem(f: ConditionFact, runId: string, combinationId: string, runFile: string, source: NewProposal["source"], checklist: string): NewProposal & Work {
   const docs = [...new Set(f.lines.map((l) => typeName(l.document_type)))], first = f.lines[0];
   const sentence = `Document condition ${typeName(first.document_type)}: ${first.condition_plain ?? "no sentence yet"}`.slice(0, 300);
-  // A choice's list comes from what the conditions test; fewer than two is for the person to complete on To review.
-  const values = isChoice(f.valueType) && f.compared.length >= 2 ? f.compared.map((code) => ({ code, label: typeName(code) })) : undefined;
+  const values = isChoice(f.valueType) ? f.compared.map((code) => ({ code, label: typeName(code) })) : undefined; // conditionFacts: two or more
   const payload: FieldPayload = { kind: "field", label: f.label, aliases: [], meaning: f.meaning, valueType: f.valueType, subject: f.fact.split(".")[0], ...(values ? { values } : {}), formBox: null };
-  const why = `${docs.join(", ")} ${docs.length === 1 ? "reads" : "read"} this fact and the library lacks it, so a release would be refused. ${f.defined?.derived ? "The saved reading works it out from other facts, and no calculation here does that, so it is proposed as a fact a person answers. " : f.defined ? "" : "The saved reading does not define it, so its meaning is the condition's words. "}One AI round: check its name, meaning and answer type; a second person approves it once accepted.${isChoice(f.valueType) ? (values ? " Its answer values are only the ones the condition tests: add the others." : " Add its answer values before accepting.") : ""}`;
+  const why = `${docs.join(", ")} ${docs.length === 1 ? "reads" : "read"} this fact and the library lacks it, so a release would be refused. ${f.defined?.derived ? "The saved reading works it out from other facts, and no calculation here does that, so it is proposed as a fact a person answers. " : f.defined ? "" : "The saved reading does not define it, so its meaning is the condition's words. "}One AI round: check its name, meaning and answer type; a second person approves it once accepted.${isChoice(f.valueType) ? " Its answer values are only the ones the conditions test. If it needs others, reject this one, accept its line, and add the fact with all its values under Smart questionnaire › Add the fact this rule needs." : ""}`;
   const reading = `${f.label}, read by ${checklist}'s conditions: ${f.defined?.plain ?? f.meaning}`;
   return { kind: "field", runId, step: "checklist_draft", scope: { formEdition: null, combinationId }, landsOn: "library", reuse: { match: "new", existingKey: null }, payload,
     source: source ? { ...source, rule: { key: first.document_type, sentence } } : null, rounds: { draft: { reading: reading.slice(0, 300), payload, from: "replay", runFile, costUsd: 0 }, check: null },

@@ -127,6 +127,14 @@ run(async () => {
   const key1 = lineFact?.facts.find((f) => !inLibrary(f)) ?? "";
   const p1 = key1 ? factOf(key1) : "";
   const problem = async () => ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).map((x: any) => String(x.message ?? x));
+  // A fact is one library item whichever combination proposed it: another combination's rule that reads it sees it waiting.
+  const other = T.combo("sp.outside"), shared = named.flatMap((n) => n.facts).find((f) => f !== key1 && !inLibrary(f) && sql(`select count(*) from proposal_item where kind='field' and status='waiting' and work->>'ruleFact'='${f}'`) === "1") ?? "";
+  r = await call("POST", `/combinations/${other}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: shared, value: true }, whenPlain: "Test words: the fact holds", thenPlain: "Test words: a note", forWhom: "each_applicant", sourceQuote: "Test words (C2.6 B82)." }, AUTHOR);
+  ok("C2.6 setup (B82): another combination's rule reads a fact this checklist proposed", !!shared && r.status < 300, words(r));
+  const rf = (await call("GET", `/combinations/${other}/rule-facts`)).body;
+  ok("C2.6 pass (B82): that combination's Add the fact panel shows it as already waiting", !!shared && rf?.facts?.find((f: any) => f.fact === shared)?.waitingProposal === factOf(shared), rf?.facts?.map((f: any) => `${f.fact}: ${f.waitingProposal}`));
+  r = await call("POST", `/combinations/${other}/rule-facts`, { fact: shared, rule: rf?.facts?.find((f: any) => f.fact === shared)?.rules?.[0]?.key ?? "x", label: "Another name for it", meaning: "A second proposal of the same fact, by a test.", valueType: "yes_no" }, AUTHOR);
+  ok("C2.6 fail (B82): that fact cannot be proposed a second time from there (409 in words)", r.status === 409 && /already waiting/.test(words(r)), { status: r.status, words: words(r) });
   if (lineFact) {
     r = await call("POST", "/review/proposals/decide", { ids: [lineFact.line.id], action: "accept", reason: "Accepted by a test (C2.6 B82)." }, AUTHOR);
     ok("C2.6 setup: a conditional line is accepted", r.status < 300, words(r));
