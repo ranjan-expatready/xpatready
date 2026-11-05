@@ -1,6 +1,17 @@
 # B88 review: a worked-out Yes/No asks its form's own deciding question (QA-239, C4.11)
 
-The reviewer agent did not build this. This file holds three rounds, a merge check and a CI-fix check. Round 1 was on 2d85215f3 (`git diff d68a8b79a..2d85215f3`; B86 #1053 is the base). Round 2 was on **7ce4a9630**, diff only (`git diff 2d85215f3..7ce4a9630`). It covers my 4 Majors, the breaker's 5 (`break-report.md`), and the tech lead's request (#1068, 6651254531) to try to break the step-finding by data path. Date: 5 Nov 2026. US$0, live AI off. My own copies ran on :4456 and :4457, never :4400, and are stopped.
+The reviewer agent did not build this. This file holds three rounds, two merge checks and a CI-fix check. Round 1 was on 2d85215f3 (`git diff d68a8b79a..2d85215f3`; B86 #1053 is the base). Round 2 was on **7ce4a9630**, diff only (`git diff 2d85215f3..7ce4a9630`). It covers my 4 Majors, the breaker's 5 (`break-report.md`), and the tech lead's request (#1068, 6651254531) to try to break the step-finding by data path. Date: 5 Nov 2026. US$0, live AI off. My own copies ran on :4456 and :4457, never :4400, and are stopped.
+
+## C4.11 stack merge (45029ba75, #1053's fe53126b0 holding #1036 at dd7ede212): **Ship**. **Verdict: Approve** (no open Blocker or Major)
+Scope (Lead 13): the 5 conflict resolutions and B88's a5aa5d657; B86's and B83's own changes are reviewed on #1053 and #1036.
+* **a5aa5d657:** a returned ask now says "Ask it again … ask the Yes/No as its deciding question again", which closes my merge-check Minor. The comment in `diff()` is one sentence again (nit closed). No code change.
+* **`api/src/own-yes-no.ts` and `samples/own-yes-no.json`:** P-319 is kept. #1036's only change to this module was adding `OWN_YES_NO_NEAR` (checked against its own base). It is now `TABLE.near`, word for word. The parsed `combinations` and `reason` equal a5aa5d657's; the JSON is only reformatted. Its two users (`acceptance/lib/pack2.ts`, `api/src/demo.ts`) import names that exist, and nothing imports the removed `IMM5257_YES_NO`.
+* **`listAll`:** B86's HIDE questions are added next to B88's asked ones, in the same one request; the rest of the function is untouched.
+* **`api/src/review-queue.ts`:** B88's ask line now ends in B86's style, "Also: <spread>" and "Reason:". The `back` note and the "Open or withdraw" next step are B83's.
+* **`web/src/pages/review-items.tsx`:** B88's ask rows are kept. The footer has its own words for an ask and for an ask's Undo. The "Withdrawn" chip (from the stack) also ends the old "Released" label on a withdrawn change. `Withdraw`'s new readers call returns nothing for a form-field change (`screen02.ts:165`), so a returned ask still withdraws cleanly.
+* **`tests/lib/forms-b86-setup.ts`:** B86's version; only its comment differs.
+* **Re-run on 82af17110** (= 45029ba75 plus one screenshot), fresh copies :4456/:4457, all exit 0: `check_forms_b88_spread` 36/36, `check_forms_b88_panel_browser` 47/47, `check_b52_own_yes_no` 66/66 (reads the merged table); `check_forms_b88_fill` 34/34, `check_forms_b86_fill` 35/35, `check_qa165_mandatory` 40/40; web tsc clean; api tsc errors only in the same 5 old test files as before, none touched. Not re-run by me (builder, exit 0): B86's door and browser checks, the C4.11 acceptance packs, and `check_c38_completeness_api`.
+* Still listed: R2-m1, R2-m3. No new finding.
 
 ## CI fixes (eb4b1d23a, `git diff 792a421bd..eb4b1d23a`): **Ship**. **Verdict: Approve** (no open Blocker or Major)
 * **97ff2e531 (tests only):** the two setup scripts moved to `tests/lib/forms-b8{6,8}-setup.ts`, with the same content apart from import paths and a comment, so run-suites no longer runs them alone. No stale reference to the old names is left. On a fresh copy, the B88 browser check runs through the moved setup: 47/47.
@@ -82,4 +93,4 @@ D2 Data integrity 4 (records now true; R2-M1 on the sample path) · D5 Stability
 
 Journey test: `journey-test-reviewer-2026-11-05.md`: round 1 **7/10**, round 2 **8½/10**, round 3 **9/10** (correct data 1 once R2-M1 is fixed; passes, no criterion at 0).
 
-Round 2 ended on **Block** (R2-M1); round 3 closes it. **Verdict: Approve** on 9527f905f, on the merge **2d2ec8d3a**, and on **eb4b1d23a**.
+Round 2 ended on **Block** (R2-M1); round 3 closes it. **Verdict: Approve** on 9527f905f, on the merge **2d2ec8d3a**, on **eb4b1d23a**, and on the stack merge **45029ba75**.
