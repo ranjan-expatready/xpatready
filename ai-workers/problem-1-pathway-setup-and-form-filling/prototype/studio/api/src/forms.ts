@@ -12,7 +12,7 @@ import { Prisma, type FormEdition } from "@prisma/client";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, SetAccount, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
 import { acceptsOf, allowedChannels, channelProblems, channelsView, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { compareEditions } from "../../engine/programs.ts";
-import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
+import { draftOptionMap, hasCodes, optionMapProblems, pdfOptions, type FormOption, type OptionMap } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { normLabel } from "../../engine/twin.ts";
 import { Sources } from "./sources.ts";
@@ -242,6 +242,24 @@ export class Forms {
     }
     await this.audit.log(ed.workspaceId, actor.id, "drafted", "option maps", ed.editionLabel, `${actor.name} drafted ${out.length} option map${out.length === 1 ? "" : "s"} of ${ed.editionLabel} without AI (${out.filter((o) => o.unmatched.length).length} with values left for a person)`);
     return { edition: ed.editionLabel, channel: ed.channel, option_maps: out };
+  }
+
+  /** What Submit would list for one PDF edition's option maps if its form were filed, as drafted by code and read only:
+   *  nothing is saved (C10.1 row 9, a waiting row that leaves the draft as it is). The same rule as engine/channels.ts. */
+  async optionMapProblemsIfFiled(editionId: string) {
+    const ed = await this.pdfEdition(editionId);
+    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
+    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
+    const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
+    const optionsOf = this.formOptions(ed, maps);
+    return maps.flatMap((m) => {
+      const list = m.outcome === "mapped" && m.canonicalFieldKey ? lists.get(lib.get(m.canonicalFieldKey)?.answerListKey ?? "") : undefined;
+      if (!list) return [];
+      const opts = optionsOf.get(m.dataPath), values = list.values.map((v) => ({ key: v.valueKey, label: v.label }));
+      const map = opts?.length ? draftOptionMap(values, opts).optionMap : m.optionMap as OptionMap | null;
+      if (!map && !hasCodes(m.transform)) return [];
+      return optionMapProblems(values.map((v) => v.key), map).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
+    });
   }
 
   /** A person sets or corrects one form field's option map (the drafted one left a value or a code open). Every value
