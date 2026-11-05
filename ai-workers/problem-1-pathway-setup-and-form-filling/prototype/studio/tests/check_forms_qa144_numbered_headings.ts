@@ -9,6 +9,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { draftFromInventory, headingsFor, type PartHeadings } from "../api/src/form-masters.ts";
+import { problemWords } from "../contracts/programs.ts";
+import { channelProblems } from "../engine/channels.ts";
 
 const SOLUTION = join(import.meta.dirname, "..", "..", "..");
 let pass = 0, fail = 0;
@@ -51,6 +53,14 @@ const groupedElsewhere = others.filter((f) => { const h = inventory(f).headings 
 ok("QA-144 slice 4 fail-guard: no other form's headings carry a numbered group", groupedElsewhere.length === 0, groupedElsewhere);
 const wrapped = others.filter((f) => inventory(f).fields.some((x) => x.data_path && (x.section ?? "").startsWith("#")));
 ok("QA-144 slice 4 fail-guard: no other form puts its pages inside an unnamed wrapper", wrapped.length === 0, wrapped);
+
+// The one refusal left on Express Entry (an option map with no code for a list value) is said by its form, never by the
+// form field's PDF path (S5; C10.1 "says why for a person (no field codes …)"): its label is the form edition.
+const snap = (caption?: string) => ({ combination: {}, forms: [], canonical_fields: [{ id: "person.marital_status", answer_list: { key: "marital_status", values: [{ key: "single", label: "Single" }, { key: "unknown", label: "Unknown" }] } }],
+  field_maps: [{ form_number: "IMM 0008 DEP", form_edition: "IMM 0008 DEP (10-2024)", entries: [{ data_path: "form1[0].Page1[0].AddDependant[0].MaritalStatus[0]", ...(caption ? { caption } : {}), outcome: "mapped", fact: "person.marital_status", transform: "option_map", option_map: { map: { single: "02" }, unused: [], codes: ["02"] } }] }] }) as never;
+const said = channelProblems(snap("a) Your current marital status")).filter((p) => /no code for "unknown"/.test(p.message));
+ok("QA-144 slice 4 pass: an option map's missing code is said by its form and the field's caption", said.length === 1 && problemWords(said[0] as never) === 'IMM 0008 DEP (10-2024): a) Your current marital status (person.marital_status): no code for "unknown" (filling would refuse it).', said.map((p) => problemWords(p as never)));
+ok("QA-144 slice 4 fail: its words never carry the form field's PDF path", said.every((p) => !/\[0\]/.test(problemWords(p as never))) && said.every((p) => p.item === "form1[0].Page1[0].AddDependant[0].MaritalStatus[0]"), said.map((p) => [p.item, problemWords(p as never)]));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exitCode = fail ? 1 : 0;
