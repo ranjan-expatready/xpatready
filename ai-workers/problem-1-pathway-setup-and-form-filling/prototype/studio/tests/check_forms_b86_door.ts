@@ -3,14 +3,11 @@
 // question. The rule's refusals stay. Saved answers only: US$0, live AI off, the ledger unchanged. All conditions are Sample.
 //   zsh studio/tools/isolated.sh forms_b86 4451 start && tsx studio/tests/check_forms_b86_door.ts 4451 xr_studio_forms_b86
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { APPROVER, AUTHOR, pack2, REVIEWER, run } from "../acceptance/lib/pack2.ts";
 
 const T = pack2("B86");
 const { call, sql, ok, words, until } = T;
-const LISTS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "p2", "question-lists"), LIST = "vv.single-ae2133b8a398";
+const LIST = "vv.single-ae2133b8a398";
 const STEPS = ["facts", "documents", "document_facts", "comes_from", "conditions", "pqr_picks", "checker"], AI = new Set(["documents", "conditions", "pqr_picks", "checker"]);
 const NAME = "person.other_family_name", GIVEN = "person.other_given_names", GATE = "person.has_used_other_name";
 const FIELDS = (vv: string, fact: string, item?: string) => `/combinations/${vv}/questions/${encodeURIComponent(fact)}/form-fields${item ? `?item=${item}` : ""}`;
@@ -32,16 +29,18 @@ run(async () => {
   };
   const changes = () => sql(`select count(*) from library_change where kind='form_field_condition'`);
   const ruleOf = (id: string, path: string) => sql(`select coalesce(condition_rule::text,'') from form_field_map where form_edition_id='${id}' and data_path='${path.replace(/'/g, "''")}' order by version desc limit 1`);
+  // The draft's errors are what Submit refuses on; until B82 is on main Submit on the six stops earlier, for other reasons (QA-233).
   const hiding = async (fact: string) => {
-    const r = await call("POST", `/combinations/${vv}/submit`, { note: "B86" }, AUTHOR);
-    const errors = (r.body?.errors ?? []) as { item?: string; message?: string }[];
-    return { status: r.status, lines: errors.filter((e) => e.item === fact && /^Hiding a value a form reads/.test(e.message ?? "")).map((e) => e.message ?? "") };
+    const errors = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as { item?: string; message?: string; level?: string }[];
+    return { lines: errors.filter((e) => e.level === "error" && e.item === fact && /^Hiding a value a form reads/.test(e.message ?? "")).map((e) => e.message ?? "") };
   };
   const approve = (id: string, by = APPROVER) => call("POST", `/library/changes/${id}/approve`, { note: "Checked against the form's words by a test (B86)." }, by);
 
   // ---------------------------------------------------------------- Done when 7: the saved list
   await saved();
-  ok(`Done when 7 pass: the people's-steps question list is ${LIST}, so the saved pairs still replay`, existsSync(LISTS) && readdirSync(LISTS).some((f) => f.startsWith(LIST)), existsSync(LISTS) ? readdirSync(LISTS).filter((f) => f.startsWith("vv")) : []);
+  const listFile = (await call("POST", `/combinations/${vv}/pqr-picks/plan`, { mode: "replay" }, AUTHOR)).body?.guide?.questions as string | null;
+  console.log(`LIST ${listFile}`);
+  ok(`Done when 7 pass: the people's-steps question list is exactly ${LIST}, so the saved pairs still replay`, listFile === `prototype/p2/question-lists/${LIST}.questions.json`, listFile);
   const item = itemOf(NAME);
   ok("setup: the saved pair proposes the condition on Other family name, held at Check by the form", !!item && bandOf(NAME) === "check", bandOf(NAME));
 
@@ -78,7 +77,7 @@ run(async () => {
   const cond = sql(`select id from library_change where kind='placement_condition' and key='${GIVEN}' and status='WAITING'`);
   ok("setup: a second person approves it", (await approve(cond)).status < 300);
   let h = await hiding(GIVEN);
-  ok("Done when 2 fail: approved, not confirmed: Submit refuses, in the rule's words", h.status === 400 && h.lines.length === 1 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(h.lines[0]), h);
+  ok("Done when 2 fail: approved, not confirmed: the draft's error, in the rule's words", h.lines.length === 1 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(h.lines[0]), h);
 
   // ---------------------------------------------------------------- the way out on Review and release (no card any more)
   r = await call("GET", FIELDS(vv, GIVEN), undefined, AUTHOR);
@@ -95,7 +94,9 @@ run(async () => {
   ok("BR-3 pass: a second person approves", (await approve(gc)).status < 300 && ruleOf(g.form_edition_id, g.data_path).includes(GATE), ruleOf(g.form_edition_id, g.data_path));
   ok("Done when 6 pass: the form field's words are kept as they were", sql(`select condition from form_field_map where form_edition_id='${g.form_edition_id}' and data_path='${g.data_path.replace(/'/g, "''")}' order by version desc limit 1`).includes("one name only on the form"));
   h = await hiding(GIVEN);
-  ok("Done when 1 pass: Submit's errors no longer hold \"Hiding a value\" for that question", h.lines.length === 0, h);
+  ok("Done when 1 pass: the draft's errors no longer hold \"Hiding a value\" for that question", h.lines.length === 0, h);
+  r = await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR);
+  ok("BR-7 pass: Review and release's one request still lists a confirmed form field, with its Undo", (r.body?.questions ?? []).some((q: { fact: string; rows: { state: string; can_undo: boolean }[] }) => q.fact === GIVEN && q.rows.some((x) => x.state === "confirmed" && x.can_undo)), r.body?.questions?.map((q: { fact: string }) => q.fact));
   r = await call("GET", FIELDS(vv, GIVEN), undefined, AUTHOR);
   ok("the row now reads Confirmed, with Undo", r.body.rows[0].state === "confirmed" && r.body.rows[0].can_undo === true && !r.body.rows[0].can_confirm, r.body.rows[0]);
 

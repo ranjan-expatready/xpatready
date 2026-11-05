@@ -6,6 +6,7 @@
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import { Prisma, type LibraryChange } from "@prisma/client";
 import { z } from "zod";
+import type { FormFieldRow, FormFieldState, FormFieldsOfCombination, FormFieldsOfQuestion } from "../../contracts/form-field-conditions.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { isWorkedOutYesNo, plainWords, showCondition, whenWords } from "../../engine/form-field-condition.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
@@ -16,14 +17,13 @@ import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Acto
 export const FORM_FIELD_KIND = "form_field_condition", FORM_FIELD_ACTION = "SET_FORM_FIELD_CONDITION";
 /** BR-7: an approved change never blocks a new one, so a mistake can be undone before any release. */
 const BLOCKING = ["WAITING", "RETURNED"];
-type Client = Pick<Db, "formFieldMap" | "combination" | "combinationForm" | "sectionQuestion">;
+type Client = Pick<Prisma.TransactionClient, "formFieldMap" | "combination" | "combinationForm" | "sectionQuestion">;
 const problem = (status: number, title: string, detail: string) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const sameCondition = (a: unknown, b: unknown) => bareCond(a) !== null && bareCond(a) === bareCond(b);
 const keyOf = (formEditionId: string, dataPath: string) => `${formEditionId}:${dataPath}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-export type FormFieldState = "not_confirmed" | "waiting" | "returned" | "confirmed" | "different" | "no_words" | "worked_out";
 const NO_WORDS = "This form field's map has no words about when it is filled, so nothing says it is conditional, and it cannot be confirmed. This combination stays held until the form can carry the condition, or the condition is removed.";
 const WORKED_OUT = "This Yes/No is worked out from other answers and must write No when the answer is No, so it cannot be filled only under this condition. This combination stays held until the form can carry the condition, or the condition is removed.";
 
@@ -104,7 +104,7 @@ export class FormFieldConditions {
   }
 
   /** The form fields of this combination's forms that read the answer, each with its own words (every edition, as the rule). */
-  private async rowsOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, tree: unknown) {
+  private async rowsOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, tree: unknown): Promise<FormFieldRow[]> {
     const maps = (s.field_maps as { form_number: string; form_edition: string; entries: { data_path: string; caption?: string | null; outcome?: string; fact?: string | null; condition?: string | null; transform?: string | null; condition_rule?: unknown }[] }[]).filter((m) => m.entries.some((e) => e.fact === fact && e.outcome === "mapped"));
     const eds = await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: maps.map((m) => m.form_edition) } }, select: { id: true, editionLabel: true, form: { select: { formKey: true } } } });
     const open = await this.db.libraryChange.findMany({ where: { workspaceId, kind: FORM_FIELD_KIND, status: { in: BLOCKING } }, select: { id: true, key: true, status: true } });
@@ -122,7 +122,25 @@ export class FormFieldConditions {
     }));
   }
 
-  async list(combinationId: string, fact: string, item?: string) {
+  /** Review and release's one request: every question of this combination with a SHOW condition that a form reads, or read
+   *  by a form field holding a condition. */
+  async listAll(combinationId: string): Promise<FormFieldsOfCombination> {
+    const workspaceId = await this.ws.id();
+    const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
+    if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
+    const { snapshot: s } = await buildSnapshot(this.db, workspaceId, combinationId, "draft");
+    const entries = (s.field_maps as { entries: { fact?: string | null; outcome?: string; condition_rule?: unknown }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.fact));
+    const facts = [...new Set(entries.filter((e) => e.condition_rule || showCondition(s.placements as never, e.fact!)).map((e) => e.fact!))].sort();
+    const questions: FormFieldsOfQuestion[] = [];
+    for (const fact of facts) {
+      const cond = await this.conditionOf(workspaceId, combinationId, fact, s);
+      const spread = cond.tree ? await spreadOf(this.db, workspaceId, fact, cond.tree, combinationId) : null;
+      questions.push({ fact, question: factWords(s, fact), sentence: cond.sentence, why: cond.why, rows: await this.rowsOf(workspaceId, combinationId, fact, s, cond.tree), spread: spread?.words ?? null });
+    }
+    return { questions };
+  }
+
+  async list(combinationId: string, fact: string, item?: string): Promise<FormFieldsOfQuestion> {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
@@ -171,6 +189,7 @@ export class FormFieldConditions {
 @Controller("api")
 export class FormFieldConditionsController {
   constructor(@Inject(FormFieldConditions) private readonly f: FormFieldConditions) {}
+  @Get("combinations/:id/form-field-conditions") listAll(@Headers("x-actor") a: string | undefined, @Param("id") id: string) { readerOf(a); return this.f.listAll(id); }
   @Get("combinations/:id/questions/:fact/form-fields") list(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Param("fact") fact: string, @Query("item") item?: string) { readerOf(a); return this.f.list(id, fact, item); }
   @Post("library/form-field-conditions") propose(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.f.propose(actorOf(a), b); }
 }

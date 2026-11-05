@@ -39,7 +39,8 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   const rules = rulesInForce(s, form, cov.edition);
   const subjectOf = (about: string) => (about === "case" ? "case" : about.split("/")[0]);
   // BR-5b: an answer whose question a SHOW condition now hides is "kept and not used" (the screen's own words), so it does
-  // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165.
+  // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165, and so does a box reading the hidden answer
+  // itself (it would write Y from it).
   const hiddenNow = (about: string, fact: string) => { const own = showCondition(placements, fact); return !!own && evalCondition(s, known, own, subjectOf(about)).applies !== true; };
   const boxes = cov.boxes.map((b) => {
     const rule = b.about ? rules.get(b.box) : undefined;
@@ -52,7 +53,7 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` };
     // A confirmed No to the gate with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
     // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
-    const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && !hiddenNow(b.about!, f) && present(confirmedAt(b.about!, f)?.value));
+    const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && (f === b.fact || !hiddenNow(b.about!, f)) && present(confirmedAt(b.about!, f)?.value));
     const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false && recorded(g)) : undefined;
     return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them, then confirm, before this is written` } : b;
   });
