@@ -68,7 +68,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
     && n(`select count(*) from proposal_item p join logical_section s on s.section_key = p.decided_key where ${namedWhere.replace(/\b(kind|work)\b/g, "p.$1")} and p.status = 'edited' and p.decided_by = 'user-A' and lower(s.title) = lower(p.payload->>'label')`) === 29, { namedByPerson });
   ok("B78 AGENTS rule 4: every section a person named carries its source on the decision (the form's words and page, or Unconfirmed: expert)", n(`select count(*) from proposal_item where ${namedWhere} and status = 'edited' and coalesce(decision_reason, '') !~ '\\(Sample(, Unconfirmed: expert)?\\)'`) === 0);
   // Review M1: naming decides where the questions are asked: a fact whose first form field is in a named part sits in that
-  // section, not the nearest other one (on main "Coming into Canada" and "Indicate whether you are" held none). A fact is
+  // section, not the nearest other one (before this fix "Coming into Canada" and "Indicate whether you are" held none). A fact is
   // asked once, in the section of the first form that reads it, so a named section may hold none (the line below lists them).
   const asked = (title: string) => n(`select count(*) from section_question q join logical_section s on s.section_key = q.section_key where s.title = '${title}'`);
   const emptyNamed = sql(`select string_agg(distinct s.title, ', ') from proposal_item p join logical_section s on s.section_key = p.decided_key where ${namedWhere.replace(/\b(kind|work)\b/g, "p.$1")} and p.status = 'edited' and not exists (select 1 from section_question q where q.section_key = s.section_key)`);
