@@ -146,6 +146,11 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B85 Question order | placement puts a Yes/No after its details; a client meets the details first. Follow-up of B83 | P-345 (5) |
 | B86 Accepting a condition is a dead end (QA-237, Major, C4.11) | a form field's condition is free text, so the guard can never be met; concept first, migration, breaker; brief on #1037 comment 6647303529. Owner: `local_a4308bc5` | P-345 (6) |
 | B87 Checker-unresolved item never Ready (QA-238, Minor, C4.7) | `engine/pqr-picks.ts:102` reads `unresolved`; after it G5 still has 5 Ready; replay byte-equal. No owner yet | P-345 (9) |
+| B88 A condition holds other combinations (C4.11, M2 end to end) | an approved condition leaves other combinations Unreachable with removal the only way out; the worked-out Yes/No form fields and deciding questions on the other forms; qa logs the bug and rules for C4.11. After B86. No owner yet | P-346 (2) |
+| B89 Answer values for the 23 `code` fields | cited values from the forms (AGENTS rule 4); adds conditions that use B86's door. After B86. No owner yet | P-346 (2) |
+| B90 `married` on IMM 5645's Applicant and Spouse | one list value against two printed choices; off the map until the immigration expert answers; the expert's question. No owner yet | P-346 (4) |
+| B91 The sponsor's partner is the principal | on a combination with a sponsor, IMM 1344 and IMM 5532 read the sponsored spouse through the sponsor; 76 form fields resolve to nobody today, and the release check cannot see it; Sample, Unconfirmed: expert; with a fail test. No owner yet | P-346 (7) |
+| B92 "The sponsor" holder on document lines | status in Canada, income proof, IMM 5533 Part B. No owner yet | P-346 (7) |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |

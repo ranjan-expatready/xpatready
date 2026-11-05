@@ -11,16 +11,17 @@ updated: 2026-11-05 08:53 IST by **Lead 10 · 5 Nov 02:31 IST (ended)** at about
 | Row | Session | Where | Next |
 |---|---|---|---|
 | B83 C4.11 | `local_6c0fdf86` | Mac, draft #1036 | Blocker + 9 Majors, breaker re-check, list id ae2133 twice, label |
-| B86 C4.11 | `local_a4308bc5` | Mac | concept + challenge; tech lead approves; migration, breaker |
-| B82 QA-233 | `local_b132d166` | Mac | local suites, PR, review |
+| B86 C4.11 | `local_a4308bc5` | Mac, #1053 | concept approved 09:07 IST (P-346 (1)); migration, breaker; label after B83, B82 |
+| B82 QA-233 | `local_b132d166` | Mac, #1058 | CI, review |
 | #1009 C10.1 | `local_b4bc646d` | Mac | CI at ab16c2cea; "ready" then the tech lead labels |
-| B81 C10.1 | standby A `local_d798901d` | Mac, `claude/forms-b81-not-on-form` | building |
+| B81 C10.1 | standby A `local_d798901d` | Mac, #1057 | concept approved (P-346 (4)); screen part |
 | B78 C10.1 | standby B `local_c2bbbd2c` | Mac, `claude/screens-b78-section-names` | merges main after #1009 |
 | B79a Express Entry | cloud, #1050 | | after #1009 and B78 on demo.ts |
 | B79b Family sponsorship | cloud, #1052 | | after B79a on demo.ts |
-| C3.16 M3 | cloud | no PR seen yet | concept; tech lead approves on its PR |
-| C1.3 + C11.5 M3 | cloud, #1051 | | concept; tech lead approves on its PR |
-| C11.6 M3 | cloud | no PR seen yet | build what is red |
+| C3.16 M3 | cloud, #1054 | | r4 approved (P-346 (5)); building, claims Partial |
+| C1.3 + C11.5 M3 | cloud, #1051 | | concept approved (P-346 (3)); building |
+| C11.6 M3 | cloud, #1056 | | built, 14/14 + browser 37/37; review next |
+| B84 C7.7 | standby C `local_34312f65` | Mac | started 09:07 IST; then B87 |
 | qa lane | `local_7bb326e9` | Mac | gate A, re-scores, M3 re-score once; sole writer of CAPABILITIES and BUGS |
 **demo.ts order:** #1009 → B78 → B79a → B79b. Ends after its PR merges: paid runner `local_0c6484d1` and Lead 1 can be archived now #1040 has merged.
 
