@@ -70,3 +70,39 @@ export function plainWords(words: string, entries: Entry[], labelOf: (fact: stri
   });
   return { text, names };
 }
+
+/** B88 (QA-239, BR-1): the deciding question of a condition "X is Yes" (`eq … true` on one field); null for any other shape
+ *  (No, a value, all/any), which this door does not take. */
+export function decidingYes(tree: unknown): string | null {
+  const r = tree as { op?: string; field?: unknown; value?: unknown } | null;
+  return r?.op === "eq" && typeof r.field === "string" && r.value === true ? r.field : null;
+}
+
+/** B88 (BR-2, BR-4): a Yes/No form field's own codes, read from its options in the form's reading ("*No" = N, "* Yes" = Y);
+ *  null unless exactly one option says Yes and one says No. Its step is then "yes_no_code:<Yes>/<No>", the shape the filler
+ *  runs (p5/transforms.ts) and IMM 0008's own map of the same question has. */
+export function yesNoStep(options: unknown): string | null {
+  const pairs = Array.isArray(options) ? options.filter((o): o is [string, string] => Array.isArray(o) && o.length === 2 && typeof o[0] === "string" && typeof o[1] === "string") : [];
+  const says = (re: RegExp) => pairs.filter(([l]) => re.test(l.replace(/^[\s*]+/, "").trim()));
+  const yes = says(/^yes$/i), no = says(/^no$/i);
+  return yes.length === 1 && no.length === 1 && yes[0][1] && no[0][1] && !/[/:;]/.test(yes[0][1] + no[0][1]) ? `yes_no_code:${yes[0][1]}/${no[0][1]}` : null;
+}
+
+/** B88 (challenge M1, QA-165): the details a Yes/No vouches for: the facts of the other mapped form fields in its own printed
+ *  block, found by its data path only (never by reading words). From the Yes/No's parent upward, the first part of the path
+ *  that holds other mapped form fields (IMM 1294 "…AliasName[0]": the other family and given names; "…natID[0]": the
+ *  document's number, country and dates), never above a page or part. Empty when none: the door then refuses. */
+export function blockFacts(entries: Entry[], dataPath: string, deciding: string): string[] {
+  const segs = dataPath.split(".");
+  for (let n = segs.length - 1; n >= 2; n--) {
+    if (/^(?:page|part)\d+\[\d+\]$/i.test(segs[n - 1]) || /^(?:page|part)\d+\[\d+\]$/i.test(segs[n])) break; // review R2-m2: page1[0] too
+    const prefix = `${segs.slice(0, n).join(".")}.`;
+    const facts = [...new Set(entries.filter((e) => e.outcome === "mapped" && e.fact && e.fact !== deciding && e.data_path !== dataPath && e.data_path.startsWith(prefix)).map((e) => e.fact!))].sort();
+    if (facts.length) return facts;
+  }
+  return [];
+}
+
+/** B88 BR-4: the step a worked-out Yes/No gets when it asks its deciding question, in B52's shape (IMM 5257's), so the filler
+ *  writes the person's own Yes or No and QA-165 still never writes No while one of these details is recorded. */
+export const askedStep = (facts: string[], codes: string) => `derived:any(${facts.join(", ")}) recorded -> ${codes}`;

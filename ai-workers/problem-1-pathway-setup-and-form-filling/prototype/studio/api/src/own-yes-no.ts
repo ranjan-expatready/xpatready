@@ -1,6 +1,8 @@
 // B52 (P-334 (5)): the forms' Yes/No form fields asked as their own questions, in the forms' own words, and how a
 // box's printed question is read. No Nest decorators here: the acceptance packs (acceptance/lib/pack2.ts) import it
 // with plain tsx, as the checkpoint (api/src/demo.ts FORM_SETUP) and the route (api/src/own-question.ts) do.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 export type Box = { data_path?: string; heading?: string | null; caption?: string | null; options?: [string, string][] };
 /** The form's printed question for a Yes/No box (P-170: never words that are not its question): the reading's heading
@@ -14,22 +16,16 @@ export function printedQuestion(b: Box | undefined): string | null {
   return asks(heading) ? heading : asks(caption) ? caption : null;
 }
 
-/** B52 (P-334 (5)): IMM 5257's three Yes/No form fields worked out from other answers, each asked as its own question
- *  (api/src/own-question.ts), so the shared placement step asks them and C4.11's conditions land on them. The words are
- *  the form's: IMM 5257 (09-2023) p. 1 Question 2 A "Have you ever used any other name such as a nickname, maiden name
- *  or alias?"; p. 2 "Do you have a national identity document?"; p. 2 "Are you a lawful Permanent Resident of the United
- *  States with a valid alien registration card (green card)?". The library field of the same name is used when there is
- *  one (IMM 0008's and IMM 1294's field maps name them so). Sample, Unconfirmed: expert. */
+/** B52 (P-334 (5)): an application form's Yes/No form fields worked out from other answers, each asked as its own question
+ *  (api/src/own-question.ts), so the shared placement step asks them and C4.11's conditions land on them. B88 (P-319): the
+ *  table is data, studio/samples/own-yes-no.json, with each box's words and the form's own question it quotes (Sample,
+ *  Unconfirmed: expert); no combination or form number is in code. */
 export type OwnYesNo = { dataPath: string; label: string; meaning: string };
-export const IMM5257_YES_NO: OwnYesNo[] = [
-  { dataPath: "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", label: "Has used other name", meaning: "Whether the person has ever used any other name, such as a nickname, maiden name or alias (IMM 5257 p. 1, Question 2 A)." },
-  { dataPath: "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", label: "Has national ID", meaning: "Whether the person has a national identity document (IMM 5257 p. 2, National identity document, Question 1)." },
-  { dataPath: "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]", label: "US permanent resident", meaning: "Whether the person is a lawful permanent resident of the United States with a valid alien registration card (green card) (IMM 5257 p. 2, US PR card, Question 1)." },
-];
-export const OWN_YES_NO_NEAR = "The form's own Yes/No question, not the detail it leads to (sample loader, B52; Sample)";
-export const OWN_YES_NO_REASON = "The form asks this Yes/No itself before its details: asked as its own question in the form's words (sample loader, B52; Sample)";
+type Table = { reason: string; near: string; combinations: Record<string, { application: string; boxes: OwnYesNo[] }> };
+const TABLE = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "own-yes-no.json"), "utf8")) as Table;
+export const OWN_YES_NO_REASON = TABLE.reason;
+/** #1036 (B83): the words for asking a form's own Yes/No question rather than the detail it leads to (sample loader). */
+export const OWN_YES_NO_NEAR = TABLE.near;
 /** Per combination: the application form whose Yes/No form fields are asked as their own questions. The checkpoint's
- *  table (api/src/demo.ts FORM_SETUP) reads its boxes from here, so the packs and the checkpoint ask the same ones. */
-export const OWN_YES_NO: Record<string, { application: string; boxes: OwnYesNo[] }> = {
-  "vv.single": { application: "IMM 5257", boxes: IMM5257_YES_NO },
-};
+ *  table (api/src/form-setup.ts FORM_SETUP) reads its boxes from here, so the packs and the checkpoint ask the same ones. */
+export const OWN_YES_NO: Record<string, { application: string; boxes: OwnYesNo[] }> = TABLE.combinations;

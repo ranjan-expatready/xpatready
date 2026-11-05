@@ -102,7 +102,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.waitForSelector("[data-form-fields-held]", { timeout: 60_000 });
   await p.locator("[data-form-fields-held] summary").click();
   await check("Review and release, a form field holding a condition", "[data-form-fields-held]", "held");
-  const undo = p.locator(`[data-form-fields-held] ${under}`).getByRole("button", { name: /Take the condition off/ });
+  const undo = p.locator(`[data-form-fields-held] ${under}`).getByRole("button", { name: /take the condition off/i }); // B88 (WCAG 2.5.3): the name starts with its visible "Undo:"
   step("BR-7 pass (review M1): once approved, Undo is on the screen", await undo.count() === 1);
   await undo.focus(); await p.keyboard.press("Enter");
   await p.locator(`[data-form-fields-held] ${under} [data-state="waiting"]`).waitFor({ timeout: 60_000 });
