@@ -200,3 +200,56 @@ D13 4 (builder's axe; R3-m9) · D16 3 (R3-M3; suites unfinished) · D4 and D11 d
 **7.5/10, provisional, not a walked score.** Nothing was walked by me under the tech lead's rule and no journey report was written, so the skill's visible-browser walk is still outstanding. Task completed 1 (builder's walk 26/26) · next step 1 · plain words 1 · feedback 1 · correct data ½ (R3-M1, R3-M2) · error recovery ½ (R3-M1) · accessibility 1 (builder's axe) · speed ½ (Minor 3) · visual ½ · trust ½ (R3-M2's pill).
 
 **Verdict: Block (changes needed).** To fix: R3-M1 (`form-choices.tsx:70,84`, with its browser step), R3-M2 (`engine/channels.ts:139` or `engine/validate.ts:131`, with a test through `channelProblems`), R3-M3 (one routes step and one browser step). The next check needs only that diff, the suites' result at its head, and the walk's count. The Minors do not hold the merge. Do not label `review: approved` at cb307b831.
+
+## Round 4 (diff only) — commit 137efd813 (5 Nov 2026; read-only, US$0)
+
+**Verdict at this commit: Approve.** R3-M1, R3-M2 and R3-M3 are fixed. I found no Blocker or Major in this diff. One older defect needs the tech lead's decision, and it does not hold this merge: "filled by hand on To review" cannot be done on a mapped form field (R4-m1). Paths are under `prototype/studio/` unless stated.
+
+**Read:** Round 3, `git diff cb307b831 137efd813`, the code that diff calls, and GitHub's logs.
+**Ran:** one read-only script (`tsx`) that calls `engine/options.ts` on the 22 committed PDF inventories in `p1/inventory`. It used no database, server, browser or suite.
+**Not run (the tech lead's rule):** no test copy, browser or suite. No walk, no axe, no keyboard or screen-reader pass, no database read. So no real saved map or release row was seen, and every finding below comes from reading. The walk's 34/34 and the offline check's 41/41 are the builder's, taken as given. Live AI off, no priced button.
+
+**CI at head, read 06:18Z (11:48 IST), not finished.** Run 41978505792: kind **success**, Devin Review pass, types and shards 2 and 6 in progress, shards 1, 3, 4 and 5 pending. So I saw no result for types or for any suite at this head. This Approve does not replace green CI.
+
+### The Majors asked about
+| # | State | Evidence |
+|---|---|---|
+| R3-M1 A save overwrites someone else's change unseen | **Fixed** | `form-choices.tsx:70-71` moves the base revision only while the group is untouched, and `:85` sends that revision. Round 3's fail case now gets a 409 from the check in `writeOptionMaps`. Browser steps: `check_forms_b81_browser.cjs:81` (told, not overwritten) and `:84` (Look again). |
+| R3-M2 "Blocks release" and Submit passes it | **Fixed** | Submit: `engine/validate.ts:131` calls `askedChoiceProblems` (`engine/channels.ts:114`), and `api/src/studio.ts:473` reads `validate`. Fill: `engine/form-values.ts:45-46` returns "by hand" before any code is read. Tests: `check_forms_b81_not_on_form.ts:90,92`. The call at `validate.ts:131` has no test of its own (R4-m2). |
+| R3-M3 No test for break M3's rule or the view half of M5 | **Fixed** | Each of round 3's three removals now fails a check. Removing `\|\| g.problems.length > 0` fails the browser step at `:91`. Removing the second problems array or `!asksMore` in `choiceRows` fails `not_on_form.ts:81`. A pure test replaces the SQL row round 3 suggested, which is fine because `api/src/forms.ts:282` only calls `choiceRows`. |
+
+### What these fixes could have broken
+* **`askedChoiceProblems`: no new error found on data the sample loader builds; no real row read.**
+  * *Only an answer printed as two or more choices can trigger it: true.* `asksMore` (`engine/options.ts:106`) needs at least two printed choices that start with the value's words, and no choice equal to them. Only a key saved in `map`, on a mapped field of a non-Online map, is tested.
+  * *In the inventories:* for marital status, the only hit is "Married" on IMM 5645's two-Married choice set. The script tested every printed label against every printed choice set. Other hits were "Common-Law" and "Spouse" on IMM 1344's relationship choices, both true two-choice cases, and "French" against a country list, which is not a real pairing.
+  * *A new draft cannot create it.* For the marital list I used, no draft put a code on a value `asksMore` holds. No save route accepts one either.
+  * *Releases:* `validate` also reads released snapshots (`api/src/programs.ts:211,324`), so see R4-m3. The checkpoint's release 1 uses IMM 5707, which prints "Married" once; IMM 5645 has no option map there (`check_c10_1_configured.ts`, row 9). The imported c1-v3 files hold no `option_map`.
+* **Cost per validate: small today, with one limit (R4-m4).** No new file read: `inventoryFields` is cached per file and `oathMappedProblems` already reads the same inventories. A form's field list is indexed only when that form has a mapped field with an option map on a listed fact. Worst case I timed: one form field with a 474-value list on 474 choices took 94 ms, one cold run. Scaled by values times choices (not timed), a marital field is about 0.03 ms.
+* **`codeAsksMore`: only such a value is affected.** It returns null for a value not on the list, for empty or null, and for any value with an exact printed choice. Two results change, both for such a value only, and both still write nothing: a value with no code keeps "by hand" with better words, and a stale mark on one reads "by hand" instead of "not on this form". No test reads the old words for such a value (grep).
+* **IMM 1295 in `check_forms_channels.ts:308`: holds, by a pure call; the suite was not run.** Its box prints `Married=01`, and `codeAsksMore` gives null for both "married" and "Married", so `w1` stays written `01`. With `{ single: "02" }` the value goes on to `codeForValue`, so `w2` stays "by hand" with "option map" in its words.
+* **`choiceRows`: the same meaning.** `values` is the same expression. `problems` differs only by `listed` for `listed.map((v) => v)`, and nothing changes the array.
+* **`basedOn`: right at each step, by reading.**
+  * First save: 200, `touched` goes false, the refetch brings the new revision, and the effect moves `basedOn` and the picks together. The second save sends the new revision.
+  * A person who keeps saving after a 409 keeps getting 409; nothing is overwritten.
+  * Look again: `touched` goes false, and if the refetch has already landed, `:73` takes its values and revision. If it has not, the effect follows it when it lands.
+  * One small remainder: R4-m5.
+* **The group key holding `problems`: fine.** It closes R3-m2, because two fields with different stale problems now show apart. `hasCodes` left the key, which is safe: an unsaved field's `problems` already differ by it, and a saved field shows the same either way. Each group's revision still covers its own rows, and the React key is unchanged.
+* **Also closed:** R3-m3 (`forms.ts:263` passes the list). R3-m5's wrong sentence is gone (list keys in quotes remain). R3-m9 except the "Not saved" notice, which still has no axe run. `review.tsx:25` links the new message to the choices step.
+
+### Minors (none holds the merge)
+* **R4-m1 The stated fix is refused: for the tech lead to decide. Older than this diff, repeated at `engine/channels.ts:124`.** The new error says `Decide this form field "filled by hand" on To review`, as the row in the dialog and the refusal in `forms.ts` already did.
+  * Why it fails: the step lists only `outcome === "mapped"` fields, while `api/src/screen02.ts:53` refuses a mapped field with 409, and To review lists only undecided fields (`web/src/pages/job.tsx:258`). I found no other route that moves a mapped field to by hand (grep, not proven absent). No B81 check tries it.
+  * Fail case: on IMM 5645's Applicant box, a person follows the words and finds no button; posting the decision gets 409. Saving the group only turns "has a code" into "no code for Married", so the block stands.
+  * Reach: the new line needs a stale code, but the older words are on every draft with this box, including Visitor visa's release 2 (row 9). The block itself is right (`concept.md:16`). The wording, or the missing route, is not. Rounds 1 to 3 did not catch this. I do not hold this diff on it, because the defect is not new here and nothing wrong gets written. I would rate it Major for release 2 if the row is meant to be completable before the expert answers.
+* **R4-m2** `engine/validate.ts:131`: removing the call fails no check I can find, because the tests call `askedChoiceProblems` directly (grep). Same pattern as R3-m4, and row B97 can read both.
+* **R4-m3** `api/src/programs.ts:211,324`: an older release holding such a code would turn Not ready and refuse new cases (`api/src/runtime.ts:92`). No row I could read does this: the loader's list blocks Submit on IMM 5645, and I read no database. It matches `statusOf`, but the fill already refuses the code, so the tech lead may prefer to judge only the draft.
+* **R4-m4** `engine/channels.ts:121-123`: the work grows with values times choices for each mapped field. Scaling the timing above, a 474-value list linked on the 40 long-list form fields of IMM 0008 would add about 4 s per validate, and the Overview validates twice per row. No loader links such a list today. Fix if one is linked: read the printed choices once per form field.
+* **R4-m5** `form-choices.tsx:71,86`: a pick made after a save's 200 and before its refetch keeps the old base, so the same person gets a 409 naming themselves. It is safe and Look again recovers, but Look again drops that pick. The window is the refetch time.
+* **R4-m6** `api/src/forms.ts:147`, `api/src/workspace.ts:94`: the Forms tab reads `channelProblems` only, so it does not list this error. Submit and the dialog do.
+
+Earlier Minors stay as listed: R3-m1, m4, m6, m7, m8, m10.
+
+### Journey test (reviewer's, on paper only)
+**8.5/10, provisional, not a walked score.** Nothing was walked by me under the tech lead's rule and no journey report was written, so the skill's visible-browser walk is still outstanding. Task completed 1 (builder's walk 34/34) · next step ½ (R4-m1) · plain words 1 · feedback 1 · correct data 1 · error recovery 1 · accessibility 1 (builder's axe) · speed ½ (Minor 3) · visual ½ · trust 1.
+
+**Verdict: Approve** for commit 137efd813 only. No Blocker or Major in this diff; the merge still needs green CI at this head, which I did not see. The tech lead decides R4-m1.

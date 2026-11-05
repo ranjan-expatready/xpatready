@@ -246,24 +246,6 @@ export class Forms {
     return { edition: ed.editionLabel, channel: ed.channel, option_maps: out };
   }
 
-  /** What Submit would list for one PDF edition's option maps if its form were filed, as drafted by code and read only:
-   *  nothing is saved (C10.1 row 9, a waiting row that leaves the draft as it is). The same rule as engine/channels.ts. */
-  async optionMapProblemsIfFiled(editionId: string) {
-    const ed = await this.pdfEdition(editionId);
-    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
-    const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
-    const optionsOf = this.formOptions(ed, maps);
-    return maps.flatMap((m) => {
-      const list = m.outcome === "mapped" && m.canonicalFieldKey ? lists.get(lib.get(m.canonicalFieldKey)?.answerListKey ?? "") : undefined;
-      if (!list) return [];
-      const opts = optionsOf.get(m.dataPath), values = list.values.map((v) => ({ key: v.valueKey, label: v.label }));
-      const map = opts?.length ? draftOptionMap(values, opts, m.optionMap as OptionMap | null).optionMap : m.optionMap as OptionMap | null; // B81: a person's marks count
-      if (!map && !hasCodes(m.transform)) return [];
-      return optionMapProblems(values.map((v) => v.key), map, values).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
-    });
-  }
-
   /** B81: the option-map step of one PDF edition for a person: every form field on an answer list with its own printed
    *  choices, grouped when they print the same choices and read the same list. Reads only: an unsaved group shows what the
    *  rules suggest, and nothing is written until a person saves. */
