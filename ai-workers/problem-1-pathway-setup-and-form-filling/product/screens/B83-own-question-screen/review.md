@@ -1,3 +1,55 @@
+# B83 last pass: head 6701498dd4, diff since 4bcf2ae14b (independent reviewer, 5 Nov 2026, 13:20 IST)
+
+**Verdict: Block** (head 6701498dd4). V1 and M11 are closed and the product code added no Major. The one Major is a check this diff breaks: one regex, in a test. **Journey score: 9 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, US$0, nothing committed.
+
+## Major
+**V2. The row's own browser check cannot pass on this head (this diff; not a product defect).** `tests/check_b83_own_question_screen_browser.cjs:230`. By reading; not run.
+* **Cause:** 29ed06089 changed the Notice title to "This changed after it was proposed: decide what it does now" (`web/src/pages/review-items.tsx:114`). Line 230 still asks for `/Decide this again/`, case-sensitive, inside `[data-came-back]`. Nothing else in that box holds those words. The working tree has no fix.
+* **Effect:** `ok` counts a fail and `:334` exits 1. So `run-suites.sh --changed` exits non-zero (WAY-OF-WORKING step 3), and the PR's check goes red if it picks this suite, which globs `tests/check_*.cjs`. The commit at this head fixed an earlier stop in the same script (`:215-216`), so the last run I can see evidence of may never have reached line 230. That is inference: the walk's two changed pictures are dated 12:54 IST, before this head's 13:04.
+* **Why Major:** it is R1's screen-level fail test, a named test this diff turns red, and the PR cannot merge on it. The product words are right; only the test is stale.
+* **Fix:** `/changed after it was proposed/` at `:230`. Then run this browser check and the packs, which I have no result for on this head. Any push needs a new review and the label (step 5); a test-only regex is a seconds-long read.
+
+## The questions asked
+| | State | Evidence |
+|---|---|---|
+| V1 (M10) | **Closed** | `git diff origin/main 6701498dd4 -- api/src/rule-facts.ts`: only the import and `refuseTakingOverReaders` at `:181`. All five refusals are back, word for word and in main's order. Nothing lost. Breaker ran derived 409, non-key 400, retired 409, same name 409 on 29ed06089. Your `check_forms_c36_rule_facts` 42/42 on 778c8ec47 stands: no API or web file changed since (`git diff --stat`) |
+| M11 | **Closed** | `library-changes.ts:316` restores origin, confidence, words and reason through `whatAskReplaced` (`:217`), the same function undo uses (`own-question.ts:212`). `whatAskReplaced` reads what the ask recorded, by edition and form field. A released row reading K cannot reach here: K must still be a draft (`:298`). A fail test sits at `check_b83_undo_withdraw.ts:335`, and it fails if the spread goes. Your 171/171 on 4bcbc3256 stands for the API: only the browser check changed since |
+| New Major in the API or web | **None found** | Read the whole delta and the code around it. Below |
+
+**Looked for and not found:**
+* **Lost approval (`document-supplies.ts:160`):** `applySupplies` has one caller, `afterApprove`, whose change has just gone APPROVED, so null means only a lost race. The throw reaches `screen02.ts:137`'s catch; `where status APPROVED` then touches nothing, so the withdrawal's words stay. No false "approved" line. The sample loader's approvals are in `try`.
+* **`before?.decisionNote` (`screen02.ts:138`):** `before` is read before the decision, so a failed re-approve puts back the note it came with and drops the approver's. Other kinds keep what they already showed. Supplies changes are never sent again (`library-changes.ts:190`), so "Changed since it was proposed" cannot show a return note on a WAITING change.
+* **Undo guard (`own-question.ts:212`):** Minor 2's case is right where the row under still reads the ask's key. The merge case stays n13, below.
+* **Stale history line:** `whatAskReplaced` takes the newest ask on that form field, even if a person's decision (`screen02.ts:65`, no `edition`) put the row on K later. Needs an ask, its undo, then a person mapping the row to a waiting field, and it errs toward a sign-off. Not a finding worth holding; same reading as undo's.
+* **Ran, no database:** `tsc -p api/tsconfig.json --noEmit`, no error in the six API files, filtered by name. `graph.mjs` without `--write`: G1 0, G2 0, G4 0, G5 0; G3 13, G6 5, as before.
+* **Earlier findings closed in this delta:** Minor 1 (words, both doors), Minor 3 (409, no audit line), `screen02.ts:138`, Minor 5's first half (own rule's re-add lands, `check_b83_undo_withdraw.ts:384`).
+
+## Minors, one line each
+1. **V1's fail test does not fail on V1.** `check_b83_undo_withdraw.ts:376`. The same fact twice is refused by the check inside the lock, which V1 did not remove (breaker's M10 ran this), and its words also match `/already waiting/`. Use `/A proposal to add "/`: only the restored name check quotes the label. `check_forms_c36_rule_facts.ts:143` is the real guard for V1, so this does not hold the PR. That suite has no route test of the derived or non-key refusals; I think that is on main. main: not run.
+2. **n14, words.** `screen02.ts:140`: "Nothing was deleted" on a change that deletes nothing. `c.action === "DELETE" ? "deleted" : "applied"`. Line unchanged by this PR. main: not run for the line.
+3. **n15, half closed.** `document-supplies.ts:203`: the clip keeps both sets of words, but cuts a long reason mid-word with no mark, and `:214`'s History line now gets the cut text too (the full reason stays on the shared-field line and the field's change, so no fact is lost). `:210`'s comment "never the part clipped" is no longer true. A clipped `earlier` still runs into "The new field" with no space. Long text only.
+4. **Words on a lost race.** `document-supplies.ts:160` says a field was withdrawn; if the proposer withdrew the whole change it is false. "This change, or a field it named, was withdrawn at the same moment." Race only.
+
+## Open, not in this delta
+* **F1 is still not settled, and I said it should be before the label.** New document type's approved ADD naming a waiting field, through `pack/release`. The fourth breaker pass did not try a route (`break-report.md` carries F1 only from the third). My reading has not changed: `propose` accepts a draft type (`document-supplies.ts:26`), and `unapprovedOf` reads a snapshot's types, which a type no combination lists is not in. It could be a Major; not run. Files unchanged against main, so **main: not run**; the withdraw step that makes it matter is this PR's. Your call and the tech lead's: I do not hold the verdict on it, because you asked me to judge this delta.
+* **n13 open** (undo after a merge over a released ask goes back to the state before the release; `own-question.ts:212`). Errs toward a sign-off; the same stale line reaches `library-changes.ts:316` if the merge target is itself withdrawn (read, not run). Minor 4, Minor 5's second half (no browser check reads `data-withdraw-taken-out`) and the left-open table below stand.
+* **PR body:** the text I read (body and comments) names none of n13, n14, n15, or follow-ups F1 to F5, and step 4 wants unfixed Minors listed. Add them with their "main: not run" marks.
+
+## Journey (by reading; provisional)
+Task completed 1 · next step obvious 1 · plain words ½ (n9) · feedback and state 1 · correct data 1 (V1 closed) · error recovery 1 · accessibility and sizes 1 (builder's on an earlier head; to re-run) · speed ½ (not measured) · visual 1 · trust and sources 1 (R5, M11). **9.0.**
+
+## Could not check
+Any behaviour here by running. The browser check, packs and `check_forms_c36_answer_values.ts` on this head: no figures given to me. `gh pr checks 1036` shows every job skipping, so CI has not tested this head. The route suite and C3.6 figures are yours, not re-run. Nothing on main run.
+
+## Fix list
+1. V2: the regex at `check_b83_own_question_screen_browser.cjs:230`, then the browser check and packs on the new head.
+2. Minors 1, 2 and 4 if you are pushing anyway; list 3, n13 and F1 to F5 in the PR.
+
+**Verdict: Block** (head 6701498dd4): open Major V2, `tests/check_b83_own_question_screen_browser.cjs:230`, test only. V1 and M11 closed.
+
+---
+Below: the previous verdict, unchanged. Its V1 is closed above.
+
 # B83 review: "Ask as its own question" (independent reviewer, 5 Nov 2026, head 4bcf2ae14b, diff since 0509b0910c)
 
 **Verdict: Block.** Skill verdict: Ship after fixes. R1 to R5, M8 and M9 are closed. One new Major, V1, which this diff causes: moving M6's check into a shared function also deleted five other refusals from the rule-fact route. It is one small fix. **Journey score: 8 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, as asked.
