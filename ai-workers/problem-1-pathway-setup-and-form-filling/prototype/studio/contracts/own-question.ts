@@ -20,8 +20,8 @@ export type OwnQuestionsView = { edition: { id: string; label: string; form: str
 /** What undo did: `kept` says why a new field stays waiting, `still_asked` names the sections that still ask it (words only). */
 export type OwnQuestionUndone = { dataPath: string; field: string; withdrew: boolean; kept: string | null; still_asked: string | null };
 /** What a withdrawal would leave, or has left, reading a new field, by name (BR-11). */
-export type FieldReadersView = { readers: string[] };
+export type FieldReadersView = { readers: string[]; taken_out: string[] };
 /** The answer to withdrawing a new field: form fields back to no decision, back to worked out, and what still reads it. */
-export type FieldWithdrawn = { form_fields_reopened?: number; form_fields_restored?: number; readers?: string[] };
+export type FieldWithdrawn = { form_fields_reopened?: number; form_fields_restored?: number; readers?: string[]; taken_out_of?: string[] };
 /** One edition of a combination that has Yes/No form fields a person can still ask (the Smart questionnaire's line). */
 export type OwnQuestionsToAsk = { editions: { id: string; form: string; label: string; to_ask: number }[] };

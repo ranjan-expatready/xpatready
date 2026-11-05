@@ -109,9 +109,9 @@ export async function fieldUseRows(db: Client, workspaceId: string) {
 }
 
 /** B83 (breaker M1, M5): what can read a shared field, each named in words (never a key). */
-export type FieldReader = { kind: "form_field" | "form_field_step" | "gate" | "rule" | "form_condition" | "document_condition" | "check" | "question_condition" | "fact_source" | "worked_out" | "document_type" | "waiting_change" | "waiting_draft"; name: string };
-const READING_DRAFTS = ["condition", "form_check", "cross_check", "requirement_line", "comes_from", "pqr_pick"];
-const DRAFT_WORD: Record<string, string> = { condition: "a condition", form_check: "a check", cross_check: "a check", requirement_line: "a document line", comes_from: "where an answer comes from", pqr_pick: "a question pick" };
+export type FieldReader = { kind: "form_field" | "form_field_step" | "gate" | "rule" | "form_condition" | "document_condition" | "check" | "question_condition" | "fact_source" | "worked_out" | "document_type" | "document_type_change" | "waiting_supplies" | "waiting_change" | "waiting_draft" | "merge"; name: string };
+const READING_DRAFTS = ["document_type", "condition", "form_check", "cross_check", "requirement_line", "comes_from", "pqr_pick"];
+const DRAFT_WORD: Record<string, string> = { document_type: "a document type", condition: "a condition", form_check: "a check", cross_check: "a check", requirement_line: "a document line", comes_from: "where an answer comes from", pqr_pick: "a question pick" };
 /** Everything that reads a shared field now, in this workspace: the one list, so an undo, a withdrawal and their words agree.
  *  A question that only asks the field is left out: it goes with a withdrawn field (library-changes.ts). */
 export async function fieldReaders(db: Client, workspaceId: string, key: string): Promise<FieldReader[]> {
@@ -144,11 +144,18 @@ export async function fieldReaders(db: Client, workspaceId: string, key: string)
   for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (named.test(JSON.stringify(k.predicateJson ?? null))) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}` });
   for (const f of current(r.facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.canonicalFieldKey === key) out.push({ kind: "fact_source", name: `where this answer comes from ${on(f.combinationId)}` });
   for (const d of await db.derivedField.findMany({ where: { workspaceId, OR: [{ inputs: { has: key } }, { reference: key }] }, select: { plain: true } })) out.push({ kind: "worked_out", name: `the worked-out value "${d.plain ?? "with no words"}"` });
-  const types = await db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, version: true, status: true, suppliesFacts: true } });
-  for (const t of current(types, (t) => t.documentTypeKey)) if (t.suppliesFacts.includes(key)) out.push({ kind: "document_type", name: `the document type "${t.name}", which supplies it` });
-  for (const c of await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, label: true, matches: true } })) {
+  const open = await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, key: true, label: true, matches: true } });
+  const changing = new Set<string>();
+  for (const c of open) {
     const after = (c.matches as { after?: unknown } | null)?.after;
-    if (c.kind === "document_supplies" ? Array.isArray(after) && after.includes(key) : reads(after)) out.push({ kind: "waiting_change", name: `the change on To review "${c.label ?? "with no name"}"` });
+    if (c.kind === "document_supplies") { if (Array.isArray(after) && after.includes(key)) { changing.add(c.key); out.push({ kind: "waiting_supplies", name: `the change on To review "${c.label ?? "with no name"}"` }); } }
+    else if (reads(after)) out.push({ kind: "waiting_change", name: `the change on To review "${c.label ?? "with no name"}"` });
+  }
+  const types = await db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, version: true, status: true, suppliesFacts: true } });
+  for (const t of current(types, (t) => t.documentTypeKey)) if (t.suppliesFacts.includes(key)) out.push({ kind: changing.has(t.documentTypeKey) ? "document_type_change" : "document_type", name: `the document type "${t.name}", which supplies it` });
+  for (const m of await db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED", OR: [{ keepKey: key }, { mergeKey: key }] }, select: { keepKey: true, mergeKey: true } })) {
+    const other = await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: m.keepKey === key ? m.mergeKey : m.keepKey }, orderBy: { version: "desc" }, select: { label: true, meaning: true } });
+    out.push({ kind: "merge", name: `a proposed merge with "${other?.label ?? other?.meaning ?? "another field"}" on To review` });
   }
   for (const w of await db.proposalItem.findMany({ where: { workspaceId, status: "waiting", kind: { in: READING_DRAFTS } }, select: { kind: true, payload: true } })) {
     if (!named.test(JSON.stringify(w.payload ?? null))) continue;

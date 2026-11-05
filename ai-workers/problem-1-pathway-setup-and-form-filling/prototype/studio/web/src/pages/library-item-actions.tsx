@@ -42,7 +42,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
   const send = async (r: ItemRow, reason: string) => {
     setActing({ busy: true, error: null });
     try {
-      if (r.row_action === "WITHDRAW") { const w = await api<FieldWithdrawn>(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(`${SAY.withdrawn(r.name)}${w.readers?.length ? ` Still reading it, and holding Submit until changed: ${w.readers.join("; ")}.` : ""}`); }
+      if (r.row_action === "WITHDRAW") { const w = await api<FieldWithdrawn>(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(`${SAY.withdrawn(r.name)}${w.readers?.length ? ` Still reading it: ${w.readers.slice(0, 3).join("; ")}${w.readers.length > 3 ? `; and ${w.readers.length - 3} more` : ""}. In a combination's draft, each holds its Submit until changed.` : ""}`); }
       else {
         const kind = r.row_action as Exclude<LifecycleWord, "WITHDRAW">;
         const c = await api<{ id: string; immediate?: boolean }>(kind === "DELETE" ? path(r.key) : `${path(r.key)}/${kind.toLowerCase()}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason: reason || SAY.ownDraft } });
@@ -94,7 +94,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
           </aside>
         ) : (
           <ImpactPanel key={`impact-${open.key}`} kind={kind!} name={open.name} immediate={kind === "DELETE" && !!uses.data?.immediate} goes={kind === "DELETE" ? shown?.uses.filter((u) => u.kind === "placement").map((u) => ({ label: u.label })) : undefined} kept={kind === "RETIRE" ? shown?.uses.filter((u) => !u.blocks && u.kind !== "draft_change").map((u) => u.label) : undefined}
-            takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} body={kind === "RESTORE" ? ITEM_RESTORE_BODY : kind === "WITHDRAW" && readers.length ? `${SAY.withdrawBody} It leaves ${readers.join("; ")} reading a field that is gone: each holds its combination's Submit until it is changed.` : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
+            takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} body={kind === "RESTORE" ? ITEM_RESTORE_BODY : kind === "WITHDRAW" && readers.length ? `${SAY.withdrawBody} It leaves ${readers.join("; ")} reading a field that is gone: whichever of these is in a combination's draft holds its Submit until it is changed.` : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
         )}
       </div>
     ) : null}

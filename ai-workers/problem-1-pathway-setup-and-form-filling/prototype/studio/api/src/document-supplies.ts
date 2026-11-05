@@ -172,6 +172,28 @@ export async function withdrawApprovedSupplies(tx: Prisma.TransactionClient, act
   await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `${actor.name} withdrew the approved change "${c.label ?? c.key}"; its facts went back to what they were. Why: ${why}`.slice(0, 600), detail: { change: c.id } } });
 }
 
+/** B83 (breaker M2): a new field withdrawn comes out of every open change of a document's facts that names it, and out of the
+ *  draft an approved one made. A change left with nothing to do ends withdrawn. Returns the changes' names, for the words. */
+export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: { id: string; name: string }, workspaceId: string, fact: string, why: string) {
+  const names: string[] = [];
+  for (const c of await tx.libraryChange.findMany({ where: { workspaceId, kind: SUPPLIES_KIND, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) {
+    const m = (c.matches ?? {}) as { document?: string; before?: string[]; after?: string[]; afterAbout?: Record<string, string>; cites?: SupplyCite[]; names?: Record<string, string> };
+    if (!m.after?.includes(fact)) continue;
+    await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `${SUPPLIES_KIND}:${workspaceId}:${c.key}`);
+    const after = m.after.filter((f) => f !== fact), afterAbout = Object.fromEntries(Object.entries(m.afterAbout ?? {}).filter(([k]) => k !== fact));
+    const nothingLeft = sameFacts(after, m.before ?? []), n = after.length, document = m.document ?? c.label ?? "A document";
+    const note = `The new field it named was withdrawn: ${why}`.slice(0, 300);
+    if (c.status === "APPROVED") {
+      const draft = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 }))[0];
+      if (draft) await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: draft.suppliesFacts.filter((f) => f !== fact), suppliesAbout: Object.keys(afterAbout).length ? (afterAbout as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
+    }
+    await tx.libraryChange.update({ where: { id: c.id }, data: nothingLeft ? { status: "WITHDRAWN", decisionNote: note, matches: { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue } : { label: `${document} · ${n ? `supplies ${n} fact${n === 1 ? "" : "s"}` : "supplies no fact"}, for every combination`.slice(0, 300), matches: { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue } });
+    await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `A new field was withdrawn, so ${actor.name}'s withdrawal took it out of the change "${c.label ?? c.key}"${nothingLeft ? ", which has nothing left to do and ended" : ""}.`.slice(0, 600) } });
+    names.push(document);
+  }
+  return names;
+}
+
 /** Facts and whom they are about read through merges (a merged field stands for the field it was merged into). */
 async function throughMerges(db: Pick<Prisma.TransactionClient, "canonicalField">, workspaceId: string, facts: string[], about: Record<string, string>) {
   const rows = await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, mergedIntoKey: true } });

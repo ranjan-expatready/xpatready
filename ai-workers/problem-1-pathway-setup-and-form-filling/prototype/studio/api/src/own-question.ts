@@ -20,7 +20,7 @@ import { TYPE_WORDS } from "../../engine/eligibility-gates.ts";
 import { manifest } from "../../engine/import.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, revise, SOLUTION, strip, type Actor } from "./core.ts";
-import { isWorkedOutYesNo, keyFor, onlyThisAsk, sameName, withdrawChange } from "./library-changes.ts";
+import { freeKey, isWorkedOutYesNo, onlyThisAsk, sameName, withdrawChange } from "./library-changes.ts";
 import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { nearLabels } from "./rule-facts.ts";
 import { landField } from "./proposals.ts";
@@ -163,7 +163,7 @@ export class OwnQuestions {
         const live = await tx.canonicalField.findMany({ where: { workspaceId: ws, status: { in: ["DRAFT", "PUBLISHED"] }, label: { not: null } }, select: { label: true } });
         const near = nearLabels(label, live.map((f) => f.label!)).slice(0, 5);
         if (near.length && !b.nearReason) fail(`"${label}" is close to the library's ${near.map((n) => `"${n}"`).join(", ")}: say why it is not the same (a one-line reason the second person reads), or use the existing field.`);
-        key = keyFor(group, label, new Set((await tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey)));
+        key = await freeKey(tx, ws, group, label, new Set((await tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey)));
         await landField(tx, { ws, actor, batchId: null, itemId: null, reason: `${b.reason} (${actor.name})${near.length ? ` Close to ${near.slice(0, 3).join(", ")}: ${b.nearReason}` : ""}`.slice(0, 1000), meaningChecked: true, aiVerdict: null },
           { key, meaning: b.meaning!, valueType: "yes_no", label, sourceRef: `${source}; asked as its own question by ${actor.name}`, origin: "HUMAN" });
         created = true; name = label;

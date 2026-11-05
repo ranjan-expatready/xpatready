@@ -14,12 +14,12 @@ import { isRuleWhy } from "../../engine/near.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
 import { isItemLifecycle, lockItem } from "./library-items.ts";
-import { fieldReaders } from "./where-used.ts";
+import { fieldReaders, type FieldReader } from "./where-used.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
 import { dropFieldList, releaseFieldList } from "./answer-values.ts";
-import { releaseSupplies, suppliesView, withdrawApprovedSupplies } from "./document-supplies.ts";
+import { dropFactFromChanges, releaseSupplies, suppliesView, withdrawApprovedSupplies } from "./document-supplies.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
@@ -212,10 +212,21 @@ type AskedRow = { canonicalFieldKey: string | null; transform: string | null; ou
 /** B83 (BR-9, breaker M3): a draft row over a released one that differs from it only by this ask: with the ask taken back
  *  it is no change at all, so it goes, and the release sees none. */
 export const onlyThisAsk = (cur: AskedRow, under: AskedRow | null | undefined, fact: string) => !!under && cur.status === "DRAFT" && under.canonicalFieldKey === fact && under.transform === cur.transform && under.outcome === cur.outcome && under.person === cur.person && under.row === cur.row && JSON.stringify(under.optionMap) === JSON.stringify(cur.optionMap) && JSON.stringify(under.listPurpose) === JSON.stringify(cur.listPurpose);
-/** What a withdrawal leaves reading the field (tech lead on breaker M5): its form fields are not among them, they are
- *  put right by the withdrawal itself. For To review's words before and after the press. */
+/** What a withdrawal leaves reading the field (tech lead on breaker M5), for To review's words before and after the press.
+ *  Its form fields are not among them, nor a change of a document's facts: the withdrawal puts those right itself. */
+const PUT_RIGHT = new Set<FieldReader["kind"]>(["form_field", "waiting_supplies", "document_type_change"]);
 export async function readersLeftByWithdrawal(db: Parameters<typeof fieldReaders>[0], workspaceId: string, key: string) {
-  return (await fieldReaders(db, workspaceId, key)).filter((r) => r.kind !== "form_field");
+  const all = await fieldReaders(db, workspaceId, key);
+  return { readers: all.filter((r) => !PUT_RIGHT.has(r.kind)), takenOut: all.filter((r) => r.kind === "waiting_supplies") };
+}
+/** Breaker M1: a new field's key. A withdrawn field's key is free again only when nothing still reads it: otherwise the new
+ *  field would take over its readers in silence, with another meaning, and the hold on them would go. */
+export async function freeKey(db: Parameters<typeof fieldReaders>[0], workspaceId: string, group: string, label: string, taken: Set<string>) {
+  for (;;) {
+    const key = keyFor(group, label, taken);
+    if (!(await db.libraryChange.count({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key } })) || !(await fieldReaders(db, workspaceId, key)).length) return key;
+    taken.add(key);
+  }
 }
 
 /** B1 (break B1): an author withdraws a new field that is waiting or returned. It leaves the draft: the form fields that
@@ -255,7 +266,10 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     if (await tx.canonicalField.count({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: { not: "DRAFT" } } })) throw problem(409, "Already released", "This field was released meanwhile; retire it in the library instead.");
     const done = await tx.libraryChange.updateMany({ where: { id, status: { in: ["WAITING", "RETURNED"] } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
     if (!done.count) throw problem(409, "Changed meanwhile", "Someone decided this at the same moment. Refresh to see it.");
-    const readers = await readersLeftByWithdrawal(tx, c.workspaceId, c.key);
+    const { readers } = await readersLeftByWithdrawal(tx, c.workspaceId, c.key);
+    // Breaker M2: an open change of a document's facts naming it would publish a fact that does not exist, and hold every
+    // combination that lists the document, whatever it reads: the field comes out of the change.
+    const takenOut = await dropFactFromChanges(tx, actor, c.workspaceId, c.key, why);
     // BR-10 (B83, challenge M2): a form field asked as its own question goes back to worked out, keeping the QA-165 check;
     // "unresolved" would lose it and hold release. Its fact is not among the facts its step names (engine/runtime/forms.ts).
     // Breaker B1, m3: only while it is still a draft. M3: a draft that only held this ask goes. m1: a named fact retired
@@ -278,7 +292,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     for (const x of lists) await dropFieldList(tx, c.workspaceId, x.answerListKey); // C3.6: its own draft list goes with it
     // Breaker m8: BR-10 changes form fields, so the history says so.
     await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "decided", entity: "shared field", entityKey: c.key, summary: `${actor.name} withdrew the new field "${c.label ?? c.key}": ${why}. ${restored} form field${restored === 1 ? "" : "s"} back to worked out, ${maps.count} to no decision${readers.length ? `; still read by ${readers.map((r) => r.name).join("; ")}` : ""}`.slice(0, 600) } });
-    return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count, form_fields_restored: restored, readers: readers.map((r) => r.name) };
+    return { ...changeView((await tx.libraryChange.findUnique({ where: { id } }))!), form_fields_reopened: maps.count, form_fields_restored: restored, readers: readers.map((r) => r.name), taken_out_of: takenOut };
   }, { timeout: 30_000, maxWait: 10_000 }); // the readers are read under the lock, on a busy machine too (the same room as an ask)
 }
 

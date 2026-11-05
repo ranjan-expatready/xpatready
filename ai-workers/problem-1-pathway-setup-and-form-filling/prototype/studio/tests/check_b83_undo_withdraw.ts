@@ -147,7 +147,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   const otherRow = one(`select id from form_field_map where form_edition_id = '${ed}' and status = 'PUBLISHED' and outcome = 'mapped' and data_path not in (${[ALIAS, NATID, USCARD].map(lit).join(", ")}) and transform not like 'derived:%'`);
   const draftItem = one(`select id from proposal_item where kind = 'requirement_line' and status = 'rejected'`);
   const change = (kind: string, action: string, after: string) => insert("library_change", { workspace_id: lit(ws), kind: lit(kind), key: lit(`b83.${randomUUID().slice(0, 8)}`), label: lit(`B83 waiting ${kind}`), action: lit(action), status: "'WAITING'", proposed_by: lit(APPROVER), matches: `${lit(JSON.stringify({ after: JSON.parse(after) }))}::jsonb` });
-  type Reader = { id: string; on: (k: string) => () => void; named: RegExp; submit?: RegExp };
+  type Reader = { id: string; on: (k: string) => () => void; named: RegExp; submit?: RegExp; takenOut?: boolean };
   const READERS: Reader[] = [
     { id: "a rule", on: (k) => drop("predicate", insert("predicate", { ...rowCols, predicate_key: lit(`b83_rule_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(k)}::jsonb`, then_plain: "'B83 rule words'", for_whom: "'applicant'" })), named: /the rule "B83 rule words" on /, submit: /B83 rule words/ },
     { id: "a section check", on: (k) => drop("check_def", insert("check_def", { ...rowCols, check_key: lit(`b83_check_${randomUUID().slice(0, 6)}`), check_group: "'cross_form'", predicate_json: `${cond(k)}::jsonb`, severity: "'warning'", message: "'B83 check words'" })), named: /the check "B83 check words" on /, submit: /B83 check words/ },
@@ -160,8 +160,9 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     { id: "a worked-out value", on: (k) => { const key = `b83_derived_${randomUUID().slice(0, 6)}`; sql(`insert into derived_field (id, workspace_id, derived_key, calculation, inputs, reference, plain, executable) values ('${randomUUID()}', '${ws}', '${key}', 'none', array[${lit(k)}], 'B83', 'B83 derived words', false)`); const off = drop("predicate", insert("predicate", { ...rowCols, predicate_key: lit(`b83_uses_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(key)}::jsonb`, then_plain: "'B83 reads the worked-out value'", for_whom: "'applicant'" })); return () => { off(); sql(`delete from derived_field where derived_key = '${key}'`); }; }, named: /the worked-out value "B83 derived words"/, submit: /The worked-out value "B83 derived words"/ },
     { id: "an eligibility gate", on: (k) => { const was = sql(`select eligibility::text from combination where id = '${vv}'`); const cur = was ? JSON.parse(was) : { judgement: [], disclaimer: null, version: 1, by: AUTHOR, at: new Date().toISOString(), gates: [] }; sql(`update combination set eligibility = ${lit(JSON.stringify({ ...cur, gates: [...cur.gates, { key: "b83_gate", label: "B83 gate words", condition: { op: "eq", field: k, value: true, subjectKind: "person" } }] }))}::jsonb where id = '${vv}'`); return () => { sql(`update combination set eligibility = ${was ? `${lit(was)}::jsonb` : "null"} where id = '${vv}'`); }; }, named: /the eligibility gate "B83 gate words" on /, submit: /The eligibility gate "B83 gate words"/ },
     { id: "a waiting condition change", on: (k) => drop("library_change", change("placement_condition", "SET_CONDITION", JSON.stringify({ op: "eq", field: k, value: true }))), named: /the change on To review "B83 waiting placement_condition"/ },
-    { id: "a waiting document-supplies change", on: (k) => drop("library_change", change("document_supplies", "SET_SUPPLIES", JSON.stringify([k]))), named: /the change on To review "B83 waiting document_supplies"/ },
-    ...["requirement_line", "form_check", "cross_check", "comes_from", "condition", "pqr_pick"].map((kind): Reader => ({ id: `a waiting draft (${kind})`, on: (k) => { const was = sql(`select kind || '|' || status || '|' || payload::text from proposal_item where id = '${draftItem}'`).split("|"); sql(`update proposal_item set kind = ${lit(kind)}, status = 'waiting', payload = ${lit(JSON.stringify({ label: "B83 draft words", reads: k }))}::jsonb where id = '${draftItem}'`); return () => { sql(`update proposal_item set kind = ${lit(was[0])}, status = ${lit(was[1])}, payload = ${lit(was.slice(2).join("|"))}::jsonb where id = '${draftItem}'`); }; }, named: /waiting on To review \("B83 draft words"\)/ })),
+    { id: "a waiting document-supplies change", on: (k) => drop("library_change", change("document_supplies", "SET_SUPPLIES", JSON.stringify([k]))), named: /the change on To review "B83 waiting document_supplies"/, takenOut: true },
+    { id: "a proposed merge", on: (k) => { const id = randomUUID(); sql(`insert into field_merge (id, workspace_id, keep_key, merge_key, reason, status, proposed_by) values ('${id}', '${ws}', ${lit(k)}, 'person.family_name', 'B83 check', 'PROPOSED', ${lit(APPROVER)})`); return () => { sql(`delete from field_merge where id = '${id}'`); }; }, named: /a proposed merge with "/ },
+    ...["document_type", "requirement_line", "form_check", "cross_check", "comes_from", "condition", "pqr_pick"].map((kind): Reader => ({ id: `a waiting draft (${kind})`, on: (k) => { const was = sql(`select kind || '|' || status || '|' || payload::text from proposal_item where id = '${draftItem}'`).split("|"); sql(`update proposal_item set kind = ${lit(kind)}, status = 'waiting', payload = ${lit(JSON.stringify({ label: "B83 draft words", reads: k }))}::jsonb where id = '${draftItem}'`); return () => { sql(`update proposal_item set kind = ${lit(was[0])}, status = ${lit(was[1])}, payload = ${lit(was.slice(2).join("|"))}::jsonb where id = '${draftItem}'`); }; }, named: /waiting on To review \("B83 draft words"\)/ })),
   ];
   ok("setup: the rows the readers are built on exist", [form, docLine, question, docType, otherRow, draftItem].every(Boolean), { form, docLine, question, docType, otherRow, draftItem });
   for (const r of READERS) {
@@ -173,7 +174,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     u = await undo(USCARD);
     ok(`M1 fail test: ${r.id} reads the field, so undo keeps it waiting and names it, no key`, u.status < 300 && u.body?.withdrew === false && r.named.test(u.body?.kept ?? "") && noKey(u.body?.kept ?? "") && sql(`select count(*) from canonical_field where canonical_field_key = ${lit(k)}`) === "1", u.body);
     const rd = await call("GET", `/library/changes/${id}/readers`);
-    ok(`M5 words before the press: To review names ${r.id}`, rd.body?.readers?.some((x: string) => r.named.test(x)) && noKey(JSON.stringify(rd.body?.readers)), rd.body);
+    ok(`M5 words before the press: To review names ${r.id}`, (r.takenOut ? rd.body?.taken_out : rd.body?.readers)?.some((x: string) => r.named.test(x)) && noKey(JSON.stringify(rd.body)), rd.body);
     if (r.submit) {
       const w = await withdraw(id);
       ok(`M5 no refusal: To review's withdraw goes ahead with ${r.id}, and its answer names it`, w.status < 300 && w.body?.readers?.some((x: string) => r.named.test(x)) && noKey(JSON.stringify(w.body?.readers)), w);
@@ -190,6 +191,42 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     }
     await plain(USCARD);
   }
+  // Breaker M1: a new field under the same name never takes over a withdrawn field's readers.
+  u = await askNew(USCARD, "B83 same name");
+  const firstKey = keyOf("B83 same name");
+  const heldRule = READERS[0].on(firstKey);
+  u = await withdraw(changeOf(firstKey));
+  u = await askNew(USCARD, "B83 same name", { meaning: "Whether a licence to drive is held: another meaning, a B83 check." });
+  const secondKey = keyOf("B83 same name");
+  ok("breaker M1 fail test: a re-ask under the same name gets its own key while the withdrawn one is still read", u.status < 300 && !!secondKey && secondKey !== firstKey, { u, firstKey, secondKey });
+  ok("breaker M1 fail test: the rule still holds Submit by name: it never reads the new meaning in silence", (await errors()).some((p) => /B83 rule words/.test(said(p)) && /a new field that was withdrawn/.test(said(p))), (await errors()).map(said));
+  heldRule();
+  await plain(USCARD);
+  u = await askNew(USCARD, "B83 free name");
+  const freeFirst = keyOf("B83 free name");
+  await plain(USCARD);
+  u = await askNew(USCARD, "B83 free name");
+  ok("breaker M1 pass: with nothing reading it, a re-ask under the same name takes the same key (the question list stays)", u.status < 300 && keyOf("B83 free name") === freeFirst, keyOf("B83 free name"));
+  await plain(USCARD);
+
+  // Breaker M2: a document's facts: a withdrawal takes the field out of the change, and holds no one who does not read it.
+  const shared = sql(`select dr.document_type_key from document_requirement dr join combination c on c.id = dr.combination_id where c.combination_key = 'sp.outside' and dr.status = 'PUBLISHED' order by 1 limit 1`);
+  const outside = sql("select id from combination where combination_key = 'sp.outside'");
+  u = await askNew(USCARD, "B83 supplied");
+  const suppliedKey = keyOf("B83 supplied");
+  const had = (await call("GET", `/library/document-types/${shared}/supplies`)).body;
+  const keepFacts = (had?.facts ?? []).map((f: { fact: string; about: string; cite?: { source: string; quote: string; readOn: string } | null }) => ({ fact: f.fact, about: f.about, ...(f.cite ?? { source: "Test words (fixture), page 1", quote: "Test: B83 check, Sample", readOn: new Date().toISOString().slice(0, 10) }) }));
+  const sup = await call("POST", `/library/document-types/${shared}/supplies`, { facts: [...keepFacts, { fact: suppliedKey, about: "holder", source: "Test words (fixture), page 1", quote: "Test: B83 check, Sample", readOn: new Date().toISOString().slice(0, 10) }], reason: "A B83 check of a document's facts." });
+  const supId = sup.body?.id;
+  u = await call("POST", `/library/changes/${supId}/approve`, { note: "B83 check" }, APPROVER);
+  ok("setup: a change of a document's facts naming the waiting field is proposed and approved", sup.status < 300 && u.status < 300 && sql(`select count(*) from document_type where document_type_key = ${lit(shared)} and status = 'DRAFT' and ${lit(suppliedKey)} = any(supplies_facts)`) === "1", { sup, u });
+  u = await withdraw(changeOf(suppliedKey));
+  ok("breaker M2 fail test: the withdrawal takes the field out of the change and the document's draft, and says so", u.status < 300 && u.body?.taken_out_of?.length === 1 && sql(`select count(*) from document_type where document_type_key = ${lit(shared)} and ${lit(suppliedKey)} = any(supplies_facts)`) === "0", u.body);
+  const otherErrors = ((await call("GET", `/combinations/${outside}`)).body.draft.problems as { level: string; label: string | null; item: string; message: string }[]).filter((p) => p.level === "error");
+  ok("breaker M2 fail test: a combination that reads nothing of the field is not held by it", !otherErrors.some((p) => said(p).includes("B83 supplied")), otherErrors.map(said));
+  ok("breaker M2: the change has nothing left to do, so it ended", sql(`select status from library_change where id = '${supId}'`) === "WITHDRAWN");
+  await plain(USCARD);
+
   // Another form field reading it, the first reader there is.
   u = await askNew(USCARD, "B83 second row");
   const second = keyOf("B83 second row");
