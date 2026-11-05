@@ -1,0 +1,54 @@
+PASS  B52 pass: the heading is the question when it is one (IMM 5257's US card box, whose caption repeats the national identity question)
+PASS  B52 pass: a heading that is not a question (Question 8 A's "* Date of birth") gives way to the caption's question, without its number
+PASS  B52 fail: neither a question ("YYYY-MM-DD", "Family name") → no question, so the box is refused
+PASS  B52/QA-227: the checkpoint's sections and questions step refuses nothing of B52's or QA-227's
+PASS  B52 pass: IMM 5257's person.has_used_other_name form field reads its own question, decided by a person, the form's words cited (page, quote, saved date)
+PASS  B52 pass (review m1): person.has_used_other_name's form field keeps only the printed question as its words (the list before the file shows them), never a file path
+PASS  B52 pass: person.has_used_other_name's form field keeps its "worked out" step as the cross-check (QA-165)
+PASS  B52 pass: IMM 5257's person.has_national_id form field reads its own question, decided by a person, the form's words cited (page, quote, saved date)
+PASS  B52 pass (review m1): person.has_national_id's form field keeps only the printed question as its words (the list before the file shows them), never a file path
+PASS  B52 pass: person.has_national_id's form field keeps its "worked out" step as the cross-check (QA-165)
+PASS  B52 pass: IMM 5257's person.us_permanent_resident form field reads its own question, decided by a person, the form's words cited (page, quote, saved date)
+PASS  B52 pass (review m1): person.us_permanent_resident's form field keeps only the printed question as its words (the list before the file shows them), never a file path
+PASS  B52 pass: person.us_permanent_resident's form field keeps its "worked out" step as the cross-check (QA-165)
+PASS  B52 pass: the library's field of the same name is used (IMM 0008's, IMM 1294's), never a second one
+PASS  B52 pass: the shared placement step asks all three on the Visitor visa, each because IMM 5257 reads it
+PASS  B52 pass: To review › Form fields lists the worked-out Yes/No form fields with the form's question; the three are asked
+PASS  B52 pass (review M2): Question 8 A is offered with its own words, never its neighbour's heading ("* Date of birth")
+PASS  B52 fail: with no person it is refused (401)
+PASS  B52 fail: the Approver cannot (403: the author's step)
+PASS  B52 fail: an unknown edition is 404 in words
+PASS  B52 fail: an unknown form field is 404 in words
+PASS  B52 fail: a form field that is not a worked-out Yes/No is refused (409), nothing changed
+PASS  B52 fail: a form field already asked as its own question is refused (409)
+PASS  B52 fail: a library field and a new name at once are refused (400)
+PASS  B52 fail: neither a library field nor a new name is refused (400)
+PASS  B52 fail: a reason under 8 characters is refused (400)
+PASS  B52 fail: a field not answered Yes or No is refused (400), in words
+PASS  B52 fail: a new name the library already has is refused (409): choose that field
+PASS  B52 fail: a field about the application on a person's form field is refused (400), in words
+PASS  B52 fail: a meaning under 10 characters is refused (400)
+PASS  B52 fail: a name with no letters or digits is refused (400)
+PASS  B52 fail: none of the refusals changed a form field or added a field
+PASS  B52 pass: a new field is named by the person, its key built (never typed), the form's words its source
+PASS  B52 pass: the new field is a draft by a person, its source the edition, page and printed question
+PASS  B52 pass: it waits for a second person on To review (proposed by the author)
+PASS  B52 fail: the author cannot approve their own new field
+PASS  B52 pass: the Approver approves it
+PASS  B52 pass: the Smart questionnaire's step then asks it in the section of its form field
+PASS  QA-227 pass: before anyone answers, IMM 5476 is "cannot tell yet" on the Visitor visa, waiting for case.uses_representative
+PASS  QA-227 pass: case.uses_representative is a deciding question asked once for the application
+PASS  QA-227 pass: before anyone answers, IMM 5475 is "cannot tell yet" on the Visitor visa, waiting for case.authorizes_release_to_designated_individual
+PASS  QA-227 pass: case.authorizes_release_to_designated_individual is a deciding question asked once for the application
+PASS  QA-227 pass: With an LMIA's IMM 5476 and IMM 5475 wait for the same two questions
+PASS  QA-227 pass: both facts came through C3.6's door for their rule (a rules proposal, approved), never SQL
+PASS  QA-227 pass: a represented case (uses a representative, authorizes a release: Yes) lists IMM 5476 and IMM 5475
+PASS  QA-227 fail: a case answering No lists neither
+PASS  QA-227 pass: a case nobody answered yet lists both as not decided yet (asked, never silently missing)
+PASS  QA-227 pass: on wp.lmia_inside a represented case lists IMM 5476 and IMM 5475, a No lists neither
+PASS  QA-227 pass: on sp.outside a represented case lists IMM 5476 and IMM 5475, a No lists neither
+PASS  B52 pass: before an answer, the list before the file says the Yes/No box needs its own question's answer, naming it (never "no question asks it yet")
+PASS  B52 fail (QA-165 kept): a confirmed No to "Has national ID" while a number is recorded is never written; the list says to correct one
+PASS  B52/QA-227: no paid call (the spend ledger is unchanged)
+
+52 passed, 0 failed
