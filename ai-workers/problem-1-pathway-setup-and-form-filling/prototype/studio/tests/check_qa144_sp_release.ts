@@ -49,7 +49,7 @@ type Question = { fact: string; about: string; why?: string };
   // No regression: the Visitor visa keeps exactly its one named block (IRM 0002's saved map), or is released once it lands.
   const irm0002Map = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0;
   ok("QA-144 slice 3 no regression: the Visitor visa keeps its one named block (IRM 0002's missing field map), or is released once that map lands",
-    irm0002Map ? n(`select count(*) from config_release where combination_id = '${vv}'`) === 1 : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 300));
+    irm0002Map ? n(`select count(*) from config_release where combination_id = '${vv}'`) >= 1 : /Visitor visa: Fix 1 problem before submitting: IRM 0002: No form fields mapped yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 300));
 
   // Row 7: sections from the study permit's own forms (rules, no AI), approved by a second person.
   // QA-206 (tech lead on #883): partial exactly while sections the forms print no heading over wait on To review for a name.

@@ -841,7 +841,7 @@ export class Demo {
     // IMM 5257 filed Online, so the family information form is IMM 5645 (FAMILY_FORM_BY_CHANNEL); IMM 5476 a PDF upload
     // signed by hand and scanned. Then the same review as release 1: submit, the SME's sign-off, a different person approves.
     let r2Why: string | null = visitor ? null : "Waits for the Visitor visa's release 1: its channels change for release 2.";
-    const r2Marks = new Map<string, number>();
+    const r2Marks = new Map<string, number>(), r2Sections: string[] = [];
     if (visitor && vvId) await timed("release 2 (mixed channels)", async () => {
       let step: ReleaseTwoStep = "forms"; // review R2 m1: the words name the step that refused it
       try {
@@ -868,7 +868,9 @@ export class Demo {
         // Its sections drafted from its own parts (as on release 1, where the channel took it off), its facts asked in the
         // section of their form field (the Smart questionnaire tab's step), and
         // any new library item it adds approved by the second person.
+        const heldBefore = sectionsHeld.length, refusedBefore = sectionsRefused.length; // row 7 is written: what this pass leaves, row 9 says
         await sectionsFrom({ id: vvId }, (await this.db.sourceAttachment.findMany({ where: { combinationId: vvId, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } })).filter((a) => (a.edition ?? "").startsWith(`${fam.form} (`)), { lists: false });
+        r2Sections.push(...sectionsHeld.slice(heldBefore).map((x) => `waiting for a name: ${x}`), ...sectionsRefused.slice(refusedBefore));
         for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true } }))
           await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
         await placeFromFormParts(this.db, this.studio, author, vvId);
@@ -893,7 +895,7 @@ export class Demo {
     });
     const vvReleases = vvId ? await this.db.configRelease.count({ where: { combinationId: vvId } }) : 0;
     row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: !r2Why && vvReleases >= 2 ? "done" : "waiting",
-      shows: !r2Why && vvReleases >= 2 ? `Visitor visa release 2: IMM 5257 Online, IMM 5645 as the family information form, IMM 5476 a PDF upload signed by hand and scanned (Forms tab, reviewed and approved)${r2Marks.size ? `; marked not on this form, Sample, Unconfirmed: expert: ${[...r2Marks].map(([label, n]) => `"${label}" on ${n} form fields`).join(", ")}` : ""}` : "The channel route and the signed-scan lines are built (Forms tab)", why: r2Why });
+      shows: !r2Why && vvReleases >= 2 ? `Visitor visa release 2: IMM 5257 Online, IMM 5645 as the family information form, IMM 5476 a PDF upload signed by hand and scanned (Forms tab, reviewed and approved)${r2Marks.size ? `; marked not on this form, Sample, Unconfirmed: expert: ${[...r2Marks].map(([label, n]) => `"${label}" on ${n} form field${n === 1 ? "" : "s"}`).join(", ")}` : ""}${r2Sections.length ? `; IMM 5645's sections left for a person: ${r2Sections.slice(0, 3).join(" · ")}${r2Sections.length > 3 ? ` · and ${r2Sections.length - 3} more` : ""}` : ""}` : "The channel route and the signed-scan lines are built (Forms tab)", why: r2Why });
     const rowEleven = !!fam?.caseId && fam.people === 4 && fam.births === 4 && fam.fromRecord > 0;
     row({ row: "11", title: "A family case on release 1", status: !fam ? "waiting" : rowEleven ? "done" : "partial",
       shows: fam?.caseId ? `Case ${SAMPLE_CASE.reference} on release ${fam.release}: ${fam.people} people (principal applicant, travelling spouse, a child under 18, a child 18 or over; Sample names); ${fam.fromRecord} answers from the Sample record and ${fam.madeUp} made up (Sample: the second child's name and both children's dates of birth)${fam.notTaken ? `; ${fam.notTaken} of the record's facts not asked by this release or not on its lists` : ""}; ${fam.copies.length} form cop${fam.copies.length === 1 ? "y" : "ies"} made` : "The case area is built (Demo › Open the case area)",

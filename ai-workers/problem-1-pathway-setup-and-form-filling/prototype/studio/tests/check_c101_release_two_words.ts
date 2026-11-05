@@ -1,5 +1,5 @@
-// C10.1 row 9 (Lead 10's ruling (c') on #1009; review M2, R2-1): the configured checkpoint's words when Visitor visa's
-// release 2 is not made come from the refusal itself: for Submit, every problem in its errors[] (its text names only the
+// C10.1 row 9 (Lead 10's ruling (c') on #1009; review M2, R2-1; B97): the configured checkpoint's words if Visitor visa's
+// release 2 is ever refused come from the refusal itself: for Submit, every problem in its errors[] (its text names only the
 // first three, studio.ts refuse()), counted by kind, in plain words (no form field codes, none of the error words the
 // C10.1 pack refuses), where the draft stands, and the form's choices step only for a value a form field has no code for; for another step, that
 // step and its own words. Offline (no database, no AI): api/src/checkpoint-words.ts. The 13 problems are the ones a
@@ -25,7 +25,7 @@ ok("C10.1 row 9: it names the form and says where the draft stands, not submitte
 ok("C10.1 row 9: plain words for a person: no form field code, and none of the words the C10.1 pack refuses (Error, undefined, null, prisma, [0])", !/\[0\]|person\.|ChildMStatus|IMM_5645/.test(words) && !/Error|undefined|null|prisma|\[0\]/i.test(words), words);
 ok("C10.1 row 9: a value a form field has no code for points to the form's choices step", /Choices this form prints/.test(words));
 const other = releaseTwoWords("submit", { detail: "Fix 1 problem before submitting: IMM 5476 is filed as PDF upload, signed by hand and scanned, but nobody signs it.", errors: [{ item: "IMM 5476", message: "IMM 5476 is filed as PDF upload, signed by hand and scanned, but nobody signs it." }] });
-ok("C10.1 row 9 fail: another problem keeps its own words, is counted as itself and is never sent to the choices step", /1 problem/.test(other) && /1 other problem: IMM 5476 is filed as PDF upload/.test(other) && !/Choices this form prints/.test(other) && !/choice form fields/.test(other), other);
+ok("C10.1 row 9 fail: another problem keeps its own words, is counted as itself and is never sent to the choices step", /1 problem/.test(other) && /1 other problem: IMM 5476 is filed as PDF upload/.test(other) && !/Choices this form prints/.test(other) && !/choice form fields/.test(other) && !/\.\./.test(other), other);
 const signoff = releaseTwoWords("signoff", { detail: "This change is already signed." });
 ok("C10.1 row 9 fail: a step after Submit is named, with its own words, and never said to be Submit's refusal or an unsubmitted draft", /the SME's sign-off refused it: This change is already signed\./.test(signoff) && !/Submit refused/.test(signoff) && !/not submitted/.test(signoff), signoff);
 const forms = releaseTwoWords("forms", { detail: "IMM 5645 is retired in the library: restore it there first." });

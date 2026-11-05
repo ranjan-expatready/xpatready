@@ -31,7 +31,7 @@ export function releaseTwoWords(step: ReleaseTwoStep, refusal: Refusal): string 
     noCode.length ? `${plural(noCode.length, "form field has", "form fields have")} no code for some values of the answer list ${noCode.length === 1 ? "it reads" : "they read"} (filling would refuse them)` : null,
     noMap.length ? `${noMap.length} ${noMap.length === 1 ? "has" : "have"} no option map yet` : null,
     // Review R2 m2: any other problem keeps its own words (at most three, then how many more).
-    other.length ? `${plural(other.length, "other problem", "other problems")}: ${other.slice(0, 3).map((p) => p.message).join(" · ")}${other.length > 3 ? ` · and ${other.length - 3} more` : ""}` : null,
+    other.length ? `${plural(other.length, "other problem", "other problems")}: ${other.slice(0, 3).map((p) => p.message.replace(/\.$/, "")).join(" · ")}${other.length > 3 ? ` · and ${other.length - 3} more` : ""}` : null,
   ].filter(Boolean);
   const on = forms.length && !other.length ? ` on ${forms.join(" and ")}'s choice form fields` : "";
   const where = `Visitor visa's draft keeps the release-2 changes (${RELEASE_TWO_CHANGES}), not submitted; its Review and release tab lists each problem.`;
