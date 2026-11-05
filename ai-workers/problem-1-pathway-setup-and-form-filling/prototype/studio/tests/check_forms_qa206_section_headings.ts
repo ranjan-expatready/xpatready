@@ -130,7 +130,7 @@ run(async () => {
   const landedOn = sql(`select section_key from logical_section where title='Applicant and application details' limit 1`), w1 = waiting(), secs = sql("select count(*) from logical_section");
   r = await call("POST", "/review/proposals/decide", { ids: [rej?.id ?? NONE], action: "edit", payload: { ...rej?.readings?.draft?.payload, label: "Applicant and application details" } }, AUTHOR);
   const twinRow = sql(`select status || '|' || decided_key || '|' || (payload->>'label') || '|' || (reuse->>'match') from proposal_item where id = '${rej?.id ?? NONE}'`);
-  ok("B78 pass (review M1): a held section named what the library holds lands on that section under the person's name, adding nothing", r.status < 300 && twinRow === `edited|${landedOn}|Applicant and application details|reuse` && waiting() === w1 && sql("select count(*) from logical_section") === secs, r.status >= 300 ? words(r) : twinRow);
+  ok("B78 pass (review M1): a held section named what the library holds lands on that section under the person's name, adding nothing", r.status < 300 && r.body?.items?.[0]?.joined === true && twinRow === `edited|${landedOn}|Applicant and application details|reuse` && waiting() === w1 && sql("select count(*) from logical_section") === secs, r.status >= 300 ? words(r) : twinRow);
   const batch = r.body?.batchId;
   r = await call("POST", `/review/proposals/undo/${batch}`, {}, AUTHOR);
   const backRow = sql(`select status || '|' || (payload->>'label') || '|' || (reuse->>'match') from proposal_item where id = '${rej?.id ?? NONE}'`);

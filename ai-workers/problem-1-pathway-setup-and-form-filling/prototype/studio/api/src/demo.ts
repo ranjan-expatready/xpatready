@@ -30,8 +30,7 @@ import { draftSourceProblems, seedSampleSources } from "./source-register.ts";
 import { FormMasters } from "./form-masters.ts";
 import { Forms } from "./forms.ts";
 import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.ts";
-import { decide, sameInLibrary } from "./proposals.ts";
-import type { ProposalPayload } from "../../contracts/proposal-item.ts";
+import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { OwnQuestions } from "./own-question.ts";
 import { OWN_YES_NO_REASON } from "./own-yes-no.ts";
@@ -679,16 +678,15 @@ export class Demo {
           const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
           const given = held?.unnamed && !held.heading ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
           if (held?.unnamed && !held.heading && !given) { sectionsHeld.push((p.payload as { label?: string }).label ?? "section"); continue; }
-          // A name the library already holds lands on that section, so it is reused, not added.
-          const twin = given ? await sameInLibrary(this.db, workspaceId, { ...(p.payload as object), label: given.name } as ProposalPayload) : null;
           try {
             const landed = (await decide(this.db, this.audit, author, workspaceId, [p.id], given
               ? { action: "edit", payload: { ...(p.payload as object), label: given.name }, reason: namedReason(given) }
               : held?.unnamed
               ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
-              : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string } | undefined;
+              : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string; joined?: boolean } | undefined;
             if (given) namedByPerson.push(given);
-            if (p.kind === "section") (twin ? sectionsReused : sectionsMade).push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
+            // A name the library already holds lands on that section, so it is reused, not added.
+            if (p.kind === "section") (landed?.joined ? sectionsReused : sectionsMade).push(landed?.landedAs ?? ""); else maritalList ??= landed?.landedAs ?? null;
           } catch (e) {
             // The card's own words: a section the library already holds is rejected here and that section reused (the
             // placement step reads its boxes into it).

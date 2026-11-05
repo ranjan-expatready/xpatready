@@ -159,7 +159,7 @@ function Reading({ label, r, rules = false }: { label: string; r: QueueProposal[
 function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => void; onDone: (r: DecideResult | null, n: number) => void }) {
   const [reason, setReason] = React.useState("");
   const run = useAction((b: { action: "accept" | "edit" | "reject"; payload?: unknown }) => api<DecideResult>("/review/proposals/decide", { method: "POST", json: { ids: [p.id], action: b.action, reason: reason.trim() || null, payload: b.payload } }),
-    { invalidate: inv, success: (r) => (r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
+    { invalidate: inv, success: (r) => (r.items[0]?.joined ? "Decided. The library already holds a section of that name, so its form fields are asked there." : r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
   const checkPayload = p.readings.check?.payload ?? null;
   const differ = p.agreement === "differ" && !!checkPayload;
   // QA-196 (tech lead, 4 Nov): a form check warns unless the person makes it a serious warning before Accept (an edit).

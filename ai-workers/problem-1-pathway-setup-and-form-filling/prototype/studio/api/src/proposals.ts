@@ -805,7 +805,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       const no = rows.map((r) => [r, bulkWhy(r) ?? (needsNearReason(r, libPool!, reuses) ? NEAR_BULK_WHY : null)] as const).filter(([, why]) => why);
       if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
-    const out: { id: string; landedAs: string | null }[] = [];
+    const out: { id: string; landedAs: string | null; joined?: boolean }[] = [];
     for (const r of rows) {
       let payload = r.payload as ProposalPayload;
       if (d.action === "edit") {
@@ -819,7 +819,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // #883) may carry the PDF's internal part name ("Page wrapper"), and its edition's one draft (P-138) is never redone:
       // it too is accepted only as an edit with a name a person typed (keeping its name is then the person's choice).
       // A reuse of a named library item adds no name to the library (it lands on that item), so it is left as it was
-      // (review r5 M6: an edit always lands a new item, so refusing its plain accept would make a duplicate). A twin waiting
+      // (review r5 M6: an edit lands a new item, except a held section named what the library holds (B78), so refusing its plain accept would make a duplicate). A twin waiting
       // on another edition's copy (reuse with no key yet) may still resolve to a new item below, so it stays guarded
       // (Devin review on c0f65af62).
       const reuseOf = r.reuse as { match?: string; existingKey?: string | null } | null;
@@ -837,7 +837,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           fail(legacy ? `"${was}" was drafted before the form's printed headings were read, so its name may be the PDF's own part name. ${UNNAMED_WHY} Keeping this name is fine once you have checked it.${rows.length > 1 ? " Nothing was accepted." : ""}`
             : `"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
       }
-      let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
+      let landedAs: string | null = null, reused = false, joined = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;
       // QA-192 (P-120: a near duplicate needs a one-line reason, shown to the second person at release): an item that adds
       // to the library while close to a library item is accepted only with a person's reason why it is not the same, its
@@ -853,7 +853,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           if (twin) fail(`"${nameOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
-        if (namedTwin) { resolved = { match: "reuse", existingKey: namedTwin }; reuse.match = resolved.match; reuse.existingKey = resolved.existingKey; }
+        if (namedTwin) { resolved = { match: "reuse", existingKey: namedTwin }; reuse.match = resolved.match; reuse.existingKey = resolved.existingKey; joined = true; }
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
         // C11.13 (review M1–M2): a twin drafted for another edition reuses the item its first copy added; when that one
         // is not in the library (waiting, rejected or undone), the twin adds it itself, unless the library already has it.
@@ -871,7 +871,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         // Review M3: a plain accept compares with the library only (a waiting item proposed later carries the pair itself);
         // an edit's new name is compared with the waiting new fields too. Review r2 m2: an edit never rests on the
         // proposer's reason for the old name.
-        // Devin r3 on #726: an edit always lands its reading as a new item (only an accept reuses), so every edit that lands
+        // Devin r3 on #726: an edit lands its reading as a new item (only an accept, or a held section's name the library holds, reuses), so every edit that lands
         // on the library is checked, a resolved twin or a reuse match included.
         if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && (d.action === "edit" || (reuse.match === "new" && !personNearReason(r)))) {
           let found: string[] = [];
@@ -928,7 +928,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         ...(d.action === "edit" || landedStamp || pqr || nearGiven ? { work: work as Prisma.InputJsonValue } : {}), ...(nearGiven ? { identity: identity as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
-      out.push({ id: r.id, landedAs });
+      out.push({ id: r.id, landedAs, ...(joined ? { joined } : {}) });
     }
     return out;
   // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
