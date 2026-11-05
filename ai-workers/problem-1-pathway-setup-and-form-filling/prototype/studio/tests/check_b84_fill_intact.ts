@@ -6,6 +6,7 @@
 // Also releaseForms (engine/runtime/forms.ts), the form numbers a case's fill accepts (QA-235). IRCC's blank files in
 // official-sources, Sample values; no server, no database, US$0.
 //   tsx studio/tests/check_b84_fill_intact.ts
+import fc from "fast-check";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -61,6 +62,17 @@ try {
   ok("C7.7 B84 pass (QA-235): releaseForms holds every form line and every field map, schedules and dependants' forms included, once each", JSON.stringify([...rel].sort()) === JSON.stringify(["IMM 0008 DEP", "IMM 5257", "IMM 5257 SCH1", "IMM 5409"]), [...rel]);
   ok("C7.7 B84 fail (QA-235): a number the release does not write is not in it, nor the same number in other case, spacing or with a space added", ["IMM 9999", "imm 5257 sch1", "IMM5257SCH1", "IMM 5257 SCH1 ", "IMM 0008", ""].every((f) => !rel.has(f)));
   ok("C7.7 B84 fail: a release with no forms and no field maps accepts nothing", releaseForms({ forms: [], field_maps: [] }).size === 0);
+  // STANDARDS §7 [M] (an engine change): generated releases, with duplicates, other case, spacing and numbers in neither
+  // list. Membership is exactly the union of the two lists' numbers as written: nothing added, nothing normalised.
+  const num = fc.oneof(fc.constantFrom("IMM 5257", "IMM 5257 SCH1", "imm 5257 sch1", "IMM 5257 SCH1 ", "IMM5257SCH1", "IMM 0008 DEP", "IMM 0008", ""), fc.string({ maxLength: 12 }));
+  const lines = fc.array(num.map((form_number) => ({ form_number })), { maxLength: 6 });
+  try {
+    fc.assert(fc.property(lines, lines, num, (forms, field_maps, asked) => {
+      const got = releaseForms({ forms, field_maps }), want = [...forms, ...field_maps].map((f) => f.form_number);
+      return got.has(asked) === want.includes(asked) && got.size === new Set(want).size && want.every((f) => got.has(f));
+    }), { numRuns: 1000 });
+    ok("C7.7 B84 property (QA-235, STANDARDS §7): for generated releases a number is accepted exactly when a form line or a field map writes it, as written", true);
+  } catch (e) { ok("C7.7 B84 property (QA-235, STANDARDS §7): for generated releases a number is accepted exactly when a form line or a field map writes it, as written", false, (e as Error).message.slice(0, 400)); }
   const empty = readFileSync(join(SOL, "official-sources", "ircc", "forms", "imm0008depe.pdf")).length > 0;
   ok("C7.7 B84 (setup): IRCC's blank IMM 0008 DEP is in official-sources", empty);
 } finally { rmSync(dir, { recursive: true, force: true }); }
