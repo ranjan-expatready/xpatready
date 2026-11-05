@@ -172,7 +172,9 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("QA-227 pass: both facts came through C3.6's door for their rule (a rules proposal, approved), never SQL", sql("select count(*) from canonical_field where canonical_field_key in ('case.uses_representative', 'case.authorizes_release_to_designated_individual') and status = 'PUBLISHED' and source_ref like 'Needed by Form condition IMM 547%'") === "2");
 
   const caseFor = async (ref: string, answer: boolean | null, combinationId = vv) => {
-    const id = (await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER)).body?.id as string;
+    const opened = await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER);
+    if (!opened.body?.id) throw new Error(`QA-227: case ${ref} did not open (${opened.status}): ${JSON.stringify(opened.body?.missing ?? opened.body).slice(0, 400)}`);
+    const id = opened.body.id as string;
     const people = (await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[];
     const subject = people.find((p) => p.role === "case")!.subject_id;
     if (answer !== null) for (const fact of ["case.uses_representative", "case.authorizes_release_to_designated_individual"]) {

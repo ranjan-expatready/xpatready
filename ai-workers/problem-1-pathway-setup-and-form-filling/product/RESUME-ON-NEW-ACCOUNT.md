@@ -1,6 +1,14 @@
 # Resume on the new account (P-344 (1)): one page, kept by the tech lead
 
-**Not yet tested on a real switch.** The first real switch tests it; correct this page then. The work lives on GitHub (P-82), so an account switch loses at most what a lane has not pushed. Every lane pushes after each step (P-344 (1)).
+**Tested on a real switch, 5 Nov 19:14 IST; corrected the same evening.** Canary requested and pushed inside 5 minutes; nothing on GitHub lost. The work lives on GitHub (P-82), so an account switch loses at most what a lane has not pushed. Every lane pushes after each step (P-344 (1)).
+
+**Found on the real switch:**
+* **The new account may not be empty.** It read 87% weekly on arrival, not 0%. Run `get_usage` first and tell the founder before starting lanes: the crew depends on it (P-356).
+* The app's session list shows nothing from the old account, running or not. A cloud lane on the old account may still push until its limit: read each stack head again before a label.
+* The built-in browser keeps its own sign-in, separate from the app's: it was signed out. The founder's step 1 is needed even when the app is signed in, and a sign-in only counts once claude.ai/code reads as text.
+* The Lead's last records branch may not be on `main` (84e9b9197 was not): compare `origin/main..origin/lead/*` before starting a records branch.
+* The notes folder is `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/`, outside the repository.
+* `find ~` runs past the 2-minute limit; `mdfind -name` finds a note at once.
 
 ## Before the switch (the Lead, if there is warning)
 1. `get_usage`: note the weekly figure and time.

@@ -142,7 +142,7 @@ function UndoBar({ batchId, n, until, onGone }: { batchId: string; n: number; un
   const undo = useAction(() => api(`/review/proposals/undo/${batchId}`, { method: "POST" }), { invalidate: inv, success: `Undone: ${plural(n, "proposal")} waiting again.`, onDone: onGone });
   return (
     <Notice tone="ok" title={`Decided ${plural(n, "proposal")}`} action={<Button size="sm" variant="secondary" busy={undo.isPending} onClick={() => undo.mutate(undefined)}><Undo2 className="size-4" aria-hidden />Undo ({left} s)</Button>}>
-      New library items wait for a second person on To review. Undo is offered for {left} more second{left === 1 ? "" : "s"}.
+      Any new library item waits for a second person on To review. Undo is offered for {left} more second{left === 1 ? "" : "s"}.
     </Notice>
   );
 }
@@ -160,7 +160,7 @@ function Reading({ label, r, rules = false }: { label: string; r: QueueProposal[
 function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => void; onDone: (r: DecideResult | null, n: number) => void }) {
   const [reason, setReason] = React.useState("");
   const run = useAction((b: { action: "accept" | "edit" | "reject"; payload?: unknown }) => api<DecideResult>("/review/proposals/decide", { method: "POST", json: { ids: [p.id], action: b.action, reason: reason.trim() || null, payload: b.payload } }),
-    { invalidate: inv, success: (r) => (r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
+    { invalidate: inv, success: (r) => (r.items[0]?.joined ? "Decided. The library already holds a section of that name, so this part joins it; nothing new was added." : r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
   const checkPayload = p.readings.check?.payload ?? null;
   const differ = p.agreement === "differ" && !!checkPayload;
   // QA-196 (tech lead, 4 Nov): a form check warns unless the person makes it a serious warning before Accept (an edit).

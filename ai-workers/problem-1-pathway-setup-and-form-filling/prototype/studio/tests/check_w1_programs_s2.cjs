@@ -81,6 +81,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ssSme = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
   if (ssSme.length) await api(`/combinations/${ss.id}/signoff`, { method: "POST", actor: "user-C", data: { items: ssSme, action: "signed" } });
   const rel = await api("/pack/release", { method: "POST", actor: "user-B", data: { expectedChanges: (await api("/draft")).body.changes } });
+  // B78 (BR-8 reads the one list Preview and a case show): a release that asks each person nothing, the state this page shows as Not ready.
+  sql(`update config_release set snapshot = jsonb_set(snapshot, '{placements}', '[]'::jsonb) where combination_id = '${ss.id}'`);
   const cat = await catOf();
   const svRow = cat.rows.find((x) => x.nodeKey === sv.nodeKey), ssRow = cat.rows.find((x) => x.nodeKey === "individual.work_permits.open.spouse_student");
   step("setup: two combinations wait on a person: Super visa has AI proposals (saved replay, US$0); Spouse of a student is released but Not ready", svRow?.aiProposals > 0 && ssRow?.status === "NOT_READY" && rel.status === 201, `${svRow?.aiProposals} proposals; ${ssRow?.status}`);

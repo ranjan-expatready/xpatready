@@ -1,0 +1,26 @@
+{
+ "about": "QA-144 slices 4 and on (B79, P-319: data, never code): what IRCC's own words set on a combination's form lines when the configured checkpoint sets it up from its forms (api/src/demo.ts) and when the packs take the people's steps (acceptance/lib/pack2.ts). Read by api/src/form-setup.ts into FORM_SETUP beside the first three slices. Per combination: the application form; each form line's rule, cited with page, quote and date (P-170); the facts only a rule reads (by their key in form-setup.ts); a family information form picked by the application form's channel only when 'familyByChannel' is given (a permanent residence application names its own family form in its rules). Status: Sample, Unconfirmed: expert (AGENTS rule 4).",
+ "combinations": {
+  "pnp.express_entry": {
+   "about": "Provincial nominees › Express Entry stream (QA-144 slice 4, B79a). The canada.ca form pages are official-sources/ircc/canada/pages/*.html (recorded 27 Oct 2026, official-sources/ircc/canada/index.json), each quoted from its paper-application section; IMM 5476's is official-sources/ircc/web-pages/page-imm5476.html (saved 19 Oct 2026). IMM 0008 DEP keeps its line as the sample file sets it (the principal applicant files it): its page says it is for each dependant IMM 0008 does not hold, a count no line can read yet (for the expert). The police certificates and medical exam are not form lines: their block stays the runtime's one named exception (P-172, P-315).",
+   "application": "IMM 0008",
+   "rules": [
+    { "form": "IMM 0008", "who": "principal_applicant",
+      "cite": "canada.ca \"Generic Application Form for Canada (IMM 0008)\" (page modified 2026-09-11, recorded 27 Oct 2026), Who must fill out this application form?: \"This form must be completed by : you, the principal applicant\"" },
+    { "form": "IMM 5669", "who": "principal_partner_adult_children", "minAge": 18,
+      "cite": "canada.ca \"Schedule A: Background / Declaration Form (IMM 5669)\" (page modified 2025-06-26, recorded 27 Oct 2026): \"This form must be completed by: you, the principal applicant; your spouse or common-law partner (whether accompanying you to Canada or not), and your dependent children aged 18 years or older (whether accompanying you to Canada or not).\"" },
+    { "form": "IMM 5406", "who": "principal_partner_adult_children", "minAge": 18,
+      "cite": "canada.ca \"Additional Family Information (IMM 5406)\" (page modified 2026-06-03, recorded 27 Oct 2026): \"This form must be completed by: You, as the principal applicant, Your spouse or common-law partner (whether accompanying you to Canada or not), and Your dependent children aged 18 or over (whether accompanying you to Canada or not).\"" },
+    { "form": "IMM 5562", "who": "principal_applicant",
+      "cite": "canada.ca \"Supplementary Information: Your Travels (IMM 5562)\" (page modified 2025-06-26, recorded 27 Oct 2026): \"This form must be completed by: you, the principal applicant; You must complete all sections including those for your spouse or common law partner (whether accompanying or not) and each dependent child over the age of 18 (whether accompanying or not).\"" },
+    { "form": "IMM 5476", "condition": { "subjectKind": "CASE", "op": "eq", "field": "case.uses_representative", "value": true },
+      "cite": "canada.ca \"Use of a Representative Form (IMM 5476)\" (page modified 2025-12-12, saved 19 Oct 2026), When to use this form: \"Complete this form only if you are: appointing a representative; updating contact information for your previously appointed representative; cancelling a representative’s appointment; cancelling the appointment of a representative and appointing a new representative; or withdrawing your role as a representative\"" }
+   ],
+   "ruleFacts": ["case.uses_representative"],
+   "notOnForm": [
+    { "form": "IMM 0008 DEP", "fact": "person.marital_status", "values": ["unknown"],
+      "cite": "IMM 0008 DEP (10-2024), Additional Dependants / Declaration, question 16 a) \"Your current marital status\": its drop-down prints Annulled Marriage (09), Common-Law (03), Divorced (04), Legally Separated (05), Married (01), Single (02), Widowed (06), from the form's own list MaritalStatusList (official-sources/ircc/forms/imm0008depe.pdf, read in prototype/p1/inventory/imm0008depe.inventory.json); it prints no Unknown, which IMM 0008 (05-2026) prints as code 00 (tech lead on #1050: B81's Not on this form)." }
+   ]
+  }
+ }
+}

@@ -246,24 +246,6 @@ export class Forms {
     return { edition: ed.editionLabel, channel: ed.channel, option_maps: out };
   }
 
-  /** What Submit would list for one PDF edition's option maps if its form were filed, as drafted by code and read only:
-   *  nothing is saved (C10.1 row 9, a waiting row that leaves the draft as it is). The same rule as engine/channels.ts. */
-  async optionMapProblemsIfFiled(editionId: string) {
-    const ed = await this.pdfEdition(editionId);
-    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const lists = new Map(effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } } }), (l) => l.answerListKey, "draft").map((l) => [l.answerListKey, l]));
-    const maps = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (x) => x.dataPath, "draft");
-    const optionsOf = this.formOptions(ed, maps);
-    return maps.flatMap((m) => {
-      const list = m.outcome === "mapped" && m.canonicalFieldKey ? lists.get(lib.get(m.canonicalFieldKey)?.answerListKey ?? "") : undefined;
-      if (!list) return [];
-      const opts = optionsOf.get(m.dataPath), values = list.values.map((v) => ({ key: v.valueKey, label: v.label }));
-      const map = opts?.length ? draftOptionMap(values, opts, m.optionMap as OptionMap | null).optionMap : m.optionMap as OptionMap | null; // B81: a person's marks count
-      if (!map && !hasCodes(m.transform)) return [];
-      return optionMapProblems(values.map((v) => v.key), map, values).map((p) => ({ item: m.dataPath, message: `${(m.caption ?? "A form field").replace(/:\s*$/, "")}: ${p}.` }));
-    });
-  }
-
   /** B81: the option-map step of one PDF edition for a person: every form field on an answer list with its own printed
    *  choices, grouped when they print the same choices and read the same list. Reads only: an unsaved group shows what the
    *  rules suggest, and nothing is written until a person saves. */
@@ -497,7 +479,17 @@ export class Forms {
       await moveConditions("checks", tx.check, await tx.check.findMany({ where: { workspaceId: ws } }), (r) => `${r.combinationId}|${r.checkKey}`);
       const types = await tx.documentType.findMany({ where: { workspaceId: ws } });
       const tHit = new Set(types.filter((t) => t.suppliesFacts.includes(from)).map((t) => t.documentTypeKey));
-      await moveLineages("document supplies", tx.documentType, types.filter((t) => tHit.has(t.documentTypeKey)), (t) => t.documentTypeKey, (t) => ({ suppliesFacts: [...new Set(t.suppliesFacts.map((f: string) => (f === from ? to : f)))] }));
+      // QA-256 (B112): whom each fact is about moves with the fact, or a fact about a spouse would read as the holder's own.
+      // A document that supplies both, about different people, would make one fact about two people: the merge's check says
+      // so before (engine/change-set.ts); this is its guard for a change that lands in between. Refused, nothing moved.
+      await moveLineages("document supplies", tx.documentType, types.filter((t) => tHit.has(t.documentTypeKey)), (t) => t.documentTypeKey, (t) => {
+        if (!t.suppliesFacts.includes(from)) return { suppliesFacts: t.suppliesFacts };
+        const about = { ...((t.suppliesAbout ?? {}) as Record<string, string>) }, whom = about[from] ?? "holder";
+        if (t.suppliesFacts.includes(to) && (about[to] ?? "holder") !== whom) conflict(`${t.name} supplies both of these fields, about different people, so merging them would lose whom one is about. Change what it supplies first, then merge. Nothing was merged.`);
+        delete about[from];
+        if (whom !== "holder") about[to] = whom;
+        return { suppliesFacts: [...new Set(t.suppliesFacts.map((f: string) => (f === from ? to : f)))], suppliesAbout: Object.keys(about).length ? (about as Prisma.InputJsonValue) : Prisma.DbNull };
+      });
       for (const d of await tx.derivedField.findMany({ where: { workspaceId: ws } })) if (d.inputs.includes(from) || d.reference === from) { await tx.derivedField.update({ where: { id: d.id }, data: { inputs: d.inputs.map((i) => (i === from ? to : i)), reference: d.reference === from ? to : d.reference } }); bump("derived definitions"); }
       const facts = await tx.sampleFact.updateMany({ where: { workspaceId: ws, canonicalFieldKey: from }, data: { canonicalFieldKey: to } }); if (facts.count) bump("sample facts (scaffolding)", facts.count);
       for (const f of await tx.combinationForm.findMany({ where: { workspaceId: ws }, select: { combinationId: true, form: { select: { editions: { select: { id: true } } } } } })) if (f.form.editions.some((e) => [...mapLineages].some((k) => k.startsWith(`${e.id}|`)))) touched.add(f.combinationId);

@@ -28,6 +28,9 @@ A banner printed "(CONTINUED)" is marked "continues": its boxes are one section 
 A child part whose first text is its own bold banner is listed under "sub" with that heading: its boxes are a section
 of their own (IMM 1295 prints "EMPLOYMENT" inside the wrapper that starts with "EDUCATION"), unless it splits into
 two or more parts that each print their own banner (rows of people: the first row's label does not name the others).
+On a page inside the form's unnamed wrapper (IMM 5669: IMM_5669 > #subform > page2), each bold numbered heading of at
+most 60 characters ("7. Education", "8. Personal history") names the boxes and parts printed after it, up to the next
+numbered text, listed under "sub" with the heading's "group" (one section per heading; QA-144 slice 4, B79a).
 Anything else has no printed heading: the rules pass then says the name must be changed before Accept.
 
 A banner is put in sentence case by the form's own spelling of each word: a word the form prints in small letters
@@ -87,6 +90,31 @@ def title_of(v):
         return None
     t = words(filled[0]).rstrip(":").strip()
     return t if 4 <= len(t) <= 60 and len(t.split()) <= 8 and sum(c.isalpha() for c in t) >= 4 else None
+
+
+def numbered_heading(d, ns):
+    """QA-144 slice 4: a printed text's numbered heading, from its first paragraph ("7. Education" over "Give the number
+    of years …"): (heading, printed, the text's name) when that paragraph is bold, numbered and at most 60 characters;
+    () when it is numbered but is not such a heading (a question: it ends the heading before it); None when it is not
+    numbered at all."""
+    v = d.find(ns + "value")
+    if v is None or v.find(ns + "image") is not None:
+        return None
+    f = d.find(ns + "font")
+    bold = f is not None and f.get("weight") == "bold"
+    body = next((b for b in v.iter() if b.tag == XHTML + "body"), None)
+    if body is not None:
+        paras = [p for p in body if p.tag == XHTML + "p" and " ".join("".join(p.itertext()).split())]
+        if not paras:
+            return None
+        first, style = " ".join("".join(paras[0].itertext()).split()), (paras[0].get("style") or "").replace(" ", "")
+        bold = "font-weight:bold" in style or (bold and "font-weight:normal" not in style)
+    else:
+        first = " ".join((inv.text_of(v, ns) or "").split())
+    m = NUMBERED.match(first)
+    if not m:
+        return None
+    return (m.group(1)[0].upper() + m.group(1)[1:], first, d.get("name") or "") if bold and len(first) <= 60 else ()
 
 
 def texts(el, ns):
@@ -270,6 +298,24 @@ def read(fname):
                 rows = sum(1 for g in c if g.tag.replace(ns, "") in PARTS and first_banner(g))
                 if cb and cb != b and rows < 2 and (c.get("name") or "") and c.get("name") not in sub:
                     sub[c.get("name")] = {"heading": sentence_case(cb, seen), "printed": cb}
+            # QA-144 slice 4 (B79a): a page inside the form's unnamed wrapper (IMM 5669: IMM_5669 > #subform > page2) is a
+            # page, not a part: its boxes sit under the numbered questions it prints between them ("7. Education",
+            # "8. Personal history", "12. Addresses"). Each bold numbered heading of at most 60 characters names the boxes
+            # and parts printed after it on that page, up to the next numbered text; a longer numbered text (a question,
+            # "6. Have you, or, ...") ends it. The boxes under one heading share its "group": one section.
+            if pname.startswith("#") and re.fullmatch(r"page\d*", part.get("name") or "", re.I):
+                kids = [c for c in part if c.tag.replace(ns, "") in ("draw", "field") + PARTS]
+                if (part.get("layout") or "position") == "position":
+                    kids = sorted(kids, key=y_of)
+                under = None
+                for c in kids:
+                    if c.tag.replace(ns, "") == "draw":
+                        nh = numbered_heading(c, ns)
+                        if nh is not None:
+                            under = nh or None
+                        continue
+                    if under and (c.get("name") or "") and c.get("name") not in sub:
+                        sub[c.get("name")] = {"heading": under[0], "printed": under[1], "group": under[2]}
             if sub:
                 entry = {**(entry or {"heading": None, "how": "none"}), "sub": sub}
             if entry and key not in out:

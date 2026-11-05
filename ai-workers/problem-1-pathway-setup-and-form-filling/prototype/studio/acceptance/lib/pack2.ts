@@ -81,8 +81,9 @@ export function pack2(id: string) {
     const newest = `f.version = (select max(v.version) from combination_form v where v.combination_id = f.combination_id and v.lineage_key = f.lineage_key)`;
     const lineForms = () => new Set(ids(`select g.form_key from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and ${newest} and f.status <> 'RETIRED'`));
     const filed = setup ? sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and g.form_key = '${setup.application}' and ${newest} limit 1`) : "";
-    const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
-    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
+    // QA-144 slice 4: no family form by channel when the setup names its own among its rules (Express Entry's IMM 5406).
+    const family = setup?.family ? FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"] : null;
+    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
     // B71: a form line of this combination whose form has no field map and no file here (IRM 0002 on Visitor visa of the six)
     // gets its official file through the form intake's sample door (the same intake an upload takes, as the configured
     // checkpoint does; no screen calls this door) and its saved field-map answer replayed (US$0); never a live run: with
@@ -133,8 +134,7 @@ export function pack2(id: string) {
       const set = async (form: string, body: object) => say(`set ${form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(form)}`, body, AUTHOR));
       for (const r of setup.rules)
         await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
-      await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
-      if (lineForms().has(family.other)) await set(family.other, { retire: true });
+      if (family) { await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 }); if (lineForms().has(family.other)) await set(family.other, { retire: true }); }
       // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
       for (const rf of setup.ruleFacts ?? []) {
         if (sql(`select count(*) from canonical_field where canonical_field_key = '${rf.fact}' and status in ('DRAFT', 'PUBLISHED')`) !== "0") continue;

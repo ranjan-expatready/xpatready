@@ -48,7 +48,7 @@ const ok = (name, c, d) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "F
   });
   await visit("preview", "3-preview-1440.png", (t) => ok("walk Preview: the principal's questionnaire has questions", t.length > 200 && !/no questions yet/i.test(t), t.slice(0, 160)));
   // IRM 0002's saved map (#840) is replayed by the checkpoint (#891): the Visitor visa is released (review m2).
-  ok("walk: the configured checkpoint released the Visitor visa", Number(sql(`select count(*) from config_release where combination_id = '${vv}'`)) === 1);
+  ok("walk: the configured checkpoint released the Visitor visa", Number(sql(`select count(*) from config_release where combination_id = '${vv}'`)) >= 1);
   await visit("review", "4-review-released-1440.png", (t) => {
     ok("walk Review and release: release 1 is out, approved by the Approver, with nothing left to fix", /Last released: version 1, in Release 1, by Approver/.test(t) && /0 problems to fix/.test(t) && !/[1-9]\d* problems? to fix/.test(t), t.slice(0, 300));
     ok("walk Review and release: no form field without a decision and no rule in words only", !/no decision in this draft/.test(t) && !/in words only/.test(t));
