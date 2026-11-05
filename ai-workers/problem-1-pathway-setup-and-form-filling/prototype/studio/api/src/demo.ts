@@ -786,12 +786,21 @@ export class Demo {
           }
         }
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
-        for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true } })) {
+        for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true, form: { select: { formKey: true } } } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
             try { await this.library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON }); byHand++; } catch (e) { setUpRefused.push(`${f.dataPath}: ${said(e)}`); }
           }
           // A choice field's list values matched to the form's own codes (no AI), as the Form library's button does.
           try { await this.forms.draftOptionMaps(author, ed.id); } catch (e) { setUpRefused.push(`option maps: ${said(e)}`); }
+          // QA-144 slice 4 (B81's door, #1050): an answer the form prints no choice for is marked Not on this form on each
+          // form field that reads it, keeping the drafted codes, so a case with that answer is refused at filling in words.
+          // From the form setup's data (samples/form-setup.json), cited; Sample, Unconfirmed: expert.
+          for (const mark of (setup?.notOnForm ?? []).filter((x) => x.form === ed.form.formKey)) {
+            const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, canonicalFieldKey: mark.fact, outcome: "mapped", status: { not: "RETIRED" } }, orderBy: { version: "desc" }, select: { dataPath: true, optionMap: true } });
+            for (const [dataPath, om] of new Map(rows.reverse().map((r) => [r.dataPath, r.optionMap as { map?: Record<string, string>; unused?: string[] } | null]))) {
+              try { await this.forms.setOptionMap(author, ed.id, { dataPath, map: om?.map ?? {}, unused: om?.unused ?? [], notOnForm: mark.values }); } catch (e) { setUpRefused.push(`${mark.form} not on this form: ${said(e)}`); }
+            }
+          }
         }
       }
     });

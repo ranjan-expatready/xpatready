@@ -108,14 +108,17 @@ type RuleFact = typeof GENDER_FACT & { beside?: string[] };
 /** One combination's setup. `family`: why each person 18 or older fills the family information form that the application
  *  form's channel picks (FAMILY_FORM_BY_CHANNEL); absent, no family form is picked by channel (a permanent residence
  *  application names its own family form among its rules, QA-144 slice 4). */
-export type FormSetup = { application: string; rules: FormRule[]; family?: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] };
+/** QA-144 slice 4 (B81): an answer a form prints no choice for, marked Not on this form on each of its form fields that
+ *  read the fact; cited with the form's printed choices. */
+export type NotOnFormMark = { form: string; fact: string; values: string[]; cite: string };
+export type FormSetup = { application: string; rules: FormRule[]; notOnForm?: NotOnFormMark[]; family?: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] };
 /** QA-144 slice 4 (B79, P-319): samples/form-setup.json, each combination's words as data. A fact only a rule reads is
  *  named there by its key and taken from the facts above; an unknown key fails the read, never a rule without its fact. */
-type SetupData = { combinations: Record<string, { application: string; rules: FormRule[]; ruleFacts?: string[]; familyByChannel?: string }> };
+type SetupData = { combinations: Record<string, { application: string; rules: FormRule[]; ruleFacts?: string[]; familyByChannel?: string; notOnForm?: NotOnFormMark[] }> };
 const RULE_FACTS: RuleFact[] = [GENDER_FACT, REP_FACT, RELEASE_FACT, MINOR_FACT];
 const fromData = (): Record<string, FormSetup> => {
   const d = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "form-setup.json"), "utf8")) as SetupData;
-  return Object.fromEntries(Object.entries(d.combinations).map(([key, c]) => [key, { application: c.application, rules: c.rules,
+  return Object.fromEntries(Object.entries(d.combinations).map(([key, c]) => [key, { application: c.application, rules: c.rules, ...(c.notOnForm ? { notOnForm: c.notOnForm } : {}),
     ...(c.familyByChannel ? { family: c.familyByChannel } : {}),
     ruleFacts: (c.ruleFacts ?? []).map((k) => RULE_FACTS.find((f) => f.fact === k) ?? (() => { throw new Error(`samples/form-setup.json, ${key}: no rule fact ${k} in api/src/form-setup.ts`); })()) }]));
 };
