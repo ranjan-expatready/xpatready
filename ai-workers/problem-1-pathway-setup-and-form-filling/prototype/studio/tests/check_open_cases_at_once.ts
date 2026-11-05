@@ -37,7 +37,7 @@ const STUDIO = join(import.meta.dirname, ".."), run = Date.now().toString(36);
     // SHARE stops the writes of a new case and lets the reads before them through; the connection it holds is the check's own.
     const holder = spawn("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-X", "-q"], { stdio: ["pipe", "ignore", "inherit"] });
     holder.stdin.write("begin; lock table party in share mode;\n");
-    const locked = await until(async () => sql("select count(*) from pg_locks where relation = 'party'::regclass and mode = 'ShareLock' and granted") !== "0", 15_000);
+    const locked = await until(async () => sql("select count(*) from pg_locks where relation = 'party'::regclass and mode = 'ShareLock' and granted and database = (select oid from pg_database where datname = current_database())") !== "0", 15_000);
     const answers = Promise.all(Array.from({ length: atOnce }, (_, i) => open(`OCW-${atOnce}-${i}-${run}`)));
     let fullAt = 0, age = 0;
     await until(async () => { age = oldest(); if (!fullAt && stuck() >= POOL) fullAt = Date.now(); return (!!fullAt && Date.now() - fullAt >= HOLD_MS) || age >= OLDEST_S; }, 60_000);
@@ -46,7 +46,7 @@ const STUDIO = join(import.meta.dirname, ".."), run = Date.now().toString(36);
     holder.stdin.end("commit;\n");
     const all = await answers;
     const bad = all.find((r) => r.status !== 201);
-    ok(`pass: ${atOnce} cases opened at once with the connections busy for ${HOLD_MS / 1000} s: every one answers 201`, !bad, { statuses: statuses(all), first_refusal: bad?.body });
+    ok(`pass: ${atOnce} cases opened at once with the connections busy: every one answers 201`, !bad, { statuses: statuses(all), first_refusal: bad?.body });
     ok("pass: each answer is its own case, with its people", new Set(all.map((r) => r.body?.id)).size === all.length && all.every((r) => r.body?.people?.some((p: { role: string }) => p.role === "principal")));
     const after = made();
     ok("pass (data): one pin and one audit line per case, nothing half made", after[0] - before[0] === all.length && after[1] - before[1] === all.length, { cases: all.length, pins: after[0] - before[0], audit: after[1] - before[1] });
