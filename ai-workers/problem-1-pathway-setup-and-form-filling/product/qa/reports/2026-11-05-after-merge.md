@@ -100,3 +100,5 @@ A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M
 | 9 | The same, on other combinations | not done here; by route: Hiding errors on the 4 others | QA-239, B88, C4.11 | Yes, for those combinations |
 
 **B89 is not a stop:** nothing is refused without it. It only adds conditions, which then need B86. **Not in this walk:** the other four combinations, the pack-route clicks in row 2, and anything after release (QA-235, B84, is at the case).
+## Batch 23 ~10:44 IST: QA-239 (Gap · Major, row B88); C10.1 after #1009
+One condition approved on Visitor visa adds release-refusing Hiding errors on the four other combinations reading it (run 41972242603). "Unreachable" did not appear by route; concept §8 simulated it. C4.11 cannot be Works while this is open. C10.1: 21/24 on the checkpoint (run 41969024051). M2 58/60.
