@@ -52,6 +52,8 @@ Every turn re-reads a session's whole context, so long, often-woken sessions are
 ## How the tech lead handles a founder ask (founder, 31 Oct)
 (1) **Restate** the ask and the decision it serves; if unclear, one question at a time, with a recommendation. (2) **Evidence first:** all our history, not one sample; outside claims from primary sources; evidence marked apart from estimate. (3) **Challenge:** say no, name knock-on effects on other screens, areas or rows, or "no clean solution as asked". (4) **Recommend** with trade-offs, in plain words. (5) **Act** on agreement for anything bigger than a small fix; record it in `DECISIONS.md` or the backlog.
 
+**Delivery order (P-348):** by a person's journey, thin first; a row counts when a person can do it by screens and the next step can use its output (gate A). `RULES.md` has the current order.
+
 Principles: don't follow blindly; evidence, not vanity numbers; simple, no quality cut; feature by feature, in users' order; small justified spend (about US$5–10 a month).
 
 ## Night playbook and the 3 Nov rules (founder, P-291; evidence: `reports/build-review-2026-11-03.html`)
