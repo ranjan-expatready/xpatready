@@ -23,7 +23,7 @@ export function FormFieldConditions({ combinationId, fact, item }: { combination
   const key = ["form-field-conditions", combinationId, fact, item ?? ""];
   const q = useApi<View>(key, `/combinations/${combinationId}/questions/${encodeURIComponent(fact)}/form-fields${item ? `?item=${item}` : ""}`);
   const act = useAction((v: { row: Row; clear?: boolean; ask?: boolean }) => api<{ id: string; spread: string | null }>("/library/form-field-conditions", { method: "POST", json: { combinationId, fact, formEditionId: v.row.form_edition_id, dataPath: v.row.data_path, ...(item && !v.clear ? { item } : {}), ...(v.clear ? { clear: true } : {}), ...(v.ask ? { ask: true } : {}) } }),
-    { invalidate: [key, ["combination", combinationId], ["review"], ["review-queue"]], success: "Sent to a second person on To review." });
+    { invalidate: [key, ["combination", combinationId], ["review"], ["review-queue"], ["form-field-followers", combinationId]], success: "Sent to a second person on To review." });
   if (q.isLoading) return <Spinner label="Loading the form fields" />;
   if (q.isError) return <ErrorState title="The form fields could not be read" description={(q.error as Error).message} />;
   const v = q.data!;
@@ -46,8 +46,8 @@ export function FormFieldConditions({ combinationId, fact, item }: { combination
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Pill tone={STATE[r.state].tone}>{STATE[r.state].word}</Pill>
                 {r.can_confirm ? <Button size="sm" variant="secondary" busy={act.isPending} onClick={() => act.mutate({ row: r })}>Says the same as this condition</Button> : null}
-                {r.can_ask && r.asks ? <Button size="sm" variant="secondary" busy={act.isPending} aria-label={`Asks the same as “${r.asks.deciding}”`} onClick={() => act.mutate({ row: r, ask: true })}>Asks the same question</Button> : null}
-                {r.can_undo ? <Button size="sm" variant="ghost" busy={act.isPending} aria-label={r.state === "asked" ? `Make ${r.caption || "this form field"} worked out from other answers again` : `Take the condition off ${r.caption || "this form field"}`} onClick={() => act.mutate({ row: r, clear: true })}>Undo</Button> : null}
+                {r.can_ask && r.asks ? <Button size="sm" variant="secondary" busy={act.isPending} aria-label={`Asks the same question: “${r.asks.deciding}”`} onClick={() => act.mutate({ row: r, ask: true })}>Asks the same question</Button> : null}
+                {r.can_undo ? <Button size="sm" variant="ghost" busy={act.isPending} aria-label={r.state === "asked" ? `Undo: ${r.caption || "this form field"} is worked out from other answers again` : `Undo: take the condition off ${r.caption || "this form field"}`} onClick={() => act.mutate({ row: r, clear: true })}>Undo</Button> : null}
                 {r.change_id ? <Link className="text-text-link underline" to={`/review/change/${r.change_id}`}>Open on To review</Link> : null}
               </div>
               {r.why ? <p className="mt-1 text-xs text-text-muted">{r.why}</p> : null}

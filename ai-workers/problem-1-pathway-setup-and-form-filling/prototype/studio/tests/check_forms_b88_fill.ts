@@ -84,6 +84,7 @@ const NINE: [string, string, RegExp][] = [
 // Challenge M3 (BR-8): the release's change summary names it once, in words, for the immigration expert.
 const line = diff(snap({ asked: false }), snap({ asked: true })).find((c) => c.kind === "Form field question");
 ok("C4.11 BR-8 pass: the change summary has a \"Form field question\" line for the expert, in words, no field code", !!line && line.needs_sme && /reads "Has used another name", was "Other family name"/.test(line.label) && !/person\./.test(line.label), line);
+ok("C4.11 BR-8 (review minor): a form field whose only change is its question is not counted again in its form's \"Field map\" line", !diff(snap({ asked: false }), snap({ asked: true })).some((c) => c.kind === "Field map"));
 ok("C4.11 BR-8: an unchanged form field adds no such line", !diff(snap({ asked: true }), snap({ asked: true })).some((c) => c.kind === "Form field question"));
 // The block a Yes/No vouches for, by data path only (IMM 1294's and IMM 1344's own paths).
 const e = (data_path: string, fact: string) => ({ data_path, fact, outcome: "mapped" });

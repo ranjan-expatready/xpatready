@@ -15,7 +15,7 @@ import { isItemLifecycle } from "./library-items.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
-import { FORM_FIELD_KIND, formFieldView, releaseFormFieldCondition } from "./form-field-condition.ts";
+import { ASK_ACTION, FORM_FIELD_KIND, formFieldView, releaseFormFieldCondition, restoreReplaced } from "./form-field-condition.ts";
 import { dropFieldList, releaseFieldList } from "./answer-values.ts";
 import { releaseSupplies, suppliesView, withdrawApprovedSupplies } from "./document-supplies.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
@@ -26,7 +26,7 @@ export const KIND_NOUN: Record<string, string> = { library_form: "library form",
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_ROLE: "Change the role of", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", SET_FORM_FIELD_CONDITION: "Change", SET_SUPPLIES: "Change", RENAME: "Rename" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_ROLE: "Change the role of", SET_FILLS: "Change who fills", SET_CONDITION: "Change when it is asked:", SET_FORM_FIELD_CONDITION: "Change", SET_FORM_FIELD_QUESTION: "Change", SET_SUPPLIES: "Change", RENAME: "Rename" };
 export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
 /** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
 export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
@@ -66,7 +66,7 @@ export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" |
 }
 
 export function changeView(c: LibraryChange) {
-  return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
+  return { id: c.id, kind: c.kind, kind_word: c.action === ASK_ACTION ? "the question a form field asks" : KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
     decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId, batch_id: c.batchId ?? null, // QA-193
     ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}), ...(c.kind === FORM_FIELD_KIND ? { form_field: formFieldView(c) } : {}), ...(c.kind === SUPPLIES_KIND ? { supplies: suppliesView(c) } : {}),
@@ -132,6 +132,7 @@ export async function decideChange(db: Pick<Db, "libraryChange" | "changeSet"> |
     if (!done.count) throw problem(409, "Already decided", "Someone decided this change at the same moment. Refresh to see it.");
     // G-CORE B2 (review M1): a returned change's change set (a rename through the door) stops waiting, in the same write.
     if (decision === "return") await w.changeSet.updateMany({ where: { libraryChangeId: id, status: "waiting" }, data: { status: "undone" } });
+    if (decision === "return" && c.kind === FORM_FIELD_KIND) await restoreReplaced(w as Prisma.TransactionClient, c); // B88 review M3
   };
   if ("$transaction" in db && typeof db.$transaction === "function") await (db as Db).$transaction((tx) => write(tx)); else await write(db);
   return changeView((await db.libraryChange.findUnique({ where: { id } }))!);
@@ -187,7 +188,7 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
   // C4.5: likewise the facts a document supplies: withdrawn, then proposed again with their official words.
   if (c.kind === SUPPLIES_KIND) throw problem(409, "Propose it again", "A returned change of the facts a document supplies is not sent again: withdraw it, then propose the facts again on its document type.");
   // B86 BR-7: likewise a form field's condition: proposing again runs its checks again.
-  if (c.kind === FORM_FIELD_KIND) throw problem(409, "Propose it again", "A returned change of a form field is not sent again: withdraw it, then confirm the form field again.");
+  if (c.kind === FORM_FIELD_KIND) throw problem(409, "Propose it again", c.action === ASK_ACTION ? "A returned change of a form field is not sent again: withdraw it, then ask the Yes/No as its deciding question again." : "A returned change of a form field is not sent again: withdraw it, then confirm the form field again.");
   // G-CORE B2: a rename is sent again through its door (the check runs again), never corrected here.
   if (c.action === "RENAME") throw problem(409, "Rename it again", "A returned rename is not sent again from here: rename it again on its page, where the check runs again.");
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can correct it and send it again. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to correct or withdraw it.`);
@@ -232,6 +233,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     const done = await tx.libraryChange.updateMany({ where: { id, status: { in: ["WAITING", "RETURNED"] } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
     if (!done.count) throw problem(409, "Changed meanwhile", "Someone decided this at the same moment. Refresh to see it.");
     await tx.changeSet.updateMany({ where: { libraryChangeId: id, status: "waiting" }, data: { status: "undone" } }); // review M1: ended, not applied
+    await restoreReplaced(tx, c); // B88 review M3: the approved change it closed is put back
     return changeView((await tx.libraryChange.findUnique({ where: { id } }))!);
   });
   return db.$transaction(async (tx) => {

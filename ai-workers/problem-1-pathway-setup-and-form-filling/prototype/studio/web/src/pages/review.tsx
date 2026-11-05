@@ -13,6 +13,7 @@ import { UnsourcedNumbers } from "@/components/unsourced-numbers";
 import { Link } from "react-router-dom";
 import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
 import { FormFieldConditions } from "@/components/form-field-conditions";
+import { FormFieldFollowers } from "@/components/form-field-followers";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
@@ -92,6 +93,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>
       ) : unsourced || lineBox ? null : <Notice tone="ok" title="The draft passes validation" />}
+      <FormFieldFollowers combinationId={id} shown={new Set(others.filter((p: { message?: string; item?: string }) => HIDING.test(p.message ?? "") && p.item).map((p: { item: string }) => p.item))} />
       <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">

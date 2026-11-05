@@ -3,7 +3,7 @@
 // cleared by product steps only: B86's door for plain form fields, and B88's for the worked-out Yes/No that prints its
 // condition's deciding question (asked as that question, a second person approves). Before that, Submit refuses them all;
 // the rule is not relaxed for any field (P-303). Saved answers only: US$0, live AI off. Every condition is Sample.
-//   zsh studio/tools/isolated.sh forms_b88 4688 start && tsx studio/tests/check_forms_b88_spread.ts 4688 xr_studio_forms_b88
+//   zsh studio/tools/isolated.sh forms_b88 4455 start && tsx studio/tests/check_forms_b88_spread.ts 4455 xr_studio_forms_b88
 import { randomUUID } from "node:crypto";
 import { APPROVER, AUTHOR, pack2, REVIEWER, run } from "../acceptance/lib/pack2.ts";
 
@@ -103,6 +103,55 @@ run(async () => {
   const again = r.body?.id as string | undefined;
   if (again) await call("POST", `/library/changes/${again}/approve`, { note: "Asked again by a test (B88)." }, APPROVER);
   ok("C4.11 B88 BR-7: asked again after Undo (a closed change never blocks a new one)", !!again && mapOf(worked!) === ASKED_STEP, mapOf(worked!));
+  const statusOf = (id?: string) => sql(`select status from library_change where id='${id}'`);
+
+  // ---------------------------------------------------------------- review M3: a returned or withdrawn Undo leaves the record true
+  r = await ask(sp, NAME, worked!, { clear: true });
+  const u3 = r.body?.id as string | undefined;
+  ok("C4.11 B88 BR-7: proposing Undo closes the approved ask it would replace (one open change per form field)", !!u3 && statusOf(again) === "WITHDRAWN", statusOf(again));
+  r = await call("POST", `/library/changes/${u3}/return`, { note: "Returned by a test: keep it asked (B88)." }, APPROVER);
+  ok("C4.11 B88 review M3 pass: the Undo returned, the ask it closed is approved again, and still waits for the next release", r.status < 300 && statusOf(again) === "APPROVED" && mapOf(worked!) === ASKED_STEP, [r.status, statusOf(again)]);
+  r = await call("POST", `/library/changes/${u3}/withdraw`, { note: "Withdrawn by a test (B88)." }, AUTHOR);
+  ok("C4.11 B88 review M3 pass: withdrawing the returned Undo changes nothing more", r.status < 300 && statusOf(again) === "APPROVED" && statusOf(u3) === "WITHDRAWN", [r.status, statusOf(again), statusOf(u3)]);
+  r = await ask(sp, NAME, worked!, { clear: true });
+  const u4 = r.body?.id as string | undefined;
+  r = await call("POST", `/library/changes/${u4}/withdraw`, { note: "Withdrawn while waiting by a test (B88)." }, AUTHOR);
+  ok("C4.11 B88 review M3 pass: an Undo withdrawn while it waits puts the ask back too", r.status < 300 && statusOf(again) === "APPROVED", statusOf(again));
+  ok("C4.11 B88 review M1: the change's words have no action code", !/\b[A-Z]+(?:_[A-Z]+)+\b/.test(`${(await call("GET", `/library/changes/${again}`, undefined, APPROVER)).body?.action_word} ${(await call("GET", `/library/changes/${again}`, undefined, APPROVER)).body?.kind_word}`));
+
+  // ---------------------------------------------------------------- review M4: checked again at approval (DB: what no route can do between two steps)
+  const NID = "person.national_id_number";
+  const nidRow = ((await call("GET", FIELDS(sp, NID), undefined, AUTHOR)).body?.rows ?? []).find((x: Row) => x.can_ask) as Row | undefined;
+  r = nidRow ? await ask(sp, NID, nidRow) : r;
+  const nidAsk = r.body?.id as string | undefined, nidWas = nidRow ? mapOf(nidRow) : "";
+  const q = sql(`select id || '|' || predicate_json::text from section_question where lineage_key='${NID}' and status in ('DRAFT','PUBLISHED') order by version desc limit 1`).split("|");
+  sql(`update section_question set predicate_json = jsonb_set(predicate_json, '{value}', 'false') where id='${q[0]}'`); // the condition changed meanwhile (DB)
+  r = await call("POST", `/library/changes/${nidAsk}/approve`, { note: "Approved by a test (B88)." }, APPROVER);
+  ok("C4.11 B88 review M4 fail: the question's condition changed between proposal and approval: 409 \"Changed since\", nothing written", r.status === 409 && /condition changed/.test(words(r)) && mapOf(nidRow!) === nidWas && statusOf(nidAsk) === "WAITING", [r.status, words(r)]);
+  sql(`update section_question set predicate_json = '${q.slice(1).join("|").replace(/'/g, "''")}'::jsonb where id='${q[0]}'`);
+  const top = sql(`select id from form_field_map where form_edition_id='${nidRow!.form_edition_id}' and data_path='${nidRow!.data_path}' order by version desc limit 1`), step0 = sql(`select transform from form_field_map where id='${top}'`);
+  sql(`update form_field_map set transform = 'as_is' where id='${top}'`); // the form field changed meanwhile (DB)
+  r = await call("POST", `/library/changes/${nidAsk}/approve`, { note: "Approved by a test (B88)." }, APPROVER);
+  ok("C4.11 B88 review M4 fail: the form field changed between proposal and approval: 409 \"Changed since\", nothing written", r.status === 409 && /form field changed/.test(words(r)) && statusOf(nidAsk) === "WAITING", [r.status, words(r)]);
+  sql(`update form_field_map set transform = '${step0.replace(/'/g, "''")}' where id='${top}'`);
+  r = await call("POST", `/library/changes/${nidAsk}/approve`, { note: "Approved by a test once nothing changed (B88)." }, APPROVER);
+  ok("C4.11 B88 review M4 pass: with nothing changed, the same change is approved", r.status < 300 && /^person\.has_national_id\|derived:any\(/.test(mapOf(nidRow!)), [r.status, mapOf(nidRow!)]);
+
+  // ---------------------------------------------------------------- breaker M2: Undo stays reachable once no problem shows the panel
+  const fol = (await call("GET", `/combinations/${sp}/form-field-followers`, undefined, AUTHOR)).body?.questions ?? [];
+  ok("C4.11 B88 breaker M2 pass: Review and release lists the questions whose form fields follow their condition, so their Undo is reachable", fol.some((x: { fact: string }) => x.fact === NAME) && fol.some((x: { fact: string }) => x.fact === NID) && !JSON.stringify(fol.map((x: { question: string }) => x.question)).includes("person."), fol);
+
+  // ---------------------------------------------------------------- breaker M3: a new edition carries the step; its history is found by form and form field (DB)
+  const key0 = sql(`select key from library_change where id='${again}'`);
+  sql(`update library_change set key = '00000000-0000-0000-0000-000000000000:' || substr(key, 38) where id='${again}'`); // as if asked on an earlier edition
+  const carried = ((await call("GET", FIELDS(sp, NAME), undefined, AUTHOR)).body?.rows ?? []).find((x: Row) => x.data_path === worked!.data_path);
+  ok("C4.11 B88 breaker M3 pass: asked on an earlier edition, the form field still shows as asking its deciding question, with Undo", carried?.state === "asked" && carried.can_undo, carried?.state);
+  sql(`update library_change set key = '${key0.replace(/'/g, "''")}' where id='${again}'`);
+
+  // ---------------------------------------------------------------- BR-10: own words are shown, never parsed (IMM 1344's co-signer)
+  const fs = T.combo("fs.spouse");
+  const cos = ((await call("GET", FIELDS(fs, NAME), undefined, AUTHOR)).body?.rows ?? []).find((x: Row & { warning?: string | null }) => /CoSigner/.test(x.data_path) && x.can_ask) as (Row & { warning?: string | null }) | undefined;
+  ok("C4.11 B88 BR-10 pass: a worked-out Yes/No with words of its own shows them as a warning beside the button, in plain words", !!cos && /^Its own words also say: "Only when co-signer = Y \(Question 3\)"\. Ask it only if/.test(cos.warning ?? "") && !/\.\"\./.test(cos.warning ?? ""), cos?.warning);
 
   // ---------------------------------------------------------------- Done when: every other combination cleared by product steps
   const through = { confirmed: 0, asked: 0, refused: [] as string[] };

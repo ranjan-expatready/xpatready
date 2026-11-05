@@ -3,16 +3,16 @@
 // Yes/No with the form's printed question beside the deciding question (B88's button). Walked in a real browser at 1440 px
 // by keyboard, the second person's page checked, then the problem gone. Plain words, no field code, axe (WCAG 2.2 AA), no
 // sideways scroll at 1440 and 400 px. Saved answers only: US$0. All conditions are Sample.
-//   zsh studio/tools/isolated.sh forms_b88b 4689 start && node studio/tests/check_forms_b88_panel_browser.cjs 4689 xr_studio_forms_b88b
+//   zsh studio/tools/isolated.sh forms_b88b 4454 start && node studio/tests/check_forms_b88_panel_browser.cjs 4454 xr_studio_forms_b88b
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
-const PORT = Number(process.argv[2] ?? 4689), DB = process.argv[3] ?? "xr_studio_forms_b88b";
+const PORT = Number(process.argv[2] ?? 4454), DB = process.argv[3] ?? "xr_studio_forms_b88b";
 const BASE = `http://localhost:${PORT}`, STUDIO = path.resolve(__dirname, "..");
 const SHOTS = path.join(STUDIO, "..", "..", "product", "screens", "B88-yes-no-asks-deciding-question", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
-const CODES = /AliasNameIndicator|natIDIndicator|usCardIndicator|person\.[a-z_]+|form1\[/;
+const CODES = /AliasNameIndicator|natIDIndicator|usCardIndicator|person\.[a-z_]+|form1\[|\b[A-Z]+(?:_[A-Z]+)+\b/; // review M1: an action code too
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 240)}` : ""}`); };
 
@@ -31,6 +31,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       if (w === 1440) await p.locator(selector).first().screenshot({ path: path.join(SHOTS, `${shot}-1440.png`) });
       const axe = await new AxeBuilder({ page: p }).include(selector).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
       step(`axe at ${w} px, ${name}: no WCAG 2.2 AA violation`, axe.violations.length === 0, axe.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
+      // Review M2: WCAG 2.5.3 Label in Name (level A); axe marks the rule experimental, so it is asked for by name.
+      const lin = await new AxeBuilder({ page: p }).include(selector).withRules(["label-content-name-mismatch"]).options({ rules: { "label-content-name-mismatch": { enabled: true } } }).analyze();
+      step(`WCAG 2.5.3 at ${w} px, ${name}: each button's name starts with its visible words`, lin.violations.length === 0, lin.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
       step(`no sideways scroll at ${w} px, ${name}`, await p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth));
     }
     await p.setViewportSize({ width: 1440, height: 900 });
@@ -61,6 +64,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   text = await check("the second person's page", "[data-change-form-field]", "second-person");
   step("the second person compares the form's printed question with the deciding question and sees what it writes", /The form asks/.test(text) && /used any other name/.test(text) && /Asked as/.test(text) && /writes Y when Yes, N when No/.test(text), text);
   const pageText = await p.locator("main").innerText();
+  const title = await p.locator("main h1").first().innerText();
+  step("review M1: the change's title is in words (no action code)", /^Change the question a form field asks: /.test(title) && !CODES.test(title), title);
   step("no field code anywhere on the second person's page", !CODES.test(pageText), pageText.match(CODES)?.[0]);
   await api(`/library/changes/${askId}/approve`, "POST", { note: "Checked against the form's printed question by a test (B88)." }, "user-B");
 
@@ -77,7 +82,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.11 B88 pass (QA-239): through these two buttons and a second person, Study permit's Hiding error is gone", (await hiding()).length === 0);
   await p.goto(`${BASE}/c/${sp}/review`);
   await p.waitForLoadState("networkidle");
-  step("Review and release no longer shows that problem", (await p.locator(under).count()) === 0);
+  step("Review and release no longer shows that problem", (await p.locator("[data-problem]", { hasText: "Hiding a value a form reads" }).count()) === 0);
+  // Breaker M2: once no problem shows the panel, its Undo stays reachable under "Form fields that follow a question's condition".
+  const fol = p.locator("[data-form-field-followers]");
+  await fol.waitFor({ timeout: 60_000 });
+  await fol.locator("summary").focus(); await p.keyboard.press("Enter");
+  text = await check("Review and release, form fields that follow a condition", "[data-form-field-followers]", "review-release-followers");
+  step("breaker M2: the asked Yes/No and the confirmed name are listed there, each with Undo", /Asks its deciding question/.test(text) && /Confirmed: same condition/.test(text) && (await fol.getByRole("button", { name: /^Undo: / }).count()) === 2, text);
   await p.screenshot({ path: path.join(SHOTS, "review-release-cleared-1440.png") });
 
   step("no error in the page's console", errs.length === 0, errs.join(" | "));
