@@ -178,12 +178,20 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   const selected = new Set(selections.map((s) => s.sectionKey));
   const used = new Set<string>();
   for (const m of fieldMaps) for (const e of m.entries) if (e.fact) used.add(e.fact);
-  const conds = [...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson), ...effQuestions.map((q) => q.predicateJson)];
-  for (const c of conds) if (c) for (const m of JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)) used.add(m[1]);
+  const conditionFields = (c: unknown) => { if (c) for (const m of JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)) used.add(m[1]); };
+  for (const c of [...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson)]) conditionFields(c);
   // Lead check L5: a minimum age is decided by each person's date of birth, so its question travels with the forms.
   if (forms.some((f) => f.minAge)) used.add("person.date_of_birth");
-  for (const d of derived) if ([...used].includes(d.derivedKey)) for (const i of [...d.inputs, d.reference]) used.add(i);
-  const placements = effQuestions.filter((q) => selected.has(q.sectionKey) || used.has(q.canonicalFieldKey));
+  // QA-262: only the questions this combination places read in their conditions, repeated until nothing new is placed. A
+  // condition on a library question it does not ask stays out: a release publishes only what its snapshot carries, so
+  // another combination's draft condition here would differ from the published snapshot and refuse every release.
+  let placements: typeof effQuestions = [];
+  for (let size = -1; size !== used.size;) {
+    size = used.size;
+    for (const d of derived) if ([...used].includes(d.derivedKey)) for (const i of [...d.inputs, d.reference]) used.add(i);
+    placements = effQuestions.filter((q) => selected.has(q.sectionKey) || used.has(q.canonicalFieldKey));
+    for (const q of placements) conditionFields(q.predicateJson);
+  }
   // W1-15 (P-97): a placement in a section only the client answers says so (only then, so the fingerprint keeps).
   const clientOnly = new Set(effSections.filter((x: any) => x.clientOnly).map((x: any) => x.sectionKey));
   for (const p of placements) used.add(p.canonicalFieldKey);
