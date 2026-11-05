@@ -190,7 +190,7 @@ export function conditionFacts(lines: ReadLine[], defined: SavedFact[], known: F
     if (!FACT_KEY.test(fact)) { held.push(`"${fact}" is not a fact key (group.name), so correct its condition`); continue; }
     if (known.retired.has(fact)) { held.push(`${fact} is a retired library field: restore it in Library › Fields`); continue; }
     const def = defined.find((d) => d.id === fact) ?? null;
-    const label = typeName(fact.split(".").slice(1).join(" ")).slice(0, 120), name = normalizeLabel(label);
+    const label = typeName(fact.split(".").slice(1).join(" ")).replace(/\bus\b/gi, "US").slice(0, 120), name = normalizeLabel(label);
     const twin = known.named.get(name);
     if (twin) { held.push(`${fact} has the name of the library's ${twin}: correct the condition to read it`); continue; }
     if (known.waitingNames.has(name) || names.has(name)) { held.push(`${fact}: a proposal named "${label}" is already waiting on To review, so decide that first`); continue; }
@@ -210,7 +210,7 @@ function factItem(f: ConditionFact, runId: string, combinationId: string, runFil
   // A choice's list comes from what the conditions test; fewer than two is for the person to complete on To review.
   const values = isChoice(f.valueType) && f.compared.length >= 2 ? f.compared.map((code) => ({ code, label: typeName(code) })) : undefined;
   const payload: FieldPayload = { kind: "field", label: f.label, aliases: [], meaning: f.meaning, valueType: f.valueType, subject: f.fact.split(".")[0], ...(values ? { values } : {}), formBox: null };
-  const why = `${docs.join(", ")} ${docs.length === 1 ? "reads" : "read"} this fact and the library lacks it, so a release would be refused. ${f.defined?.derived ? "The saved reading works it out from other facts, and no calculation here does that, so it is proposed as a fact a person answers. " : f.defined ? "" : "The saved reading does not define it, so its meaning is the condition's words. "}One AI round: check its name, meaning and answer type; a second person approves it once accepted.${isChoice(f.valueType) && !values ? " Add its answer values before accepting." : ""}`;
+  const why = `${docs.join(", ")} ${docs.length === 1 ? "reads" : "read"} this fact and the library lacks it, so a release would be refused. ${f.defined?.derived ? "The saved reading works it out from other facts, and no calculation here does that, so it is proposed as a fact a person answers. " : f.defined ? "" : "The saved reading does not define it, so its meaning is the condition's words. "}One AI round: check its name, meaning and answer type; a second person approves it once accepted.${isChoice(f.valueType) ? (values ? " Its answer values are only the ones the condition tests: add the others." : " Add its answer values before accepting.") : ""}`;
   const reading = `${f.label}, read by ${checklist}'s conditions: ${f.defined?.plain ?? f.meaning}`;
   return { kind: "field", runId, step: "checklist_draft", scope: { formEdition: null, combinationId }, landsOn: "library", reuse: { match: "new", existingKey: null }, payload,
     source: source ? { ...source, rule: { key: first.document_type, sentence } } : null, rounds: { draft: { reading: reading.slice(0, 300), payload, from: "replay", runFile, costUsd: 0 }, check: null },
