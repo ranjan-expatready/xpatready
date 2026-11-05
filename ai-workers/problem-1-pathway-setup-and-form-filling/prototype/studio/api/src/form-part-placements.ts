@@ -11,7 +11,7 @@ import { Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from "
 import { coverageGaps, previewRender } from "../../engine/coverage.ts";
 import { roleOf } from "../../engine/resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
-import { conditionFactsNobodyAsked } from "../../engine/coverage.ts";
+import { conditionFactsNobodyAsked, formReadFacts } from "../../engine/coverage.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { MASTERS_STEP } from "./form-masters.ts";
@@ -92,10 +92,12 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   // B82 (tech lead's ruling on #1058): a fact only a document line's condition reads has no form field to group it. It is
   // asked beside the fact it is about, as a fact only a rule reads is (api/src/demo.ts), so the line can reach a person.
   // No form reads it, so it stays off the question list a paid run replays on (api/src/pqr-drafts.ts questionList).
-  const conditionFacts = conditionFactsNobodyAsked(snapshot);
+  // A fact a form field reads is the pass above's, whatever it decided: its question stays in the form's section.
+  const read = formReadFacts(snapshot);
+  const conditionFacts = conditionFactsNobodyAsked(snapshot).filter((g) => !read.has(g.fact));
   if (conditionFacts.length) {
     const at = ["person.sex", "person.gender", "person.date_of_birth"];
-    const near = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: { in: at }, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true, sectionKey: true } });
+    const near = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: { in: at }, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: [{ version: "desc" }, { sectionKey: "asc" }], select: { canonicalFieldKey: true, sectionKey: true } });
     const beside = at.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean)?.sectionKey;
     for (const { fact } of conditionFacts) {
       if (!beside) { out.noSection.push(fact); continue; }

@@ -4,7 +4,8 @@
 // The facts are asked of a person, and no form reads them, so the paid pairs' saved rounds still replay. Sample, US$0, no
 // model call.
 //   zsh studio/tools/isolated.sh forms_b82 4471 start && tsx studio/tests/check_forms_b82_case_lines.ts 4471 xr_studio_forms_b82
-import { conditionFactsNobodyAsked } from "../engine/coverage.ts";
+import { conditionFactProblems, conditionFactsNobodyAsked, formReadFacts } from "../engine/coverage.ts";
+import { validate } from "../engine/validate.ts";
 import { APPROVER, AUTHOR, pack2, REVIEWER, run } from "../acceptance/lib/pack2.ts";
 import { openCase, answer, OFFICER, call as caseCall } from "../acceptance/lib/m3.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -24,6 +25,18 @@ run(async () => {
   const line = (field: string) => ({ document_type: "doc", condition: { op: "eq", field, value: true } });
   ok("C2.6 B82 pass: a condition on a library fact nobody is asked is named, with its document", JSON.stringify(conditionFactsNobodyAsked(snap({ document_requirements: [line("person.a")] }))) === JSON.stringify([{ fact: "person.a", documents: ["doc"] }]));
   ok("C2.6 B82 fail: a fact asked, supplied by a document, worked out, or not in the library (an error of its own) is not named", conditionFactsNobodyAsked(snap({ document_requirements: [line("person.b"), line("person.c"), line("person.d"), line("person.z")] })).length === 0);
+  const cond = (field: string, extra: object = {}) => ({ document_type: "doc", document_type_key: "doc", base_or_conditional: "conditional", condition: { op: "eq", field, value: true, ...extra } });
+  ok("C2.6 B82 fail (m14): a base line ignores its condition, so it names nothing", conditionFactsNobodyAsked(snap({ document_requirements: [{ ...cond("person.a"), base_or_conditional: "base" }] as never })).length === 0);
+  ok("C2.6 B82 fail (m15): a condition on a document's own contents is read from it, never asked", conditionFactsNobodyAsked(snap({ document_requirements: [cond("person.a", { subjectKind: "DOCUMENT" })] as never })).length === 0);
+  const own = snap({ document_types: [{ key: "doc", supplies_facts: ["person.a"] }], document_requirements: [cond("person.a")] as never });
+  ok("C2.6 B82 pass (m12): the document a fact decides cannot itself supply that fact", conditionFactsNobodyAsked(own).length === 1);
+  const problems = conditionFactProblems(snap({ document_requirements: [line("person.a")] }));
+  ok("C2.6 B82 pass: the draft's refusal is an error naming the step that fixes it", problems.length === 1 && problems[0].level === "error" && /Ask them in their forms' sections/.test(problems[0].message), problems);
+  const released = { ...snap({ document_requirements: [line("person.a")] }), mode: "released", forms: [], field_maps: [], sections: [], rules: [], checks: [], combination: { participants: [] } } as unknown as Snapshot;
+  let judged: { message: string }[] = []; try { judged = validate(released, [{ key: "person.a", valueType: "yes_no" }], []); } catch (e) { judged = [{ message: `validate threw: ${(e as Error).message}` }]; }
+  ok("C2.6 B82 fail (M3): a release already made is not re-judged for it: validate() does not name it, so its cases can still open", !judged.some((p) => /nobody is asked|validate threw/.test(p.message)), judged.map((p) => p.message).slice(0, 3));
+  const maps = snap({ field_maps: [{ entries: [{ outcome: "mapped", fact: "person.a" }, { outcome: "unmapped", fact: "person.c" }] }] as never });
+  ok("C2.6 B82 fail (M1): a fact a form field reads is the forms' to place, so the condition pass never moves its question", formReadFacts(maps).has("person.a") && !formReadFacts(maps).has("person.c"));
   ok("C2.6 B82 fail: a line with no condition names nothing", conditionFactsNobodyAsked(snap({ document_requirements: [{ document_type: "doc", condition: null }] as never })).length === 0);
 
   await T.ready();
@@ -33,6 +46,11 @@ run(async () => {
   const savedBefore = await replay();
   const d = await T.documentsBySteps(vv);
   ok("setup: the lines, their types and their facts land by the people's steps, and their facts are asked", d.refused.length === 0 && d.accepted > 0, d);
+  // M1 end to end: this combination's questions are placed, so a second press moves nothing a form reads.
+  const whereNow = () => sql(`select canonical_field_key||':'||section_key||':'||repeats from section_question where status <> 'RETIRED' order by 1`);
+  const before = whereNow();
+  const again = await call("POST", `/combinations/${vv}/place-from-form-parts`, {}, AUTHOR);
+  ok("C2.6 B82 fail (M1): pressing the step again places nothing and moves no question", again.status < 300 && (again.body?.placed ?? []).length === 0 && whereNow() === before, again.body?.placed);
   for (const l of LINES) {
     ok(`C2.6 B82 pass: ${l.fact} is asked of a person, in the client's questionnaire`, sql(`select count(*) from section_question where canonical_field_key='${l.fact}' and collected_from='client_questionnaire' and status <> 'RETIRED'`) === "1");
     ok(`C2.6 B82 pass: no form field reads ${l.fact}, so it stays off the paid runs' question list`, sql(`select count(*) from form_field_map where canonical_field_key='${l.fact}'`) === "0");

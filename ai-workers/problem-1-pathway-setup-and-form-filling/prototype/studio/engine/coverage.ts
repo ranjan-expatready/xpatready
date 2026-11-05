@@ -51,17 +51,33 @@ export function coverageGaps(s: Snapshot): CoverageGap[] {
   return [...gaps.values()].sort((a, b) => a.role.localeCompare(b.role) || a.fact.localeCompare(b.fact));
 }
 
-/** B82 (tech lead's ruling on qa's gate A, #1058): a fact in the library that a document line's condition reads, that
- *  nobody is asked, no document supplies and nothing works out. On a case such a line can never reach anyone, whatever
- *  the person's situation. A fact not in the library is already an error (engine/validate.ts). */
+/** B82 (tech lead's ruling on qa's gate A, #1058): a fact in the library that a conditional document line's condition
+ *  reads, that nobody is asked, nothing works out and no other document supplies. On a case such a line can never be
+ *  decided. A fact not in the library is already an error (engine/validate.ts); a base line ignores its condition; a
+ *  condition on a document's own contents is read from the document, never asked. */
 export function conditionFactsNobodyAsked(s: Snapshot): { fact: string; documents: string[] }[] {
   const field = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id));
   const derived = new Set((s.derived_fields as { id: string }[]).map((d) => d.id));
   const placed = new Set((s.placements as { fact: string }[]).map((p) => p.fact));
-  const supplied = new Set(((s.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
+  const types = (s.document_types ?? []) as { key: string; supplies_facts?: string[] }[];
   const by = new Map<string, Set<string>>();
-  for (const d of s.document_requirements as { document_type: string; condition?: unknown }[]) {
-    for (const m of JSON.stringify(d.condition ?? null).matchAll(/"field":"([^"]+)"/g)) if (field.has(m[1]) && !derived.has(m[1]) && !placed.has(m[1]) && !supplied.has(m[1])) by.set(m[1], (by.get(m[1]) ?? new Set()).add(d.document_type));
+  for (const d of s.document_requirements as { document_type: string; document_type_key?: string; base_or_conditional?: string; condition?: { subjectKind?: string } | null }[]) {
+    if (d.base_or_conditional === "base" || d.condition?.subjectKind === "DOCUMENT") continue;
+    for (const m of JSON.stringify(d.condition ?? null).matchAll(/"field":"([^"]+)"/g)) {
+      const supplied = types.some((t) => t.key !== d.document_type_key && (t.supplies_facts ?? []).includes(m[1])); // the document it decides cannot supply it
+      if (field.has(m[1]) && !derived.has(m[1]) && !placed.has(m[1]) && !supplied) by.set(m[1], (by.get(m[1]) ?? new Set()).add(d.document_type));
+    }
   }
   return [...by].sort(([a], [b]) => a.localeCompare(b)).map(([fact, documents]) => ({ fact, documents: [...documents].sort() }));
 }
+
+/** B82: the draft's lines for those facts, refused at Submit (a warning shows on no screen). The draft only, beside
+ *  filingProblems and draftSourceProblems: a release already made keeps its status and can still open cases. */
+export function conditionFactProblems(s: Snapshot): { level: "error"; where: string; item: string; message: string }[] {
+  const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? f.id]));
+  return conditionFactsNobodyAsked(s).flatMap((g) => g.documents.map((item) => ({ level: "error" as const, where: "Documents", item,
+    message: `The condition reads "${(meaning.get(g.fact) ?? g.fact).trim().replace(/\.$/, "")}", which nobody is asked, so on a case this document can never be decided. Ask it: Smart questionnaire › Ask them in their forms' sections.` })));
+}
+
+/** The facts a form field of this combination reads: their question belongs to the form's own section. */
+export const formReadFacts = (s: Snapshot) => new Set((s.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]).flatMap((m) => m.entries).filter((e) => e.outcome === "mapped" && e.fact).map((e) => e.fact as string));

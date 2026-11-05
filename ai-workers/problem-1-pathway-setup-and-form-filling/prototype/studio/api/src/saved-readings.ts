@@ -41,11 +41,12 @@ export function savedReading(officialFile: string | null, where: { runs?: string
   return null;
 }
 /** B82: the facts a saved reading defined. A derived one means its first sentence; the rest is the AI's working, kept in
- *  `plain` for the item's reading (it may say what a person must settle, such as an age the checklist does not state). */
+ *  `plain` for the item's reading (it may say what a person must settle, such as an age the checklist does not state).
+ *  A client reads the meaning as the question, so "True when…" reads "Whether…". */
 function savedFacts(out: { proposed_fields?: unknown; derived_fields?: unknown }): SavedFact[] {
   const list = (v: unknown) => (Array.isArray(v) ? v : []) as { id?: unknown; meaning?: unknown; value_type?: unknown; plain?: unknown }[];
   const asked = list(out.proposed_fields).map((f) => ({ id: str(f.id, 120), meaning: str(f.meaning, 500), plain: str(f.meaning, 500), valueType: str(f.value_type, 40), derived: false }));
-  const worked = list(out.derived_fields).map((f) => ({ id: str(f.id, 120), meaning: str(f.plain, 500)?.split(/(?<=\.)\s+/)[0] ?? null, plain: str(f.plain, 500), valueType: null, derived: true }));
+  const worked = list(out.derived_fields).map((f) => ({ id: str(f.id, 120), meaning: str(f.plain, 500)?.split(/(?<=\.)\s+/)[0].replace(/^True when /, "Whether ") ?? null, plain: str(f.plain, 500), valueType: null, derived: true }));
   return [...asked, ...worked].filter((f): f is SavedFact => !!f.id && !!f.meaning && !!f.plain);
 }
 /** BR-10 (C4.11 part 4c): the newest saved real reading of this checklist FILE whose text checksum is no longer the
