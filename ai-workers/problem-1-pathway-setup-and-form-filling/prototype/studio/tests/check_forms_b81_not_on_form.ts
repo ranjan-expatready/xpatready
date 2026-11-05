@@ -3,7 +3,7 @@
 // Unconfirmed: expert. Offline (no database, no AI): engine/options.ts, engine/form-values.ts. The routes, the group
 // save and the validator are checked on an isolated copy by tests/check_forms_b81_routes.ts.
 //   tsx studio/tests/check_forms_b81_not_on_form.ts
-import { asksMore, carriedOptionMap, codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedNear, samePrintedChoices } from "../engine/options.ts";
+import { asksMore, carriedOptionMap, choiceEditionsOf, codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedNear, samePrintedChoices } from "../engine/options.ts";
 import { channelProblems } from "../engine/channels.ts";
 import { formValues, notOnFormLines } from "../engine/form-values.ts";
 import { optionsOf } from "../engine/runtime/case.ts";
@@ -59,6 +59,21 @@ ok("B81: a draft with no mark stores nothing new (older option maps stay byte fo
 const dep = JSON.parse(readFileSync(new URL("../../p1/inventory/imm0008depe.inventory.json", import.meta.url), "utf8")) as { fields: { data_path?: string; ui?: string; options_resolved?: [string, string][] | null }[] };
 const depOpts = pdfOptions(dep.fields.find((f) => /MaritalStatus\[0\]\.MaritalStatus\[0\]$/.test(f.data_path ?? ""))!, null), depDraft = draftOptionMap(list, depOpts);
 ok("B81 (IMM 0008 DEP, B79a): the door is general: its seven printed choices draft, only Unknown is open, and Unknown can be marked", depOpts.length === 7 && depDraft.unmatched.join() === "unknown" && depDraft.optionMap.map.married === "01" && printedNear(unknownV, depOpts).length === 0 && optionMapProblems(keys, { ...depDraft.optionMap, notOnForm: ["unknown"] }).length === 0, depDraft);
+
+// Break M4: a mark is held against the choices the form printed when it was made.
+const relabelled = { ...d.optionMap, notOnForm: ["unknown"], printed: mother };
+ok("B81 fail (break M4): a marked value reworded into a printed choice blocks: the mark no longer holds", /is marked not on this form, but the form prints "Single"/.test(optionMapProblems(keys, relabelled, list.map((v) => (v.key === "unknown" ? { key: "unknown", label: "Single" } : v))).join()), optionMapProblems(keys, relabelled));
+ok("B81 pass: a mark that still holds has no problem, with its printed choices kept", optionMapProblems(keys, relabelled, list).length === 0 && draftOptionMap(list, mother, relabelled).optionMap.printed?.length === 7);
+// Break M5: an answer with two printed choices.
+const guessed = draftOptionMap(list, applicant, { map: { married: "5" }, unused: [], codes: [] });
+ok("B81 fail (break M5): a new draft drops a code kept on an answer with two printed choices", !("married" in guessed.optionMap.map) && guessed.unmatched.includes("married"), guessed);
+// Break m6: a key that is also an object's own word.
+ok("B81 fail (break m6): \"constructor\" as an answer is an open answer, never taken as already having a code", /no code for "constructor"/.test(optionMapProblems(["constructor"], { map: {}, unused: [], codes: [] }).join()));
+// Review R2-M1: the editions the step offers.
+const eds = [{ form_number: "F", form_edition: "F (old)", channel: "PDF" }, { form_number: "F", form_edition: "F (new)" }, { form_number: "F", form_edition: "F (online)", channel: "ONLINE" }, { form_number: "G", form_edition: "G (1)" }];
+const shownEds = choiceEditionsOf(eds, "F", "F (new)", (e) => (e === "F (old)" ? "id-old" : e === "F (new)" ? "id-new" : "id-online"));
+ok("B81 (review R2-M1): the step offers every PDF edition the release check reads, the one in use first, never an online map or another form's", shownEds.map((e) => e.label).join("|") === "F (new)|F (old)" && shownEds[0].id === "id-new", shownEds);
+ok("B81 (review R2-M1): a line filed Online (no edition in use) still gets its PDF editions", choiceEditionsOf(eds, "F", null, (e) => e).length === 2);
 
 // Filling and the release check, as a fill and Submit run them.
 const path = box("Mother").data_path!, entry = { data_path: path, outcome: "mapped", fact: "person.marital_status", transform: "option_map", caption: "Marital status:", option_map: marked };

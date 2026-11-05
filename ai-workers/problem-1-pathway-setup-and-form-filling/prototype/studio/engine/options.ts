@@ -10,7 +10,10 @@ import { printedChoices } from "./printed-choices.ts";
 
 export type ListValue = { key: string; label: string };
 export type FormOption = { code: string; label: string };
-export type OptionMap = { map: Record<string, string>; unused: string[]; codes: string[]; notOnForm?: string[] };
+export type OptionMap = { map: Record<string, string>; unused: string[]; codes: string[]; notOnForm?: string[];
+  /** The choices the form printed when a person marked a value (with notOnForm only): the release check holds a mark
+   *  against them, so a list value reworded later into a printed choice blocks instead of passing (break M4). */
+  printed?: FormOption[] };
 
 const n = (s: string) => s.toLowerCase().replace(/^\*/, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 const firstWord = (s: string) => n(s).split(" ")[0];
@@ -23,7 +26,8 @@ export function draftOptionMap(values: ListValue[], options: FormOption[], kept?
   const taken = new Set<string>();
   const marked = values.filter((v) => kept?.notOnForm?.includes(v.key)).map((v) => v.key);
   const printed = new Set(opts.map((o) => o.code));
-  for (const v of values) { const c = kept?.map[v.key]; if (c !== undefined && printed.has(c) && !taken.has(c) && !marked.includes(v.key)) { map[v.key] = c; taken.add(c); } }
+  // Break M5: a code kept on an answer with two printed choices would keep a guess: it goes back to a person's question.
+  for (const v of values) { const c = kept && Object.hasOwn(kept.map, v.key) ? kept.map[v.key] : undefined; if (c !== undefined && printed.has(c) && !taken.has(c) && !marked.includes(v.key) && !asksMore(v, opts)) { map[v.key] = c; taken.add(c); } }
   const open0 = values.filter((v) => !marked.includes(v.key));
   for (const v of open0.filter((x) => !(x.key in map))) {
     // B81: a first word two printed choices share decides nothing ("Married" against "Married-physically present" and
@@ -43,17 +47,17 @@ export function draftOptionMap(values: ListValue[], options: FormOption[], kept?
   const pairs = open.map((v) => [v, opts.filter((o) => ends(v, o))] as const).filter(([, t]) => t.length === 1);
   for (const [v, [o]] of pairs) if (open.filter((w) => ends(w, o)).length === 1) { map[v.key] = o.code; taken.add(o.code); }
   const codes = opts.map((o) => o.code);
-  return { optionMap: { map, unused: codes.filter((c) => !taken.has(c)), codes, ...(marked.length ? { notOnForm: marked } : {}) }, unmatched: open0.filter((v) => !(v.key in map)).map((v) => v.key) };
+  return { optionMap: { map, unused: codes.filter((c) => !taken.has(c)), codes, ...(marked.length ? { notOnForm: marked, printed: opts } : {}) }, unmatched: open0.filter((v) => !(v.key in map)).map((v) => v.key) };
 }
 
 /** Problems of one form field's option map against its answer list: every value needs a code or a person's "not on this
  *  form" (else filling refuses it unexplained); every code of the form field is filled by a value or listed as unused
  *  (nothing silently dropped). */
-export function optionMapProblems(values: string[], m: OptionMap | null | undefined): string[] {
+export function optionMapProblems(values: string[], m: OptionMap | null | undefined, listed: ListValue[] = []): string[] {
   if (!m) return ["it has no option map yet"];
   const out: string[] = [];
   const marked = m.notOnForm ?? [];
-  const missing = values.filter((v) => !(v in m.map) && !marked.includes(v));
+  const missing = values.filter((v) => !Object.hasOwn(m.map, v) && !marked.includes(v));
   if (missing.length) out.push(`no code for ${missing.map((v) => `"${v}"`).join(", ")} (filling would refuse ${missing.length > 1 ? "them" : "it"})`);
   const covered = new Set([...Object.values(m.map), ...m.unused]);
   const loose = m.codes.filter((c) => !covered.has(c));
@@ -62,8 +66,9 @@ export function optionMapProblems(values: string[], m: OptionMap | null | undefi
   if (unknown.length) out.push(`it maps ${unknown.map((v) => `"${v}"`).join(", ")}, which the answer list does not have`);
   const stale = marked.filter((v) => !values.includes(v));
   if (stale.length) out.push(`it marks ${stale.map((v) => `"${v}"`).join(", ")} not on this form, which the answer list does not have`);
-  const both = marked.filter((v) => v in m.map);
+  const both = marked.filter((v) => Object.hasOwn(m.map, v));
   if (both.length) out.push(`${both.map((v) => `"${v}"`).join(", ")} ${both.length > 1 ? "have" : "has"} a code and ${both.length > 1 ? "are" : "is"} marked not on this form`);
+  for (const v of listed.filter((x) => marked.includes(x.key))) { const near = printedNear(v, m.printed ?? []); if (near.length) out.push(`"${v.label}" is marked not on this form, but the form prints ${near.map((o) => `"${o.label}"`).join(" and ")}`); }
   return out;
 }
 
@@ -93,7 +98,7 @@ export function printedNear(v: ListValue, options: FormOption[]): FormOption[] {
   const w = n(v.label);
   const same = options.filter((o) => n(o.label) === w);
   if (same.length) return same;
-  return options.filter((o) => { const l = n(o.label); return l.length > 3 && (l.startsWith(`${w} `) || w.startsWith(`${l} `) || w.endsWith(` ${l}`)); });
+  return options.filter((o) => { const l = n(o.label); return l.length > 3 && (l.startsWith(`${w} `) || l.endsWith(` ${w}`) || w.startsWith(`${l} `) || w.endsWith(` ${l}`)); });
 }
 
 /** True when the form prints two or more choices that start with the value's words: which one holds is a further fact the
@@ -112,6 +117,12 @@ export function samePrintedChoices(before: Parameters<typeof pdfOptions>[0], aft
 /** What a new edition's form field carries of an old option map: all of it, or nothing when the form prints other choices. */
 export function carriedOptionMap<T>(optionMap: T | null, before: Parameters<typeof pdfOptions>[0], after: Parameters<typeof pdfOptions>[0]): T | null {
   return optionMap !== null && samePrintedChoices(before, after) ? optionMap : null;
+}
+
+/** B81 (review R2-M1): the PDF editions whose field maps the release check reads for one form, each with its edition id, the
+ *  edition in use first: a form filed Online still has them, and an older edition's problem has somewhere to be fixed. */
+export function choiceEditionsOf(maps: { form_number: string; form_edition: string; channel?: string }[], form: string, inUse: string | null | undefined, idOf: (edition: string) => string | undefined): { id: string; label: string }[] {
+  return maps.filter((m) => m.form_number === form && m.channel !== "ONLINE").sort((x, y) => Number(y.form_edition === inUse) - Number(x.form_edition === inUse)).flatMap((m) => { const id = idOf(m.form_edition); return id ? [{ id, label: m.form_edition }] : []; });
 }
 
 /** The value a person marked not on this form, when `value` is one: filling refuses it in the value's own words (B81). */

@@ -68,7 +68,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // B81: a release problem on a form's choices lands on that form's panel with the choices open (?choices=<form number>).
   const [choicesOf, setChoicesOf] = React.useState<{ code: string; edition: string | null } | null>(null);
   const choices = sp.get("choices"), choicesEdition = sp.get("edition");
-  React.useEffect(() => { const l = choices ? lines.find((x) => x.code === choices) : null; if (!choices) return; if (l && canAuthor) { setOpen(l); setChoicesOf({ code: l.code, edition: choicesEdition }); } setSp((x) => { const n = new URLSearchParams(x); n.delete("choices"); n.delete("edition"); return n; }, { replace: true }); }, [choices]); // eslint-disable-line react-hooks/exhaustive-deps -- lands once; the panel is the author's, as Change is
+  React.useEffect(() => { const l = choices ? lines.find((x) => x.code === choices) : null; if (!choices || !known) return; if (l && canAuthor) { setOpen(l); setChoicesOf({ code: l.code, edition: choicesEdition }); } setSp((x) => { const n = new URLSearchParams(x); n.delete("choices"); n.delete("edition"); return n; }, { replace: true }); }, [choices, known]); // eslint-disable-line react-hooks/exhaustive-deps -- lands once; the panel is the author's, as Change is
   const [removing, setRemoving] = React.useState<WorkspaceFormLine | null>(null);
   // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
   const setup = sp.get("setup");

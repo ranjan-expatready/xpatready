@@ -281,10 +281,10 @@ export class Forms {
       const listed = list.values.map((v) => ({ key: v.valueKey, label: v.label })), saved = m.optionMap as OptionMap | null;
       const shown = saved ?? draftOptionMap(listed, choices).optionMap;
       const printedCodes = new Set(choices.map((o) => o.code));
-      const values = listed.map((v) => { const code = shown.map[v.key]; return { ...v, code: code !== undefined && printedCodes.has(code) ? code : null, not_on_form: (shown.notOnForm ?? []).includes(v.key), printed: printedNear(v, choices).map((o) => o.label), asks_more: asksMore(v, choices) }; });
+      const values = listed.map((v) => { const code = Object.hasOwn(shown.map, v.key) ? shown.map[v.key] : undefined; return { ...v, code: code !== undefined && printedCodes.has(code) && !asksMore(v, choices) ? code : null, not_on_form: (shown.notOnForm ?? []).includes(v.key), printed: printedNear(v, choices).map((o) => o.label), asks_more: asksMore(v, choices) }; });
       const key = JSON.stringify([list.answerListKey, m.canonicalFieldKey, choices, values, !!saved, hasCodes(m.transform)]);
       // The same words Submit lists: a form field with codes and no saved map blocks release, however good the suggestion.
-      const g = groups.get(key) ?? { list: list.answerListKey, list_label: list.label ?? null, fact: m.canonicalFieldKey!, revision: "", form_fields: [], choices, saved: !!saved, values, problems: saved || hasCodes(m.transform) ? optionMapProblems(listed.map((v) => v.key), saved) : [] };
+      const g = groups.get(key) ?? { list: list.answerListKey, list_label: list.label ?? null, fact: m.canonicalFieldKey!, revision: "", form_fields: [], choices, saved: !!saved, values, problems: saved || hasCodes(m.transform) ? [...optionMapProblems(listed.map((v) => v.key), saved, listed.map((v) => v)), ...(saved ? listed.filter((v) => Object.hasOwn(saved.map, v.key) && asksMore(v, choices)).map((v) => `"${v.label}" has a code, but the form prints two or more choices for it: the immigration expert decides`) : [])] : [] };
       g.form_fields.push({ data_path: m.dataPath, caption: m.caption, person: m.person, row: m.row, part: printedPart(partOf.get(m.dataPath)) });
       revisionRows.set(key, [...(revisionRows.get(key) ?? []), m]);
       groups.set(key, g);
@@ -300,7 +300,7 @@ export class Forms {
     const m = effective(rows, (x) => x.dataPath, "draft")[0];
     if (!m || m.outcome !== "mapped" || !m.canonicalFieldKey) fail("That form field is not mapped to a shared field.", HttpStatus.NOT_FOUND);
     const field = (await this.libraryRows(ed.workspaceId)).find((r) => r.canonicalFieldKey === m!.canonicalFieldKey);
-    const list = field?.answerListKey ? await this.db.answerList.findFirst({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: true }, orderBy: { version: "desc" } }) : null;
+    const list = field?.answerListKey ? effective(await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: true } }), (l) => l.answerListKey, "draft")[0] : null;
     if (!list) fail(`${m!.canonicalFieldKey} has no answer list.`, HttpStatus.CONFLICT);
     return { rows, m: m!, list: list!, options: this.formOptions(ed, [m!]).get(dataPath) ?? [] };
   }
@@ -316,7 +316,7 @@ export class Forms {
     for (const k of Object.keys(b.map).filter((x) => values.has(x))) { const v = { key: k, label: values.get(k)! }; if (asksMore(v, options)) bad.push(asks(v)); }
     for (const k of b.notOnForm.filter((x) => values.has(x))) {
       const v = { key: k, label: values.get(k)! }, near = printedNear(v, options);
-      if (k in b.map) bad.push(`"${v.label}" cannot have a code and be marked not on this form`);
+      if (Object.hasOwn(b.map, k)) bad.push(`"${v.label}" cannot have a code and be marked not on this form`);
       else if (!options.length) bad.push(`"${v.label}" cannot be marked not on this form: this form field's printed choices were not read`);
       else if (asksMore(v, options)) bad.push(asks(v));
       else if (near.length) bad.push(`"${v.label}" is on this form: it prints ${near.map((o) => `"${o.label}"`).join(" and ")}`);
@@ -324,17 +324,31 @@ export class Forms {
     return bad;
   }
 
+  /** B81 (challenge M4, review M6, break M1, M2; STANDARDS §4): one save at a time and never over someone else's unseen. The
+   *  form fields' rows are locked first, so a second save waits, then reads what the first wrote and is refused. */
+  private async writeOptionMaps(tx: Prisma.TransactionClient, ed: { id: string }, dataPaths: string[], optionMap: object, baseRevision: string | undefined, actor: Actor, needsRevision: (now: RevisionRow[]) => boolean) {
+    await tx.$queryRaw`SELECT id FROM form_field_map WHERE form_edition_id = ${ed.id}::uuid AND data_path = ANY(${dataPaths}) ORDER BY id FOR UPDATE`;
+    const all = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: dataPaths } } });
+    const now = effective(all, (x) => x.dataPath, "draft");
+    if ((baseRevision !== undefined || needsRevision(now)) && baseRevision !== optionMapRevision(now)) {
+      const last = [...now].sort((x, y) => y.updatedAt.getTime() - x.updatedAt.getTime())[0];
+      fail(`${nameOf(last.updatedBy)} changed these choices since you opened them (at ${last.updatedAt.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })} IST). Nothing was saved. Look at them again, then save.`, HttpStatus.CONFLICT);
+    }
+    for (const p of dataPaths) await revise(tx.formFieldMap, all.filter((x) => x.dataPath === p), { optionMap: json(optionMap) }, actor.id, strip);
+  }
+
   /** A person sets or corrects one form field's option map (the drafted one left a value or a code open). Every value
    *  must be on the field's answer list and every code among the form field's own choices. */
   async setOptionMap(actor: Actor, editionId: string, body: unknown) {
     need(actor, "author");
-    const b = parse(SetOptionMap, body), dataPath = b.dataPath;
+    const b0 = parse(SetOptionMap, body), b = { ...b0, notOnForm: [...new Set(b0.notOnForm)] }, dataPath = b.dataPath;
     const ed = await this.pdfEdition(editionId);
-    const { rows, m, list, options } = await this.optionMapTarget(ed, dataPath);
+    const { m, list, options } = await this.optionMapTarget(ed, dataPath);
     const bad = this.optionMapRefusals(list, options, b);
     if (bad.length) fail(`${bad.join("; ")}.`);
-    const optionMap = { map: b.map, unused: b.unused, codes: options.map((o) => o.code), ...(b.notOnForm.length ? { notOnForm: b.notOnForm } : {}) };
-    await revise(this.db.formFieldMap, rows, { optionMap: json(optionMap) }, actor.id, strip);
+    const optionMap = { map: b.map, unused: b.unused, codes: options.map((o) => o.code), ...(b.notOnForm.length ? { notOnForm: b.notOnForm, printed: options } : {}) };
+    // Break M2: this field's other route. A person's marks are never overwritten unseen; a save with no marks to lose needs no revision (the API's older callers).
+    await this.db.$transaction((tx) => this.writeOptionMaps(tx, ed, [dataPath], optionMap, b.baseRevision, actor, (now) => !!(now[0]?.optionMap as OptionMap | null)?.notOnForm?.length), CHANNEL_TX);
     await this.audit.log(ed.workspaceId, actor.id, "changed", "option map", dataPath, `${actor.name} set the option map of ${m.caption ?? dataPath} on ${ed.editionLabel} (${Object.keys(b.map).length} values${b.notOnForm.length ? `; not on this form: ${labelsOf(list, b.notOnForm)}` : ""})`);
     return { form_field: dataPath, option_map: optionMap };
   }
@@ -343,24 +357,16 @@ export class Forms {
    *  print the same codes, so a mark never lands on a form field that prints the value. Codes no value fills are unused. */
   async setOptionMaps(actor: Actor, editionId: string, body: unknown) {
     need(actor, "author");
-    const b = parse(SetOptionMaps, body), ed = await this.pdfEdition(editionId), dataPaths = [...new Set(b.dataPaths)];
+    const b0 = parse(SetOptionMaps, body), b = { ...b0, notOnForm: [...new Set(b0.notOnForm)] }, ed = await this.pdfEdition(editionId), dataPaths = [...new Set(b.dataPaths)];
     const targets: Awaited<ReturnType<Forms["optionMapTarget"]>>[] = [];
     for (const p of dataPaths) targets.push(await this.optionMapTarget(ed, p)); // one at a time: a group can be large
     const same = (t: (typeof targets)[number]) => JSON.stringify([t.list.answerListKey, t.options]) === JSON.stringify([targets[0].list.answerListKey, targets[0].options]);
     if (!targets.every(same)) fail("These form fields do not print the same choices or read the same answer list: save them apart.", HttpStatus.CONFLICT);
     const codes = targets[0].options.map((o) => o.code), used = new Set(Object.values(b.map));
-    const optionMap = { map: b.map, unused: codes.filter((c) => !used.has(c)), codes, ...(b.notOnForm.length ? { notOnForm: b.notOnForm } : {}) };
+    const optionMap = { map: b.map, unused: codes.filter((c) => !used.has(c)), codes, ...(b.notOnForm.length ? { notOnForm: b.notOnForm, printed: targets[0].options } : {}) };
     const bad = this.optionMapRefusals(targets[0].list, targets[0].options, { ...b, unused: optionMap.unused });
     if (bad.length) fail(`${bad.join("; ")}.`);
-    await this.db.$transaction(async (tx) => {
-      // Challenge M4, review M6 (STANDARDS §4): someone else's save is never overwritten unseen; read again inside the write.
-      const now = effective(await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: { in: dataPaths } } }), (x) => x.dataPath, "draft");
-      if (b.baseRevision !== optionMapRevision(now)) {
-        const last = [...now].sort((x, y) => y.updatedAt.getTime() - x.updatedAt.getTime())[0];
-        fail(`${nameOf(last.updatedBy)} changed these choices since you opened them (at ${last.updatedAt.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })} IST). Nothing was saved. Look at them again, then save.`, HttpStatus.CONFLICT);
-      }
-      for (const t of targets) await revise(tx.formFieldMap, t.rows, { optionMap: json(optionMap) }, actor.id, strip);
-    });
+    await this.db.$transaction((tx) => this.writeOptionMaps(tx, ed, dataPaths, optionMap, b.baseRevision, actor, () => true), CHANNEL_TX);
     await this.audit.log(ed.workspaceId, actor.id, "changed", "option map", targets[0].list.answerListKey, `${actor.name} set the choices of ${dataPaths.length} form field${dataPaths.length === 1 ? "" : "s"} on ${ed.editionLabel} (${targets[0].list.label}: ${Object.keys(b.map).length} answers${b.notOnForm.length ? `; not on this form: ${labelsOf(targets[0].list, b.notOnForm)}` : ""})`);
     return { form_fields: dataPaths, option_map: optionMap };
   }
@@ -529,10 +535,10 @@ type H = string | undefined;
 /** A printed heading without its long instructions ("SECTION B - CHILDREN (Include ALL …)" → "SECTION B - CHILDREN"). */
 const printedPart = (h: string | undefined) => (h ? h.split(/\s*\(/)[0].trim() || null : null);
 const labelsOf = (list: { values: { valueKey: string; label: string }[] }, keys: string[]) => keys.map((k) => list.values.find((v) => v.valueKey === k)?.label ?? k).join(", ");
-type RevisionRow = { dataPath: string; version: number; optionMap: unknown };
+type RevisionRow = { dataPath: string; version: number; optionMap: unknown; updatedAt: Date };
 /** B81 (challenge M4): what a person saw of a group of form fields: a save against anything else is refused. */
 function optionMapRevision(rows: RevisionRow[]) {
-  return createHash("sha256").update(JSON.stringify([...rows].sort((x, y) => x.dataPath.localeCompare(y.dataPath)).map((m) => [m.dataPath, m.version, m.optionMap]))).digest("hex").slice(0, 16);
+  return createHash("sha256").update(JSON.stringify([...rows].sort((x, y) => x.dataPath.localeCompare(y.dataPath)).map((m) => [m.dataPath, m.version, m.updatedAt.toISOString(), m.optionMap]))).digest("hex").slice(0, 16);
 }
 
 @Controller("api")

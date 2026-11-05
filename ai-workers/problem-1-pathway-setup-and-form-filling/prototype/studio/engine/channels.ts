@@ -130,19 +130,20 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
     }
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }
+  const listedOf = new Map((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values] as const] : [])));
   const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked
   for (const m of pdfMaps) for (const e of m.entries) {
     const values = e.outcome === "mapped" && e.fact ? lists.get(e.fact) : undefined;
     // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
     if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
-    for (const p of optionMapProblems(values, e.option_map)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
+    for (const p of optionMapProblems(values, e.option_map, listedOf.get(e.fact!))) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
   }
   // B81: a value a person marked not on this form is said once per form: it passes, and a case with that answer is refused.
   const labels = new Map<string, string>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list?.values ?? []).map((v): [string, string] => [`${f.id}|${v.key}`, v.label])));
   for (const m of pdfMaps) {
     const marked = new Map<string, number>();
     for (const e of m.entries) for (const v of e.outcome === "mapped" && e.fact && lists.has(e.fact) ? e.option_map?.notOnForm ?? [] : []) { const k = `${e.fact}|${v}`; marked.set(k, (marked.get(k) ?? 0) + 1); }
-    for (const [k, n] of marked) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${m.form_number}: "${labels.get(k) ?? k.split("|")[1]}" is marked not on this form on ${n} form field${n === 1 ? "" : "s"}: a case with that answer is refused at filling, in words, and a person decides.` });
+    for (const [k, n] of marked) if (labels.has(k)) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${m.form_number}: "${labels.get(k) ?? k.split("|")[1]}" is marked not on this form on ${n} form field${n === 1 ? "" : "s"}: a case with that answer is refused at filling, in words, and a person decides.` });
   }
   // F1-P (Screen 02 Q3): a list's rows say what the list holds and where extra rows go; until then it is a warning,
   // never an error, so configurations released before F1-P stay releasable.

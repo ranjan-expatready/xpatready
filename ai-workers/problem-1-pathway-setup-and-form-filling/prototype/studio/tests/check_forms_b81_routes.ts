@@ -56,6 +56,13 @@ const after = (await call("GET", `/editions/${ed}/option-maps`)).body.groups.fin
 ok("B81: the mark reads back on the group, with no problem left and saved", !!after && after.saved && after.problems.length === 0 && after.form_fields.length === paths.length, after);
 r = await save({ notOnForm: [], baseRevision: g.revision });
 ok("B81 fail (challenge M4): a save against what someone has changed since is refused, and says so", r.status === 409 && /Configuration author changed these choices since you opened them \(at \d\d:\d\d IST\)/.test(r.body.message), r);
+// Break M1: saves at the same moment: one wins and the rest are told.
+const fresh = (await call("GET", `/editions/${ed}/option-maps`)).body.groups.find((x: { form_fields: { data_path: string }[] }) => x.form_fields[0].data_path === paths[0]);
+const race = await Promise.all(Array.from({ length: 4 }, () => call("PATCH", `/editions/${ed}/option-maps/group`, { dataPaths: paths, map, notOnForm: [unprinted.key], baseRevision: fresh.revision })));
+ok("B81 fail (break M1): of four saves at once from one reading, exactly one is saved and the others get 409", race.filter((x) => x.status < 300).length === 1 && race.filter((x) => x.status === 409).length === 3, race.map((x) => x.status));
+// Break M2: the one-field route never takes a person's mark away unseen.
+r = await call("PATCH", `/editions/${ed}/option-maps`, { dataPath: paths[0], map, notOnForm: [] });
+ok("B81 fail (break M2): the one-field route refuses to drop a mark it was not told about", r.status === 409, r);
 const drafted = (await call("POST", `/editions/${ed}/option-maps/draft`)).body.option_maps.filter((o: { form_field: string }) => paths.includes(o.form_field));
 ok("B81 (challenge M6): a new rules draft keeps the mark", drafted.length === paths.length && drafted.every((o: { optionMap: { notOnForm?: string[] } }) => o.optionMap.notOnForm?.join() === unprinted.key), drafted.map((o: { optionMap: unknown }) => o.optionMap));
 ok("B81: the save is in the audit trail, naming the answer in words", sql(`select count(*) from audit_event where action = 'changed' and detail::text like '%not on this form: ${unprinted.label}%'`) >= "1");

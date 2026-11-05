@@ -11,6 +11,7 @@ import { previewFamily } from "../../engine/runtime/preview.ts";
 import { aliasOf, appliesOf, filingWarnings, filingWords, isLineMode, previewFilings } from "../../engine/filing-modes.ts";
 import { defaultModeOf, hasFeeRules } from "../../engine/runtime/filings.ts";
 import { wordsOnly } from "../../engine/render.ts";
+import { choiceEditionsOf } from "../../engine/options.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
 import { type LineMode, answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
@@ -60,7 +61,7 @@ export class WorkspaceViews {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
     const accepts = await acceptsOf(this.db, workspaceId);
     const revisions = await this.studio.revisions(id);
-    const maps = snapshot.field_maps as { form_number: string; form_edition: string; entries: { outcome: string }[] }[];
+    const maps = snapshot.field_maps as { form_number: string; form_edition: string; channel?: string; entries: { outcome: string }[] }[];
     const rows = await this.db.combinationForm.findMany({ where: { combinationId: id }, orderBy: { version: "desc" } });
     const status = new Map<string, string>(), version = new Map<string, number>();
     for (const r of rows) if (!status.has(r.lineageKey)) { status.set(r.lineageKey, r.status); version.set(r.lineageKey, r.version); }
@@ -75,7 +76,7 @@ export class WorkspaceViews {
       const { channels: accepted, record } = allowedChannels(accepts.get(f.form_number), account);
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };
       return {
-        line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null, libraryEdition: libraryEdition.get(f.form_number) ?? null, choiceEditions: maps.filter((m) => m.form_number === f.form_number && (m as { channel?: string }).channel !== "ONLINE").sort((x, y) => Number(y.form_edition === map?.form_edition) - Number(x.form_edition === map?.form_edition)).flatMap((m) => { const eid = editionIdOf.get(`${f.form_number}|${m.form_edition}`); return eid ? [{ id: eid, label: m.form_edition }] : []; }),
+        line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null, libraryEdition: libraryEdition.get(f.form_number) ?? null, choiceEditions: choiceEditionsOf(maps, f.form_number, map?.form_edition, (e) => editionIdOf.get(`${f.form_number}|${e}`)),
         boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, copies: f.copies ?? 1, onlyIf, condition: f.condition ?? null,
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(signature), signatureKind: signature,
         // P-143 (C-2): the signatures that fit the line's channel; C-3, C-4: each channel, offered or refused with its reason.

@@ -91,9 +91,9 @@ export const NewAnswerList = z.object({
 export const LinkAnswerList = z.object({ list: z.string().trim() });
 /** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused;
  *  values the form prints no choice for are marked notOnForm, so filling refuses them in words (B81). */
-export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]), notOnForm: z.array(z.string()).default([]) });
+export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]), notOnForm: z.array(z.string()).default([]), baseRevision: z.string().optional() });
 /** B81: the same choices saved on several form fields that print the same choices and read the same answer list. */
-export const SetOptionMaps = z.object({ dataPaths: z.array(z.string().trim().min(1)).min(1, "Name the form fields.").max(200), map: z.record(z.string(), z.string()), notOnForm: z.array(z.string()).default([]), baseRevision: z.string().min(1, "Say which choices you opened: read them again, then save.") });
+export const SetOptionMaps = z.object({ dataPaths: z.array(z.string().trim().min(1)).min(1, "Name the form fields.").max(2000), map: z.record(z.string(), z.string()), notOnForm: z.array(z.string()).default([]), baseRevision: z.string().min(1, "Say which choices you opened: read them again, then save.") });
 /** B81: the option-map step of one PDF edition as a person reads it: form fields that print the same choices and read
  *  the same answer list are one group. `code` is what is saved, or (saved false) what the rules suggest from the form's
  *  own words, nothing saved until a person saves. */
