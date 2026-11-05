@@ -191,3 +191,87 @@ own copy; I relied on the builder's logs.
 
 **Verdict: Block.** To fix: Major 1 (the IMM 5604 "For CIC use only" entry, plus a fail line that `printed` words occur
 in the form's print). Then re-run the three checks named there. The Minors can go in the PR or as follow-up rows.
+
+## Round 3 (diff-only, 47d776203 + fe9a1e705)
+Opus, a fresh context (P-293 (3), allowed once by the tech lead on #1052). Scope: `git show 47d776203` and
+`git show fe9a1e705`, nothing else. On the head (fe9a1e705, clean tree) I re-ran `python3 prototype/p1/xfa_texts.py --names`:
+`git diff` was empty afterwards. I extracted the 9 XFA templates myself with pypdf, ran `check_b78_section_names` and
+`check_c101_row_ten` on a copy in my scratchpad with mutations, and ran `product/tools/typecheck.mjs`. I re-ran no
+studio check that needs a server. I read the builder's `runs3/` logs: c10_1_configured 42/42 with the option A line
+`{"status":"done","refusedWithForms":0,"drafts":["High-wage position"]}`, fs 28/28, and C10.1 25/27 (R12b, and "every row"
+`["2 out","12 partial"]`).
+
+### What I verified
+1. **Major 1 is closed.** `section-names.json` names `IMM_5604[0].Page1[0].forCICUseOnly[0].fileNo[0]` "For office use
+   only", printed "FOR OFFICE USE ONLY", page 1, `basis` printed. That is the 02-2023 template's own draw text. "CIC" occurs
+   in none of the form's printed texts. Only the subform name `forCICUseOnly` has it, plus base64 image data.
+2. **The texts files are what the PDF prints, as draw texts.** I extracted each template separately (pypdf, `draw` →
+   `value` text, images skipped). For all 9 files, the set of texts equals the committed `texts` exactly: 0 missing, 0
+   extra. The `edition` and `sha256` values match the manifest. A re-run reproduces the files byte for byte.
+3. **The new lines can fail.** The pass line on mutated data:
+   * The old entry ("FOR CIC USE ONLY") → 10/11, exit 1.
+   * Another form's printed words changed (IMM 5532 "… SPONSOR ZZZ") → 10/11.
+   * A stale texts checksum, the PDF's bytes changed, or the PDF and the manifest checksum changed together without
+     regenerating the texts → 9/11 each (pass and fail lines both red).
+   * A missing texts file → 9/11.
+   * A texts file hand-edited to add "FOR CIC USE ONLY" → 10/11 (the fail line).
+
+   **So a texts file left stale against a changed PDF is caught**, through the manifest checksum and the committed PDF's
+   own bytes. Only when the PDF is absent does the line fall back to the manifest. PDFs are committed, so that does not
+   apply today.
+4. **The m2 relabel** (`check_c10_1_configured.ts:105`) now says the line is a standing guard with no planted case, and
+   that C9.1 plants one. That closes round 2's Minor 2 as worded.
+5. **fe9a1e705 follows the ruling exactly.**
+   * `releaseRowTen` gives waiting when nothing is released, partial when any combination with forms is refused, and
+     done otherwise. A formless combination never sets partial. It stays in `why` with the same sentence as before, as
+     its own " · " segment after the refusals.
+   * `demo.ts` sends a formless combination to `noForm` and a thrown release to `notReleased`. The old `blocked` list was
+     read only by row 10 (`blocked` at `demo.ts:1084` is an unrelated local in `sweepOrphans`).
+   * The readers of row 10's words (C10.1:61/72, fs, sp, lmia, vv) split on " · " or prefix-match `label: `. Both still
+     hold. The web dialog shows `why` whatever the status (`App.tsx:266`), so a done row still shows the formless name.
+   * The ruling's two fail tests are there.
+     * (1) A refused combination with forms gives partial (`check_c101_row_ten` line 3). With partial removed it goes 5/6,
+       exit 1.
+     * (2) The formless name is in the words when the row reads done (line 2). Restoring the old rule makes line 1 fail,
+       5/6. Dropping the formless words makes it 4/6. Removing waiting makes it 5/6. The real-load line in
+       `check_c10_1_configured.ts:132` fails if the old rule comes back (partial with `refusedWithForms` 0).
+   * Neither commit touches `acceptance/` (C10.1.test.ts unchanged, the "every row" line untouched) or any C4.11 file.
+   * Type check: 15 known errors, 0 new.
+
+### Blockers
+None.
+
+### Majors
+None.
+
+### Minors
+1. **The B79b fail line never plants the old entry through the check's own rule (`check_b78_section_names.ts:35-36`).**
+   It asserts the IMM 5604 texts file's content, not that the `unprinted` filter rejects a part-name quote. If the filter
+   is mutated to `raw.filter((s) => false && …)`, the check still reads 11 passed, 0 failed. The pass line can then never
+   fail, and the fail line does not notice. Fix: run the same predicate on a planted copy of the old entry
+   (`{…5604 entry, printed: "FOR CIC USE ONLY"}`) and assert that it is flagged.
+2. **A hand-edited texts file with the right checksum is caught only for the one CIC string.** No CI step re-derives
+   `<form>.texts.json` from the PDF, so a forged or edited text on any other form would let a wrong `printed` name pass.
+   A changed PDF *is* caught (point 3). Fix: a CI line that re-runs `xfa_texts.py --names` and fails on `git diff`. CI
+   already runs Python. Otherwise, say in the check that the files are trusted as committed.
+3. **The script's docstring says "every text a form prints", but it reads `draw` texts only, hidden ones included.**
+   * Field captions are not read. "File no." and "Date (YYYY-MM-DD)" in the same office box are absent. That can only
+     cause a false red.
+   * Draws under `presence` hidden/invisible/inactive *are* read. IMM 1294, 5257 and 5710 each carry 3–6 such texts, for
+     example "Date last validated". No printed name relies on one today, but a later name could pass on words the form
+     never shows.
+   * Fix: skip draws under a hidden ancestor, and say "draw texts" in the docstring.
+
+### Nits
+* The match is a substring test, so a short `printed` value ("SIGNATURE", "PASSPORT", "Full name") passes inside any
+  longer text. All of them hit visible draws today.
+* Row 10's words now list refusals first and formless combinations after, not in combination order. No reader depends on
+  the order.
+* Round 2's Minor 1 (the comment at `check_c10_1_configured.ts:126-128`) is unchanged. The new comment two lines down
+  explains the formless case, which partly covers it.
+
+### Could not check
+CI on fe9a1e705. I did not run `check_c10_1_configured`, fs or the C10.1 pack on my own isolated copy. I relied on the
+builder's `runs3/` logs, which agree with the code I read.
+
+**Verdict: Approve.** No open Blocker or Major for 47d776203 + fe9a1e705. Minors 1–3 can go in the PR or as follow-up rows.
