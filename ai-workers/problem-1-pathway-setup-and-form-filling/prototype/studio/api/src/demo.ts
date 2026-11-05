@@ -39,6 +39,7 @@ import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
 import { Runtime } from "./runtime.ts";
 import { openSampleFamilyCase, SAMPLE_CASE } from "./sample-case.ts";
+import { setStageOne } from "./checkpoint-stage-one.ts";
 /** QA-144 slices 1–3 (tech lead on #798): the combinations the configured checkpoint sets up from their forms' own parts.
  *  The others follow, one slice each. */
 const SET_UP_FROM_FORMS = new Set(["vv.single", "wp.lmia_inside", "sp.outside"]);
@@ -801,6 +802,8 @@ export class Demo {
       why: [...(heldLine ? [heldLine] : []), ...[...sectionsRefused, ...setUpRefused].slice(0, 6)].join(" · ") || null });
     row({ row: "8", title: "Smart questionnaire (SQR) per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Smart questionnaire (SQR) and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
 
+    // B104 (P-351): J7 Stage 1's parts the rows above do not make (who signs, the IRCC account), from samples/checkpoint-stage-one.json.
+    for (const c of six.combinations) { const s = await timed("J7 Stage 1 setup", () => setStageOne({ db: this.db, studio: this.studio, forms: this.forms }, author, c.id, keyOf.get(c.id), said)); if (s.done.length || s.refused.length) log.push(`  ${keyOf.get(c.id)} J7 Stage 1: ${[...s.done, ...s.refused.map((x) => `refused: ${x}`)].join("; ")}`); }
     await applySampleFormRoles(this.db, workspaceId); // breaker M2: the demo's form roles before any release is made
     // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
     // different person's approval. A combination the validator refuses stays a draft, with the validator's words.

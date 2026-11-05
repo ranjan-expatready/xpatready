@@ -1,0 +1,25 @@
+{
+  "about": "B104 (P-351, #1069's re-score): journey J7 Stage 1's parts the configured checkpoint did not make, set on a combination's draft before its release, as the author, through the Forms tab's own services (api/src/checkpoint-stage-one.ts). Every value is Sample, Unconfirmed: expert (AGENTS rule 4); each cites its official source with page, quote and date (P-170). Files are the local copies under official-sources/ircc/; dates are each page's own modified date or the form's edition. Form ages are not here: IMM 5707 and IMM 5257 SCH1 already carry 'from 18' (api/src/form-setup.ts), and IMM 5476's age is row C6.11's (#1072).",
+  "combinations": {
+    "vv.single": {
+      "account": {
+        "value": "APR_PORTAL",
+        "cite": "VV-R12 (product/compliance-trace.md): canada.ca 'Sign in to an account for representatives' (https://www.canada.ca/en/immigration-refugees-citizenship/corporate/partners-service-providers/authorized-paid-representatives-portal.html, page dated 2026-10-05): \"Use the APR portal for these applications:\" \"visitor visa, study and work permit\". The same page lists \"temporary resident visas\" under the IRCC portal for representatives: ambiguous, founder question FQ-1; APR Portal kept as DEMO.md and P-98 have it. QA-247."
+      },
+      "signers": [
+        { "form": "IMM 5257", "signedBy": "parent_for_minor",
+          "cite": "VV-R09. Guide 5256 (official-sources/ircc/instructions/guide-5256.html, dcterms.modified 2026-03-31), the signing step: \"If you are 18 years of age or older , you must sign and date in the boxes provided at the bottom of the page. If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\" IMM 5257 (09-2023) (official-sources/ircc/forms/imm5257e.pdf, read in prototype/expected/source-text/imm5257e.xfa-template.txt), its caption: \"Signature of Applicant or Parent/Legal Guardian’s for a person under 18 years of age\". QA-228." },
+        { "form": "IMM 5707", "signedBy": "person",
+          "cite": "VV-R07. IMM 5707 (01-2023) (official-sources/ircc/forms/imm5707e.pdf, read in prototype/expected/source-text/imm5707e.xfa-template.txt), Section C: \"… accurate and factual. I also realize that once this document has been completed and signed that it will form part of my Immigration Record\"; canada.ca IMM 5707 page (official-sources/ircc/canada/pages/imm5707.html, modified 2024-06-21): \"This form must be filled out by each person, 18 years of age or older\". QA-228." },
+        { "form": "IMM 5476", "signedBy": "person_and_representative",
+          "cite": "VV-R10. IMM 5476 (11-2025) (official-sources/ircc/forms/imm5476e.pdf), its captions: \"Signature of applicant or Parent/Legal Guardian for a person under 18 years of age\" and \"Signature of representative\"; IMM 5476 (11-2021), the edition the checkpoint's line files (official-sources/ircc/previous-editions/imm5476e-2021.pdf): \"Signature of representative\" and \"Signature of applicant\"; canada.ca IMM 5476 page (official-sources/ircc/canada/pages/imm5476.html, modified 2025-12-12): \"By signing, you authorize IRCC to complete your request for yourself and your dependent children under 18 years of age.\" QA-228." }
+      ],
+      "signers_not_set": [
+        { "form": "IMM 5257 SCH1", "why": "The official words say who completes it, not who signs: IMM 5257 SCH1 (09-2023) p. 1, \"The principal applicant, his or her spouse or common-law partner, if applicable, and all dependent children aged 18 years or older listed in the application for temporary residence must complete their own copy of this form.\" Left unset, which the readiness check reads as 'a signature is needed'. For the immigration expert." },
+        { "form": "IMM 5409", "why": "Two signers and a commissioner, which no one signer value says: IMM 5409 (01-2023), \"Signature of declarant\", \"Signature of declarant's partner\", \"Signature of the person who administered the declaration\"; canada.ca IMM 5409 page (modified 2024-08-23): \"This form must be completed and signed with handwritten signatures.\" Left unset (a signature is needed)." },
+        { "form": "IMM 5475", "why": "The applicant, and the spouse on the same copy: IMM 5475 (05-2021) (its boxes, prototype/p1/inventory/imm5475e.inventory.json), \"Signature of applicant\" and \"Signature of spouse common-law partner (if applicable)\". No one signer value says it. Left unset (a signature is needed)." },
+        { "form": "IRM 0002", "why": "A minor and a parent both sign (not a parent instead of the minor): IRM 0002 (03-2021), \"If a change of sex or gender identifier is being requested for an individual under 18 years of age, both the applicant and their parent or legal guardian will need to sign\". No one signer value says it. Left unset (a signature is needed)." }
+      ]
+    }
+  }
+}
