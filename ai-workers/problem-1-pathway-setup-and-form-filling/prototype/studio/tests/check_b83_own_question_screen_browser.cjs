@@ -203,7 +203,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   ok("review F5: a stale row's Undo shows the refusal, and the row refreshes to Ask", /nothing to take back/.test(await R.locator("[data-own-said]").innerText()) && (await R.locator("[data-own-ask]").count()) === 1);
   await R.locator("[data-own-ask]").click();
   await R.locator("[data-own-form]").waitFor();
-  const lib0 = (await api("GET", `/editions/${edId}/form-fields/own-questions`)).body.yes_no_fields[0];
+  const lib0 = (await api("GET", `/editions/${edId}/form-fields/own-questions`)).body.yes_no_fields.filter((f) => f.key.startsWith("person.")).sort((a, b) => a.key.localeCompare(b.key))[0]; // about a person, as this row is: any other is refused
   const other = await api("POST", `/editions/${edId}/form-fields/own-question`, { dataPath: dp, reason: WHY, field: lib0.key });
   await R.locator("[data-own-form]").getByLabel("Why", { exact: true }).fill(WHY);
   await R.locator("[data-own-form]").getByRole("radio", { name: "Name a new one" }).check();

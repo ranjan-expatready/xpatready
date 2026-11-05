@@ -104,7 +104,7 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   r = await ask({ dataPath: open?.dataPath, field: "person.has_national_id", reason: "short" });
   ok("B52 fail: a reason under 8 characters is refused (400)", r.status === 400 && /at least 8/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, field: "person.national_id_number", reason: why });
-  ok("B52 fail: a field not answered Yes or No is refused (400), in words", r.status === 400 && /not Yes or No/.test(words(r)), r);
+  ok("B52 fail: a field not answered Yes or No is refused (400), in words", r.status === 400 && /not answered Yes or No/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, label: "Has national ID", meaning: "Whether the person has a national identity document (B52 check).", reason: why });
   ok("B52 fail: a new name the library already has is refused (409): choose that field", r.status === 409 && /already a shared field/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, field: "case.uses_representative", reason: why });

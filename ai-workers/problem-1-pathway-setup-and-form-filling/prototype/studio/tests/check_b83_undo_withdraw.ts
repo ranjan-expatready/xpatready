@@ -320,7 +320,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   await undo(USCARD);
   const aiRow = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
   sql(`update form_field_map set origin = 'AI_PROPOSAL', confidence = 'medium', evidence_quote = 'B83 quote', reason = 'B83 reason' where id = '${aiRow}'`);
-  u = await ask(USCARD, { field: lib.key });
+  u = await askNew(USCARD, "B83 door one"); // the row under it is released reading the library's field, so a new one is this draft's own ask
   const asOf = () => sql(`select origin || '|' || coalesce(confidence, '') || '|' || coalesce(evidence_quote, '') || '|' || coalesce(reason, '') from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
   ok("setup: an ask records a person's decision", /^HUMAN\|/.test(asOf()), asOf());
   u = await undo(USCARD);
