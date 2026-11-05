@@ -786,6 +786,7 @@ export class Demo {
           }
         }
         const editions = ((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
+        const marked = new Set<string>(); // review r2-m1 (#1050): a Not on this form mark that finds no form field is said
         for (const ed of await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true, form: { select: { formKey: true } } } })) {
           for (const f of (await this.library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
             try { await this.library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON }); byHand++; } catch (e) { setUpRefused.push(`${f.dataPath}: ${said(e)}`); }
@@ -798,10 +799,11 @@ export class Demo {
           for (const mark of (setup?.notOnForm ?? []).filter((x) => x.form === ed.form.formKey)) {
             const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, canonicalFieldKey: mark.fact, outcome: "mapped", status: { not: "RETIRED" } }, orderBy: { version: "desc" }, select: { dataPath: true, optionMap: true } });
             for (const [dataPath, om] of new Map(rows.reverse().map((r) => [r.dataPath, r.optionMap as { map?: Record<string, string>; unused?: string[] } | null]))) {
-              try { await this.forms.setOptionMap(author, ed.id, { dataPath, map: om?.map ?? {}, unused: om?.unused ?? [], notOnForm: mark.values }); } catch (e) { setUpRefused.push(`${mark.form} not on this form: ${said(e)}`); }
+              try { await this.forms.setOptionMap(author, ed.id, { dataPath, map: om?.map ?? {}, unused: om?.unused ?? [], notOnForm: mark.values }); marked.add(`${mark.form}|${mark.fact}`); } catch (e) { setUpRefused.push(`${mark.form} not on this form: ${said(e)}`); }
             }
           }
         }
+        for (const mark of (setup?.notOnForm ?? []).filter((x) => !marked.has(`${x.form}|${x.fact}`))) setUpRefused.push(`${mark.form} not on this form: no form field of ${mark.form} on a PDF edition here reads ${mark.fact}, so nothing was marked`);
       }
     });
     // QA-206 (tech lead on #883): each held section is named in one line, so the row says all of them, not the first six.
