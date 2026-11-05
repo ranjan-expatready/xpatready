@@ -153,13 +153,13 @@ const FACT_KEY = /^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/;
 
 async function factsKnown(tx: Parameters<typeof insertProposals>[0], ws: string): Promise<FactsKnown> {
   const [fields, derived, waiting] = await Promise.all([
-    tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true, label: true, status: true, mergedIntoKey: true } }),
+    tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true, label: true, aliases: true, status: true, mergedIntoKey: true } }),
     tx.derivedField.findMany({ where: { workspaceId: ws }, select: { derivedKey: true } }),
     tx.proposalItem.findMany({ where: { workspaceId: ws, kind: "field", status: "waiting" }, select: { identityKey: true, work: true } }),
   ]);
   const usable = fields.filter((f) => f.status !== "RETIRED" && !f.mergedIntoKey);
   return { live: new Set([...usable.map((f) => f.canonicalFieldKey), ...derived.map((d) => d.derivedKey)]), retired: new Set(fields.filter((f) => f.status === "RETIRED").map((f) => f.canonicalFieldKey)),
-    named: new Map(usable.filter((f) => f.label).map((f) => [normalizeLabel(f.label!), f.canonicalFieldKey])),
+    named: new Map(usable.flatMap((f) => [f.label ?? "", ...f.aliases].filter(Boolean).map((n) => [normalizeLabel(n), f.canonicalFieldKey] as [string, string]))), // as the door's sameInLibrary
     waitingKeys: new Set(waiting.map((w) => (w.work as { ruleFact?: unknown; proposedKey?: unknown } | null)).flatMap((w) => [w?.ruleFact, w?.proposedKey]).filter((k): k is string => typeof k === "string")),
     waitingNames: new Set(waiting.map((w) => w.identityKey).filter((k): k is string => !!k)) };
 }

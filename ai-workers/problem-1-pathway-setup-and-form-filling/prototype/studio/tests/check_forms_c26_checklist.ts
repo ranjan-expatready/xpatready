@@ -74,6 +74,7 @@ async function main() {
   ok("C2.6 R6 fail: a retired fact is not added again; the job says to restore it", retiredOne.propose.length === 0 && /restore it/.test(retiredOne.held[0] ?? ""), retiredOne);
   const sameName = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, named: new Map([["hasvisa", "case.has_visa"]]) });
   ok("C2.6 R6 fail: a fact with a library field's name is not a second field; the job names the field to read", sameName.propose.length === 0 && /case\.has_visa/.test(sameName.held[0] ?? ""), sameName);
+  // (factsKnown puts a library field's aliases in `named` too, as the door's sameInLibrary does: one bad item never stops the draft.)
   const nameWaiting = conditionFacts([reads("person.has_visa", true)], [], { ...nothing, waitingNames: new Set(["hasvisa"]) });
   ok("C2.6 R6 fail: a name already waiting on To review is decided there first", nameWaiting.propose.length === 0 && /already waiting/.test(nameWaiting.held[0] ?? ""), nameWaiting);
   const badKey = conditionFacts([reads("no_group", true)], [], nothing);
