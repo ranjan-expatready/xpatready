@@ -175,7 +175,7 @@ function CasePage() {
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
-          {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} /></div> : null}
+          {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">

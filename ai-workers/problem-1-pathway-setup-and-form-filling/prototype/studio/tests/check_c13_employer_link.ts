@@ -6,7 +6,7 @@
 // data, no model call (US$0); the demo is never used.
 //   zsh studio/tools/isolated.sh c13_link 4436 start && tsx studio/tests/check_c13_employer_link.ts 4436 xr_studio_c13_link
 import { carriedFacts, employerFacts, employerLinkOffer, factState } from "../engine/runtime/employer.ts";
-import { client, recorder } from "../tests/runtime/api.ts";
+import { client, recorder } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_c13_link";
 const { call, sql } = client(PORT, DB);
