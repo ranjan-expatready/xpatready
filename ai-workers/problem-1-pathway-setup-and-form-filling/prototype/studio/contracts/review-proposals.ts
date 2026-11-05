@@ -54,6 +54,8 @@ export type QueueProposal = {
   near_reason_needed?: boolean;
   /** QA-192 (Devin r2): the same, for accepting the checker's reading (an edit to that reading's name). */
   near_reason_needed_check?: boolean;
+  /** B86: a condition on a question: its combination and question, for "Form fields that read this answer"; null for other kinds. */
+  form_fields?: { combination: string; fact: string } | null;
   /** Where it is decided instead (the field-map step's form-field page), or null when it is decided here. */
   decide_on: string | null;
   created_at: string;

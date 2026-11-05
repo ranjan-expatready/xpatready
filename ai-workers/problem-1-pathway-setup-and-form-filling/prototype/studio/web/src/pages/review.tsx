@@ -12,6 +12,7 @@ import { itemCell } from "@/lib/item-words";
 import { UnsourcedNumbers } from "@/components/unsourced-numbers";
 import { Link } from "react-router-dom";
 import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
+import { FormFieldConditions } from "@/components/form-field-conditions";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
@@ -21,6 +22,8 @@ const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated an
 const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? roleKeysInWords(p.label) : "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
 
+/** B86: the rule's own opening words; the problem's item is the question it names. */
+const HIDING = /^Hiding a value a form reads/;
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
 export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
@@ -59,7 +62,8 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   const noFormLine = errors.find((p: { code?: string }) => p.code === "no_form_line"); // engine/programs.ts NO_FORM_LINE
   const noDocLine = errors.find((p: { code?: string }) => p.code === "no_document_line"); // engine/programs.ts NO_DOCUMENT_LINE
   const lineBox = noFormLine || noDocLine;
-  const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine);
+  const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine)
+    .sort((a: any, b: any) => Number(HIDING.test(b.message ?? "")) - Number(HIDING.test(a.message ?? ""))); // B86: its way out is on the row, so never behind "Show all"
   const ref = (c: any) => `${c.kind}|${c.key}`;
   const needSme = changes.filter((c) => c.needs_sme), unsignedSme = needSme.filter((c) => !signed.has(ref(c)));
   const can = (duty: string) => me.duties.includes(duty);
@@ -84,7 +88,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
           <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced || lineBox ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
-          <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
+          <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex flex-wrap gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}{HIDING.test(p.message ?? "") && p.item && others.findIndex((x: any) => HIDING.test(x.message ?? "") && x.item === p.item) === i ? <div className="w-full pb-2"><FormFieldConditions combinationId={id} fact={p.item} /></div> : null}</li>)}</ul>
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>
       ) : unsourced || lineBox ? null : <Notice tone="ok" title="The draft passes validation" />}

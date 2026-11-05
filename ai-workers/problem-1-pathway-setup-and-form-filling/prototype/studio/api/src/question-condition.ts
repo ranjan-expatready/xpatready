@@ -9,6 +9,7 @@ import { HttpException, HttpStatus } from "@nestjs/common";
 import type { LibraryChange, Prisma } from "@prisma/client";
 import { Audit, Db, revise, strip, type Actor } from "./core.ts";
 import { checkCondition } from "../../engine/validate.ts";
+import { spreadOf } from "./form-field-condition.ts";
 
 export const COND_KIND = "placement_condition", COND_ACTION = "SET_CONDITION";
 const OPEN = ["WAITING", "RETURNED", "APPROVED"];
@@ -41,16 +42,18 @@ export async function proposeConditionChange(tx: Tx, l: { ws: string; actor: Act
   if (await tx.libraryChange.findFirst({ where: { workspaceId: l.ws, kind: COND_KIND, key, status: { in: OPEN } } })) throw problem(409, "Already waiting", `A change of when "${name}" is asked already waits on To review or for the next release.`);
   const uses = await tx.combination.count({ where: { workspaceId: l.ws, retiredAt: null, sections: { some: { sectionKey: current.sectionKey } } } });
   const label = `${name} · ${p.condition.sentence.replace(/^"[^"]*" is /, "").replace(/\.$/, "")}, for every combination that asks it`.slice(0, 300);
+  // B86 (ruling 3 on #1053): the second person is told what approving this holds elsewhere.
+  const spread = await spreadOf(tx as never, l.ws, key, p.condition.tree, l.combinationId);
   const c = await tx.libraryChange.create({ data: { workspaceId: l.ws, kind: COND_KIND, key, label, action: COND_ACTION, reason: l.reason, status: "WAITING", proposedBy: l.actor.id, appliedBy: l.actor.id,
-    matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses } as Prisma.InputJsonValue,
+    matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses, spread: spread.words } as Prisma.InputJsonValue,
     sourceJobId: l.sourceJobId ?? null, combinationId: l.combinationId ?? null, proposalItemId: l.itemId, batchId: l.batchId } });
   return c.id;
 }
 
 /** What the second person compares on To review: before → after, the reason, how many combinations ask it. */
 export function conditionView(c: Pick<LibraryChange, "matches" | "reason">) {
-  const m = (c.matches ?? {}) as { beforePlain?: string | null; sentence?: string; uses?: number };
-  return { before: m.beforePlain ?? "Always asked", after: m.sentence ?? "", uses: m.uses ?? 0, reason: c.reason ?? "" };
+  const m = (c.matches ?? {}) as { beforePlain?: string | null; sentence?: string; uses?: number; spread?: string | null };
+  return { before: m.beforePlain ?? "Always asked", after: m.sentence ?? "", uses: m.uses ?? 0, reason: c.reason ?? "", spread: m.spread ?? null };
 }
 
 /** At approval (lifecycle afterApprove): the question gets a draft version with the condition, checked again first. */

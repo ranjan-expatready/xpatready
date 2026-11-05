@@ -79,6 +79,15 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       {x.rename ? <RenameChange change={x} /> : null}
+      {x.form_field ? (
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-form-field>
+          <dt className="text-text-muted">Form field</dt><dd className="font-semibold">{x.form_field.edition} · {x.form_field.caption || "A form field with no printed name"}</dd>
+          <dt className="text-text-muted">Its own words</dt><dd className="[overflow-wrap:anywhere]">{x.form_field.words ? `“${x.form_field.words}”` : "None"}</dd>
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.form_field.clear ? "Filled whenever the form applies" : `Filled only when ${x.form_field.sentence}`}</dd>
+          <dd className="col-span-2 text-xs text-text-muted">For every combination that files this form. Approving says these say the same, not that the condition is correct: Sample, Unconfirmed: expert.</dd>
+        </dl>
+      ) : null}
+      {x.form_field?.spread || x.condition?.spread ? <div data-change-spread><Notice tone="warn" title="Other combinations">{x.form_field?.spread ?? x.condition?.spread}</Notice></div> : null}
       {x.supplies ? (
         // C4.5: what the second person compares before approving: the facts before → after, each with its official words.
         <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-supplies>
@@ -111,7 +120,7 @@ export function LibraryChangePage() {
         {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
-      <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>
+      {x.form_field ? null : <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>}
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
         : x.status === "RETURNED" ? (x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
