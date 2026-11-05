@@ -31,6 +31,11 @@ const same = (a: { facts: string[]; about: Record<string, string> }, b: { facts:
   JSON.stringify([...a.facts].sort()) === JSON.stringify([...b.facts].sort()) && JSON.stringify(Object.entries(a.about).sort()) === JSON.stringify(Object.entries(b.about).sort());
 /** Words of a document's name that say nothing about what it shows (never used to suggest a fact). */
 const SUGGEST_STOP = new Set(["information", "document", "documents", "photocopy", "proof", "evidence", "certificate", "letter", "application"]);
+/** B83: the names of withdrawn new fields among these keys: no row of them is left to name them. */
+async function goneNames(db: Pick<Db, "libraryChange">, workspaceId: string, keys: string[]) {
+  const rows = keys.length ? await db.libraryChange.findMany({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key: { in: keys } }, select: { key: true, label: true } }) : [];
+  return new Map(rows.map((c) => [c.key, c.label ?? "A withdrawn field"]));
+}
 /** A new version copies the row; a Json column that is null is written as the database's null (Prisma refuses a bare null). */
 const copyType = (r: Record<string, unknown>) => { const x = strip(r); if (x.readerProfile === null) x.readerProfile = Prisma.DbNull; return x; };
 const nameOfField = (f: { canonicalFieldKey: string; meaning: string | null; label: string | null }) => (f.meaning ?? f.label ?? f.canonicalFieldKey).trim().replace(/\.$/, "").replace(/^./, (x) => x.toUpperCase());
@@ -62,7 +67,8 @@ export class DocumentSupplies {
     // The newest version decides (a merge or a retire marks only it): merged or retired fields are not offered.
     const seen = new Set<string>(), named = new Map<string, string>();
     for (const f of rows) { if (seen.has(f.canonicalFieldKey)) continue; seen.add(f.canonicalFieldKey); if (f.status !== "RETIRED" && !f.mergedIntoKey) named.set(f.canonicalFieldKey, nameOfField(f)); }
-    for (const f of current.suppliesFacts) if (!named.has(f)) { const r = rows.find((x) => x.canonicalFieldKey === f); named.set(f, r ? nameOfField(r) : f); }
+    const gone = await goneNames(this.db, workspaceId, current.suppliesFacts);
+    for (const f of current.suppliesFacts) if (!named.has(f)) { const r = rows.find((x) => x.canonicalFieldKey === f); named.set(f, r ? nameOfField(r) : gone.get(f) ?? "A field no longer in the library"); }
     // The official words recorded with what it supplies now: the newest approved or released change of its facts.
     const last = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: SUPPLIES_KIND, key, status: { in: ["APPROVED", "RELEASED"] } }, orderBy: { proposedAt: "desc" } });
     const cites = ((last?.matches ?? {}) as { cites?: SupplyCite[] }).cites ?? [];
@@ -101,6 +107,7 @@ export class DocumentSupplies {
     // Break M3: the facts it supplies now are named too (the second person reads names, never keys).
     const older = (await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: current.suppliesFacts } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true, label: true } }));
     const names: Record<string, string> = {}; for (const f of older) names[f.canonicalFieldKey] ??= nameOfField(f); for (const [k, v] of label) names[k] = v;
+    for (const [k, v] of await goneNames(this.db, workspaceId, current.suppliesFacts)) names[k] ??= v; // B83: the second person reads a withdrawn field's name, never its key
     const cites: SupplyCite[] = parsed.data.facts.map((f) => ({ fact: f.fact, label: label.get(f.fact)!, about: f.about, source: f.source, quote: f.quote, readOn: f.readOn }));
     const before = { facts: current.suppliesFacts, about: (current.suppliesAbout ?? {}) as Record<string, string> }, after = { facts, about: aboutOf(cites) };
     if (same(before, after)) throw problem(409, "Nothing changes", `"${current.name}" already supplies exactly these facts in the library.`);

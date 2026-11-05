@@ -59,7 +59,7 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
 export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Problem[] {
   if (!gone.size) return [];
   const out: Problem[] = [];
-  const say = (where: string, item: string, label: string, keys: Iterable<unknown>) => { for (const k of new Set(keys)) if (typeof k === "string" && gone.has(k)) out.push({ level: "error", where, item, label, message: `It reads "${gone.get(k)}", a new field that was withdrawn. Point it at another field, or remove it.` }); };
+  const say = (where: string, item: string, label: string, keys: Iterable<unknown>, wayOut = "Point it at another field, or remove it.") => { for (const k of new Set(keys)) if (typeof k === "string" && gone.has(k)) out.push({ level: "error", where, item, label, message: `It reads "${gone.get(k)}", a new field that was withdrawn. ${wayOut}` }); };
   const conds = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
   const inText = (x: unknown) => { const text = typeof x === "string" ? x : JSON.stringify(x ?? null); return [...gone.keys()].filter((k) => keyInText(k).test(text)); };
   const wordsOf = new Map((s.canonical_fields as { id: string; label?: string | null; meaning?: string | null }[]).map((f) => [f.id, f.label ?? f.meaning ?? "a question"]));
@@ -72,7 +72,7 @@ export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Pro
   for (const g of s.eligibility?.gates ?? []) say("Eligibility", g.key, `The eligibility gate "${g.label}"`, conds(g.condition));
   for (const m of s.field_maps) for (const e of m.entries) if (e.outcome === "mapped") say(`Field map ${m.form_edition}`, e.data_path, `${m.form_number}'s form field "${e.caption ?? e.heading ?? "with no caption"}"`, [e.fact, ...inText(e.transform), ...inText(e.condition)]);
   for (const f of s.fact_sources ?? []) say("Questions", f.fact, `Where this answer comes from (${roleOf.get(f.role) ?? "a person"})`, [f.fact]);
-  for (const t of s.document_types ?? []) say("Documents", t.key, `The document type "${t.name}"`, t.supplies_facts ?? []);
+  for (const t of s.document_types ?? []) say("Documents", t.key, `The document type "${t.name}"`, t.supplies_facts ?? [], `On its document line, use "Change the facts it supplies…" to take it out; a second person approves.`);
   const read = derivedRead(s);
   for (const d of s.derived_fields as { id: string; plain?: string | null; inputs?: string[]; reference?: string | null }[]) if (read.has(d.id)) say("Derived fields", d.id, `The worked-out value "${d.plain ?? "with no words"}"`, [...(d.inputs ?? []), d.reference]);
   return out;
