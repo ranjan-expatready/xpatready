@@ -265,8 +265,8 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   }
   for (const [k, e] of a) if (e.condition_rule && !b.has(k)) out.push({ kind: "Form field condition", key: k, change: "removed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, true) });
   // B88 (challenge M3): a Yes/No form field that now asks its own question, or no longer does, is named once, in words, for the
-  // expert. Only a move from one field to another (CI on #1068: a mapping cleared to no field is a Field map change, below).
-  // immigration expert: it writes the person's own answer instead of one worked out from the details recorded.
+  // immigration expert: it writes the person's own answer instead of one worked out from the details recorded. Only a move from
+  // one field to another counts (CI on #1068): a mapping cleared to no field is a Field map change, below.
   const yesNo = (e?: { transform?: string | null }) => /\byes_no_code:/.test(e?.transform ?? "");
   const asked = new Set<string>();
   for (const [k, e] of b) { const was = a.get(k); if (was && was.fact && e.fact && was.fact !== e.fact && (yesNo(e) || yesNo(was))) asked.add(k), out.push({ kind: "Form field question", key: k, change: "changed", origin: e.origin, needs_sme: true, label: `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": reads "${factWords(next, e.fact)}", was "${factWords(next, was.fact)}" (shared library; Sample, Unconfirmed: expert)` }); }
