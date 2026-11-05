@@ -503,7 +503,7 @@ export class Forms {
       await moveLineages("document supplies", tx.documentType, types.filter((t) => tHit.has(t.documentTypeKey)), (t) => t.documentTypeKey, (t) => {
         if (!t.suppliesFacts.includes(from)) return { suppliesFacts: t.suppliesFacts };
         const about = { ...((t.suppliesAbout ?? {}) as Record<string, string>) }, whom = about[from] ?? "holder";
-        if (t.suppliesFacts.includes(to) && (about[to] ?? "holder") !== whom) conflict(`${t.name} supplies both of these fields, about different people, so merging them would lose whom one is about. Change what it supplies first, or withdraw or release its approved change, then merge. Nothing was merged.`);
+        if (t.suppliesFacts.includes(to) && (about[to] ?? "holder") !== whom) conflict(`${t.name} supplies both of these fields, about different people, so merging them would lose whom one is about. Change what it supplies first, then merge. Nothing was merged.`);
         delete about[from];
         if (whom !== "holder") about[to] = whom;
         return { suppliesFacts: [...new Set(t.suppliesFacts.map((f: string) => (f === from ? to : f)))], suppliesAbout: Object.keys(about).length ? (about as Prisma.InputJsonValue) : Prisma.DbNull };

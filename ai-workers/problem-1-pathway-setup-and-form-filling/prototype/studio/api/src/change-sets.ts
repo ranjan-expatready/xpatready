@@ -49,6 +49,9 @@ export async function libraryOf(db: Client, workspaceId: string): Promise<Librar
   const liveNames = new Map<string, string[]>(); for (const f of fields) if (isLive(f.status) && !f.mergedIntoKey) liveNames.set(f.canonicalFieldKey, [...(liveNames.get(f.canonicalFieldKey) ?? []), f.label ?? "", ...f.aliases].filter(Boolean));
   const liveTitles = new Map<string, string[]>(); for (const x of sections) if (isLive(x.status)) liveTitles.set(x.sectionKey, [...(liveTitles.get(x.sectionKey) ?? []), x.title]);
   const listIds = new Map<string, string[]>(); for (const l of lists) if (isLive(l.status)) listIds.set(l.answerListKey, [...(listIds.get(l.answerListKey) ?? []), listId(l.values.map((v) => v.valueKey))]);
+  // B112 (review round 2): a change's stored keys read as today's, through any merge made since (one hop: merges are flattened).
+  const mergedTo = new Map(newestBy(fields, (f) => f.canonicalFieldKey).filter((f) => f.mergedIntoKey).map((f) => [f.canonicalFieldKey, f.mergedIntoKey!]));
+  const today = (k: string) => mergedTo.get(k) ?? k;
   const proves = (t: (typeof types)[number]) => String((t.readerProfile as { proves?: unknown } | null)?.proves ?? "");
   const docIds = new Map<string, string[]>(); for (const t of types) if (isLive(t.status)) docIds.set(t.documentTypeKey, [...(docIds.get(t.documentTypeKey) ?? []), `${normalizeLabel(t.name)}|${normalizeLabel(proves(t))}`]);
   return {
@@ -56,7 +59,7 @@ export async function libraryOf(db: Client, workspaceId: string): Promise<Librar
     sections: newestBy(sections, (x) => x.sectionKey).map((x) => ({ key: x.sectionKey, title: x.title, status: x.status, liveTitles: liveTitles.get(x.sectionKey) ?? [] })),
     answerLists: newestBy(lists, (l) => l.answerListKey).map((l) => ({ key: l.answerListKey, values: l.values.map((v) => v.valueKey), status: l.status, liveIds: listIds.get(l.answerListKey) ?? [] })),
     documentTypes: newestBy(types, (t) => t.documentTypeKey).map((t) => ({ key: t.documentTypeKey, name: t.name, proves: proves(t), status: t.status, liveIds: docIds.get(t.documentTypeKey) ?? [],
-      supplies: [{ facts: t.suppliesFacts, about: (t.suppliesAbout ?? {}) as Record<string, string> }, ...approved.filter((c) => c.key === t.documentTypeKey).map((c) => { const m = c.matches as { before?: string[]; beforeAbout?: Record<string, string> }; return { facts: m.before ?? [], about: m.beforeAbout ?? {} }; })] })),
+      supplies: [{ facts: t.suppliesFacts, about: (t.suppliesAbout ?? {}) as Record<string, string> }, ...approved.filter((c) => c.key === t.documentTypeKey).map((c) => { const m = c.matches as { before?: string[]; beforeAbout?: Record<string, string> }; return { facts: (m.before ?? []).map(today), about: Object.fromEntries(Object.entries(m.beforeAbout ?? {}).map(([k, v]) => [today(k), v])), held: true }; })] })),
   };
 }
 

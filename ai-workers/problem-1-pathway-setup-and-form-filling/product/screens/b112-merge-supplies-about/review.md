@@ -119,3 +119,50 @@ Fixes that raise it, most valuable first: Major 1, then Major 2.
 * Not read: the panel's words while a change is open, beyond the PR's statement. Not measured: whether a real test run reproduces Major 2.
 
 **Verdict: Block** (changes needed). Fix: **Major 1** (rule into the check, so the card and the proposal say it), **Major 2** (no silent wrong person through change, merge, withdraw).
+
+## Round 2 (diff only), commit b4a88dca9
+Read `git diff bfa10621f b4a88dca9`, the code around it, the new `b112-3` screenshot and CI on GitHub. **I ran no copy, browser or suite; every finding below is read from code.** Live AI off, US$0.
+
+### Round 1 findings
+* **M1: Fixed.** The rule is in the check (`engine/change-set.ts:271`), so `proposeMerge` and approval refuse through `guard`, and the card reads it. `b112-3` shows "This change is refused" with the reason and no "Checks passed."; the card offers only Reject (`review-items.tsx:248`). `forms.ts` stays as the guard for a change that lands in between.
+* **M2: Fixed for the route I reported; the same result is still open by a longer route (new Major below).** One merge after the approved change is now refused.
+
+### New Major (Must): two merges still make the holder's fact the spouse's, silently
+* **Where:** `api/src/change-sets.ts:59` passes the approved change's `before` with its stored keys; `engine/change-set.ts:271` compares them with today's keys; `document-supplies.ts:165,180` reads them through merges at withdraw.
+* **Fail case (read from code, not run):**
+  1. Type T supplies K (holder) and G (spouse). A change to [K] is approved: `before [K,G]`, `beforeAbout {G: spouse}`, draft [K].
+  2. Merge K into H, a third field. Neither set holds both K and H: passes. The draft is now [H].
+  3. Merge G into H. The draft has no G, and `before` has G but not H: passes.
+  4. The proposer withdraws. `after` through merges is [H] and matches the draft. `before` through merges is facts [H], about `{H: spouse}`, and that is written.
+* **Result:** the holder's fact reads as the spouse's, with no message. Merging G into H and then H into K gets there too, because `forms.ts` redirects G to K. It takes two approved merges during one approved change, so it is narrow, but it is the same silent wrong person as round 1's M2.
+* **Fix:** at `change-sets.ts:59`, map `before` and `beforeAbout` through the newest `mergedIntoKey` of `fields` (already read there). Step 3 is then refused. Test: steps 1 to 3, with the second merge refused.
+
+### What the fixes broke
+| Asked | Finding |
+|---|---|
+| Cost in `libraryOf` | Small, not measured. Its one caller is `check()`, so every check pays, renames too. It adds one query on `@@index([workspaceId, status])`, which returns only approved supplies changes, and two columns. `check()` already reads every draft it touches |
+| Extra field in a fingerprint or comparison | **No.** The fingerprint hashes items, problems, tier and preview (`change-sets.ts`, `check`); `preview` reads only `lib.fields` and `lib.sections`. The other readers of `lib.documentTypes` (`engine/change-set.ts:102,252`) read `liveIds` and `key`. The fingerprint moves only when the refusal appears, which is right |
+| Retired newest row | **Yes, it can refuse (Minor 1).** Retiring only flips the status (`library-items.ts:179`), so the facts stay on the row |
+| Merges in other suites | None refused, as far as read. `check_forms_channels` and `check_gcore_b2_door` set no supplies. `check_c45_supplies_release:80` merges into `person.citizenship`, and its pack passes. No file in `acceptance/` contains the text `library/merges`. `check_screen02_slice2` and `fill_queue_kinds` merge fields I did not trace, and the demo load's supplies were not read |
+| Proposed change that holds both | Safe: at approval `refuseUnusable` refuses a merged field (`document-supplies.ts:146`) |
+
+### Minor (Should)
+1. **A retired type refuses a merge it would not touch.** `forms.ts` skips a retired newest row and `engine/change-set.ts:271` does not. It should not refuse: the merge moves nothing there, and "Change what it supplies first" answers "retired: Restore it first" (`document-supplies.ts:92`). Words only, no data harm, and Restore is a way out. If it is skipped, a later restore brings back the old keys, as on main today.
+2. **The refusal's words fit only one of its cases.**
+   * With no approved change, it still says "its approved change".
+   * When only the approved change's `before` holds both, it says the document "supplies both", but the panel shows one.
+   * A person does not release a change: a combination's release carries it. Only its proposer can withdraw it.
+3. **A type no released combination names can stay refused.** Its change can never be released, and withdrawing goes back to both. Rare. `document-supplies.ts:153` already notes that such a type keeps its change.
+4. The walk asserts the words and no "Checks passed.", not that only Reject is offered.
+
+Round 1's Minors 1 (same person now tested; the other gaps stay), 2, 3, 5 and 6 stand. Minor 4 is settled.
+
+### CI seen
+* **Nightly run 42002600456, on this commit: success.** C3.5 42/42, C3.8 12 passed and 0 failed, C4.5 26/26. `suites` was skipped.
+* **PR CI run 42002608841: still running at last read.** `kind` and `types` passed; shards 1 to 6 pending; `regression` and `regression-plan` skipping. Devin Review passed. No label on the PR. Green CI is not yet shown.
+* Evidence given to me, not re-run: `check_b112_merge_supplies_about` 8/8 and the walk 7/7 on f098ff026.
+
+### Journey score: 7.5/10, from the desk, not a walk
+Up from 6.5: next step and feedback now score 1 each, as the card says it before the click. Correct data and error recovery stay ½ (the Major, Minor 2), and sizes, speed and trust are unchanged. Provisional, and below the pass of 8.
+
+**Verdict: Block** (changes needed). Fix: **`change-sets.ts:59`**, read an approved change's `before` through merges, so the two-merge route is refused.

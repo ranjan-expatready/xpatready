@@ -31,10 +31,10 @@ const merge = async (keep: string, gone: string) => {
 
 const load = await call("POST", "/demo/load");
 if (load.status >= 300) { console.error("STOP  the fixture did not load", load.body); process.exit(2); }
-const types = sql(`select distinct document_type_key from document_type where status = 'PUBLISHED' order by 1 limit 5`).split("\n");
-const fields = sql(`select distinct f.canonical_field_key from canonical_field f where f.status = 'PUBLISHED' and f.merged_into_key is null and f.canonical_field_key like 'person.%' and f.value_type = 'text' and f.answer_list_key is null and not exists (select 1 from document_type t where f.canonical_field_key = any(t.supplies_facts)) order by 1 limit 10`).split("\n");
-if (types.length < 5 || fields.length < 10) { console.error("STOP  the fixture has too few document types or fields", { types, fields }); process.exit(2); }
-const [typeA, typeB, typeC, typeD, typeE] = types, [keepA, goneA, keepB, goneB, keepC, goneC, keepD, goneD, keepE, goneE] = fields;
+const types = sql(`select distinct document_type_key from document_type where status = 'PUBLISHED' order by 1 limit 6`).split("\n");
+const fields = sql(`select distinct f.canonical_field_key from canonical_field f where f.status = 'PUBLISHED' and f.merged_into_key is null and f.canonical_field_key like 'person.%' and f.value_type = 'text' and f.answer_list_key is null and not exists (select 1 from document_type t where f.canonical_field_key = any(t.supplies_facts)) order by 1 limit 13`).split("\n");
+if (types.length < 6 || fields.length < 13) { console.error("STOP  the fixture has too few document types or fields", { types, fields }); process.exit(2); }
+const [typeA, typeB, typeC, typeD, typeE, typeF] = types, [keepA, goneA, keepB, goneB, keepC, goneC, keepD, goneD, keepE, goneE, keepF, goneF, thirdF] = fields;
 
 // A fact about the spouse, merged into a field this document does not supply yet.
 await supplies(typeA, [{ fact: goneA, about: "holder.spouse" }]);
@@ -58,6 +58,14 @@ sql(`update document_type set supplies_facts = array['${keepC}','${goneC}'], sup
 await supplies(typeC, [{ fact: keepC, about: "holder" }]);
 r = await merge(keepC, goneC);
 ok("B112 fail (review M2): a merge is refused while an approved change holds both about different people: withdrawing it would make the holder's fact the spouse's", r.status >= 400 && r.status < 500 && /about different people/.test(JSON.stringify(r.body)), r);
+
+// Review round 2: the same through two merges: the change's stored keys are read as today's.
+sql(`update document_type set supplies_facts = array['${keepF}','${goneF}'], supplies_about = '{"${goneF}": "holder.spouse"}'::jsonb where document_type_key = '${typeF}' and status = 'PUBLISHED'`);
+await supplies(typeF, [{ fact: keepF, about: "holder" }]);
+r = await merge(thirdF, keepF);
+ok("B112 setup: a first merge under an approved change passes: nothing yet holds both fields", r.status < 300, r);
+r = await merge(thirdF, goneF);
+ok("B112 fail (review round 2): the second merge is refused, in words naming the approved change", r.status >= 400 && r.status < 500 && /has an approved change that would bring back/.test(JSON.stringify(r.body)), r);
 
 // A change that lands between the proposal and the approval.
 const late = await call("POST", "/library/merges", { keep: keepD, merge: goneD, reason: "Test: these two mean the same for this check only (B112)." });
