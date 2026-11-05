@@ -10,8 +10,9 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { backgroundWords, readingMissingWords } from "../../engine/form-completeness.ts";
 import { backgroundPathsOf } from "./background-questions.ts";
-import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, revise, strip, Workspace, type Actor } from "./core.ts";
-import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
+import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
+import type { FieldReadersView } from "../../contracts/own-question.ts";
+import { actionVerb, changeView, decideChange, readersLeftByWithdrawal, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { isLifecycleKind, Lifecycle } from "./lifecycle.ts";
 import { isItemLifecycle } from "./library-items.ts";
@@ -134,9 +135,9 @@ export class Screen02 {
     const c = (await this.db.libraryChange.findUnique({ where: { id } }))!;
     // An approved delete is applied at once; if applying fails, nothing was deleted, so the change waits again (R3-4).
     if (decision === "approve") await this.lifecycle.afterApprove(actor, c).catch(async (e) => {
-      await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: null } });
+      await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: before?.decisionNote ?? null } }); // B83 (review): a note it came back with stays
       if (e instanceof HttpException) throw e;
-      fail(`Nothing was ${c.kind === "form_accepts" ? "applied" : "deleted"}: the database refused it. It still waits on To review; try again, or return it.`, HttpStatus.CONFLICT);
+      fail(`Nothing was ${c.action === "DELETE" ? "deleted" : "applied"}: the database refused it. It still waits on To review; try again, or return it.`, HttpStatus.CONFLICT);
     });
     // S4 round 2 N8: an approved delete that could not be applied comes back RETURNED: say that, not "approved".
     const now = decision === "approve" ? (await this.db.libraryChange.findUnique({ where: { id } }))! : c;
@@ -160,6 +161,8 @@ export class Screen02Controller {
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }
   @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "approve", noteOf(b)); }
   @Post("library/changes/:id/resubmit") resubmit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const o = obj(b); const str = (v: unknown) => (typeof v === "string" ? v : undefined); return this.s.resubmitLibraryChange(actorOf(a), id, { label: str(o.label), meaning: str(o.meaning), reason: str(o.reason) }); }
+  // B83 (tech lead on breaker M5): what a withdrawal would leave reading a new field, for To review's words before the press.
+  @Get("library/changes/:id/readers") async readers(@Headers("x-actor") a: H, @Param("id") id: string): Promise<FieldReadersView> { readerOf(a); const c = await this.s.db.libraryChange.findUnique({ where: { id }, select: { workspaceId: true, kind: true, action: true, status: true, key: true } }).catch(() => null); if (!c) fail("This library change does not exist.", HttpStatus.NOT_FOUND); if (c!.kind !== "field" || c!.action !== "ADD" || !["WAITING", "RETURNED"].includes(c!.status)) return { readers: [], taken_out: [] }; const left = await readersLeftByWithdrawal(this.s.db, c!.workspaceId, c!.key); return { readers: left.readers.map((r) => r.name), taken_out: left.takenOut.map((r) => r.name) }; }
   @Post("library/changes/:id/withdraw") withdraw(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return withdrawChange(this.s.db, actorOf(a), id, noteOf(b)); }
   // P-116 amended: Undo of an author's own-draft delete (structure names; the library kinds come with S6).
   @Post("library/changes/:id/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.undoDelete(actorOf(a), id); }

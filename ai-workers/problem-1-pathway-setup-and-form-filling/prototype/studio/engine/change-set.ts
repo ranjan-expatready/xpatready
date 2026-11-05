@@ -13,7 +13,7 @@ export type LibField = { key: string; group: string; label: string | null; alias
   /** Labels and aliases of every live version that is not merged away. */ names: string[] };
 export type LibSection = { key: string; title: string; status: string; /** Titles of every live version. */ liveTitles: string[] };
 export type LibList = { key: string; values: string[]; status: string; /** The code set of every live version (listIdentity). */ liveIds: string[] };
-export type LibDocType = { key: string; name: string; proves: string; status: string; /** name|proves of every live version. */ liveIds: string[] };
+export type LibDocType = { key: string; name: string; proves: string; status: string; /** name|proves of every live version. */ liveIds: string[] ; /** B112 (QA-256): what it supplies now and whom each fact is about, and (held) what an approved change would go back to if withdrawn. */ supplies?: { facts: string[]; about: Record<string, string>; held?: boolean }[] };
 export type Library = { fields: LibField[]; sections: LibSection[]; answerLists: LibList[]; documentTypes: LibDocType[] };
 
 /** R8's question order on one combination's draft, before and after the change (compared per combination, review m4). */
@@ -267,6 +267,12 @@ export function checkChangeSet(items: ChangeItem[], madeBy: MadeBy, ctx: Context
       // SH3 contract (#509, Q1): the resolver follows at most MERGE_HOPS_MAX merges and answers the first key beyond
       // that, so a merge that would make a longer chain is refused.
       else if (gone) { const merges = mergeDepth(lib.fields, it.key) + 1; if (merges > MERGE_HOPS_MAX) add("R4", i, `Merging ${fieldName(gone)} into ${fieldName(keep)} would make a chain of ${merges} merges; at most ${MERGE_HOPS_MAX} are followed.`); }
+      // B112 (QA-256): one fact can't be about two people: a document that supplies both, about different people, keeps them apart.
+      if (gone && keep) for (const t of lib.documentTypes.filter((d) => d.status !== "RETIRED")) {
+        const both = (t.supplies ?? []).filter((x) => x.facts.includes(it.key) && x.facts.includes(it.into) && (x.about[it.key] ?? "holder") !== (x.about[it.into] ?? "holder"));
+        if (both.some((x) => !x.held)) add("R4", i, `${t.name} supplies both ${fieldName(gone)} and ${fieldName(keep)}, about different people, so merging them would lose whom one is about. Change what it supplies first, then merge.`);
+        else if (both.length) add("R4", i, `${t.name} has an approved change that would bring back ${fieldName(gone)} and ${fieldName(keep)}, about different people, if it were withdrawn, so merging them would lose whom one is about. Let that change go out with a release, or withdraw it, then merge.`);
+      }
       // R5, R6, R7 on every condition the merge rewrites (challenge M4): only the problems the swap makes count. The swap
       // renames the field inside the words, so they are compared by how many there are of each rule, before and after.
       for (const w of ctx.rewrites?.[i] ?? []) {

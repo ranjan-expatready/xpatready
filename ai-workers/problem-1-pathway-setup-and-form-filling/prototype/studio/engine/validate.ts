@@ -53,6 +53,45 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
   return errs;
 }
 
+/** B83 (tech lead on breaker M5): withdrawing a new shared field is never refused while something reads it, but a reader is
+ *  never left broken silently: each one in this draft holds Submit and release by its name, the withdrawn field's name
+ *  beside it, never a key. `gone`: the keys of withdrawn fields no longer in the library, with their names. */
+export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Problem[] {
+  if (!gone.size) return [];
+  const out: Problem[] = [];
+  const say = (where: string, item: string, label: string, keys: Iterable<unknown>, wayOut = "Point it at another field, or remove it.") => { for (const k of new Set(keys)) if (typeof k === "string" && gone.has(k)) out.push({ level: "error", where, item, label, message: `It reads "${gone.get(k)}", a new field that was withdrawn. ${wayOut}` }); };
+  const conds = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+  const inText = (x: unknown) => { const text = typeof x === "string" ? x : JSON.stringify(x ?? null); return [...gone.keys()].filter((k) => keyInText(k).test(text)); };
+  const wordsOf = new Map((s.canonical_fields as { id: string; label?: string | null; meaning?: string | null }[]).map((f) => [f.id, f.label ?? f.meaning ?? "a question"]));
+  const roleOf = new Map(((s.combination.participants ?? []) as { role: string; label?: string }[]).map((p) => [p.role, p.label ?? p.role]));
+  for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
+  for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
+  for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
+  for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.when_plain ?? "with no words"}"`, conds(r.when));
+  for (const c of s.checks) say("Checks", c.id, `The check "${c.message ?? "with no message"}"`, inText(c.condition)); // a validity rule names its date outside "field"
+  for (const g of s.eligibility?.gates ?? []) say("Eligibility", g.key, `The eligibility gate "${g.label}"`, conds(g.condition));
+  for (const m of s.field_maps) for (const e of m.entries) if (e.outcome === "mapped") say(`Field map ${m.form_edition}`, e.data_path, `${m.form_number}'s form field "${e.caption ?? e.heading ?? "with no caption"}"`, [e.fact, ...inText(e.transform), ...inText(e.condition)]);
+  for (const f of s.fact_sources ?? []) say("Questions", f.fact, `Where this answer comes from (${roleOf.get(f.role) ?? "a person"})`, [f.fact]);
+  for (const t of s.document_types ?? []) say("Documents", t.key, `The document type "${t.name}"`, t.supplies_facts ?? [], `On its document line, use "Change the facts it supplies…" to take it out; a second person approves.`);
+  const read = derivedRead(s);
+  for (const d of s.derived_fields as { id: string; plain?: string | null; inputs?: string[]; reference?: string | null }[]) if (read.has(d.id)) say("Derived fields", d.id, `The worked-out value "${d.plain ?? "with no words"}"`, [...(d.inputs ?? []), d.reference]);
+  return out;
+}
+/** A key standing alone in a text: never inside a longer key (person.x in person.x_2). */
+const keyInText = (k: string) => new RegExp(`(?<![\\w.])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\w|\\.\\w)`);
+/** The validator's own lines with no key of a withdrawn field. Its "not in the library" line gives way only to a named line
+ *  for the same thing (review N1: a line with no named one would stop holding release); any other mention takes the name. */
+export const withoutWithdrawnKeys = (problems: Problem[], gone: Map<string, string>, named: Problem[]): Problem[] => {
+  const keys = [...gone.keys()];
+  if (!keys.length) return problems;
+  const covered = new Set(named.map((n) => `${n.where}|${n.item}`));
+  return problems.filter((p) => !(covered.has(`${p.where}|${p.item}`) && keys.some((k) => p.message.includes(`reads ${k}, which is not in the library`)))).map((p) => {
+    let message = p.message;
+    for (const k of keys) message = message.replace(new RegExp(`"?${keyInText(k).source}"?`, "g"), `"${gone.get(k)}"`);
+    return { ...p, message, ...(gone.has(p.item) ? { label: gone.get(p.item) } : {}) };
+  });
+};
+
 export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const types = new Map(library.map((f) => [f.key, f.valueType]));
@@ -163,16 +202,19 @@ export function askedInOrder(s: Snapshot): Problem[] {
   return reachability(s, placed, docFacts, derived, (f) => `"${factWords(s, f)}"`);
 }
 
+/** A condition without whose answer it is read from, to compare two of them; null for anything that is not a condition
+ *  (a form field's words are never one, B86). */
+export const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
+
 /** Grounding audit finding 3 (W1 3.4, 3.5): a question's condition must never hide a value that something applicable
  *  still reads, every value that decides a question must be obtainable, and questions must not decide each other in a
  *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible. */
 // C3.8: the messages name each question by its meaning (`words`), never by its field code.
 function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>, words: (fact: string) => string): Problem[] {
   const out: Problem[] = [];
-  const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
   const fieldsOf = (c: any) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
   const readers = new Map<string, { form: string; formCond: any; boxCond: any }[]>();
-  for (const m of s.field_maps) { const f = s.forms.find((x) => x.form_number === m.form_number); if (!f) continue; for (const e of m.entries) if (e.outcome === "mapped" && e.fact) readers.set(e.fact, [...(readers.get(e.fact) ?? []), { form: f.form_number, formCond: f.condition, boxCond: e.condition }]); }
+  for (const m of s.field_maps) { const f = s.forms.find((x) => x.form_number === m.form_number); if (!f) continue; for (const e of m.entries) if (e.outcome === "mapped" && e.fact) readers.set(e.fact, [...(readers.get(e.fact) ?? []), { form: f.form_number, formCond: f.condition, boxCond: e.condition_rule }]); }
   const conditions = [...s.rules.map((r) => ({ what: `rule ${r.id}`, tree: r.when })), ...s.document_requirements.map((d) => ({ what: `document "${d.document_type}"`, tree: d.condition })), ...s.forms.map((f) => ({ what: `form ${f.form_number}`, tree: f.condition })), ...(s.checks ?? []).filter((c) => c.condition && typeof c.condition === "object").map((c) => ({ what: `check ${c.id}`, tree: c.condition }))];
   for (const p of s.placements) {
     if (!p.condition) continue;
@@ -253,7 +295,24 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const a = boxes(prev), b = boxes(next);
   const byForm = new Map<string, { added: number; changed: number; removed: number; ai: number }>();
   const bump = (k: string, f: "added" | "changed" | "removed", ai: boolean) => { const form = k.split("|")[0]; const x = byForm.get(form) ?? { added: 0, changed: 0, removed: 0, ai: 0 }; x[f]++; if (ai) x.ai++; byForm.set(form, x); };
-  for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(a.get(k)) !== bare(e)) bump(k, "changed", e.origin === "AI_PROPOSAL");
+  // B86 BR-8: a form field's condition rule is named once, in words, for the immigration expert (what a case fills changes
+  // with it); a box whose only change is that rule is not counted again in its form's "Field map" line.
+  const noRule = (e: Record<string, unknown>) => { const { condition_rule: _r, ...rest } = e; return rest; };
+  const ruleWords = (k: string, e: { caption?: string | null; fact: string }, had: boolean) => `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
+  for (const [k, e] of b) {
+    const was = a.get(k), rule = e.condition_rule ?? null, wasRule = was?.condition_rule ?? null;
+    if (canonical(rule) !== canonical(wasRule)) out.push({ kind: "Form field condition", key: k, change: !wasRule ? "added" : !rule ? "removed" : "changed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, !rule) });
+  }
+  for (const [k, e] of a) if (e.condition_rule && !b.has(k)) out.push({ kind: "Form field condition", key: k, change: "removed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, true) });
+  // B88 (challenge M3): a Yes/No form field that now asks its own question, or no longer does, is named once, in words, for the
+  // immigration expert: it writes the person's own answer instead of one worked out from the details recorded. Only a move from
+  // one field to another counts (CI on #1068): a mapping cleared to no field is a Field map change, below.
+  const yesNo = (e?: { transform?: string | null }) => /\byes_no_code:/.test(e?.transform ?? "");
+  const asked = new Set<string>();
+  for (const [k, e] of b) { const was = a.get(k); if (was && was.fact && e.fact && was.fact !== e.fact && (yesNo(e) || yesNo(was))) asked.add(k), out.push({ kind: "Form field question", key: k, change: "changed", origin: e.origin, needs_sme: true, label: `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": reads "${factWords(next, e.fact)}", was "${factWords(next, was.fact)}" (shared library; Sample, Unconfirmed: expert)` }); }
+  // B88 (review minor): a form field whose only change is the question it reads is named above, not counted again here.
+  const noAsk = (k: string, e: Record<string, unknown>) => { const r = noRule(e); if (!asked.has(k)) return r; const { fact: _f, transform: _t, origin: _o, evidence_quote: _q, ...rest } = r; return rest; };
+  for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(noAsk(k, a.get(k))) !== bare(noAsk(k, e))) bump(k, "changed", e.origin === "AI_PROPOSAL");
   for (const k of a.keys()) if (!b.has(k)) bump(k, "removed", false);
   for (const [form, x] of byForm) out.push({ kind: "Field map", key: form, change: x.added && !x.changed && !x.removed ? "added" : "changed", origin: x.ai ? "AI_PROPOSAL" : undefined, needs_sme: x.ai > 0, label: `${x.added} form fields added, ${x.changed} changed, ${x.removed} removed${x.ai ? ` (${x.ai} AI-proposed)` : ""}` });
 

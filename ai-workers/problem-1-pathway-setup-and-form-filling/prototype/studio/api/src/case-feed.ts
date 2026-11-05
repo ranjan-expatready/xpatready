@@ -24,7 +24,7 @@ export const CASE_ENTITIES: ReadonlySet<string> = new Set([
 export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "AI draft", "AI proposal", "AI work", "PDF", "alias", "answer key", "answer list", "answer-key family", "answer-key tests", "check",
   "checklist draft", "combination", "configuration row", "configuration", "configured checkpoint", "demo story", "demo workspace",
-  "document requirement", "document type", "edition impact AI", "eligibility", "fact source", "field draft", "field merge", "field",
+  "document requirement", "document type", "shared field", "edition impact AI", "eligibility", "fact source", "field draft", "field merge", "field",
   "form field", "form finder", "form library", "form line", "form", "held file", "library batch", "line batch", "list purpose",
   "masters draft", "new edition", "official page", "option map", "option maps", "pack", "people", "placement", "pre-qualification",
   "proposals", "questions and documents", "release", "reviewed release", "rule fact", "rule", "sample inputs", "section selection",
