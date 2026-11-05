@@ -94,6 +94,12 @@ const NINE: [string, string, RegExp][] = [
 const line = diff(snap({ asked: false }), snap({ asked: true })).find((c) => c.kind === "Form field question");
 ok("C4.11 BR-8 pass: the change summary has a \"Form field question\" line for the expert, in words, no field code", !!line && line.needs_sme && /reads "Has used another name", was "Other family name"/.test(line.label) && !/person\./.test(line.label), line);
 ok("C4.11 BR-8 (review minor): a form field whose only change is its question is not counted again in its form's \"Field map\" line", !diff(snap({ asked: false }), snap({ asked: true })).some((c) => c.kind === "Field map"));
+{ // CI on #1068 (check_c38_completeness_api): a Yes/No form field whose field is cleared (decided "not a fact") is not a question change
+  const cleared = snap({ asked: false }); (cleared.field_maps[0].entries[1] as { fact: string | null }).fact = null;
+  let lines: ReturnType<typeof diff> = [], threw = "";
+  try { lines = diff(snap({ asked: false }), cleared); } catch (e) { threw = String(e); }
+  ok("C4.11 BR-8 fail guard: a Yes/No form field cleared to no field never breaks the change summary, and is no \"Form field question\"", !threw && !lines.some((c) => c.kind === "Form field question") && lines.some((c) => c.kind === "Field map"), threw || lines.map((c) => c.kind));
+}
 ok("C4.11 BR-8: an unchanged form field adds no such line", !diff(snap({ asked: true }), snap({ asked: true })).some((c) => c.kind === "Form field question"));
 // The block a Yes/No vouches for, by data path only (IMM 1294's and IMM 1344's own paths).
 const e = (data_path: string, fact: string) => ({ data_path, fact, outcome: "mapped" });
