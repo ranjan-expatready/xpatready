@@ -10,7 +10,11 @@ import { pack2, run } from "./lib/pack2.ts";
 const T = pack2("C11.12-runtime");
 const { call, sql, ok, words } = T;
 const OFFICER = "user-O", CLIENT = "user-P";
-if (!process.argv[4]) process.argv[4] = "wp.family"; // the suites' fixture until a combination of the six is released
+// qa lane, 4 Nov (Lead 8): the configured checkpoint now releases the Visitor visa (#891), so the pack runs on the first
+// released of vv.single and the suites' fixture's wp.family; with neither released it falls back to wp.family, which
+// stops as setup missing below (exit 2) on a copy that lacks it.
+const released = (k: string) => Number(sql(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = '${k}'`) || 0) > 0;
+if (!process.argv[4]) process.argv[4] = ["vv.single", "wp.family"].find(released) ?? "wp.family";
 
 run(async () => {
   await T.ready();
