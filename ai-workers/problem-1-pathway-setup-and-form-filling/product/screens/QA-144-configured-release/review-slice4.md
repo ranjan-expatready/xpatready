@@ -117,3 +117,82 @@ I put it here, as slice 3's review did, because I was asked to write only this f
 **To fix:** M1, then show these green on the same commit: `check_qa144_vv_release`, `check_qa144_lmia_release`, and C4.1 on the configured checkpoint. m1–m5 can go with it or onto the forms row.
 
 Verdict: Block
+
+## Round 2 (diff-only, a90c36e78)
+Same reviewer, 5 Nov 2026. US$0: no *_LIVE variable, no live AI, port 4458 only (`xr_studio_rv2`, stopped and dropped afterwards). Scope: the builder's commits 86ca0423a, 6e31c8f51, bf56b25e7, dffef13b9, 7d11883ab, cea946b2b and a90c36e78, plus the `engine/channels.ts` resolution in merge d9f5c8f5d. The merged-in PRs (B81 #1057, origin/main, qa's #1064) are out of scope except where this code calls into them.
+
+### What I ran
+* `check_qa144_ee_release 4458 xr_studio_rv2`: **23/23**. The load took 87.9 s and released all four combinations (VV, SP, LMIA and Express Entry, each at version 1).
+* `check_forms_qa144_numbered_headings` (pure): **15/15**.
+* `product/tools/typecheck.mjs`: no new type errors (15 known). `route-has-screen.mjs`: 0 mutating routes without a screen.
+* Database reads after the load:
+  * IMM 0008 DEP's q16 field has one row: `{"map": 7 codes, "notOnForm": ["unknown"], "printed": 7 choices}`. No row maps `unknown`.
+  * The audit has one line: "Configuration author set the option map of a) Your current marital status on IMM 0008 DEP (10-2024) (7 values; not on this form: Unknown)".
+  * Express Entry's release snapshot carries `notOnForm: ["unknown"]`.
+  * The Visitor visa has 2 chosen sections (`details_of_visit_to_canada`, `employment`), as qa's ruling expects.
+  * Rules-pass jobs exist only for the four FORM_SETUP keys.
+  * `fs.spouse` (the one combination labelled "Spouse or common-law partner") has no release; its draft lists 96 problems.
+* Headless Playwright (scratchpad only) on Express Entry's Forms and Review tabs at 1440, 1024 and 400 px:
+  * axe WCAG 2.2 A/AA is clean on both tabs at 1440 px. There is no sideways scroll at any width, and no console or page errors.
+  * Forms loads in about 1.4 s and Review in about 1.0–1.1 s.
+  * Forms shows the B81 warning "IMM 0008 DEP: "Unknown" is marked not on this form on 1 form field: a case with that answer is refused at filling, in words, and a person decides."
+* **Not re-run by me** (not on my run list): VV, LMIA and SP release checks, `C10.1.test.ts`, `check_c10_1_configured`, C4.1 on the checkpoint, and the channels check. Their underlying facts are checked above. I could not see CI: the head shows only Mergify's neutral runs.
+
+### The asked points
+* **Only the product route: yes.** `demo.ts:801` calls `Forms.setOptionMap`, the same service that `PATCH editions/:id/option-maps` calls (`forms.ts:551`). So it gets the same author check, the same `optionMapRefusals` (a mark on a value the form prints is refused), the same row lock, revision check and audit line. There is no SQL write.
+* **The drafted codes are kept: yes.** The step runs right after `draftOptionMaps`. It re-sends the drafted `map` and `unused` with only `notOnForm` added. The check asserts 7 map keys and no `unknown` code.
+* **Scope.**
+  * The marks come from the combination's own setup (`setup?.notOnForm`) and only for editions in that combination's snapshot.
+  * They are filtered by form key and fact (`demo.ts:798-799`), and the check line requires that the only mark workspace-wide is this one.
+  * It is scoped by form, not by edition: the cite names 10-2024 (Nit below). A later edition that printed Unknown would be refused, and the refusal would show in words.
+  * A refusal goes to `setUpRefused`, which turns row 7 to "partial" with its words. One silent gap remains (r2-m1).
+* **The cite is right.** In `prototype/p1/inventory/imm0008depe.inventory.json`, `…q16[0].MaritalStatus[0].MaritalStatus[0]` has the caption "a) Your current marital status" and `options_resolved` Annulled Marriage 09, Common-Law 03, Divorced 04, Legally Separated 05, Married 01, Single 02, Widowed 06, in that order. The field reads `MaritalStatusList`. IMM 0008's own list has `Unknown 00`. The edition labels match the database ("IMM 0008 DEP (10-2024)", "IMM 0008 (05-2026)"). The file's `about` keeps the Sample, Unconfirmed: expert status.
+* **channels.ts: both kept.** `git diff 137efd813 d9f5c8f5d -- engine/channels.ts` differs from B81's tip only by the comment and `label: m.form_edition`. The line keeps B81's third argument `listedOf.get(e.fact!)`. `askedChoiceProblems`, the import of `codeAsksMore` and the not-on-this-form warning loop are all intact. Against origin/main the file differs by the same two lines only, and a90c36e78 leaves it as the merge made it.
+* **Checks that cannot fail:** none found.
+  * E10b, the mark line and the audit line all fail on main (no mark, no Express Entry release).
+  * c10_1_configured's new Express Entry line fails on main.
+  * The "no code invented" and "at least two sections" lines also pass on main. They are guards that fail if someone invents a code or the Visitor visa drops to one section, which is their job.
+  * 86ca0423a's scope lines now compare against `FORM_SETUP`, the loader's own set (P-319). They still fail if any other path runs a rules pass.
+* **P-319:** no form or combination number was added to product code. The values live in `samples/form-setup.json`, and `form-setup.ts`/`demo.ts` add only types and a loop. Tests name the form they check, as before.
+
+### Issues
+**Blockers:** none. **Majors:** none. M1 is closed by the ruling: qa's #1064 needs two sections, and the two guards now say "at least 2" with the reason beside them (`check_qa144_vv_release.ts:84-87`, `check_qa144_lmia_release.ts:99-101`).
+
+**Minors (Should)**
+* **r2-m1. A mark that matches nothing is silent (`api/src/demo.ts:798-800`).**
+  * If a `notOnForm` entry's form key or fact matches no edition or no mapped form field (a typo, or a renamed fact), the loop does nothing and adds no `setUpRefused` line. Row 7 stays "done" while the combination later fails Submit for the missing code.
+  * This goes against the file's own rule, "an unknown key fails the read, never a rule without its fact" (`form-setup.ts:116`).
+  * Today `check_qa144_ee_release` catches it for this one mark only.
+  * Fix: push a refusal when a mark's form or fact finds no form field, or check the entries when `fromData` reads them.
+* **r2-m2. E10's re-asked Submit is a write route (`acceptance/C10.1.test.ts:66-68`).**
+  * The comment says Submit "writes nothing when it refuses". In fact `submit` runs `runKeys` first (`studio.ts:1027`), and that writes `answer_key_run` rows and an audit line whenever the combination has answer keys.
+  * On an unreleased draft with no errors, it would also create a submission and withdraw any waiting one.
+  * It is reached only when Express Entry is unreleased, so not on this head.
+  * Fix: read `draft.problems` from `GET /combinations/:id/review` (read-only), or correct the comment.
+* **r2-m3. The refused-draft example is picked by label (`tests/check_c10_1_configured.ts:118`).** It uses `c.label = 'Spouse or common-law partner'`, while the line above uses `combination_key`. Only `fs.spouse` carries that label today. Fix: use `fs.spouse` by key. The regex on row 10's words can keep the label.
+
+**Nits**
+* The mark is keyed by form, while its cite is the 10-2024 edition's. This is safe because the product refuses a mark on a printed value. Say it in the cite or the type's comment.
+* The cite gives the edition but not the PDF's saved date (P-170 asks for a date). The file's `about` does not yet describe the `notOnForm` key.
+* The mark's cite stays in the data file: the B81 route takes no reason, so the product's record and screen show no source. This is B81's design, not this PR's, so I note it and do not ask for scope.
+
+### Journey test, round 2 (reviewer role; the one score for this check)
+Journeys: J1 (author) is the configured load, then Express Entry's Forms (the IMM 0008 DEP line and its warnings) and its Review at three widths. J3 is the Visitor visa's chosen sections after the load, read from the database. The rest are unchanged by this diff and carried from round 1.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Express Entry is released (release 1, author → Approver); 23/23 |
+| Next step obvious | ½ | Unchanged: Overview "Confirm who can apply", Forms "33 to do" |
+| Plain words | ½ | m3 stays, and m5 is a follow-up; the new warning reads plainly |
+| Feedback and state | 1 | Forms names the Not on this form mark; row 7 and the audit name it |
+| Correct data | 1 | Codes kept, no invented code, the mark is in the release; M1 accepted as designed (m2 is on row B93) |
+| Error recovery | 1 | Not touched by the diff; C10.1 part A carried from round 1 |
+| Accessibility and sizes | 1 | axe clean on Forms and Review; no sideways scroll at 400, 1024 or 1440 px; 0 errors |
+| Speed | ½ | An 88 s load; Forms about 1.4 s |
+| Visual quality | 1 | The team look holds at three widths |
+| Trust and sources | ½ | The cite is accurate but stays in the data file, not on screen |
+
+**Score 8/10: pass** (no 0). The next lifts: m5 and m3 (Plain words); the Overview's next step (Next step obvious).
+**Could not check:** a headed or keyboard-only walk, 200 % zoom, a screen reader, the suites listed above as not re-run, CI on this head, or an intended user's walk (D17 and D20 stay with the founder).
+
+**Verdict: Approve a90c36e78.** No open Blocker or Major. r2-m1 to r2-m3 can go with this PR or onto the forms row.
