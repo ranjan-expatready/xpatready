@@ -58,7 +58,7 @@ function misfit(type: string | undefined, v: unknown): string | null {
   if (type === "date") return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? null : "a date written YYYY-MM-DD";
   return typeof v === "string" ? null : "text";
 }
-const TYPE_WORDS: Record<string, string> = { yes_no: "a yes/no question", declaration: "a yes/no declaration", number: "a number", derived: "a worked-out number", date: "a date" };
+export const TYPE_WORDS: Record<string, string> = { yes_no: "a yes/no question", declaration: "a yes/no declaration", number: "a number", derived: "a worked-out number", date: "a date" };
 
 /** Break report M1 (b), (c) and m1 inside a condition: each compared value fits its fact's type, no text value carries
  *  invisible characters, and an "and" never asks one fact to equal two different values. What is not caught: a

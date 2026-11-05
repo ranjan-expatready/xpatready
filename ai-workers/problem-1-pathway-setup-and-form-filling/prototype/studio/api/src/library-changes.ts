@@ -9,6 +9,7 @@ import { HttpException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { LibraryChange, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
+import { factName } from "../../engine/fact-name.ts";
 import { isRuleWhy } from "../../engine/near.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
@@ -57,7 +58,7 @@ export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" |
   const want = normalizeLabel(label);
   const rows = await db.canonicalField.findMany({ where: { workspaceId, groupKey: group, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, aliases: true, valueType: true } });
   const lib = rows.find((r) => [r.label ?? "", ...r.aliases].some((x) => normalizeLabel(x) === want));
-  if (lib) return { label: lib.label ?? lib.canonicalFieldKey, valueType: lib.valueType };
+  if (lib) return { label: lib.label ?? factName(lib.canonicalFieldKey), valueType: lib.valueType };
   const open = await db.libraryChange.findMany({ where: { workspaceId, kind: "field", status: { in: ["WAITING", "APPROVED"] }, key: { startsWith: `${group}.` } }, select: { label: true } });
   const ch = open.find((c) => c.label && normalizeLabel(c.label) === want);
   if (ch) return { label: ch.label! };

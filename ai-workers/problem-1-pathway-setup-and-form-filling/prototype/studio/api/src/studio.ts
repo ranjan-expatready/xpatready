@@ -473,7 +473,8 @@ export class Studio {
     // B83 (tech lead on breaker M5): a reader of a withdrawn new field holds Submit and release by name.
     const live = new Set(lib.map((f) => f.key));
     const gone = new Map(s.mode !== "draft" ? [] : (await this.db.libraryChange.findMany({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN" }, select: { key: true, label: true } })).filter((c) => !live.has(c.key)).map((c) => [c.key, c.label ?? "a withdrawn field"]));
-    const all = [...withdrawnFieldLines(s, gone), ...withoutWithdrawnKeys([...structure, ...filing, ...contentProblems(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests], gone)]; // L4: what IRCC accepts
+    const named = withdrawnFieldLines(s, gone);
+    const all = [...named, ...withoutWithdrawnKeys([...structure, ...filing, ...contentProblems(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...sources, ...carried, ...tests], gone, named)]; // L4: what IRCC accepts
     // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
     // any other the forms whose field map reads that item as a fact; none otherwise.
     const formsOf = new Map<string, Set<string>>();

@@ -3,6 +3,7 @@
 // opening it reads every use (GET …/:key/uses, the one guard's decision): a refused action shows why and every use with a
 // link; an allowed one is confirmed in the right panel (ImpactPanel), then the Undo toast (Undo withdraws the request).
 import * as React from "react";
+import type { FieldReadersView, FieldWithdrawn } from "../../../contracts/own-question";
 import type { UsesView } from "../../../contracts/structure";
 import { RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY, type LifecycleWord } from "../../../contracts/lifecycle";
 import { api, queryClient, useActorId, useApi } from "@/lib/api";
@@ -41,7 +42,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
   const send = async (r: ItemRow, reason: string) => {
     setActing({ busy: true, error: null });
     try {
-      if (r.row_action === "WITHDRAW") { await api(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(SAY.withdrawn(r.name)); }
+      if (r.row_action === "WITHDRAW") { const w = await api<FieldWithdrawn>(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(`${SAY.withdrawn(r.name)}${w.readers?.length ? ` Still reading it, and holding Submit until changed: ${w.readers.join("; ")}.` : ""}`); }
       else {
         const kind = r.row_action as Exclude<LifecycleWord, "WITHDRAW">;
         const c = await api<{ id: string; immediate?: boolean }>(kind === "DELETE" ? path(r.key) : `${path(r.key)}/${kind.toLowerCase()}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason: reason || SAY.ownDraft } });
@@ -65,6 +66,8 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
       canEdit={canAuthor && list !== "document-types"} name={r.name} reasonId={domId(r.key)} onEdit={onEdit} onAction={() => start(r)} editTip={canAuthor && list !== "document-types" ? (list === "sections" ? "Rename it." : "Open it: rename, where it is used, its history.") : "See where it is used and its history."} />
   );
   const kind = open?.row_action;
+  // B83 (review N2, BR-11): the Fields row is a door to the same withdrawal, so it names what still reads the field too.
+  const readers = useApi<FieldReadersView>(["change-readers", open?.change?.id], kind === "WITHDRAW" && open?.change ? `/library/changes/${open.change.id}/readers` : null).data?.readers ?? [];
   // A use that stops a delete but not a retire (a library form's field reads it) is kept, not stopping, for Retire.
   const shown: UsesView | undefined = uses.data && kind === "RETIRE" ? { ...uses.data, uses: uses.data.uses.map((u) => (u.retireOk ? { ...u, blocks: false } : u)) } : uses.data;
   const refusal = open && uses.data && kind !== "WITHDRAW" ? uses.data.can[(kind ?? "DELETE").toLowerCase() as "delete" | "retire" | "restore"] : null;
@@ -91,7 +94,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
           </aside>
         ) : (
           <ImpactPanel key={`impact-${open.key}`} kind={kind!} name={open.name} immediate={kind === "DELETE" && !!uses.data?.immediate} goes={kind === "DELETE" ? shown?.uses.filter((u) => u.kind === "placement").map((u) => ({ label: u.label })) : undefined} kept={kind === "RETIRE" ? shown?.uses.filter((u) => !u.blocks && u.kind !== "draft_change").map((u) => u.label) : undefined}
-            takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} body={kind === "RESTORE" ? ITEM_RESTORE_BODY : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
+            takesEffect={kind === "RETIRE" || kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} body={kind === "RESTORE" ? ITEM_RESTORE_BODY : kind === "WITHDRAW" && readers.length ? `${SAY.withdrawBody} It leaves ${readers.join("; ")} reading a field that is gone: each holds its combination's Submit until it is changed.` : undefined} busy={acting.busy} error={acting.error} onCancel={close} onSend={(reason) => void send(open, reason)} />
         )}
       </div>
     ) : null}

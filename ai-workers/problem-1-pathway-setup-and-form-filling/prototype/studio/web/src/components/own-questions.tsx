@@ -54,7 +54,7 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
   if (!fields.length) return null;
   // Never rejects: both Undo buttons end here, and the answer or the refusal is said on the row (the shared toast's run clears itself).
   const undo = async (row: OwnQuestionRow) => {
-    setSaid(null);
+    setSaid(null); setOpen(null);
     try {
       const r = await api<OwnQuestionUndone>(`/editions/${editionId}/form-fields/own-question/undo`, { method: "POST", json: { dataPath: row.dataPath } });
       setSaid({ dataPath: row.dataPath, bad: false, text: ["Taken back: worked out from other answers again.", r.withdrew ? "Its new field was withdrawn." : null, r.kept, r.still_asked].filter(Boolean).join(" ") });
@@ -74,9 +74,9 @@ export function OwnQuestions({ editionId }: { editionId: string }) {
             <span className="min-w-0 flex-1"><b className="font-medium">{row.page ? <span className="text-text-muted">p. {row.page} · </span> : null}{row.question ?? "This form field"}</b>
               {!row.asked && row.worked_out_from_names.length ? <span className="block text-xs text-text-muted">Worked out from: {row.worked_out_from_names.join(", ")}</span> : null}
               {row.why_not ? <span className="block text-xs text-text-muted" data-own-why-not>{row.why_not}</span> : null}
-              {row.asked_as ? <span className="mt-0.5 flex items-center gap-1 text-text" data-own-asked><CheckCheck className="size-4 shrink-0" aria-hidden /> <span>Asked as "{row.asked_as.name}"{row.asked_as.waiting ? <span className="text-text-muted"> · a second person approves it on To review; release is held until then</span> : null}</span></span> : null}</span>
+              {row.asked_as ? <span className="mt-0.5 flex items-center gap-1 text-text" data-own-asked><CheckCheck className="size-4 shrink-0" aria-hidden /> <span>Asked as "{row.asked_as.name}"{row.asked_as.waiting ? <span className="text-text-muted"> · a second person approves it on {row.asked_as.change_id ? <Link className="underline" to={`/review/change/${row.asked_as.change_id}`} data-own-change>To review</Link> : "To review"}; release is held until then</span> : null}</span></span> : null}</span>
             {canAuthor && row.can_ask ? <Button size="sm" variant="secondary" data-own-ask aria-expanded={open === row.dataPath} onClick={() => { setSaid(null); setOpen(open === row.dataPath ? null : row.dataPath); }}>Ask as its own question</Button> : null}
-            {canAuthor && row.asked_as ? <UndoButton onUndo={() => undo(row)} /> : null}
+            {canAuthor && row.asked_as ? <UndoButton onUndo={() => { undoToast.clear(); return undo(row); }} /> : null}
           </div>
           {said?.dataPath === row.dataPath && !(open === row.dataPath && row.can_ask) ? <p role={said.bad ? "alert" : "status"} className={`mt-1 text-sm ${said.bad ? "text-text-danger" : "text-text"}`} data-own-said>{said.text}</p> : null}
           {open === row.dataPath && row.can_ask ? <AskForm editionId={editionId} row={row} choices={closest(q.data?.yes_no_fields ?? [], row)} startWhy={lastWhy} onDone={async (r, why) => {

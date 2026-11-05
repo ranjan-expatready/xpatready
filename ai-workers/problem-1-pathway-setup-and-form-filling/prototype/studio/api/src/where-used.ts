@@ -109,7 +109,7 @@ export async function fieldUseRows(db: Client, workspaceId: string) {
 }
 
 /** B83 (breaker M1, M5): what can read a shared field, each named in words (never a key). */
-export type FieldReader = { kind: "form_field" | "form_field_step" | "rule" | "form_condition" | "document_condition" | "check" | "question_condition" | "fact_source" | "worked_out" | "document_type" | "waiting_change" | "waiting_draft"; name: string };
+export type FieldReader = { kind: "form_field" | "form_field_step" | "gate" | "rule" | "form_condition" | "document_condition" | "check" | "question_condition" | "fact_source" | "worked_out" | "document_type" | "waiting_change" | "waiting_draft"; name: string };
 const READING_DRAFTS = ["condition", "form_check", "cross_check", "requirement_line", "comes_from", "pqr_pick"];
 const DRAFT_WORD: Record<string, string> = { condition: "a condition", form_check: "a check", cross_check: "a check", requirement_line: "a document line", comes_from: "where an answer comes from", pqr_pick: "a question pick" };
 /** Everything that reads a shared field now, in this workspace: the one list, so an undo, a withdrawal and their words agree.
@@ -119,12 +119,14 @@ export async function fieldReaders(db: Client, workspaceId: string, key: string)
   const reads = (x: unknown) => fieldsOf(x).includes(key);
   const r = await fieldUseRows(db, workspaceId);
   const out: FieldReader[] = [];
-  const combos = new Map((await db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
+  const rows = await db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, eligibility: true } });
+  const combos = new Map(rows.map((c) => [c.id, c.label]));
   const on = (id: string) => `on ${combos.get(id) ?? "a combination"}`;
+  for (const c of rows) for (const g of ((c.eligibility as { gates?: { label: string; condition: unknown }[] } | null)?.gates ?? [])) if (reads(g.condition)) out.push({ kind: "gate", name: `the eligibility gate "${g.label}" on ${c.label}` });
   for (const b of r.boxes) {
     const name = `${b.edition.editionLabel}'s form field "${(b.caption ?? b.heading ?? "with no caption").trim().slice(0, 80)}"`;
     if (b.canonicalFieldKey === key) out.push({ kind: "form_field", name });
-    else if (b.transform && named.test(b.transform)) out.push({ kind: "form_field_step", name });
+    else if ((b.transform && named.test(b.transform)) || (b.condition && named.test(b.condition))) out.push({ kind: "form_field_step", name });
   }
   const lines = current(r.lines, (l) => `${l.combinationId}|${l.lineageKey}`).filter((l) => reads(l.predicateJson));
   const docs = current(r.docs, (d) => `${d.combinationId}|${d.lineageKey}`).filter((d) => reads(d.predicateJson));
@@ -139,9 +141,9 @@ export async function fieldReaders(db: Client, workspaceId: string, key: string)
   for (const d of docs) out.push({ kind: "document_condition", name: `the condition of the document line "${typeOf.get(d.documentTypeKey) ?? "a document"}" ${on(d.combinationId)}` });
   for (const q of questions) out.push({ kind: "question_condition", name: `the condition of the question "${askedOf.get(q.canonicalFieldKey) ?? "a question"}"` });
   for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) if (reads(x.predicateJson)) out.push({ kind: "rule", name: `the rule "${x.thenPlain}" ${on(x.combinationId)}` });
-  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (reads(k.predicateJson)) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}` });
+  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (named.test(JSON.stringify(k.predicateJson ?? null))) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}` });
   for (const f of current(r.facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.canonicalFieldKey === key) out.push({ kind: "fact_source", name: `where this answer comes from ${on(f.combinationId)}` });
-  for (const d of await db.derivedField.findMany({ where: { workspaceId, inputs: { has: key } }, select: { plain: true } })) out.push({ kind: "worked_out", name: `the worked-out value "${d.plain ?? "with no words"}"` });
+  for (const d of await db.derivedField.findMany({ where: { workspaceId, OR: [{ inputs: { has: key } }, { reference: key }] }, select: { plain: true } })) out.push({ kind: "worked_out", name: `the worked-out value "${d.plain ?? "with no words"}"` });
   const types = await db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, version: true, status: true, suppliesFacts: true } });
   for (const t of current(types, (t) => t.documentTypeKey)) if (t.suppliesFacts.includes(key)) out.push({ kind: "document_type", name: `the document type "${t.name}", which supplies it` });
   for (const c of await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, label: true, matches: true } })) {

@@ -124,7 +124,8 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     let s = await submit(`B83 race ${i}`);
     if (/Nothing has changed/.test(words(s))) { await plain(USCARD); await release(); await ask(USCARD, { field: lib.key }); s = await submit(`B83 race ${i}`); }
     if (s.status >= 300) { ok(`B1 race ${delay} ms: Submit`, false, s); continue; }
-    const [a, b] = await Promise.all([call("POST", `/combinations/${vv}/approve`, {}, APPROVER), sleep(delay).then(() => undo(USCARD))]);
+    const [a, b] = await Promise.all([once("POST", `/combinations/${vv}/approve`, {}, APPROVER), sleep(delay).then(() => once("POST", `/editions/${ed}/form-fields/own-question/undo`, { dataPath: USCARD }, AUTHOR))]);
+    if (a.status >= 500 || b.status >= 500) { const lost = !/Something went wrong/.test(words(a.status >= 500 ? a : b)); ok(`B1 race ${delay} ms: a 500 is said in words, never a server error`, lost, { a, b }); }
     const live = rowsOf(USCARD).filter((r) => /:(PUBLISHED|DRAFT):/.test(r));
     const published = live.filter((r) => r.includes(":PUBLISHED:"));
     const frozen = sql(`select e->>'fact' from config_release r, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e where r.combination_id = '${vv}' and r.status = 'RELEASED' and m->>'form_number' = 'IMM 5257' and e->>'data_path' = ${lit(USCARD)} order by r.version desc limit 1`);
@@ -156,7 +157,8 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     { id: "a fact source", on: (k) => drop("fact_source", insert("fact_source", { ...rowCols, lineage_key: lit(`applicant|${k}`), role: "'applicant'", canonical_field_key: lit(k), prequalification: "true" })), named: /where this answer comes from on /, submit: /Where this answer comes from/ },
     { id: "a document type that supplies it", on: (k) => { sql(`update document_type set supplies_facts = array_append(supplies_facts, ${lit(k)}) where id = '${docType}'`); return () => { sql(`update document_type set supplies_facts = array_remove(supplies_facts, ${lit(k)}) where id = '${docType}'`); }; }, named: /the document type ".*", which supplies it/, submit: /The document type "/ },
     { id: "another form field's step", on: (k) => { const was = sql(`select transform from form_field_map where id = '${otherRow}'`); sql(`update form_field_map set transform = ${lit(`derived:${k} recorded -> yes_no_code`)} where id = '${otherRow}'`); return () => { sql(`update form_field_map set transform = ${lit(was)} where id = '${otherRow}'`); }; }, named: /IMM 5257 .*'s form field "/, submit: /'s form field "/ },
-    { id: "a worked-out value", on: (k) => { const key = `b83_derived_${randomUUID().slice(0, 6)}`; sql(`insert into derived_field (id, workspace_id, derived_key, calculation, inputs, reference, plain, executable) values ('${randomUUID()}', '${ws}', '${key}', 'none', array[${lit(k)}], 'B83', 'B83 derived words', false)`); return () => { sql(`delete from derived_field where derived_key = '${key}'`); }; }, named: /the worked-out value "B83 derived words"/ },
+    { id: "a worked-out value", on: (k) => { const key = `b83_derived_${randomUUID().slice(0, 6)}`; sql(`insert into derived_field (id, workspace_id, derived_key, calculation, inputs, reference, plain, executable) values ('${randomUUID()}', '${ws}', '${key}', 'none', array[${lit(k)}], 'B83', 'B83 derived words', false)`); const off = drop("predicate", insert("predicate", { ...rowCols, predicate_key: lit(`b83_uses_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(key)}::jsonb`, then_plain: "'B83 reads the worked-out value'", for_whom: "'applicant'" })); return () => { off(); sql(`delete from derived_field where derived_key = '${key}'`); }; }, named: /the worked-out value "B83 derived words"/, submit: /The worked-out value "B83 derived words"/ },
+    { id: "an eligibility gate", on: (k) => { const was = sql(`select eligibility::text from combination where id = '${vv}'`); const cur = was ? JSON.parse(was) : { judgement: [], disclaimer: null, version: 1, by: AUTHOR, at: new Date().toISOString(), gates: [] }; sql(`update combination set eligibility = ${lit(JSON.stringify({ ...cur, gates: [...cur.gates, { key: "b83_gate", label: "B83 gate words", condition: { op: "eq", field: k, value: true, subjectKind: "person" } }] }))}::jsonb where id = '${vv}'`); return () => { sql(`update combination set eligibility = ${was ? `${lit(was)}::jsonb` : "null"} where id = '${vv}'`); }; }, named: /the eligibility gate "B83 gate words" on /, submit: /The eligibility gate "B83 gate words"/ },
     { id: "a waiting condition change", on: (k) => drop("library_change", change("placement_condition", "SET_CONDITION", JSON.stringify({ op: "eq", field: k, value: true }))), named: /the change on To review "B83 waiting placement_condition"/ },
     { id: "a waiting document-supplies change", on: (k) => drop("library_change", change("document_supplies", "SET_SUPPLIES", JSON.stringify([k]))), named: /the change on To review "B83 waiting document_supplies"/ },
     ...["requirement_line", "form_check", "cross_check", "comes_from", "condition", "pqr_pick"].map((kind): Reader => ({ id: `a waiting draft (${kind})`, on: (k) => { const was = sql(`select kind || '|' || status || '|' || payload::text from proposal_item where id = '${draftItem}'`).split("|"); sql(`update proposal_item set kind = ${lit(kind)}, status = 'waiting', payload = ${lit(JSON.stringify({ label: "B83 draft words", reads: k }))}::jsonb where id = '${draftItem}'`); return () => { sql(`update proposal_item set kind = ${lit(was[0])}, status = ${lit(was[1])}, payload = ${lit(was.slice(2).join("|"))}::jsonb where id = '${draftItem}'`); }; }, named: /waiting on To review \("B83 draft words"\)/ })),
@@ -202,13 +204,14 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
 
   // ------------------------------------------------------------ M2: never a form field reading a deleted field
   const dangling = () => Number(sql(`select count(*) from form_field_map m where m.form_edition_id = '${ed}' and m.status in ('DRAFT','PUBLISHED') and m.canonical_field_key is not null and not exists (select 1 from canonical_field f where f.workspace_id = m.workspace_id and f.canonical_field_key = m.canonical_field_key and f.status in ('DRAFT','PUBLISHED')) and m.version = (select max(version) from form_field_map x where x.form_edition_id = m.form_edition_id and x.data_path = m.data_path)`));
-  let left = 0;
+  let left = 0, server = 0;
   for (let i = 0; i < 6; i++) {
     await plain(USCARD, NATID);
     const label = `B83 race two ${i}`;
     await askNew(USCARD, label);
     const k = keyOf(label);
-    await Promise.all([undo(USCARD), sleep(i * 8).then(() => ask(NATID, { field: k }))]);
+    const pair = await Promise.all([once("POST", `/editions/${ed}/form-fields/own-question/undo`, { dataPath: USCARD }, AUTHOR), sleep(i * 8).then(() => once("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: NATID, reason: WHY, field: k }, AUTHOR))]);
+    server += pair.filter((r) => r.status >= 500).length;
     left += dangling();
   }
   ok("M2 fail test: undo against an ask on another row, 6 rounds: no form field reads a deleted field", left === 0, left);
@@ -218,10 +221,12 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
     const label = `B83 race three ${i}`;
     await askNew(USCARD, label);
     const k = keyOf(label), id = changeOf(k);
-    await Promise.all([withdraw(id), sleep(i * 8).then(() => ask(NATID, { field: k }))]);
+    const pair = await Promise.all([once("POST", `/library/changes/${id}/withdraw`, { note: "Withdrawn on To review (B83 check)." }, AUTHOR), sleep(i * 8).then(() => once("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: NATID, reason: WHY, field: k }, AUTHOR))]);
+    server += pair.filter((r) => r.status >= 500).length;
     left += dangling();
   }
   ok("M2 fail test: To review's withdraw against an ask on another row, 6 rounds: no form field reads a deleted field", left === 0, left);
+  ok("M2: no race round answered with a server error", server === 0, server);
   await plain(USCARD, NATID);
 
   // ------------------------------------------------------------ m1, m2, F3, F6, F8, words
@@ -262,6 +267,24 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   await ask(USCARD, { field: lib.key });
   const afterAsk = (await list()).fields;
   ok("F8: a save does not reorder them", JSON.stringify(afterAsk.map((r) => r.dataPath)) === JSON.stringify(before.map((r) => r.dataPath)));
+  await plain(USCARD);
+
+  // BR-10 with its named fact retired: the row goes to "no decision", which To review lists; never a form field reading a retired fact.
+  u = await askNew(USCARD, "B83 retired named");
+  sql(`update canonical_field set status = 'RETIRED' where canonical_field_key = '${fact}' and status = 'PUBLISHED'`);
+  u = await withdraw(changeOf(keyOf("B83 retired named")));
+  ok("BR-10 fail test: withdrawing with the named fact retired leaves the row with no decision, counted, and no reference to the retired fact", u.status < 300 && u.body?.form_fields_restored === 0 && u.body?.form_fields_reopened === 1 && /:DRAFT:$/.test(newest(USCARD)), { u: u.body, rows: rowsOf(USCARD) });
+  sql(`update canonical_field set status = 'PUBLISHED' where canonical_field_key = '${fact}' and status = 'RETIRED'`);
+  sql(`delete from form_field_map where id = (select id from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1)`);
+  await plain(USCARD);
+  // Review N2: undo's words send the author to To review, so To review has a step for them.
+  u = await askNew(USCARD, "B83 author door");
+  const door = changeOf(keyOf("B83 author door"));
+  const queue = (await call("GET", "/review-queue")).body;
+  const item = ((queue?.items ?? queue?.rows ?? queue ?? []) as { id: string; next: { href: string } | null; waiting_on: string | null }[]).find((i) => i.id === `change:${door}`);
+  ok("review N2 fail test: To review gives the author's own waiting new field a step, to the page that withdraws it", item?.next?.href === `/review/change/${door}` && /You proposed it/.test(item?.waiting_on ?? ""), item);
+  u = await call("GET", `/library/changes/${randomUUID()}/readers`);
+  ok("review n9: the readers of a change that does not exist are 404, in words", u.status === 404 && noKey(words(u)), u);
   await plain(USCARD);
 
   // ------------------------------------------------------------ the tech lead's done-when: no key in any refusal

@@ -16,6 +16,7 @@ import { OwnQuestion, OwnQuestionUndo, type OwnQuestionUndone, type OwnQuestions
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { current } from "../../engine/where-used.ts";
 import { factName } from "../../engine/fact-name.ts";
+import { TYPE_WORDS } from "../../engine/eligibility-gates.ts";
 import { manifest } from "../../engine/import.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, revise, SOLUTION, strip, type Actor } from "./core.ts";
@@ -147,7 +148,7 @@ export class OwnQuestions {
         const f = await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: b.field, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" } });
         if (!f) { await refuseRetired(tx, ws, "field", [b.field]); fail("That is not a library field: choose one the library has, or name a new one.", HttpStatus.NOT_FOUND); }
         name = f!.label?.trim() || f!.meaning?.trim() || factName(f!.canonicalFieldKey);
-        if (!YES_NO.has(f!.valueType)) fail(`"${name}" is answered as ${f!.valueType}, not Yes or No: choose a Yes/No field.`);
+        if (!YES_NO.has(f!.valueType)) fail(`"${name}" is answered as ${TYPE_WORDS[f!.valueType] ?? "a text question"}, not Yes or No: choose a Yes/No field.`);
         if (f!.canonicalFieldKey.split(".")[0] !== group) fail(`"${name}" is about ${groupWords(f!.canonicalFieldKey.split(".")[0])}, but this form field is about ${groupWords(group)}: choose a field about ${groupWords(group)}.`);
         key = f!.canonicalFieldKey;
       } else {
@@ -156,7 +157,7 @@ export class OwnQuestions {
         if (b.meaning!.length < 10) fail("Say what the field means, in a sentence (10 characters or more).");
         const twin = await sameName(tx, ws, group, label);
         // Review F6: the picker holds only Yes/No fields, so a same-name field of another type cannot be chosen there.
-        if (twin?.valueType && !YES_NO.has(twin.valueType)) fail(`"${label}" is already a shared field (${twin.label}), answered as ${twin.valueType}, not Yes or No: give this one a different name.`, HttpStatus.CONFLICT);
+        if (twin?.valueType && !YES_NO.has(twin.valueType)) fail(`"${label}" is already a shared field (${twin.label}), answered as ${TYPE_WORDS[twin.valueType] ?? "a text question"}, not Yes or No: give this one a different name.`, HttpStatus.CONFLICT);
         if (twin) fail(`"${label}" is already a shared field or waiting to be one (${twin.label}): choose it as the library field instead.`, HttpStatus.CONFLICT);
         // M6: a name close to a live field's needs a one-line reason, as C3.6's add does (P-149 (2)).
         const live = await tx.canonicalField.findMany({ where: { workspaceId: ws, status: { in: ["DRAFT", "PUBLISHED"] }, label: { not: null } }, select: { label: true } });

@@ -100,7 +100,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await save(row(WORDS[0].box), WORDS[0], WHY);
   await page.waitForLoadState("networkidle");
   ok("BR-4 pass: a new field is asked, and the row says a second person approves it, where, and that release is held until then", /Asked as "Has used other name"/.test(await row(WORDS[0].box).innerText()) && /second person approves it on To review; release is held until then/.test(await row(WORDS[0].box).innerText()));
-  ok("review F12: the row links nowhere: To review shows the author nothing of it", (await row(WORDS[0].box).locator("a").count()) === 0);
+  ok("review N2: the row's To review leads to the page that withdraws it", /\/review\/change\//.test((await row(WORDS[0].box).locator("[data-own-change]").getAttribute("href")) ?? ""));
   ok("BR-8 words: the section says a form field not asked holds nothing, and what holds release once one is", /A form field not asked holds nothing/.test(await section.innerText()) && /or release is held; a new field also holds release until a second person approves it/.test(await section.innerText()));
   await axeOf(page, "the section with a form field asked and waiting", "[data-own-questions]");
   const landed = await page.waitForFunction(() => document.activeElement?.hasAttribute("data-own-ask"), undefined, { timeout: 30_000 }).then(() => true, () => false);
@@ -156,7 +156,22 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   ok("review F2 (b) kept: the row says the new field stays waiting and names what reads it, no key", keptRule.status < 300 && /stays waiting on To review: the rule "nothing, it is a walk check"/.test(await R.locator("[data-own-said]").innerText()) && !/person\.[a-z_]+/.test(await R.locator("[data-own-said]").innerText()), await R.locator("[data-own-said]").innerText());
 
   // The tech lead's ruling on breaker M5, on the screen: To review's withdraw names the reader before the press, goes ahead, says so.
-  await page.goto(`${BASE}/review/change/${keptChange}`, { waitUntil: "networkidle" });
+  // Review N2: the Fields row is a second door to the same withdrawal: it names the reader before the press too.
+  await page.goto(`${BASE}/library/fields`, { waitUntil: "networkidle" });
+  await page.getByLabel("Search fields").fill("B83 toast kept");
+  const door = page.locator(`tr[data-item="${keptKey}"] [data-action="WITHDRAW"]`);
+  await door.waitFor({ timeout: 60_000 });
+  await door.click();
+  const doorPanel = page.locator(`[data-item-panel="${keptKey}"]`);
+  await doorPanel.getByText(/It leaves the rule "nothing, it is a walk check"/).waitFor({ timeout: 30_000 }).catch(() => {});
+  ok("review N2 fail test: the Fields row's Withdraw names the reader before the press, no key", /It leaves the rule "nothing, it is a walk check"/.test(await doorPanel.innerText()) && !/person\.[a-z_]+/.test(await doorPanel.innerText()), await doorPanel.innerText());
+  await doorPanel.getByRole("button", { name: "Cancel" }).click();
+  // Review N2: by clicks, as a person: undo's words say To review, and To review has the step.
+  await page.goto(`${BASE}/review`, { waitUntil: "networkidle" });
+  const step = page.locator(`[data-next] a[href*="/review/change/${keptChange}"]`).first();
+  await step.waitFor({ timeout: 60_000 });
+  ok("review N2 fail test: To review offers the author a step on their own waiting field, not \"No step for you\"", /Open or withdraw/.test(await step.innerText()), await step.innerText());
+  await step.click();
   await page.getByRole("button", { name: "Withdraw it instead…" }).click();
   const named = page.locator("[data-withdraw-readers]");
   await named.waitFor({ timeout: 30_000 });
@@ -165,7 +180,9 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await page.screenshot({ path: path.join(OUT, "7-withdraw-names-reader-1440.png") });
   await page.getByLabel("Why withdraw it").fill("A walk check of the words");
   await page.getByRole("button", { name: "Withdraw the new field" }).click();
-  await page.waitForURL(/\/review$/, { timeout: 30_000 });
+  const afterWords = await page.getByText(/Still reading it/).first().innerText({ timeout: 15_000 }).catch(() => "");
+  ok("M5 ruling: the withdraw's answer names the reader after the press too", /the rule "nothing, it is a walk check"/.test(afterWords), afterWords);
+  await page.waitForURL(/\/review/, { timeout: 30_000 });
   let submitted = await api("POST", `/combinations/${vv}/submit`, { note: "B83 walk" });
   if (submitted.status >= 500) submitted = await api("POST", `/combinations/${vv}/submit`, { note: "B83 walk" }); // a busy Mac: Postgres "Interrupted system call" (4 Nov)
   const lines = (submitted.body?.errors ?? []).map((e) => e.message).join(" · ");
