@@ -78,3 +78,60 @@
 Task completed ½ (not walked; PR's copy saved 13 with 200) · next step ½ (Major 2) · plain words ½ (Major 1) · feedback ½ (Major 4) · correct data 1 (by reading; routes check not seen green at this head) · error recovery ½ (Major 6) · accessibility ½ (not walked) · speed ½ (Minor 3) · visual ½ (not seen) · trust 1. No separate journey report: the brief allows this one file.
 
 **Verdict: Block.** To fix before `review: approved`: Blockers 1–2, Majors 1–7. The review then applies to the new head only.
+
+## Round 2 — diff-only check at 6e14568fd (5 Nov 2026; read-only, US$0)
+
+**Verdict: Changes needed.** Every Blocker and Major of round 1 is fixed in code. Two new Majors stay open, both missing tests and neither a defect I saw on screen: BR-8's two new paths have no test (R2-M1), and the new dialog has no axe run (R2-M2). Round 1 should have caught R2-M2; it was already open at c0c93b571. Paths are under `prototype/studio/` unless stated.
+
+**Read:** `git diff c0c93b571 6e14568fd`, `git diff origin/main 6e14568fd` on the checkpoint files, GitHub's logs, the four committed screenshots.
+**Not run (the tech lead's rule, the Mac is overloaded):** no test copy, browser or suite. No walk by me at any size, no keyboard or screen-reader pass, no axe. The walk's 20/20 at 1caaf6e1c and the pack counts are the builder's, taken as given except where a log is cited below. The only commit after 1caaf6e1c adds four screenshots (`git diff --stat`, confirmed). Live AI off, no priced button.
+
+**CI at head, read 05:42Z (11:12 IST), still running.** Run 41973499207: kind, types, the rules step and gate B **success**; shards 1–6 suites **in progress**. So the head has no full green run yet, and I did not see `check_c10_1_configured.ts`, the routes check or `check_qa182_no_box_words` run at this head.
+
+### Round 1's Blockers and Majors
+| # | State | Evidence |
+|---|---|---|
+| B1 Conflicts with main | **Fixed** | GitHub says MERGEABLE; merge base is main's ffcfb45c8. `api/src/forms.ts:261` passes the saved map as `kept`. `tests/check_c10_1_configured.ts` now expects 13 no code, none with no map (result not seen at this head). `api/src/checkpoint-words.ts:15` no longer says "row B81", and three checks pin the new words. `demo.ts` has no diff against main. |
+| B2 CI red | **Fixed as far as it has run** | The type error at 982dcbf1e (`engine/channels.ts:145`) is gone and types is green. Gate B is green at head. At 982dcbf1e it refused because the body then named the whole of C10.1. The title's C10.1 no longer widens the claim: body steps replace it (`tools/gate-b.mjs:83-84`). Log: C3.8 12/12 on the six, C10.1 21/24; main's own run at d2e0d82dd also gives 21/24 on the checkpoint (run 41969024051), so B81 costs nothing there. Suites unfinished. |
+| M1 "box" on screen | **Fixed** | `web/src/components/form-choices.tsx:54` says "the form field". No added line in `web/src` or `api/src/forms.ts` holds the word. Grep only; the check itself not seen. |
+| M2 BR-8 dead ends | **Fixed in code; see R2-M1** | `web/src/pages/review.tsx:25` carries form and edition; `api/src/workspace.ts:78` lists every non-Online edition Submit reads; `web/src/pages/workspace/forms.tsx:391` shows a section for each, however the line is filed, and opens the named one. Both round-1 fail cases are gone by reading. |
+| M3 Approver reaches the panel | **Fixed** | `review.tsx:90` shows the link only with `can("author")`; `forms.tsx:71` opens only with `canAuthor` and strips the address; two browser steps fail if either goes. See R2-m1. |
+| M4 Dialog guard | **Fixed** | The footer Close and the X both go through `close` (`form-choices.tsx:48,52`), and the question depends on real edits (`:69`), not on `touched`. Browser steps: asked once with an edit, edit kept on No, not asked after a save. They click the X only; the footer shares the function. See R2-m2. |
+| M5 Parts and each field | **Fixed for the fail case; heading open** | A person can now see which fields a mark covers: `<details>` lists part, caption, whose answer and row (`form-choices.tsx`, `api/src/forms.ts:288`). The inventory gives Mother, Father, SECTION B and SECTION C on the 13. Still open as Minor: the heading shows role words where `concept.md:30` asks for the parts. The browser step named "told apart in the form's words" (`tests/check_forms_b81_browser.cjs:65`) only counts rows. |
+| M6 Stale save | **Fixed for who and when; the rest is Minor** | `baseRevision` is required (`contracts/forms.ts`); the check is inside the transaction (`api/src/forms.ts:355-358`); the 409 names who and when in IST, and a test pins it. It does not say which values changed, so `concept.md:23` ("with the change named") and STANDARDS §4 ("with what changed") are met only as far as `api/src/eligibility.ts`'s own 409 meets them. I hold that as Minor on that precedent, not as a pass. See R2-m4, R2-m5. |
+| M7 Rules without a test | **Fixed for the rules; call sites are Minor** | See "Known choices". The label point is now a stated acceptance with an offline test. |
+
+Round 1's Minors, now closed: 2 (labels per list), 4 (the validator's list), 5 (loading when arriving from a problem), 6 (each person's why), 7 (Yes/No groups), most of 8 (audit lines in words; keyboard Save). Open by choice: 1, 3.
+
+### New Majors
+* **R2-M1 BR-8's new paths have no test that fails when they go (STANDARDS "A rule's test fails when the rule is removed").** `choiceEditions` is named in no test (grep), and the fixture's link goes to one PDF edition of a line filed as PDF.
+  * Fail case: put back `l.channel !== "ONLINE"` at `web/src/pages/workspace/forms.tsx:391`, or reduce `api/src/workspace.ts:78` to the edition in use. Unit, routes and browser checks all stay green, and round 1's Fail A and Fail B return: Submit blocks with nothing to set on screen. A line filed Online is the shape of row 9's release 2.
+  * Fix: move the list into a small pure function and test one Online map plus two PDF maps, or assert `choiceEditions` through the route on a line filed Online. Add a browser step if the panel gate at `:391` stays inline.
+  * I treat this as Major, unlike BR-4 and BR-7, because those rules have a failing test and only a call site is bare; this one has none.
+* **R2-M2 No axe on the new dialog or section (STANDARDS: "axe-core on every screen state").** `tests/check_forms_b81_browser.cjs` has no axe call, and no other test opens `data-choices-dialog` (grep). `tests/check_c10_1_browser.cjs:30` shows the two lines needed.
+  * Fail case: nothing checks the dialog's contrast, the names of its Selects or `<details>`, or the states below; D13 stays unscored.
+  * Fix: run axe on the section, the dialog before and after a save, and the expanded list. If it reports violations, fix them in the same commit.
+
+### Known choices, judged
+* **One-field route with no stale check: accepted, Minor.** `web/src` calls only `/option-maps/group` (grep); the others are `tests/check_forms_channels.ts`, `tests/runtime/setup_visitor_visa.ts` and similar. A script's save still changes the group's revision, because the hash holds the map, so it cannot get past a person's 409. But `concept.md:23` and the PR body read as if every save is checked: say in the concept that this route is API-only and unchecked. A screen using it later must add the check.
+* **BR-4 by the pure `notOnFormLines` test: accepted, Minor.** Removing the person there fails the test. Dropping `about_label` at `api/src/fill-case.ts:253` or the person at `web/src/runtime/forms.tsx:220` fails nothing, so the on-screen line stays unproved. I did not check whether a case could be made on the fixture. Row B97 has a real case: read `data-not-on-form` there.
+* **BR-7 by the pure `carriedOptionMap` test: accepted, Minor.** Same, the rule is pinned and the call at `api/src/impact.ts:238` is not. Deleting the call fails nothing.
+* **Label check moved offline: accepted.** The browser check never read it. By `engine/runtime/case.ts:92-100` the key does not change and only the words may; `concept.md:38` says so, and the test fails if a mark takes an answer off the question. It does not pin "Annulled marriage" and nothing relies on that.
+* **Minors left: accepted.** "Married Spouse" stays Minor 1. The Forms tab's list having no link is fine while Review has it, as the panel is on the same tab. That list prints a field code, "(person.marital_status)" (`b81-01-section-1440.png`); those words come from existing code in `engine/channels.ts`, not this PR, and belong on a row of their own.
+* **Capabilities line: accepted.** R11a, R11b and R12a are labelled and gate B passed on them. None of the three exercises this PR's change, which P-330 (7) allows and the body states. Open: B97 is on neither this branch's nor main's `BACKLOG.md` (read 05:40Z), and the body still says the follow-up's turn "is yours to set". Add the row and name it in the body.
+
+### What the fixes brought (all Minor)
+* **R2-m1** `web/src/pages/workspace/forms.tsx:71`: the effect runs once and reads `canAuthor`, which is false until the session answers (`web/src/lib/api.ts:43`). Fail: an author opens the link in a new tab, the session is slower than the combination, the address is stripped and nothing opens. Fix: wait for `known`. By reading; the race is probably rare.
+* **R2-m2** `form-choices.tsx:69`: the effect has no cleanup. Fail: a person edits and saves a group whose result joins another group; it unmounts with its key still in `changed`, and closing asks about nothing. Fix: remove the key on unmount.
+* **R2-m3** `form-choices.tsx:35-36`: two editions now mean two `id="choices-h"`, so the second section takes the first's name. Fix: `React.useId`.
+* **R2-m4** `form-choices.tsx:67`: after a 409, "Look again" keeps the "Not saved" notice and its button until the next Save, and replaces the person's picks without saying so.
+* **R2-m5** `api/src/forms.ts:355-358` with `api/src/core.ts:147`: the read is in the transaction, but the update is by id only, so two saves in the same instant can both pass at the default isolation. `api/src/eligibility.ts` checks in the write itself. The same transaction also skips the file's `CHANNEL_TX` and keeps the 5 s default, with up to 200 updates.
+* **R2-m6** Records: `concept.md:38` and the PR body's first line name `WorkspaceFormLine.editionId`, which no longer exists; `choiceEditions` and `form_fields[].part` are listed nowhere. `concept.md:29` still says the section is "only for a PDF form", while a line filed Online now shows it.
+
+### Scores changed since round 1 (1–5; from reading and four screenshots, nothing walked)
+D1 4 · D2 4 · D4 5 · D5 4 · D6 5 · D9 4 · D10 4 (role words in the heading) · D11 4 · D12 4 (1440 px screenshots only; no defect seen, 1024 px not seen) · D13 not scored (R2-M2) · D16 3 (R2-M1, R2-M2; suites unfinished) · D19 2 (row 9 needs B97). D17 and D20 remain simulated only.
+
+### Journey test (reviewer's, on paper only)
+**8/10, provisional, not a walked score.** Nothing was walked by me: the skill's visible-browser walk was not run under the tech lead's rule, and no journey report was written. Task completed 1 (builder's walk 20/20, screenshots seen) · next step ½ (R2-M1) · plain words 1 · feedback 1 · correct data 1 (by reading; routes check not seen at head) · error recovery ½ (R2-m4) · accessibility ½ (R2-M2) · speed ½ (Minor 3) · visual ½ (1440 px only) · trust 1.
+
+**Verdict: Changes needed.** To fix: R2-M1, R2-M2. Both are additions to tests unless axe finds something, so the next check needs only that diff and the suites' result. The Minors do not hold the merge. Do not label `review: approved` at 6e14568fd.
