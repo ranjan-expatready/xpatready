@@ -139,7 +139,10 @@ function tableDefault(rules: Rules | undefined, role: string): LineMode | undefi
   return m === "co_files" ? undefined : m;
 }
 /** C11.12: whether a combination's fees are worked out at all (else its words say "not worked out yet"). */
-export const hasFeeRules = (combinationKey: string) => !!RULES.get(combinationKey)?.fees.length;
+export const hasFeeRules = (combinationKey: string) => { const r = RULES.get(combinationKey); return !!r?.fees.length && !r.coFiledFees; };
+// Review M1 on #1074: a combination priced only with a co-filed sponsorship (coFiledFees) keeps the studio's words "Fees not
+// worked out yet": the studio's fee words (engine/filing-modes.ts filingWords, previewFilings) name family maximums and know
+// no co-filed fees, so they would be wrong for it. Its case prices it; the studio's words for it are a follow-up row.
 /** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
 export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
 
@@ -242,7 +245,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const coMissing = !rules?.coFiledFees ? null
     : !principal ? `no sponsored person's application is on this case (the principal applicant is not applying)`
     : coFiled.length !== 1 || !CO_FILING_ROLES.has(coFiled[0].owner!.role) ? `its fees are worked out with the sponsor's sponsorship filed beside the sponsored person's application, and ${coFiled.length ? "this case's co-filed application is not the sponsor's alone" : "no sponsorship is filed on this case yet (add the sponsor; Who can be in this application sets the sponsor's filing)"}`
-    : new Set(filings.map((f) => f.group)).size > 1 ? `an application is split out from the sponsorship's submission, and the sponsorship's fees cover one submission only` : null;
+    : new Set(filings.map((f) => f.group)).size > 1 ? `an application is split out from the sponsorship's submission, and the sponsorship's fees cover one submission only`
+    // Review m3: someone applying whom no line of the table charges (a spouse on the sponsored person's application) is
+    // never shown as worked out at no fee.
+    : (() => { const free = filings.flatMap((f) => f.applicants.filter((a) => a.mode === "applying" && !fees0.some((r) => !r.roles || r.roles.includes(a.role)))); return free.length ? `no fee line of the table charges ${free.map((a) => `${a.label} (${a.role.replace(/_/g, " ")})`).join(", ")}` : null; })();
   const coPriced = coFiling && !!rules?.coFiledFees && !coMissing;
   const priced = rules?.coFiledFees ? (coMissing ? [] : fees0) : coFiling ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];

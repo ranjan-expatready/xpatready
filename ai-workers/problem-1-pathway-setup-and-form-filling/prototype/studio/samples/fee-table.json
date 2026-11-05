@@ -231,7 +231,6 @@
    ],
    "modes": {
     "principal": "files_own",
-    "child": "on_principal",
     "sponsor": "co_files"
    },
    "co_filed_fees": {
