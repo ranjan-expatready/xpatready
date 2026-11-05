@@ -1,3 +1,46 @@
+# B83 last narrow read: head 5887d5837, diff since 3773ef7e9 (independent reviewer, 5 Nov 2026, 14:42 IST)
+
+**Verdict: Approve** (head 5887d583769ecc3959bf2950da11495914272f01). The delta adds no Major, and F1-a is closed. **Delta touched money, schema, permissions or a new screen: No.** **Journey score: 9 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, US$0, nothing committed. By reading only, except `tsc -p api/tsconfig.json --noEmit`, which shows no error in `document-supplies.ts`, `library-changes.ts` or `validate.ts`. This read covers the code; your route suite and walk on this head were still running, and step 3 still asks for them to pass.
+
+## The questions asked
+| | Answer | Evidence |
+|---|---|---|
+| 1. An exact revert? | **Yes** | `git diff 6701498dd 5887d5837 -- api/src/library-changes.ts` is empty. The test's `newWaitingField` and F1 block are gone, with nothing left over (grep for its names: 0). The other two changed test lines since 6701498dd are the V1 regex, which should stay, and the new words at `:166` |
+| F1-a closed? | **Yes** | `publishLibraryChanges` no longer skips the type, so `programs.ts:456`'s "will release" is true of it again. The other `continue`, at `library-changes.ts:344`, is not from this diff |
+| 2. Real label? | **Yes** | The same bytes, "…" included, at `engine/validate.ts:75`, `web/src/pages/workspace/documents.tsx:210` and `web/src/pages/library.tsx:385` |
+| 2. Real place? | **Yes, one click on (Minor 3)** | The hold exists only for a type a document line lists (`engine/snapshot.ts:210`). Documents tab › the line's name, or its menu's "Open details" › "Facts it supplies" › the button, authors only. An automatic line's drawer has no button, but such a line alone never puts a type in the snapshot. Library › Document types has the same button |
+| 3. Name in the panel's list? | **Yes** | A withdrawn field has no row left (`library-changes.ts:323` deletes its drafts). `document-supplies.ts` puts `gone`'s name in `named`, so it reaches `fields`, and the chip reads it through `label` (`supplies-panel.tsx:43`). The name is the change's `label`, the same source as the hold (`studio.ts:476`), so the words match |
+| 3. Can a person take it out? | **Yes** | The chip's × (`Remove "<name>"`), then a reason, then "Send for approval". With no fact left, `used` is empty, the API takes `facts: []` and `same()` sees a change. With words left on a line, the panel refuses in words and offers "Remove this line". Other facts with no recorded words need source and quote, refused in words (C4.5's own rule, not this diff) |
+| 3. And after that? | **Clears, by reading** | `applySupplies` checks only `after` for live fields, so a withdrawn key in `before` does not refuse. The new draft has no such fact, so the line goes. Your run says the same; I did not see it |
+| 3. Second person | **Name, not key** | `names` gets it, and `suppliesView` puts it in `before` and `removed`; `suppliesWords` says "removes <name>" |
+| 4. BR-11's limit | **True to the code** | `withdrawnFieldLines` reads only the listed types; `gone` is draft mode only. "Run on both" is your run, not seen, and agrees with reading: the hold is B83's own code |
+| Money, schema, permissions, new screen | **No** | Five files: concept, `document-supplies.ts`, `library-changes.ts`, `validate.ts`, the check. No Prisma or migration file, no duty or price line, no route or page |
+
+**Your F1 run, weighed:** Submit 400 by name here, against silent 201 on main, fits `studio.ts:477`. So this head leaves the ruled limit better than main.
+
+**Also read:** the default `wayOut` keeps every other reader's words. No other test or screen reads the old sentence for a type. `:166`'s regex matches `said`'s `label: message`, so it reads the new way out. The fallback "A field no longer in the library" shows only for a key with no row and no withdrawal, and replaces showing the key.
+
+## Minors, one line each
+1. **The refusal still shows the key (this delta makes it visible: the chip now reads a name).** `api/src/document-supplies.ts:103`: pressing Send with the withdrawn chip still there says "This is not in the shared library: person.x". The same comes from picking the name again by search after removing it (`:81` offers it; `supplies-panel.tsx:104`). Fix: name it with `goneNames` at `:103`, and leave withdrawn keys out of what `hits` offers.
+2. **The line's drawer and the row's tooltip show the key.** `engine/sources.ts:266`, `meaning.get(fact) ?? fact`, one click before the panel: `person.x` where the hold said the name. Not this diff; main: not run. The panel's name is one click on, so nobody is stuck.
+3. **"On its document line" is one click short.** The button is in the line's details, not on the row. Fix: `Open its document line and use "Change the facts it supplies…"`. Also, a line whose `who` matches nobody shows on no role's list (`engine/sources.ts:259-260`); the Library door still works, and the words do not say so. Rare.
+4. **`goneNames` has no fail test.** No B83 check opens the panel with a withdrawn fact or reads `names`. Fix: in `tests/check_b83_undo_withdraw.ts`, GET the panel and POST without the field, with `noKey` on both answers.
+5. **The panel does not mark the fact as withdrawn.** Its chip looks like any other; the person finds it by the name the hold gave. Words only.
+
+## Open, for the PR's list
+BR-11's "qa holds the QA number": no number is in this diff, and `product/qa/BUGS.md` has no line for this limit that I could find, so the PR body should carry it until qa adds one. n13, the second half of Minor 5 and the left-open table below stand, with their "main: not run" marks.
+
+## Journey (by reading; provisional)
+As last read, with feedback and state's ½ back, since F1-a is gone. **9.** Speed still not measured; sizes and accessibility are the builder's.
+
+## Could not check
+Any behaviour by running: the panel with a withdrawn fact was not seen on screen, and no B83 check walks it. Your F1 runs and the suite on this head are your report, not seen.
+
+**Verdict: Approve** (head 5887d583769ecc3959bf2950da11495914272f01). No open Blocker or Major. Any later push needs a new read and the label again (step 5).
+
+---
+Below: the previous verdict, unchanged. Its F1-a is closed above by the revert.
+
 # B83 final read: head 3773ef7e9, diff since 6701498dd4 (independent reviewer, 5 Nov 2026, 14:35 IST)
 
 **Verdict: Block** (head 3773ef7e9be2cfd354ef34ac1d064a0ef98ab976). V2 and the four minors are closed, and the type no longer goes out. But F1's fix causes one new Major: the Release page promises the change, and the press publishes a release without it. **Delta touched money, schema, permissions or a new screen: No.** **Journey score: 8.5 / 10, provisional: scored by reading, not walked.** No copy started (P-348 (5)), no new journey report, US$0, nothing committed. The head moved twice during this read, from 989dc6420: 7f43dd453 changes one line, the browser check's own `api` helper; 3773ef7e9 changes only two walk pictures.
