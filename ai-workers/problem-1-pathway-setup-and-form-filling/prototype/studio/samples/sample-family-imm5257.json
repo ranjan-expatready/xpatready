@@ -60,7 +60,10 @@
   "person.refused_visa_entry_or_removed": false,
   "person.criminal_history": false,
   "person.military_service": false,
-  "person.violent_organization_association": false
+  "person.violent_organization_association": false,
+  "person.tuberculosis_in_past_two_years": false,
+  "person.ill_treatment_of_prisoners_or_civilians": false,
+  "person.consents_to_research_contact": false
  },
  "people": {
   "principal": {
