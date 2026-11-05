@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full rewrite at its hand-over); earlier by Lead 10 at 08:53 IST · milestone: **M2 — Super Admin configuration, with M3 alongside (P-344)** · rules: **`RULES.md`** (as of P-341; DECISIONS P-342 to P-345 are newer and win) · hand-over note: lead10-handover-2026-11-05.md in the side-session notes folder lead10-saved-2026-11-05 · earlier STATE: git history
+updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full rewrite at its hand-over); earlier by Lead 10 at 08:53 IST · milestone: **M2 — Super Admin configuration, with M3 alongside (P-344)** · rules: **`RULES.md`** (as of P-348) · hand-over note: lead10-handover-2026-11-05.md in the side-session notes folder lead10-saved-2026-11-05 · earlier STATE: git history
 
 ## Where we are
 * **M2: 58/60 on main (qa).** Confirmed since 02:31 IST: C3.4, C3.6, C9.1, C5.1, C4.5, C4.1. Left: **C4.11** (pack 24/24, held by B83 and B86) and **C10.1** (#1009, B81, B78, B79a, B79b). **M3: 1/17** on the table, qa re-scoring once (P-344 (2)).
@@ -38,7 +38,7 @@ updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full r
 3. What "it is only 4" meant; until then M3's target is 24 working hours, about 3 working days.
 
 ## Founder asks of 5 Nov
-**A132** (~07:35 IST) status ✓ · **A133** (~07:55) start four builders ✓ · **A134** (~08:05) full update; what went well or badly; dependency on him; ETAs; M3 and cleanup: answered, retrospective to be finished by Lead 11 · **A135** (~08:10) leads and sessions under them; cleanup ✓ · **A136** (~08:30) lessons and workflow changes, budget, account switch, standbys: answered in brief; Lead 11 finishes · **A137** (~08:32) two capabilities in 2 hours: not realistic, said why; factory pipeline; M3 order: answered; board to do · **A138** (~08:45) start in cloud ✓ · **A139** (~08:55) Lead 11 now; standbys; Fable or not; method changes; 30-minute updates: reported ✓ (P-347) · **A140** (~10:10) resume messages, B84 to the cloud, label #1055 ✓.
+**A132** (~07:35 IST) status ✓ · **A133** (~07:55) start four builders ✓ · **A134** (~08:05) full update; what went well or badly; dependency on him; ETAs; M3 and cleanup: answered, retrospective to be finished by Lead 11 · **A135** (~08:10) leads and sessions under them; cleanup ✓ · **A136** (~08:30) lessons and workflow changes, budget, account switch, standbys: answered in brief; Lead 11 finishes · **A137** (~08:32) two capabilities in 2 hours: not realistic, said why; factory pipeline; M3 order: answered; board to do · **A138** (~08:45) start in cloud ✓ · **A139** (~08:55) Lead 11 now; standbys; Fable or not; method changes; 30-minute updates: reported ✓ (P-347) · **A140** (~10:10) resume messages, B84 to the cloud, label #1055 ✓ · **A141** (~10:50) M2 in 2 hours, M3 start, clean the Mac, plan, aggressive: cloud lanes started, cleanup done, honest times given (P-348) ✓ · **A142** (~10:53) record and adopt what Fable and the Lead decided: P-348, RULES, skills, memory ✓.
 
 ## Lessons of 5 Nov
 * Green packs hid dead ends (QA-233, QA-237): a row needs one walk of a person's full journey before it counts. Proposed; not yet a rule.
