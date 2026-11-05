@@ -106,7 +106,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(`${BASE}/c/${id}/review`);
   await p.getByRole("tablist", { name: "Combination" }).waitFor();
   const link = p.locator("[data-choices-link]").first();
-  const more = p.getByRole("button", { name: /^Show all/ }); if (await more.count()) await more.click();
+  const more = p.getByRole("button", { name: /^Show all/ }).first(); if (await more.count()) await more.click(); // the problems' list comes first; the changes' list may have its own
   const hasLink = await link.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
   step("B81 (challenge M3): a release problem on a form's choices links to the step", hasLink);
   if (hasLink) { await link.click(); await p.locator("[data-choices-dialog]").waitFor({ timeout: 20000 }); step("B81 (challenge M3): the link lands on that form's panel with the choices open", /Choices: /.test(await p.getByRole("dialog").last().innerText())); await shot("b81-04-from-review-1440"); }
@@ -121,7 +121,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // Review M3: the panel is the author's, whatever the way in.
   await as("user-B");
   await p.goto(`${BASE}/c/${id}/review`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
-  const moreB = p.getByRole("button", { name: /^Show all/ }); if (await moreB.count()) await moreB.click();
+  const moreB = p.getByRole("button", { name: /^Show all/ }).first(); if (await moreB.count()) await moreB.click();
   await p.locator("[data-problem]").first().waitFor({ timeout: 20000 });
   step("B81 fail (review M3): the Approver has no link to the author's step", (await p.locator("[data-choices-link]").count()) === 0);
   await p.goto(`${BASE}/c/${id}/forms?choices=IMM%205707`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await p.waitForTimeout(1500);

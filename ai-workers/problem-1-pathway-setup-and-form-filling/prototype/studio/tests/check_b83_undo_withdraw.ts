@@ -92,6 +92,14 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   ok("m7: its answer counts the form field put back to worked out, and none to no decision", u.body?.form_fields_restored === 1 && u.body?.form_fields_reopened === 0, u.body);
   ok("m8: the withdraw is in the history, in words, with what it did to form fields", /withdrew the new field "B83 no-op draft".*1 form field back to worked out/.test(sql(`select summary from audit_event where entity = 'shared field' and entity_key = ${lit(noopKey)} order by at desc limit 1`)));
 
+  // Devin on #1068: a draft that differs from the released row by more than this ask is not deleted by Undo: its words stay.
+  u = await askNew(USCARD, "B83 changed words");
+  sql(`update form_field_map set condition = 'B83 changed words on the draft' where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} and status = 'DRAFT'`);
+  u = await undo(USCARD);
+  const wordsLeft = sql(`select status || '|' || coalesce(condition, '') from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
+  ok("onlyThisAsk fail test (Devin): a draft with changed words, ask, Undo: the draft and its words stay", u.status < 300 && wordsLeft === "DRAFT|B83 changed words on the draft" && /:DRAFT:person\.us_green_card_number$/.test(newest(USCARD)), { wordsLeft, rows: rowsOf(USCARD) });
+  sql(`delete from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} and status = 'DRAFT'`);
+
   // ------------------------------------------------------------ B1: undo and ask against a release, deterministic
   u = await askNew(USCARD, "B83 race delete");
   const del = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
