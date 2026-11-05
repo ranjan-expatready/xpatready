@@ -172,23 +172,35 @@ export async function withdrawApprovedSupplies(tx: Prisma.TransactionClient, act
   await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `${actor.name} withdrew the approved change "${c.label ?? c.key}"; its facts went back to what they were. Why: ${why}`.slice(0, 600), detail: { change: c.id } } });
 }
 
-/** B83 (breaker M2): a new field withdrawn comes out of every open change of a document's facts that names it, and out of the
- *  draft an approved one made. A change left with nothing to do ends withdrawn. Returns the changes' names, for the words. */
-export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: { id: string; name: string }, workspaceId: string, fact: string, why: string) {
+/** B83 (breaker M2, review N3): a new field withdrawn comes out of every open change of a document's facts that names it.
+ *  Nothing left to change: it ends, the draft back to what it was, the approver's note kept. Something left on a waiting or
+ *  returned change: it is narrowed. Something left on an approved one: its draft goes back and it waits again, because a
+ *  second person approved a different set and decides the real one (never a released set nobody approved). */
+export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: { id: string; name: string }, workspaceId: string, fact: string, fieldName: string, why: string) {
   const names: string[] = [];
-  for (const c of await tx.libraryChange.findMany({ where: { workspaceId, kind: SUPPLIES_KIND, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) {
-    const m = (c.matches ?? {}) as { document?: string; before?: string[]; after?: string[]; afterAbout?: Record<string, string>; cites?: SupplyCite[]; names?: Record<string, string> };
-    if (!m.after?.includes(fact)) continue;
-    await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `${SUPPLIES_KIND}:${workspaceId}:${c.key}`);
+  type Matches = { document?: string; before?: string[]; beforeAbout?: Record<string, string>; after?: string[]; afterAbout?: Record<string, string>; cites?: SupplyCite[] };
+  const OPEN = ["WAITING", "RETURNED", "APPROVED"];
+  for (const { id } of await tx.libraryChange.findMany({ where: { workspaceId, kind: SUPPLIES_KIND, status: { in: OPEN } }, select: { id: true } })) {
+    const peek = await tx.libraryChange.findUnique({ where: { id }, select: { key: true } });
+    if (!peek) continue;
+    await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `${SUPPLIES_KIND}:${workspaceId}:${peek.key}`);
+    const c = await tx.libraryChange.findUnique({ where: { id } }); // read under the lock
+    const m = (c?.matches ?? {}) as Matches;
+    if (!c || !OPEN.includes(c.status) || !m.after?.includes(fact)) continue;
     const after = m.after.filter((f) => f !== fact), afterAbout = Object.fromEntries(Object.entries(m.afterAbout ?? {}).filter(([k]) => k !== fact));
-    const nothingLeft = sameFacts(after, m.before ?? []), n = after.length, document = m.document ?? c.label ?? "A document";
-    const note = `The new field it named was withdrawn: ${why}`.slice(0, 300);
-    if (c.status === "APPROVED") {
+    const before = { facts: m.before ?? [], about: m.beforeAbout ?? {} }, nothingLeft = same({ facts: after, about: afterAbout }, before), wasApproved = c.status === "APPROVED";
+    const n = after.length, document = m.document ?? c.label ?? "A document";
+    const said = `The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why}`;
+    if (wasApproved) {
       const draft = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 }))[0];
-      if (draft) await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: draft.suppliesFacts.filter((f) => f !== fact), suppliesAbout: Object.keys(afterAbout).length ? (afterAbout as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
+      if (draft) await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: before.facts, suppliesAbout: Object.keys(before.about).length ? (before.about as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
     }
-    await tx.libraryChange.update({ where: { id: c.id }, data: nothingLeft ? { status: "WITHDRAWN", decisionNote: note, matches: { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue } : { label: `${document} · ${n ? `supplies ${n} fact${n === 1 ? "" : "s"}` : "supplies no fact"}, for every combination`.slice(0, 300), matches: { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue } });
-    await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `A new field was withdrawn, so ${actor.name}'s withdrawal took it out of the change "${c.label ?? c.key}"${nothingLeft ? ", which has nothing left to do and ended" : ""}.`.slice(0, 600) } });
+    const matches = { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue;
+    const earlier = c.decisionNote ? `${wasApproved ? "Approved: " : ""}${c.decisionNote.replace(/\.$/, "")}. ` : "";
+    await tx.libraryChange.update({ where: { id }, data: nothingLeft ? { status: "WITHDRAWN", decisionNote: `${earlier}${said}`.slice(0, 300), matches }
+      : { label: `${document} · ${n ? `supplies ${n} fact${n === 1 ? "" : "s"}` : "supplies no fact"}, for every combination`.slice(0, 300), matches, decisionNote: `${earlier}${said}`.slice(0, 300), ...(wasApproved ? { status: "WAITING", decidedBy: null, decidedAt: null } : {}) } });
+    const proposer = ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person";
+    await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "withdrawn", entity: "document type", entityKey: c.key, summary: `${said}. It was taken out of ${proposer}'s change "${c.label ?? c.key}", which ${nothingLeft ? "has nothing left to do and ended" : wasApproved ? "waits for a second person again" : "still waits"}.`.slice(0, 600) } });
     names.push(document);
   }
   return names;

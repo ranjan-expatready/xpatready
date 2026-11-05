@@ -78,7 +78,7 @@ export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Pro
   return out;
 }
 /** A key standing alone in a text: never inside a longer key (person.x in person.x_2). */
-const keyInText = (k: string) => new RegExp(`(?<![\\w.])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w.])`);
+const keyInText = (k: string) => new RegExp(`(?<![\\w.])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\w|\\.\\w)`);
 /** The validator's own lines with no key of a withdrawn field. Its "not in the library" line gives way only to a named line
  *  for the same thing (review N1: a line with no named one would stop holding release); any other mention takes the name. */
 export const withoutWithdrawnKeys = (problems: Problem[], gone: Map<string, string>, named: Problem[]): Problem[] => {

@@ -1,77 +1,76 @@
-# B83 review: "Ask as its own question" (independent reviewer, 5 Nov 2026, head 689804c9c, diff since 0aff0e0b4)
+# B83 review: "Ask as its own question" (independent reviewer, 5 Nov 2026, head f5a4743d5, diff since 689804c9c)
 
-**Verdict: Block.** Skill verdict: Ship after fixes. F1 to F4 are closed. Two new Majors, both in the withdraw work added since the last review: N1 lets a broken eligibility gate through release, N2 keeps BR-11's words off the path a person takes.
+**Verdict: Block.** Skill verdict: Ship after fixes. N1 and N2 are closed, and so are breaker M1 and M2 on the states they named. One new Major, N3, comes from the M2 fix: a field's withdrawal edits a change a second person already approved, and that change stays approved. Everything else is Minor.
 
-**Journey score: 7.5 / 10, fail, provisional: scored by reading, not walked** (table below). The tech lead's rule for this Mac says no copy unless a finding needs one, and load read 20 to 29 all through. No copy was started. The earlier walk is `journey-test-reviewer-2026-11-05.md` at 0aff0e0b4; no new report was written.
+**Journey score: 8 / 10, provisional: scored by reading, not walked** (table below). It reaches the pass mark, but N3 still blocks. No copy started (P-348 (5)); no new journey report, as asked. The last walk is `journey-test-reviewer-2026-11-05.md` at 0aff0e0b4.
 
-**Ran:** the engine functions on N1's state (no database, US$0); `graph.mjs` (hard gaps 0; G3 13, G6 5, totals only). **Read:** the whole diff, both suites, `walk/1`, `walk/4`, `walk/7`. **Taken from the builder, not re-run:** browser check 51/51, C4.11 23/24, route suite 118 to 120 of 121.
+**Ran, no database, US$0:** the engine functions on N1's state and on how a key is swapped for a name (`/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready--claude-worktrees-qa2-2026-11-04-e3ae2d/555d5da1-189e-4917-97a7-e0d4053a6810/scratchpad/n1-recheck.mts`); `graph.mjs` without `--write` (G1 0, G2 0, G4 0, G5 0; G3 12, G6 5, totals only). **Read:** the whole diff, both suites' changes, the withdraw, approve and release paths around it. **Taken from the builder, not re-run:** route suite 145/145 on this head; browser check 54/54 and C4.11 23/24 on d418cbfee. `library-item-actions.tsx` and `review-items.tsx` changed after d418cbfee, so the browser check must run again before the label.
 
-## Majors
+## Major
 
-**N1. An eligibility gate reading a withdrawn field no longer holds release, and nothing names it.** `engine/validate.ts:82` with `:59-75`; `api/src/where-used.ts:117`. BR-9, BR-11. Worse than main: there the validator's line held release.
-* **Cause:** `gateProblems` (`engine/eligibility-gates.ts:208-209`) says `"<label>": the rule reads <key>, which is not in the library.` `withoutWithdrawnKeys` drops every line holding that text, on the promise that a named line replaces it. `withdrawnFieldLines` has no line for `s.eligibility.gates`.
-* **Ran (engine functions):** gate on a withdrawn key. `gateProblems` gives 1 error; after `withoutWithdrawnKeys` 0 errors; `withdrawnFieldLines` 0 lines. Script: `/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready--claude-worktrees-qa2-2026-11-04-e3ae2d/555d5da1-189e-4917-97a7-e0d4053a6810/scratchpad/gate-check.mts`.
-* **Code, not run through the app:** the gate route accepts a waiting field (`api/src/eligibility.ts:44-47`, every field not retired). `problems()` is the only list Submit and release use (`api/src/studio.ts:476`, `approve` on a draft snapshot). So Submit and release would pass, with a gate reading a field that no longer exists. The gate's own comment calls this kind of state waiting for ever (`eligibility-gates.ts:215`); not run through a case.
-* **Undo too (by code):** `fieldReaders` never reads `combination.eligibility`, so Undo would withdraw the field with `withdrew: true`. BR-9's "one list" misses a reader, and the Yes/No fields this screen makes are natural gate facts.
-* **Fix:** (a) add the gates to `withdrawnFieldLines` and `fieldReaders`. (b) Close the class: drop a validator line only when a named line exists for the same `where` and `item`; otherwise keep it with the key swapped. Otherwise the next reader type repeats this. Fail test in `check_b83_undo_withdraw.ts`: gate reader, Undo keeps it, Submit names it. A unit test: a "not in the library" line with no named line is never lost.
+**N3. A withdrawal rewrites what a second person approved, and it stays approved.** `api/src/document-supplies.ts:177-193`, called at `api/src/library-changes.ts:272`. By reading; not run. STANDARDS §2 (governance), §3.10, §7.
+* **The rule it meets:** the second person approves the whole set (`document-supplies.ts:5-8`). Only the proposer withdraws a change, "whatever its kind" (DV-bb-9, `library-changes.ts:241-242`). The approver's decision stays on the change (R2-M3, `document-supplies.ts:168`).
+* **(a) A set nobody approved goes out.** A swap: before `[r]`, after `[F]`, approved. Withdraw F: `after` is `[]`, which differs from `before`, so `nothingLeft` is false (`:184`). The change stays APPROVED, the draft now supplies nothing (`:188`), and the next release removes `r` for every combination that lists the document. The second person approved a replacement, not a removal. A mixed add, `[a, G, F]` to `[a, G]`, has the same flaw with less harm. Mixed sets are the normal shape here: the panel proposes the whole set.
+* **(b) It can be someone else's change.** The check at `:241` looks only at the field's change. So author C's withdrawal edits or ends the approved change of author A. Nobody tells A or the approver. The breaker saw a direct withdraw of that change answer 403.
+* **(c) One door says nothing.** The Fields row reads only `readers` (`web/src/pages/library-item-actions.tsx:70`) and ignores `taken_out` and `taken_out_of` (`:45`). To review says it (`review-items.tsx:224`), and its toast does too.
+* **(d) `nothingLeft` ignores whom a fact is about.** `:184` uses `sameFacts`; `same` (`:30`) compares both. Approved `[a]` to `[a, F]` that also changes who `a` is about: the change ends WITHDRAWN, while the draft keeps the approved `about` (`:188`) and releases it under no open change. On a WAITING change that edit is lost with no word.
+* **(e) The record goes.** `matches.after` is overwritten, an ended change's `decisionNote` replaces the approver's (`:190`, against R2-M3), the note names no actor, and the audit line names neither the field nor the proposer (`:191`).
+* **(f) A stale read.** `c` is read at `:179`, before the lock at `:182`, with no re-read (compare `:159`) and an unguarded update at `:190`. An approval landing in between leaves its draft holding F, or a WITHDRAWN status over it. Submit still holds by name, so this one is not silent.
+* **(g) No test on most of it.** The M2 test has one added fact, so it only reaches the ended path (`tests/check_b83_undo_withdraw.ts:224-227`). The "something left" branch has no test. The WAITING path has none either: the reader at `:163` is removed before the withdraw.
+* **Fix:** re-read under the lock. Nothing left (by `same`, facts and whom-about): end it, draft back to `before` and `beforeAbout`, approver's note kept as `withdrawApprovedSupplies` does. Something left on WAITING or RETURNED: narrow it, nothing was applied. **Something left on APPROVED: draft back to `before`, narrow it, status WAITING, `decidedBy` and `decidedAt` null, a note saying why,** so the second person decides the set that will really go out (`api/src/screen02.ts:138` already puts an approved change back this way, and `applySupplies` then passes its "changed since" check). Name the field and the proposer in the audit line. Show taken-out words at the Fields door, before and after. Fail tests: mixed approved set, swap, another proposer, whom-about, WAITING.
 
-**N2. BR-11's words sit on a page the author is not led to; the door they are led to has none.** `api/src/review-queue.ts:277`, `web/src/pages/library-item-actions.tsx:44`, `api/src/own-question.ts:230`, `tests/check_b83_own_question_screen_browser.cjs:159`. BR-11, BR-9, EXPERIENCE §2.5.
-* **To review:** the author's own WAITING change gets `next: null`, so the row reads "No step for you" under Waiting for others, with no link to `/review/change/:id`, where Withdraw and the readers notice live (`review-items.tsx:130`).
-* **What the words promise:** Undo's `kept` says "stays waiting on To review", and `whyKept` adds "so withdraw it there" (`own-question.ts:230`). That leads to the same dead end, while the field holds release (BR-8).
-* **The way that exists:** Fields › open the row › where-used › "Add waiting" (`api/src/library-items.ts:109`, by code). The check does not walk it: it opens the URL with an id from SQL (`:159`).
-* **The easy door:** the Fields row's own Withdraw calls the same route and shows no readers before the press (no `WherePanel` for WITHDRAW). After it, it says `Withdrawn: "X" stays as it was.` and ignores the answer's `readers`. Submit still holds by name, so the end state is safe, but "the page names the readers before the press, the answer names them after it" is not met there.
-* **Decision 4 (F12):** dropping the row's link answered the dead `/review` link, and `asked_as.change_id` is now unused by the web. The ruling on M5 came with this fix round and changes the sum.
-* **Fix:** on `review-queue.ts:277`, give the author's own WAITING field ADD a `next` to `/review/change/:id`, state still waiting; `row.asked_as.change_id` can link the row the same way. On the Fields door, show the readers and pass the answer's `readers` to its words. The browser check then reaches the page by clicks. Amend concept §4's "To review shows the author nothing".
+## Your five challenges
+1. **`dropFactFromChanges` on an approved change: not as written.** Ending a change whose only content was the field is fine: same end state as the proposer's own withdraw, and the fact cannot exist. Narrowing what stays approved is not (N3). Narrowing a WAITING or RETURNED change is fine.
+2. **`freeKey` reusing a key nothing reads: accepted.** The field never released and its rows are gone, so nothing can carry the old meaning. A fresh copy has no withdrawn rows, so `keyFor`'s answer and `vv.single-ae2133b8a398` do not move. Pass and fail at `check_b83_undo_withdraw.ts:201-202,209`. The rule-fact route keeping a rule's key (`proposals.ts:599`) is also fine: the second person sees "Needed by" that rule. Its safety is only as good as the reader list: see q1, q2.
+3. **"Open or withdraw" under Waiting: accepted.** `state` stays `waiting`, counts run on state (`api/src/review-queue.ts:71`), and `waiting_on` still says a different person acts next. "Needs you" does not grow. The step is optional, and it is the proposer's own. See q3 for the path to it.
+4. **The row's link: accepted.** F12 removed a dead link to `/review`; this one goes to the page holding Withdraw, and the state is in the concept. The browser check reads its href (`:103`) and clicks only the queue's step (`:173`), which is enough.
+5. **m6, F11, the false "was retired" on a dead merge: accepted as Minors, list all three in the PR.** Dead merge: named before the press, 409 on approval, so not silent. Its words are one small edit (`api/src/forms.ts:348`: no row means withdrawn, not retired), and the published field stays locked until someone rejects it.
 
-## The earlier findings (checked in code and tests)
+## Closure, checked for myself
 | | State | Evidence |
 |---|---|---|
-| F1 | **Closed** | `review-items.tsx:382,386`. Neutral while loading, error state on 500 and wrong id, "Decided" only once loaded; check covers held GET, 500, zero id, 0 undecided. See n2 |
-| F2 | **Closed** | `own-questions.tsx:56-62`: `undo` never rejects, words on the row, list refreshed; toast (a) (b) (c) in the browser check. See n1 |
-| F3 | **Closed** | `own-question.ts`: `still_asked` names sections and the tab; pass and fail at `check_b83_undo_withdraw.ts:250,255` on a real placement |
-| F4 | **Closed** | `check_b83_undo_withdraw.ts:297-313`: never asked, new field unplaced, press clears, waiting holds, approved releases, no second press. Words in section, toast and row: M1's words now there (`walk/4`) |
-| F5 | Closed | `onRefused` and undo always refresh; see n3 for one path left |
-| F6 | Closed | `own-question.ts:159`; see n5 for words |
-| F7, F8, F9 | Closed | `backTo` effect; sort at GET; `known && !failed`; each tested |
-| F10 | Closed | `walk/1` shows the line; axe on six states; `graph.mjs` G3 as before |
-| F11 | Open, for the tech lead | Limit of C3.6's check; list in the PR |
-| F12 | Reopened by N2 | |
-
-Breaker: B1, M2, M3, M4 closed in code and suite. M1 closed except gates (N1) and n7. M5 ruling partly met (N2). m1, m2, m3, m4, m5, m7, m8, m9, m10 closed. m6 open.
-
-## Your decisions
-1. **Interception, F3's words and F1's zero state: accepted.** Only rendering is under test, the route side is real at `:250`, and STANDARDS bars nothing here. The gap is the URL at `:159` (N2).
-2. **Dropping and swapping: challenged, N1 and n6.** Promoting a check's warning for withdrawn fields only: accepted, it is what BR-11 says.
-3. **m6 and F11 left open: accepted, list both.** m6 stays Minor: the row is edited in place, so the old values would have to be kept at the ask. I read no release gate that turns on a form field's origin, but did not search every path.
-4. **F12: challenged, N2.**
-5. **Form fields out of To review's words: accepted.** The answer counts them, and `check_b83_undo_withdraw.ts:199-201` proves they are put right.
-6. **F6's different words: accepted,** with n5.
+| Review N1 | **Closed** | Ran: gate gives a named line, and the validator's line goes only when covered; with no named line it stays, key swapped. Fail test `:161`, Undo and Submit. `where-used.ts:125`, `validate.ts:72,85-88`. No unit test for the no-named-line case (q7) |
+| Review N2 | **Closed** | Queue step `review-queue.ts:277`, tests `:322` and browser `:173`; row link `own-questions.tsx:77`; Fields door names before and after, browser `:167`, `library-item-actions.tsx:45,97`; concept amended. Its check reaches the queue by `?f=waiting`, not the chip (q3) |
+| Review n1 to n3 | Closed | `own-questions.tsx:79` clears the toast; `:57` closes the form; `review-items.tsx:387` keeps loaded data and adds Try again |
+| Review n4 | Closed on the change's page, open on the Fields door | `review-items.tsx:221-222` load and fail states, Withdraw disabled while loading. Fields door has neither (q4). After-words still a short toast: accepted, History has them |
+| Review n5 | Closed, with q5 | `TYPE_WORDS`; `sameName` uses `factName` |
+| Review n6 | Closed, with q6 | Ran: `_2` is left alone, a quoted key gets one pair of quotes |
+| Review n7, n8 | Closed | `validate.ts:71,77` and `where-used.ts:144,146` read a validity rule's date and a reference date; `roleOf` at `:66` |
+| Review n9 | Closed | `FieldReadersView`, `FieldWithdrawn` in `contracts/`; unknown id 404, test `:324`. Plain types, like the rest of that file |
+| Review n10 | Closed | `once` in the race rounds, `server === 0`; BR-10 retired fact `:313`; Submit for a worked-out value, derived branch now fails if removed |
+| Breaker M1 | **Closed,** but q1 | `freeKey` at `own-question.ts:166`, `sources.ts:820`, `proposals.ts:599` |
+| Breaker M2 | **Closed for its state,** replaced by N3 | `sp.outside` no longer held, `:226` |
+| Breaker n1, n2 | Closed | Merge and document type draft in `fieldReaders`, tests `:164` and the draft list |
+| Breaker n3 | Closed | Words say "whichever of these is in a combination's draft" at both doors |
+| Breaker n4 | Partly, accepted | Clipped to three and a count; toast still brief; before-press list is whole |
+| Breaker n5 | Closed | `autoFocus` on the reason, `review-items.tsx:226` |
+| F12 | Superseded | Challenge 4 |
+| F11, m6 | Open, for the PR | Challenge 5 |
 
 ## Minors (fix or list in the PR)
-* **n1 Row Undo leaves the toast up.** `own-questions.tsx:56`: the old `show` replaced it, now nothing does. For up to 10 s: "Asked as X… or release is held" beside "Taken back", and its Undo gives "nothing to take back". Fix: `undoToast.clear()` in the row's path.
-* **n2 A failed refetch blanks a loaded page.** `review-items.tsx:382`: TanStack 5 keeps `isError` true with data held, and every action refetches all. An open form and its typed words go, with no retry. Fix: `q.isError && !q.data`; add Try again.
-* **n3 `open` survives a refused save.** `own-questions.tsx:81,85`: the form closes because `can_ask` is false, `open` stays. Undo then reopens it, and `:81` hides the undo's words, so F2's `kept` and `still_asked` are lost on this path. Fix: `setOpen(null)` in `undo`.
-* **n4 The readers notice has no loading or failed state, and the after-words are short-lived.** `review-items.tsx:209`: while the GET is out or after it fails, no notice, and Withdraw works. `:210`: the names sit in a green toast for 4.5 s (`lib/api.ts:61`), with no browser assertion.
-* **n5 Raw type in words.** `own-question.ts:159`: "answered as `valueType`"; `declaration` would read "answered as declaration, not Yes or No". `TYPE_WORDS` exists (`eligibility-gates.ts:61`). Same at `:150`, older. `sameName` can also give a key when `label` is null (`library-changes.ts`), against M5; rare.
-* **n6 The swap is by substring.** `validate.ts:82`. **Ran:** `person.has_used_other_name_2` becomes `"Has used other name"_2`, and a quoted key becomes `""Has used other name""`. The regex at `:64` already has the right boundaries.
-* **n7 Readers `fieldsOf` cannot see.** A document validity rule's `before` (`runtime/case-checklist.ts:64`) and a derived value's `reference` (`validate.ts:180`) are in neither list. Not Yes/No in the usual case; a warning remains for the first.
-* **n8 A raw role in the words.** `validate.ts:72`: "Where this answer comes from (`role`)"; `roleWord` is in `validate`.
-* **n9 Contract.** `GET library/changes/:id/readers` and withdraw's answer are inline types, not in `contracts/` (STANDARDS §6, concept §2). The GET answers `{readers: []}` for an id that does not exist.
-* **n10 Tests.** `call` presses again on any 5xx (`check_b83_undo_withdraw.ts:21`), in the race rounds too, and `:131` never asserts statuses: a 500 from a race, breaker m3's kind, is hidden. Use `once` there and fail on 500. No test: BR-10 with its named fact retired; Submit for a worked-out value (`:159`, no `submit`); withdrawal lines' derived branch would survive removal.
+* **q1 One more door to M1's hole.** `api/src/proposals.ts:595`: a drafted field keeps the AI's proposed key when `!used.has(proposed)`, and `used` holds only live rows. A draft proposing a withdrawn key that is still read takes over its readers, as M1 did. Fix: route it through the same check. Worth fixing: one line.
+* **q2 A reader missing from the one list.** An open "who fills" change is keyed on the field (`api/src/who-fills.ts:41`) and is not in `fieldReaders`, so Undo withdraws and `freeKey` reuses under it. Needs a placed waiting field; narrow. Answer keys holding the field: not checked by anyone yet.
+* **q3 The way to the step after an Undo that keeps the field.** The row goes back to worked out, so `asked_as` and its link are gone. The words say "stays waiting on To review" (`own-question.ts:218`). To review opens on Needs you, which can say nothing waits. Fix: "under Waiting for others" in those words, cheap. Then the check can press the chip rather than `?f=waiting` (`check_b83_own_question_screen_browser.cjs`, the line before `:173`).
+* **q4 Fields door states.** `library-item-actions.tsx:70` takes `.data` only: while loading or after a failed GET no readers show and the button works. BR-11 says both doors name them.
+* **q5 False type words.** `own-question.ts:151,160`: the fallback "a text question" is wrong for `code`, `country`, `address`, `phone` (`engine/snapshot.ts:34`). Say "not a Yes/No question".
+* **q6 A key at a sentence's end survives the swap.** `validate.ts:81`: `(?![\w.])` rejects a final full stop. **Ran:** `This reads person.has_used_other_name.` keeps its key. The old `split` caught it. I found no producer on today's release lines, so no leak today. Fix: `(?!\w|\.\w)`.
+* **q7 The class test review N1 asked for.** No unit test that a "not in the library" line with no named line is never lost. It held when I ran it; the next reader type relies on it.
+* **q8 Concept.** BR-9 and BR-11 do not record `freeKey`'s rule or the taken-out step, and §6 does not list them. Amend with N3's fix (STANDARDS §10: consequential choices are recorded).
+* **q9 A reader hidden but not put right.** `where-used.ts:155` calls a document type draft "put right" for any open change naming the field, but `dropFactFromChanges` edits the draft only for APPROVED. A draft holding F under a WAITING change is left unnamed before the press; Submit still names it. Fix: only for APPROVED.
 
 ## [M] lines (met unless named)
-EXPERIENCE: §2.5 next action not met (N2). §2.8 undo met but n1, n3. §2.10 met. §2.12 met by the builder's checks (keyboard, axe, widths); not re-run. §4 states met but n2, n4. §5 words: n5, n6, n8. STANDARDS: §3 second person, no typed key met. §5 no per-row request met; `problems()` adds one query. §6 server authorisation met (`readerOf`), contract n9. §7 test pyramid met; axe on the states met; "a rule's test fails when removed": F1 to F4 yes by reading, BR-11's gate has none (N1).
+EXPERIENCE: §2.5 next action met (N2 closed), q3. §2.8 undo met. §2.10 met, q5. §2.12 by the builder's checks at d418cbfee; not re-run. §4 states met on To review, q4 on the Fields door. §5 words met, q6. STANDARDS: §2 governance **not met (N3)**. §3 second person, no typed key: no typed key met; second person not met on N3's path. §5 no per-row request met for screens; `fieldReaders` does one lookup per proposed merge, few by nature. §6 server authorisation met, contract met. §7 "a rule's test fails when removed": M1, N1, N2 yes by reading; **N3's branch has none.** §10 q8.
 
 ## Scores (1–5; by reading)
-D1 3 N1, N2 · D2 4 races now one winner by code and suite · D3 4 F11 · D4 3 N1 · D5 4 F2, F5 closed; n1, n3 · D6 5 withdraw and undo both in history · D7 n/a, no AI · D8 3 N2 · D9 5 rows keep order · D10 4 n5, n8 · D11 4 F1 closed; n2, n4 · D12 4 · D13 4 F7 closed, not re-run · D14 5 team parts · D15 5 · D16 3 strong suites; N1, n10 · D17 simulated only · D18 5 form's words · D19 3 gates · D20 simulated only.
+D1 4 N1, N2 closed; N3 · D2 3 approved change edited · D3 4 F11 · D4 3 N3 · D5 5 n1, n3 closed · D6 3 N3 (e) · D7 n/a, no AI · D8 4 q3 · D9 5 · D10 4 q5 · D11 4 q4 · D12 4 · D13 4 not re-run · D14 5 · D15 5 · D16 3 strong suites; N3 (g), q7 · D17 simulated only · D18 5 · D19 4 · D20 simulated only.
 
 ## Journey score (provisional, by reading)
-Task completed 1 · next step obvious ½ (N2) · plain words 1 · feedback and state ½ (n1, n4) · correct data ½ (N1) · error recovery 1 · accessibility and sizes 1 (builder's) · speed ½ (not measured) · visual 1 (`walk/4`, `walk/7`) · trust and sources ½ (m6). **7.5, fail.** N1 and N2 fixed would make it 8.5.
+Task completed 1 · next step obvious 1 (row link, queue step) · plain words 1 · feedback and state ½ (the Fields door's silence on taken-out, short toast) · correct data ½ (N3) · error recovery 1 · accessibility and sizes 1 (builder's, d418cbfee) · speed ½ (not measured) · visual 1 (`walk/7`) · trust and sources ½ (m6). **8.0.** N3 fixed makes it 8.5 to 9.
 
 ## Could not check
-No walk, keyboard pass or 200 % zoom of my own at this head, and no real screen reader or intended user. N1 end to end through a route and a case: the filter is proven on the functions, the path by reading. A clean route suite at this head: none seen, and one is needed before Approve. Retrofit mapping: none needed (no migration).
+N3 by running: read only, as no copy is allowed here. If you doubt (a) or (d), they need one route script on your copy: a swap approved, then withdraw and read the draft. No walk, keyboard pass or 200 % zoom of my own at this head; no real screen reader or intended user. Retrofit mapping: none needed (no migration).
 
 ## Fix list
-N1 and N2 before approval, each with a fail test, then a clean route suite and browser check. n1 to n10: fix or list in the PR, with m6 and F11. The cheap ones: n1, n2, n3, n6.
+N3, with its fail tests, then a clean route suite and browser check on the new head. q1, q3, q6 are cheap and worth doing. The other q items, m6, F11 and the dead merge's words: fix or list in the PR.
 
-**Verdict: Block** (head 689804c9c): open Majors N1, N2.
+**Verdict: Block** (head f5a4743d5): open Major N3.

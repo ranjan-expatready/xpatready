@@ -153,7 +153,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   const keptKey = sql("select canonical_field_key from canonical_field where label = 'B83 toast kept'"), keptChange = sql(`select id from library_change where key = '${keptKey}' and status = 'WAITING'`);
   const keptRule = await api("POST", `/combinations/${vv}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: keptKey, value: true }, whenPlain: "a rule that reads it (B83 walk)", thenPlain: "nothing, it is a walk check", forWhom: "each_applicant" });
   await toastUndo();
-  ok("review F2 (b) kept: the row says the new field stays waiting and names what reads it, no key", keptRule.status < 300 && /stays waiting on To review: the rule "nothing, it is a walk check"/.test(await R.locator("[data-own-said]").innerText()) && !/person\.[a-z_]+/.test(await R.locator("[data-own-said]").innerText()), await R.locator("[data-own-said]").innerText());
+  ok("review F2 (b) kept: the row says the new field stays waiting and names what reads it, no key", keptRule.status < 300 && /stays waiting on To review, under Waiting for others: the rule "nothing, it is a walk check"/.test(await R.locator("[data-own-said]").innerText()) && !/person\.[a-z_]+/.test(await R.locator("[data-own-said]").innerText()), await R.locator("[data-own-said]").innerText());
 
   // The tech lead's ruling on breaker M5, on the screen: To review's withdraw names the reader before the press, goes ahead, says so.
   // Review N2: the Fields row is a second door to the same withdrawal: it names the reader before the press too.

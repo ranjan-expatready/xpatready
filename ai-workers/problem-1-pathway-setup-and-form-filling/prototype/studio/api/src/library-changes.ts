@@ -224,9 +224,13 @@ export async function readersLeftByWithdrawal(db: Parameters<typeof fieldReaders
 export async function freeKey(db: Parameters<typeof fieldReaders>[0], workspaceId: string, group: string, label: string, taken: Set<string>) {
   for (;;) {
     const key = keyFor(group, label, taken);
-    if (!(await db.libraryChange.count({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key } })) || !(await fieldReaders(db, workspaceId, key)).length) return key;
+    if (!(await withdrawnStillRead(db, workspaceId, key))) return key;
     taken.add(key);
   }
+}
+/** A withdrawn new field's key that something still reads. */
+export async function withdrawnStillRead(db: Parameters<typeof fieldReaders>[0], workspaceId: string, key: string) {
+  return !!(await db.libraryChange.count({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key } })) && !!(await fieldReaders(db, workspaceId, key)).length;
 }
 
 /** B1 (break B1): an author withdraws a new field that is waiting or returned. It leaves the draft: the form fields that
@@ -269,7 +273,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     const { readers } = await readersLeftByWithdrawal(tx, c.workspaceId, c.key);
     // Breaker M2: an open change of a document's facts naming it would publish a fact that does not exist, and hold every
     // combination that lists the document, whatever it reads: the field comes out of the change.
-    const takenOut = await dropFactFromChanges(tx, actor, c.workspaceId, c.key, why);
+    const takenOut = await dropFactFromChanges(tx, actor, c.workspaceId, c.key, c.label ?? "a new field", why);
     // BR-10 (B83, challenge M2): a form field asked as its own question goes back to worked out, keeping the QA-165 check;
     // "unresolved" would lose it and hold release. Its fact is not among the facts its step names (engine/runtime/forms.ts).
     // Breaker B1, m3: only while it is still a draft. M3: a draft that only held this ask goes. m1: a named fact retired

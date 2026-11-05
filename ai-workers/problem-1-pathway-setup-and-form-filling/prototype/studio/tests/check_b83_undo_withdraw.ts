@@ -9,6 +9,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { request } from "node:http";
 import { randomUUID } from "node:crypto";
+import { withoutWithdrawnKeys } from "../engine/validate.ts";
 
 const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_b83api", LOADED = process.argv[4] === "loaded";
 const PSQL = "/opt/homebrew/opt/postgresql@18/bin/psql", URL_DB = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
@@ -36,6 +37,13 @@ const holdAsARelease = (sets: string, ms: number) => new Promise<() => Promise<v
   const done = new Promise<void>((r) => p.on("exit", () => r()));
   setTimeout(() => ready(() => done), 400);
 });
+
+// Review q7: pure: a validator line with no named line for the same thing is never lost, and the key's name goes in whole.
+const GONE = new Map([["person.b83_gone", "Gone field"]]);
+const KEPT = { level: "error" as const, where: "Elsewhere", item: "x", message: "Condition reads person.b83_gone, which is not in the library." };
+ok("review q7 fail test: a \"not in the library\" line with no named line stays, with the field's name and no key", (() => { const r = withoutWithdrawnKeys([KEPT], GONE, []); return r.length === 1 && r[0].level === "error" && r[0].message.includes('"Gone field"') && !r[0].message.includes("person."); })());
+ok("review q7 pass: with a named line for the same thing it gives way", withoutWithdrawnKeys([KEPT], GONE, [{ ...KEPT, message: "named" }]).length === 0);
+ok("review q6: a longer key is left alone, and a key at a sentence's end takes the name", (() => { const r = withoutWithdrawnKeys([{ ...KEPT, message: "See person.b83_gone_2 and person.b83_gone." }], GONE, []); return r[0].message === 'See person.b83_gone_2 and "Gone field".'; })());
 
 const ALIAS = "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0]", NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]";
 const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) => `Whether ${n}: a B83 check, Sample.`;
@@ -209,22 +217,84 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   ok("breaker M1 pass: with nothing reading it, a re-ask under the same name takes the same key (the question list stays)", u.status < 300 && keyOf("B83 free name") === freeFirst, keyOf("B83 free name"));
   await plain(USCARD);
 
-  // Breaker M2: a document's facts: a withdrawal takes the field out of the change, and holds no one who does not read it.
+  // Breaker M2, review N3: a document's facts: a withdrawal takes the field out of the change, never releases a set nobody approved.
   const shared = sql(`select dr.document_type_key from document_requirement dr join combination c on c.id = dr.combination_id where c.combination_key = 'sp.outside' and dr.status = 'PUBLISHED' order by 1 limit 1`);
   const outside = sql("select id from combination where combination_key = 'sp.outside'");
-  u = await askNew(USCARD, "B83 supplied");
-  const suppliedKey = keyOf("B83 supplied");
-  const had = (await call("GET", `/library/document-types/${shared}/supplies`)).body;
-  const keepFacts = (had?.facts ?? []).map((f: { fact: string; about: string; cite?: { source: string; quote: string; readOn: string } | null }) => ({ fact: f.fact, about: f.about, ...(f.cite ?? { source: "Test words (fixture), page 1", quote: "Test: B83 check, Sample", readOn: new Date().toISOString().slice(0, 10) }) }));
-  const sup = await call("POST", `/library/document-types/${shared}/supplies`, { facts: [...keepFacts, { fact: suppliedKey, about: "holder", source: "Test words (fixture), page 1", quote: "Test: B83 check, Sample", readOn: new Date().toISOString().slice(0, 10) }], reason: "A B83 check of a document's facts." });
-  const supId = sup.body?.id;
-  u = await call("POST", `/library/changes/${supId}/approve`, { note: "B83 check" }, APPROVER);
-  ok("setup: a change of a document's facts naming the waiting field is proposed and approved", sup.status < 300 && u.status < 300 && sql(`select count(*) from document_type where document_type_key = ${lit(shared)} and status = 'DRAFT' and ${lit(suppliedKey)} = any(supplies_facts)`) === "1", { sup, u });
-  u = await withdraw(changeOf(suppliedKey));
-  ok("breaker M2 fail test: the withdrawal takes the field out of the change and the document's draft, and says so", u.status < 300 && u.body?.taken_out_of?.length === 1 && sql(`select count(*) from document_type where document_type_key = ${lit(shared)} and ${lit(suppliedKey)} = any(supplies_facts)`) === "0", u.body);
+  const today = new Date().toISOString().slice(0, 10);
+  const citeOf = (fact: string, about = "holder") => ({ fact, about, source: "Test words (fixture), page 1", quote: "Test: B83 check, Sample", readOn: today });
+  const factsNow = () => sql(`select array_to_string(supplies_facts, ',') from document_type where document_type_key = ${lit(shared)} and status in ('DRAFT','PUBLISHED') order by version desc limit 1`).split(",").filter(Boolean);
+  const changeRow = (id: string) => sql(`select status || '|' || coalesce(decided_by, '') || '|' || coalesce(decision_note, '') from library_change where id = '${id}'`).split("|");
+  const startFacts = factsNow();
+  ok("setup: a document with no draft, its facts known", !!shared, shared);
+  const proposeFacts = (facts: ReturnType<typeof citeOf>[]) => call("POST", `/library/document-types/${shared}/supplies`, { facts, reason: "A B83 check of a document's facts." });
+  const approve = (id: string) => call("POST", `/library/changes/${id}/approve`, { note: "Approved in a B83 check" }, APPROVER);
+  // Added alone, approved: nothing left, it ends, the draft goes back, and the approver's note stays.
+  u = await askNew(USCARD, "B83 supplied one");
+  let sk = keyOf("B83 supplied one");
+  let sup = await proposeFacts([...startFacts.map((f) => citeOf(f)), citeOf(sk)]);
+  let ap = await approve(sup.body?.id);
+  ok("setup: a change naming the waiting field is proposed and approved, and its draft names it", sup.status < 300 && ap.status < 300 && factsNow().includes(sk), { sup, ap, f: factsNow() });
+  u = await withdraw(changeOf(sk));
+  ok("breaker M2 fail test: the withdrawal takes the field out of the document's draft, and says so", u.status < 300 && u.body?.taken_out_of?.length === 1 && !factsNow().includes(sk), u.body);
   const otherErrors = ((await call("GET", `/combinations/${outside}`)).body.draft.problems as { level: string; label: string | null; item: string; message: string }[]).filter((p) => p.level === "error");
   ok("breaker M2 fail test: a combination that reads nothing of the field is not held by it", !otherErrors.some((p) => said(p).includes("B83 supplied")), otherErrors.map(said));
-  ok("breaker M2: the change has nothing left to do, so it ended", sql(`select status from library_change where id = '${supId}'`) === "WITHDRAWN");
+  let row = changeRow(sup.body?.id);
+  ok("review N3: nothing left: the change ended, and the approver's note stays with why", row[0] === "WITHDRAWN" && /Approved in a B83 check/.test(row[2]) && /was withdrawn by/.test(row[2]), row);
+  ok("review N3: the history names the field and the proposer", /"B83 supplied one".*taken out of Configuration author's change/.test(sql(`select summary from audit_event where entity = 'document type' and action = 'withdrawn' order by at desc limit 1`)));
+  await plain(USCARD);
+  // A swap, approved: a released fact out, the new field in. Taking the field out must never release the removal unseen.
+  if (startFacts.length) {
+    u = await askNew(USCARD, "B83 supplied swap");
+    sk = keyOf("B83 supplied swap");
+    sup = await proposeFacts([...startFacts.slice(1).map((f) => citeOf(f)), citeOf(sk)]);
+    ap = await approve(sup.body?.id);
+    u = await withdraw(changeOf(sk));
+    row = changeRow(sup.body?.id);
+    ok("review N3 fail test (swap): the draft goes back to what was released, and the narrowed change waits for a second person again", ap.status < 300 && u.status < 300 && JSON.stringify(factsNow().sort()) === JSON.stringify([...startFacts].sort()) && row[0] === "WAITING" && row[1] === "", { row, f: factsNow(), startFacts });
+    ok("review N3: the change now proposes only what remains", !sql(`select matches->>'after' from library_change where id = '${sup.body?.id}'`).includes(sk));
+    await call("POST", `/library/changes/${sup.body?.id}/withdraw`, { note: "Done with this B83 check." });
+    await plain(USCARD);
+  }
+  // Mixed, approved, with another's fact added: something left: the same.
+  const addable = sql(`select canonical_field_key from canonical_field where group_key = 'person' and status = 'PUBLISHED' and canonical_field_key not in (${[...startFacts, "x"].map(lit).join(", ")}) order by 1 limit 1`);
+  u = await askNew(USCARD, "B83 supplied mixed");
+  sk = keyOf("B83 supplied mixed");
+  sup = await proposeFacts([...startFacts.map((f) => citeOf(f)), citeOf(addable), citeOf(sk)]);
+  ap = await approve(sup.body?.id);
+  u = await withdraw(changeOf(sk));
+  row = changeRow(sup.body?.id);
+  ok("review N3 fail test (mixed): an approved change with something left is not released as if approved: draft back, waiting again", ap.status < 300 && JSON.stringify(factsNow().sort()) === JSON.stringify([...startFacts].sort()) && row[0] === "WAITING" && row[1] === "", { row, f: factsNow() });
+  await call("POST", `/library/changes/${sup.body?.id}/withdraw`, { note: "Done with this B83 check." });
+  await plain(USCARD);
+  // WAITING: narrowed, and still waits; the draft was never written.
+  u = await askNew(USCARD, "B83 supplied waiting");
+  sk = keyOf("B83 supplied waiting");
+  sup = await proposeFacts([...startFacts.map((f) => citeOf(f)), citeOf(addable), citeOf(sk)]);
+  u = await withdraw(changeOf(sk));
+  row = changeRow(sup.body?.id);
+  ok("review N3 pass (waiting): a waiting change is narrowed and still waits", u.status < 300 && row[0] === "WAITING" && !sql(`select matches->>'after' from library_change where id = '${sup.body?.id}'`).includes(sk) && sql(`select matches->>'after' from library_change where id = '${sup.body?.id}'`).includes(addable), row);
+  await call("POST", `/library/changes/${sup.body?.id}/withdraw`, { note: "Done with this B83 check." });
+  await plain(USCARD);
+  // Whom-about: an approved change that only said whom a kept fact is about, plus the field: it stays a real change.
+  if (startFacts.length) {
+    u = await askNew(USCARD, "B83 supplied about");
+    sk = keyOf("B83 supplied about");
+    sup = await proposeFacts([citeOf(startFacts[0], "spouse"), ...startFacts.slice(1).map((f) => citeOf(f)), citeOf(sk)]);
+    ap = await approve(sup.body?.id);
+    u = await withdraw(changeOf(sk));
+    row = changeRow(sup.body?.id);
+    ok("review N3 fail test (whom-about): a change of whom a fact is about is not lost or ended: it waits for a second person again", ap.status < 300 && row[0] === "WAITING", { row, ap });
+    await call("POST", `/library/changes/${sup.body?.id}/withdraw`, { note: "Done with this B83 check." });
+    await plain(USCARD);
+  }
+  // Another proposer's change: their change is narrowed too, and the history says whose.
+  u = await askNew(USCARD, "B83 supplied other");
+  sk = keyOf("B83 supplied other");
+  sup = await proposeFacts([...startFacts.map((f) => citeOf(f)), citeOf(addable), citeOf(sk)]);
+  sql(`update library_change set proposed_by = 'user-Z' where id = '${sup.body?.id}'`);
+  u = await withdraw(changeOf(sk));
+  ok("review N3: another person's change is narrowed, not ended, and the history names it", u.status < 300 && changeRow(sup.body?.id)[0] === "WAITING" && /taken out of Another person's change/.test(sql(`select summary from audit_event where entity = 'document type' and action = 'withdrawn' order by at desc limit 1`)));
+  sql(`update library_change set status = 'WITHDRAWN' where id = '${sup.body?.id}'`);
   await plain(USCARD);
 
   // Another form field reading it, the first reader there is.
@@ -298,7 +368,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
 
   const other = sql("select label from canonical_field where group_key = 'person' and status = 'PUBLISHED' and value_type not in ('yes_no','boolean') and label is not null and merged_into_key is null order by label limit 1");
   u = await ask(USCARD, { label: other, meaning: MEANS(other) });
-  ok(`F6 fail test: a name the library holds on a field that is not Yes/No ("${other}") is refused with words that fit: not "choose it"`, u.status === 409 && /not Yes or No/.test(words(u)) && !/choose it/.test(words(u)) && noKey(words(u)), u);
+  ok(`F6 fail test: a name the library holds on a field that is not Yes/No ("${other}") is refused with words that fit: not "choose it"`, u.status === 409 && /not answered Yes or No/.test(words(u)) && !/choose it/.test(words(u)) && noKey(words(u)), u);
   const before = (await list()).fields;
   ok("F8: the rows are in the form's order, page then data path", before.every((r, i) => !i || Number(before[i - 1].page ?? 999) <= Number(r.page ?? 999)), before.map((r) => r.page));
   await ask(USCARD, { field: lib.key });

@@ -115,7 +115,7 @@ const DRAFT_WORD: Record<string, string> = { document_type: "a document type", c
 /** Everything that reads a shared field now, in this workspace: the one list, so an undo, a withdrawal and their words agree.
  *  A question that only asks the field is left out: it goes with a withdrawn field (library-changes.ts). */
 export async function fieldReaders(db: Client, workspaceId: string, key: string): Promise<FieldReader[]> {
-  const named = new RegExp(`(?<![\\w.])${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w.])`);
+  const named = new RegExp(`(?<![\\w.])${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\w|\\.\\w)`);
   const reads = (x: unknown) => fieldsOf(x).includes(key);
   const r = await fieldUseRows(db, workspaceId);
   const out: FieldReader[] = [];
@@ -144,11 +144,11 @@ export async function fieldReaders(db: Client, workspaceId: string, key: string)
   for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (named.test(JSON.stringify(k.predicateJson ?? null))) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}` });
   for (const f of current(r.facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.canonicalFieldKey === key) out.push({ kind: "fact_source", name: `where this answer comes from ${on(f.combinationId)}` });
   for (const d of await db.derivedField.findMany({ where: { workspaceId, OR: [{ inputs: { has: key } }, { reference: key }] }, select: { plain: true } })) out.push({ kind: "worked_out", name: `the worked-out value "${d.plain ?? "with no words"}"` });
-  const open = await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, key: true, label: true, matches: true } });
+  const open = await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, key: true, label: true, status: true, matches: true } });
   const changing = new Set<string>();
   for (const c of open) {
     const after = (c.matches as { after?: unknown } | null)?.after;
-    if (c.kind === "document_supplies") { if (Array.isArray(after) && after.includes(key)) { changing.add(c.key); out.push({ kind: "waiting_supplies", name: `the change on To review "${c.label ?? "with no name"}"` }); } }
+    if (c.kind === "document_supplies") { if (Array.isArray(after) && after.includes(key)) { if (c.status === "APPROVED") changing.add(c.key); out.push({ kind: "waiting_supplies", name: `the change on To review "${c.label ?? "with no name"}"` }); } }
     else if (reads(after)) out.push({ kind: "waiting_change", name: `the change on To review "${c.label ?? "with no name"}"` });
   }
   const types = await db.documentType.findMany({ where: { workspaceId }, select: { documentTypeKey: true, name: true, version: true, status: true, suppliesFacts: true } });
