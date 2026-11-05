@@ -41,7 +41,9 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   const errors = (o?.draft?.problems ?? []).filter((p: { level: string }) => p.level === "error");
   // QA-206 (tech lead on #883): the sections the forms print no heading over stay waiting on To review, so the facts only
   // their boxes read are asked of nobody until a person names them: the honest block, each named.
-  const held = sql(`select payload->>'label' from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' order by payload->>'label'`).split("\n").filter(Boolean);
+  // Row 7 is written before row 9: the family form release 2 files drafts its sections after it, and row 9 says what those leave (B97).
+  const held = sql(`select payload->>'label' from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and coalesce(form_edition, '') not like 'IMM 5645 (%' order by payload->>'label'`).split("\n").filter(Boolean);
+  const heldOnRowNine = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and form_edition like 'IMM 5645 (%'`);
   // A form field no accepted section names is placed in the nearest one on its own form (form-part-placements.ts), so the
   // only facts left asked of nobody are those read on a form with no accepted section at all, every one of its sections
   // waiting for a name (IMM 5257 SCH1 prints no heading; review r8 M8: never a form with one held part among named ones).
@@ -59,6 +61,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Row 7: sections from the forms' own parts (rules, no AI), approved by a second person.
   // QA-206 (tech lead on #883): a held section is named only by print, or stays waiting and is named on the row.
   ok("QA-144 row 7: said in plain words (sections, questions, form fields, form lines); partial exactly while sections wait for a name, each named on the row", r("7").status === (held.length ? "partial" : "done") && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows) && held.every((h) => (r("7").why ?? "").includes(h)), { row: r("7"), held });
+  ok("QA-144 row 9 (B97): the family form's sections left waiting for a name are said on row 9, not lost after row 7 was written", !heldOnRowNine || /IMM 5645's sections left for a person: waiting for a name/.test(r("9").shows), { heldOnRowNine, shows: r("9").shows });
   ok("QA-144 row 7 (QA-206): no section was named by a made-up name: every section in the library carries a printed heading or a person's name, none a placeholder", n(`select count(*) from logical_section where title ilike 'unnamed section%'`) === 0 && n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work ? 'heading'`) === 0);
   ok("QA-144 rules pass: every Visitor visa form had its sections drafted by rules (no AI, US$0; IMM 5645 too once release 2 files it, B97)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
