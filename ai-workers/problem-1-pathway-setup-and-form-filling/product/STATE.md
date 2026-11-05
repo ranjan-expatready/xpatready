@@ -23,6 +23,22 @@ updated: 2026-11-06 02:35 IST by **Lead 19 · 6 Nov 02:07 IST** (new Claude acco
 
 Old account's sessions (Leads 15-18, row 12b lane, qa, watcher) are gone from the app; their work is on GitHub. Their worktrees stay on disk until unpushed checks: `quirky-bouman-0b534a` (#1052 merge `74dfdee40`, unpushed), `b82-checklist-facts-853da5` (qa files; unpushed merge `8cdc64863` on the old gate-A branch: leave it).
 
+## Added 02:35 IST (P-370)
+* **b99-12b** `local_1d938a5a-2159-472f-bd6e-3b948c250111` (Mac): phase 1 now, read-only (the three empty-read fields, checkpoint copies carrying values), then idle; phase 2 on the Lead's "go" after #1052 and #1125 are on `main`: four IMM 5257 copies → **Lead 19 runs Acrobat's Validate (grant is this session's only; hand over after it)** → read-back.
+* **#1125** queued; its approval came from the Ollama route: a Claude Opus re-review runs now; label off on a Blocker or Major.
+* Lead message cap: about 10 messages to sessions after the founder's last typed turn. Budget: B99 "go", fix-1052, qa, one take-over. Rulings go on PR comments.
+
+## Hourly plan (IST, 6 Nov; judgement, checked at each 30-minute check)
+| By | Expected | Slips if |
+|---|---|---|
+| 03:30 | #1125 merged (Opus re-review clean); fix-1052 has the cause; qa mid-walk; B99 phase 1 pushed; B115 and B104 pushing | re-review finds a Major; cloud lanes never push |
+| 04:30 | qa verdicts on C4.5, C4.6, C4.11 → up to **59/60**; #1052 fix reviewed, labelled, in the queue | qa finds a new exit-list fault |
+| 05:30 | #1052 on `main` (about 1 h of queue CI); B115 retargeted to `main`, reviewed | #1052's cause is outside #1052 |
+| 06:30 | B99 phase 2: four copies generated; Lead's Acrobat Validate done; read-back running | Validate stops at a new field (then fix and repeat, about 1 h each) |
+| 08:00 | B99 and B115 approved, labelled, in the queue | |
+| 09:30 | both on `main`; qa walks C10.1 on `main`; fresh verdict. P-360 check | |
+| 10:00-13:00 | **60/60** (best about 10:00, likely by 13:00) → M3 sprint starts at the founder's next typed message (the app starts no sessions from timer turns) | |
+
 ## Next (in order)
 1. #1125 lands; label #1128 when the queue is idle.
 2. qa's verdicts: C4.5, C4.6, C4.11 → up to 59/60.
@@ -39,7 +55,7 @@ Old account's sessions (Leads 15-18, row 12b lane, qa, watcher) are gone from th
 **Lead 19** (this session, new account) · standbys Lead 20, Lead 21 · Lead 18 (Ollama, ended 02:20 IST) · Leads 1-17 on earlier accounts. Hand over at about 400k (P-314).
 
 ## Founder asks of 6 Nov (A176-A198: `history/STATE-2026-11-06-0220-lead18.md`)
-**A199** (~02:07 IST) what was done on the other account and what not; why M2 keeps failing (58 → 57); too many tokens; M2 in 3-4 hours, M3 in 24; strategy with lanes, standbys, cloud; what is needed from him; speed first without lowering quality: answered in chat; lanes started; P-369 ✓ · **A200** (~02:20) connected to his GitHub repo? Yes: fetch and API reads work from the Mac; the GitHub plugin inside Claude fails to connect (not used); cloud proven by the first cloud lane's push ✓ · **A201** (~02:25) M3 tonight: "B104 now, sprint at 60" (P-369) ✓
+**A199** (~02:07 IST) what was done on the other account and what not; why M2 keeps failing (58 → 57); too many tokens; M2 in 3-4 hours, M3 in 24; strategy with lanes, standbys, cloud; what is needed from him; speed first without lowering quality: answered in chat; lanes started; P-369 ✓ · **A200** (~02:20) connected to his GitHub repo? Yes: fetch and API reads work from the Mac; the GitHub plugin inside Claude fails to connect (not used); cloud proven by the first cloud lane's push ✓ · **A201** (~02:25) M3 tonight: "B104 now, sprint at 60" (P-369) ✓ · **A202** (~02:25) Mac stays awake; signed in to claude.ai (verified: claude.ai/code reads as text); Acrobat approved up front (granted to Lead 19 ~02:25 IST); check what Ollama changed, overnight lessons, approvals up front, hourly plan: P-370, plan above ✓
 
 ## Lessons (5 Nov lessons: earlier page in history)
 * Why M2 stalled 16 hours (P-360's evidence): stacks of about 8,700 lines open 14-15 hours; batches failing when PRs were first combined; qa finding real Majors at the gate; records PRs outnumbering product PRs 34 to 19; two account switches and the Ollama detour. Small PRs that land fast and walks on `main` are the fix (P-360).
