@@ -117,19 +117,18 @@ export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor,
       if (qualifies(sec)) continue;
       try { await studio.selectSection(author, id, sec, false); out.unselected.push(`${sec} (on ${nameOf.get(id)})`); } catch (err) { out.refused.push(`unchoose section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
     }
-    if (id !== combinationId) continue;
-    for (const sec of touched) {
+    if (id === combinationId) for (const sec of touched) {
       if (chosen.has(sec) || !qualifies(sec)) continue;
       try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
     }
     // B78 (review M3): BR-8 opens a case only when a chosen section asks each person something (engine/programs.ts). Its
-    // person facts may already sit in sections another combination's run placed them in, which this run did not touch, and
-    // then only sections about the application are chosen here: the first section everyone answers anyway is chosen too.
-    const nowChosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId }, select: { sectionKey: true } })).map((x) => x.sectionKey));
+    // person facts may already sit in sections another combination's run placed them in, or that run may just have unchosen
+    // its one such section above: then the first section everyone answers anyway is chosen too, so its cases still open.
+    const nowChosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId: id }, select: { sectionKey: true } })).map((x) => x.sectionKey));
     const asksEachPerson = (sec: string) => live.some((q) => q.sectionKey === sec && !isFilingFact(q.canonicalFieldKey, q));
     if (![...nowChosen].some(asksEachPerson)) {
       const sec = [...new Set(live.map((q) => q.sectionKey))].sort().find((x) => asksEachPerson(x) && qualifies(x));
-      if (sec) { try { await studio.selectSection(author, combinationId, sec, true); out.selected.push(sec); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); } }
+      if (sec) { try { await studio.selectSection(author, id, sec, true); out.selected.push(id === combinationId ? sec : `${sec} (on ${nameOf.get(id)})`); } catch (err) { out.refused.push(`section ${sec}: ${String((err as Error).message).slice(0, 200)}`); } }
     }
   }
 }
