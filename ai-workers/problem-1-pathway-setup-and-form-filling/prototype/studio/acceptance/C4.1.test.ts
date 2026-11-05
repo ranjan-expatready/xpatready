@@ -37,14 +37,16 @@ run(async () => {
   // ---------------------------------------------------------------- section order per combination (P-216 (1))
   const order = () => sql(`select string_agg(section_key, ',' order by section_order) from sqr_section_selection where combination_id='${wp}'`).split(",").filter(Boolean);
   const o0 = order();
-  ok("setup: the combination has at least three chosen sections", o0.length >= 3, o0);
+  // qa lane, 5 Nov (#1050): two chosen sections are enough to prove the moves. A combination can rightly hold two: Express
+  // Entry's IMM 0008 address parts land in the shared "Contact information", so the Visitor visa unchooses it (review M2).
+  ok("setup: the combination has at least two chosen sections", o0.length >= 2, o0);
   const second = o0[1];
   const seenNow = async () => ((await call("GET", `/combinations/${wp}/section-order`)).body?.order ?? []).map((x: any) => x.key);
   let r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up", seen: await seenNow() }, AUTHOR);
   ok("C4.1 pass: Move up puts the second section first", r.status < 300 && order()[0] === second, r.status >= 300 ? words(r) : order().slice(0, 3));
   r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up", seen: await seenNow() }, AUTHOR);
   ok("C4.1 fail: the first section cannot move up (409, in words)", r.status === 409 && words(r).length > 10, words(r));
-  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(o0.at(-1)!)}/move`, { direction: "down", seen: await seenNow() }, AUTHOR);
+  r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent((await seenNow()).at(-1)!)}/move`, { direction: "down", seen: await seenNow() }, AUTHOR);
   ok("C4.1 fail: the last section cannot move down (409)", r.status === 409, words(r));
   r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "sideways", seen: await seenNow() }, AUTHOR);
   ok("C4.1 fail: a direction other than up or down is refused (400, in words)", r.status === 400, words(r));
