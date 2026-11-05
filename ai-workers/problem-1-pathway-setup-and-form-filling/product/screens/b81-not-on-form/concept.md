@@ -44,3 +44,10 @@ States: loading, a read error with Retry, no such field (the section is absent),
 2. Two values on one code: keep refusing (finding 2)? Recommended: yes.
 3. `married` on Applicant and Spouse: no mark and no pick; those boxes stay off the map until the expert answers, outside this row? Recommended: yes.
 4. A value refused at filling does not hold filing (BR-4)? Recommended: yes, shown to the officer, the expert's question recorded.
+
+## Tech lead's ruling (Lead 11, 5 Nov, on #1057)
+Approved: all four as recommended. `married` on Applicant and Spouse goes to row B90. The reading fix counts as C3.8, so the PR names C3.8 with its pack shown green. The door stays general: B79a (#1050) marks IMM 0008 DEP through it, so it is tested on that form too.
+
+## Build discoveries
+* A form's panel opens only for the author today (`canAuthor`), so "read-only" is reached only if that changes; the controls still carry the reason.
+* A box the form marks required stays on the open list when its answer is refused (`engine/runtime/mandatory.ts`): the form's own Validate would refuse it blank. Ruling 4 is met on IMM 5645 (no required fields). IMM 0008 DEP's marital box may differ: B79a should read it.
