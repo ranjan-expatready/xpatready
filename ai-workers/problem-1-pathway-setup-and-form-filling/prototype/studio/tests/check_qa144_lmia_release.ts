@@ -96,7 +96,9 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
   // there is nothing to unchoose, and it is not chosen at the end either (the invariant R1-m4 guards).
   ok("QA-144 R1-m4 pass: the IRM 0002 fact's section, once chosen on the Visitor visa, is unchosen by the Visitor visa's own step, before With an LMIA's first selection (or was never chosen there)", rfSec !== "" && lmFirst !== "" && (vvAdded === "" ? vvRemoved === "" : vvRemoved !== "" && vvRemoved < lmFirst)
     && n(`select count(*) from sqr_section_selection where combination_id = '${vv}' and section_key = '${rfSec}'`) === 0, { rfSec, vvAdded, vvRemoved, lmFirst });
-  ok("QA-144 R2-m1 fail-guard: the Visitor visa keeps chosen sections (C4.1 can still order them)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3);
+  // QA-144 slice 4 (qa's ruling on #1050, P-314): two are enough for C4.1's order (its pack reads the current last
+  // section); Express Entry's IMM 0008 address parts make the Visitor visa unchoose "Contact information" (review M2).
+  ok("QA-144 R2-m1 fail-guard: the Visitor visa keeps chosen sections (at least two: C4.1 can still order them)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 2);
 
   // K1 and its list values: a form field no saved answer proposed is filled by hand; IMM 5710's own marital codes.
   ok("QA-144 slice 2 K1 pass: IMM 5710's form fields no saved answer proposed are filled by hand, with the rule's words", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IMM 5710 (%' and m.outcome = 'by_hand' and m.reason like 'Not proposed by the saved AI answer%'`) > 0);

@@ -81,7 +81,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Review M2: a section is chosen only when every applying person answers all of it anyway (C4.1 orders the chosen
   // ones); every other placement goes out because a form or a rule reads its fact, and only to whom it applies. A child
   // aged 1 is asked nothing only because a section is chosen, and no representative's licence facts.
-  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least three, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3
+  // QA-144 slice 4 (qa's ruling on #1050, P-314): at least two, enough for C4.1's order since its pack reads the current
+  // last section. Express Entry's IMM 0008 puts its address parts in the shared "Contact information" section, so the
+  // Visitor visa unchooses it (review M2: no visitor is asked them); three were only for a fixed position.
+  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least two, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 2
     && n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) < n(`select count(distinct section_key) from section_question where updated_by = 'user-A'`), sql(`select string_agg(section_key, ',') from sqr_section_selection where combination_id = '${vv}'`));
   const pv = (await call("GET", `/combinations/${vv}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify({ "child-1|person.date_of_birth": "2025-03-01" }))}`)).body;
   const toddler = ((pv?.questions ?? []) as { fact: string; about: string; why?: string; required?: boolean }[]).filter((q) => q.about === "child-1");
