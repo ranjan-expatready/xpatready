@@ -1,7 +1,8 @@
 // B115 (QA-271; C6.1, C11.12; P-319): a person adds the sponsor by screens. On a copy with the configured checkpoint
 // (Family sponsorship › Spouse or common-law partner released, #1052), the case officer opens a case on it by the
-// "Open a case" dialog, sees one Add button per role the release lists (Add sponsor, Add child, Add representative;
-// no "Add spouse or partner": the principal is the sponsored spouse), adds the sponsor, and IMM 1344 and IMM 5532 appear
+// "Open a case" dialog, sees one Add button per role the release lists (Add sponsor, Add child; no "Add spouse or
+// partner": the principal is the sponsored spouse; no "Add representative": the case team's representative of record,
+// C7.7, review M1), adds the sponsor, and IMM 1344 and IMM 5532 appear
 // for the sponsor on Prepare application and in GET /runtime/cases/:id/forms. Fail lines: before the sponsor, neither
 // form is on the case; a second sponsor is refused in words in the dialog (the release allows 1); a Visitor visa case
 // offers no Add sponsor (its release lists no sponsor). axe-core (WCAG 2.2 A/AA) and no sideways scroll at 1440 px;
@@ -72,9 +73,10 @@ const shot = async (p, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: 
     const id = await openCase(FS_OPTION, `B115-${run}`);
     const view = (await api(`/runtime/cases/${id}`)).body;
     const lines = (view?.can_add ?? []).map((r) => r.role);
-    ok("B115 pass (data): the case view lists the roles its release lets a person add, sponsor first, never the principal", JSON.stringify(lines) === JSON.stringify(["sponsor", "child", "representative"]), view?.can_add);
+    ok("B115 pass (data): the case view lists the roles its release lets a person add, sponsor first, never the principal or the representative", JSON.stringify(lines) === JSON.stringify(["sponsor", "child"]), view?.can_add);
     const buttons = await addButtons();
-    ok("B115 pass (P-319): the Add buttons are the release's roles, in its words: Add sponsor, Add child, Add representative", JSON.stringify(buttons) === JSON.stringify(["sponsor|Add sponsor", "child|Add child", "representative|Add representative"]), buttons);
+    ok("B115 pass (P-319): the Add buttons are the release's roles, in its words: Add sponsor, Add child", JSON.stringify(buttons) === JSON.stringify(["sponsor|Add sponsor", "child|Add child"]), buttons);
+    ok("B115 fail (review M1, C7.7): no \"Add representative\": the representative comes from the case team, never added as a person", (await p.getByRole("button", { name: /Add representative/ }).count()) === 0);
     ok("B115 fail (P-319): no fixed \"Add spouse or partner\" on a combination whose release lists no spouse line", (await p.getByRole("button", { name: /Add spouse or partner/ }).count()) === 0);
     const before = (await formsOf(id)).map((f) => f.form);
     ok("B115 fail: before the sponsor is added, neither IMM 1344 nor IMM 5532 is on the case", !before.includes("IMM 1344") && !before.includes("IMM 5532"), before);
@@ -93,7 +95,8 @@ const shot = async (p, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: 
     await p.getByText("Sponsor added: their questions are now asked").waitFor(T);
     const chip = p.locator("section[aria-labelledby=people] li", { hasText: "Sample Sponsor A" });
     await chip.waitFor(T);
-    ok("B115 pass: the sponsor is listed on the case in the release's words (Sponsor), not travelling", /Sponsor/.test(await chip.innerText()) && /Not travelling/.test(await chip.innerText()), await chip.innerText());
+    ok("B115 pass: the sponsor is listed on the case in the release's words (Sponsor), sent with the principal's application", /Sponsor/.test(await chip.innerText()) && /Sent with the principal's application/.test(await chip.innerText()), await chip.innerText());
+    ok("B115 fail (review m1): the sponsor carries no \"Not travelling\" pill (that pill says they are asked only what the principal's forms need)", !/Not travelling/.test(await chip.innerText()), await chip.innerText());
     const sponsor = (await api(`/runtime/cases/${id}`)).body?.people?.find((x) => x.role === "sponsor");
     const after = await formsOf(id), mine = after.filter((f) => f.subject_id === sponsor?.subject_id).map((f) => f.form);
     ok("B115 pass (data): IMM 1344 and IMM 5532 are on the case for the sponsor", mine.includes("IMM 1344") && mine.includes("IMM 5532"), after.map((f) => `${f.form}:${f.person}`));
@@ -134,7 +137,7 @@ const shot = async (p, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: 
     // 2. Visitor visa: its release lists no sponsor, so no Add sponsor (choices from the release, never a fixed list).
     const vv = await openCase(VV, `B115V-${run}`);
     const vvButtons = await addButtons();
-    ok("B115 fail (P-319): a Visitor visa case offers no Add sponsor; its buttons are its release's roles", vvButtons.length > 0 && !vvButtons.some((b) => b.startsWith("sponsor|")) && vvButtons.some((b) => b.startsWith("spouse_or_partner|Add spouse or partner")), vvButtons);
+    ok("B115 fail (P-319): a Visitor visa case offers no Add sponsor and no Add representative; its buttons are its release's roles", JSON.stringify(vvButtons) === JSON.stringify(["spouse_or_partner|Add spouse or partner (travelling)", "child|Add child (travelling)"]), vvButtons);
     const r = await fetch(`${BASE}/api/runtime/cases/${vv}/people`, { method: "POST", headers: { "x-actor": "user-O", "content-type": "application/json" }, body: JSON.stringify({ role: "sponsor", displayName: "Sample Sponsor V" }) });
     ok("B115 fail (route agrees with the screen): adding a sponsor to the Visitor visa case is refused (422)", r.status === 422, r.status);
   } catch (e) {

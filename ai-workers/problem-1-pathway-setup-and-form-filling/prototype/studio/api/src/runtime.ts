@@ -15,7 +15,7 @@ import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from 
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
-import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
+import { openingTeam, REPRESENTATIVE, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
@@ -42,6 +42,10 @@ const roleWords = (p: Pick<PeopleLine, "role" | "label">) => p.label ?? p.role.r
 /** B115 (P-319): who a person may add to a case: every role the pinned release lists with a maximum above 0, never the
  *  principal applicant or the application itself. One list for the case page's Add buttons and addPerson's check. */
 export const addableRoles = (s: Snapshot) => linesOf(s).filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0);
+/** B115 review M1 (C7.7): the case page's Add buttons. The representative is the case team's representative of record,
+ *  read from the firm record (engine/runtime/team.ts: "A case has no representative participant"), so the screen never
+ *  offers to add one as a person; every other role comes from the release (P-319). */
+export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
@@ -133,14 +137,16 @@ export class Runtime {
     // C6.11: staff see the case team in the header (the client's screens come after M3, P-129).
     const team = isOfficer(actor) ? await this.teamLine(c.id) : undefined;
     const snapshot = this.snapshotOf(c), roleOfRelease = new Map(linesOf(snapshot).map((p) => [p.role, roleWords(p)]));
+    const coFiling = new Set(linesOf(snapshot).filter((p) => p.filingMode === "co_files").map((p) => p.role));
     return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
       // G13 (QA-140): the release in the studio's own words.
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
       // B115: each person's role in the release's own words (the sponsor has no fixed word on the screen).
-      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies })),
-      // B115 (P-319): the roles a person may add on this case, from its pinned release, with how many it has.
-      can_add: addableRoles(snapshot).map((p) => ({ role: p.role, label: roleWords(p), max: p.max!, has: c.participants.filter((x) => x.role === p.role).length })),
+      // B115 review m1: co_files marks the person whose application is always sent with the principal's (the sponsor).
+      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role) })),
+      // B115 (P-319): the roles the case page offers to add, from its pinned release, with how many the case has.
+      can_add: offeredRoles(snapshot).map((p) => ({ role: p.role, label: roleWords(p), max: p.max!, has: c.participants.filter((x) => x.role === p.role).length })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
       // C1.3: and, once picked, the employer case it relies on (its facts copied then, never updated later).
       ...(team ? { employer_link: { ...employerLinkOffer(snapshot), linked: await linkedOf(this.db, c.workspaceId, c.id) } } : {}) };

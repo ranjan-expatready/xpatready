@@ -17,7 +17,7 @@ import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
-export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean };
+export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean };
 /** B115 (P-319): a role a person may add to this case, from its pinned release; has = how many the case has now. */
 export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */

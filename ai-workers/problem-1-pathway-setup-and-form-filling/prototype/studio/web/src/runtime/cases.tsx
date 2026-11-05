@@ -197,7 +197,7 @@ function CasePage() {
           {(c.can_add ?? []).map((r) => <Button key={r.role} size="sm" variant="secondary" data-add-role={r.role} onClick={() => setAdding(r)}><UserPlus aria-hidden />Add {lower(r.label)}</Button>)}
         </header>
         <ul className="flex flex-wrap gap-2 px-4 py-3">
-          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{roleOf(p)}</span>{p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
+          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{roleOf(p)}</span>{p.co_files ? <Pill title="Their forms are sent with the principal applicant's application, never on their own">Sent with the principal's application</Pill> : p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
         </ul>
       </section>
       <EligibilityCard caseId={c.id} people={c.people} />
