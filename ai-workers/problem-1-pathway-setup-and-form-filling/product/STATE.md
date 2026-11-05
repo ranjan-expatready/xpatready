@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-05 08:53 IST by **Lead 10 · 5 Nov 02:31 IST (ended)** at about 425k tokens; **Lead 11 takes over** · milestone: **M2 — Super Admin configuration, with M3 alongside (P-344)** · rules: **`RULES.md`** (as of P-341; DECISIONS P-342 to P-345 are newer and win) · hand-over note: lead10-handover-2026-11-05.md in `side-session-notes/local_a8344098-6064-4f72-80d6-15342cda8b27/` · earlier STATE: git history
+updated: 2026-11-05 08:53 IST by **Lead 10 · 5 Nov 02:31 IST (ended)** at about 425k tokens; **Lead 11 takes over** · milestone: **M2 — Super Admin configuration, with M3 alongside (P-344)** · rules: **`RULES.md`** (as of P-341; DECISIONS P-342 to P-345 are newer and win) · hand-over note: lead10-handover-2026-11-05.md in the side-session notes folder lead10-saved-2026-11-05 · earlier STATE: git history
 
 ## Where we are
 * **M2: 58/60 on main (qa).** Confirmed since 02:31 IST: C3.4, C3.6, C9.1, C5.1, C4.5, C4.1. Left: **C4.11** (pack 24/24, held by B83 and B86) and **C10.1** (#1009, B81, B78, B79a, B79b). **M3: 1/17** on the table, qa re-scoring once (P-344 (2)).
@@ -47,5 +47,6 @@ updated: 2026-11-05 08:53 IST by **Lead 10 · 5 Nov 02:31 IST (ended)** at about
 * Check Mac memory and disk before starting local sessions: four new copies took disk to 3.3 GB.
 * A cleanup must tell the lanes first: removing qa's scratch `wtrec13` led to a local commit in qa's main copy (undone, never pushed).
 * Two rows that fail the same way across runs can be a tied sort: list ids flipped 3 in 7 on `started_at` (QA-236). Same tie at `demo.ts:595`.
+* Archiving Lead 5 removed its side-session notes folder (a copy was made first): keep hand-overs in the side-session notes folder lead10-saved-2026-11-05.
 * Long lanes burn the most: S2 reached 960k tokens. A context figure must be measured with `get_usage`; "90%" repeated for hours was 65%.
 * Write what happened after it happens: two "card proposed" lines and a guessed "06:45" were wrong.
