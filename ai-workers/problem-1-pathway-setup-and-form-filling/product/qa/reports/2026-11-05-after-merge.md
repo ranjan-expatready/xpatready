@@ -59,7 +59,7 @@ The checklist reading lands Visitor visa lines whose conditions read three facts
 ## Batch 21 — #967 (B52, QA-227) · main adc904436 · ~05:50–06:15 IST
 | Row | Verdict | Evidence |
 |---|---|---|
-| C4.11 (M2) | Partial, 23/24 on the six (run 41944044725) | G5 red (Ready gap, #865's lane); new QA-234 (Major): the own-question step has no screen |
+| C4.11 (M2) | Partial, 23/24 on the six (run 41944044725) | G5 red (Ready gap; owner B73, after #865 and B74); new QA-234 (Major; row B83): the own-question step has no screen |
 | C7.7, C6.11 (M3) | Partial (unchanged) | QA-227 closed; other Majors remain |
 
 **Closed:** QA-227 (`check_b52_own_yes_no.ts` 52/52 on a fresh copy of main). **New:** QA-234. **M2: 58/60.** Left: C4.11, C10.1.
