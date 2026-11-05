@@ -50,3 +50,34 @@ Sections page: axe WCAG 2.2 AA no violations; no sideways scroll at 400, 1024 or
 
 ## Could not test
 A real screen reader, an intended user's unaided walk (D17 and D20 stay with the founder), a client's own questionnaire screen, 200 % zoom, and break-it cases on the naming box, which B78 does not change.
+
+---
+
+# Round 3: commit 9590c86fa
+
+**Method limits:** no walk by me. Judged from the builder's 1440 px images in `walk/` and GitHub run 41976726207, on the tech lead's load rule. No break-it pass.
+
+| # | Journey | Result |
+|---|---|---|
+| 1 | Author: load the checkpoint, row 7 done | **Held** on GitHub: nightly 41976732979's non-done list has no row 7 |
+| 2 | Author: name a section what the library holds | **Held:** walk images 5 and 6, browser check 14/14 on GitHub |
+| 4 | Author: a named section has its questions | **Held:** image 1 (Contact information 10, Employment 13), image 3 (Coming into Canada, 6 questions). 7 named sections still hold none, with no next step |
+| 5 | Across the boundary: asked in the right place | **Held for the four pinned facts:** `check_qa144_vv_release.ts` 34/34. Image 4 shows a Worker a study heading (review, finding b) |
+| 10 | Case officer: open a case on the Study permit | **Failed:** `check_b52_own_yes_no.ts:152`, review M3 |
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | ½ | Names reach the questionnaire; no case opens on the Study permit (M3) |
+| Next step obvious | ½ | 7 named sections show 0 questions and no step |
+| Plain words | ½ | Round 1's wording fixed; a raw key in one toast, a fragment name, a study heading for a Worker |
+| Feedback and state | ½ | A join is now told; "waiting" stays on approved items (pre-existing), the Notice stays generic (m11) |
+| Correct data | 1 | Pages fixed; pinned facts in their sections on GitHub |
+| Error recovery | 1 | No entry stays waiting; Undo of a join tested |
+| Accessibility and screen sizes | ½ | axe on the panel; keyboard, 200 % and other widths not proved this round |
+| Speed | ½ | Not measured this round |
+| Visual quality | 1 | Same components in every image |
+| Trust and sources | ½ | Source on each decision; the row still says "No source recorded" and "AI-proposed" |
+
+**Score: 6.5 / 10. Below the pass of 8 (no criterion at 0).** It reads 7 once M3 is fixed. Next most valuable after that: say why a named section holds no question, then the row's source and origin words, then a keyboard and speed walk.
+
+**Could not test:** a real screen reader, an intended user's unaided walk (D17, D20), a client's own questionnaire screen, and the Study permit in a browser.

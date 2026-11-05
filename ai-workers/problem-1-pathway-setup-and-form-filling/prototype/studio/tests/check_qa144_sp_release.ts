@@ -18,9 +18,9 @@ const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const n = (q: string) => Number(sql(q));
 // node:http, not fetch: the load can take more than fetch's 300 s header wait on a busy machine.
-const call = (method: string, path: string, body?: unknown) => new Promise<{ status: number; body: any }>((done, fail) => {
+const call = (method: string, path: string, body?: unknown, actor = "user-A") => new Promise<{ status: number; body: any }>((done, fail) => {
   const data = body === undefined ? undefined : JSON.stringify(body);
-  const rq = request({ host: "localhost", port: PORT, path: `/api${path}`, method, headers: { "x-actor": "user-A", "content-type": "application/json", ...(data ? { "content-length": Buffer.byteLength(data) } : {}) } }, (r) => {
+  const rq = request({ host: "localhost", port: PORT, path: `/api${path}`, method, headers: { "x-actor": actor, "content-type": "application/json", ...(data ? { "content-length": Buffer.byteLength(data) } : {}) } }, (r) => {
     let t = ""; r.setEncoding("utf8"); r.on("data", (c) => (t += c)); r.on("end", () => { let b: any = null; try { b = JSON.parse(t); } catch { /* not JSON */ } done({ status: r.statusCode ?? 0, body: b }); });
   });
   rq.on("error", fail); if (data) rq.write(data); rq.end();
@@ -102,6 +102,12 @@ type Question = { fact: string; about: string; why?: string };
   ok("QA-144 slice 3: person.marital_status keeps the Visitor visa's list (a second combination's list waits on To review)", sql(`select answer_list_key from canonical_field where canonical_field_key = 'person.marital_status' order by version desc limit 1`) === "marital_status");
   const codeOf = (edition: string) => sql(`select m.option_map->'map'->>'legally_separated' from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = '${edition}' and m.data_path = 'form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]' and m.status <> 'RETIRED' order by m.version desc limit 1`);
   ok("QA-144 slice 3: IMM 1294's \"Separated\" takes code 05, the code IMM 5257 gives \"Legally Separated\" on the same IRCC list", codeOf("IMM 1294 (06-2026)") === "05" && codeOf("IMM 5257 (09-2023)") === "05", [codeOf("IMM 1294 (06-2026)"), codeOf("IMM 5257 (09-2023)")]);
+  // B78 (review M3; engine/programs.ts personQuestions): the study permit's Student is asked the facts its forms read, so a
+  // case opens on the release, though the one chosen section holds only questions asked once for the application.
+  const opened = await call("POST", "/runtime/cases", { combinationId: sp, reference: `B78-sp-${Date.now()}`, clientActor: "user-P", principal: { displayName: "Sample Client (Sample)" } }, "user-O");
+  ok("B78 pass (review M3): a case opens on the study permit's release: no false \"No questions yet for Student\"", opened.status < 300 && !!opened.body?.id, opened.body?.missing ?? opened.status);
+  const pvSp = (await call("GET", `/combinations/${sp}/preview`)).body;
+  ok("B78 pass (review M3): the Student really is asked: Preview lists the principal's questions", ((pvSp?.questions ?? []) as { about: string }[]).filter((q) => q.about === "principal").length > 50);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();

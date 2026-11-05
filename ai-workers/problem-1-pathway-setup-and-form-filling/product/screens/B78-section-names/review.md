@@ -128,3 +128,68 @@ New:
 Not re-walked (no server). **Score stays 6.5/10, on b17da354b**, below the bar of 8. Steps 4 and 5 now look fixed by CI and the replay, but no one has walked them on this commit.
 
 **Verdict: Block** (changes needed). Fix M2 and rerun all shards; m4, m7, m8 and m9 are worth the same pass. Reviewed: 28483c59a.
+
+---
+
+# Round 3: 9590c86fa (diff 28483c59a..9590c86fa only)
+
+**Commit reviewed: 9590c86fa.** The code is at e7a027164; 9590c86fa adds only 6 images under `walk/`. **Method:** code read, the walk's images, and GitHub run 41976726207 at this commit with its logs. No server, no other copy's database. **Verdict: Block** (changes needed). One new Major, M3.
+
+## Blockers
+None.
+
+## Majors
+**M3 (new): CI is red, and a case cannot be opened on the Study permit.** Run 41976726207, shard 6: `tests/check_b52_own_yes_no.ts` fails at `:152`, inside `caseFor` (`:138`), with `TypeError: Cannot read properties of undefined (reading 'find')`. The line before it passed for `wp.lmia_inside`, so the case that fails is `sp.outside`. `POST /runtime/cases` gave no case, so `GET /runtime/cases/undefined` had no `people`.
+- **It comes from this PR, not from main or chance.** The suite passes 52/52 on this branch at b17da354b (run 41969838547), on the merge queue at 0dc8feac0 and ee9213109 (41975378111, 41975164242), and on three other PRs in the same hours (41976562578, 41976135410, 41973499207). At 28483c59a the same shard was cancelled, so this is the first result since the M1 fix. Attempt 1 only; no rerun.
+- **Likely cause, by reading:** `createCase` refuses a release that fails `startableMissing` (`api/src/runtime.ts:92`). `personQuestions` (`engine/programs.ts`) counts only placements in chosen sections, and none gives "No questions yet for <role>". The M1 fix moved the Student's facts into named sections that are not chosen. The log does not print the refusal's words, so this is not measured.
+- **Why nothing else saw it:** this is the only suite that opens a case on the Study permit (`grep` of `tests/` and `acceptance/`). `check_qa144_sp_release.ts` passes 24/24 at this commit because it proves the release, not that a case opens. The walk covers With an LMIA only.
+- **Fix:** make the Study permit startable and rerun all shards. Keep a line that a case opens on it.
+- **Seen while I wrote this, not reviewed:** uncommitted edits appeared in this copy (`engine/programs.ts`, `tests/check_screen01_rules.ts`) changing `personQuestions` so a form-read fact counts. They agree with this cause. They change the startable check for every combination, so they need their own look once pushed.
+
+## The round 2 list
+| Item | Result | Evidence |
+|---|---|---|
+| M2 guard red and weak | **Fixed** | `check_qa144_vv_release.ts` 34/34 at this commit (shard 1). The titles became four named facts in named sections |
+| m4 line 3 claims more | **Fixed** | Its regex now needs `page N) (Sample…)`, and NULL fails. The form's name comes from the one reason template in `section-names.ts`; the regex does not read it |
+| m7 miscount | **Fixed** | `demo.ts` counts from `landed.joined`, so every held row counts the same. By reading: no test takes a printed-heading twin |
+| m8 not told | **Fixed** | `proposals.tsx:162`, walk image 6, `check_forms_qa206_name_browser.cjs` 14/14 on GitHub too (shard 3), `joined === true` in `check_forms_qa206_section_headings.ts` 47/47. See m10, m11 |
+| m9 stale comments | **Fixed** | Both reworded. `proposals.ts:321` still says "always", but that function returns false for anything but a field, so it is true there |
+
+## `joined`, the message, the loader
+No defect in the field or the loader. `joined` is set only where `namedTwin` lands the row, it is sent only when true, and it stays inside each row's loop, so plain accepts and new sections are unchanged. No other reader of `landedAs` is affected. The loader's count now comes from the same `decide` result, not a second lookup.
+
+New minors, both on the message:
+- **m10. "so its form fields are asked there" promises more than the rule gives.** A fact sits in the section of the first form that reads it, and the placement step places only unplaced facts. So facts already placed do not move, and 7 named sections hold none. Fix: "so this part joins it; nothing new was added."
+- **m11. The Notice beside it stays generic.** Walk image 6 shows "New library items wait for a second person on To review" after a join that added nothing and queued nothing (`proposals.tsx:144`). The toast goes away; this line stays for the Undo window. Fix: leave the line out when `joined`.
+
+Pre-existing, on the same screen: a new section's toast shows a raw key, "It landed as applicant_and_application_details".
+
+## Do the pinned facts tell fixed from old?
+**Yes, by reading; I did not run the old code against them.** Under the old rule an `edited` row is not read (`form-part-placements.ts:50-52`), and a named part's placeholder label misses `byTitle`. So a fact can never land in a section that only a naming edit brought in.
+| Pinned fact | Its box | Section | Old rule |
+|---|---|---|---|
+| `person.original_entry_date` | IMM 5710 `ComingIntoCda` | Coming into Canada | Round 1 measured 0 questions there. Walk image 3 shows it now |
+| `case.subject_is_principal_applicant` | IMM 5257 SCH1 `PrincipalApplicant` | Indicate whether you are | Round 1 measured it under "Previous travel" |
+| `relationship.other_documentary_evidence` | IMM 5409 `Section4` | Other documentary evidence | The name comes only from the names file, so it cannot be reached |
+| `case.representative_form_action` | IMM 5476 `appoint`, `cancel` | Appointing or cancelling a representative | Same |
+
+`string_agg` also fails on a fact placed twice or not at all, and CI proves the fixed side. One limit: all four are newly named sections, so a fact landing in a section the part joined is not pinned. Line 2 proves the row lands there, and placement reads that same key.
+
+## The builder's two findings
+- **(a) "New: waiting for a second person" on APPROVED: follow-up, not a Major for this PR.** Confirmed: `OPEN` includes APPROVED (`library-items.ts:20`), and `ItemStatusNote` tests only `action === "ADD"` (`library-item-actions.tsx:112`), so it says waiting whatever the status. A RETURNED ADD gets the same words. This dates from C11.9 (1 Nov), and B78 touches neither file. On its own it is a real state error on a main list and should have its own row; I found none in `BACKLOG.md` or `STATE.md`.
+- **(b) A Worker sees "Details of intended study in Canada · 1": follow-up, not a Major for this PR, but the stated cause is half right.** IMM 5710 is why a Worker is asked. The section comes from IMM 1294: `case.caq_number` is in `Page3.Contacts_Row1`, one of B78's 29 parts. IMM 5710's own box is in `DetailsOfWork`. So B78 now gives the reason, an exact box, but by reading not a new result: on main the part is unnamed and the nearest-box rule ties on `form1[0].Page3[0].`, which is the tie round 1 measured sending `person.alt_phone_number` to this section. Not measured on main. It needs a tech lead ruling, because one placement per fact in a shared section puts a study heading in front of a Worker.
+
+## Merge and other CI
+- **Merge:** clean with origin/main at d236e3e28, 26 commits ahead (`git merge-tree`, no conflict). Main's studio changes since the merge base are C11.6 and one acceptance test, in no file B78 touches. PR #1062 has no label.
+- **Passing at this commit:** types, shards 1 to 5; `check_qa144_lmia_release.ts` 23/23, `check_qa144_sp_release.ts` 24/24, `check_c10_1_configured.ts` 38/38, `check_c10_1_browser.cjs` 12/12, `check_b78_section_names.ts` 9/9.
+- **Nightly at this commit (41976732979, 41976735799):** C4.8, C9.1, C4.1, C4.7, C3.4 pass. C10.1 is 21/24 on the same three lines as before; its non-done list is `2 out, 9 waiting, 10 partial, 12 partial`, so row 7 is done.
+- **C4.8's 7/12 at 28483c59a is not B78's:** main fails on the same lines (41975737148), and it passes in another run of the same commit.
+
+## Journey
+**6.5/10 at this commit, re-judged from the images and CI, not walked by me;** below the bar of 8. The total matches round 1, for different reasons: the placement faults are gone, and task completed stays ½ because of M3. It reads 7 once M3 is fixed. Still unproved: keyboard, 200 % zoom, speed, a client's own questionnaire screen, and anything on the Study permit in a browser. Report: `journey-test-reviewer-2026-11-05.md`, Round 3.
+
+## Could not check
+- The words of the refusal behind M3, and whether a rerun repeats it: no server, and I did not rerun CI.
+- D1 to D20 were not re-scored and the graph tool was not run (it writes `qa/GRAPH.md`). No new page or route in this diff.
+
+**Verdict: Block** (changes needed). Fix M3 and rerun all shards. m10 and m11 are worth the same pass; (a) and (b) go to the tech lead as follow-ups. Reviewed: 9590c86fa. Any later push needs a new look.

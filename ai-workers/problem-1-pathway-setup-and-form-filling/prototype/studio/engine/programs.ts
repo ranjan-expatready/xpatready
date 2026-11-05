@@ -20,10 +20,11 @@ const applicants = (ps: Participant[]) => ps.filter((p) => p.role !== "represent
 const isCaseLevel = (p: { repeats: string; fact: string }) => isFilingFact(p.fact, p); // SH3 R5
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** Questions a person is asked: placements in the questionnaire's sections that are asked of each person. */
+/** Questions a person is asked: the snapshot's placements (a chosen section's, or a fact a form or rule reads: engine/
+ *  snapshot.ts) that are asked of each person. B78: a section need not be chosen: its fact goes out because a form reads it,
+ *  as Preview and a case ask it (Study permit: 90 questions for the Student, one chosen section of the application's). */
 function personQuestions(s: Snapshot) {
-  const selected = new Set((s.sections as { id: string }[]).map((x) => x.id));
-  return (s.placements as Placement[]).filter((p) => selected.has(p.section_id) && !p.rule_only && !isCaseLevel(p));
+  return (s.placements as Placement[]).filter((p) => !p.rule_only && !isCaseLevel(p));
 }
 
 /** Where the row's setup stands (draft): forms attached as sources and not set up yet, and what moves them on. */
