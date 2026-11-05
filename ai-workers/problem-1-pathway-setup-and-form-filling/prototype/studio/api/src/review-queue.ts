@@ -8,7 +8,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
-import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView, roleView } from "./library-changes.ts";
+import { KIND_NOUN, actionWord, unapprovedWhy, acceptsView, roleView, unapprovedOf } from "./library-changes.ts";
 import { fillsView } from "./who-fills.ts";
 import { conditionView, COND_KIND } from "./question-condition.ts";
 import { suppliesView, suppliesWords } from "./document-supplies.ts";
@@ -185,7 +185,7 @@ export class ReviewQueueService {
         const changes = (s.changeSummary as unknown[]).length, href = `/c/${s.combinationId}/review`;
         const base = { id: `submission:${s.id}`, kind: "release" as const, title: c?.path ?? "A combination", by: nameOf(s.submittedBy), at: s.submittedAt.toISOString(), cost_usd: null, forms: formsOfCombination(s.combinationId), combination: s.combinationId };
         // Review Must 1: the same new-field check as both release routes, so "Release" is never offered on a refusal.
-        const unapproved = gate.ok ? await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(s.combinationId) as { snapshot: Snapshot }).snapshot)) : [];
+        const unapproved = gate.ok ? await unapprovedOf(this.db, workspaceId, (snaps.get(s.combinationId) as { snapshot: Snapshot }).snapshot) : [];
         if (unapproved.length) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. Not ready to release: ${unapprovedWhy(unapproved)}.`, state: "waiting" as const, waiting_on: "Its new shared fields are decided on To review first.", next: null });
         else if (gate.ok) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}; every change that needs a sign-off is signed. Ready to release.`, ...(holds(actor, "approve") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Release", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "An approver releases it: not the person who submitted it." : "An approver releases it.", next: null }) });
         else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author submits it again.", next: null }) });

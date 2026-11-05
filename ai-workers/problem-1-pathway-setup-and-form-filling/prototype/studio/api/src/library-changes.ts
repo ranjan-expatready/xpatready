@@ -228,6 +228,20 @@ export async function freeKey(db: Parameters<typeof fieldReaders>[0], workspaceI
     taken.add(key);
   }
 }
+/** Breaker M7 on B83: a document type in this draft supplying a new field still waiting: its release would publish a fact
+ *  nobody approved, which could then be withdrawn from under it. Said as any other unapproved item. */
+export async function waitingSupplied(db: Pick<Db, "libraryChange">, workspaceId: string, s: { canonical_fields: { id: string }[]; document_types: { supplies_facts?: string[] }[] }): Promise<Unapproved[]> {
+  const used = new Set(s.canonical_fields.map((f) => f.id));
+  const keys = [...new Set(s.document_types.flatMap((t) => t.supplies_facts ?? []))].filter((k) => !used.has(k));
+  if (!keys.length) return [];
+  const rows = await db.libraryChange.findMany({ where: { workspaceId, kind: "field", action: "ADD", key: { in: keys }, status: { in: ["WAITING", "RETURNED"] } }, select: { key: true, label: true, status: true } });
+  return rows.map((c) => ({ kind: "field" as const, key: c.key, label: c.label, status: c.status as Unapproved["status"] }));
+}
+/** What holds a combination's release: unapproved items it uses, and new fields its document types supply. */
+export async function unapprovedOf(db: Pick<Db, "libraryChange" | "canonicalField" | "logicalSection" | "documentType">, workspaceId: string, s: Parameters<typeof itemsOf>[0] & Parameters<typeof waitingSupplied>[2]) {
+  const out = await unapprovedAdds(db, workspaceId, itemsOf(s));
+  return [...out, ...(await waitingSupplied(db, workspaceId, s)).filter((w) => !out.some((o) => o.kind === w.kind && o.key === w.key))];
+}
 /** A withdrawn new field's key that something still reads. */
 export async function withdrawnStillRead(db: Parameters<typeof fieldReaders>[0], workspaceId: string, key: string) {
   return !!(await db.libraryChange.count({ where: { workspaceId, kind: "field", action: "ADD", status: "WITHDRAWN", key } })) && !!(await fieldReaders(db, workspaceId, key)).length;

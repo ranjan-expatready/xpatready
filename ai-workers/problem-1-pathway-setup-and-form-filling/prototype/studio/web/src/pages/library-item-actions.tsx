@@ -42,7 +42,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
   const send = async (r: ItemRow, reason: string) => {
     setActing({ busy: true, error: null });
     try {
-      if (r.row_action === "WITHDRAW") { const w = await api<FieldWithdrawn>(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(`${SAY.withdrawn(r.name)}${w.taken_out_of?.length ? ` Taken out of the facts ${w.taken_out_of.join("; ")} was changing to.` : ""}${w.readers?.length ? ` Still reading it: ${w.readers.slice(0, 3).join("; ")}${w.readers.length > 3 ? `; and ${w.readers.length - 3} more` : ""}. In a combination's draft, each holds its Submit until changed.` : ""}`); }
+      if (r.row_action === "WITHDRAW") { const w = await api<FieldWithdrawn>(`/library/changes/${r.change!.id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(`${SAY.withdrawn(r.name)}${w.taken_out_of?.length ? ` Taken out of the change to the facts of ${w.taken_out_of.join("; ")}: a second person decides what is left, or it ended if nothing is.` : ""}${w.readers?.length ? ` Still reading it: ${w.readers.slice(0, 3).join("; ")}${w.readers.length > 3 ? `; and ${w.readers.length - 3} more` : ""}. In a combination's draft, each holds its Submit until changed.` : ""}`); }
       else {
         const kind = r.row_action as Exclude<LifecycleWord, "WITHDRAW">;
         const c = await api<{ id: string; immediate?: boolean }>(kind === "DELETE" ? path(r.key) : `${path(r.key)}/${kind.toLowerCase()}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason: reason || SAY.ownDraft } });

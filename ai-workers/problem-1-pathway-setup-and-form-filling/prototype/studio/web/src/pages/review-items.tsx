@@ -214,7 +214,7 @@ function Withdraw({ id, label = "Withdraw the new field" }: { id: string; label?
     const n = (c: number) => `${c} form field${c === 1 ? "" : "s"}`, parts = [];
     if (r.form_fields_restored) parts.push(`${n(r.form_fields_restored)} back to worked out from other answers`);
     if (r.form_fields_reopened) parts.push(`${n(r.form_fields_reopened)} back to "no decision"`);
-    return `Withdrawn${parts.length ? `: ${parts.join(", ")}` : ""}.${r.taken_out_of?.length ? ` Taken out of the facts ${r.taken_out_of.join("; ")} was changing to.` : ""}${r.readers?.length ? ` Still reading it: ${r.readers.slice(0, 3).join("; ")}${r.readers.length > 3 ? `; and ${r.readers.length - 3} more` : ""}. In a combination's draft, each holds its Submit until changed.` : ""}`;
+    return `Withdrawn${parts.length ? `: ${parts.join(", ")}` : ""}.${r.taken_out_of?.length ? ` Taken out of the change to the facts of ${r.taken_out_of.join("; ")}: a second person decides what is left, or it ended if nothing is.` : ""}${r.readers?.length ? ` Still reading it: ${r.readers.slice(0, 3).join("; ")}${r.readers.length > 3 ? `; and ${r.readers.length - 3} more` : ""}. In a combination's draft, each holds its Submit until changed.` : ""}`;
   }, invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   return open ? (
     <div className="space-y-2 border-t border-border pt-3" data-withdraw>

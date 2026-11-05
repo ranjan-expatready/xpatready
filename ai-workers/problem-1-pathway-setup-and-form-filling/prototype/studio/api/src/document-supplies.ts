@@ -190,10 +190,11 @@ export async function dropFactFromChanges(tx: Prisma.TransactionClient, actor: {
     const after = m.after.filter((f) => f !== fact), afterAbout = Object.fromEntries(Object.entries(m.afterAbout ?? {}).filter(([k]) => k !== fact));
     const before = { facts: m.before ?? [], about: m.beforeAbout ?? {} }, nothingLeft = same({ facts: after, about: afterAbout }, before), wasApproved = c.status === "APPROVED";
     const n = after.length, document = m.document ?? c.label ?? "A document";
-    const said = `The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why}`;
+    const said = `The new field "${fieldName}" it named was withdrawn by ${actor.name}: ${why.replace(/\.$/, "")}`;
     if (wasApproved) {
       const draft = (await tx.documentType.findMany({ where: { workspaceId, documentTypeKey: c.key, status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 }))[0];
-      if (draft) await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: before.facts, suppliesAbout: Object.keys(before.about).length ? (before.about as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
+      const back = await throughMerges(tx, workspaceId, before.facts, before.about); // Break R2-M1: a merge since approval moved the keys
+      if (draft) await tx.documentType.update({ where: { id: draft.id }, data: { suppliesFacts: back.facts, suppliesAbout: Object.keys(back.about).length ? (back.about as Prisma.InputJsonValue) : Prisma.DbNull, updatedBy: actor.id } });
     }
     const matches = { ...m, after, afterAbout, cites: (m.cites ?? []).filter((x) => x.fact !== fact) } as unknown as Prisma.InputJsonValue;
     const earlier = c.decisionNote ? `${wasApproved ? "Approved: " : ""}${c.decisionNote.replace(/\.$/, "")}. ` : "";

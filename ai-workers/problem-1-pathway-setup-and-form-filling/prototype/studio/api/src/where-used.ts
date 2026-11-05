@@ -109,7 +109,7 @@ export async function fieldUseRows(db: Client, workspaceId: string) {
 }
 
 /** B83 (breaker M1, M5): what can read a shared field, each named in words (never a key). */
-export type FieldReader = { kind: "form_field" | "form_field_step" | "gate" | "rule" | "form_condition" | "document_condition" | "check" | "question_condition" | "fact_source" | "worked_out" | "document_type" | "document_type_change" | "waiting_supplies" | "waiting_change" | "waiting_draft" | "merge"; name: string };
+export type FieldReader = { kind: "form_field" | "form_field_step" | "gate" | "rule" | "form_condition" | "document_condition" | "check" | "question_condition" | "fact_source" | "worked_out" | "document_type" | "document_type_change" | "waiting_supplies" | "waiting_change" | "waiting_draft" | "merge"; name: string; /** Where it is, when it belongs to one combination: its rule or check's key beside it. */ combinationId?: string; ref?: string };
 const READING_DRAFTS = ["document_type", "condition", "form_check", "cross_check", "requirement_line", "comes_from", "pqr_pick"];
 const DRAFT_WORD: Record<string, string> = { document_type: "a document type", condition: "a condition", form_check: "a check", cross_check: "a check", requirement_line: "a document line", comes_from: "where an answer comes from", pqr_pick: "a question pick" };
 /** Everything that reads a shared field now, in this workspace: the one list, so an undo, a withdrawal and their words agree.
@@ -140,8 +140,8 @@ export async function fieldReaders(db: Client, workspaceId: string, key: string)
   for (const l of lines) out.push({ kind: "form_condition", name: `the condition of ${formOf.get(l.govFormDefId) ?? "a form"} ${on(l.combinationId)}` });
   for (const d of docs) out.push({ kind: "document_condition", name: `the condition of the document line "${typeOf.get(d.documentTypeKey) ?? "a document"}" ${on(d.combinationId)}` });
   for (const q of questions) out.push({ kind: "question_condition", name: `the condition of the question "${askedOf.get(q.canonicalFieldKey) ?? "a question"}"` });
-  for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) if (reads(x.predicateJson)) out.push({ kind: "rule", name: `the rule "${x.thenPlain}" ${on(x.combinationId)}` });
-  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (named.test(JSON.stringify(k.predicateJson ?? null))) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}` });
+  for (const x of current(r.rules, (x) => `${x.combinationId}|${x.predicateKey}`)) if (reads(x.predicateJson)) out.push({ kind: "rule", name: `the rule "${x.thenPlain}" ${on(x.combinationId)}`, combinationId: x.combinationId, ref: x.predicateKey });
+  for (const k of current(r.checks, (k) => `${k.combinationId}|${k.checkKey}`)) if (named.test(JSON.stringify(k.predicateJson ?? null))) out.push({ kind: "check", name: `the check "${(k.message ?? "with no message").slice(0, 80)}" ${on(k.combinationId)}`, combinationId: k.combinationId, ref: k.checkKey });
   for (const f of current(r.facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.canonicalFieldKey === key) out.push({ kind: "fact_source", name: `where this answer comes from ${on(f.combinationId)}` });
   for (const d of await db.derivedField.findMany({ where: { workspaceId, OR: [{ inputs: { has: key } }, { reference: key }] }, select: { plain: true } })) out.push({ kind: "worked_out", name: `the worked-out value "${d.plain ?? "with no words"}"` });
   const open = await db.libraryChange.findMany({ where: { workspaceId, kind: { in: ["placement_condition", "document_supplies"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { kind: true, key: true, label: true, status: true, matches: true } });

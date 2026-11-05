@@ -16,7 +16,7 @@ import { identityKeyOf, insertProposals } from "./proposals.ts";
 import { nameKey, namedDocumentType, waitingDocumentType } from "./document-type-names.ts";
 import { checkCondition, diff, ordinal, validate, isDemoSnapshot, sampleContentProblems, withdrawnFieldLines, withoutWithdrawnKeys } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, revise, RUNTIME_ACTORS, strip, Workspace, WORKSPACE_KEY, type Actor } from "./core.ts";
-import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { itemsOf, mergeItems, publishLibraryChanges, unapprovedWhy, unapprovedOf } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
@@ -1081,7 +1081,7 @@ export class Studio {
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
     // A new shared field this draft uses is approved by a second person first (Screen 02 slice 2, B1).
-    const waiting = await unapprovedAdds(this.db, c.workspaceId, itemsOf(snapshot));
+    const waiting = await unapprovedOf(this.db, c.workspaceId, snapshot);
     if (waiting.length) fail(`Release refused: ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
     const sub = (gate as { sub: ReviewSubmission }).sub;
     const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
@@ -1140,7 +1140,7 @@ export class Studio {
       if (own.length) refuse(`Release refused: "${c.label}" has ${own.length} problem${own.length > 1 ? "s" : ""} (${problemWords(own[0])})`, own, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
-      const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));
+      const waiting = await unapprovedOf(this.db, workspaceId, snapshot);
       if (waiting.length) fail(`Release refused: "${c.label}": ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
       await runKeys(this.db, this.audit, actor, c, snapshot, sha256); // G2 BR-6 (reviewer m2: after the cheap refusals): the tests run again at release
       const keyGate = await keyGateOf(this.db, id, snapshot, sha256);

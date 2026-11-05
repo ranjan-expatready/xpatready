@@ -297,6 +297,37 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   sql(`update library_change set status = 'WITHDRAWN' where id = '${sup.body?.id}'`);
   await plain(USCARD);
 
+  // Breaker M7: a release never publishes a document's facts naming a new field still waiting.
+  u = await askNew(USCARD, "B83 supplied held");
+  sk = keyOf("B83 supplied held");
+  const heldOuter = sql(`select id from combination where combination_key = 'vv.single'`);
+  const vvDoc = sql(`select document_type_key from document_requirement where id = '${docLine}'`);
+  const vvFacts = sql(`select array_to_string(supplies_facts, ',') from document_type where document_type_key = ${lit(vvDoc)} and status in ('DRAFT','PUBLISHED') order by version desc limit 1`).split(",").filter(Boolean);
+  sup = await call("POST", `/library/document-types/${vvDoc}/supplies`, { facts: [...vvFacts.map((f) => citeOf(f)), citeOf(sk)], reason: "A B83 check of a held release." });
+  ap = await approve(sup.body?.id);
+  await call("POST", `/combinations/${heldOuter}/place-from-form-parts`, {});
+  u = await release();
+  ok("breaker M7 fail test: release is refused while a document it lists supplies a new field still waiting, by name, no key", ap.status < 300 && u.status === 409 && /B83 supplied held/.test(words(u)) && noKey(words(u)), { ap: ap.status, u });
+  await withdraw(changeOf(sk));
+  await plain(USCARD);
+
+  // Breaker M6: a rule-fact proposal never gives a withdrawn key to a new meaning while another reader holds it.
+  u = await askNew(USCARD, "B83 rule fact");
+  const rfKey = keyOf("B83 rule fact");
+  const thisRule = `b83_rf_${randomUUID().slice(0, 6)}`;
+  const dropThis = drop("predicate", insert("predicate", { ...rowCols, predicate_key: lit(thisRule), predicate_json: `${cond(rfKey)}::jsonb`, then_plain: "'B83 this rule'", for_whom: "'applicant'" }));
+  const dropOther = drop("predicate", insert("predicate", { ...rowCols, combination_id: lit(outside), predicate_key: lit(`b83_rf_other_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(rfKey)}::jsonb`, then_plain: "'B83 other rule'", for_whom: "'applicant'" }));
+  await withdraw(changeOf(rfKey));
+  const addFact = () => call("POST", `/combinations/${vv}/rule-facts`, { rule: thisRule, fact: rfKey, label: "B83 rule fact new", meaning: "Whether a licence to drive is held: a B83 check, Sample.", valueType: "yes_no" });
+  u = await addFact();
+  ok("breaker M6 fail test: with a rule on another combination still reading it, the proposal is refused, naming that rule", u.status === 409 && /the rule "B83 other rule" on /.test(words(u)) && !/B83 this rule/.test(words(u)), u);
+  dropOther();
+  u = await addFact();
+  ok("breaker M6 pass: with only its own rule reading it, the fact can be proposed for that rule", u.status < 300, u);
+  sql(`update proposal_item set status = 'rejected' where id = ${lit(u.body?.proposalId ?? u.body?.id ?? randomUUID())}`);
+  dropThis();
+  await plain(USCARD);
+
   // Another form field reading it, the first reader there is.
   u = await askNew(USCARD, "B83 second row");
   const second = keyOf("B83 second row");
