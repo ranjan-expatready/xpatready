@@ -4,7 +4,8 @@
 // Written 4 Nov (G5): C5.1 had no pack. Part A is P-248: the form line (A1–A24) and the document line (A25–A32, added on
 // the tech lead's ruling on #868 after qa's gate A); part B is C5.1's own rule (submit, the expert's tick, a different
 // person releases). A combination with forms and no document line is refused the same way, in its own words ("No
-// document line yet", Add a document): on the checkpoint a combination loaded with forms only, on the fixture Super visa.
+// document line yet", Add a document): on the checkpoint a combination loaded with forms only, or one this pack makes when
+// none is left; on the fixture Super visa.
 // As a person: on a combination with documents and no form, its Review and release tab shows "No form line yet: this
 // combination cannot be released" with Add a form, Submit for review is greyed, and the shared Release page lists the
 // row "Held back: No form line yet: …". Underneath: Submit is refused (400) and Approve (409), and so is the Release
@@ -157,8 +158,16 @@ run(async () => {
   // Visitor visa, which now gets its lines from IMM 5484); on the fixture Super visa, given IMM 5257 through the Forms
   // route (it starts empty, and Super visa files IMM 5257).
   // On the checkpoint, the first combination that has forms and no document line yet (the Visitor visa and With an
-  // LMIA now get theirs from the checkpoint's own steps).
-  const D = FIXTURE ? T.combo("sv.super_visa") : sql(`select c.id from combination c where c.retired_at is null and exists (select 1 from combination_form f where f.combination_id = c.id and f.status <> 'RETIRED') and not exists (select 1 from document_requirement d where d.combination_id = c.id) order by c.combination_key limit 1`);
+  // LMIA now get theirs from the checkpoint's own steps, and once the Spouse does too none may be left: then this copy gets
+  // its own, by an author's routes: a new program stream, its combination, one form line).
+  let D = FIXTURE ? T.combo("sv.super_visa") : sql(`select c.id from combination c where c.retired_at is null and exists (select 1 from combination_form f where f.combination_id = c.id and f.status <> 'RETIRED') and not exists (select 1 from document_requirement d where d.combination_id = c.id) order by c.combination_key limit 1`);
+  if (!FIXTURE && !D) {
+    const node = await call("POST", "/program-nodes", { kind: "STREAM", label: "Forms only (C5.1 pack)", parentKey: "visitors" }, AUTHOR);
+    const made = node.status < 300 ? await call("POST", "/combinations", { nodeKey: node.body?.programNodeKey }, AUTHOR) : node;
+    D = made.body?.combination?.id ?? "";
+    const form = D ? await call("POST", `/combinations/${D}/forms`, { formKey: formA }, AUTHOR) : made;
+    if (form.status >= 300) { console.error("STOP  setup: the combination with forms and no document line could not be made", form.status, words(form)); process.exit(2); }
+  }
   if (FIXTURE) { r = await call("POST", `/combinations/${D}/forms`, { formKey: "IMM 5257" }, AUTHOR); if (r.status >= 300) console.log(`NOTE  setup: IMM 5257 was not added to Super visa (${r.status} ${words(r).slice(0, 100)})`); }
   ok(`setup (${DATA}): ${FIXTURE ? "Super visa" : sql(`select label from combination where id='${D}'`) || "a combination"} has form lines and no document line`, !!D && Number(sql(`select count(*) from combination_form where combination_id='${D}' and status<>'RETIRED'`)) > 0 && sql(`select count(*) from document_requirement where combination_id='${D}'`) === "0", D);
   const docRule = (forms: object[], docs: number) => documentLineProblem({ forms, document_requirements: Array(docs).fill({}) } as any);
