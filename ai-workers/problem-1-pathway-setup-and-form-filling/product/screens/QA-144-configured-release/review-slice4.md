@@ -196,3 +196,75 @@ Journeys: J1 (author) is the configured load, then Express Entry's Forms (the IM
 **Could not check:** a headed or keyboard-only walk, 200 % zoom, a screen reader, the suites listed above as not re-run, CI on this head, or an intended user's walk (D17 and D20 stay with the founder).
 
 **Verdict: Approve a90c36e78.** No open Blocker or Major. r2-m1 to r2-m3 can go with this PR or onto the forms row.
+
+## Round 3 (diff-only, e4b756667)
+Same reviewer, 5 Nov 2026, the last round (P-293 (3)). US$0: no *_LIVE variable, no live AI, port 4458 only (`xr_studio_rv3`, stopped and dropped afterwards). Scope: `git diff a90c36e78 e4b756667`, which is the builder's fix commit e4b756667 plus 7e73527d3, the commit that recorded round 2. The three code changes are `api/src/demo.ts` (+3/−1), `acceptance/C10.1.test.ts` (+3/−3) and `tests/check_c10_1_configured.ts` (+1/−1).
+
+### What I ran
+* `acceptance/C10.1.test.ts 4458 xr_studio_rv3`: **23/26**, the same as the builder.
+  * E10 and E10b PASS. E10 gives `{"refusals":0,"undecided":0}`: Express Entry is released, so the new GET branch is skipped.
+  * R9, R12b and the whole-gate line are red, as on main.
+* `check_c10_1_configured`: **39/39**. `check_qa144_ee_release`: **23/23**, with all four combinations at release 1.
+* `product/tools/typecheck.mjs`: no new type errors (15 known, 0 fixed).
+* **GET compared with Submit on a real refused draft.** After the load, I read `GET /combinations/:id` for `fs.spouse` and then called its Submit (`POST …/submit` as the author, on my own copy only).
+  * GET lists 81 errors, 78 of them matching E10's undecided regex. Submit answers 400 with 81 errors, 78 matching.
+  * Once `problemWords` adds the item prefix (`contracts/programs.ts:227`), the two lists are identical line for line. Row 10 says "Fix 81 problems" too.
+  * The configured load has no answer keys on any combination (`answer_key` count 0). Each draft's Tests lines are warnings ("no answer-key test: allowed only in a Demo release.").
+* **Row 7's words after a fresh load:** "partial", only for the 29 held sections, as before this PR. There is no "nothing was marked" line, so the real IMM 0008 DEP mark is found.
+
+### The fixes
+* **r2-m1 (`api/src/demo.ts:789, 802, 806`): done, with one wording gap (r3-m1 below).**
+  * A `notOnForm` entry whose form or fact finds no mapped form field on a non-Online edition of this combination is now pushed to `setUpRefused`. That turns row 7 to "partial" with its words, which is what the Minor asked.
+  * It cannot pass on main: main has no `samples/form-setup.json` and no `notOnForm` step.
+  * No check line exercises the new no-match path. Triggering it needs a broken sample entry, and the logic is inline in the loader. This is acceptable for a guard on sample data (Nit).
+* **r2-m2 (`acceptance/C10.1.test.ts:66-68`): done.** E10 now reads `body.draft.problems` (level `error`) from `GET /combinations/:id` (`main.ts:62` → `studio.ts:425`). This is a read that writes nothing. `review()` (`studio.ts:1014`), which I named in round 2, returns this same object plus sign-offs, so either route works.
+  * **Same blocking problems as Submit?** Yes, for everything E10 tests.
+    * Both call `this.problems(workspaceId, snapshot, id, <gate>)` on the same draft snapshot from `buildSnapshot(…, "draft")` (`studio.ts:430/434` and `1024/1028`) and keep `level === "error"`.
+    * The K1 undecided lines come from `structureProblems` → `undecidedFormFields(id, "DRAFT")` (`studio.ts:217`). The "nobody is asked for it" lines come from `validate()` (`engine/validate.ts:96`). Neither depends on the gate, so `undecided` is identical on both routes.
+    * Both routes use `keyGateOf`, which is `gateOf` imported under another name (`studio.ts:33`). `combination()` passes it to `problems()` as `gate`, the same object Submit builds inline.
+  * **The one difference is the answer-key gate's timing.**
+    * Submit calls `runKeys` first (`studio.ts:1027`), so its gate judges keys that ran on this draft.
+    * GET judges the stored runs. A key not yet run on this draft is a *warning* on GET while the draft is unsubmitted ("…it runs at Submit", `engine/answer-key-gate.ts:61`). At Submit, the same key is PASSED, or an error if it fails.
+    * So GET's error list is a subset of Submit's, missing only a key that would fail when first run. In E10, that can only make the line fail falsely (red), never pass falsely. The configured load has no keys, so it does not arise.
+    * Submit's "Nothing has changed since the released version" refusal (`studio.ts:1025`) applies only to a released draft, and E10 does not read a released one.
+  * **Could it pass on main?** No. Main has no Express Entry in `demo.ts` and no `form-setup.json`, so `!!ee` is false. On this head it can still fail: an unreleased Express Entry with an undecided field, or with no errors at all, fails the line.
+* **r2-m3 (`tests/check_c10_1_configured.ts:118`): done.** The line now selects the combination by `combination_key = 'fs.spouse'`, matching the line above it. The regex on row 10's words keeps the label, as asked. As before, the count part does not check that `fs.spouse` exists, but the regex on row 10's words needs it, so the line still fails without it.
+
+### Issues
+**Blockers:** none. **Majors:** none.
+
+**Minors (Should)**
+* **r3-m1. A refused mark is also reported as "nothing was marked" (`api/src/demo.ts:802, 806`).**
+  * `marked.add` runs only after `setOptionMap` succeeds. So when a mark *does* find its form fields but every `setOptionMap` call is refused (in the `catch` at :802), the loop after it (:806) adds a second line: "no form field of … reads …, so nothing was marked". That line is untrue.
+  * The real refusal is still listed first and row 7 is still "partial", so the row's status is right. But the false line takes one of the six refusal lines row 7 shows (`demo.ts`, the `slice(0, 6)` in row 7's `why`), and it sends a reader to look for a missing field.
+  * This happens only on a failure path, and not on this head.
+  * Fix: record the mark as found when `rows.length > 0`, before the `try`, and keep the line at :806 for marks with no field.
+
+**Nits**
+* The comment at `C10.1.test.ts:66-67` says "Submit refuses on exactly these". That is true except for an answer key not yet run on the draft, which Submit runs first (see r2-m2 above). Add "an answer key Submit runs first can add a line", or leave it.
+
+### Journey test, round 3 (reviewer role; the one score for this check)
+The diff changes no screen, route or word a person sees. It changes a loader refusal on a path not reached on this head, and two test reads. So the round 2 walk (J1 Express Entry's Forms and Review at 400, 1024 and 1440 px, axe, timings; J3 the Visitor visa's sections) stands.
+I re-checked the data under it on this head:
+* Express Entry is released (release 1, author → Approver), and so are the other three combinations.
+* Row 7 names Express Entry. Its only refusal words are the held sections.
+* Row 10 gives the validator's words for `fs.spouse` (81 problems).
+* GET and Submit agree on that draft's 81 blocking problems.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Four combinations released; 23/23, 39/39 |
+| Next step obvious | ½ | Unchanged from round 2 |
+| Plain words | ½ | Unchanged (m3, m5); r3-m1's false line is off this head's path |
+| Feedback and state | 1 | Row 7 now names a mark that finds nothing (r2-m1) |
+| Correct data | 1 | GET and Submit list the same 81 errors on `fs.spouse` |
+| Error recovery | 1 | C10.1 part A passes (403s, double load refused, Reset) |
+| Accessibility and sizes | 1 | Carried from round 2 (no screen change) |
+| Speed | ½ | Load about 90 s, as in round 2 |
+| Visual quality | 1 | Carried from round 2 (no screen change) |
+| Trust and sources | ½ | Unchanged: the mark's cite stays in the data file |
+
+**Score 8/10: pass** (no 0).
+**Could not check:** a headed, keyboard-only or 200 % zoom walk (no screen change in this diff), a screen reader, CI on this head, the r3-m1 path (it needs a refused `setOptionMap` on a found field), or an intended user's walk (D17 and D20 stay with the founder).
+
+**Verdict: Approve e4b756667.** No open Blocker or Major. r2-m1, r2-m2 and r2-m3 are closed. r3-m1 and the Nit can go with this PR or onto the forms row.
