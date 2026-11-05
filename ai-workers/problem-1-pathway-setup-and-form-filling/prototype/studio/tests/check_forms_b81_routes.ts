@@ -65,7 +65,7 @@ r = await call("PATCH", `/editions/${ed}/option-maps`, { dataPath: paths[0], map
 ok("B81 fail (break M2): the one-field route refuses to drop a mark it was not told about", r.status === 409, r);
 const drafted = (await call("POST", `/editions/${ed}/option-maps/draft`)).body.option_maps.filter((o: { form_field: string }) => paths.includes(o.form_field));
 ok("B81 (challenge M6): a new rules draft keeps the mark", drafted.length === paths.length && drafted.every((o: { optionMap: { notOnForm?: string[] } }) => o.optionMap.notOnForm?.join() === unprinted.key), drafted.map((o: { optionMap: unknown }) => o.optionMap));
-ok("B81: the save is in the audit trail, naming the answer in words", sql(`select count(*) from audit_event where action = 'changed' and detail::text like '%not on this form: ${unprinted.label}%'`) >= "1");
+ok("B81: the save is in the audit trail, naming the answer in words", sql(`select count(*) from audit_event where action = 'changed' and summary like '%not on this form: ${unprinted.label}%'`) >= "1");
 r = await call("PATCH", `/editions/${ed}/option-maps/group`, { dataPaths: paths, map, notOnForm: [] });
 ok("B81 fail (review M6): a save that does not say which choices it opened is refused", r.status >= 400 && r.status < 500, r);
 
