@@ -1,55 +1,46 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-04 23:18 IST by **Lead 8 · 4 Nov 20:16 IST (ended at ~400k tokens)**; **Lead 9 takes over** (hand-over note lead8-handover-2026-11-04.md) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-340) · earlier STATE: git history of this file (Lead 7 at 20:20 IST), `history/STATE-2026-11-04-0925.md` · Lead 8's running log: lead8-2026-11-04.md in Lead 5's side-session notes folder (`local_a8344098-…`), which also holds lead7-handover-2026-11-04.md and the Fable report
+updated: 2026-11-05 02:30 IST by **Lead 9 · 4 Nov 23:18 IST (ending at ~340k tokens)**; **Lead 10 takes over** (hand-over note lead9-handover-2026-11-05.md) · milestone: **M2 — Super Admin configuration** · rules: **`RULES.md`** (as of P-341; DECISIONS P-342 and P-343 are newer) · earlier STATE: git history of this file (Lead 8 at 23:18 IST), `history/STATE-2026-11-04-0925.md` · Lead 9's running log: lead9-2026-11-04.md in Lead 5's side-session notes folder (`local_a8344098-…`)
 
 ## Where we are
-* **M2: 51/60 confirmed by qa** (qa batch 13, notes PR #974): since 20:16 IST C4.7, C4.9, C4.3, C4.2 (after #936, QA-144 closed), C11.14 (#785, #969) and C11.12 (#968). **C4.8 is red on main** in the protected set (6/11, run 41867612816) and fails every batch: qa holds it and re-scores it (P-214, P-340 (7)), so expect 50 until B70 lands. C9.1 14/17 (QA-231, #978). **M3: 1/17**, no new M3 work (P-332).
-* **Founder's goal (~21:50 IST): 55 in 4–5 hours without faking; by 01:00 IST C3.4, C5.1, C11.7 plus C11.14 (done).** At 22:44 IST: C5.1 ~00:15–00:45, C6.1 ~23:45, C11.7 ~01:00–01:30, C3.4 ~02:00+, C9.1 ~02:00–03:00 (ETA board, P-338).
-* **Weekly plan 52% at 22:44 IST**, about 2% an hour → 85% near 15:00 and 90% near 17:30 IST 5 Nov (P-331: no extra usage; 85% no new rows; 90% clean stop, "Resume on the new account"). Trip-wire 6 Nov 23:00 IST: M2 under 57 or burn over 2.5%/h → scale first (P-336).
-* **Paid AI today:** US$0.76 of the US$30 cap. Next: the QA-162 conditions run (B74), quote first.
-* **Disk 8 GB free.** 20 idle test databases hold only 0.4 GB (not dropped, P-334 (11)). Old copies need the founder's yes.
+* **M2: 52/60 confirmed by qa on main; 53 when #1004 (C3.4 records) lands** (in batch #1008). Confirmed since 23:18 IST: C6.1 (after #948), C11.7 (after #881), C3.4 (after #982); C4.8 now 12/12 on the six and 11/11 on the checkpoint, and back in the protected set on the checkpoint (#991 B77, #1002). **M3: 1/17**, no new M3 work (P-332).
+* **Left for M2 (8), each with an owner:** C5.1 #868 · C3.6 #998 (labelled) · C9.1 #978 · C4.11 + C7.7 #967 (+ paid B74) · C4.5 #1005 · C4.1 (#973 QA-221 + qa pack PR after #1004 and #1005) · C10.1 (#1009 rows 9/11/12; rows 7 and 10 are new rows, so not tonight). **60 is not reachable by the morning of 5 Nov**; forecast 56–58 by 07:00 IST.
+* **Weekly plan 59% at 02:28 IST**, about 2% an hour (P-331: 85% no new rows; 90% clean stop, "Resume on the new account"). Paid AI today US$0.76 of US$30. Disk 9 GB free (21 idle test databases, 0.49 GB, not dropped, P-334 (11)).
 
-## In flight (22:44 IST), critical path first
+## In flight (02:30 IST), critical path first
 | PR / session | What | Next |
 |---|---|---|
-| qa lane `local_7bb326e9…` | C4.8 hold + honest re-score (P-214) **first**; #865's C4.11 pack on main with per-step labels; C5.1 after #868; K1 decision + gate A on #978; P-339 Works rule | the one writer of CAPABILITIES and BUGS |
-| #883 cloud QA-206 (C3.4) | dequeued by C4.8 | requeue (Mergify box) after the hold; then B70 as its own PR |
-| #929 cloud QA-218, #948 Builder 1 (QA-225), #974 qa, #926 cloud (M3 C9.2) | in merge batches | at risk until C4.8 is held |
-| #868 cloud G5 (C5.1) | IMM 5483 lines added, CI green | after #883; qa gate A re-run on 61761f685; label |
-| #881 cloud C11.7 part B | merged main early | label after #868 |
-| #967 builder-yesno-facts `local_3b435f0f…` | B52 + QA-227; lands together with #865 (P-340 (3)) | after qa's C4.11 pack; next row B72 (C3.6) |
-| #978 Builder 8 `local_bf2f3e98…` | QA-231, C9.1's last 3 steps | qa's K1 decision, gate A |
-| #973 S2 `local_c58834aa…` | QA-221 (C4.1) | next row B71 (IMM 5707 undecided fields) |
-| Builder 1 `local_8b65d77f…` | flaky checks QA-208/209 + c1116, uxa4, s4_run_browser (P-214) | draft PR; started 22:47 IST |
-| #865 cloud C4.11 | held | B73 (G5 Ready gap) |
-| paid runner `local_0c6484d1…` | B74 quote (US$0) | run after #967 and the Lead's Go |
-| lead-watch v2 #858 | paused to 6 Nov (P-337) | — |
-Ports: B1 4430–4434, yesno builder 4440–4444, S2 4445–4449, B8 4470–4479, qa 4490–4499; demo 4400.
+| #1006 Builder 1 `local_8b65d77f…` | QA-193 root cause: engine ties ranked by key (audit-trail bug) | Opus diff + all-suites CI, label, queue; then s4_run_browser row |
+| #868 cloud G5 (C5.1) | gate A PASS; red only on the QA-193 flake; failed jobs re-run | label on green (or after #1006 lands: merge main once) |
+| #998 builder-yesno-facts (C3.6) | labelled; qa gate A PASS; red only on the QA-193 flake; re-run | queue on green; skipped duplicate `ci` may block Mergify → empty commit |
+| #978 Builder 8 `local_bf2f3e98…` (C9.1) | check fixed (IMM 5476 on Express Entry), Opus r4, head 8e2122732, CI running | label on green |
+| #973 S2 `local_c58834aa…` (QA-221) | merging main after #993 | chain after #978/#868; then #1009 |
+| #1009 S2 (C10.1 rows 9/11/12) | building; R12b waits (no simulated Validate) | qa OK on step relabels; chain |
+| #1005 builder-c45 `local_26419e9b…` (C4.5) | concept approved; UI built; Opus round 2 + breaker running | label; qa gate A |
+| #967 builder-yesno-facts `local_3b435f0f…` | ready at 75ce87664; last on demo.ts | merge main when next; qa gate A; lane ends |
+| paid runner `local_0c6484d1…` | B74 Go after #967 (worst US$2.05) | one PR with the result for qa |
+| qa lane `local_7bb326e9…` | #1004; C4.1 pack PR (G4 headings, suppliesBySteps) after #1004 + #1005 | sole writer of CAPABILITIES/BUGS |
+**demo.ts chain:** #978 → #868 → #973 → #967 → #1009 (all conflict pairwise; merge main once each).
 
 ## Leads, in order (highest = current)
-**Lead 9** `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` (current from ~23:20 IST; creates its check at minutes 13 and 43) · standby: **Lead 10** `local_e336999f-beb6-41ae-a978-a5bdc886991c`; start Lead 11 at the founder's next typed turn · Lead 8 `local_96177831-842a-4d2c-9c07-eafb51e452fe` ended 23:18 IST · Leads 1, 2, 3, 5, 7 ended · Lead 4 archived. Hand over at about 400k tokens (P-314).
+**Lead 10** `local_e336999f-beb6-41ae-a978-a5bdc886991c` (current from ~02:31 IST) · standbys: **Lead 11** `local_55e21a98-68ad-4429-a441-0462a75e910b`, **Lead 12** `local_9ab43f49-877d-45e4-aa0d-a0abc561c2de` · Lead 9 `local_fa5c998c-d3e5-464b-8aa6-951d79ea78c0` ended 02:31 IST · Leads 1, 2, 3, 5, 7, 8 ended · Lead 4 archived. Founder (~23:25 IST): "the standbys exist so the night never stalls … 60 out of 60 by the time he wakes … ask him only for what you need from the product side, or what you really can't do yourself".
 
 ## Next (in order)
-1. C4.8 hold merges (P-214) → batches flow; #883 requeued.
-2. #868 → qa C5.1; then #881 (C11.7), #967 with #865, #978 (C9.1), one at a time on demo.ts.
-3. Builder 1's flaky-checks PR → C3.4 with #883 and #929.
-4. B70 (C4.8), B71 (C4.1 Submit), B72 (C3.6 rule), B73 (G5 gap), B74 (paid QA-162 run).
-5. Records once a day plus each hand-over (P-336); next about 08:00 IST 5 Nov.
+1. #1006 → batches stop failing on QA-193; #868, #998 green.
+2. demo.ts chain above; #1005; #998; qa re-scores each.
+3. New rows: C10.1 row 7 (29 sections without a printed heading, a person names them) and row 10 (Express Entry and Family sponsorship from their forms, QA-144 slices 4–5); the check_ai_launch_paths follow-up from #1006.
+4. Records once a day plus each hand-over (P-336); next about 08:00 IST 5 Nov.
 
 ## Waiting for the founder
 1. Label this records PR (auto mode refuses the Lead's own records PR unless the founder names it).
-2. Delete five test-only branches `claude/runtime-lmia-demo-release-packtest*` (#837): yes or no.
-3. 23 rewritten r1c screenshots in the qa lane's copy: the founder restores them.
-4. #861 representative-review preference (recommendation: keep as built).
-5. Old copies to remove for disk, on his yes.
+2. Old copies to remove for disk, on his yes.
 
-## Founder asks of 4 Nov after 20:16 IST (P-228 (9)); earlier asks: git history of this file
-**A119** (~21:50 IST, Lead 7's chat) 55 in 4–5 h without faking: owners and ETAs ✓ · **A120** (~22:10 IST) ETA board in every report → P-338 ✓ · **A121** (~22:15 IST) C3.4, C5.1, C11.7 by 01:00 IST: tracked ✓ · **A122** (~22:25 IST) archive finished lanes, organise the sidebar, standbys, are we on track: 4 archived, 4 renamed, two left for him (he archives them) ✓ · **A123** (~22:35 IST) escalate every block to him at once, available to 01:00 IST ✓ · **A124** (~22:45 IST) message resets, answer lanes' prompts in claude.ai, check every cloud lane in the app → P-339 ✓ · **A125** (~22:50 IST) what works and should repeat; bake rules into skills so nothing is lost → lead-watch skill, P-339, B65–B76 ✓.
+## Founder asks of 4–5 Nov after 23:18 IST (P-228 (9))
+**A126** (~23:22 IST) "Yes, merge #984" ✓ · **A127** (~23:25 IST) all rights for #984, #926, #929, #948; one question at a time ✓ · **A128** (~00:30 IST) "fell to 49, expected 55; what can we do; is everything OK?": causes and order answered ✓ · **A129** (~01:05 IST) sleep? anything needed? lanes OK? best speed? what's covered: answered; C10.1 and C4.5 given owners ✓ · **A130** (~01:10 IST) "what is 100% by 07:00?": 51 certain; 55 stood behind ✓ · **A131** (~01:20 IST) "all approvals and all the rights … get the job done": C4.5 builder started ✓.
 
-## Lessons of 4 Nov (evening)
-* A row promoted to Works enters the protected set: C4.8 was red on main and failed every batch; promote only when its pack is green on main's head on GitHub (P-339).
-* "Auto-archive on PR close" archived S2 and qa-2 with work left: the app view finds them; restore and brief (P-339).
-* A lane waiting on an open question looks "running" in the app: read the question and answer it inside the brief (P-339), or bring it to the founder.
-* "Approved, not queued" for an hour was a duplicate skipped `ci` run: read Mergify's check summary first.
-* Two PRs that wait for each other (#967 and #865) land together: say so, and record the exception (P-340 (3)).
-* Times only from the clock: guessed "22:3x" stamps on PR comments were 15–30 minutes off.
+## Lessons of 4–5 Nov night
+* Read qa's PR comments before re-ordering a chain: a PASS posted minutes earlier was missed and cost 30 minutes.
+* `git merge-tree` between PRs on a shared file shows which may share a batch; most demo.ts PRs conflict pairwise.
+* A flake that fails two unrelated PRs the same way can be a product bug (QA-193: ties ranked by database row order); find the cause, never quarantine blind.
+* Records PRs stacked on each other conflict after the first merges: watch "-conflict" in Mergify's summary.
+* Times only from the clock: two guessed stamps in messages were 2–20 minutes off.
