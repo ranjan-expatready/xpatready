@@ -4,7 +4,7 @@
 // The facts are asked of a person, and no form reads them, so the paid pairs' saved rounds still replay. Sample, US$0, no
 // model call.
 //   zsh studio/tools/isolated.sh forms_b82 4471 start && tsx studio/tests/check_forms_b82_case_lines.ts 4471 xr_studio_forms_b82
-import { conditionFactProblems, conditionFactsNobodyAsked, formReadFacts } from "../engine/coverage.ts";
+import { conditionFactProblems, conditionFactsNobodyAsked, conditionFactsToAsk } from "../engine/coverage.ts";
 import { validate } from "../engine/validate.ts";
 import { APPROVER, AUTHOR, pack2, REVIEWER, run } from "../acceptance/lib/pack2.ts";
 import { openCase, answer, OFFICER, call as caseCall } from "../acceptance/lib/m3.ts";
@@ -35,8 +35,13 @@ run(async () => {
   const released = { ...snap({ document_requirements: [line("person.a")] }), mode: "released", forms: [], field_maps: [], sections: [], rules: [], checks: [], combination: { participants: [] } } as unknown as Snapshot;
   let judged: { message: string }[] = []; try { judged = validate(released, [{ key: "person.a", valueType: "yes_no" }], []); } catch (e) { judged = [{ message: `validate threw: ${(e as Error).message}` }]; }
   ok("C2.6 B82 fail (M3): a release already made is not re-judged for it: validate() does not name it, so its cases can still open", !judged.some((p) => /nobody is asked|validate threw/.test(p.message)), judged.map((p) => p.message).slice(0, 3));
-  const maps = snap({ field_maps: [{ entries: [{ outcome: "mapped", fact: "person.a" }, { outcome: "unmapped", fact: "person.c" }] }] as never });
-  ok("C2.6 B82 fail (M1): a fact a form field reads is the forms' to place, so the condition pass never moves its question", formReadFacts(maps).has("person.a") && !formReadFacts(maps).has("person.c"));
+  // Review M1: this choice decides whether the step moves a form's question. A stand-in carries the forms' reading, so a rule's removal fails here without a copy.
+  const toAsk = (entries: object[], channel = "PDF") => conditionFactsToAsk(snap({ forms: [], field_maps: [{ form_edition: "F (1)", form_number: "F", channel, entries }], sections: [], rules: [], checks: [], combination: { participants: [{ role: "principal", max: 1, applies: true }] }, document_requirements: [cond("person.a")] } as never)).map((g) => g.fact);
+  const asks = (e: object[], channel?: string) => { try { return toAsk(e, channel); } catch (x) { return `threw: ${(x as Error).message}`; } };
+  const mapped = [{ data_path: "a", outcome: "mapped", fact: "person.a", person: "form_subject" }];
+  ok("C2.6 B82 fail (M1): a fact a form maps, nobody is asked and a condition reads is the forms' to place, so the condition pass leaves its question alone", JSON.stringify(asks(mapped)) === "[]", asks(mapped));
+  ok("C2.6 B82 pass (M1): a fact no form reads is the condition pass's to ask", JSON.stringify(asks([])) === JSON.stringify(["person.a"]), asks([]));
+  ok("C2.6 B82 pass (m24): a fact only an online form reads is not taken by the forms' pass (PDF maps only), so the condition pass asks it", JSON.stringify(asks(mapped, "ONLINE")) === JSON.stringify(["person.a"]), asks(mapped, "ONLINE"));
   ok("C2.6 B82 fail: a line with no condition names nothing", conditionFactsNobodyAsked(snap({ document_requirements: [{ document_type: "doc", condition: null }] as never })).length === 0);
 
   await T.ready();
@@ -50,7 +55,7 @@ run(async () => {
   const whereNow = () => sql(`select canonical_field_key||':'||section_key||':'||repeats from section_question where status <> 'RETIRED' order by 1`);
   const before = whereNow();
   const again = await call("POST", `/combinations/${vv}/place-from-form-parts`, {}, AUTHOR);
-  ok("C2.6 B82 fail (M1): pressing the step again places nothing and moves no question", again.status < 300 && (again.body?.placed ?? []).length === 0 && whereNow() === before, again.body?.placed);
+  ok("C2.6 B82 fail: pressing the step again places nothing and moves no question", again.status < 300 && (again.body?.placed ?? []).length === 0 && whereNow() === before, again.body?.placed);
   for (const l of LINES) {
     ok(`C2.6 B82 pass: ${l.fact} is asked of a person, in the client's questionnaire`, sql(`select count(*) from section_question where canonical_field_key='${l.fact}' and collected_from='client_questionnaire' and status <> 'RETIRED'`) === "1");
     ok(`C2.6 B82 pass: no form field reads ${l.fact}, so it stays off the paid runs' question list`, sql(`select count(*) from form_field_map where canonical_field_key='${l.fact}'`) === "0");

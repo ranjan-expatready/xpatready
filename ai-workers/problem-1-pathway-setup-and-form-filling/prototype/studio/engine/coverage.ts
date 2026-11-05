@@ -79,5 +79,20 @@ export function conditionFactProblems(s: Snapshot): { level: "error"; where: str
     message: `The condition reads "${(meaning.get(g.fact) ?? g.fact).trim().replace(/\.$/, "")}", which nobody is asked, so on a case this document can never be decided. Ask it: Smart questionnaire › Ask them in their forms' sections.` })));
 }
 
-/** The facts a form field of this combination reads: their question belongs to the form's own section. */
-export const formReadFacts = (s: Snapshot) => new Set((s.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]).flatMap((m) => m.entries).filter((e) => e.outcome === "mapped" && e.fact).map((e) => e.fact as string));
+/** What the forms' placing pass may still ask: every fact a coverage gap names, and every other mapped fact asked of
+ *  nobody that no document type supplies (the validator's own two readings: this file and engine/validate.ts "unplaced"). */
+export function formGapFacts(s: Snapshot): Set<string> {
+  const placed = new Set((s.placements as { fact: string }[]).map((p) => p.fact));
+  const docFacts = new Set(((s.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
+  const gaps = new Set(coverageGaps(s).map((g) => g.fact));
+  for (const m of s.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]) for (const e of m.entries) if (e.outcome === "mapped" && e.fact && !placed.has(e.fact) && !docFacts.has(e.fact)) gaps.add(e.fact);
+  return gaps;
+}
+
+/** The facts the condition pass asks: those nobody is asked (conditionFactsNobodyAsked) that the forms' pass does not
+ *  take. That pass reads PDF maps' boxes only, and a question it places stays in the form's section (B82, review M1). */
+export function conditionFactsToAsk(s: Snapshot): { fact: string; documents: string[] }[] {
+  const gaps = formGapFacts(s), forms = new Set<string>();
+  for (const m of s.field_maps as { channel?: string; entries: { outcome: string; fact?: string | null }[] }[]) if (m.channel !== "ONLINE") for (const e of m.entries) if (e.outcome === "mapped" && e.fact && gaps.has(e.fact)) forms.add(e.fact);
+  return conditionFactsNobodyAsked(s).filter((g) => !forms.has(g.fact));
+}
