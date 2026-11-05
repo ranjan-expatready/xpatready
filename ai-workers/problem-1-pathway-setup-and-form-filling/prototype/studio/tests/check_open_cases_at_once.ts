@@ -1,10 +1,12 @@
 // Opening cases at once (POST /api/runtime/cases; tech lead's ruling on #1116): when the connections are all busy, opening a
-// case waits for one. The route's transaction waited Prisma's default 2 s, and past that answered a 500 (P2028, "Unable to
-// start a transaction in the given time"), with nothing a person could act on. Now it waits as long as its neighbours do.
-// So the check does not depend on how fast the machine is, it makes the wait itself: from its own session it holds a lock
-// that stops new cases being written, until the connections really are all stuck on it (the pool holds 10; PrismaPg ignores a
-// connection_limit in the URL), then 4 s more. That is past the old 2 s every time and far below the new 10 s. It says
-// nothing about load in general: with no lock, 48 at once on the Mac still answers 500 (the PR's out-of-scope list). US$0.
+// case waits for one. The route's transaction took Prisma's defaults, 2 s to get a connection and 5 s to finish, lock waits
+// included, and past either it answered a 500 (P2028), with nothing a person could act on. Now it takes what its neighbours
+// do. So the check rests less on the machine's speed, it makes the wait itself: from its own session it holds a lock that
+// stops new cases being written, until the connections are all stuck on it (the pool holds 10; PrismaPg ignores a
+// connection_limit in the URL), then 4 s more, or until the oldest has waited 12 s, whichever is first: past the old limits
+// and inside the new 10 s and 15 s. A much slower machine could still pass those; about 3 times the Mac is an estimate, not
+// measured. It says nothing about load in general: with no lock, 48 at once on the Mac still answers 500 (the PR's
+// out-of-scope list). US$0.
 //   zsh studio/tools/isolated.sh runtime_ocw 4484 start && tsx studio/tests/check_open_cases_at_once.ts 4484 xr_studio_runtime_ocw
 import { execFileSync, spawn } from "node:child_process";
 import { join } from "node:path";
@@ -13,7 +15,7 @@ import { client, recorder } from "./runtime/api.ts";
 const PORT = Number(process.argv[2] ?? 4484), DB = process.argv[3] ?? "xr_studio_runtime_ocw";
 const { call, sql, until } = client(PORT, DB);
 const { ok, summary } = recorder();
-const OFFICER = "user-O", CLIENT = "user-P", POOL = 10, HOLD_MS = 4000;
+const OFFICER = "user-O", CLIENT = "user-P", POOL = 10, HOLD_MS = 4000, OLDEST_S = 12;
 const STUDIO = join(import.meta.dirname, ".."), run = Date.now().toString(36);
 
 (async () => {
@@ -27,17 +29,20 @@ const STUDIO = join(import.meta.dirname, ".."), run = Date.now().toString(36);
   const made = () => [Number(sql("select count(*) from pack_work_pin")), Number(sql("select count(*) from audit_event where action='opened' and entity='case'"))];
   const statuses = (rs: { status: number }[]) => rs.reduce<Record<number, number>>((t, x) => ({ ...t, [x.status]: (t[x.status] ?? 0) + 1 }), {});
   const stuck = () => Number(sql("select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'"));
+  const oldest = () => Number(sql("select coalesce(extract(epoch from now() - min(xact_start)), 0) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'"));
+  await open(`OCW-WARM-${run}`); // the first open of a server costs more than the rest; they arrive closer together after it
 
   for (const atOnce of [12, 16]) {
     const before = made();
     // SHARE stops the writes of a new case and lets the reads before them through; the connection it holds is the check's own.
     const holder = spawn("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-X", "-q"], { stdio: ["pipe", "ignore", "inherit"] });
-    holder.stdin.write("begin; lock table party in share mode; select pg_advisory_lock(hashtext('check_open_cases_at_once'));\n");
-    const locked = await until(async () => sql("select count(*) from pg_locks where locktype = 'advisory' and granted") !== "0", 15_000);
+    holder.stdin.write("begin; lock table party in share mode;\n");
+    const locked = await until(async () => sql("select count(*) from pg_locks where relation = 'party'::regclass and mode = 'ShareLock' and granted") !== "0", 15_000);
     const answers = Promise.all(Array.from({ length: atOnce }, (_, i) => open(`OCW-${atOnce}-${i}-${run}`)));
-    const full = await until(async () => stuck() >= POOL, 60_000);
-    ok(`setup: ${atOnce} at once, every connection is stuck waiting`, locked && full, { locked, stuck: stuck() });
-    await new Promise((res) => setTimeout(res, HOLD_MS));
+    let fullAt = 0, age = 0;
+    await until(async () => { age = oldest(); if (!fullAt && stuck() >= POOL) fullAt = Date.now(); return (!!fullAt && Date.now() - fullAt >= HOLD_MS) || age >= OLDEST_S; }, 60_000);
+    ok(`setup: ${atOnce} at once, the writes are held by the lock`, locked && age > 0, { every_connection_stuck: !!fullAt, oldest_waited_s: Math.round(age * 10) / 10 });
+    if (!fullAt) console.log(`NOTE  ${atOnce} at once: the oldest reached ${OLDEST_S} s before every connection was stuck (a slow machine), so this part tests less here`);
     holder.stdin.end("commit;\n");
     const all = await answers;
     const bad = all.find((r) => r.status !== 201);
