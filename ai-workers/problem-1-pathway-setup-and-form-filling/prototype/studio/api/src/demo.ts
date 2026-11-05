@@ -15,7 +15,7 @@ import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
-import { type Listed, type ReleaseTwoStep, releaseTwoWords } from "./checkpoint-words.ts";
+import { type Listed, releaseRowTen, type ReleaseTwoStep, releaseTwoWords } from "./checkpoint-words.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -736,8 +736,11 @@ export class Demo {
             try { await this.formLibrary.attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { setUpRefused.push(`${form}: ${said(e)}`); }
           }
           for (const r of setup.rules) {
-            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
-            try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); }
+            // B79b: whose form it is is kept on a conditional line too (IMM 5604: each child, when the rule says so).
+            const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
+            try { await this.studio.saveForm(author, c.id, r.form, body); lines++; } catch (e) { setUpRefused.push(`${r.form}: ${said(e)}`); continue; }
+            // B79b: a form IRCC's words say is filled in its portal is set Online on the Forms tab's channel route.
+            if (r.channel) { try { await this.forms.setChannel(author, c.id, r.form, { channel: r.channel }); } catch (e) { setUpRefused.push(`${r.form} channel: ${said(e)}`); } }
           }
           // The shared field takes the list once (the first combination's), for every combination after it.
           if (maritalList) { try { await this.forms.linkAnswerList(author, "person.marital_status", { list: maritalList }); maritalList = null; } catch (e) { setUpRefused.push(`person.marital_status list: ${said(e)}`); } }
@@ -835,11 +838,12 @@ export class Demo {
     await applySampleFormRoles(this.db, workspaceId); // breaker M2: the demo's form roles before any release is made
     // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
     // different person's approval. A combination the validator refuses stays a draft, with the validator's words.
-    const released: string[] = [], blocked: string[] = [];
+    // Lead 14 on #1052 (option A): a refused combination with forms (notReleased) and one with no form (noForm) are said apart.
+    const released: string[] = [], notReleased: string[] = [], noForm: string[] = [];
     for (const c of six.combinations) {
       // An empty combination is never released as "configured": the rules would allow it today (finding for the Lead),
       // but a release with no form says nothing about the configuration.
-      if (!(await this.db.combinationForm.count({ where: { combinationId: c.id } }))) { blocked.push(`${c.label}: not submitted, no form is on it yet (the form finder has no saved answer for its canada.ca page, or none was confirmed).`); continue; }
+      if (!(await this.db.combinationForm.count({ where: { combinationId: c.id } }))) { noForm.push(c.label); continue; }
       try {
         await timed("review and release", async () => {
           // G1 (tech lead on #558): the six are Sample, so the seed answers their numbers with Sample entries (passes only in
@@ -851,10 +855,9 @@ export class Demo {
           await this.studio.approve(approver, c.id);
         });
         released.push(c.label);
-      } catch (e) { blocked.push(`${c.label}: ${said(e)}`); }
+      } catch (e) { notReleased.push(`${c.label}: ${said(e)}`); }
     }
-    row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", status: !released.length ? "waiting" : blocked.length ? "partial" : "done", shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
-      why: blocked.length ? blocked.join(" · ") : null });
+    row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", ...releaseRowTen(released, notReleased, noForm) });
     const visitor = released.some((l) => /Visitor visa/.test(l));
     // Row 11 (QA-231, P-67; C10.1 rows 11–12, #1009): the family of four's Sample case opens on the Visitor visa's release 1
     // through the case officer's own steps, answered from the one Sample record, each form's copy made (C7.1), before
