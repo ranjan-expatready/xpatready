@@ -53,6 +53,45 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
   return errs;
 }
 
+/** B83 (tech lead on breaker M5): withdrawing a new shared field is never refused while something reads it, but a reader is
+ *  never left broken silently: each one in this draft holds Submit and release by its name, the withdrawn field's name
+ *  beside it, never a key. `gone`: the keys of withdrawn fields no longer in the library, with their names. */
+export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Problem[] {
+  if (!gone.size) return [];
+  const out: Problem[] = [];
+  const say = (where: string, item: string, label: string, keys: Iterable<unknown>, wayOut = "Point it at another field, or remove it.") => { for (const k of new Set(keys)) if (typeof k === "string" && gone.has(k)) out.push({ level: "error", where, item, label, message: `It reads "${gone.get(k)}", a new field that was withdrawn. ${wayOut}` }); };
+  const conds = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+  const inText = (x: unknown) => { const text = typeof x === "string" ? x : JSON.stringify(x ?? null); return [...gone.keys()].filter((k) => keyInText(k).test(text)); };
+  const wordsOf = new Map((s.canonical_fields as { id: string; label?: string | null; meaning?: string | null }[]).map((f) => [f.id, f.label ?? f.meaning ?? "a question"]));
+  const roleOf = new Map(((s.combination.participants ?? []) as { role: string; label?: string }[]).map((p) => [p.role, p.label ?? p.role]));
+  for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
+  for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
+  for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
+  for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.when_plain ?? "with no words"}"`, conds(r.when));
+  for (const c of s.checks) say("Checks", c.id, `The check "${c.message ?? "with no message"}"`, inText(c.condition)); // a validity rule names its date outside "field"
+  for (const g of s.eligibility?.gates ?? []) say("Eligibility", g.key, `The eligibility gate "${g.label}"`, conds(g.condition));
+  for (const m of s.field_maps) for (const e of m.entries) if (e.outcome === "mapped") say(`Field map ${m.form_edition}`, e.data_path, `${m.form_number}'s form field "${e.caption ?? e.heading ?? "with no caption"}"`, [e.fact, ...inText(e.transform), ...inText(e.condition)]);
+  for (const f of s.fact_sources ?? []) say("Questions", f.fact, `Where this answer comes from (${roleOf.get(f.role) ?? "a person"})`, [f.fact]);
+  for (const t of s.document_types ?? []) say("Documents", t.key, `The document type "${t.name}"`, t.supplies_facts ?? [], `On its document line, use "Change the facts it supplies…" to take it out; a second person approves.`);
+  const read = derivedRead(s);
+  for (const d of s.derived_fields as { id: string; plain?: string | null; inputs?: string[]; reference?: string | null }[]) if (read.has(d.id)) say("Derived fields", d.id, `The worked-out value "${d.plain ?? "with no words"}"`, [...(d.inputs ?? []), d.reference]);
+  return out;
+}
+/** A key standing alone in a text: never inside a longer key (person.x in person.x_2). */
+const keyInText = (k: string) => new RegExp(`(?<![\\w.])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\w|\\.\\w)`);
+/** The validator's own lines with no key of a withdrawn field. Its "not in the library" line gives way only to a named line
+ *  for the same thing (review N1: a line with no named one would stop holding release); any other mention takes the name. */
+export const withoutWithdrawnKeys = (problems: Problem[], gone: Map<string, string>, named: Problem[]): Problem[] => {
+  const keys = [...gone.keys()];
+  if (!keys.length) return problems;
+  const covered = new Set(named.map((n) => `${n.where}|${n.item}`));
+  return problems.filter((p) => !(covered.has(`${p.where}|${p.item}`) && keys.some((k) => p.message.includes(`reads ${k}, which is not in the library`)))).map((p) => {
+    let message = p.message;
+    for (const k of keys) message = message.replace(new RegExp(`"?${keyInText(k).source}"?`, "g"), `"${gone.get(k)}"`);
+    return { ...p, message, ...(gone.has(p.item) ? { label: gone.get(p.item) } : {}) };
+  });
+};
+
 export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const types = new Map(library.map((f) => [f.key, f.valueType]));

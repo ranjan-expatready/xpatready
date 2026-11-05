@@ -33,7 +33,7 @@ import { keepChosenEveryones, placeFromFormParts } from "./form-part-placements.
 import { decide } from "./proposals.ts";
 import { RuleFacts } from "./rule-facts.ts";
 import { OwnQuestions } from "./own-question.ts";
-import { OWN_YES_NO_REASON } from "./own-yes-no.ts";
+import { OWN_YES_NO_NEAR, OWN_YES_NO_REASON } from "./own-yes-no.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { FormLibrary } from "./form-library.ts";
 import { CaseForms } from "./fill-case.ts";
@@ -743,7 +743,7 @@ export class Demo {
           for (const y of setup.ownYesNo ?? []) {
             const ed = await this.db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true } });
             const same = (await this.db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, valueType: "yes_no", groupKey: "person" }, select: { canonicalFieldKey: true, label: true } })).find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(y.label));
-            try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await this.ownQuestions.ask(author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning }) }); } catch (e) { setUpRefused.push(`${y.label}: ${said(e)}`); }
+            try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await this.ownQuestions.ask(author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }) }); } catch (e) { setUpRefused.push(`${y.label}: ${said(e)}`); }
           }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }

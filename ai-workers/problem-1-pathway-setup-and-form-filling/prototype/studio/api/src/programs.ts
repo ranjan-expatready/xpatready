@@ -25,7 +25,7 @@ import { join, resolve } from "node:path";
 import { ACTORS, Audit, Db, isDemoWorkspace, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
-import { changeView, itemsOf, nearOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { changeView, nearOf, unapprovedWhy, unapprovedOf } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { emptyProblem, Studio } from "./studio.ts";
@@ -437,7 +437,7 @@ export class Programs {
         if (r.holds) { why.set(id, { why: r.firstHold }); continue; }
         const gate = gates.get(id)!;
         if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
-        const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(id) as { snapshot: Snapshot }).snapshot));
+        const waiting = await unapprovedOf(this.db, workspaceId, (snaps.get(id) as { snapshot: Snapshot }).snapshot);
         if (waiting.length) { why.set(id, { why: `${unapprovedWhy(waiting).replace(/^it/, "It")}.` }); continue; }
         if (actor && (actor.duties as readonly string[]).includes("approve")) {
           if (gate.sub.submittedBy === actor.id) { why.set(id, { why: "You submitted it, so a different person releases it (BR-14).", self: true }); continue; }
