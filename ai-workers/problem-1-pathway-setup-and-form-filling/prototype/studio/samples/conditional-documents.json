@@ -1,0 +1,172 @@
+{
+  "_about": "C6.4 (tech lead on #1073, Q1 option 1): conditional document lines a combination needs, with the facts their conditions read, which the configured checkpoint adds through the product routes (Documents; C3.6 add the fact a rule needs, with its answer values; placement). Data, not code (P-319). Every quote is word for word from the official page or form named in it, with its date; the lines and their conditions are Sample, Unconfirmed: expert (AGENTS rule 4). The same lines and words as acceptance/lib/setup_vv_m3.ts (R3, P-230 (3)).",
+  "vv.single": {
+    "status": "Sample, Unconfirmed: expert",
+    "lines": [
+      {
+        "type": "Letter of authorization for a minor",
+        "who": "each_applicant",
+        "condition": {
+          "op": "and",
+          "subjectKind": "PERSON",
+          "args": [
+            {
+              "op": "lt",
+              "field": "person.age_years",
+              "value": 18
+            },
+            {
+              "op": "in",
+              "field": "person.travels_with",
+              "value": [
+                "alone",
+                "another_adult",
+                "one_parent"
+              ]
+            }
+          ]
+        },
+        "conditionPlain": "a child under 18 travelling alone, with another adult (signed by both parents, naming the adult responsible in Canada) or with one parent (from the other parent; with sole custody, from the parent who has it)",
+        "sourceQuote": "IMM 5881 E (05-2026), New Delhi visa office checklist, page 2 (downloaded 2026-10-19; a visa office instruction, may change): \"Minors travelling alone or with a person other than their parents or legal guardians must have a letter of authorization signed by both parents and legal guardians; it must also include the name of the adult who will be responsible for the children in Canada. Minors travelling with only one parent or legal guardian must have a letter of authorization from the non-accompanying parent or guardian.\" canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change, under \"If the parents are separated or divorced and one of them has sole custody of the child\": \"The letter of authorization may be signed by that parent only, and they should bring a copy of the custody decree.\" and \"The letter does not need to be certified.\"",
+        "sourceFile": "https://ircc.canada.ca/english/pdf/kits/forms/IMM5881E.pdf"
+      },
+      {
+        "type": "Copy of the minor's birth certificate",
+        "who": "each_applicant",
+        "condition": {
+          "op": "and",
+          "subjectKind": "PERSON",
+          "args": [
+            {
+              "op": "lt",
+              "field": "person.age_years",
+              "value": 18
+            },
+            {
+              "op": "in",
+              "field": "person.travels_with",
+              "value": [
+                "alone",
+                "one_parent"
+              ]
+            }
+          ]
+        },
+        "conditionPlain": "a child under 18 travelling alone or with one parent",
+        "sourceQuote": "canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change: under \"If a minor child is travelling alone\": \"a copy of their birth certificate\"; under \"If a minor child is travelling with one parent only\": \"a copy of the child’s birth certificate\".",
+        "sourceFile": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html"
+      },
+      {
+        "type": "Copy of the absent parent's signed passport or national ID",
+        "who": "each_applicant",
+        "condition": {
+          "op": "and",
+          "subjectKind": "PERSON",
+          "args": [
+            {
+              "op": "lt",
+              "field": "person.age_years",
+              "value": 18
+            },
+            {
+              "op": "in",
+              "field": "person.travels_with",
+              "value": [
+                "one_parent",
+                "another_adult"
+              ]
+            }
+          ]
+        },
+        "conditionPlain": "a child under 18 travelling with one parent or with another adult: a copy for each parent not travelling (both parents when with another adult), in one file",
+        "sourceQuote": "IMM 5881 E (05-2026), New Delhi visa office checklist, page 2 (downloaded 2026-10-19; a visa office instruction, may change): \"You must provide a copy of the page of the passport or other government-issued identification document showing the name, photo and signature of each non-accompanying parent.\" canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change, under \"If a minor child is travelling with a person other than their parents or legal guardians\": \"A photocopy of the parents’ or legal guardians’ signed passports or national identity cards should be attached to the letter.\"",
+        "sourceFile": "https://ircc.canada.ca/english/pdf/kits/forms/IMM5881E.pdf"
+      },
+      {
+        "type": "Custody documents",
+        "who": "each_applicant",
+        "condition": {
+          "op": "and",
+          "subjectKind": "PERSON",
+          "args": [
+            {
+              "op": "lt",
+              "field": "person.age_years",
+              "value": 18
+            },
+            {
+              "op": "in",
+              "field": "person.custody",
+              "value": [
+                "sole",
+                "shared"
+              ]
+            }
+          ]
+        },
+        "conditionPlain": "a child under 18 in sole custody (the custody decree) or shared custody",
+        "sourceQuote": "IMM 5484 (05-2026), Document checklist for a temporary resident visa, page 1: \"Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians.\" (downloaded 2026-10-19). canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change: \"The parent travelling with the child should carry copies of the legal custody documents.\"; \"they should bring a copy of the custody decree.\"",
+        "sourceFile": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5484/01-05-2026/imm5484e.pdf"
+      },
+      {
+        "type": "Adoption or guardianship papers",
+        "who": "each_applicant",
+        "condition": {
+          "op": "and",
+          "subjectKind": "PERSON",
+          "args": [
+            {
+              "op": "lt",
+              "field": "person.age_years",
+              "value": 18
+            },
+            {
+              "op": "in",
+              "field": "person.custody",
+              "value": [
+                "adopted",
+                "guardian"
+              ]
+            }
+          ]
+        },
+        "conditionPlain": "a child under 18 who is adopted or under guardianship",
+        "sourceQuote": "canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change, under \"If a minor child is travelling with a legal guardian or adoptive parents\": \"The child should have a copy of the guardianship papers or the adoption papers (whichever one applies).\"",
+        "sourceFile": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/minor-children-travelling-canada.html"
+      }
+    ],
+    "facts": [
+      {
+        "fact": "person.travels_with",
+        "label": "Who the child travels with",
+        "meaning": "Who a child under 18 travels to Canada with. canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change.",
+        "values": [
+          "Both parents",
+          "One parent",
+          "Another adult",
+          "Alone"
+        ],
+        "question": "If under 18: who is this person travelling to Canada with?",
+        "beside": [
+          "person.date_of_birth"
+        ]
+      },
+      {
+        "fact": "person.custody",
+        "label": "Custody of the child",
+        "meaning": "The custody arrangement for a child under 18. canada.ca, Minor children travelling to Canada (page dated 2025-01-23, read 2026-11-02); official page, may change.",
+        "values": [
+          "Not applicable",
+          "Shared",
+          "Sole",
+          "Adopted",
+          "Guardian"
+        ],
+        "question": "If under 18: what is the custody arrangement for this person?",
+        "beside": [
+          "person.date_of_birth"
+        ]
+      }
+    ]
+  }
+}

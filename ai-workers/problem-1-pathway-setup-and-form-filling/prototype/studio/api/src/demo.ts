@@ -81,6 +81,10 @@ export const DEMO_ONLY = "This demo control works only in the demo workspace.";
  *  Rows with a "setup" block get their combination and official files through the normal upload path; one of them
  *  starts from the reviewed work-permit release. Everything else shows as Not started. */
 export const SAMPLES = join(STUDIO, "samples", "programs.json");
+/** C6.4 (tech lead on #1073, Q1 option 1): conditional document lines per combination, with the facts their conditions read
+ *  (Sample, cited word for word, Unconfirmed: expert). Data, not code (P-319). */
+export const CONDITIONAL_DOCUMENTS = join(STUDIO, "samples", "conditional-documents.json");
+type ConditionalDocuments = { lines: { type: string; who: string; condition: unknown; conditionPlain: string; sourceQuote: string; sourceFile: string }[]; facts: { fact: string; label: string; meaning: string; values: string[]; question: string; beside: string[] }[] };
 type SampleSetup = { key: string; participants: any[]; sources: string[]; import?: "release"; note: string; drop_documents?: { document_type: string; why: string }[] };
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
 /** S7 (P-148): the six agreed combinations the Demo menu loads (samples/wave1.json). */
@@ -248,6 +252,62 @@ export class Demo {
     for (const t of await this.db.proposalItem.findMany({ where: { runId: job.id, kind: "document_type", status: "waiting" }, select: { id: true, payload: true } }))
       await reject(t.id, String((t.payload as { name?: unknown }).name ?? "a document type"), "no accepted line uses it");
     return { n, rejected };
+  }
+
+  /** C6.4 (tech lead on #1073, Q1 option 1): a combination's conditional document lines and the facts they read
+   *  (samples/conditional-documents.json), through the services the screens call, as acceptance/lib/setup_vv_m3.ts S6
+   *  and S6a do by route. Each line on Documents as the author (Configuration › Documents); a type the library lacks waits
+   *  as a proposal the content reviewer accepts (C3.6). Then each fact a line reads is added for that line's rule with its
+   *  answer values (Questionnaires › "Facts a rule needs"), accepted by the content reviewer and approved into the library
+   *  by the Approver, and asked per person beside the fact it is about (Library › Fields › placement). A step a rule
+   *  refuses is named in `refused`, never dropped. Returns how many lines went in. */
+  private async conditionalDocumentLines(author: Actor, reviewer: Actor, approver: Actor, workspaceId: string, combinationId: string, spec: ConditionalDocuments, parts: Awaited<ReturnType<typeof placeFromFormParts>>, placed: string[], refused: string[], say: (e: unknown) => string) {
+    type Save = Parameters<Studio["saveRequirement"]>[3];
+    let n = 0;
+    // A line goes in only when each fact its condition reads is in the library, is a calculated fact, or is one this step
+    // adds; otherwise the release would be refused ("reads …, which is not in the library"), so the line waits and is named.
+    const factsOf = (x: unknown, out = new Set<string>()): Set<string> => { if (Array.isArray(x)) x.forEach((v) => factsOf(v, out)); else if (x && typeof x === "object") for (const [k, v] of Object.entries(x)) { if (k === "field" && typeof v === "string") out.add(v); else factsOf(v, out); } return out; };
+    const known = new Set([...(await this.db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey),
+      ...(await this.db.derivedField.findMany({ where: { workspaceId }, select: { derivedKey: true } })).map((d) => d.derivedKey), ...spec.facts.map((f) => f.fact)]);
+    const waiting: string[] = [];
+    for (const l of spec.lines) {
+      const missing = [...factsOf(l.condition)].filter((f) => !known.has(f));
+      if (missing.length) { waiting.push(`${l.type} (its condition reads ${missing.join(", ")}, which this library neither holds nor calculates)`); continue; }
+      const line = { attachMode: "ANSWER_CONDITIONAL" as const, appliesToRoles: l.who, providedBy: "client", condition: l.condition, conditionPlain: l.conditionPlain, sourceQuote: l.sourceQuote, sourceFile: l.sourceFile };
+      try {
+        const r = (await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeName: l.type } as Save)) as { proposalId?: string } | null;
+        if (r && r.proposalId) {
+          const key = ((await decide(this.db, this.audit, reviewer, workspaceId, [r.proposalId], { action: "accept", reason: "Accepted by the sample loader: a document line the official words call for, cited (Sample, Unconfirmed: expert; C6.4)." })).items[0] as { landedAs?: string } | undefined)?.landedAs;
+          if (!key) { refused.push(`${l.type}: its document type was not accepted`); continue; }
+          await this.studio.saveRequirement(author, combinationId, null, { ...line, documentTypeKey: key } as Save);
+        }
+        n++;
+      } catch (e) { refused.push(`${l.type}: ${say(e)}`); }
+    }
+    if (waiting.length) refused.push(`${waiting.length} conditional document line${waiting.length === 1 ? " waits" : "s wait"}: ${waiting.join("; ")}`);
+    if (!n) return n; // no line reads the facts, so they are not added (C3.6 adds a fact only for a rule that reads it)
+    const needed = (await this.ruleFacts.list(combinationId)).facts;
+    for (const f of spec.facts) {
+      try {
+        if (!(await this.db.canonicalField.count({ where: { workspaceId, canonicalFieldKey: f.fact, status: { in: ["DRAFT", "PUBLISHED"] } } }))) {
+          const rule = needed.find((x) => x.fact === f.fact)?.rules[0]?.key;
+          if (!rule) { refused.push(`${f.fact}: no rule on this combination reads it, so it is not added`); continue; }
+          const { proposalId } = await this.ruleFacts.add(author, combinationId, { fact: f.fact, rule, label: f.label, meaning: f.meaning, valueType: "code", values: f.values });
+          await decide(this.db, this.audit, reviewer, workspaceId, [proposalId], { action: "accept", reason: "Accepted by the sample loader: the fact a document line reads, with its answer values (Sample; C6.4)." });
+          for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "field", key: f.fact }, select: { id: true } }))
+            await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C6.4, a fact a document line reads).");
+        }
+        // A fact another combination asked already keeps its one placement (QA-227: the library's questions are shared).
+        if (await this.db.sectionQuestion.count({ where: { workspaceId, canonicalFieldKey: f.fact, status: { not: "RETIRED" } } })) continue;
+        const near = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: f.beside } }, select: { canonicalFieldKey: true, sectionKey: true } });
+        const beside = f.beside.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
+        if (!beside) { refused.push(`${f.fact}: none of ${f.beside.join(", ")} is asked in a section`); continue; }
+        await this.studio.placeField(author, f.fact, { sectionKey: beside.sectionKey, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: f.question });
+        placed.push(f.fact);
+        await keepChosenEveryones(this.db, this.studio, author, combinationId, new Set([beside.sectionKey]), parts);
+      } catch (e) { refused.push(`${f.fact}: ${say(e)}`); }
+    }
+    return n;
   }
 
   /** G5 (C5.1, P-248; tech lead's ruling on #868, option 1): the configured checkpoint's With an LMIA gets its document
@@ -780,6 +840,9 @@ export class Demo {
           if (setup.documentsFromChecklist) { const d = await this.checklistDocumentLines(author, workspaceId, c.id, setup.documentsFromChecklist, setUpRefused, said); documentLines += d.n; log.push(`  ${keyOf.get(c.id)}: ${d.n} document lines from ${setup.documentsFromChecklist}'s saved reading (Sample; P-248); ${d.rejected.length} rejected with their reason: ${d.rejected.join("; ")}`); }
           // G5 (#868, Lead 8's option 1 for the Study permit): its always-needed lines from its checklist's own words, cited.
           if (setup.documentsCited) { const d = await this.citedDocumentLines(author, sme, workspaceId, c.id, setup.documentsCited, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} document lines from its document checklist, cited with page and quote (Sample, Unconfirmed: expert; P-248)`); }
+          // C6.4 (tech lead on #1073): the conditional lines and the facts they read, after the checklist's own lines.
+          const conditional = (JSON.parse(readFileSync(CONDITIONAL_DOCUMENTS, "utf8")) as Record<string, ConditionalDocuments | string>)[keyOf.get(c.id) ?? ""];
+          if (conditional && typeof conditional === "object") { const d = await this.conditionalDocumentLines(author, sme, approver, workspaceId, c.id, conditional, p, placedFacts, setUpRefused, said); documentLines += d; log.push(`  ${keyOf.get(c.id)}: ${d} conditional document lines and the facts they read (samples/conditional-documents.json; Sample, Unconfirmed: expert)`); }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "document_type" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (G5, a document line's type)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
           }
