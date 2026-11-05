@@ -379,3 +379,53 @@ Unchanged from the 3c2c72115 section, with this correction to condition 3: `chec
 **7/10 at 529806b38,** unchanged from 3c2c72115, re-judged from images and CI, not walked by me; below the bar of 8, no criterion at 0. Its product evidence comes from 3c2c72115, one line earlier: `check_b78_sp_case_browser.cjs` and `check_b52_own_yes_no.ts` have no result at this commit.
 
 **Verdict: Block** (changes needed). Fix M6, then get every shard to finish and read the suites listed above. Reviewed: 529806b38. Any later push needs a new look.
+
+---
+
+# Round 6: 5fd461ac9 (diff 529806b38..5fd461ac9 only)
+
+**Commit reviewed: 5fd461ac9.** **Method:** code read and GitHub logs. No server, no other copy's database. The tech lead's rulings stand and are not re-opened: the SQL setups, m17 listed for qa, the journey score at qa's gate A (P-349). **Verdict: Approve.** No open Blocker or Major.
+
+## Blockers
+None.
+
+## Majors
+None open.
+- **M6: fixed, on GitHub.** `check_w1_programs_s2.cjs` 90/90, setup only, assertions untouched.
+- **M3, M4, M5: hold at this commit.** `check_b52_own_yes_no.ts` 52/52, `check_b78_sp_case_browser.cjs` 8/8, `check_qa144_sp_release.ts` 27/27, `check_c1112_modes.ts` 44/44. PR #1062 reads `MERGEABLE`, `CLEAN`; `git merge-tree` against origin/main at a76265091, 30 commits ahead, reports no conflict.
+
+## m18, every role: fixed
+`rolesWithoutQuestions` is right on each point you asked about, by reading:
+- **`roleOf`:** it takes `about.split("/")[0]`, so `principal/parent_1` counts as the principal. That is right: the principal answers it. `FILING` is left out first.
+- **`applies: false`:** `applicants` leaves that role out, so it is not asked of.
+- **A role the release does not hold:** skipped by `people.some`, including `max: 0`, since `previewRender` drops those. An optional role in the release is held to it, at a preview of at least one person.
+- **A role asked only through `decides`:** it counts. The question is really on the list, and its status is not hidden. It does meet "has questions".
+- **Nothing placed:** returns every filing role, which is the old answer.
+- **The fail test is true.** On the real release fixture the old any-person rule gives no line, so `check_screen01_rules.ts`'s line fails without this change, and its regex names the Spouse alone. The next line repeats the earlier pass line under a new title, which adds nothing but does no harm.
+
+**Could it wrongly refuse a real row? None on GitHub.** The Visitor visa, the Study permit and With an LMIA all pass above, and C10.1's non-done list has no new row.
+
+One thing left, a minor:
+- **m19. "Files" does not read `filingMode`.** `applicants` does not look at it, so a role marked `on_principal` is held to its own questions. In `samples/wave1.json`, Express Entry's Spouse and Child are `on_principal`, and Family sponsorship's Child too. Neither row is set up from its forms on this checkpoint, so nothing shows it today. If such a role's facts are read by no form, the row turns Not ready, saying "No questions yet for Child". Row B79 will meet this first; rule on it there. The refusal is in words and errs towards refusing.
+
+## The edition move: right
+- The three functions in `engine/editions.ts` match what left `engine/programs.ts`, and `programs.ts` re-exports them, so its other importers are untouched. `pdfMapInUse` reads the imported binding.
+- `engine/where-used.ts` no longer pulls in `programs` → `coverage` → `render`. `check_gcore_engine.ts` 137/137 on GitHub.
+
+## Still open, no change to the verdict
+- **m15:** `check_screen01_browser.cjs:86`, `:100` and `check_w1_visual_system.cjs` still call the row Not ready while it is Live.
+- **m17:** listed for qa by ruling.
+- **Keyboard step:** part only; the panel opens by a click.
+- **Commit `73d749866`'s subject** says "two more suites"; it changes one. Records only.
+- **Follow-ups for the tech lead:** (a) "New: waiting for a second person" on APPROVED and RETURNED items; (b) one placement per fact puts a study heading in front of a Worker and a visit heading in front of a Student.
+
+## CI at 5fd461ac9
+- **CI 42020457295: success.** Types and all 6 shards, no FAIL line. Also `check_qa144_vv_release.ts` 34/34, `check_qa144_lmia_release.ts` 23/23, `check_forms_qa206_section_headings.ts` 47/47, `check_b78_section_names.ts` 9/9, `check_c10_1_browser.cjs` 12/12, `check_screen01_rules.ts` 72/72, `check_screen01_browser.cjs` 116, `check_w1_s1s2_fix.cjs` 30/30.
+- **Full set 42020446870: success.** 326 suites PASS, 0 FAIL, including `check_screen01_api.ts` 135/135, the first GitHub result of it since the rule changed (quarantined on PR CI only).
+- **On the six 42020455282: success.** C3.4, C4.1, C4.7.
+- **Checkpoint 42020451182:** C4.1, C4.7, C4.8, C9.1 pass. C10.1 is 21/24 on the same three lines as every earlier round (R9, R12b, every row), all outside this row (P-343 (10)); row 7 is done.
+
+## Could not read
+- `check_catalogue_scale.cjs`: `run-suites.sh` and `select-suites.mjs` skip it, so CI never runs it and scale is unproved. `check_screen01_browser.cjs` reads cold 1098 ms, first view 189 ms.
+
+**Verdict: Approve.** Reviewed: 5fd461ac9. Approve covers this commit only; any later code push needs a new look.
