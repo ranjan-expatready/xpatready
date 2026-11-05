@@ -1,46 +1,60 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full rewrite at its hand-over); earlier by Lead 10 at 08:53 IST · milestone: **M2 — Super Admin configuration, with M3 alongside (P-344)** · rules: **`RULES.md`** (as of P-348) · hand-over note: lead10-handover-2026-11-05.md in the side-session notes folder lead10-saved-2026-11-05 · earlier STATE: git history
+updated: 2026-11-05 19:30 IST by **Lead 14 · 5 Nov 19:14 IST**, after the account switch · milestone: **M2; M3 holds until M2 lands (P-356)** · rules: **`RULES.md`** + DECISIONS P-354, P-355, P-356 · hand-over note: `history/lead12-handover-2026-11-05.md` · earlier STATE: git history
 
 ## Where we are
-* **M2: 58/60 on main (qa).** Confirmed since 02:31 IST: C3.4, C3.6, C9.1, C5.1, C4.5, C4.1. Left: **C4.11** (pack 24/24, held by B83 and B86) and **C10.1** (#1009, B81, B78, B79a, B79b). **M3: 1/17** on the table, qa re-scoring once (P-344 (2)).
-* **M2 is not end to end until B82 and B86 land:** QA-233 and QA-237 are dead ends a person can reach while the packs are green.
-* **Weekly plan 67% at 08:51 IST;** the plan is used to its limit, then the founder switches account (P-344). Paid AI today US$0.56 of US$30. Disk 14 GB; swap 7.6 of 8.2 GB, load 25: **the Mac is full, new builders go to the cloud or standbys.**
+* **M2: 57/60 (qa, #1105).** Left: C4.5 (QA-255, at the C4.11 stack's gate A), C4.11 (B83, B86, B88), C10.1 (B78, B79a, B79b, B97, row 12b = B99). Of the 57, qa has shown none to reach a dead end now that C2.6 is out; that is a floor. Walk list: QA-233, QA-234, QA-237, QA-239.
+* **M3: 0/17 on the checkpoint (qa, from cloud's #1069).** 10 of 14 packs first red at J7 Stage 1: row B104.
+* **The founder's own test failed ~13:05 IST, now fixed (#1091, QA-252 closed, C11.15 Works):** page address on "Choose the page and find again". The cloud fix lane reads that every offered page fails, not only the long one: even the shortest, 103 characters, builds a key of about 150 against the limit of 120. Fix running, no PR yet at 13:15 IST; qa logging.
+* **New account: weekly plan 87% on arrival (19:15 IST), resets 8 Nov 22:30 IST; about 13% left, 3-6 h at 2-5%/h; extra usage off. So M3 holds (P-356).** Paid AI US$0.56 of US$30 at 08:51 IST, not re-read since. Disk 15 GB, load 15 at 19:22 IST.
 
-## In flight (08:55 IST)
-| Row | Session | Where | Next |
-|---|---|---|---|
-| B83 C4.11 | `local_6c0fdf86` | Mac, draft #1036 | Blocker + 9 Majors, breaker re-check, list id ae2133 twice, label |
-| B86 C4.11 | `local_a4308bc5` | Mac, #1053 | concept approved 09:07 IST (P-346 (1)); migration, breaker; label after B83, B82 |
-| B82 QA-233 | `local_b132d166` | Mac, #1058 | CI, review |
-| B81 C10.1 | standby A `local_d798901d` | Mac, #1057 | concept approved (P-346 (4)); screen part |
-| B78 C10.1 | standby B `local_c2bbbd2c` | Mac, `claude/screens-b78-section-names` | merges main after #1009 |
-| B79a Express Entry | cloud, #1050 | | after #1009 and B78 on demo.ts |
-| B79b Family sponsorship | cloud, #1052 | | after B79a on demo.ts |
-| C3.16 M3 | cloud, #1054 | | r4 approved (P-346 (5)); building, claims Partial |
-| C1.3 + C11.5 M3 | cloud, #1051 | | concept approved (P-346 (3)); building |
-| C11.6 M3 | cloud, #1056 | | built, 14/14 + browser 37/37; review next |
-| B84 C7.7 | cloud, #1060 | | moved off the Mac 09:45 IST; also the restart-from-a-PR rehearsal |
-| qa lane | `local_7bb326e9` | Mac | gate A, re-scores, M3 re-score once; sole writer of CAPABILITIES and BUGS |
-**demo.ts order:** #1009 merged 10:05 IST → whichever of B78 and #1036 has gate A first → B79a → B79b. Ends after its PR merges: paid runner `local_0c6484d1` and Lead 1 can be archived now #1040 has merged.
+## In flight (19:30 IST; read from the PRs and the board; full rulings are PR comments, read them all)
+**C4.11 stack, top #1068 at `414289ef6`, one gate A (P-355):** #1036 `fc0c39996`, #1053 `09a19e631`, #1068 `414289ef6`: Lead 14 measured ancestry exit 0, #1068 CI green (run 42032524480), mergeable clean. No builder running: none is needed unless gate A fails. **qa asked for gate A at 19:20 IST** with P-355's four conditions; PASS holds for that exact head. Then the three labels together in order. Keep the removal of line 9 of `route-has-screen-allow.txt`: a stop hook flags it, ruled on #1036. Security thread on `case-feed.ts:27`: ruled on #1068, keep for C4.11 unless qa's run shows a leak; reasons shown only to configuration people is a row after M2. Option B on F1 is ruled; qa tests QA-255's hold and a case on a release already out; C4.5 returns with it. B105 (#1053's approver-as-author) stays a warm row after #1053's label.
+**C10.1 stack, top #1052:** #1062 `5fd461ac9` and #1085 `bb0c092f3` approved, no push. #1050 `5ee192c6b` (code `7a68a0bcc`, CI green, m19 checked 26/26, `applicants` needs no fix). **#1052 B79b: fresh cloud session requested 19:21 IST;** merges #1050's head, adds the 30 names, re-measures its cause 2; option C refused. Counts as running only after its first push (P-326 (3)). Row 12b after C4.11 lands: real Validate, ask for Acrobat access again, app name "Acrobat" (P-349); nobody owns it yet.
+**qa:** `local_4f43c3a4-cb9a-445d-8195-961adf26a7eb` (new, Mac), sole writer of CAPABILITIES and BUGS; asked per stack.
+**Watcher (P-354 trial, until about 19:30 IST on 6 Nov):** `local_cd535067-7d6f-449a-aadf-f1b141ae4fd4`, Sonnet; digest watcher-digest (.md) in the notes folder.
+**M3, holding (P-356):** #1072 and #1073 approved, then `demo.ts` after M2's stacks. #1084 B104: gate A with cloud qa. #1086 B108 design ready, two questions for the founder. B109, B110 not started (brief on #1091). Paused: #1075, #1054, #1074.
+**Copies saved at the switch, on their own branches, no PR:** `claude/saved-b78-review-round6-2026-11-05` (Opus round 6 text; #1062's head stays the approved commit), `claude/saved-qa-c1112-pack-2026-11-05` (a C11.12 pack line; qa decides). Canary branch `claude/canary-switch-2026-11-05` holds one empty commit.
+**Board at 19:22 IST:**
+```
+#1086  -   Building            356m  B108 — scale phase, how the factory reaches   no push 356m
+#1075  M3  Building            443m  C7.3 — portal sheet passes its pack on the c  no push 443m
+#1054  M3  Building            523m  C3.16 — shared field scope (person · filing   no push 523m
+#1084  M3  CI red              315m  C8.2, C6.9 — B104 J7 Stage 1 on the configur red checks: 2 no push 315m
+#1072  M3  CI red              372m  C6.11 — IMM 5476 follows the representative  red checks: 2 no push 372m
+#1074  M3  CI red              457m  C6.12 — spouse sponsorship priced from the f red checks: 2 no push 457m
+#1050  M2  CI running           28m  C10.1 (steps E10, E10b) — QA-144 slice 4 (B7
+#1052  M2  Question to Lead     89m  C10.1 — Family sponsorship set up from its f
+#1068  M2  Ready for label      47m  C4.11 — B88: one combination's approved cond
+#1053  M2  Ready for label      80m  C4.11 — a form field can hold a question's c
+#1036  M2  Ready for label      84m  C4.11 — ask a form's Yes/No form field as it
+#1085  M2  Ready for label      95m  C10.1 — B97: release 2 through B81's choices  no push 95m
+#1062  M2  Ready for label     134m  C10.1 — row 7: a person's names for the 29 s  no push 134m
+#1073  M3  Ready for label     326m  C6.4 — Documents panel on the case page; che  no push 326m
+```
+(Older rows, not moving: #945, #417, #671, #669.)
 
 ## Leads, in order (highest = current)
-**Lead 11** `local_55e21a98-68ad-4429-a441-0462a75e910b` (current from this hand-over) · standby: see the hand-over note · Lead 10 `local_e336999f-beb6-41ae-a978-a5bdc886991c` ended · Leads 1, 2 open (ended) · Leads 3–9 archived. Hand over at about 400k tokens (P-314). The 30-minute check runs at minutes 13 and 43 (skill lead-watch, app view every check).
+**Lead 14** `local_a924b889-5436-4e23-af0b-97c8813c2f08` (new account) · standby: Lead 15 `local_6e4fb2cc-8a4f-4931-b7c9-def6444d7d9b`, Lead 16 `local_3444648a-6db3-406f-b931-300c571feb91` · Leads 1-13 and every earlier session are on the old account and do not appear here. Hand over at about 400k (P-314). Check at minutes 13 and 43.
 
 ## Next (in order)
-1. Retrospective and M3 plan to the founder, very brief (founder's asks below); write "Resume on the new account"; build the factory board from `lead-watch.sh`.
-2. Critical path above; next free standby takes B84, then B87; M3 order after qa's re-score: foundations (C3.16, C11.5, C1.3, C11.6, C6.11) → case journey (C6.4, C6.12, C6.5, C7.7, C7.6, C7.3) → after filling (C7.5, C8.1, C8.2, C9.2) → C10.2 last. From row titles only; verify against code.
-3. Records once a day plus each hand-over (P-336).
+0. **qa's gate A on `414289ef6`;** on PASS, the labels of #1036, #1053, #1068 together, in order (P-355). On FAIL, a fix lane on the PR that owns it; any push voids the PASS.
+1. **C10.1:** B79b's head, then qa's gate A on #1052's top, then its four labels. The stack landing second merges main and re-runs its pack first (P-355).
+2. Row 12b after C4.11 lands (P-349): ask for Acrobat access, app name "Acrobat".
+3. M2 = 60: bring the M3 changes to the founder as one decision (A156), then end the hold (P-356).
 
 ## Waiting for the founder
-1. Label this records PR (auto mode refuses a Lead's own unless he names it).
-2. Fable report when he has run the prompt (P-344 (6)).
-3. What "it is only 4" meant; until then M3's target is 24 working hours, about 3 working days.
+1. claude.ai in the built-in browser: reads as signed out at 19:26 IST after the sign-in; the app view stays closed until it reads as text.
+2. Name this records PR for its label, if the label is refused.
 
 ## Founder asks of 5 Nov
-**A132** (~07:35 IST) status ✓ · **A133** (~07:55) start four builders ✓ · **A134** (~08:05) full update; what went well or badly; dependency on him; ETAs; M3 and cleanup: answered, retrospective to be finished by Lead 11 · **A135** (~08:10) leads and sessions under them; cleanup ✓ · **A136** (~08:30) lessons and workflow changes, budget, account switch, standbys: answered in brief; Lead 11 finishes · **A137** (~08:32) two capabilities in 2 hours: not realistic, said why; factory pipeline; M3 order: answered; board to do · **A138** (~08:45) start in cloud ✓ · **A139** (~08:55) Lead 11 now; standbys; Fable or not; method changes; 30-minute updates: reported ✓ (P-347) · **A140** (~10:10) resume messages, B84 to the cloud, label #1055 ✓ · **A141** (~10:50) M2 in 2 hours, M3 start, clean the Mac, plan, aggressive: cloud lanes started, cleanup done, honest times given (P-348) ✓ · **A142** (~10:53) record and adopt what Fable and the Lead decided: P-348, RULES, skills, memory ✓.
+**A132** (~07:35 IST) status ✓ · **A133** (~07:55) start four builders ✓ · **A134** (~08:05) full update; what went well or badly; dependency on him; ETAs; M3 and cleanup: answered, retrospective to be finished by Lead 11 · **A135** (~08:10) leads and sessions under them; cleanup ✓ · **A136** (~08:30) lessons and workflow changes, budget, account switch, standbys: answered in brief; Lead 11 finishes · **A137** (~08:32) two capabilities in 2 hours: not realistic, said why; factory pipeline; M3 order: answered; board to do · **A138** (~08:45) start in cloud ✓ · **A139** (~08:55) Lead 11 now; standbys; Fable or not; method changes; 30-minute updates: reported ✓ (P-347) · **A140** (~10:10) resume messages, B84 to the cloud, label #1055 ✓ · **A141** (~10:50) M2 in 2 hours, M3 start, clean the Mac, plan, aggressive: cloud lanes started, cleanup done, honest times given (P-348) ✓ · **A142** (~10:53) record and adopt what Fable and the Lead decided: P-348, RULES, skills, memory ✓. · **A143** (~11:47) status, clean up from the browser, check result, rating: answered; 10 sessions archived ✓ · **A144** (~11:53) M2 only? P-350, then P-351 ✓ · **A145** (~11:58) questions apart from text; B88 now; Acrobat; M3 plan; what waits: rule saved, done ✓ · **A146** (~12:00) engineering research report: answered in brief, gap told ✓ · **A147** (~12:25) merge queue and factory view: answered, rule saved ✓ · **A148** (~12:55) why two capabilities take so long: answered, P-352 ✓ · **A149** (~12:58) fit at 100+? No; P-353 ✓ · **A150** (~13:00) watch cloud lanes in the browser: rule saved ✓ · **A151** (~13:05) his test failed, fix and why, how to be sure: fix started; answer given; qa's result: no walk found that ever chose another offered page; told him. · **A152** (~13:10) "you have all my approval related to adobe acrobat": access to Acrobat granted to Lead 13's session at 13:12 IST for row 12b; used only after C4.11 lands (P-349). · **A153** (~13:30) Devin instead of Claude lanes, whether to wait, monitoring that cleans up by itself, saving context with a dedicated agent: answered; P-354. · **A154** (~14:20) why M2 is not done: answered. · **A155** (~14:27) why stuck, M2 in 2 hours, what is wrong: answered; P-355; the times told him then are overtaken: see the report of 17:10 IST. · **A156** (~17:13) why so slow, what it means for M3: answered; changes for M3 to bring to him as one decision once M2 lands (shared causes first, stacks from day one, time each row, records once a day, the watcher). · **A157** (~17:08) how to switch accounts: answered; switch at 98-99% on the Lead's card. · **A158** (~19:14) account switched; follow the resume page word for word, canary first; C4.11 and C10.1 stacks; qa from its note; watcher; Acrobat before 12b; report in one line: restarted qa, B79b, watcher, standbys, check ✓; M3 held on the founder's choice (P-356).
 
 ## Lessons of 5 Nov
+* The new account was at 87%, not empty, and the plan did not say to look first: `get_usage` now comes first on the resume page. Lead 13's last STATE commit was not on `main` either.
+* The 10-message cap held C4.11 from 14:47 to 17:05 IST, 2 h 18 min, while lanes sat ready. Asked in text and in the box, he did not see it; AskUserQuestion reached him at once. Ask for "go" by AskUserQuestion and end the turn straight after; spend Mac messages only on what moves the critical path, and let lanes hand each other heads directly.
+* A founder's word typed while the Lead is mid-turn does not reset the app's 10-message cap, nor does an AskUserQuestion answer: end the turn and ask for a typed turn.
+* A standby can be archived without anyone saying so: check before telling a lane it is being replaced (qa standby, found 13:24 IST; restored, take-over message sent).
 * Green packs hid dead ends (QA-233, QA-237): a row needs one walk of a person's full journey before it counts. Proposed; not yet a rule.
 * A row waited 3 h 20 min for a typed turn when typing into claude.ai/code or a standby would have done (P-344 (3)).
 * Auto-archive closed working lanes and standby Leads; now off. `ListAgents` does not show an unarchived session until it runs: message it by its id.
@@ -50,3 +64,7 @@ updated: 2026-11-05 10:30 IST by **Lead 11 · 5 Nov 09:01 IST** (partial; full r
 * Archiving Lead 5 removed its side-session notes folder (a copy was made first): keep hand-overs in the side-session notes folder lead10-saved-2026-11-05.
 * Long lanes burn the most: S2 reached 960k tokens. A context figure must be measured with `get_usage`; "90%" repeated for hours was 65%.
 * Write what happened after it happens: two "card proposed" lines and a guessed "06:45" were wrong.
+* The founder's first test of a dialog failed where every pack passed: nothing tried the other options or a long address. Walks need every offered option, not only the path a pack uses.
+* A check that reads a PR's latest question misses earlier ones (#1074, over an hour). The app view showed it.
+* Grants and permissions are per session: Acrobat access does not pass to the next Lead; Lead 14 must ask again. The app's name for it is "Acrobat", not "Adobe Acrobat".
+

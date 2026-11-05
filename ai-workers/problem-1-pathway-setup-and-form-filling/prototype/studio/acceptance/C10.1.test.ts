@@ -57,6 +57,20 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   const sp = sql(`select id from combination where combination_key = 'sp.outside' and retired_at is null limit 1`);
   ok("C10.1 S10 row 10: the Study permit (outside Canada) has release 1, submitted by the author and approved by the Approver after the SME's sign-off", releasesOf(sp).length >= 1
     && n(`select count(*) from config_release where combination_id = '${sp}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1, releasesOf(sp).length);
+  // Labelled E10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps E10)"; QA-144 slice 4, B79a):
+  // Express Entry set up from its forms; Submit refuses it for no form field without a decision and no fact nobody is
+  // asked (219 on main 86b721eac). E10b is its release: IMM 0008 DEP prints no "Unknown" marital status, marked Not on this
+  // form through B81's door (tech lead on #1050).
+  const ee = sql(`select id from combination where combination_key = 'pnp.express_entry' and retired_at is null limit 1`);
+  const eeWhy = (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Provincial nominees › Express Entry stream: ")).join(" · ");
+  // Review m1 and r2-m2 (#1050): the whole list of the draft's blocking problems, not row 10's first three, read from the
+  // combination's own read (GET, writes nothing; Submit refuses on these, after first running the draft's answer keys,
+  // which can only add refusals). A released combination is not read.
+  const eeErrors = ee && !releasesOf(ee).length ? ((((await call("GET", `/combinations/${ee}`)).body?.draft?.problems ?? []) as { level: string; message: string }[]).filter((p) => p.level === "error")) : [];
+  const undecided = eeErrors.filter((e) => /form fields? ha(s|ve) no decision|nobody is asked for it/.test(e.message));
+  ok("C10.1 E10 row 7 and 10: Express Entry is set up from its forms, and Submit refuses it for no form field without a decision and no fact nobody is asked", !!ee && /Provincial nominees › Express Entry stream/.test(r("7")?.shows ?? "")
+    && (releasesOf(ee).length >= 1 || (eeErrors.length > 0 && undecided.length === 0)), { refusals: eeErrors.length, undecided: undecided.length, first: (undecided[0] ?? eeErrors[0])?.message?.slice(0, 200) });
+  ok("C10.1 E10b row 10: Express Entry has release 1, submitted by the author and approved by the Approver", releasesOf(ee).length >= 1 && n(`select count(*) from config_release where combination_id = '${ee}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1, eeWhy.slice(0, 300));
   ok("C10.1 part B (DEMO.md row 10): each release is approved by the Approver after the SME's sign-off, never by the author", n(`select count(*) from config_release where approver_id <> '${APPROVER}'`) === 0 && n(`select count(*) from config_release`) >= 3 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1 && n(`select count(*) from review_submission where submitted_by = '${AUTHOR}' and status = 'APPROVED'`) >= 3);
   // Row 11: the thin family case, one Sample family of four (DEMO.md "The story").
   const vvCase = vv ? sql(`select id from runtime_case where combination_id = '${vv}' order by created_at limit 1`) : "";

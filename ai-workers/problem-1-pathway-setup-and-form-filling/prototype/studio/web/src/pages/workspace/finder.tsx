@@ -19,6 +19,7 @@ import { costWords, START } from "../../../../contracts/start-setup";
 import { FindFormsStart } from "@/components/start-setup";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS } from "../../../../contracts/cost-check";
+import { findErrorWords, findRunKey } from "./find-key";
 
 export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION" | "CHECKLIST_IN_LIBRARY";
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; /** C11.15 (P-156 (4)): where the file is on canada.ca when its download failed. */ link?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string; /** QA-103: the library edition the finder used or downloaded. */ edition?: string | null };
@@ -26,7 +27,7 @@ export type FinderForm = { code: string; title: string; quote: string | null; co
 export type PageChoice = { candidates: { title: string; url: string }[]; why: string };
 export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string; page_choice?: PageChoice | null };
 type Mode = "replay" | "rules" | "live";
-type Plan = { live?: { on: boolean; why: string | null }; steps: { n: number; label: string; uses_ai: boolean; chosen?: boolean; worst_usd?: number | null }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
+type Plan = { page_url?: string | null; live?: { on: boolean; why: string | null }; steps: { n: number; label: string; uses_ai: boolean; chosen?: boolean; worst_usd?: number | null }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
 
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
 const ON_LINE = new Set<FinderState>(["ATTACHED", "DOWNLOADED_ATTACHED", "NEWER_FILE_SAME_EDITION"]);
@@ -49,6 +50,11 @@ const MODES: [Mode, string, string][] = [
 ];
 
 const SAMPLE_NOTE = "Which forms apply is Sample until the immigration expert confirms.";
+/** QA-252 (2): Find again's choice of the page the last finished find read (review m1: a failed find since then does not
+ *  change it), beside "Another canada.ca page". */
+const USED_BEFORE = "The page the last finished find read";
+/** Choosing another page with nothing pasted yet: no plan is made, and Start stays off until there is an address. */
+const PASTE_FIRST = "Paste the address of the canada.ca page to see the steps and their cost.";
 
 /** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With
  *  `page` (S3 item 5), the person first chooses the application page the last run could not pick: from the pages it saw,
@@ -60,13 +66,21 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
   const [stage, setStage] = React.useState<Stage>("match");
   const [picked, setPicked] = React.useState<string>(page?.candidates[0]?.url ?? "");
   const [other, setOther] = React.useState("");
-  const pageUrl = page ? (picked === "other" ? other.trim() : picked) || undefined : undefined;
+  // QA-252 (2): a find that finished on a page remembers it (api/src/finder.ts rememberedPages), so every later find reads
+  // it again and never waits for a page: "Choose the page and find again" was not offered after one finished try, and a
+  // wrong page (Visitor visa's for Super visa, 0 forms) was a dead end. Find again now shows that page and lets the person
+  // paste another canada.ca page instead; with no remembered page it is as before.
+  const again = !page && !only;
+  const [usedBefore, setUsedBefore] = React.useState<string | null>(null);
+  const choosing = !!page || (again && picked === "other");
+  const pageUrl = choosing ? (picked === "other" ? other.trim() : picked) || undefined : undefined;
   const key = React.useMemo(() => crypto.randomUUID(), []);
   const redoPath = redoCode ? `/combinations/${id}/forms/${encodeURIComponent(redoCode)}/redo` : null;
-  const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? "", redoCode ? stage : ""],
-    queryFn: () => redoPath ? api<Plan>(redoPath, { method: "POST", json: { stage, mode } }) : api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
+  const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? (choosing ? "choosing" : ""), redoCode ? stage : ""],
+    queryFn: () => redoPath ? api<Plan>(redoPath, { method: "POST", json: { stage, mode } }) : api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !choosing || !!pageUrl });
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   const qc = useQueryClient(), toast = useToast();
+  React.useEffect(() => { if (again && !choosing && plan.data?.page_url) setUsedBefore(plan.data.page_url); }, [again, choosing, plan.data?.page_url]);
   // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
   const liveOff = plan.data?.live && !plan.data.live.on ? plan.data.live.why : null;
   React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
@@ -85,20 +99,28 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
     setBusy(true); setError(null);
     try {
       const body = { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) };
+      // Founder's test 5 Nov: the key holds a fixed-length fingerprint of the page, never the page itself (find-key.ts).
+      const runKey = redoPath ? null : await findRunKey(key, mode, pageUrl);
       // A Redo is started as planned; over a cost limit the server refuses it in words (no Continue past a limit here).
       const v = redoPath ? await api<{ id: string }>(redoPath, { method: "POST", json: { stage, mode, planSha256: plan.data.plan_sha256, idempotencyKey: `redo-${key}-${stage}-${mode}` } }) : (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
-        (overrideId) => api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { ...body, planSha256: plan.data!.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}`, ...(overrideId ? { overrideId } : {}) } }))) as { id: string } | undefined;
+        (overrideId) => api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { ...body, planSha256: plan.data!.plan_sha256, idempotencyKey: runKey!, ...(overrideId ? { overrideId } : {}) } }))) as { id: string } | undefined;
       // Review m7: Cancel is the person's choice, not an error: the same info toast as Draft setup.
       if (!v) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k });
       void qc.invalidateQueries({ queryKey: ["combination", id, "finder"] });
       onStarted(v.id); onClose();
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setError(findErrorWords(e)); } finally { setBusy(false); }
   };
+  // Review M1 (keyboard): the address box chooses "Another canada.ca page" only when the person types in it (or picks its
+  // radio), never on focus: Tab from the chosen page passes through the box on its way to Start and keeps that page.
+  const otherPage = (checked: boolean) => (
+    <label className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={checked} onChange={() => setPicked("other")} className="mt-1" /><span className="flex-1"><span className="font-medium">{START.pageOther}</span>
+      <input type="url" aria-label={START.pageOther} placeholder="https://www.canada.ca/en/immigration-refugees-citizenship/…" value={other} onChange={(e) => { setOther(e.target.value); setPicked("other"); }} className="mt-1 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm" data-page-other /></span></label>
+  );
   const title = only?.length ? `Redo with AI: ${only.join(", ")}` : page ? START.pageButton : "Find this combination's forms";
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description={redoCode ? `Redo with AI for ${redoCode} only: the run says what AI decided about it, and a form already on this combination keeps its line as it is. ${SAMPLE_NOTE}` : `${FIND_DESCRIPTION[mode]} ${SAMPLE_NOTE}`}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={!plan.data}><Sparkles /> Start</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={!plan.data || (choosing && !pageUrl)}><Sparkles /> Start</Button></>}>
       <div className="space-y-4" data-find-dialog>
         {redoCode ? (
           <fieldset className="space-y-2" data-redo-stage>
@@ -115,8 +137,13 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
             {page.candidates.map((c) => (
               <label key={c.url} className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={picked === c.url} onChange={() => setPicked(c.url)} className="mt-1" /><span><span className="font-medium">{c.title}</span><br /><span className="break-all text-xs text-text-muted">{c.url}</span></span></label>
             ))}
-            <label className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={picked === "other" || !page.candidates.length} onChange={() => setPicked("other")} className="mt-1" /><span className="flex-1"><span className="font-medium">{START.pageOther}</span>
-              <input type="url" aria-label={START.pageOther} placeholder="https://www.canada.ca/en/immigration-refugees-citizenship/…" value={other} onFocus={() => setPicked("other")} onChange={(e) => setOther(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm" data-page-other /></span></label>
+            {otherPage(picked === "other" || !page.candidates.length)}
+          </fieldset>
+        ) : again && usedBefore ? (
+          <fieldset className="space-y-2" data-page-again>
+            <legend className="text-xs font-medium">{START.pageLegend}</legend>
+            <label className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={picked !== "other"} onChange={() => setPicked("")} className="mt-1" /><span><span className="font-medium">{USED_BEFORE}</span><br /><span className="break-all text-xs text-text-muted" data-page-used>{usedBefore}</span></span></label>
+            {otherPage(picked === "other")}
           </fieldset>
         ) : null}
         <fieldset className="space-y-2">
@@ -125,7 +152,7 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
             <label key={m} className={`flex gap-2 text-sm${m === "live" && liveOff ? " text-text-muted" : ""}`} data-mode={m}><input type="radio" name="find-mode" checked={mode === m} disabled={m === "live" && !!liveOff} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{m === "live" && liveOff ? liveOff : hint}</span></span></label>
           ))}
         </fieldset>
-        {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="danger" title="This find cannot start">{plan.error.message}</Notice> : plan.data ? (
+        {choosing && !pageUrl ? <p className="text-sm text-text-muted" data-page-needed>{PASTE_FIRST}</p> : plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="danger" title="This find cannot start">{findErrorWords(plan.error)}</Notice> : plan.data ? (
           <div className="rounded-lg border border-border p-3 text-sm" data-find-plan>
             <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((s) => <li key={s.n}>{s.label} {s.uses_ai ? <Pill tone="ai">AI</Pill> : s.chosen ? <Pill title="The page a person chose: no AI and no rule reads it again">your choice</Pill> : <Pill>rules</Pill>}{mode === "live" && s.worst_usd != null ? <span className="ml-1 text-xs text-text-muted" data-step-reserve>at most US${s.worst_usd.toFixed(2)}</span> : null}</li>)}</ol>
             <p className="mt-2 font-medium" data-find-cost>{mode === "live" ? `${costWords(plan.data.totals.about_usd ?? null, plan.data.totals.worst_usd ?? 0).replace(/^./, (x) => x.toUpperCase())}, inside the AI spending cap. Nothing is spent until you click Start.` : "Cost: US$0 (no AI call)."}</p>

@@ -195,7 +195,7 @@ function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, w
     <div className={compact ? "flex flex-wrap items-center gap-2" : "space-y-1.5 rounded-lg border border-border bg-surface px-3 py-2"}>
       <div className="flex flex-wrap items-center gap-2 text-[13px]">
         <CopyState c={c} />
-        <span className="text-text-muted">Copy of {when(c.created_at)}{c.counts ? ` · ${c.counts.written} form fields written${c.counts.by_hand ? `, ${c.counts.by_hand} by hand` : ""}` : ""}{c.intact ? " · read back and checked" : ""}</span>
+        <span className="text-text-muted">Copy of {when(c.created_at)}{c.counts ? ` · ${c.counts.written} form fields written${c.counts.by_hand ? `, ${c.counts.by_hand} by hand` : ""}${c.counts.not_on_form ? `, ${c.counts.not_on_form} not on this form` : ""}` : ""}{c.intact ? " · read back and checked" : ""}</span>
         {c.status === "GENERATED" && c.file_ok ? <Button size="sm" variant="ghost" onClick={() => void download()} aria-label={`Download the copy of ${when(c.created_at)}`}><Download aria-hidden />Download</Button> : null}
         {c.status === "GENERATED" && !c.file_ok ? <Pill tone="danger" title="The file is missing from the working files">File missing</Pill> : null}
         {lockBlocked ? <>
@@ -217,6 +217,8 @@ function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, w
       ) : null}
       {!compact && (c.out_of_date || c.stale) ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>{c.stale ? "Facts changed after this copy was locked; the locked file is kept as it was." : "Facts changed since this copy was made; generate a new copy to file it."} Added, changed or removed: <Few items={c.changed} />.</span></p> : null}
       {!compact && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
+      {/* B81: not "by hand": the form has no such choice to write. Who it is about comes first (the same words on many form fields). */}
+      {!compact && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
       {!compact && c.status === "FAILED" ? <p className="text-[13px] text-text-danger">{c.error}</p> : null}
       {!compact && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
     </div>

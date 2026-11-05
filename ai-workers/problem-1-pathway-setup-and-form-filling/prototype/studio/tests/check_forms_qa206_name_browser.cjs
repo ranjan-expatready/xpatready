@@ -70,6 +70,21 @@ const PART_NAMES = /^(Page wrapper|Nat id|Us card|Contacts row2|Background info2
   await accept.click();
   await p.getByText(/Decided\. It landed as/).first().waitFor({ timeout: 20000 });
   step("QA-206 pass: it lands under the typed name, waiting for a second person", sql("select count(*) from logical_section where title = 'Applicant and application details' and status = 'DRAFT'") === "1" && Number(sql("select count(*) from library_change where status = 'WAITING' and kind = 'section'")) === w0 + 1);
+  // B78 (review M1, m8): the second part, named what the library now holds, joins that section, and the person is told so.
+  await unnamed.first().waitFor({ timeout: 20000 });
+  await unnamed.first().getByRole("button", { name: /^Open / }).click();
+  const panel2 = p.getByRole("dialog"), w1 = sql("select count(*) from library_change where status = 'WAITING' and kind = 'section'");
+  // By keyboard alone: type the name, Tab to Accept, press Enter.
+  await panel2.getByLabel(/Section name/).focus();
+  await p.keyboard.type("Applicant and application details");
+  await shot("5-imm5475-named-what-the-library-holds-1440");
+  let onAccept = false;
+  for (let i = 0; i < 40 && !onAccept; i++) { await p.keyboard.press("Tab"); onAccept = await p.evaluate(() => document.activeElement?.textContent?.trim() === "Accept with this name"); }
+  step("B78 pass: Accept is reached by the keyboard", onAccept);
+  await p.keyboard.press("Enter");
+  await p.getByText(/The library already holds a section of that name, so this part joins it; nothing new was added/).first().waitFor({ timeout: 20000 });
+  await shot("6-imm5475-joined-says-so-1440");
+  step("B78 pass: named what the library holds, it joins that section, no second section and nothing new waits; the person is told in words", sql("select count(*) from logical_section where title = 'Applicant and application details'") === "1" && sql("select count(*) from library_change where status = 'WAITING' and kind = 'section'") === w1);
   step("no page errors", errors.length === 0, errors);
   await b.close();
   console.log(`\n${pass} passed, ${failed} failed`);

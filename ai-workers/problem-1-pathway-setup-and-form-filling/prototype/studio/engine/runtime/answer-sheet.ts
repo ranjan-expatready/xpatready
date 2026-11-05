@@ -38,7 +38,7 @@ export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], o
   const out: SheetSection[] = Object.entries(sections).map(([key, title]) => ({ key, title, version: "", entered: null, out_of_date: false, answers: [], waiting: [] }));
   const byKey = new Map(out.map((x) => [x.key, x]));
   for (const b of boxes) {
-    if (!b.fact) continue;
+    if (!b.fact || b.coverage === "not needed") continue; // B86 BR-5: nothing to enter, nothing to wait for
     const sec = byKey.get(sectionGroupOf(b.box.split(".").slice(1).join(".")) ?? "");
     if (!sec) continue;
     // Review N1: keyed by the whole "about" (a person, or a person's relation such as "<id>/parent_1"), so a parent's

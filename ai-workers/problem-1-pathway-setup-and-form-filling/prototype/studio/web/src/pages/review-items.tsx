@@ -15,6 +15,7 @@ import { UsesList, type Uses } from "@/pages/library-forms";
 import { ToReviewPage } from "@/pages/to-review";
 import { FormFieldDecisions } from "@/pages/job";
 import type { SessionView } from "../../../contracts/programs";
+import type { FieldReadersView, FieldWithdrawn } from "../../../contracts/own-question";
 import type { HeldFileView, ImpactAccepted, ImpactChange, ImpactComponentKind, ImpactDrafted, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView } from "../../../contracts/screen02";
 import { RECHECK, SAY } from "../../../contracts/lifecycle";
 
@@ -28,8 +29,8 @@ function useMe() {
 function Crumbs({ here }: { here: string }) {
   return <nav aria-label="Path" className="text-xs text-text-muted"><Link to="/review" className="hover:underline">To review</Link> › {here}</nav>;
 }
-function Head({ title, chip, tone = "warn", sub }: { title: string; chip: string; tone?: string; sub?: React.ReactNode }) {
-  return <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold tracking-tight">{title}</h1><Pill tone={tone}>{chip}</Pill></div>{sub ? <p className="mt-1 text-sm text-text-muted">{sub}</p> : null}</div>;
+function Head({ title, chip, tone = "warn", sub }: { title: string; chip?: string; tone?: string; sub?: React.ReactNode }) {
+  return <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold tracking-tight">{title}</h1>{chip ? <Pill tone={tone}>{chip}</Pill> : null}</div>{sub ? <p className="mt-1 text-sm text-text-muted">{sub}</p> : null}</div>;
 }
 /** Decide with an optional or required note: the primary step and the one that sends it back with a reason. */
 function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy, onlyNo }: { yes: string; no: string; onYes: () => void; onNo: (note: string) => void; busy: boolean; noNeedsReason?: boolean; disabledWhy?: string | null; /** The yes would be refused: the reason is filled in and the no is the main action. */ onlyNo?: string }) {
@@ -67,7 +68,7 @@ export function LibraryChangePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
       {x.kind === "library_form" ? <FormUses code={x.key} changeId={x.id} /> : null}
-      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : x.status === "WITHDRAWN" ? "Withdrawn" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
       {x.accepts ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-accepts>
           <dt className="text-text-muted">Form</dt><dd className="font-semibold">{x.accepts.form}{x.accepts.edition ? ` · ${x.accepts.edition}` : ""}</dd>
@@ -79,6 +80,16 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       {x.rename ? <RenameChange change={x} /> : null}
+      {x.form_field ? (
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-form-field>
+          <dt className="text-text-muted">Form field</dt><dd className="font-semibold">{x.form_field.edition} · {x.form_field.caption || "A form field with no printed name"}</dd>
+          <dt className="text-text-muted">Its own words</dt><dd className="[overflow-wrap:anywhere]">{x.form_field.words ? `“${x.form_field.words}”` : "None"}</dd>
+          {x.form_field.ask ? <><dt className="text-text-muted">The form asks</dt><dd className="[overflow-wrap:anywhere]">“{x.form_field.ask.printed}”</dd></> : null}
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.form_field.ask ? (x.form_field.clear ? `Worked out from other answers again, not asked as “${x.form_field.ask.deciding}”` : `Asked as “${x.form_field.ask.deciding}”: writes ${x.form_field.ask.writes}`) : x.form_field.clear ? "Filled whenever the form applies" : `Filled only when ${x.form_field.sentence}`}</dd>
+          <dd className="col-span-2 text-xs text-text-muted">For every combination that files this form. {x.form_field.ask ? (x.form_field.clear ? "Approving makes this Yes/No worked out from other answers again: Sample, Unconfirmed: expert." : "Approving says this Yes/No asks the same question as its deciding question, not that the condition is correct: Sample, Unconfirmed: expert.") : x.form_field.clear ? "Approving takes the condition off this form field: Sample, Unconfirmed: expert." : "Approving says these say the same, not that the condition is correct: Sample, Unconfirmed: expert."}</dd>
+        </dl>
+      ) : null}
+      {x.form_field?.spread || x.condition?.spread ? <div data-change-spread><Notice tone="warn" title="Other combinations">{x.form_field?.spread ?? x.condition?.spread}</Notice></div> : null}
       {x.supplies ? (
         // C4.5: what the second person compares before approving: the facts before → after, each with its official words.
         <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-supplies>
@@ -110,10 +121,11 @@ export function LibraryChangePage() {
         {x.with_combination ? <p data-with-combination><b>Its combination</b> is {x.action === "RESTORE" ? "restored" : "retired"} with it, in the same release.</p> : null}
         {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
+        {x.status === "WAITING" && x.supplies && x.decision_note ? <div data-came-back><Notice tone="warn" title="This changed after it was proposed: decide what it does now">{x.decision_note}. What it does now is above; the reason was written for what it did before.</Notice></div> : null}
       </div>
-      <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>
+      {x.form_field ? null : <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>}
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
-        : x.status === "RETURNED" ? (x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
+        : x.status === "RETURNED" ? (x.form_field ? <><Notice title={x.form_field.ask ? "Ask it again" : "Confirm it again"}>{x.form_field.ask ? "A returned change of a form field is not sent again from here: withdraw it, then ask the Yes/No as its deciding question again on Review and release." : "A returned change of a form field is not sent again from here: withdraw it, then confirm the form field again on Review and release."}</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -127,7 +139,7 @@ export function LibraryChangePage() {
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
           <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
         </>}
-      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME") ? <Withdraw id={x.id} /> : null}
+      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field) ? <Withdraw id={x.id} label={x.form_field ? "Withdraw it" : undefined} /> : null}
     </div>
   );
 }
@@ -204,11 +216,27 @@ function Correct({ change }: { change: LibraryChangeDetail }) {
 function Withdraw({ id, label = "Withdraw the new field" }: { id: string; label?: string }) {
   const nav = useNavigate();
   const [open, setOpen] = React.useState(false), [why, setWhy] = React.useState("");
-  const go = useAction(() => api<{ form_fields_reopened?: number }>(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why } }), { success: (r) => (typeof r.form_fields_reopened === "number" ? `Withdrawn: ${r.form_fields_reopened} form field${r.form_fields_reopened === 1 ? "" : "s"} back to "no decision"` : "Withdrawn: nothing in the library changed"), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  // B83 (tech lead on breaker M5): withdrawing is not refused while something reads the field, but the words name the
+  // readers before and after the press, and each one holds Submit by name until it is changed.
+  const asking = useApi<FieldReadersView>(["change-readers", id], open ? `/library/changes/${id}/readers` : null);
+  const readers = asking.data?.readers ?? [];
+  const go = useAction(() => api<FieldWithdrawn>(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why } }), { success: (r) => {
+    if (typeof r.form_fields_reopened !== "number") return "Withdrawn: nothing in the library changed";
+    const n = (c: number) => `${c} form field${c === 1 ? "" : "s"}`, parts = [];
+    if (r.form_fields_restored) parts.push(`${n(r.form_fields_restored)} back to worked out from other answers`);
+    if (r.form_fields_reopened) parts.push(`${n(r.form_fields_reopened)} back to "no decision"`);
+    return `Withdrawn${parts.length ? `: ${parts.join(", ")}` : ""}.${r.taken_out_of?.length ? ` Taken out of the change to the facts of ${r.taken_out_of.join("; ")}: a second person decides what is left, or it ended if nothing is.` : ""}${r.readers?.length ? ` Still reading it: ${r.readers.slice(0, 3).join("; ")}${r.readers.length > 3 ? `; and ${r.readers.length - 3} more` : ""}. In a combination's draft, each holds its Submit until changed.` : ""}`;
+  }, invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   return open ? (
-    <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3" data-withdraw>
-      <label className="flex-1 text-sm">Why withdraw it<Input className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
-      <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3} onClick={() => go.mutate(undefined)}>{label}</Button>
+    <div className="space-y-2 border-t border-border pt-3" data-withdraw>
+      {asking.isLoading ? <p className="text-sm text-text-muted" data-withdraw-reading>Checking what reads this field…</p> : null}
+      {asking.isError ? <div data-withdraw-unread><Notice tone="warn" title="What reads this field could not be checked">You can still withdraw it. Anything that reads it holds its combination's Submit, by name, until it is changed.</Notice></div> : null}
+      {readers.length ? <div data-withdraw-readers><Notice tone="warn" title="Something still reads this field">Withdrawing it leaves {readers.join("; ")} reading a field that is gone: whichever of these is in a combination's draft holds its Submit until it is changed.</Notice></div> : null}
+      {asking.data?.taken_out.length ? <p className="text-sm text-text-muted" data-withdraw-taken-out>Withdrawing it also takes it out of {asking.data.taken_out.join("; ")}: an approved change then goes back to a second person.</p> : null}
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex-1 text-sm">Why withdraw it<Input autoFocus className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
+        <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3 || asking.isLoading} onClick={() => go.mutate(undefined)}>{label}</Button>
+      </div>
     </div>
   ) : <div className="flex justify-end"><Button variant="ghost" onClick={() => setOpen(true)}>Withdraw it instead…</Button></div>;
 }
@@ -352,6 +380,7 @@ export function EditionImpactPage() {
 }
 
 /** Break M5: a held edition that cannot be compared is set aside with a reason, never left stuck on To review. */
+
 function SetAside({ id }: { id: string }) {
   const nav = useNavigate();
   const go = useAction((note: string) => api(`/intake/held/${id}/reject`, { method: "POST", json: { note } }), { success: "Set aside: the edition is not used", invalidate: [["held"], ...inv], onDone: () => nav("/review") });
@@ -362,11 +391,16 @@ function SetAside({ id }: { id: string }) {
  *  from a new edition's accepted impact. */
 export function FormFieldsPage() {
   const { id } = useParams(); const me = useMe();
+  // B83: this page is also reached with nothing undecided (Smart questionnaire's line). Review F1: it says so only once it
+  // knows: neutral while loading, the error state when the edition cannot be read.
+  const q = useApi<{ fields: { outcome: string; background?: boolean }[] }>(["edition-form-fields", id!], `/editions/${id}/form-fields`);
+  const undecided = (q.data?.fields ?? []).some((f) => f.outcome === "unresolved" || (!!f.background && (f.outcome === "not_a_fact" || f.outcome === "never_filled")));
+  if (q.isError && !q.data) return <div className="mx-auto max-w-5xl space-y-5"><Crumbs here="Form fields" /><ErrorState title="These form fields could not be opened" description={(q.error as Error).message} action={<span className="flex items-center gap-3"><Button variant="secondary" onClick={() => void q.refetch()}>Try again</Button><Link className="text-text-link underline" to="/review">Back to To review</Link></span>} /></div>;
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <Crumbs here="Form fields" />
-      <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." />
-      {me.has("review") ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
+      {!q.data ? <Head title="Form fields" /> : undecided ? <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." /> : <Head title="Form fields" chip="Decided" tone="ok" sub="Every form field of this edition has a decision." />}
+      {me.has("review") || !undecided ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
       <FormFieldDecisions editionId={id!} readOnly={!me.has("review")} />
     </div>
   );
