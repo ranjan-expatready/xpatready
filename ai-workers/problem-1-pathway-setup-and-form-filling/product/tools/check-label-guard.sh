@@ -42,7 +42,7 @@ guard() {  # $1 before, $2 after, $3 labels, $4 comments, $5 reviews → output 
   echo "$3" > "$T/fx/labels.json"; echo "$4" > "$T/fx/comments.json"; echo "${5:-[]}" > "$T/fx/reviews.json"; : > "$T/fx/log"
   out=$(cd "$R" && PATH="$T/bin:$PATH" FX="$T/fx" GH_TOKEN=x REPO=o/r PR=1052 BEFORE="$1" AFTER="$2" API=https://api.test MAIN_REF=main bash "$G" 2>&1); r=$?
   log=$(cat "$T/fx/log"); }
-cm() { jq -n --arg b "$1" '[{body: $b}]'; }
+cm() { jq -n --arg b "$1" --arg a "${2:-OWNER}" '[{body: $b, author_association: $a}]'; }
 removed() { [ $r = 0 ] && echo "$log" | grep -q '^DELETE label' && echo "$log" | grep -q '^POST comment \*\*Label guard:\*\*' && echo 1; }
 kept() { [ $r = 0 ] && [ -z "$log" ] && echo 1; }
 
@@ -57,9 +57,13 @@ guard "$c1" "$c2" "$label" "$(cm "the label goes on after the reviewer approves 
 ok "prose that mentions the SHA without 'Reviewer: Approve' does not count" "$(removed)" "$out / $log"
 guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve ${c2:0:6}")"
 ok "a SHA shorter than 7 characters does not count" "$(removed)" "$out / $log"
-guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c2" '[{state:"APPROVED",commit_id:$h}]')"
+guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c2" '[{state:"APPROVED",commit_id:$h,author_association:"OWNER"}]')"
 ok "a GitHub review APPROVED on the new head keeps the label" "$(kept)" "$out / $log"
-guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c1" '[{state:"APPROVED",commit_id:$h}]')"
+guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve ${c2}" NONE)"
+ok "an Approve line from someone without write access (anyone, on a public repository) does not count" "$(removed)" "$out / $log"
+guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c2" '[{state:"APPROVED",commit_id:$h,author_association:"CONTRIBUTOR"}]')"
+ok "a GitHub review from someone without write access does not count" "$(removed)" "$out / $log"
+guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c1" '[{state:"APPROVED",commit_id:$h,author_association:"OWNER"}]')"
 ok "a GitHub review on the old head does not count" "$(removed)" "$out / $log"
 guard "$c1" "$pure" "$label" "[]"
 ok "a pure merge of main touching none of the PR's files keeps the label (P-318 (1))" "$(kept)" "$out / $log"

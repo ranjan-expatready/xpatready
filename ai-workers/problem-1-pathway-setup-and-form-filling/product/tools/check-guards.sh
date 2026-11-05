@@ -14,6 +14,7 @@ rm -f /tmp/guard-$$.log
 # guard | file the edit goes in | sed edit that switches the guard off | the test that must then fail
 MUT='1|product/tools/check-docs.sh|/CURRENT LEAD: STATE.md has/d|check-current-lead.sh
 2|product/tools/label-guard.sh|s/^# 3\. No review.*/exit 0/|check-label-guard.sh
+2 who|product/tools/label-guard.sh|s/^team=.*/team=true/|check-label-guard.sh
 3|product/tools/lane-preflight.sh|/under ${min} GB;/d|check-lane-preflight.sh
 4 ttl|prototype/studio/tools/isolated.sh|s/\$(( TTL \* \${ISOLATED_TTL_UNIT:-60} ))/999999/|check-isolated-ttl.sh
 4 cap|prototype/studio/tools/isolated.sh|s/COPY_CAP:-4} ))/COPY_CAP:-99} ))/|check-isolated-ttl.sh

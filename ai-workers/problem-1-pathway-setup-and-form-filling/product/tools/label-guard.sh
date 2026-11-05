@@ -4,7 +4,7 @@
 # is main's copy and a PR cannot change it). When the PR carries `review: approved` and its new head has no reviewer
 # Approve recorded for that exact commit, the label comes off and a comment says why. Kept only when:
 #   * a PR comment line reads "Reviewer: Approve" and names the new head (7 to 40 hex characters of its SHA), or a
-#     GitHub review APPROVED on that commit; or
+#     GitHub review APPROVED on that commit, by someone with write access (OWNER, MEMBER, COLLABORATOR); or
 #   * the push is a pure merge of main (P-318 (1)): the new head's parents are the old head and a commit on main, it is
 #     exactly what git's own merge gives (nothing edited by hand), and it changes none of the PR's own files.
 # Env: GH_TOKEN, REPO (owner/name), PR, BEFORE, AFTER; API (default https://api.github.com); MAIN_REF (default
@@ -26,10 +26,12 @@ echo "$labels" | jq -e --arg l "$LABEL" 'any(.[]; .name == $l)' >/dev/null || { 
 # 1. A reviewer Approve recorded for this exact head.
 comments=$(pages "repos/$REPO/issues/$PR/comments") || { echo "label-guard: cannot read comments"; exit 2; }
 reviews=$(pages "repos/$REPO/pulls/$PR/reviews") || { echo "label-guard: cannot read reviews"; exit 2; }
-named=$(echo "$comments" | jq -r '.[].body // "" | split("\n")[] | gsub("[*_`]"; "")
+# Only people with write access count (OWNER, MEMBER, COLLABORATOR): anyone can comment on a public repository.
+team='.author_association == "OWNER" or .author_association == "MEMBER" or .author_association == "COLLABORATOR"'
+named=$(echo "$comments" | jq -r ".[] | select($team) | .body // \"\"" | jq -Rr 'gsub("[*_`]"; "")
   | select(test("\\breviewer:\\s*approve[sd]?\\b"; "i")) | [scan("\\b[0-9a-f]{7,40}\\b")][]')
 for s in $named; do case "$AFTER" in "$s"*) echo "kept: reviewer Approve recorded for ${AFTER:0:9} ($s)"; exit 0;; esac; done
-if echo "$reviews" | jq -e --arg h "$AFTER" 'any(.[]; .state == "APPROVED" and .commit_id == $h)' >/dev/null; then
+if echo "$reviews" | jq -e --arg h "$AFTER" "any(.[]; ($team) and .state == \"APPROVED\" and .commit_id == \$h)" >/dev/null; then
   echo "kept: GitHub review APPROVED on ${AFTER:0:9}"; exit 0; fi
 
 # 2. A pure merge of main touching none of the PR's files (P-318 (1)).
