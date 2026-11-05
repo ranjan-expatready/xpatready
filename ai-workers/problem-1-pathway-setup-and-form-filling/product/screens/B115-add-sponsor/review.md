@@ -35,3 +35,15 @@ D1 4 row met with pass and fail lines; M1 breaks C7.7 · D2 3 sponsor data exact
 Base-code failure of the test (builder's evidence only); a real screen reader; an intended user's unaided walk (D17, D20 stay with the founder). Other suites running in this checkout rewrote committed screenshots under `screens/C11.12-…`, `R1-thin-slice`, `QA-165`, `W1-…` during my run; not mine, left untouched.
 
 **Verdict: Block** · commit b0ec3c37c2f486b5eba55b6249097647d1d1cd89 · Blockers 0 · Majors 1 · Minors 2
+
+## Round 2 (diff-only, `b0ec3c37c..2c7d6c6bf`)
+
+Own copy `rv_b115` on :4436 again (configured checkpoint, 105 s; stopped after), US$0. `check_b115_add_sponsor.cjs 4436`: 19/19, exit 0, twice. web `tsc` exit 0.
+- **M1: closed.** `offeredRoles` (`api/src/runtime.ts:48`) removes the engine's own `REPRESENTATIVE` from `can_add`, so neither Family sponsorship nor Visitor visa offers "Add representative" (new fail lines at `check_b115_add_sponsor.cjs:79` and `:140`, the second matching exactly). The route still accepts a representative, exactly as on the base. I checked the builder's reason: `tests/qa/check_qa_am_1101c_runtime_walk.cjs:30` (QA-76) posts `{role:"representative"}` and expects 201. M1 was the screen putting that path one click away on every case, and that is gone. Whether the route should refuse it too is a behaviour outside B115, so it rightly goes to the tech lead as a question in the PR, not into this row.
+- **m1: closed.** People carry `co_files` from the release line (`runtime.ts:140`, `:147`). The sponsor's chip reads "Sent with the principal's application" (title: forms sent with the principal's, never on their own) and has no "Not travelling" (fail line `:99`). Data: sponsor `applies=false, co_files=true`. axe clean on People at 400 px and 200 % zoom; no sideways scroll.
+- m2: open, listed in the PR (the reason holds: `check_runtime_r1c.cjs` clicks Add at the limit to see the refusal).
+- m3 (new Minor, Should): at 400 px the longer pill keeps its width, so the sponsor's name breaks mid-word ("Sampl / e / Spons / or A"), because the name span has `min-w-0` and `[overflow-wrap:anywhere]` and the pill does not wrap (`web/src/runtime/cases.tsx:200`). This is fine at 1024 px and at 200 % zoom (512 CSS px), the STANDARDS bar. Fix: let the chip wrap (`flex-wrap`), or let the pill wrap, so the name keeps whole words.
+- Nit (pre-existing): `addPerson`'s 422 for role "case" still lists "representative" in "This application can add: …" (`runtime.ts:200`, from `addableRoles`), while the screen no longer offers it. Align it if the tech lead rules on the route.
+Journey score unchanged in substance. With M1 and m1 closed, correct data, error recovery and plain words rise to 1, so it is now **9.5/10** (visual quality ½ for m3 at 400 px).
+
+**Round 2 verdict: Approve** · commit 2c7d6c6bfbda012979cfaa14fd29351252396a7f · Blockers 0 · Majors 0 · Minors 2 (m2, m3)
