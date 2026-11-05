@@ -70,7 +70,7 @@ export function ItemChannels({ caseId }: { caseId: string }) {
                         <span className="text-text-muted">IRCC accepts: {f.accepts.length ? words(f.accepts) : "nothing recorded yet"}</span>
                         <span className="flex-1" />
                         <Button ref={(b) => { buttons.current[f.id] = b; }} size="sm" variant="secondary" disabled={recorded} aria-describedby={recorded ? `ch-ro-${f.id}` : undefined}
-                          aria-label={`Change how ${f.form} is filed for ${p.label}`} onClick={(e) => { back.current = e.currentTarget; setEditing(f); }}>Change channel</Button>
+                          aria-label={`Change channel: ${f.form} for ${p.label}`} onClick={(e) => { back.current = e.currentTarget; setEditing(f); }}>Change channel</Button>
                         <p className="basis-full text-text-muted" data-channel-why>
                           {f.channel_changed ? <>Changed from {CHANNEL_WORDS[f.line_channel]} (the combination’s default) by {nameOf(f.channel_changed.by)}, {day(f.channel_changed.at)}{f.channel_changed.reason ? <>: “{f.channel_changed.reason}”</> : null}.</>
                             : <>The combination’s default.</>}
