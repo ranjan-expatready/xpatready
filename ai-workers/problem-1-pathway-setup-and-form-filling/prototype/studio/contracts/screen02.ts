@@ -1,6 +1,8 @@
 // Screen 02 slices 2 and 3: the shapes the API answers and the web app reads (STANDARDS §6 contract first, §7 no any).
 // Requests are parsed on the server with their own zod schemas (api/src/screen02.ts); these are the response shapes.
 
+import type { SuppliesView } from "./document-supplies.ts";
+
 /** A change to the shared library a second person approves (LibraryChange, Screen 04 B1). */
 export type LibraryChangeView = {
   id: string; kind: string; kind_word: string; key: string; label: string; action: string; action_word: string; reason: string | null;
@@ -11,6 +13,8 @@ export type LibraryChangeView = {
   batch_id?: string | null;
   /** G-CORE B2: a rename waiting for a second person (action RENAME): the name now and the name proposed. */
   rename?: { before: string | null; after: string | null; undo: boolean };
+  /** C4.5: the facts a document supplies, before → after, each new fact's official words (contracts/document-supplies.ts). */
+  supplies?: SuppliesView;
 };
 export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string; /** C3.6: the answer list the field carries, approved with it. */ answer_list?: { key: string; label: string; status: string; values: { code: string; label: string }[] } | null } | null;
   /** A structure name (P-128): the names a branch delete takes with it, and whether a retire or restore takes its combination. */

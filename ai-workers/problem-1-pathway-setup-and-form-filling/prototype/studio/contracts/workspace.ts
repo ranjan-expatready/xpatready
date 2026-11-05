@@ -237,7 +237,9 @@ export type PreviewForm = { form: string; title: string; applies: boolean | "can
  *  for the person with where its answer comes from. `from` is in words: "Client", "Case officer", "Document · Passport". */
 export type PreviewSets = {
   pqr: { fact: string; label: string; from: string }[];
-  sqr: { asked: number; fromDocuments: { document: string; facts: string[] }[] };
+  /** C4.5: `missing` lists the person's needed documents that supply facts; marking one tries it missing or unreadable,
+   *  so its facts are asked instead (its key goes in the preview's tweaks as true). */
+  sqr: { asked: number; fromDocuments: { document: string; facts: string[] }[]; missing: { key: string; document: string; marked: boolean }[] };
   agent: { questions: number; sections: { section: string; title: string; about: string; questions: { fact: string; label: string; from: string; hidden: boolean }[] }[] };
 };
 /** An answer that changes what applies (yes/no facts only): the author tries it to see what changes. */

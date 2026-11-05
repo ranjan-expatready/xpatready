@@ -93,7 +93,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
           <h2 id="pv-pqr" className="font-semibold">{SETS[0].title(p)}</h2>
           <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the Client questionnaire; no result is shown to them.</p>
           {!p.sets.pqr.length ? <p className="mt-2 text-sm text-text-muted" data-pqr-empty>No Prospect questionnaire (PQR) question is ticked for {who.label}. Tick them on the Smart questionnaire (SQR) tab.</p> : (
-            <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"}>{q.from}</Pill></li>)}</ul>
+            <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"} className="max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">{q.from}</Pill></li>)}</ul>
           )}
         </section>
         <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
@@ -110,6 +110,17 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
               <p className="mt-1 text-xs text-text-muted">Not asked while the document is on the checklist; if it is missing or cannot be read, the question is asked instead.</p>
             </div>
           ) : null}
+          {p.sets.sqr.missing.length ? (
+            // C4.5 (P-130): try a document as missing or unreadable; its answers are asked instead. Preview only: at a case
+            // this comes with the document reader (M3).
+            <fieldset className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-try-missing>
+              <legend className="px-1 text-xs font-medium">Try it missing (Preview only)</legend>
+              {p.sets.sqr.missing.map((m) => (
+                <label key={m.key} className="flex items-center gap-2"><input type="checkbox" checked={m.marked} onChange={(e) => setTweak(m.key, e.target.checked ? true : null)} data-missing-toggle={m.key} /><span>{m.document} is missing or cannot be read</span></label>
+              ))}
+              {p.sets.sqr.missing.some((m) => m.marked) ? <p className="mt-1 text-xs text-text-muted" data-missing-note>Tried as missing: its answers are asked instead. At a case this comes with the document reader (M3); until then a case asks them.</p> : null}
+            </fieldset>
+          ) : null}
           <div className="rounded-[1.75rem] border-8 border-text/80 bg-surface p-3"><PreviewQuestions view={p.questionnaire} person={who.subjectId} /></div>
         </section>
         <section aria-labelledby="pv-agent" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "agent" && "hidden xl:block")} data-set="agent">
@@ -122,7 +133,9 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
                 <ul className="mt-1 space-y-1 text-sm">{x.questions.map((q) => (
                   <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-agent-fact={q.fact}>
                     <span className={q.hidden ? "text-text-muted" : undefined}>{q.label}</span>
-                    <Pill tone={q.from.startsWith("Document") ? "info" : q.from === "Case officer" ? "warn" : "neutral"}>{q.from}</Pill>
+                    {/* G5 (#868): a document's name can be long ("Passport or travel document information page photocopy"); the
+                        tag wraps inside the row rather than widen the page at 400 px. */}
+                    <Pill tone={q.from.startsWith("Document") ? "info" : q.from === "Case officer" ? "warn" : "neutral"} className="max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">{q.from}</Pill>
                     {q.hidden ? <span className="text-xs text-text-muted">hidden by a rule for this family</span> : null}
                   </li>
                 ))}</ul>

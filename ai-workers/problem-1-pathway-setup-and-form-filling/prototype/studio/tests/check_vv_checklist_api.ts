@@ -30,10 +30,13 @@ const ALL = (p: Person) => [...p.lines, ...p.waiting, ...p.not_needed];
   }
   const vv = sql("select id from combination where combination_key='vv.single'");
   // Sample document lines, released through the screens' own routes (scaffolding for this check, P-33).
-  if (sql(`select count(*) from document_requirement where combination_id='${vv}' and status <> 'RETIRED'`) === "0") {
+  // G5 (P-248, #868): setup_visitor_visa.ts now releases the Visitor visa with one line (the passport, each applicant), so
+  // this check adds its lines while its own are missing (the photographs line marks them), and the passport only if absent.
+  const has = (key: string) => sql(`select count(*) from document_requirement where combination_id='${vv}' and document_type_key='${key}' and status <> 'RETIRED'`) !== "0";
+  if (!has("visa_application_photographs")) {
     const add = (b: object) => call("POST", `/combinations/${vv}/requirements`, b, AUTHOR);
     const results = [
-      await add({ documentTypeKey: "passport_or_travel_document_information_page_photocopy", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }),
+      has("passport_or_travel_document_information_page_photocopy") ? { status: 201, body: null } : await add({ documentTypeKey: "passport_or_travel_document_information_page_photocopy", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }),
       await add({ documentTypeKey: "visa_application_photographs", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }),
       await add({ documentTypeKey: "birth_certificate_of_accompanying_dependent_child", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_dependent_child" }),
       // C3.6 (P-158): a new type waits as a library proposal (202); a second person accepts it, then the line goes in with it.

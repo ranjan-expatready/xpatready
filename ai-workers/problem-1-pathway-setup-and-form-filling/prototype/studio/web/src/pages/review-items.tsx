@@ -79,6 +79,21 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       {x.rename ? <RenameChange change={x} /> : null}
+      {x.supplies ? (
+        // C4.5: what the second person compares before approving: the facts before → after, each with its official words.
+        <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-supplies>
+          <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
+            <dt className="text-text-muted">Document type</dt><dd className="font-semibold">{x.supplies.document}</dd>
+            <dt className="text-text-muted">Supplies now</dt><dd>{x.supplies.before.length ? x.supplies.before.join(" · ") : "No fact: filed as is"}</dd>
+            <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.supplies.after.length ? `${x.supplies.after.length} fact${x.supplies.after.length === 1 ? "" : "s"}` : "No fact"}{x.supplies.removed.length ? ` · removes ${x.supplies.removed.join(", ")}` : ""}</dd>
+            <dt className="text-text-muted">Used by</dt><dd>{x.supplies.uses} combination{x.supplies.uses === 1 ? "" : "s"}: their drafts and Preview change at approval</dd>
+          </dl>
+          {x.supplies.cites.length ? <ul className="space-y-1.5 border-t border-border pt-2" aria-label="Each fact and the official words">{x.supplies.cites.map((c) => (
+            <li key={c.fact} data-supply-cite={c.fact} className="[overflow-wrap:anywhere]"><span className="font-medium">{c.label}</span>{c.about !== "holder" ? <span className="text-text-muted"> · about {c.about === "holder.spouse" ? "the holder's spouse or partner" : "the holder's parent"}</span> : null}<br /><span className="text-xs text-text-muted">{c.source} · read {c.readOn}: </span><span className="text-xs">“{c.quote}”</span></li>
+          ))}</ul> : null}
+          <p className="text-xs text-text-muted">Sample until the immigration expert confirms. Approving makes a draft of the document type; it goes out with each combination's next release.</p>
+        </div>
+      ) : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -96,9 +111,9 @@ export function LibraryChangePage() {
         {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
-      <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
+      <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
-        : x.status === "RETURNED" ? (x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
+        : x.status === "RETURNED" ? (x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -186,14 +201,14 @@ function Correct({ change }: { change: LibraryChangeDetail }) {
   );
 }
 /** An author withdraws a new field: the form fields that read it go back to "no decision" (K1). */
-function Withdraw({ id }: { id: string }) {
+function Withdraw({ id, label = "Withdraw the new field" }: { id: string; label?: string }) {
   const nav = useNavigate();
   const [open, setOpen] = React.useState(false), [why, setWhy] = React.useState("");
-  const go = useAction(() => api<{ form_fields_reopened: number }>(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why } }), { success: (r) => `Withdrawn: ${r.form_fields_reopened} form field${r.form_fields_reopened === 1 ? "" : "s"} back to "no decision"`, invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  const go = useAction(() => api<{ form_fields_reopened?: number }>(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why } }), { success: (r) => (typeof r.form_fields_reopened === "number" ? `Withdrawn: ${r.form_fields_reopened} form field${r.form_fields_reopened === 1 ? "" : "s"} back to "no decision"` : "Withdrawn: nothing in the library changed"), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   return open ? (
     <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3" data-withdraw>
       <label className="flex-1 text-sm">Why withdraw it<Input className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
-      <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3} onClick={() => go.mutate(undefined)}>Withdraw the new field</Button>
+      <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3} onClick={() => go.mutate(undefined)}>{label}</Button>
     </div>
   ) : <div className="flex justify-end"><Button variant="ghost" onClick={() => setOpen(true)}>Withdraw it instead…</Button></div>;
 }
@@ -326,7 +341,7 @@ export function EditionImpactPage() {
           <tbody>{x.rows.filter((row) => row.change !== "unchanged").slice(0, 200).map((row) => <tr key={row.dataPath + row.change} className="border-b border-border last:border-b-0"><td className="px-4 py-2">{row.caption}{row.was ? <p className="text-xs text-text-muted">was: {row.was}</p> : null}</td><td className="px-4 py-2"><Pill tone={CH[row.change][0]}>{CH[row.change][1]}</Pill></td><td className="px-4 py-2 text-text-muted">{row.field ?? "—"}</td><td className="px-4 py-2" data-box-ai={row.dataPath}>{row.change === "removed" || row.change === "unchanged" ? <span className="text-text-muted">—</span> : x.ai.drafted?.boxes[row.dataPath]?.length ? <Link className="text-text-link underline" to="/review">{x.ai.drafted.boxes[row.dataPath].length} on To review</Link> : <span className="text-text-muted">{x.ai.drafted ? "None proposed: a person maps it" : "Waiting for Draft with AI or a person"}</span>}</td></tr>)}
             <tr><td colSpan={4} className="px-4 py-2 text-text-muted">{x.counts.unchanged} unchanged form fields keep their map.</td></tr></tbody></table>
           : tab === "components" ? <div className="divide-y divide-border text-sm" data-components>{COMPONENTS.map(([k, w]) => <div key={k} className="px-4 py-3"><h3 className="font-medium">{w} ({x.components[k].length})</h3>
-            {x.components[k].length ? <ul className="mt-1 space-y-1">{x.components[k].map((c) => <li key={`${c.key}|${c.field}|${c.combination_id}`}><b className="font-medium">{c.label}</b> · <Link className="text-text-link hover:underline" to={`/c/${c.combination_id}`}>{c.combination}</Link><p className="text-text-muted">{c.why}</p></li>)}</ul> : <p className="text-text-muted">None touched.</p>}</div>)}</div>
+            {x.components[k].length ? <ul className="mt-1 space-y-1">{x.components[k].map((c) => <li key={`${c.key}|${c.field}|${c.combination_id}`}><b className="font-medium">{c.label}</b> · <Link className="text-text-link underline" to={`/c/${c.combination_id}`}>{c.combination}</Link><p className="text-text-muted">{c.why}</p></li>)}</ul> : <p className="text-text-muted">None touched.</p>}</div>)}</div>
           : tab === "library" ? (x.library.length ? <ul className="divide-y divide-border text-sm">{x.library.map((f) => <li key={f.key} className="px-4 py-2"><b>{f.label}</b> · {f.form_fields} form field{f.form_fields === 1 ? "" : "s"} reworded or removed<p className="text-text-muted">{f.meaning}</p></li>)}</ul> : <p className="p-4 text-sm text-text-muted">No shared field loses or changes a form field.</p>)
           : (x.combinations.length ? <ul className="divide-y divide-border text-sm">{x.combinations.map((c) => <li key={c.id} className="px-4 py-2"><Link className="text-text-link hover:underline" to={`/c/${c.id}`}>{c.label}</Link></li>)}<li className="px-4 py-2 text-text-muted">{x.open_cases} open case{x.open_cases === 1 ? "" : "s"} stay on the release they started on.</li></ul> : <p className="p-4 text-sm text-text-muted">No combination files this form yet.</p>)}
       </div>

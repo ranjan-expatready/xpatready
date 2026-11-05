@@ -9,6 +9,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
+import { OWN_YES_NO } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
 import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
 
@@ -67,7 +68,7 @@ export function pack2(id: string) {
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
   async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
-    const out = { accepted: 0, applied: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
+    const out = { accepted: 0, applied: 0, ownYesNo: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     // Review m6: only what the author's own steps put on To review, never another person's waiting change.
@@ -110,6 +111,17 @@ export function pack2(id: string) {
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
     }
+    // B52: on To review › Form fields the author asks the application form's Yes/No form fields worked out from other
+    // answers as their own questions, in the form's words (api/src/own-yes-no.ts), the library's field of the same
+    // name when it has one.
+    const own = OWN_YES_NO[sql(`select combination_key from combination where id='${comboId}'`)];
+    const ed = own?.boxes.length ? sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${own.application}' and e.channel='PDF' order by e.edition_label desc limit 1`) : "";
+    const asked = new Set<string>(ed ? ((await call("GET", `/editions/${ed}/form-fields/own-questions`, undefined, AUTHOR)).body?.fields ?? []).filter((f: { asked: boolean }) => f.asked).map((f: { dataPath: string }) => f.dataPath) : []);
+    for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath))) {
+      const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
+      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning }) }, AUTHOR))) out.ownYesNo++;
+    }
     // B71 (P-319, AGENTS rule 4): with the maps applied, the author sets each form line as IRCC's own words set it, on the
     // Forms tab's own routes: a rule in words becomes its rule; the family information form follows how the application
     // form is filed and the other one is taken off; a fact only a rule reads is added for its rule (C3.6) and approved by a
@@ -120,8 +132,9 @@ export function pack2(id: string) {
         await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
       await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
       if (lineForms().has(family.other)) await set(family.other, { retire: true });
-      const rf = setup.ruleFact;
-      if (rf) {
+      // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
+      for (const rf of setup.ruleFacts ?? []) {
+        if (sql(`select count(*) from canonical_field where canonical_field_key = '${rf.fact}' and status in ('DRAFT', 'PUBLISHED')`) !== "0") continue;
         const added = await call("POST", `/combinations/${comboId}/rule-facts`, { fact: rf.fact, rule: rf.rule, label: rf.label, meaning: rf.meaning, valueType: rf.valueType }, AUTHOR);
         if (say(`rule fact ${rf.fact}`, added) && added.body?.proposalId) say("accept the rule fact", await call("POST", "/review/proposals/decide", { ids: [added.body.proposalId], action: "accept", reason: `Accepted by a test: the fact ${rf.rule}'s rule reads (${rf.cite}; Sample).` }, AUTHOR));
         await approveAll();
@@ -155,15 +168,67 @@ export function pack2(id: string) {
     const placed = await call("POST", `/combinations/${comboId}/place-from-form-parts`, {}, AUTHOR);
     if (say("place", placed)) out.placed = placed.body?.placed?.length ?? 0;
     // B71: a fact only a rule reads is asked beside the fact it is about (as the checkpoint asks IRM 0002's).
-    const rf = FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)]?.ruleFact;
-    if (rf) {
+    for (const rf of FORM_SETUP[sql(`select combination_key from combination where id = '${comboId}'`)]?.ruleFacts ?? []) {
+      // QA-227: a fact another combination asked already keeps its one placement (the library's questions are shared).
+      if (sql(`select count(*) from section_question where canonical_field_key = '${rf.fact}' and status <> 'RETIRED'`) !== "0") continue;
       const at = rf.beside ?? ["person.sex", "person.gender", "person.date_of_birth"]; // as the checkpoint (demo.ts) places it
       const sec = at.map((k) => sql(`select section_key from section_question where canonical_field_key = '${k}' order by version desc limit 1`)).find(Boolean);
-      if (sec) say(`place ${rf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(rf.fact)}/placement`, { sectionKey: sec, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case" }, AUTHOR));
+      if (sec) say(`place ${rf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(rf.fact)}/placement`, { sectionKey: sec, collectedFrom: "client_questionnaire", repeats: rf.fact.startsWith("case.") ? "once_per_case" : "per_person", tier: "case" }, AUTHOR));
       else out.refused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
     }
     await approveAll();
     return out;
+  }
+  /** C4.5 (P-322): a combination of the six gets its document lines the way people give them, US$0: on the Documents
+   *  tab the author drafts each document checklist from its saved reading (Saved, never Live), accepts its Ready lines
+   *  and new document types on To review, and a second person approves the new library items. Lines for a person to
+   *  decide (visa office words) stay waiting. Test setup only; the product never calls it. */
+  async function documentsBySteps(comboId: string) {
+    const out = { drafted: 0, accepted: 0, approved: 0, refused: [] as string[] };
+    const ids = (q: string) => sql(q).split("\n").filter(Boolean);
+    const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
+    for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Document checklist' order by created_at`)) if (say("draft the checklist", await call("POST", `/attachments/${a}/draft-checklist`, { mode: "replay" }, AUTHOR))) out.drafted++;
+    // The library's new document types first (a line lands only on a type the library holds), then the lines.
+    for (const kind of ["document_type", "requirement_line"]) {
+      const ready = ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='checklist_draft' and p.kind='${kind}' and p.status='waiting' order by p.created_at, p.identity_key`);
+      const v = await queued(comboId), lib = (await call("GET", "/review/proposals")).body?.groups ?? [];
+      const bands = new Map<string, string>(v.map((x: any) => [x.id, x.band]));
+      for (const g of lib as any[]) { const b = (await call("GET", `/review/proposals?group=${encodeURIComponent(g.id)}`)).body?.group?.bands ?? {}; for (const x of [...(b.ready ?? []), ...(b.check ?? []), ...(b.decide ?? [])]) bands.set(x.id, x.band); }
+      for (const p of ready.filter((x) => bands.get(x) !== "decide")) if (say(`accept a ${kind}`, await call("POST", "/review/proposals/decide", { ids: [p], action: "accept", reason: "Accepted by a test as the saved reading proposed it (C4.5 setup)." }, AUTHOR))) out.accepted++;
+    }
+    for (const c of ids(`select id from library_change where status='WAITING' and proposed_by='${AUTHOR}' order by proposed_at`)) if (say("approve", await call("POST", `/library/changes/${c}/approve`, { note: "Approved by a test as the second person (C4.5 setup)." }, APPROVER))) out.approved++;
+    return out;
+  }
+  /** C4.5 (P-322, P-319): the facts each document type of a combination's checklist supplies, as a person sets them in
+   *  the library, US$0: the author proposes each type's facts from samples/document-supplies.json (each with its
+   *  official words) and a second person approves it on To review. Only types this combination's checklist names. */
+  async function suppliesBySteps(comboId: string) {
+    const out = { proposed: 0, approved: 0, refused: [] as string[] };
+    const sample = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "document-supplies.json"), "utf8")) as { document_types: { documentType: string; reason: string; facts: unknown[] }[] };
+    const named = new Set(sql(`select distinct document_type_key from document_requirement where combination_id='${comboId}' and status <> 'RETIRED'`).split("\n").filter(Boolean));
+    for (const t of sample.document_types.filter((x) => named.has(x.documentType))) {
+      const r = await call("POST", `/library/document-types/${encodeURIComponent(t.documentType)}/supplies`, { facts: t.facts, reason: t.reason }, AUTHOR);
+      if (r.status >= 300) { out.refused.push(`propose ${t.documentType}: ${r.status} ${words(r).slice(0, 160)}`); continue; }
+      out.proposed++;
+      const a = await call("POST", `/library/changes/${r.body?.id ?? sql(`select id from library_change where kind='document_supplies' and key='${t.documentType}' and status='WAITING'`)}/approve`, { note: "Approved by a test as the second person (C4.5 setup)." }, APPROVER);
+      if (a.status < 300) out.approved++; else out.refused.push(`approve ${t.documentType}: ${a.status} ${words(a).slice(0, 160)}`);
+    }
+    return out;
+  }
+  /** B72 (P-340, P-318 (6), C3.6): on the six a combination has no rule until a person adds one. The author adds each
+   *  Sample rule of studio/samples/sample-rules.json for this combination through the author's own route, once (not when
+   *  the draft has a rule already). Test setup only, labelled as the sample loader's words. Returns how many it added. */
+  async function ruleBySteps(comboId: string) {
+    const key = sql(`select combination_key from combination where id='${comboId}'`);
+    if (sql(`select count(*) from predicate where combination_id='${comboId}' and status <> 'RETIRED'`) !== "0") return 0;
+    const rules = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "sample-rules.json"), "utf8")) as { rules: { combination: string; condition: unknown; whenPlain: string; thenPlain: string; forWhom: string; sourceQuote: string }[] }).rules.filter((r) => r.combination === key);
+    let added = 0;
+    for (const r of rules) {
+      const x = await call("POST", `/combinations/${comboId}/rules`, { condition: r.condition, whenPlain: r.whenPlain, thenPlain: r.thenPlain, forWhom: r.forWhom, sourceQuote: r.sourceQuote }, AUTHOR);
+      if (x.status < 300) added++; else console.log(`SETUP the Sample rule "${r.thenPlain.slice(0, 60)}" was refused: ${x.status} ${words(x).slice(0, 200)}`);
+    }
+    console.log(`SETUP ${added} Sample rule(s) added by the author's route (samples/sample-rules.json)`);
+    return added;
   }
   const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
   const attachment = (comboId: string, file: string) => sql(`select id from source_attachment where combination_id='${comboId}' and lower(file_name) like lower('%${file}') order by created_at limit 1`);
@@ -208,7 +273,7 @@ export function pack2(id: string) {
     if (waits.length) console.log(`${waits.length} waiting (not passed): ${waits.map((w) => w.on).filter((x, i, a) => a.indexOf(x) === i).join("; ")}`);
     process.exit(fail ? 1 : waits.length ? 2 : 0);
   }
-  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
+  return { PORT, DB, call, sql, until, ok, wait, words, ready, needQuestions, questionsBySteps, ruleBySteps, documentsBySteps, suppliesBySteps, key, combo, attachment, queued, people, spent, sourceGate, done };
 }
 
 /** Runs a test body, turning an unexpected throw into a failure (exit 1) rather than a pass. */
