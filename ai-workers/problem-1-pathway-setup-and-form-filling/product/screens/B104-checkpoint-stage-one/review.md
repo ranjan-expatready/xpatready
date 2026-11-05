@@ -84,3 +84,27 @@ Reviewer: Opus, a separate session that did not build this. Commit **eab0f38da**
 **Journey score: 7.5 / 10, below the pass mark of 8; no criterion at 0.** What would raise it, most valuable first: m1 (plain words), m2 (error recovery), m3 (correct data), m6 (trust).
 
 **Verdict: Block.** To fix before Approve: **M1**. Fix if cheap: m1, m2, m4, m5. Record in the JSON or the PR: m3, m6.
+
+## Round 2: diff-only, eab0f38da → c28c68923
+I verified each fix myself rather than taking the builder's word. Isolated copy :4436, live AI off, US$0.
+* **M1: closed.** Two new layers of tests, both checked by me:
+  * **Live:** `tests/check_b104_checkpoint.ts` B104-L1…L9 reads release 1 for the three signers, the four unset forms, the gates (2 gates, 4 judgement lines, saved by the author) and APR Portal. It also checks that no other combination gets gates, and that a case opened on the release reads the portal and runs a check. My run on a fresh copy: 9/9 PASS. On main (`runs/live/live-main.txt`) it is 7 FAIL, exit 1, so removing the step fails it. Its usage line fits `run-suites.sh`, so CI runs it.
+  * **Refusal paths:** the rules moved to `applyStageOne` behind `StageOnePort` (`checkpoint-stage-one-data.ts:36-78`), and B104-10…16 test them on fakes. I removed each rule in a scratch copy. Each removal turns exactly one test red:
+    * the gates check run first → B104-11;
+    * the retired-line check → B104-12;
+    * the revision sent with each signer → B104-10;
+    * skipping a value already set → B104-14;
+    * leaving saved gates alone → B104-14;
+    * saying a refused save → B104-13;
+    * plain-word labels → B104-10.
+* **m2: closed.** `gatesProblems` runs `checkGates` on the workspace's fields before any write (`checkpoint-stage-one.ts:34-41`). `"op": "equals"` now gives "The rule not a node of the closed 11-operator vocabulary", and nothing is set (B104-11). The step's own check skips the body schema's limits (at most 30 gates, 20 judgement lines), but `put` still applies them. The file holds 2 gates and 4 lines, so this is not a finding.
+* **m1: closed.** The log now reads "filed through the APR Portal" and "signed by a parent, for a minor" (`throughAccount`, `signedByLabel`); B104-L2 asserts no engine keys.
+* **m3: closed.** IMM 5476's cite (`samples/checkpoint-stage-one.json:23`) now says a child under 18 is listed as a signer until #1072's who and age land.
+* **m4: closed.** Each signer is saved with `baseRevision` set to the newest row's `updatedAt` (`checkpoint-stage-one.ts:26-31`), as `forms.tsx` does. That is the token `sameRevision` compares, and L1 shows nothing was refused live.
+* **m5: closed.** Step 1.8 is now recorded with `aside`, as a note, and the exit code no longer counts it. `walk/walk.json`: 13/13 seen, 1 note, no errors. `walk/walk.log` is git-ignored and not on the PR.
+* **m6: still open (Minor, PR body only).** The PR body at c28c68923 still does not say that IMM 5257 loses its "Picked by AI · Sample" chip. No code change is needed.
+* **Unchanged:** explicit `any` 418, same as the base; `graph.mjs --check` exit 0; `tsc` shows no error in the changed files; no records file or allow-list line changed.
+
+**Round 2 journey score:** 8.5 / 10, now a pass with no criterion at 0. Plain words, correct data and error recovery each rise to 1; visual quality (pre-existing clipping) and trust (m6) stay at ½.
+
+**Verdict on c28c68923: Approve.** No Blocker or Major is open. Still open: m6 (Minor), a line for the PR body.
