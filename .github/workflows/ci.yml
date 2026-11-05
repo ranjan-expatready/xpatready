@@ -471,9 +471,10 @@ jobs:
   records-merge:
     # P-371 (4): a records-only PR with "review: approved" and green ci merges here, outside Mergify's product queues,
     # while no batch is checking against its base (P-306 (3)); else it waits up to 10 minutes, then the sweep
-    # (records-merge.yml) takes it. Runs the base's own copy of the script, never the PR's.
+    # (records-merge.yml) takes it. Runs the base's own copy of the script, never the PR's. !cancelled(): the parts and
+    # the type check are skipped for records, and a skipped need would otherwise skip this job too.
     needs: [kind, ci]
-    if: "${{ needs.ci.result == 'success' && needs.kind.outputs.records == 'yes' && needs.kind.outputs.queue != 'true' && !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'review: approved') && github.event.pull_request.head.repo.full_name == github.repository }}"
+    if: "${{ !cancelled() && needs.ci.result == 'success' && needs.kind.outputs.records == 'yes' && needs.kind.outputs.queue != 'true' && !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'review: approved') && github.event.pull_request.head.repo.full_name == github.repository }}"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions: { contents: write, pull-requests: write }
