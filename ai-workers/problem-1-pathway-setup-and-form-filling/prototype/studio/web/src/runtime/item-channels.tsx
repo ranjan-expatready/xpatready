@@ -50,7 +50,8 @@ export function ItemChannels({ caseId }: { caseId: string }) {
   const open = forms.find((f) => f.id === editing);
   const [opening, setOpening] = React.useState<string | null>(null);
   // Review R2-M1: the dialog opens only on a fresh read of its item, so its first choice is what the case holds now.
-  async function openFresh(id: string) { setOpening(id); try { await q.refetch(); } finally { setOpening(null); } setEditing(id); }
+  // The button stays enabled (aria-busy only) so it keeps the focus, and the dialog gives the focus back to it on close.
+  async function openFresh(id: string) { if (opening) return; setOpening(id); try { await q.refetch(); } finally { setOpening(null); } setEditing(id); }
   // Review R2 n4: an item that leaves the view while its dialog is open closes the dialog properly.
   React.useEffect(() => { if (editing && v && !open) close(); }, [editing, v, open]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -78,7 +79,7 @@ export function ItemChannels({ caseId }: { caseId: string }) {
                         <span className="text-text-muted"><span className="sr-only">Signature: </span>{SIGNATURE_WORDS[f.signature] ?? f.signature}</span>
                         <span className="text-text-muted">IRCC accepts: {f.accepts.length ? words(f.accepts) : "nothing recorded yet"}</span>
                         <span className="flex-1" />
-                        <Button ref={(b) => { buttons.current[f.id] = b; }} size="sm" variant="secondary" disabled={recorded} busy={opening === f.id} aria-describedby={recorded ? `ch-ro-${f.id}` : undefined}
+                        <Button ref={(b) => { buttons.current[f.id] = b; }} size="sm" variant="secondary" disabled={recorded} aria-busy={opening === f.id || undefined} aria-describedby={recorded ? `ch-ro-${f.id}` : undefined}
                           aria-label={`Change channel: ${f.form} for ${p.label}`} onClick={() => void openFresh(f.id)}>Change channel</Button>
                         <p className="min-w-0 basis-full text-text-muted [overflow-wrap:anywhere]" data-channel-why>
                           {onDefault || !f.channel_changed ? <>The combination’s default.</>

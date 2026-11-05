@@ -61,5 +61,22 @@ r = await lock(fresh!.id);
 ok("fail: back on Online, the copy is refused at lock as filed Online (409)", r.status === 409 && /is filed Online/.test(r.body?.detail ?? ""), r.body?.detail);
 ok("pass: back on Online, /forms gives it not for filing and names Client A among the Online forms again", mine(await forms())?.for_filing === false && ((await forms()).online.find((x) => x.form === "IMM 5707")?.people ?? []).includes("Sample Client A"));
 
+
+// Devin on #1056: the channel is frozen with the copy's facts when it is asked for (a queued copy keeps it).
+const frozen = (id: string | undefined) => sql(`select s.facts_json->>'channel' from form_instance f join answer_snapshot s on s.id=f.snapshot_id where f.id='${id}'`);
+ok("pass (data): each copy holds the channel it was asked for: Online for the stamped one, PDF upload for the new one", frozen(old?.id) === "ONLINE" && frozen(fresh?.id) === "PDF_UPLOAD", [frozen(old?.id), frozen(fresh?.id)]);
+// Devin on #1056: a form a person was moved to Online is listed among the Online forms with that person (fixture: the
+// Form library accepts only PDF upload or Paper for IMM 5257 here, so the item is set underneath).
+const k5257 = itemsOf((await prepare(c.id)).p, c.subjects["Sample Child A1"], "IMM 5257")[0]?.id;
+sql(`update filing_item set channel='ONLINE' where id='${k5257}'`);
+const f2 = await forms();
+ok("pass (Devin on #1056): a PDF-default form moved to Online is listed among the Online forms with that person only", JSON.stringify(f2.online.find((x) => x.form === "IMM 5257")?.people) === JSON.stringify(["Sample Child A1"]), f2.online);
+// Devin on #1056: Not needed is not offered as a PDF to file, and generating it is refused.
+const p5476 = itemsOf((await prepare(c.id)).p, P, "IMM 5476")[0]?.id;
+sql(`update filing_item set channel='NOT_NEEDED' where id='${p5476}'`);
+ok("pass (Devin on #1056): a form moved to Not needed has no row to fill or file for that person", !(await forms()).forms.some((x) => x.form === "IMM 5476" && x.subject_id === P));
+r = await call("POST", `/runtime/cases/${c.id}/forms/${encodeURIComponent("IMM 5476")}/${P}/generate`, { idempotencyKey: crypto.randomUUID() }, officer);
+ok("fail (Devin on #1056): generating it is refused (422) in words, no copy made", r.status === 422 && /Not needed/.test(r.body?.detail ?? "") && sql(`select count(*) from form_instance where case_id='${c.id}' and form_number='IMM 5476' and subject_id='${P}'`) === "0", [r.status, r.body?.detail]);
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exitCode = fail ? 1 : 0;

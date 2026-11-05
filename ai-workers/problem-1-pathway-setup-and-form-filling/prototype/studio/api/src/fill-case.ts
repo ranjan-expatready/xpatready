@@ -30,7 +30,8 @@ import { trialFor, type EditionMap } from "./fill-trials.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
-type Stored = { facts: FormFact[]; boxes: BoxRow[]; groups?: GroupFact[] };
+/** `channel` (C11.6, Devin on #1056): the person's channel when the copy was asked for, frozen with its facts. */
+type Stored = { facts: FormFact[]; boxes: BoxRow[]; groups?: GroupFact[]; channel?: Channel };
 const short = (id: string) => id.slice(0, 8);
 const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { const r = schema.safeParse(input ?? {}); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
 const conflict = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
@@ -159,20 +160,24 @@ export class CaseForms implements OnModuleInit {
         const applies = !!cov && cov.applies !== false;
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
+        if (chosen(s, items, form, p.subjectId) === "NOT_NEEDED" && !mine.length) continue; // C11.6 (Devin on #1056): nothing to fill or file
         const channel = chosen(s, items, form, p.subjectId);
-        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(form, channel),
+        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
           draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
           readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channelIn(s, form) === "ONLINE")) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case
     // officer types it into the portal from the answer sheet; the browser extension fills it in a later wave).
-    const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE").map((f) => ({
+    // C11.6 (Devin on #1056): the release's Online lines, plus any form a person's item was moved to Online; each lists
+    // the people whose own channel is Online now (by person, not by name).
+    const movedOnline = new Set([...items].filter(([, ch]) => ch === "ONLINE").map(([k]) => k.slice(k.indexOf("|") + 1)));
+    const hasPdf = (form: string) => copyOnlyForms(s).has(form) || pdfForms(s).has(form);
+    const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" || movedOnline.has(f.form_number)).map((f) => ({
       form: f.form_number, title: f.title ?? f.form_number,
-      // C11.6: a person whose item was moved off Online is no longer listed here (their PDF is filed instead).
-      people: [...new Set(view.forms.filter((x) => x.form === f.form_number && x.applies !== false && people.filter((p) => p.label === x.person).every((p) => chosen(s, items, f.form_number, p.subjectId) === "ONLINE")).map((x) => x.person))],
-      pdf_copy: copyOnlyForms(s).has(f.form_number),
-      why_no_copy: copyOnlyForms(s).has(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy." : "IRCC's PDF of this form is not in this case's release.",
+      people: people.filter((p) => p.role !== "case" && chosen(s, items, f.form_number, p.subjectId) === "ONLINE" && view.forms.some((x) => x.form === f.form_number && x.person === p.label && x.applies !== false)).map((p) => p.label),
+      pdf_copy: hasPdf(f.form_number),
+      why_no_copy: hasPdf(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy." : "IRCC's PDF of this form is not in this case's release.",
     })).filter((f) => f.people.length);
     return { forms, online };
   }
@@ -219,7 +224,11 @@ export class CaseForms implements OnModuleInit {
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
         const active = await tx.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
-        const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, inputHash: inputHash(cov!.facts), factsJson: stored as object } });
+        // C11.6: the person's channel read under the same lock the channel change takes, and frozen with the facts.
+        const it = await tx.filingItem.findFirst({ where: { caseId, subjectId, itemKey: form, kind: "form", active: true }, select: { channel: true } });
+        const frozen = (it?.channel as Channel | null | undefined) ?? channelIn(s, form);
+        if (frozen === "NOT_NEEDED") throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not needed", status: 422, detail: `${form} is Not needed for this person: the IRCC account asks it itself, so nothing is filled.` }, HttpStatus.UNPROCESSABLE_ENTITY);
+        const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, inputHash: inputHash(cov!.facts), factsJson: { ...stored, channel: frozen } as object } });
         return tx.formInstance.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, configReleaseId: c.pins[0].configReleaseId, snapshotId: snap.id, idempotencyKey: b.idempotencyKey ?? null, createdBy: actor.id } });
       });
     } catch (e) {
@@ -258,7 +267,7 @@ export class CaseForms implements OnModuleInit {
       const base = `${x.formNumber.replace(/\s+/g, "")}-${short(x.subjectId)}-${id}`;
       // P-145, C11.6: stamped "Copy, not for filing" when this person's form is filed Online now; recorded with the copy,
       // so a stamped copy is never locked as filed after the channel changes.
-      const channel = chosen(snapshot as Snap, await this.itemChannels(x.caseId), x.formNumber, x.subjectId), notForFiling = channel === "ONLINE";
+      const channel = stored.channel ?? chosen(snapshot as Snap, await this.itemChannels(x.caseId), x.formNumber, x.subjectId), notForFiling = channel === "ONLINE";
       const r = await writeForm(snapshot, { boxes: stored.boxes }, x.formNumber, dir, base, { notForFiling, channel });
       if (!r.report.intact) throw new Error("the filled file did not pass its checks (read back, signatures, unchanged parts); it is not handed over");
       const by = (k: string) => r.boxes.filter((b: { result: string }) => b.result === k).length;
@@ -327,8 +336,16 @@ export class CaseForms implements OnModuleInit {
       if (!formPassed(v)) conflict(`${x.formNumber}'s validated copy was read back before the form's own Validate result was checked, so it does not show that Validate passed. Send the file you validated in Adobe again, then lock it.`);
       if (v!.factsHash !== inputHash(cov?.facts ?? [])) conflict(`${x.formNumber}'s validated copy is out of date: a fact on the form changed after it was validated. Make a new copy, validate it again and read it back.`);
     }
-    const n = await this.db.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } });
-    if (n.count !== 1) conflict("Someone locked this copy at the same moment.");
+    // C11.6 (Devin on #1056): the channel is read again under the case row lock the channel change takes, so a change
+    // made while this lock was being checked is never locked over.
+    const n = await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${x.caseId}::uuid FOR NO KEY UPDATE`;
+      const it = await tx.filingItem.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, itemKey: x.formNumber, kind: "form", active: true }, select: { channel: true } });
+      if (((it?.channel as Channel | null | undefined) ?? channelIn(s, x.formNumber)) !== channel) return -1;
+      return (await tx.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } })).count;
+    });
+    if (n === -1) conflict(`How ${x.formNumber} is filed for this person changed while this copy was being locked. Reload, then lock it again if it is still to be filed.`);
+    if (n !== 1) conflict("Someone locked this copy at the same moment.");
     await this.audit.log(c.workspaceId, actor.id, "locked", "form copy", x.formNumber, `${actor.name} locked copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)}: ${LOCK_KINDS[b.kind]}`);
     return this.copy(actor, id);
   }
