@@ -15,14 +15,17 @@ export type OptionMap = { map: Record<string, string>; unused: string[]; codes: 
 const n = (s: string) => s.toLowerCase().replace(/^\*/, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 const firstWord = (s: string) => n(s).split(" ")[0];
 
-/** `notOnForm` (B81): values a person marked stay marked and are never drafted a code. */
-export function draftOptionMap(values: ListValue[], options: FormOption[], notOnForm: string[] = []): { optionMap: OptionMap; unmatched: string[] } {
+/** `kept` (B81, challenge M6): what is already saved: a mark stays, and a code the form still prints stays; only the rest
+ *  is drafted, so a new draft never undoes a person's decision. */
+export function draftOptionMap(values: ListValue[], options: FormOption[], kept?: OptionMap | null): { optionMap: OptionMap; unmatched: string[] } {
   const opts = options.filter((o) => o.code !== "" || o.label !== "");
   const map: Record<string, string> = {};
   const taken = new Set<string>();
-  const marked = values.filter((v) => notOnForm.includes(v.key)).map((v) => v.key);
+  const marked = values.filter((v) => kept?.notOnForm?.includes(v.key)).map((v) => v.key);
+  const printed = new Set(opts.map((o) => o.code));
+  for (const v of values) { const c = kept?.map[v.key]; if (c !== undefined && printed.has(c) && !taken.has(c) && !marked.includes(v.key)) { map[v.key] = c; taken.add(c); } }
   const open0 = values.filter((v) => !marked.includes(v.key));
-  for (const v of open0) {
+  for (const v of open0.filter((x) => !(x.key in map))) {
     // B81: a first word two printed choices share decides nothing ("Married" against "Married-physically present" and
     // "Married-not physically present"): which one holds is a fact the value does not say, so it stays with a person.
     const sameWord = opts.filter((o) => firstWord(o.label) === firstWord(v.label));
@@ -83,10 +86,26 @@ export function codeForValue(value: unknown, m: OptionMap, values: ListValue[]):
   return Object.hasOwn(m.map, key) ? m.map[key] : null; // "toString" is not a code (break m11)
 }
 
-/** The printed choice a value's own words are, when the form prints them: such a value is on the form, so it can never
- *  be marked "not on this form" (B81; AGENTS.md rule 4: the form's own words decide). */
-export function printedAs(v: ListValue, options: FormOption[]): FormOption | null {
-  return options.find((o) => n(o.label) === n(v.label)) ?? null;
+/** The printed choices that could be this value (B81, challenge B1; AGENTS.md rule 4: the form's own words decide): its
+ *  own words; else a choice that starts with them ("Married" and "Married-physically present") or that its label starts
+ *  or ends with ("Separated" for "Legally Separated"). Such a value is on the form, so it is never "not on this form". */
+export function printedNear(v: ListValue, options: FormOption[]): FormOption[] {
+  const w = n(v.label);
+  const same = options.filter((o) => n(o.label) === w);
+  if (same.length) return same;
+  return options.filter((o) => { const l = n(o.label); return l.length > 3 && (l.startsWith(`${w} `) || w.startsWith(`${l} `) || w.endsWith(` ${l}`)); });
+}
+
+/** True when the form prints two or more choices that start with the value's words: which one holds is a further fact the
+ *  value does not say, so no person picks it here and the rules never do (ruling (b) on #1009: no content guess). */
+export function asksMore(v: ListValue, options: FormOption[]): boolean {
+  return options.filter((o) => n(o.label).startsWith(`${n(v.label)} `)).length > 1 && !options.some((o) => n(o.label) === n(v.label));
+}
+
+/** A new edition's form field keeps its option map only when it prints exactly the same choices: the codes and marks were
+ *  decided against those words (B81, challenge M2). */
+export function samePrintedChoices(before: Parameters<typeof pdfOptions>[0], after: Parameters<typeof pdfOptions>[0]): boolean {
+  return JSON.stringify(pdfOptions(before, null)) === JSON.stringify(pdfOptions(after, null));
 }
 
 /** The value a person marked not on this form, when `value` is one: filling refuses it in the value's own words (B81). */

@@ -3,7 +3,7 @@
 // Unconfirmed: expert. Offline (no database, no AI): engine/options.ts, engine/form-values.ts. The routes, the group
 // save and the validator are checked on an isolated copy by tests/check_forms_b81_routes.ts.
 //   tsx studio/tests/check_forms_b81_not_on_form.ts
-import { codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedAs } from "../engine/options.ts";
+import { asksMore, codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedNear, samePrintedChoices } from "../engine/options.ts";
 import { channelProblems } from "../engine/channels.ts";
 import { formValues } from "../engine/form-values.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -42,17 +42,29 @@ ok("B81 fail: a mark on a value the list does not have is a problem", /does not 
 ok("B81 fail: a value with a code and a mark is a problem", /has a code and is marked/.test(optionMapProblems(keys, { ...marked, notOnForm: ["unknown", "married"] }).join()));
 ok("B81: a marked value has no code at filling (the filler refuses, never the nearest choice)", codeForValue("unknown", marked, list) === null && codeForValue("Unknown", marked, list) === null);
 ok("B81: a marked value is named by key or label; an unmarked one is not", notOnFormValue("Unknown", marked, list)?.key === "unknown" && notOnFormValue("unknown", marked, list)?.label === "Unknown" && notOnFormValue("married", marked, list) === null);
-ok("B81: a value the form prints in its own words can never be marked; one it does not print can", printedAs({ key: "married", label: "Married" }, mother)?.code === "5" && printedAs({ key: "unknown", label: "Unknown" }, mother) === null);
-const again = draftOptionMap(list, mother, ["unknown"]);
-ok("B81: a person's mark survives a new draft, and the value is not left open", again.optionMap.notOnForm?.join() === "unknown" && again.unmatched.length === 0, again);
+const married = { key: "married", label: "Married" }, unknownV = { key: "unknown", label: "Unknown" }, sep = { key: "legally_separated", label: "Legally Separated" };
+ok("B81 pass: only a value the form prints nothing for can be marked", printedNear(unknownV, mother).length === 0 && printedNear(unknownV, applicant).length === 0);
+ok("B81 fail (challenge B1): a value printed in its own words, or as a shorter ending, or as two longer choices is on the form, so it cannot be marked", printedNear(married, mother)[0]?.code === "5" && printedNear(married, applicant).length === 2 && printedNear(sep, [{ code: "05", label: "Separated" }]).length === 1);
+ok("B81: an unrelated choice sharing only a first word is not this value", printedNear({ key: "uae", label: "United Arab Emirates" }, [{ code: "1", label: "United States" }]).length === 0);
+ok("B81 fail (challenge B1): two printed choices that start with the value ask a further fact; one printed in its own words does not", asksMore(married, applicant) && !asksMore(married, mother) && !asksMore(unknownV, applicant));
+const again = draftOptionMap(list, mother, { ...d.optionMap, map: { ...d.optionMap.map, single: "5", married: "6" }, notOnForm: ["unknown"] });
+ok("B81 (challenge M6): a person's mark and codes survive a new draft; only the open values are drafted", again.optionMap.notOnForm?.join() === "unknown" && again.unmatched.length === 0 && again.optionMap.map.married === "6", again);
+const stale = draftOptionMap(list, child, { map: { divorced: "Divorced", married: "5" }, unused: [], codes: [] });
+ok("B81 (challenge M6): a saved code the form does not print (\"Divorced\") is drafted again from the form's own codes", stale.optionMap.map.divorced === "3" && stale.optionMap.map.married === "5", stale);
+ok("B81 (challenge M2): the same printed choices carry a map to a new edition; a changed or added choice does not", samePrintedChoices(box("Mother"), box("Father")) && !samePrintedChoices(box("Mother"), box("Applicant")));
 ok("B81: a draft with no mark stores nothing new (older option maps stay byte for byte)", !("notOnForm" in d.optionMap));
+
+// B79a (#1050) marks IMM 0008 DEP through the same door: its marital status box stores its choices the other way (resolved).
+const dep = JSON.parse(readFileSync(new URL("../../p1/inventory/imm0008depe.inventory.json", import.meta.url), "utf8")) as { fields: { data_path?: string; ui?: string; options_resolved?: [string, string][] | null }[] };
+const depOpts = pdfOptions(dep.fields.find((f) => /MaritalStatus\[0\]\.MaritalStatus\[0\]$/.test(f.data_path ?? ""))!, null), depDraft = draftOptionMap(list, depOpts);
+ok("B81 (IMM 0008 DEP, B79a): the door is general: its seven printed choices draft, only Unknown is open, and Unknown can be marked", depOpts.length === 7 && depDraft.unmatched.join() === "unknown" && depDraft.optionMap.map.married === "01" && printedNear(unknownV, depOpts).length === 0 && optionMapProblems(keys, { ...depDraft.optionMap, notOnForm: ["unknown"] }).length === 0, depDraft);
 
 // Filling and the release check, as a fill and Submit run them.
 const path = box("Mother").data_path!, entry = { data_path: path, outcome: "mapped", fact: "person.marital_status", transform: "option_map", caption: "Marital status:", option_map: marked };
 const snapshot = { canonical_fields: [{ id: "person.marital_status", answer_list: { values: list } }], forms: [], field_maps: [{ form_number: "IMM 5645", form_edition: "IMM 5645 (01-2021)", channel: "PDF", entries: [entry, { ...entry, data_path: "second" }] }] } as unknown as Snapshot;
 const fill = (value: string) => formValues(snapshot, { entries: [entry] }, { fields: [box("Mother")] }, [{ box: path, coverage: "confirmed fact", fact: "person.marital_status", value, transform: "option_map", about: "subject_parent_1" } as never]);
 const refused = fill("unknown"), written = fill("married");
-ok("B81 fail: a fill with a marked value writes nothing and says why in words, naming the answer; never a code or a nearest choice", refused.boxes[0].result === "by hand" && !(path in refused.values) && /prints no choice for "Unknown"/.test(refused.boxes[0].why ?? "") && /nothing is guessed/.test(refused.boxes[0].why ?? "") && !/option_map|person\.marital/.test(refused.boxes[0].why ?? ""), refused.boxes[0]);
+ok("B81 fail: a fill with a marked value writes nothing and says why in words, naming the answer; never a code or a nearest choice", refused.boxes[0].result === "not on this form" && !(path in refused.values) && /no choice for "Unknown"/.test(refused.boxes[0].why ?? "") && /nothing is guessed/.test(refused.boxes[0].why ?? "") && /leave it blank or change the answer/.test(refused.boxes[0].why ?? "") && !/option_map|person\.marital/.test(refused.boxes[0].why ?? ""), refused.boxes[0]);
 ok("B81 pass: a printed value on the same form field is written as the form's own code", written.boxes[0].result === "written" && written.values[path] === "5", written.boxes[0]);
 const probs = channelProblems(snapshot), marks = probs.filter((p) => /not on this form/.test(p.message));
 ok("B81: the release check blocks nothing for a marked value and warns once per form and value, in the answer's words", !probs.some((p) => p.level === "error") && marks.length === 1 && marks[0].level === "warning" && /"Unknown" is marked not on this form on 2 form fields/.test(marks[0].message), probs);

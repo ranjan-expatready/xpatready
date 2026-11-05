@@ -21,6 +21,7 @@ import { FindDialog, FinderPanel, formsKeys, useFinderLatest } from "./finder";
 import { Button, Dialog, Field, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder } from "@/components/conditions";
+import { FormChoices } from "@/components/form-choices";
 import { StartableNotice } from "@/components/startable-notice";
 import { fmtWhen, Tip } from "@/components/status";
 import { FORM_WHO, useLibraryFields, whoLabel } from "@/pages/configuration";
@@ -64,6 +65,10 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // C11.15: a line's own "Redo with AI" chooses its stage (find, read, match); Find again for a form not on it does not.
   const [lineRedo, setLineRedo] = React.useState(false);
   const [sp, setSp] = useSearchParams();
+  // B81: a release problem on a form's choices lands on that form's panel with the choices open (?choices=<form number>).
+  const [choicesOf, setChoicesOf] = React.useState<string | null>(null);
+  const choices = sp.get("choices");
+  React.useEffect(() => { const l = choices ? lines.find((x) => x.code === choices) : null; if (!choices) return; if (l) { setOpen(l); setChoicesOf(l.code); } setSp((x) => { const n = new URLSearchParams(x); n.delete("choices"); return n; }, { replace: true }); }, [choices]); // eslint-disable-line react-hooks/exhaustive-deps -- lands once
   const [removing, setRemoving] = React.useState<WorkspaceFormLine | null>(null);
   // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
   const setup = sp.get("setup");
@@ -175,7 +180,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
       <SourcesLine d={combo} lineCodes={codes} />
       {/* QA-218 (C3.4, P-138): the guide's checks, Saved (US$0) where a saved AI run exists; forms are listed once (S5 fix 1). */}
       {canAuthor ? <FormMasters combinationId={id} guidesOnly /> : null}
-      {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} onRemoved={onRemoved} /> : null}
+      {open ? <LineDrawer id={id} l={open} d={combo} startChoices={choicesOf === open.code} onClose={() => { setOpen(null); setChoicesOf(null); }} onRemoved={onRemoved} /> : null}
       {removing ? <RemoveDialog id={id} l={removing} onClose={() => setRemoving(null)} onRemoved={onRemoved} /> : null}
       {picker}{rail}{toast.node}{bulk.node}
     </div>
@@ -288,7 +293,7 @@ function OnlyIfCell({ l }: { l: WorkspaceFormLine }) {
 }
 
 /** The line drawer: who, minimum age, only if (rule builder and words), filed as within what IRCC accepts, signed by. */
-function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: WorkspaceFormLine; d: Combo; onClose: () => void; onRemoved: (code: string) => void }) {
+function LineDrawer({ id, l, d, startChoices, onClose, onRemoved }: { id: string; l: WorkspaceFormLine; d: Combo; startChoices?: boolean; onClose: () => void; onRemoved: (code: string) => void }) {
   const qc = useQueryClient(); const toast = useToast();
   const fields = useLibraryFields();
   const [who, setWho] = React.useState(l.who);
@@ -382,6 +387,7 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
         {/* Break m9: each way IRCC does not accept says why in visible text, not only in a disabled option's tooltip. */}
         {!l.document && l.channelOptions.some((o) => !o.ok) ? <ul className="space-y-0.5 text-xs text-text-muted" data-refused-ways>{l.channelOptions.filter((o) => !o.ok).map((o) => <li key={o.channel}><b className="font-medium">{o.words}</b> is not offered: {o.why}</li>)}</ul> : null}
         {!l.document ? <section aria-labelledby="drawer-reading" className="space-y-2 border-t border-border pt-4"><h3 id="drawer-reading" className="text-xs font-medium">Reading and matching</h3><ReadingSteps d={d} a={attachmentFor(d, l.code)} /></section> : null}
+        {!l.document && l.channel !== "ONLINE" && l.editionId ? <FormChoices combinationId={id} editionId={l.editionId} start={startChoices} /> : null}
       </div>
     </Panel>
   );

@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { manifest } from "../../engine/import.ts";
 import { newestEdition } from "../../engine/programs.ts";
+import { samePrintedChoices, pdfOptions } from "../../engine/options.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { ACTORS, Audit, Db, fail, need, PY, ROOT, STUDIO, Workspace, type Actor } from "./core.ts";
 import { APPROVED_DIR, recordApproval, Sources } from "./sources.ts";
@@ -42,6 +43,7 @@ const NO_LAUNCH = { launchOnce: async (): Promise<never> => { throw new Error("A
 export const printedOf = (code: string, label: string | null) => (/^[A-Z]+ [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(label ?? "") ? label! : `${code} (${label ?? ""})`);
 const costWordsOf = (o: { about_usd: number; at_most_usd: number }) => costWords(o.about_usd, o.at_most_usd);
 type Row = BoxRow;
+type PrintedBox = Parameters<typeof pdfOptions>[0];
 
 @Injectable()
 export class Impact {
@@ -222,6 +224,10 @@ export class Impact {
     const { h, item, def, old } = await this.held(id);
     const inventory = await this.readInventory(item.file, h);
     const oldMaps = old ? new Map(effective(await this.db.formFieldMap.findMany({ where: { formEditionId: old.id } }), (m) => m.dataPath, "draft").map((m) => [m.dataPath, m])) : new Map();
+    // B81 (challenge M2): codes and marks were decided against the printed choices: if they changed, a person decides again.
+    const oldInventory = old?.inventoryFile ?? (old?.officialFile ? await this.readInventory(old.officialFile).catch(() => null) : null);
+    const printedBefore = new Map((oldInventory ? inventoryFields(oldInventory) : []).map((f) => [f.data_path!, f])), printedNow = new Map(inventoryFields(inventory).map((f) => [f.data_path!, f]));
+    const samePrinted = (path: string) => samePrintedChoices((printedBefore.get(path) ?? {}) as PrintedBox, (printedNow.get(path) ?? {}) as PrintedBox);
     const res = await this.db.$transaction(async (tx) => {
       const claimed = await tx.intakeItem.updateMany({ where: { id, status: "HELD", outcome: "new_edition_held" }, data: { status: "DONE", outcome: "added", reason: `Accepted after impact review by ${actor.name}` } });
       if (!claimed.count) fail("Someone decided this edition at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
@@ -229,7 +235,7 @@ export class Impact {
       const data: Prisma.FormFieldMapCreateManyInput[] = r.rows.filter((x) => x.change !== "removed").map((x) => {
         const m = x.change === "unchanged" ? oldMaps.get(x.dataPath) : undefined;
         return m ? { workspaceId: h.workspaceId, formEditionId: ed.id, dataPath: x.dataPath, caption: x.caption, heading: x.section, outcome: m.outcome, person: m.person, row: m.row, canonicalFieldKey: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence,
-          evidenceQuote: `Unchanged from ${old!.editionLabel}`, reason: m.reason, version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, optionMap: m.optionMap === null ? Prisma.DbNull : (m.optionMap as Prisma.InputJsonValue), updatedBy: actor.id }
+          evidenceQuote: `Unchanged from ${old!.editionLabel}`, reason: m.reason, version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, optionMap: m.optionMap === null || !samePrinted(x.dataPath) ? Prisma.DbNull : (m.optionMap as Prisma.InputJsonValue), updatedBy: actor.id }
           : { workspaceId: h.workspaceId, formEditionId: ed.id, dataPath: x.dataPath, caption: x.caption, heading: x.section, outcome: "unresolved", reason: x.change === "reworded" ? `Reworded in ${h.editionLabel}: was "${x.was}"` : `New in ${h.editionLabel}`, version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, updatedBy: actor.id };
       });
       await tx.formFieldMap.createMany({ data });

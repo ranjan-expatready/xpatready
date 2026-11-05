@@ -60,6 +60,7 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     const settled = b?.about && e?.fact && b.row !== null && b.row !== undefined ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
     if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
     else if (b?.result === "by hand") out.push({ box: path, label, reason: "filled by hand", why: b.why ?? "type it in Adobe" });
+    else if (b?.result === "not on this form") out.push({ box: path, label, reason: "not on this form", why: b.why ?? "the form has no such choice" });
     // A derived "is anything recorded?" Yes/No (C7.2 cause 3): an answer can only make it Yes; its No needs a question
     // that records "none" (a confirmed "none apply" group does; other names, the national ID and the US card have none yet).
     // Devin on #715: a box held back by a fix (a confirmed answer with a problem, or a gate answered No with a detail

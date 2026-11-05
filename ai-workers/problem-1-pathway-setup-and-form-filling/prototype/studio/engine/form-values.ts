@@ -14,7 +14,7 @@ import type { Snapshot } from "./snapshot.ts";
 export type InventoryBox = { data_path?: string | null; som?: string | null; ui?: string; caption?: string | null; required?: boolean | null; max_chars?: number | null; options?: unknown; options_resolved?: [string, string][] | null };
 export type Inventory = { fields: InventoryBox[]; groups?: unknown[] };
 /** What happened to one form field: written (with the value), or why not. */
-export type BoxResult = BoxRow & { result: "written" | "by a person" | "not written" | "by hand" | "blank"; written?: string; why?: string; fix?: string };
+export type BoxResult = BoxRow & { result: "written" | "by a person" | "not written" | "by hand" | "not on this form" | "blank"; written?: string; why?: string; fix?: string };
 type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
 type Def = { id: string; answer_list?: { values: ListValue[] } };
 
@@ -36,7 +36,7 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
     if (r.coverage !== "confirmed fact" && !r.nothing_recorded) return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
     // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
     const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
-    if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) { const not = notOnFormValue(r.value, e.option_map, list); return { ...r, result: "by hand", why: not ? `Refused: this form field prints no choice for "${not.label}" (a person marked it "not on this form"), so nothing is written and nothing is guessed. A person decides what to do for this answer.` : `"${r.value}" has no code in this form field's option map` }; } write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
+    if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) { const not = notOnFormValue(r.value, e.option_map, list); return not ? { ...r, result: "not on this form", why: `The form has no choice for "${not.label}", so nothing is written and nothing is guessed: leave it blank or change the answer.` } : { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; } write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
     const own = box.get(r.box) ?? {};
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
