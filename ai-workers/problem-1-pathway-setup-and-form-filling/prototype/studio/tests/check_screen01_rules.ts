@@ -40,6 +40,16 @@ ok("BR-8: a released row that passes is Ready", statusOf(true, m) === "READY");
 m = missingItems(empty, people, []);
 ok("BR-8 fail: no forms is missing", m.some((x) => x.code === "no_forms"), m.map((x) => x.text));
 ok("F2: no questions is one line naming every role that files, with its next step", m.filter((x) => x.code === "role_without_questions").length === 1 && m.some((x) => x.text === "No questions yet for Principal applicant, Spouse or partner. Next step: Add questions (Configuration › Questions and sections)."), m.map((x) => x.text));
+// B78 (P-294, Lead 13): BR-8 reads the one list Preview and a case show. A fact a form reads is asked though its section is
+// not chosen; a person with no questions at all is still refused, with the same code.
+const noQuestionsLine = (x: Snapshot) => missingItems(x, people, []).some((i) => i.code === "role_without_questions");
+ok("B78 pass: a person's question a form reads, its section not chosen, is a question: no \"No questions yet\"", !noQuestionsLine({ ...full, sections: [] } as Snapshot));
+// The real release, its forms filed and read for the Principal only, with no rule, document line or form condition asking the Spouse anything.
+const onlyPrincipalForms = { ...full, sections: [], rules: [], document_requirements: [], forms: full.forms.map((f: object) => ({ ...f, who: "principal_applicant", condition: null })), field_maps: (full.field_maps as { entries: { person?: string | null }[] }[]).map((m) => ({ ...m, entries: m.entries.filter((e) => e.person !== "subject_spouse_or_partner") })) } as unknown as Snapshot;
+ok("B78 fail (m18, every role): a Principal-and-Spouse release whose forms read only the Principal stays Not ready, naming the Spouse alone", missingItems(onlyPrincipalForms, people, []).some((i) => i.code === "role_without_questions" && /^No questions yet for Spouse or partner\./.test(i.text)), missingItems(onlyPrincipalForms, people, []).map((i) => i.text));
+ok("B78 pass (m18): the same release with each applicant's forms names no role", !noQuestionsLine({ ...full, sections: [] } as Snapshot));
+ok("B78 fail: a person with no questions at all (nothing placed) is refused with role_without_questions", noQuestionsLine({ ...full, sections: [], placements: [] } as Snapshot));
+ok("B78 fail: questions about the application only (a chosen section, no form reading a person's fact) are no question for a person", noQuestionsLine({ ...full, field_maps: [], sections: [{ id: "about_it" }], placements: [{ section_id: "about_it", repeats: "once_per_case", fact: "case.school_name" }] } as unknown as Snapshot));
 ok("F2: every missing item says what to do next", m.length > 0 && m.every((x) => /Next step: /.test(x.text)), m.map((x) => x.text));
 ok("BR-8: a released row that fails is Not ready, never Ready", statusOf(true, m) === "NOT_READY");
 ok("BR-8: a row never released is In setup, whatever it holds", statusOf(false, []) === "IN_SETUP" && statusOf(false, m) === "IN_SETUP");
