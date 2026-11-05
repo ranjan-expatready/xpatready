@@ -280,7 +280,7 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   // Review N2: undo's words send the author to To review, so To review has a step for them.
   u = await askNew(USCARD, "B83 author door");
   const door = changeOf(keyOf("B83 author door"));
-  const queue = (await call("GET", "/review-queue")).body;
+  const queue = (await call("GET", "/review-queue?filter=waiting")).body;
   const item = ((queue?.items ?? queue?.rows ?? queue ?? []) as { id: string; next: { href: string } | null; waiting_on: string | null }[]).find((i) => i.id === `change:${door}`);
   ok("review N2 fail test: To review gives the author's own waiting new field a step, to the page that withdraws it", item?.next?.href === `/review/change/${door}` && /You proposed it/.test(item?.waiting_on ?? ""), item);
   u = await call("GET", `/library/changes/${randomUUID()}/readers`);

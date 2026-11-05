@@ -167,7 +167,7 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   ok("review N2 fail test: the Fields row's Withdraw names the reader before the press, no key", /It leaves the rule "nothing, it is a walk check"/.test(await doorPanel.innerText()) && !/person\.[a-z_]+/.test(await doorPanel.innerText()), await doorPanel.innerText());
   await doorPanel.getByRole("button", { name: "Cancel" }).click();
   // Review N2: by clicks, as a person: undo's words say To review, and To review has the step.
-  await page.goto(`${BASE}/review`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/review?f=waiting`, { waitUntil: "networkidle" });
   const step = page.locator(`[data-next] a[href*="/review/change/${keptChange}"]`).first();
   await step.waitFor({ timeout: 60_000 });
   ok("review N2 fail test: To review offers the author a step on their own waiting field, not \"No step for you\"", /Open or withdraw/.test(await step.innerText()), await step.innerText());
