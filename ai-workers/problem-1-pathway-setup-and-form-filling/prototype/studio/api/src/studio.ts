@@ -34,6 +34,7 @@ import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } fro
 import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
 import { firmMayRead } from "./case-feed.ts";
+import { placementRefusal } from "../../engine/field-scope.ts"; // C3.16: a field asked once for the household or employer stays single and unconditioned
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -659,6 +660,7 @@ export class Studio {
     await refuseRetired(this.db, workspaceId, "section", [b.sectionKey]); // C11.9: a retired section takes no new question
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
+    { const no = placementRefusal((await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } }))?.scope, { repeats: b.repeats, condition: b.condition }); if (no) fail(no, HttpStatus.UNPROCESSABLE_ENTITY); } // C3.16 (#1054 M3, M1)
     const types = await this.libraryTypes(workspaceId);
     if (b.condition) { const errs = draftErrors(this.conditionErrors(b.condition, types)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
