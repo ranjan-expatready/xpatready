@@ -122,3 +122,6 @@ Main 53515caef. C2.6 Works, 48/48 on the six (run 41994356502). C4.8 Works, 11/1
 
 ## Records ~15:00 IST: C11.15 Works, C4.5 Partial; QA-252 closed; QA-255 to QA-261
 **C11.15 Works** on main 64b67d056: 37/37 on the six (run 42001975299), every offered page on Super visa walked by screens, 8 of 8. **C4.5 Partial** on main 91a62168e: QA-255 (Major, reproduced by qa as far as the published type naming a withdrawn field, K's rows made by SQL) and QA-256 (Major, confirmed in the code, not run; no owner yet). QA-257 to QA-260 (Minor) come from the B83 builder's runs on main, not re-run by qa; F2's probe failed in its own setup. QA-261 (Minor). **M2: 57/60** (not Works: C4.5, C4.11, C10.1).
+
+## Records ~17:15 IST: QA-256 closed
+On main 8dd8df449, after #1100: the spouse's fact, set by the screen, stays about the spouse after a merge, on the draft row; a merge that would make one fact about two people is refused in words. Published row not read by qa (the fixture's release was refused for another reason). C4.5 stays Partial on QA-255. **M2: 57/60.**
