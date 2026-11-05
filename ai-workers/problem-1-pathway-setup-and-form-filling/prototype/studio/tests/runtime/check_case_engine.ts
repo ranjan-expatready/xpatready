@@ -9,6 +9,8 @@ import { changedFacts, changedGroups, factsOf, formCoverage, groupFacts, inputHa
 import { render } from "../../engine/render.ts";
 import { inSentence } from "../../contracts/runtime.ts";
 import { recorder } from "./api.ts";
+import { isCodeRange, spellOutCodeRange } from "../../engine/options.ts";
+import { codeFor } from "../../../p5/transforms.ts";
 
 const { ok, summary } = recorder();
 /** A property over many generated cases: a failure prints the smallest counterexample instead of stopping the run. */
@@ -275,5 +277,26 @@ const repBox = (people: Parameters<typeof render>[1]) => render(withRep, people,
 const solo = [{ id: "p", role: "principal" as const, label: "Applicant", applies: true }];
 ok("QA-76 pass: with no representative on the case, a form field about the representative names \"The representative\"", repBox(solo)?.about_label === "The representative", repBox(solo)?.about_label);
 ok("QA-76 fail-guard: with a representative on the case, it names that person, as before", repBox([...solo, { id: "r1", role: "representative" as const, label: "Rep A", applies: false }])?.about_label === "Rep A", repBox([...solo, { id: "r1", role: "representative" as const, label: "Rep A", applies: false }])?.about_label);
+
+// ── QA-272: a mapping's code range is a note, not one choice; the form's own labels and codes replace it at apply
+{
+  const statusBox = { options_resolved: [["", ""], ["Citizen", "01"], ["Permanent resident", "02"], ["Visitor", "03"], ["Worker", "04"], ["Student", "05"], ["Other", "06"], ["Protected Person", "07"], ["Refugee Claimant", "08"], ["Foreign National", "09"]] as [string, string][] };
+  const range = "code_list:imm5257.immigration_status (01..09)";
+  const spelled = spellOutCodeRange(range, statusBox)!;
+  const withTransform = (transform: string) => ({ ...S, field_maps: S.field_maps.map((m) => ({ ...m, entries: m.entries.map((e) => e.fact === "case.visa_type" ? { ...e, transform } : e) })) } as unknown as Snapshot);
+  ok("QA-272 pass: a range plus the form's options becomes its labelled list", spelled === "code_list:imm5257.immigration_status (Citizen=01, Permanent resident=02, Visitor=03, Worker=04, Student=05, Other=06, Protected Person=07, Refugee Claimant=08, Foreign National=09)", spelled);
+  ok("QA-272 pass: the question offers the form's nine words and accepts one", optionsOf(withTransform(spelled), "case.visa_type")?.map((o) => o.label).join("|") === "Citizen|Permanent resident|Visitor|Worker|Student|Other|Protected Person|Refugee Claimant|Foreign National" && checkValue(withTransform(spelled), "case.visa_type", "Citizen").length === 0, optionsOf(withTransform(spelled), "case.visa_type"));
+  ok("QA-272 fail: a bare range stays open and is never offered as one choice", isCodeRange("01..09") && shapeOf(withTransform(range), "case.visa_type").choices === null && optionsOf(withTransform(range), "case.visa_type") === null, shapeOf(withTransform(range), "case.visa_type"));
+  ok("QA-272 fail: a label with a comma, equals sign, semicolon or bracket leaves the transform unchanged", [",", "=", ";", "(", ")"].every((mark) => spellOutCodeRange(range, { options_resolved: [["", ""], [`Bad${mark}label`, "01"]] }) === range));
+  ok("QA-272 fail: a range without the form's options, or a non-range note, stays unchanged", spellOutCodeRange(range, { options_resolved: [] }) === range && spellOutCodeRange("code_list:x.y (VisitorVisa, Transit)", statusBox) === "code_list:x.y (VisitorVisa, Transit)");
+  const keyed = { ...withTransform(spelled), canonical_fields: S.canonical_fields.map((f) => f.id === "case.visa_type" ? { ...f, answer_list: { key: "status", values: [{ key: "citizen", label: "Citizen" }, { key: "other", label: "Other" }] } } : f) } as unknown as Snapshot;
+  ok("QA-272 pass: an attached answer list keeps its lowercase keys, so rules such as is: other still hold", optionsOf(keyed, "case.visa_type")?.some((o) => o.key === "other" && o.label === "Other") === true && checkValue(keyed, "case.visa_type", "other").length === 0, optionsOf(keyed, "case.visa_type"));
+  prop("QA-272 property: every offered word reads back to its code in the range; no code outside it appears", fc.property(fc.integer({ min: -20, max: 20 }), (code) => {
+    const options = optionsOf(withTransform(spelled), "case.visa_type") ?? [];
+    const wanted = String(code).padStart(2, "0");
+    const hit = options.some((o) => codeFor(o.key, statusBox) === wanted);
+    return code >= 1 && code <= 9 ? hit && options.length === 9 : !hit;
+  }), 100);
+}
 
 process.exitCode = summary() ? 1 : 0;
