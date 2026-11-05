@@ -69,3 +69,6 @@ Confirmed by route on a checkpoint copy of main adc904436: generating IMM 5257 S
 
 ## Records ~06:35 IST: QA-236 (Bug · Minor)
 Reproduced by route on fresh copies of main 113532ac2: the order of applying Visitor visa's field maps changes the library (one UCI field or two). The duplicate needs the author to accept a proposal marked CONFLICT / Decide. qa's 1440 px walk confirms the page says so in words, as the first row to decide (`qa236-uci-conflict-1440.png`): the rating stays Minor. Tagged C3.2; M2 unchanged. The setup's accept-all with a tied `started_at` is the likely cause of flakes in packs that use `questionsBySteps`.
+
+## Records: QA-237 (Gap · Major, row B86)
+Reproduced by route and walked at 1440 px on a fresh six: an approved condition makes the draft refuse "Hiding a value a form reads", and the only other way out the message offers (a box under the same condition) cannot work, because box conditions are free text. Tagged C4.11; it cannot be Works while this is open. The guard itself is right. M2 unchanged, 58/60.
