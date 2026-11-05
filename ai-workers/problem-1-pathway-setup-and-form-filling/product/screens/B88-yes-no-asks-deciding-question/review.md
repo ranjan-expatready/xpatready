@@ -1,6 +1,32 @@
 # B88 review: a worked-out Yes/No asks its form's own deciding question (QA-239, C4.11)
 
-The reviewer agent did not build this. This file holds three rounds. Round 1 was on 2d85215f3 (`git diff d68a8b79a..2d85215f3`; B86 #1053 is the base). Round 2 was on **7ce4a9630**, diff only (`git diff 2d85215f3..7ce4a9630`). It covers my 4 Majors, the breaker's 5 (`break-report.md`), and the tech lead's request (#1068, 6651254531) to try to break the step-finding by data path. Date: 5 Nov 2026. US$0, live AI off. My own copies ran on :4456 and :4457, never :4400, and are stopped.
+The reviewer agent did not build this. This file holds three rounds and a merge check. Round 1 was on 2d85215f3 (`git diff d68a8b79a..2d85215f3`; B86 #1053 is the base). Round 2 was on **7ce4a9630**, diff only (`git diff 2d85215f3..7ce4a9630`). It covers my 4 Majors, the breaker's 5 (`break-report.md`), and the tech lead's request (#1068, 6651254531) to try to break the step-finding by data path. Date: 5 Nov 2026. US$0, live AI off. My own copies ran on :4456 and :4457, never :4400, and are stopped.
+
+## Merge check (2d2ec8d3a, B86's d46ae4e5f into 9527f905f/f6356050e): **Ship**. **Verdict: Approve** (no open Blocker or Major)
+Scope: only how the conflicts were resolved and what B88 adapted (`git diff f6356050e..2d2ec8d3a` on the 7 named files, plus `git show --stat`). B86's own changes are reviewed on #1053.
+* **API** (`api/src/form-field-condition.ts`):
+  * The types now come from B86's `contracts/form-field-conditions.ts`, which gains `asked`, `asks` and `can_ask`.
+  * B88's followers route is gone. B86's `GET /combinations/:id/form-field-conditions` (`listAll`) lists every question with a SHOW condition, so a question whose only reader was asked keeps its Undo.
+  * `listAll` strips `step` and `field` (checked: none leak). Without an actor it answers 401.
+  * B88's `rowsOf`, the ask branch, `closeReplaced` and `restoreReplaced` are kept.
+  * B86's own close-at-approval is replaced by `closeReplaced` at proposal, so a returned or withdrawn later change still restores the earlier one. I walked this: Undo proposed → the ask closed; Undo returned → the ask is APPROVED again, with its chip "Approved · in the next release".
+  * `applyAsk` now writes `c.proposedBy` as the draft's author, as B86's apply does.
+  * `applyAsk` still closes other approved changes at approval. That is now redundant but harmless.
+* **Web:**
+  * One request for Review and release: on load I saw 0 per-question requests and one `listAll`. That closes my R2-m5.
+  * `listAll` answers in 38–72 ms on the four held combinations of the six, with all 9 asked boxes present (2/2/3/2).
+  * `FormFieldsHeld` includes `asked`. A content reviewer (no author duty) sees no buttons there (`canAuthor`).
+  * The WCAG 2.5.3 names are kept: axe AA and `label-content-name-mismatch` are clean, with no sideways scroll at 1024/512/400 px.
+  * React Query invalidates by the shared key prefix, so the card's own panel refreshes too.
+* **Tests:**
+  * B88's spread and browser checks read B86's route and section (`[data-form-fields-held]`); same assertions, same 2 Undo buttons.
+  * B86's browser check matches Undo's name case-insensitively, as it must after 2.5.3.
+* **Re-run on 2d2ec8d3a (fresh copies :4456/:4457):**
+  * `check_forms_b88_spread` 36/36, `check_forms_b88_panel_browser` 47/47, `check_forms_b88_fill` 33/33, `check_forms_b86_fill` 34/34, `check_qa165_mandatory` 40/40.
+  * Web tsc is clean. Api tsc has no error in any file the merge touches; the 15 errors it does report are in 5 old test files this merge does not change.
+  * Not re-run by me: B86's door and browser checks and the acceptance packs (builder: 44/44, 37/37, 26/26, 8/8).
+* **Minor (Should):** a returned **ask** now lands on B86's "Confirm it again … then confirm the form field again on Review and release" (`web/src/pages/review-items.tsx`). For an ask the words should say "ask the Yes/No as its deciding question again", as the server's refusal already does (`library-changes.ts:191`).
+* Still listed from earlier rounds: R2-m1, R2-m3. Round-1 m6 (the returned page's form) is now fixed by B86.
 
 ## Round 3 verdict (9527f905f): **Ship**. **Verdict: Approve** (no open Blocker or Major)
 Scope: the tech lead's ruling (#1068, 6651482813), a diff-only check of the R2-M1 fix, `git diff 7ce4a9630..9527f905f`. Files: `p5/transforms.ts`, `engine/form-field-condition.ts`, `api/src/library-changes.ts`, `tests/check_forms_b88_fill.ts`.
@@ -54,11 +80,7 @@ Method: I ran `blockFacts`/`askedStep` on **all 39 worked-out Yes/No form fields
 * Still open from round 1 and not taken (concept §10): m6, the returned page's "Correct it and send it again" form (B86's page).
 
 ## Round 1 summary (2d85215f3)
-**Block on 4 Majors**, all fixed above:
-* M1: raw code `SET_FORM_FIELD_QUESTION` in the title;
-* M2: WCAG 2.5.3 on the new buttons;
-* M3: closeReplaced left a WITHDRAWN "Replaced by a later change" record, shown as "Released", on an ask that was still in force;
-* M4: no test for the approval re-checks.
+**Block on 4 Majors**, all fixed above: M1 raw code `SET_FORM_FIELD_QUESTION` in the title; M2 WCAG 2.5.3 on the new buttons; M3 closeReplaced left a WITHDRAWN "Replaced by a later change" record, shown as "Released", on an ask still in force; M4 no test for the approval re-checks.
 
 Round-1 Minors taken (concept §10): label instead of meaning, BR-10 tested, concept updated, no double count, Undo restores origin and evidence, ports.
 
@@ -72,6 +94,4 @@ A real screen reader; an intended user's unaided walk (D17/D20); a full release 
 
 Journey test: `journey-test-reviewer-2026-11-05.md`: round 1 **7/10**, round 2 **8½/10**, round 3 **9/10** (correct data 1 once R2-M1 is fixed; passes, no criterion at 0).
 
-Round 2 ended on **Block** (R2-M1); round 3 closes it.
-
-**Verdict: Approve** on 9527f905f.
+Round 2 ended on **Block** (R2-M1); round 3 closes it. **Verdict: Approve** on 9527f905f, and on the merge **2d2ec8d3a**.
