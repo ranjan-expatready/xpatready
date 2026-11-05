@@ -90,6 +90,12 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
     if (why !== undefined) await f.getByLabel("Why", { exact: true }).fill(why);
     await f.getByRole("button", { name: /Ask it/ }).click();
     await Promise.race([r.locator("[data-own-asked]").waitFor({ timeout: 30_000 }), f.locator("[data-own-error]").waitFor({ timeout: 30_000 })]);
+    // A busy Mac: Postgres answers "Interrupted system call" now and then (5 Nov), and the save rolls back: pressed again once.
+    if (await f.locator("[data-own-error]").count() && /went wrong on the server/.test(await f.locator("[data-own-error]").innerText())) {
+      await f.getByRole("button", { name: /Ask it/ }).click();
+      await page.waitForTimeout(1000);
+      await Promise.race([r.locator("[data-own-asked]").waitFor({ timeout: 30_000 }), f.locator("[data-own-error]").waitFor({ timeout: 30_000 })]);
+    }
     if (await f.locator("[data-own-error]").count() && /is close to the library/.test(await f.locator("[data-own-error]").innerText())) {
       await f.getByLabel("Why it is not the same").fill("The form's own Yes/No question, not the detail it leads to (walk).");
       await f.getByRole("button", { name: /Ask it/ }).click();
