@@ -136,6 +136,9 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B75 Field-map decision page words | the page where proposals are decided shows the checker's and the disagreement words, as the Proposals list does (QA-230, Minor); after M2 60 | P-340, qa-2, QA-230 |
 | B77 Protected set on the verdict's data (P-214, now) | the regression job runs each Works row's pack on the data its verdict counts on (the six, or `data=checkpoint` for release and case steps, as the nightly re-test mode does); until then such rows are held from the six run. Owner: Builder 1 after its flaky-checks PR | P-339, Lead 8 |
 | B76 Scale phase additions (P-336, P-339) | (1) a tooling check that refuses a Works row in CAPABILITIES without a green main run id for its pack; (2) lead-watch.sh flags a session archived with work left and a lane waiting on an open question over 30 min | Lead 8 |
+| B78 C10.1 row 7: name the unheaded sections | the configured checkpoint holds 29 sections that no printed heading names; a person names each through the Sections screen (product route), so the loader's row 7 completes; part of C10.1 "every row done" | P-343 (10), S2, #1009 |
+| B79 C10.1 row 10: Express Entry and Family sponsorship from their forms | QA-144 slices 4–5: both combinations set up from their forms through the people's steps, so Submit stops refusing 225 and 92 undecided form fields; several rows; the rest of C10.1 "every row done" | P-343 (10), S2, QA-144 |
+| B80 check_ai_launch_paths leaves no state behind | the usage line sets the live switch with the fake launcher; check whether it leaves library fields or shared files behind for later suites (follow-up of QA-193's root cause, #1006) | P-343 (8), Builder 1, #1006 |
 
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
