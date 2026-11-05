@@ -66,3 +66,6 @@ The checklist reading lands Visitor visa lines whose conditions read three facts
 
 ## Records ~06:45 IST: QA-235 (Bug · Major, row B84)
 Confirmed by route on a checkpoint copy of main adc904436: generating IMM 5257 SCH1 answers 404 "No such form." (IMM 5257: 202). Tagged C7.7 only (M3, already Partial): no pack step generates SCH1, so no Works row is demoted. M2 unchanged.
+
+## Records ~07:15 IST: QA-236 (Bug · Minor)
+Reproduced by route on fresh copies of main 113532ac2: the order of applying Visitor visa's field maps changes the library (one UCI field or two). The duplicate needs the author to accept a proposal marked CONFLICT / Decide. Tagged C3.2; M2 unchanged. The setup's accept-all with a tied `started_at` is the likely cause of flakes in packs that use `questionsBySteps`.
