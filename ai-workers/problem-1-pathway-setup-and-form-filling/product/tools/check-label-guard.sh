@@ -15,7 +15,9 @@ m=GET; d=""; u=""
 while [ $# -gt 0 ]; do case "$1" in -X) m=$2; shift;; -d) d=$2; shift;; -H) shift;; http*) u=$1;; esac; shift; done
 case "$m $u" in
   "GET "*/labels) cat "$FX/labels.json";;
-  "GET "*/comments*page=1) cat "$FX/comments.json";;
+  "GET "*/comments*) [ -n "${FAIL_COMMENTS:-}" ] && { echo '{"message":"Server Error"}'; exit 22; }
+    case "$u" in *page=1) cat "$FX/comments.json";; *) echo '[]';; esac;;
+  "GET "*/pulls/1052) cat "$FX/pull.json" 2>/dev/null || echo '{}';;
   "GET "*/reviews*page=1) cat "$FX/reviews.json";;
   "GET "*) echo '[]';;
   "DELETE "*/labels/review%3A%20approved) echo "DELETE label" >> "$FX/log"; echo '[]';;
@@ -33,12 +35,16 @@ echo fix >> a.txt; git commit -qam c2; c2=$(git rev-parse HEAD)
 git checkout -q main; echo b2 > b.txt; git commit -qam "main: b"; mb=$(git rev-parse HEAD)
 git checkout -q -b m1 "$c1"; git merge -q --no-edit main >/dev/null 2>&1; pure=$(git rev-parse HEAD)
 git checkout -q -b m3 "$c1"; git merge -q --no-edit --no-commit main >/dev/null 2>&1; echo sneaked > c.txt; git add c.txt; git commit -qm "merge + edit"; evil=$(git rev-parse HEAD)
+git checkout -q main; echo e > e.txt; git add e.txt; git commit -qm "main: e"
+git checkout -q -b m5 "$pure"; git merge -q --no-edit main >/dev/null 2>&1; pure2=$(git rev-parse HEAD)
+git checkout -q -b m6 "$c2"; git merge -q --no-edit main >/dev/null 2>&1; fixmerged=$(git rev-parse HEAD)
 git checkout -q main; sed -i.bak 's/^8$/eight/' a.txt; rm -f a.txt.bak; git commit -qam "main: a"
 git checkout -q -b m2 "$c1"; git merge -q --no-edit main >/dev/null 2>&1; mine=$(git rev-parse HEAD)
 git checkout -q -b side "$c1"; echo x > d.txt; git add d.txt; git commit -qm side; git checkout -q -b m4 "$c1"; git merge -q --no-edit side; notmain=$(git rev-parse HEAD)
 git checkout -q main
 label='[{"name":"review: approved"},{"name":"queued"}]'
-guard() {  # $1 before, $2 after, $3 labels, $4 comments, $5 reviews → output in $out, log in $log
+guard() {  # $1 before, $2 after, $3 labels, $4 comments, $5 reviews, $6 the PR's head now → $out, $log
+  if [ -n "${6:-}" ]; then jq -n --arg h "$6" '{head: {sha: $h}}' > "$T/fx/pull.json"; else rm -f "$T/fx/pull.json"; fi
   echo "$3" > "$T/fx/labels.json"; echo "$4" > "$T/fx/comments.json"; echo "${5:-[]}" > "$T/fx/reviews.json"; : > "$T/fx/log"
   out=$(cd "$R" && PATH="$T/bin:$PATH" FX="$T/fx" GH_TOKEN=x REPO=o/r PR=1052 BEFORE="$1" AFTER="$2" API=https://api.test MAIN_REF=main bash "$G" 2>&1); r=$?
   log=$(cat "$T/fx/log"); }
@@ -65,8 +71,19 @@ guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c2" '[{state:"APPROVED",commi
 ok "a GitHub review from someone without write access does not count" "$(removed)" "$out / $log"
 guard "$c1" "$c2" "$label" "[]" "$(jq -n --arg h "$c1" '[{state:"APPROVED",commit_id:$h,author_association:"OWNER"}]')"
 ok "a GitHub review on the old head does not count" "$(removed)" "$out / $log"
-guard "$c1" "$pure" "$label" "[]"
-ok "a pure merge of main touching none of the PR's files keeps the label (P-318 (1))" "$(kept)" "$out / $log"
+guard "$c1" "$pure" "$label" "$(cm "Reviewer: Approve $c1")"
+ok "a pure merge of main touching none of the PR's files, on an approved commit, keeps the label (P-318 (1))" "$(kept)" "$out / $log"
+guard "$pure" "$pure2" "$label" "$(cm "Reviewer: Approve ${c1:0:9}")"
+ok "two pure merges of main on an approved commit keep the label" "$(kept)" "$out / $log"
+guard "$c2" "$fixmerged" "$label" "$(cm "Reviewer: Approve $c1")"
+ok "review M2: an unreviewed fix, then a pure merge of main (the fix's own run cancelled), loses the label" "$(removed)" "$out / $log"
+echo "$out" | grep -q "${c2:0:9} is a new commit"; ok "... naming the unreviewed commit" "$([ $? = 0 ] && echo 1)" "$out"
+guard "$c1" "$c1" "$label" "$(cm "Reviewer: Approve $c1")" "[]" "$c2"
+ok "a run for an approved push checks the PR's head now (a newer unreviewed push) and removes the label" "$(removed)" "$out / $log"
+FAIL_COMMENTS=1 guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve $c2")"
+ok "comments that cannot be read count as no Approve (fails closed)" "$(removed)" "$out / $log"
+guard "$c1" "$c2" "$label" "[]"; body=$(grep '^POST' "$T/fx/log")
+ok "the guard's own comment names no SHA after 'Reviewer: Approve' (it must never approve itself)" "$( ! echo "$body" | grep -qiE 'reviewer: approve[^a-z]*[0-9a-f]{7}' && echo 1)" "$body"
 guard "$c1" "$mine" "$label" "[]"
 ok "a merge of main that changes the PR's own file loses the label" "$(removed)" "$out / $log"
 echo "$out" | grep -q 'a.txt'; ok "... and names that file" "$([ $? = 0 ] && echo 1)" "$out"
@@ -75,7 +92,7 @@ ok "a merge of main with a hand edit added loses the label" "$(removed)" "$out /
 guard "$c1" "$notmain" "$label" "[]"
 ok "a merge of a branch that is not main loses the label" "$(removed)" "$out / $log"
 guard "$c2" "$pure" "$label" "[]"
-ok "a merge whose first parent is not the old head (a force-push) loses the label" "$(removed)" "$out / $log"
+ok "with no Approve anywhere, a pure merge alone does not keep the label" "$(removed)" "$out / $log"
 guard "$c1" "$c2" '[{"name":"queued"}]' "[]"
 ok "no label: nothing is removed or posted" "$(kept)" "$out / $log"
 W="$(cd "$TOOLS/../../../.." && pwd)/.github/workflows/label-guard.yml"

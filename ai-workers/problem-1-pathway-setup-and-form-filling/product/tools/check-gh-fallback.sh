@@ -18,8 +18,8 @@ echo 'Post "https://api.github.com/graphql": tls: failed to verify certificate: 
 EOF
 cat > "$T/bin/curl" <<'EOF'
 #!/bin/bash
-m=GET; u=""; hdr=""; auth=""; body=""
-while [ $# -gt 0 ]; do case "$1" in -X) m=$2; shift;; -D) hdr=$2; shift;; -H) case "$2" in Authorization*) auth=$2;; esac; shift;;
+m=GET; u=""; hdr=""; auth=""; body=""; echo "$*" >> "$FX/argv.log"
+while [ $# -gt 0 ]; do case "$1" in -X) m=$2; shift;; -D) hdr=$2; shift;; -H) case "$2" in Authorization*) auth=$2;; @*) auth=$(grep Authorization "${2#@}");; esac; shift;;
   --data-binary) body=$(cat); shift;; http*) u=$1;; esac; shift; done
 echo "$m $u | $auth | $body" >> "$FX/curl.log"; : > "$hdr"
 case "$u" in
@@ -54,6 +54,7 @@ run bash "$TOOLS/factory-board.sh"
 ok "factory-board with gh failing TLS prints the board (#1052 in the queue, #1131 red)" "$(echo "$out" | grep -q '#1052 .*Merge queue' && echo "$out" | grep -q '#1131 .*CI red' && echo 1)" "exit $r: $out / $err"
 ok "... and says once per call that it went through curl, not a wall of TLS errors" "$( ! echo "$out" | grep -q x509 && echo "$err" | grep -q 'answered through curl' && echo 1)" "$err"
 ok "... with gh's own token on every request" "$( ! grep -v 'Bearer tok123' "$T/curl.log" | grep -q . && echo 1)" "$(cat "$T/curl.log")"
+ok "... and never on curl's command line, where ps shows it (review m8)" "$( ! grep -q tok123 "$T/argv.log" && echo 1)" "$(grep tok123 "$T/argv.log" | head -1)"
 
 run bash "$GH" pr list --state merged --search "merged:>=2026-11-06T00:00:00Z" --json number,title -q '.[]|"#\(.number)"'
 ok "pr list --state merged --search: a GraphQL search with is:merged and the terms, --jq applied" "$([ $r = 0 ] && echo "$out" | grep -qx '#1052' && tail -1 "$T/curl.log" | grep -q 'is:pr is:merged merged:>=2026-11-06T00:00:00Z' && echo 1)" "exit $r: $out $err"

@@ -6,7 +6,7 @@
 err=$(mktemp); trap 'rm -f "$err"' EXIT
 if [ "${GH_FALLBACK:-auto}" != always ]; then
   out=$(command gh "$@" 2>"$err"); rc=$?
-  if [ "$rc" = 0 ] || ! grep -qiE 'x509|certificate|tls:|tls handshake|OSStatus|SSL' "$err"; then
+  if [ "$rc" = 0 ] || ! grep -qiE 'x509|tls: |tls handshake|certificate (verify|signed by unknown|is not trusted|has expired)|OSStatus -?[0-9]+|SSL_ERROR|SSL certificate|ssl handshake' "$err"; then
     [ -n "$out" ] && printf '%s\n' "$out"; cat "$err" >&2; exit "$rc"
   fi
   echo "gh: TLS failed ($(head -1 "$err" | cut -c1-120)); answered through curl with gh auth token (P-363)" >&2

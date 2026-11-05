@@ -22,6 +22,7 @@ set -- "${rest[@]}"
 [[ "$TTL" =~ ^[0-9]+$ ]] && (( TTL >= 1 && TTL <= 480 )) || { echo "--ttl: whole minutes from 1 to 480"; exit 2; }
 [[ "$NAME" =~ ^[a-z0-9_]+$ ]] || { echo "name: lower case letters, digits, _"; exit 2; }
 [[ "$NAME" != "demo" ]] || { echo "refused: 'demo' is the demo workspace"; exit 2; }
+[[ "$NAME" != "ttl" && "$NAME" != "logs" ]] || { echo "refused: '$NAME' is a folder of var/ (isolated-ttl, isolated-logs)"; exit 2; }
 export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:$PATH"
 DB="xr_studio_$NAME"; URL="postgresql://xr_studio@127.0.0.1:54329/$DB"; VARDIR="$STUDIO/var/isolated-$NAME"
 TTLPID="$STUDIO/var/isolated-ttl/$NAME.pid"
@@ -44,8 +45,8 @@ for pid in $(lsof -ti tcp:$PORT -sTCP:LISTEN 2>/dev/null); do kill -9 $pid 2>/de
 for i in {1..20}; do lsof -ti tcp:$PORT -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.25; done
 if [[ "$ACTION" != "stop" ]] && curl -s -o /dev/null --max-time 2 "localhost:$PORT/"; then echo "port $PORT is still answering after its server was stopped: not starting $NAME on it"; exit 1; fi
 if [[ "$ACTION" == "stop" ]]; then
-  end_timer
-  if [[ "${ISOLATED_KEEP:-}" == 1 ]]; then echo "stopped $NAME (database $DB and $VARDIR kept: ISOLATED_KEEP=1)"; exit 0; fi
+  # The timer ends only with the copy (#1136 review m3): a stop that keeps the copy running keeps its timer.
+  if [[ "${ISOLATED_KEEP:-}" == 1 ]]; then end_timer; echo "stopped $NAME (database $DB and $VARDIR kept: ISOLATED_KEEP=1)"; exit 0; fi
   # The server this copy recorded on its database at start ("isolated.sh server pid N port P host H"; #745 review M1):
   # on this port it is this copy's, so it is ended too (the tsx parent of the listener stopped above).
   rec=$(psql -h 127.0.0.1 -p 54329 -U xr_studio -d postgres -XAtq -c "select shobj_description(oid, 'pg_database') from pg_database where datname = '$DB'" 2>/dev/null)
@@ -58,6 +59,7 @@ if [[ "$ACTION" == "stop" ]]; then
   # server it recorded (say, on another port than the one given) no longer alive. Otherwise both are kept.
   if lsof -ti tcp:$PORT -sTCP:LISTEN >/dev/null 2>&1; then echo "stopped $NAME, but port $PORT is still listening: database $DB and files kept"; exit 0; fi
   if [[ -n "$opid" ]] && ps -p "$opid" >/dev/null 2>&1; then echo "stopped nothing on $PORT: $NAME's server (pid $opid, port $oport) is still running, so database $DB and files are kept"; exit 0; fi
+  end_timer
   # Its own database only (the name check above refuses "demo"); --force ends leftover connections of its stopped server.
   # A database server that is down, or a failure, never fails the stop: prune-test-dbs.sh cleans up.
   dropdb -h 127.0.0.1 -p 54329 -U xr_studio --if-exists --force "$DB" >/dev/null 2>&1 || echo "note: could not drop $DB (tools/prune-test-dbs.sh will)"

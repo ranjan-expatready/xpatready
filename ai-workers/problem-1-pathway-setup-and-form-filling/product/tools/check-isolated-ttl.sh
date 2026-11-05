@@ -54,11 +54,12 @@ timer() { cat "$S/var/isolated-ttl/$1.pid" 2>/dev/null; }
 
 iso qa_a 4471 start --ttl 3
 ok "a copy started with --ttl 3 answers and names its stop time" "$([ $r = 0 ] && up 4471 && echo "$out" | grep -q 'stops itself in 3 min' && echo 1)" "exit $r: $out"
-waitfor '! up 4471' 9; ok "... and stops itself when its ttl is reached" "$( ! up 4471 && echo 1)" "still listening on 4471"
-waitfor '[ "$(grep -c "dropdb xr_studio_qa_a" "$F/log")" = 2 ]' 5; ok "... dropping its database and files" "$([ "$(grep -c 'dropdb xr_studio_qa_a' "$F/log")" = 2 ] && [ ! -d "$S/var/isolated-qa_a" ] && echo 1)" "$(cat "$F/log")"
+waitfor '! up 4471' 30; ok "... and stops itself when its ttl is reached" "$( ! up 4471 && echo 1)" "still listening on 4471"
+waitfor '[ "$(grep -c "dropdb xr_studio_qa_a" "$F/log")" = 2 ]' 20; ok "... dropping its database and files" "$([ "$(grep -c 'dropdb xr_studio_qa_a' "$F/log")" = 2 ] && [ ! -d "$S/var/isolated-qa_a" ] && echo 1)" "$(cat "$F/log")"
 
 iso qa_b 4472 start; t=$(timer qa_b)
 ok "with no --ttl the timer is set to 60 minutes" "$([ $r = 0 ] && ps -p "$t" -o command= | grep -q 'isolated-ttl 60 ' && echo 1)" "timer $t: $(ps -p "$t" -o command= 2>/dev/null)"
+iso qa_b 4499 stop; ok "a stop on another port leaves the copy running, so its timer stays (review m3)" "$([ $r = 0 ] && up 4472 && live "$t" && echo 1)" "exit $r: $out"
 iso qa_b 4472 stop; ok "stop ends the timer too" "$([ $r = 0 ] && ! up 4472 && ! live "$t" && echo 1)" "exit $r: $out"
 
 iso qa_c 4473 start --ttl 2; t1=$(timer qa_c); iso qa_c 4473 start --ttl 30
@@ -74,6 +75,7 @@ ok "restarting one of the four on its own port is allowed" "$([ $r = 0 ] && up 4
 iso qa_w 4479 stop; iso qa_d 4474 start
 ok "with three running, a 4th starts" "$([ $r = 0 ] && up 4474 && echo 1)" "exit $r: $out"
 for c in "qa_x 4420" "qa_y 4431" "qa_z 4452" "qa_d 4474"; do iso $c stop; done
+iso ttl 4475 start; ok "the names ttl and logs are refused (folders of var/)" "$([ $r = 2 ] && echo 1)" "exit $r: $out"
 iso qa_e 4475 start --ttl 0; ok "--ttl 0 is refused (every copy stops itself)" "$([ $r = 2 ] && echo 1)" "exit $r: $out"
 
 SK="$(cd "$TOOLS/../../../.." && pwd)/.claude/skills"

@@ -11,19 +11,20 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
-concurrency:
-  group: label-guard-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+# No concurrency group: GitHub would cancel a waiting run, and every run checks the PR's head as it is now, back to its
+# last approved commit, so runs are independent (#1136 review M2). A run that fails or times out removes the label.
 jobs:
   guard:
     if: "contains(github.event.pull_request.labels.*.name, 'review: approved')"
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: ai-workers/problem-1-pathway-setup-and-form-filling/product/tools
       - name: fetch the pull request's commits (data only)
         run: git fetch --no-tags origin "+refs/pull/${{ github.event.pull_request.number }}/head:refs/remotes/pr/head"
       - name: label guard
@@ -34,3 +35,13 @@ jobs:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.event.after }}
         run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/label-guard.sh
+      - name: the guard could not finish, so the label comes off (fails closed)
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          curl -sS -X DELETE -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/labels/review%3A%20approved" || true
+          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/comments" \
+            -d '{"body":"**Label guard:** `review: approved` removed because the guard could not finish on this push (see the label-guard run). Label again once the head has a reviewer Approve."}' >/dev/null || true

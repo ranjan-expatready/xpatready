@@ -24,8 +24,9 @@ def token():
 
 def curl(method, url, body=None):
     """One request with curl; returns (parsed JSON, Link header)."""
-    with tempfile.NamedTemporaryFile() as h:
-        cmd = ["curl", "-sS", "--fail-with-body", "-X", method, "-D", h.name, "-H", "Authorization: Bearer " + token(),
+    with tempfile.NamedTemporaryFile() as h, tempfile.NamedTemporaryFile("w") as a:
+        a.write("Authorization: Bearer " + token() + "\n"); a.flush()   # in a file, not on the command line (ps)
+        cmd = ["curl", "-sS", "--fail-with-body", "-X", method, "-D", h.name, "-H", "@" + a.name,
                "-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2022-11-28"]
         if body is not None: cmd += ["-H", "Content-Type: application/json", "--data-binary", "@-"]
         r = subprocess.run(cmd + [url], input=json.dumps(body) if body is not None else None, capture_output=True, text=True)
