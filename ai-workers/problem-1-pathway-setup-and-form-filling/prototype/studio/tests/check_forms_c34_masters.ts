@@ -4,10 +4,10 @@
 // parts stay red there until the founder-approved live trial records the AI step's saved run (P-131). A passing and a
 // failing check per rule. On an isolated copy with the six loaded (Demo load). No browser, no model call.
 //   zsh studio/tools/isolated.sh forms_c34 4459 start && tsx studio/tests/check_forms_c34_masters.ts 4459 xr_studio_forms_c34
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { AUTHOR, APPROVER, pack2, run } from "../acceptance/lib/pack2.ts";
-import { codeOf, draftFromInventory, words as wordsOfName } from "../api/src/form-masters.ts";
+import { codeOf, draftFromInventory, headingsFor, words as wordsOfName } from "../api/src/form-masters.ts";
 
 // The C3.4 v2 rerun (3 Nov) committed the Mac paid runner's real C3.4 runs. This check proves the rules pass and Saved's
 // refusal when nothing is recorded (the saved result itself is acceptance/C3.4.test.ts), so the real runs are set aside in
@@ -55,6 +55,28 @@ run(async () => {
   ]);
   // QA-206: such a part is kept, but never under its internal name: with no printed heading it is held for a person to name.
   ok("C3.4 fail→pass (re-review M2, QA-206): a part with an internal name only (IMM 5475's Five, Seven) is a real section, held unnamed for a person to name", five.sections.length === 2 && five.sections.every((x) => x.unnamed && x.label === null) && five.sections.some((x) => x.part === "Five" && x.quote === "Family name (Surname)"), five.sections);
+
+  // B79b (QA-144 slice 5): IMM 5669 puts its pages inside one unnamed wrapper ("#subform.page2.educationTable"); read as
+  // every other form is, its tables are parts (main drafted 0 sections from it), and a page alone is still no part.
+  const wrapped = draftFromInventory([
+    { data_path: "w1", section: "#subform.page2.educationTable.Row1", caption: "From (YYYY-MM)" },
+    { data_path: "w2", section: "#subform.page2.educationTable.Row2", caption: "Name of institution" },
+    { data_path: "w3", section: "#subform.page3.addressTable.Row1", caption: "Street and number" },
+  ]);
+  ok("C3.4 pass (B79b): a form's pages inside an unnamed wrapper give their parts as sections (IMM 5669: its education and address tables)", wrapped.sections.length === 2 && wrapped.sections.some((x) => x.part === "educationTable" && x.fieldKeys.join() === "w1,w2") && wrapped.sections.some((x) => x.part === "addressTable"), wrapped.sections);
+  const notWrapper = draftFromInventory([
+    { data_path: "v1", section: "#subform.page2", caption: "Family name" },
+    { data_path: "v2", section: "Page1.#subform.Table2.Row1", caption: "Given name" },
+  ]);
+  ok("C3.4 fail (B79b): only a wrapper before a page is read off: a box straight on a wrapped page, and an unnamed part inside a page (IMM 5532's), make no section", notWrapper.sections.length === 0, notWrapper.sections);
+  const rel5669 = "prototype/p1/inventory/imm5669e.inventory.json", inv5669 = JSON.parse(readFileSync(join(STUDIO, "..", "..", rel5669), "utf8"));
+  const real5669 = draftFromInventory(inv5669.fields, headingsFor(rel5669, inv5669.summary.sha256)).sections;
+  // Its headings file (prototype/p1/xfa_headings.py rule 6): the numbered titles printed between its parts name them.
+  const named5669 = real5669.filter((x) => !x.unnamed).map((x) => x.label);
+  ok("C3.4 pass (B79b): the real IMM 5669 gives its parts as sections named by the numbered titles it prints (Education, Personal history, Addresses …)", ["Your full name", "Personal details of your father", "Education", "Personal history", "Membership of association with organizations", "Government positions", "Military and/or paramilitary service", "Addresses"].every((n) => named5669.includes(n)), named5669);
+  const edu = real5669.find((x) => x.label === "Education");
+  ok("C3.4 pass (B79b): the boxes under one printed title are one section (IMM 5669's years of school and its education table, under \"7. Education\")", !!edu && edu.fieldKeys.some((k) => /elementary/.test(k)) && edu.fieldKeys.some((k) => /educationTable/.test(k)) && real5669.filter((x) => x.label === "Education").length === 1, edu?.fieldKeys.slice(0, 4));
+  ok("C3.4 fail (B79b): a box under no printed title stays held for a person to name, never named after a title further up (IMM 5669's declaration on page 4)", real5669.some((x) => x.unnamed && x.fieldKeys.some((k) => /page4/.test(k))) && !real5669.some((x) => !x.unnamed && x.fieldKeys.some((k) => /page4/.test(k))), real5669.filter((x) => x.fieldKeys.some((k) => /page4/.test(k))).map((x) => x.label));
 
   await T.ready();
   const vv = T.combo("vv.single");
