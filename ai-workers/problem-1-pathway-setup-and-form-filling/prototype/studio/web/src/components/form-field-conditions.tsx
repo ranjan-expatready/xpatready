@@ -46,7 +46,7 @@ export function FormFieldConditions({ combinationId, fact, item }: { combination
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Pill tone={STATE[r.state].tone}>{STATE[r.state].word}</Pill>
                 {r.can_confirm ? <Button size="sm" variant="secondary" busy={act.isPending} onClick={() => act.mutate({ row: r })}>Says the same as this condition</Button> : null}
-                {r.can_ask && r.asks ? <Button size="sm" variant="secondary" busy={act.isPending} onClick={() => act.mutate({ row: r, ask: true })}>Asks the same as “{r.asks.deciding}”</Button> : null}
+                {r.can_ask && r.asks ? <Button size="sm" variant="secondary" busy={act.isPending} aria-label={`Asks the same as “${r.asks.deciding}”`} onClick={() => act.mutate({ row: r, ask: true })}>Asks the same question</Button> : null}
                 {r.can_undo ? <Button size="sm" variant="ghost" busy={act.isPending} aria-label={r.state === "asked" ? `Make ${r.caption || "this form field"} worked out from other answers again` : `Take the condition off ${r.caption || "this form field"}`} onClick={() => act.mutate({ row: r, clear: true })}>Undo</Button> : null}
                 {r.change_id ? <Link className="text-text-link underline" to={`/review/change/${r.change_id}`}>Open on To review</Link> : null}
               </div>
