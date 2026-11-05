@@ -125,3 +125,28 @@ Not met:
 * Still open from round 1, accepted as Minor with the reason given in the build notes: m1 (the Sample record's FQ ids, now shown once as "The Form library's record") and m7 (no retrofit map). m4 (placement) is now recorded.
 
 **To approve:** fix R2-M1 (n1–n4 are optional), then a re-review of that commit.
+
+---
+
+## Round 3: narrow, `git diff 17a3dcd87..19df023e6` (R2-M1, n1, n3, n4)
+
+**Verdict: Approve (commit 19df023e6).** There is no open Blocker or Major.
+
+**Ran on :4450** (bundle index-7SLSJQzY, restarted on 19df023e6):
+* `check_c116_channels_browser.ts`: **54/54 three times in a row**. Step 9 is the R2-M1 case.
+* `check_c116_item_channel_forms.ts` 12/12.
+* Committed screenshots put back with `git checkout` after each run.
+
+**Checked**
+* **R2-M1, fixed.**
+  * My repro (walk3) now opens with PDF upload checked and "filed this way now", and Save is disabled. Nothing can be sent over the colleague's change.
+  * `openFresh` waits for the refetch before it mounts the dialog, and the button shows busy meanwhile. Opening costs one GET of `/prepare`. Focus starts on the current way.
+  * The dialog keeps the version it read (`read`). In walk4 a colleague changed the item while the dialog was open; the officer's Save got "Changed since you read it" (409) and the database kept the colleague's PDF upload. After Reload and Save, the officer's Paper choice saved with its reason, and focus returned to the row's button.
+  * I could not set off a background refetch here (window focus does not refetch this query). That path is read from the code only: `version: read` is sent whatever the prop holds.
+* **n1, fixed.** For a copy with no recorded stamp, the list (`copyOf` via `channelIn`), `copy()`, the download name and lock all now fall back to the release line. New copies use their recorded `not_for_filing`.
+* **n3, fixed.** The focus checks wait up to 5 s (`focusOn`). No failure in 3 runs.
+* **n4, fixed (code read).** When the dialog's item leaves the view, an effect calls `close()`. React's ref callback has set the gone button's ref to null, so focus goes to the section heading. I did not reach this state on screen.
+
+**Still open, Minor (not blocking):** n2 (the Online list matches people by label, `fill-case.ts:173`). From round 1: m1 (the Sample record's FQ ids are quoted as the Form library holds them) and m7 (no retrofit map).
+
+**Journey score on 19df023e6: 9/10.** Feedback and state and correct data are back to 1. Plain words and trust and sources stay at ½ (the FQ ids in the record). It passes, and no criterion is at 0. D17 and D20 remain simulated only.
