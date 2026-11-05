@@ -72,3 +72,6 @@ Reproduced by route on fresh copies of main 113532ac2: the order of applying Vis
 
 ## Records: QA-237 (Gap · Major, row B86)
 Reproduced by route and walked at 1440 px on a fresh six: an approved condition makes the draft refuse "Hiding a value a form reads", and the only other way out the message offers (a box under the same condition) cannot work, because box conditions are free text. Tagged C4.11; it cannot be Works while this is open. The guard itself is right. M2 unchanged, 58/60.
+
+## Records ~07:30 IST: QA-238 (Bug · Minor), from the verdict on #1040
+A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M2 unchanged. #1040's verdict: PASS as a Saved result (C4.11 24/24, C4.7 17/17 on its head; run 41951440360). C4.11 stays Partial (QA-234, QA-237).
