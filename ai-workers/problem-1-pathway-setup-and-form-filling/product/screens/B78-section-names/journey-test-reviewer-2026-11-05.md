@@ -81,3 +81,40 @@ A real screen reader, an intended user's unaided walk (D17 and D20 stay with the
 **Score: 6.5 / 10. Below the pass of 8 (no criterion at 0).** It reads 7 once M3 is fixed. Next most valuable after that: say why a named section holds no question, then the row's source and origin words, then a keyboard and speed walk.
 
 **Could not test:** a real screen reader, an intended user's unaided walk (D17, D20), a client's own questionnaire screen, and the Study permit in a browser.
+
+---
+
+# Round 4: commit af40bed8a
+
+**Method limits:** no walk by me. Judged from `walk/` and GitHub runs 41987692692 and 41987757985. Images 7 and 9 came from a reverted rule, so they do not count here. No break-it pass.
+
+| # | Journey | Result |
+|---|---|---|
+| 1 | Author: load the checkpoint, row 7 done | **Held** on GitHub: nightly's non-done list has no row 7 |
+| 2 | Author: name a section what the library holds, by keyboard in the panel | **Held:** browser check 15/15 on GitHub; the panel is opened by a click |
+| 10 | Case officer: open a case on the Study permit | **Failed:** `check_b52_own_yes_no.ts:152`, review M3 |
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | ½ | Names reach the questionnaire; no case opens on the Study permit (M3) |
+| Next step obvious | ½ | 7 named sections show 0 questions and no step |
+| Plain words | ½ | The join's words are right; a raw key in one toast, a fragment name, a study heading for a Worker |
+| Feedback and state | ½ | A join is told; "waiting" stays on approved items (pre-existing); the step does not say it chose a section (m12) |
+| Correct data | 1 | Pinned facts in their sections on GitHub |
+| Error recovery | 1 | No entry stays waiting; Undo of a join tested |
+| Accessibility and screen sizes | ½ | Keyboard inside the panel; 200 % on Sections only |
+| Speed | ½ | Not measured this round |
+| Visual quality | 1 | Same components in every image |
+| Trust and sources | ½ | Source on each decision; the row still says "No source recorded" and "AI-proposed" |
+
+**Score: 6.5 / 10. Below the pass of 8 (no criterion at 0).** It reads 7 once M3 is fixed.
+
+**Could not test:** a real screen reader, an intended user's unaided walk (D17, D20), a client's own questionnaire screen at this commit, and the Study permit in a browser.
+
+---
+
+# Round 4, finished: commit 77af3c360
+
+Same method and limits as the af40bed8a section. Journey 10 (case officer opens a case on the Study permit) still **fails**, now in words: 409, "No questions yet for Student" (`check_b52_own_yes_no.ts`, run 41991481778). Journeys 1 and 2 held. The criteria table is unchanged.
+
+**Score: 6.5 / 10. Below the pass of 8 (no criterion at 0).** It reads 7 once M3 is fixed.

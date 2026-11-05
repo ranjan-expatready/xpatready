@@ -193,3 +193,104 @@ Pre-existing, on the same screen: a new section's toast shows a raw key, "It lan
 - D1 to D20 were not re-scored and the graph tool was not run (it writes `qa/GRAPH.md`). No new page or route in this diff.
 
 **Verdict: Block** (changes needed). Fix M3 and rerun all shards. m10 and m11 are worth the same pass; (a) and (b) go to the tech lead as follow-ups. Reviewed: 9590c86fa. Any later push needs a new look.
+
+---
+
+# Round 4: af40bed8a (diff 9590c86fa..af40bed8a only)
+
+**Commit reviewed: af40bed8a.** **Method:** code read, the walk's images, GitHub runs 41987692692 (CI) and 41987757985 (nightly) with their logs. No server, no other copy's database. An earlier look at fc92a021b was stopped at the builder's request and gave no verdict. **Verdict: Block** (changes needed). M3 is still open.
+
+## Blockers
+None.
+
+## Majors
+**M3: not fixed. A case still cannot be opened on the Study permit on GitHub.** Run 41987692692, shard 6: `tests/check_b52_own_yes_no.ts` fails at `:152` inside `caseFor` (`:138`), with the same `TypeError` as round 3. The line before it passed for `wp.lmia_inside`, so the failing case is again `sp.outside`. The new lines in `check_qa144_sp_release.ts` have no result: shard 5 was cancelled when shard 6 failed, and your local run stopped before them.
+
+**Likely cause, by reading; the log cannot separate these two:**
+1. **A later run unchooses the section.** Load order is `vv.single`, `sp.outside`, `wp.lmia_inside` (`samples/wave1.json`), and all releases come after all placements (`demo.ts:818`). So With an LMIA's run can place a fact in the Study permit's new section. `keepChosenEveryones` then unchooses it there, and the new step does not run for that combination: `if (id !== combinationId) continue` comes before it. The release then has no chosen section asking the Student anything.
+2. **No section qualifies.** `qualifies` needs every question in the section to be read for the Student by a form that surely applies. If none does, nothing is chosen, with no word.
+
+**To tell them apart on your copy:** after a load, read `sqr_section_selection` for `sp.outside` and its `removed the section` audit lines.
+
+**Fix:** give the Study permit a chosen section that survives to its release, and rerun all shards. If cause 1, run the step for every combination that just lost a section, or after the last combination's placement.
+
+## Your questions on the placement step
+- **Can it wrongly choose?** Not by asking more: `qualifies` holds it to sections everyone answers anyway, for every applying role, and only `combinationId` gets it. `check_qa144_vv_release.ts` 34/34, `check_qa144_lmia_release.ts` 23/23, `check_qa144_place_step.ts` 23/23 and the C4.1 order suites pass. The faults are m12 and m13.
+- **A later run unchooses it:** that combination is left with no such section and is not chosen for again (cause 1). A person pressing the step on another combination does the same. Its current release keeps working; its next release turns Not ready. The words name it, "no longer chosen", and a person can add a section by hand.
+- **Is the fixed order enough?** For repeatability, yes: `.sort()` on keys gives one answer for a given library, and the choice then stays. It picks by alphabet, not meaning, which does no harm since everyone answers that section anyway. Order does not help with cause 1 or 2.
+
+## Round 3 list and the rest
+| Item | Result | Evidence |
+|---|---|---|
+| `engine/programs.ts`, `check_screen01_rules.ts` as on main | **Yes** | `git diff --stat origin/main af40bed8a` is empty for both. BR-8's pins pass: `check_w1_s1s2_fix.cjs` 30/30, `check_screen01_browser.cjs` 116, `check_s4_startable.ts` 10/10, `check_setup_checklist.ts` 71/71 |
+| m10 message | **Fixed** | "so this part joins it; nothing new was added"; `check_forms_qa206_name_browser.cjs` 15/15 on GitHub; image 6 |
+| m11 Notice | **Fixed** | "Any new library item waits…" is true after a join, though not what I suggested |
+| Keyboard step | **Part** | Type, Tab, Enter inside the panel, on GitHub. The panel is still opened by a click |
+
+## New minors
+- **m12. The step does not say it chose a section.** `place-from-form-parts.tsx` never shows `selected`. A press that places nothing but chooses one reads "Nothing was placed" and "Every answer… is already asked", while the draft has changed. It can also choose again a section the author removed. Fix: say which section was chosen and why.
+- **m13. A retired section can stop it.** `live` filters on the question's status, and a retire changes the section's (`library-items.ts:178`). If the first key is retired, `selectSection` refuses, the refusal is listed, and no other section is tried. By reading. Fix: leave retired sections out of the choice.
+- **m14. The new line claims more than it proves.** Its title in `check_qa144_sp_release.ts` says "and everyone answers it anyway"; the SQL shows only that a chosen section holds a person's question. There is also no fail line: "already has one, nothing extra chosen" and "none qualifies, nothing chosen".
+
+## Walk images
+- **7 and 9 are stale:** taken at fc92a021b. Their "Live" and the opened case came from the reverted rule, so they prove nothing at this commit. Retake them once M3 is fixed.
+- **1 to 6 and 8 still hold.** `proposals.tsx` is the same at both commits. 8 could differ only in one section's "Used by combinations".
+- **"Details of visit to Canada" on image 9: pre-existing, by reading, not measured on main.** It is the Visitor visa's printed section, placed first in the load. The M1 fix only adds sections a fact can land in, so it cannot bring a new fact into this one. Same one-placement effect as round 3 finding (b), and the same follow-up.
+
+## Merge and other CI
+- **Merge:** clean with origin/main at fca4451f9 (`git merge-tree`, no conflict).
+- **Nightly at this commit (41987757985):** C4.8, C9.1, C4.1, C4.7 pass. C10.1 is 21/24 on the same three lines; non-done `2 out, 9 waiting, 10 partial, 12 partial`, so row 7 is done.
+
+## Could not read
+- Shard 5 at this commit: cancelled, no results, including `check_qa144_sp_release.ts`, `check_b78_section_names.ts` and `check_c10_1_browser.cjs`.
+- The words of the refusal behind `caseFor`: the log does not print them.
+- Row 7's text, so whether it reports a section unchosen on the Study permit.
+- `check_screen01_api.ts`: quarantined on PR CI, nightly only.
+
+## Journey
+**6.5/10 at this commit, re-judged from images and CI, not walked by me;** below the bar of 8, no criterion at 0. Task completed stays ½ because of M3. It reads 7 once M3 is fixed. Still unproved at this commit: the Study permit in a browser, a client's own questionnaire screen, the whole path by keyboard, and speed. Report: `journey-test-reviewer-2026-11-05.md`, Round 4.
+
+**Verdict: Block** (changes needed). Fix M3 and get all shards to finish, with `check_b52_own_yes_no.ts` and `check_qa144_sp_release.ts` both read as passing. m12, m13 and m14 are worth the same pass. Retake images 7 and 9. Reviewed: af40bed8a. Any later push needs a new look.
+
+---
+
+# Round 4, finished: 77af3c360 (diff 9590c86fa..77af3c360; new since af40bed8a: `form-part-placements.ts`, `check_b52_own_yes_no.ts`)
+
+**Commit reviewed: 77af3c360.** **Method:** code read, GitHub runs 41991481778 (CI) and 41991501370 (nightly) with their logs. No server, no other copy's database. Everything in the af40bed8a section above still applies unless changed here. **Verdict: Block** (changes needed): M3 is open and the branch no longer merges.
+
+## Blockers
+None.
+
+## Majors
+**M3: not fixed, and its cause is now measured.** Run 41991481778, shard 6, in the words the check now prints: `case sp.outside-yes did not open (409): [{"code":"role_without_questions","text":"No questions yet for Student. …"}]`. This confirms round 3's reading: BR-8 refuses because no chosen section in the release asks the Student anything.
+
+**The unchoose guess does not explain it alone.** The guard now runs for each combination the loop visits, and the case is still refused. What is left, none of it measured:
+1. **No section qualifies for the Student (the most likely).** `qualifies` needs every question in the section read for the Student by a form that surely applies. In a shared library, a section holding one fact the Study permit's forms do not read fails. If so, nothing is chosen and no word is given.
+2. **The guard and BR-8 disagree on rule-only questions.** `personQuestions` leaves out `rule_only`; `asksEachPerson` does not, and `live` does not read that column. A chosen section whose only person question is rule-only satisfies the guard and fails BR-8.
+3. **A section is lost in a way the loop does not visit.** I found none by reading.
+
+**Measure before the next change; this is the third fix on a reading.** On your copy after a load, list `sqr_section_selection` for `sp.outside`. Then, for each section holding a person question, list which questions fail `qualifies`. If cause 1 holds, BR-8 and "everyone answers it anyway" cannot both be met on this data, which is a tech lead's ruling, not another guard.
+
+**M4 (new): the branch has a conflict with main.** `git merge-tree` against origin/main at 53515caef reports `api/src/form-part-placements.ts`. B82 on main changed the same import lines. It also changes this step: `formGapFacts` chooses what to place, and `conditionFactsToAsk` puts new person facts in the section of `person.sex`, `person.gender` or `person.date_of_birth`. A fact placed there can stop that section qualifying. Fix: merge main before measuring; CI on the merged code is the only result that counts.
+
+## The new diff
+- **The guard on other combinations:** by reading it does what it says. It can choose a section on a combination nobody pressed the step on. `qualifies` still holds that to what everyone answers anyway, and `selectSection` writes that combination's history line. This makes m12 larger: the person who pressed sees nothing about it. A refusal pushed from that path does not name the combination.
+- **`check_b52_own_yes_no.ts`:** right. It stops as before, now with the refusal's words. Nothing weakened.
+- **No test proves the guard's new path.** The passing suites never show a section chosen on another combination; m14 covers this path too.
+- **Still open:** m12, m13, m14.
+- **Walk images:** 7 and 9 stay stale; 1 to 6 and 8 still hold.
+
+## Other CI
+- **Passing at this commit:** types, shards 1 to 4; `check_qa144_vv_release.ts` 34/34, `check_qa144_lmia_release.ts` 23/23, `check_qa144_place_step.ts` 23/23, `check_c10_1_configured.ts` 38/38, `check_w1_s1s2_fix.cjs` 30/30, `check_screen01_browser.cjs` 116, `check_forms_qa206_name_browser.cjs` 15/15, `check_forms_qa206_section_headings.ts` 47/47, C4.1 order suites.
+- **Nightly (41991501370):** C4.8, C9.1, C4.1, C4.7 pass. C10.1 is 21/24 on the same three lines; non-done `2 out, 9 waiting, 10 partial, 12 partial`, so row 7 is done.
+
+## Could not read
+- Shard 5 at this commit: cancelled, no results, including `check_qa144_sp_release.ts`, `check_b78_section_names.ts` and `check_c10_1_browser.cjs`. So the new Study permit lines have never had a GitHub result on this placement fix.
+- Which section, if any, the Study permit has chosen: the logs print no selection.
+- `check_screen01_api.ts`: quarantined on PR CI, nightly only.
+- Any result on the code merged with main.
+
+## Journey
+**6.5/10 at 77af3c360, re-judged from images and CI, not walked by me;** below the bar of 8, no criterion at 0. Unchanged from af40bed8a: task completed stays ½ because of M3. Still unproved: the Study permit in a browser, a client's own questionnaire screen, the whole path by keyboard, and speed.
+
+**Verdict: Block** (changes needed). Merge main (M4), measure and fix M3, and get all shards to finish with `check_b52_own_yes_no.ts` and `check_qa144_sp_release.ts` both read as passing. Reviewed: 77af3c360. Any later push needs a new look.
