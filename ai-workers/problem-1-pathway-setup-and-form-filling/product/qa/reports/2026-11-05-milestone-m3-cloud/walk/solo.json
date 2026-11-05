@@ -1,0 +1,129 @@
+{
+ "solo": "d1deba9e-d7f3-411e-8987-8d07a7e7c9fa",
+ "filled": false,
+ "officer": "user-O",
+ "rep": "user-R",
+ "readiness": [
+  {
+   "filing": "6123936f-3cf8-49e6-abb4-2cc5ef043060",
+   "ready": false,
+   "blocks": [
+    {
+     "code": "barcode_not_validated",
+     "item": "9e6c433e-a751-46f9-aba8-9946ef907432",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "staff",
+     "words": "IMM 5257 for Sample Client A: no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unprocessed otherwise.",
+     "key": "9e6c433e-a751-46f9-aba8-9946ef907432",
+     "unblocks": "Ready to file and Record",
+     "severity": "block"
+    }
+   ],
+   "warns": [
+    {
+     "code": "missing_signature",
+     "item": "9e6c433e-a751-46f9-aba8-9946ef907432",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "staff",
+     "words": "CRITICAL: IMM 5257 for Sample Client A must be signed (how it is signed is not set on the form line yet; until it is, the signature is waited for) by the person.",
+     "key": "9e6c433e-a751-46f9-aba8-9946ef907432",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "critical"
+    },
+    {
+     "code": "missing_signature",
+     "item": "a91a5b03-8a0d-4de7-b75b-b8c251b8386e",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "staff",
+     "words": "CRITICAL: IMM 5257 SCH1 for Sample Client A must be signed (how it is signed is not set on the form line yet; until it is, the signature is waited for) by the person.",
+     "key": "a91a5b03-8a0d-4de7-b75b-b8c251b8386e",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "critical"
+    },
+    {
+     "code": "missing_signature",
+     "item": "d36fd03f-9c59-422c-bf15-261aee643cba",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "staff",
+     "words": "CRITICAL: IMM 5707 for Sample Client A must be signed (how it is signed is not set on the form line yet; until it is, the signature is waited for) by the person.",
+     "key": "d36fd03f-9c59-422c-bf15-261aee643cba",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "critical"
+    },
+    {
+     "code": "representative_review",
+     "owes": "representative",
+     "words": "CRITICAL: The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed.",
+     "key": "representative_review|||none|e1ab3d5a36e86b1a",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "critical"
+    },
+    {
+     "code": "fact_problem",
+     "item": "9e6c433e-a751-46f9-aba8-9946ef907432",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "client",
+     "words": "CRITICAL: IMM 5257 for Sample Client A: \"Unique Client Identifier assigned by IRCC\" has a problem, so it would be written wrong. Fix it, then confirm it.",
+     "key": "9e6c433e-a751-46f9-aba8-9946ef907432|person.uci",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "critical"
+    },
+    {
+     "code": "fact_problem",
+     "item": "a91a5b03-8a0d-4de7-b75b-b8c251b8386e",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "client",
+     "words": "CRITICAL: IMM 5257 SCH1 for Sample Client A: \"Unique Client Identifier assigned by IRCC\" has a problem, so it would be written wrong. Fix it, then confirm it.",
+     "key": "a91a5b03-8a0d-4de7-b75b-b8c251b8386e|person.uci",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "critical"
+    },
+    {
+     "code": "missing_document",
+     "item": "3295f3fd-d186-4e25-aa5b-0ca94403331d",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "client",
+     "words": "Sample Client A: Passport information page copy not received.",
+     "key": "3295f3fd-d186-4e25-aa5b-0ca94403331d",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "warning"
+    },
+    {
+     "code": "missing_document",
+     "item": "50c338a4-05a5-4982-b55e-5821889ae57d",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "client",
+     "words": "Sample Client A: Proof of financial support not received.",
+     "key": "50c338a4-05a5-4982-b55e-5821889ae57d",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "warning"
+    },
+    {
+     "code": "missing_document",
+     "item": "e9c4ac74-7ae5-49f3-a546-e0567017cc81",
+     "subject": "ae6fc604-24be-4134-af13-65b420843aae",
+     "owes": "client",
+     "words": "Sample Client A: Fee payment receipt not received.",
+     "key": "e9c4ac74-7ae5-49f3-a546-e0567017cc81",
+     "unblocks": "Ready to file, once passed with a reason or fixed",
+     "severity": "warning"
+    }
+   ],
+   "passed": [],
+   "owes": {
+    "staff": 4,
+    "representative": 1,
+    "client": 5
+   },
+   "status_rule": "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
+   "reviewed": null,
+   "facts_hash": "e1ab3d5a36e86b1a14ce06684b016fc1a5262cf70ab0079784961e4b2b911f09",
+   "representative": "user-R"
+  }
+ ],
+ "filings": [
+  {
+   "status": "NOT_STARTED"
+  }
+ ]
+}
