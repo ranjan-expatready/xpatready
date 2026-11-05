@@ -1,5 +1,5 @@
 {
- "label": "Sample: made-up answers for the one Sample family's IMM 5257 copies (B99, C10.1 row 12b). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "label": "Sample: made-up answers for the one Sample family's IMM 5257 copies (B99, C10.1 row 12b), saved and confirmed by the configured checkpoint's loader (api/src/sample-case.ts) before the copies are made. Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
  "source": "The household shape of evidence lane E1's checked IMM 5257 fill (prototype/evidence-lane/E1/imm5257/values.complete.json, Adobe Validate passed 23 Oct 2026), written as this family's answers on the release's questions.",
  "case": {
   "case.visa_type_requested": "VisitorVisa",
@@ -26,16 +26,14 @@
   "person.birth_country": "India",
   "person.birth_city": "NEW DELHI",
   "person.current_residence_country": "India",
-  "person.current_residence_status": "01",
+  "person.current_residence_status": "Citizen",
   "person.applying_from_country": "India",
-  "person.applying_from_status": "01",
   "relationship.previously_married_or_common_law": false,
   "person.passport_country_of_issue": "IND",
   "person.passport_issue_date": "2019-05-10",
   "person.passport_expiry_date": "2029-05-09",
   "person.native_language": "Hindi",
   "person.official_language_ability": "English",
-  "person.preferred_official_language": "English",
   "person.language_test_taken": false,
   "person.mailing_address": {
    "street_number": "12",
@@ -116,5 +114,9 @@
  "job_place": {
   "person.occupation_city": "NEW DELHI",
   "person.occupation_country": "India"
+ },
+ "not_answered": {
+  "person.applying_from_status": "Asked only when the applying-from country differs from the country of residence (the question's own help). IMM 5257's Validate empties 'Same as current country of residence? Yes' when its row holds a status (validateCWA, 5 Nov rehearsal).",
+  "person.preferred_official_language": "IMM 5257 keeps 'In which language are you most at ease?' only when the person can communicate in both English and French; its Validate empties it otherwise (validateLanguageSection, 5 Nov rehearsal). This family speaks English."
  }
 }
