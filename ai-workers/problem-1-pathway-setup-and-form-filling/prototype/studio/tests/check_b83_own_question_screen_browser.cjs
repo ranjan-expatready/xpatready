@@ -212,6 +212,8 @@ const WHY = "The form asks this Yes/No itself before its details (walk)";
   await R.locator("[data-own-said][role=alert]").waitFor({ timeout: 30_000 });
   ok("review F5: a refused save refreshes the list: the row now shows how it is asked, and the refusal stays on it, no key", other.status < 300 && /already asked/.test(await R.locator("[data-own-said]").innerText()) && (await R.locator("[data-own-asked]").count()) === 1 && !/person\.[a-z_]+|form1\[/.test(await R.innerText()), await R.innerText());
   await api("POST", `/editions/${edId}/form-fields/own-question/undo`, { dataPath: dp });
+  await page.reload({ waitUntil: "networkidle" }); // the undo above came from another tab, as it were
+  await section.waitFor({ timeout: 60_000 });
   // Review R1 on the screen: an approved change of a document's facts a withdrawal sent back tells the second person why.
   await askThrow("B83 came back");
   const backKey = sql("select canonical_field_key from canonical_field where label = 'B83 came back'");
