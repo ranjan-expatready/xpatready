@@ -5,7 +5,7 @@
 // start one run on that page with no red line (before: "Too big: expected string to have <=120 characters" for every
 // offered page, 103 to 148 characters), and the walk goes on to what the Forms tab shows next. A double click on Start is
 // one run. QA-252 (2): once a find finished on a page, Find again shows that page and lets the person paste another one
-// (before, the page choice was never offered again and a wrong page was a dead end). Screenshots into product/screens/C11.15/screenshots/long-page/, axe (WCAG 2.2 AA) on the dialog. No model call.
+// (before, the page choice was never offered again and a wrong page was a dead end). Review M1: both by keyboard only. Screenshots into product/screens/C11.15/screenshots/long-page/, axe (WCAG 2.2 AA) on the dialog. No model call.
 //   zsh studio/tools/isolated.sh forms_lpb 4452 start && node studio/tests/check_finder_long_page_browser.cjs 4452 xr_studio_forms_lpb
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -34,6 +34,8 @@ const MODES = [["replay", "Saved"], ["rules", "Rules only (US$0)"]];
     for (let i = 0; i < 240; i++) { if (sql(`select count(*) from ai_batch where operation='find_forms' and scope_label like '${sv}|%' and status in ('QUEUED','RUNNING')`) === "0") return; await p.waitForTimeout(500); }
     throw new Error("a find did not end within 120 s");
   };
+  // Tab until the focused element reads `name` (at most 25 presses); false when it never does.
+  const tabTo = async (name) => { for (let i = 0; i < 25; i++) { await p.keyboard.press("Tab"); if (await p.evaluate(() => (document.activeElement?.textContent ?? "").trim()) === name) return true; } return false; };
   const button = async () => { const x = panel.locator("[data-find-forms]:not([disabled])").first(); await x.waitFor({ timeout: 30000 }); return x; };
 
   // ======================================================== setup: the demo as the founder had it
@@ -56,7 +58,30 @@ const MODES = [["replay", "Saved"], ["rules", "Rules only (US$0)"]];
   await choose.click(); await dlg.waitFor();
   const offered = await dlg.locator("[data-page-choice] label").evaluateAll((ls) => ls.map((l) => ({ title: l.querySelector(".font-medium")?.textContent ?? "", url: l.querySelector(".break-all")?.textContent ?? "" })).filter((x) => x.url));
   step("journey: the dialog offers the founder's page, Start Up Visa (148 characters), among its pages", offered.some((o) => o.title === "Start Up Visa" && o.url.length === 148), offered.map((o) => `${o.title} (${o.url.length})`));
-  await p.keyboard.press("Escape"); await dlg.waitFor({ state: "detached" });
+  // Review M1: the founder's task by keyboard only. Arrow to Start Up Visa, Tab on to Start (through the address box, the
+  // modes and Cancel), Enter: one run on that page. Before, focusing the address box chose "Another canada.ca page" and
+  // turned Start off.
+  const startUpAt = offered.findIndex((o) => o.title === "Start Up Visa");
+  await dlg.locator("[data-page-choice] input[type=radio]").first().focus();
+  for (let i = 0; i < startUpAt; i++) await p.keyboard.press("ArrowDown");
+  const startUp = dlg.locator("[data-page-choice] label").filter({ hasText: "Start Up Visa" }).locator("input");
+  const arrowed = await startUp.isChecked();
+  await p.keyboard.press("Tab");
+  const onBox = await p.evaluate(() => document.activeElement?.hasAttribute("data-page-other") ?? false);
+  // Read before any wait: with the fault, Tab chose "Another canada.ca page", so no plan is made and none would come.
+  const kept = await startUp.isChecked() && !(await dlg.getByRole("radio", { name: /Another canada\.ca page/ }).isChecked());
+  const planned = kept && await dlg.locator("[data-find-plan]").waitFor({ timeout: 30000 }).then(() => true, () => false);
+  step("M1 keyboard: arrowed to Start Up Visa, Tab lands on the address box and keeps Start Up Visa chosen; Start stays on", arrowed && onBox && kept && planned && !(await p.getByRole("button", { name: "Start" }).isDisabled()), { arrowed, onBox, kept, planned });
+  if (!kept) throw new Error("M1: Tab through the address box replaced the chosen page; the walk stops here");
+  await shot("keyboard-start-up-visa-tab-past-box");
+  const kbBefore = runs(sv);
+  step("M1 keyboard: Tab reaches Start", await tabTo("Start"));
+  await p.keyboard.press("Enter");
+  step("M1 keyboard: Enter on Start starts the find and closes the dialog", await dlg.waitFor({ state: "detached", timeout: 30000 }).then(() => true, () => false));
+  await ended(sv);
+  const kb = sql(`select mode || '|' || (plan->>'page_url') from ai_batch where operation='find_forms' and scope_label like '${sv}|%' order by started_at desc limit 1`).split("|");
+  step("M1 keyboard: one run, on Start Up Visa's page (148 characters), Rules only (Live is off)", runs(sv) === kbBefore + 1 && kb[1] === offered[startUpAt].url && kb[0] === "RULES", { runs: runs(sv) - kbBefore, mode: kb[0], page: kb[1]?.length });
+  await p.reload(); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await button();
   // Visitor visa's page is the one offered page in the recorded canada.ca copies, so a find on it finishes and is then
   // remembered (QA-252 (2)): it goes last among the offered pages, so every other one, Start Up Visa included, is pressed
   // in the offered list as the founder did; the pasted address then goes through Find again's "Another canada.ca page".
@@ -122,6 +147,29 @@ const MODES = [["replay", "Saved"], ["rules", "Rules only (US$0)"]];
     step(`${tag}: next step: the Forms tab says how the find ended and offers the next action (a find button, never a dead end)`, await panel.locator("[data-find-forms]").count() === 1 && /Last find|Waiting for you|AI found/.test(after), `${last[2]}: ${last[3]} | ${after.split("\n").slice(0, 2).join(" | ")}`);
     if (k <= 2 || t.pasted || t.title === "Start Up Visa" || RECORDED.test(t.url)) await shot(`after-${k}-${t.pasted ? "pasted" : t.title.replace(/[^A-Za-z]+/g, "-").toLowerCase()}-${mode}`);
   }
+  // Review M1 in Find again: the page the last finished find read is chosen; Tab through the box keeps it; Enter on Start
+  // reads it. Fail: typing in the box chooses "Another canada.ca page".
+  await p.reload(); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await (await button()).focus(); await p.keyboard.press("Enter"); await dlg.waitFor();
+  await dlg.locator("[data-page-again]").waitFor({ timeout: 30000 });
+  const usedRadio = dlg.getByRole("radio", { name: /The page the last finished find read/ });
+  const usedUrl = (await dlg.locator("[data-page-used]").innerText()).trim();
+  await usedRadio.focus(); await p.keyboard.press("Tab");
+  const onBox2 = await p.evaluate(() => document.activeElement?.hasAttribute("data-page-other") ?? false), kept2 = await usedRadio.isChecked();
+  const planned2 = kept2 && await dlg.locator("[data-find-plan]").waitFor({ timeout: 30000 }).then(() => true, () => false);
+  step("M1 keyboard (Find again): Tab from the page used before lands on the address box and keeps that page chosen; Start stays on", onBox2 && kept2 && planned2 && !(await p.getByRole("button", { name: "Start" }).isDisabled()), { onBox2, kept2, planned2 });
+  if (!kept2) throw new Error("M1: Tab through the address box replaced the page used before; the walk stops here");
+  const fkBefore = runs(sv);
+  step("M1 keyboard (Find again): Tab reaches Start", await tabTo("Start"));
+  await p.keyboard.press("Enter");
+  step("M1 keyboard (Find again): Enter on Start starts the find", await dlg.waitFor({ state: "detached", timeout: 30000 }).then(() => true, () => false));
+  await ended(sv);
+  step("M1 keyboard (Find again): one run, on the page shown as used before", runs(sv) === fkBefore + 1 && sql(`select plan->>'page_url' from ai_batch where operation='find_forms' and scope_label like '${sv}|%' order by started_at desc limit 1`) === usedUrl, usedUrl.length);
+  await p.reload(); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await (await button()).click(); await dlg.waitFor(); await dlg.locator("[data-page-again]").waitFor({ timeout: 30000 });
+  await usedRadio.focus(); await p.keyboard.press("Tab"); await p.keyboard.type(LONG.slice(0, 120));
+  step("M1 fail (Find again): typing in the address box chooses 'Another canada.ca page'", await dlg.getByRole("radio", { name: /Another canada\.ca page/ }).isChecked() && !(await usedRadio.isChecked()));
+  await p.keyboard.press("Escape"); await dlg.waitFor({ state: "detached" });
   step("no page error in the walk", !errs.length, errs.join(" | "));
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);

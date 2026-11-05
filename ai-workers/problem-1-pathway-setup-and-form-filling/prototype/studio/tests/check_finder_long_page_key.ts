@@ -108,6 +108,7 @@ const LONG = `https://www.canada.ca/en/immigration-refugees-citizenship/services
   ok("words fail: a refusal naming a field a person never sets (the key) reads as what to do, never 'Too small' or a field name", garbled.status === 400 && garbledSaid === FIND_WORDS.refused && !/Too small|idempotency/i.test(garbledSaid), garbledSaid);
   const busy = Object.assign(new Error("The form finder is already running for this combination: watch it, or stop it first."), { status: 409, problem: {} });
   ok("words pass: a refusal the server wrote for a person (409 Already finding) is shown as written", findErrorWords(busy) === busy.message);
+  ok("words (break M2): a lost answer or a server error never claims nothing was started; it says pressing Start again gives the same find", !/nothing was started/.test(FIND_WORDS.unreachable + FIND_WORDS.server) && /same find, never a second one/.test(FIND_WORDS.unreachable) && /same find, never a second one/.test(FIND_WORDS.server));
   ok("words fail: a server error, a lost connection and an answer with no words of its own each read as what to do", findErrorWords(Object.assign(new Error("Internal server error"), { status: 500 })) === FIND_WORDS.server && findErrorWords(new TypeError("Failed to fetch")) === FIND_WORDS.unreachable && findErrorWords(Object.assign(new Error("404 Not Found"), { status: 404 })) === FIND_WORDS.refused);
 
   console.log(`\n${pass} passed, ${fail} failed`);

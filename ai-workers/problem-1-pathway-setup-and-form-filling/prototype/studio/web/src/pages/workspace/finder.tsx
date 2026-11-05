@@ -50,8 +50,9 @@ const MODES: [Mode, string, string][] = [
 ];
 
 const SAMPLE_NOTE = "Which forms apply is Sample until the immigration expert confirms.";
-/** QA-252 (2): Find again's choice of the page a finished find read, beside "Another canada.ca page". */
-const USED_BEFORE = "The page this combination's last find read";
+/** QA-252 (2): Find again's choice of the page the last finished find read (review m1: a failed find since then does not
+ *  change it), beside "Another canada.ca page". */
+const USED_BEFORE = "The page the last finished find read";
 /** Choosing another page with nothing pasted yet: no plan is made, and Start stays off until there is an address. */
 const PASTE_FIRST = "Paste the address of the canada.ca page to see the steps and their cost.";
 
@@ -110,9 +111,11 @@ export function FindDialog({ id, only, page, stages, onClose, onStarted }: { id:
       onStarted(v.id); onClose();
     } catch (e) { setError(findErrorWords(e)); } finally { setBusy(false); }
   };
+  // Review M1 (keyboard): the address box chooses "Another canada.ca page" only when the person types in it (or picks its
+  // radio), never on focus: Tab from the chosen page passes through the box on its way to Start and keeps that page.
   const otherPage = (checked: boolean) => (
     <label className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={checked} onChange={() => setPicked("other")} className="mt-1" /><span className="flex-1"><span className="font-medium">{START.pageOther}</span>
-      <input type="url" aria-label={START.pageOther} placeholder="https://www.canada.ca/en/immigration-refugees-citizenship/…" value={other} onFocus={() => setPicked("other")} onChange={(e) => setOther(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm" data-page-other /></span></label>
+      <input type="url" aria-label={START.pageOther} placeholder="https://www.canada.ca/en/immigration-refugees-citizenship/…" value={other} onChange={(e) => { setOther(e.target.value); setPicked("other"); }} className="mt-1 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm" data-page-other /></span></label>
   );
   const title = only?.length ? `Redo with AI: ${only.join(", ")}` : page ? START.pageButton : "Find this combination's forms";
   return (

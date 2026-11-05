@@ -29,8 +29,10 @@ const RAW = /^(Too (big|small)|Invalid|Expected|Required|Unrecognized|String mus
 
 export const FIND_WORDS = {
   refused: "This find could not start. Close this window, open it again and press Start; nothing was started and nothing was spent.",
-  unreachable: "The studio could not be reached, so nothing was started. Check your connection and press Start again.",
-  server: "Something went wrong on the studio's side, so nothing was started. Press Start again in a minute.",
+  // Break M2: with no answer (or a server error) the dialog cannot know whether the find started, so it never says it did
+  // not; pressing Start again is safe, because the same key answers the same run (findRunKey).
+  unreachable: "The studio did not answer. Check your connection and press Start again: if this find had already started, you get that same find, never a second one.",
+  server: "Something went wrong on the studio's side. Press Start again in a minute: if this find had already started, you get that same find, never a second one.",
 };
 
 /** What the dialog says when a plan or a Start is refused: the server's own words for what a person chose (the page,

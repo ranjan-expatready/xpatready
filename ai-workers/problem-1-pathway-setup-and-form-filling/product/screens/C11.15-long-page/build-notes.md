@@ -44,3 +44,29 @@ Why our checks missed it: no test or walk pressed Start with a page address. `ch
 
 ## Why Super visa offers Start Up Visa (report only; fix item 4)
 The list is `api/src/finder.ts` `sureMatch` (`:556`) over canada.ca's list of application packages (`INDEX_URL`, `:75`). It scores each package title against the combination's names after the first ("Visitors", "Super visa"), less one for each extra word in the title, and keeps **every package with a score above 0**, up to 10. "Start Up Visa" shares one word, "visa": 1 + 2 (that word is in the last name) − 2 (start, up) = 1, so it is kept. Super visa's own page scores 4 and Visitor visa's 3. The gap is under the 1.5 a sure match needs, so the run waits for a person and shows all four. Recommendation (Question for the tech lead): offer only pages scoring at least half the top score (here Super visa's and Visitor visa's), or never let a generic word such as "visa" alone keep a page. A forms-lane row, with a fail test that Super visa does not offer Start Up Visa.
+
+## Round 2 (after the Opus review and the breaker on 6277f5df6)
+Both returned the same **Major (review M1 = break M1), keyboard.** Focusing the address box chose "Another canada.ca page" (`finder.tsx` `onFocus`). Tab from a chosen page therefore went through the box, replaced the page and turned Start off. This was new in Find again with this diff, and already true on main in the page choice, including the founder's task by keyboard.
+* **Fix:** typing in the box, or its radio, chooses "Another"; focus never does.
+* **Fail tests (walk):** the founder's task by keyboard only (arrow to Start Up Visa, Tab to Start, Enter → one run on that page), the same in Find again, and typing in the box chooses "Another".
+* The walk run on this code with `onFocus` put back: **exit 1**, `FAIL M1 keyboard: … {"arrowed":true,"onBox":true,"kept":false,"planned":false}`.
+
+**Break M2, untrue words:** a lost answer or a 5xx said "…so nothing was started", while the run may have been made.
+* **Fix:** both now say to press Start again, which gives the same find, never a second one (true: the same key answers the same run).
+* **Fail test:** in `check_finder_long_page_key.ts`.
+
+**Review m1:** the label is now "The page the last finished find read" (a failed find since then does not change it).
+
+**Kept as they are, listed for follow-up rows:**
+* review m2: after a finished find the offered list is reachable only by pasting.
+* review m3: after a failed find the panel does not say why.
+* review m4: a plan request per keystroke in the address box; while it is refused, Live shows as enabled (the server still refuses it). Already true before.
+* review m5: the suites' psql path and the screenshot folder, as in the other suites.
+* Break minors:
+  * five Starts at once with one key give one run plus "Already finding" 409s, not the same run;
+  * two tabs give two runs (one key per dialog, as before);
+  * a page opened before another tab's find gets 409 until it is closed;
+  * page addresses have no length limit (the server stores the whole address);
+  * a page-field message is shown as the server wrote it, by design.
+
+**Checks on the round-2 code:** `check_finder_long_page_key.ts` **29/29, exit 0** · `check_finder_long_page_browser.cjs` **61/61, exit 0** (screenshots rewritten: 17) · typecheck no new errors. The 19 chosen suites on 6277f5df6 all pass. `check_cost_warning_browser.cjs` first failed because its default port 4456 clashed with the reviewer's copy; it then passed 33/33 alone on 4453.
