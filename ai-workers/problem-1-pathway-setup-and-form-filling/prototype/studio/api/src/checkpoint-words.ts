@@ -33,8 +33,8 @@ export function releaseTwoWords(step: ReleaseTwoStep, refusal: Refusal): string 
     // Review R2 m2: any other problem keeps its own words (at most three, then how many more).
     other.length ? `${plural(other.length, "other problem", "other problems")}: ${other.slice(0, 3).map((p) => p.message).join(" · ")}${other.length > 3 ? ` · and ${other.length - 3} more` : ""}` : null,
   ].filter(Boolean);
-  const on = forms.length && !other.length ? ` on ${forms.join(" and ")}'s choice boxes` : "";
+  const on = forms.length && !other.length ? ` on ${forms.join(" and ")}'s choice form fields` : "";
   const where = `Visitor visa's draft keeps the release-2 changes (${RELEASE_TWO_CHANGES}), not submitted; its Review and release tab lists each problem.`;
-  const waits = noCode.length ? " Waits for row B81: a person marks a list value a form box does not print, so filling refuses it in words." : "";
+  const waits = noCode.length ? " Waits for row B81: a person marks a list value a form field does not print, so filling refuses it in words." : "";
   return `Release 2 was not made: Submit refused it with ${plural(all.length, "problem", "problems")}${on}: ${parts.join("; ")}. ${where}${waits}`;
 }
