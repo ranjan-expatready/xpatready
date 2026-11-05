@@ -83,3 +83,6 @@ A PQR pick can be Ready while a round lists its own quote as unresolved. C4.7; M
 | C4.7 (M2) | Works (unchanged) | 17/17 on the six, same run |
 
 **M2: 58/60.** Left: C4.11 (B83, B86), C10.1 (#1009).
+
+## Batch 23 ~10:44 IST: QA-239 (Gap · Major, row B88); C10.1 after #1009
+One condition approved on Visitor visa adds release-refusing Hiding errors on the four other combinations reading it (run 41972242603). "Unreachable" did not appear by route; concept §8 simulated it. C4.11 cannot be Works while this is open. C10.1: 21/24 on the checkpoint (run 41969024051). M2 58/60.
