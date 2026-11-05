@@ -22,7 +22,7 @@ function pure() {
   ok("C11.5 fail: a Retail combination whose forms read no employer facts offers no employer case link", !vv.offered && vv.facts.length === 0);
   ok("C11.5: the reason is the board's words (frame 1)", vv.reason === "Not offered: the Visitor visa has no employer facts.", vv.reason);
   const wp = employerLinkOffer(snap("Employer-specific work permit", "INDIVIDUAL", maps("organisation.name", "organisation.address", "organisation.name", "person.family_name")));
-  ok("C11.5: a Retail combination whose forms read employer facts offers the link, counting only the facts it reads (review m2)", wp.offered && wp.reason === "Offered: the Employer-specific work permit forms read 2 employer facts from a Corporate case, read-only.", wp.reason);
+  ok("C11.5: a Retail combination whose forms read employer facts offers the link, counting only the facts it reads (review m2)", wp.offered && wp.reason === "Offered: the Employer-specific work permit forms read 2 employer facts; you can copy them from an employer case.", wp.reason);
   ok("C11.5: the employer facts are listed once each, sorted", JSON.stringify(wp.facts) === JSON.stringify(["organisation.address", "organisation.name"]), wp.facts);
   const corp = employerLinkOffer(snap("LMIA", "CORPORATE", maps("organisation.name")));
   ok("C11.5 fail: a Corporate combination never links to another employer case, even when it reads employer facts", !corp.offered && /Corporate case/.test(corp.reason), corp.reason);
