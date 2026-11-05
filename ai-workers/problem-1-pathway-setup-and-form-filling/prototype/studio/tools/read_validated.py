@@ -1,6 +1,6 @@
 """W1-10 slice 1 C-9 (P-144, P-171 (1)): read a validated copy back into the case. The person filled the copy the
 product made, clicked Validate in Adobe and saved it; this reads the saved file with the proven E5 reader
-(p1/e5_roundtrip.py read_back, unchanged) and compares every value the product wrote (the copy's .request.json) with
+(p1/e5_roundtrip.py read_back; B84 counts an empty data root as no data and a new valued leaf as other data) and compares every value the product wrote (the copy's .request.json) with
 what the saved file holds. Validate adds the barcode and may set computed fields, so other data is reported, never
 refused here. QA-165: it also reports the form's own Validate result kept in the file (form_validation); the server
 records the copy as validated only when that result passed. The barcode itself is decoded and compared by the M3 tool (evidence-lane/E1/tools/barcode_compare.py),

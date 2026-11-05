@@ -17,6 +17,7 @@ import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
 import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
+import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
 
 type H = string | undefined;
@@ -131,7 +132,8 @@ export class Runtime {
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
       people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
-      ...(team ? { employer_link: employerLinkOffer(this.snapshotOf(c)) } : {}) };
+      // C1.3: and, once picked, the employer case it relies on (its facts copied then, never updated later).
+      ...(team ? { employer_link: { ...employerLinkOffer(this.snapshotOf(c)), linked: await linkedOf(this.db, c.workspaceId, c.id) } } : {}) };
   }
 
   /** V3 B1 (runtime side, P-297 (3)): what the "Open a case" dialog may offer. Each not retired combination's newest

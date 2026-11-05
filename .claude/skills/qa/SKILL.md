@@ -45,3 +45,6 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 Commit your report and `qa/BUGS.md` rows on a branch `claude/qa-<word>` from main (`qa: <mode> — <summary>` + attribution line), push, open a PR (`gh pr create --base main`) and label it `review: approved` (records only; it merges by itself on green CI). Reply once, briefly: the run (mode, main commit), verdict (ready or not, one line), bugs (n Blocker · n Critical · n Major · n Minor, new QA-…), coverage, questions.
 A Blocker or Critical goes to the top of the backlog: the tech lead holds merges in that area until it is fixed and retested.
 **Finish the round, then hand over (P-218):** from 60% context start no new round, finish the one in hand, write a Handover comment on your records PR and stop; hard stop at 80%. Commit your own checks with the records PR, never in a stash (cloud copies are lost).
+
+## Gate A (P-317, P-348 (3))
+A PR that claims Works is labelled only after your PASS on its own isolated copy, on the data its verdict counts on (P-322). The walk is by screens only and ends at the **next capability's first step**, not at the row's own last assertion: a green pack whose output the next step cannot use is a FAIL. A Major with no failing step still names its nearest capability, so gate B sees it.

@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
+import { askedChoiceProblems, channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
@@ -167,6 +167,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   out.push(...gateProblems(s.eligibility, placed, reads, types, derived, (f) => `"${(s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain?.trim().replace(/\.$/, "") || factWords(s, f)}"`, s.placements)); // C6.9 BR-5
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
   out.push(...channelProblems(s, accepts));
+  out.push(...askedChoiceProblems(s, (m) => (m.inventory_file ? inventoryFields(m.inventory_file) ?? [] : []))); // B81: a code on an answer the form prints twice
   out.push(...oathMappedProblems(s.field_maps, inventoryFields)); // C-11 (P-171 c): a mapped oath box is by a person
   out.push(...factSourceProblems(s)); // W1-15 slice 1 (C4.10): where each answer comes from, and the PQR ticks // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
   // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain

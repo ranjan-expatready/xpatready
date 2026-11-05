@@ -6,6 +6,7 @@
 // any library item (proposals.ts LANDERS.field). No model call, US$0. Every value stays Sample (AGENTS rule 4).
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Snapshot } from "../../engine/snapshot.ts";
 import { canonical } from "../../../contracts/rules.ts";
@@ -146,7 +147,7 @@ export class RuleFacts {
       buildSnapshot(this.db, c.workspaceId, c.id, "draft"),
       this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } }),
       this.db.derivedField.findMany({ where: { workspaceId: c.workspaceId }, select: { derivedKey: true } }),
-      this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "field", status: "waiting", step: "rule_fact" }, select: { id: true, work: true } }),
+      this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], not: Prisma.AnyNull } }, select: { id: true, work: true } }), // B82: a checklist's reading proposes these too, once per library
     ]);
     const rules = rulesOf(snapshot);
     const library = new Set(fields.map((f) => f.canonicalFieldKey));
@@ -194,7 +195,7 @@ export class RuleFacts {
     // per combination and fact, so a second add waits, then sees the first and is refused (409).
     const { proposalId } = await this.db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${b.fact}`}))`;
-    if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "field", status: "waiting", step: "rule_fact", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
+    if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
       fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });

@@ -24,6 +24,7 @@ import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } 
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
+import { conditionFactProblems } from "../../engine/coverage.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { aiLive, usesFakeLauncher } from "./sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
@@ -465,7 +466,7 @@ export class Studio {
     const open = s.mode === "draft" && (!last || last.sha256 !== snapshotHash(s));
     // C5.5 (G2 BR-3, P-240): outside the demo workspace the same draft's Sample checks are listed beside its numbers; a
     // Sample source is already the source gate's line there (demo false).
-    const sources = open ? [...draftSourceProblems(s, isDemoWorkspace()), ...(isDemoWorkspace() ? [] : sampleContentProblems(s))] : [];
+    const sources = open ? [...conditionFactProblems(s), ...draftSourceProblems(s, isDemoWorkspace()), ...(isDemoWorkspace() ? [] : sampleContentProblems(s))] : [];
     // G1: the numbers without a source come after the validator's own errors, so a list cut at its first lines still
     // shows those (the Review tab shows eight).
     // G2 (C5.5): the answer-key gate's lines, in the same list as every other problem (one list on Review and release).
