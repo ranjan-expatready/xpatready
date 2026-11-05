@@ -1,8 +1,8 @@
 // B88: the setup of check_forms_b88_panel_browser.cjs: Visitor visa and Study permit of the six through people's steps, a Saved
 // draft of Visitor visa (US$0), and its condition on "Other family name" accepted there and approved by a second person.
-// Prints one JSON line: { vv, sp }. Not a suite of its own (no usage line).
+// Prints one JSON line: { vv, sp }. Not a suite of its own: in tests/lib, so run-suites never runs it alone (CI on #1068).
 import { randomUUID } from "node:crypto";
-import { APPROVER, AUTHOR, pack2, run } from "../acceptance/lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, run } from "../../acceptance/lib/pack2.ts";
 
 const T = pack2("B88");
 const { call, sql, until } = T;

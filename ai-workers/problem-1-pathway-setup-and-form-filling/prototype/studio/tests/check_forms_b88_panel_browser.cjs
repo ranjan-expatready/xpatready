@@ -17,7 +17,7 @@ let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 240)}` : ""}`); };
 
 (async () => {
-  const out = execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), [path.join(__dirname, "check_forms_b88_setup.ts"), String(PORT), DB], { encoding: "utf8", maxBuffer: 1 << 26, timeout: 900_000 });
+  const out = execFileSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), [path.join(__dirname, "lib", "forms-b88-setup.ts"), String(PORT), DB], { encoding: "utf8", maxBuffer: 1 << 26, timeout: 900_000 });
   const { sp } = JSON.parse(out.split("\n").find((l) => l.startsWith("SETUP {")).slice(6));
   const b = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ headless: true }));
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
