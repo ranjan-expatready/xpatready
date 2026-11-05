@@ -157,5 +157,8 @@ run(async () => {
   const left = await hidingOf();
   const inForce = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body;
   ok("C4.11-25 pass (QA-237): the author confirms the form field through the new route, showing its own words, a second person approves: that error is gone for that question and the condition is still in force in the draft", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0 && !!inForce?.sentence && (inForce?.rows ?? []).length > 0 && inForce.rows.every((x: any) => x.state === "confirmed"), { confirmed: toConfirm.length, left: left.map((e) => e.message), rows: inForce?.rows?.map((x: any) => x.state) });
+  // Tech lead's ruling on #1053 and qa's wording: the fill on a real case needs a release on the six, so B82. Never green until it
+  // runs (pure fill tests do not stand in for it). A "blocked by" line, as C4.11-0, since gate B refuses a pack's exit 2.
+  ok("C4.11-26 pass (the fill, BR-5): blocked by B82, not run yet: with the deciding answer No, that form field is not written, whatever is stored (needs a release on the six)", false, "waits on B82 (#1058) on main");
   T.done();
 });
