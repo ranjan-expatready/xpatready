@@ -140,7 +140,7 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild><Button ref={trigger} size="sm" variant="ghost" aria-label={`Actions for ${label}`} aria-busy={busy || undefined} data-line-menu>
             {/* Review r2: a spinner while the line's request runs, without disabling the button (focus stays on it). */}
-            {busy ? <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden data-line-busy /> : <MoreHorizontal />}</Button></DropdownMenu.Trigger>
+            {busy ? <span className="size-3.5 animate-spin motion-reduce:animate-none rounded-full border-2 border-current border-t-transparent" aria-hidden data-line-busy /> : <MoreHorizontal />}</Button></DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[220px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
               {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
