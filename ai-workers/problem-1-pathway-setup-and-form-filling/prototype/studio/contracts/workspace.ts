@@ -195,7 +195,9 @@ export function stillAskedWords(x: { forms: string[] }): string {
 export type QuestionnaireRole = { role: string; label: string; questions: number; gaps: number };
 export type QuestionnairesView = {
   roles: QuestionnaireRole[]; role: string;
-  coverage: { needed: number; client: number; officer: number; gaps: { fact: string; meaning: string; forms: string[]; boxes: number }[] };
+  coverage: { needed: number; client: number; officer: number; gaps: { fact: string; meaning: string; forms: string[]; boxes: number }[];
+    /** B82: facts a document line's condition reads that nobody is asked (engine/coverage.ts). */
+    conditionFacts: number };
   sections: QuestionnaireSection[]; notAsked: number;
 };
 

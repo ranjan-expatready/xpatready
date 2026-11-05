@@ -8,7 +8,7 @@ import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rule
 import type { Snapshot } from "./snapshot.ts";
 import { channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts";
-import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
+import { COVERAGE_FIXES, conditionFactsNobodyAsked, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
 import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
@@ -111,6 +111,9 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     for (const e of checkCondition(d.condition, types, derived)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Condition ${e}.` });
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });
   }
+  // B82: never silent at Submit. A warning, not a refusal: older lines with such conditions may be released as they are.
+  const docName = new Map(((s.document_types ?? []) as { key: string; name?: string }[]).map((t) => [t.key, t.name ?? t.key]));
+  for (const g of conditionFactsNobodyAsked(s)) out.push({ level: "warning", where: "Documents", item: g.documents[0], message: `${g.documents.map((d) => docName.get(d) ?? d).join(", ")}: the condition reads "${(meaningOf.get(g.fact) ?? g.fact).trim().replace(/\.$/, "")}", which nobody is asked, so on a case this document can never reach anyone. Ask it: Smart questionnaire › Ask them in their forms' sections.` });
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
   for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object" && x.group !== "document_validity")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
   // C6.4: a document validity rule (engine/runtime/case-checklist.ts) names a document type, whole months, the date it

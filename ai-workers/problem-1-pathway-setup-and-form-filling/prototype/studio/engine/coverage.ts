@@ -50,3 +50,18 @@ export function coverageGaps(s: Snapshot): CoverageGap[] {
   }
   return [...gaps.values()].sort((a, b) => a.role.localeCompare(b.role) || a.fact.localeCompare(b.fact));
 }
+
+/** B82 (tech lead's ruling on qa's gate A, #1058): a fact in the library that a document line's condition reads, that
+ *  nobody is asked, no document supplies and nothing works out. On a case such a line can never reach anyone, whatever
+ *  the person's situation. A fact not in the library is already an error (engine/validate.ts). */
+export function conditionFactsNobodyAsked(s: Snapshot): { fact: string; documents: string[] }[] {
+  const field = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id));
+  const derived = new Set((s.derived_fields as { id: string }[]).map((d) => d.id));
+  const placed = new Set((s.placements as { fact: string }[]).map((p) => p.fact));
+  const supplied = new Set(((s.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
+  const by = new Map<string, Set<string>>();
+  for (const d of s.document_requirements as { document_type: string; condition?: unknown }[]) {
+    for (const m of JSON.stringify(d.condition ?? null).matchAll(/"field":"([^"]+)"/g)) if (field.has(m[1]) && !derived.has(m[1]) && !placed.has(m[1]) && !supplied.has(m[1])) by.set(m[1], (by.get(m[1]) ?? new Set()).add(d.document_type));
+  }
+  return [...by].sort(([a], [b]) => a.localeCompare(b)).map(([fact, documents]) => ({ fact, documents: [...documents].sort() }));
+}

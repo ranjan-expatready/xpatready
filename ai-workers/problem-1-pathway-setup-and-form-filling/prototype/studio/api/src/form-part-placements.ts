@@ -11,6 +11,7 @@ import { Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from "
 import { coverageGaps, previewRender } from "../../engine/coverage.ts";
 import { roleOf } from "../../engine/resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
+import { conditionFactsNobodyAsked } from "../../engine/coverage.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { MASTERS_STEP } from "./form-masters.ts";
@@ -87,6 +88,21 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
     if (!pick) { out.noSection.push(fact); continue; }
     try { await studio.placeField(author, fact, { sectionKey: pick, collectedFrom: "client_questionnaire", repeats, tier: "case" }); out.placed.push({ fact, section: pick, repeats }); }
     catch (err) { out.refused.push(`${fact}: ${String((err as Error).message).slice(0, 200)}`); }
+  }
+  // B82 (tech lead's ruling on #1058): a fact only a document line's condition reads has no form field to group it. It is
+  // asked beside the fact it is about, as a fact only a rule reads is (api/src/demo.ts), so the line can reach a person.
+  // No form reads it, so it stays off the question list a paid run replays on (api/src/pqr-drafts.ts questionList).
+  const conditionFacts = conditionFactsNobodyAsked(snapshot);
+  if (conditionFacts.length) {
+    const at = ["person.sex", "person.gender", "person.date_of_birth"];
+    const near = await db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: { in: at }, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true, sectionKey: true } });
+    const beside = at.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean)?.sectionKey;
+    for (const { fact } of conditionFacts) {
+      if (!beside) { out.noSection.push(fact); continue; }
+      const repeats = fact.startsWith("case.") ? "once_per_case" : "per_person";
+      try { await studio.placeField(author, fact, { sectionKey: beside, collectedFrom: "client_questionnaire", repeats, tier: "case" }); out.placed.push({ fact, section: beside, repeats }); }
+      catch (err) { out.refused.push(`${fact}: ${String((err as Error).message).slice(0, 200)}`); }
+    }
   }
   // A section is chosen on the combination (so the author can order it: C4.1 Move up / Move down) only when choosing it
   // asks nobody anything a form does not already ask (review M2): every question in it, from the shared library, is a

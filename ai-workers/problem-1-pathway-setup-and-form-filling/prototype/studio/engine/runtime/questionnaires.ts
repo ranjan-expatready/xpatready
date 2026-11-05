@@ -6,7 +6,7 @@
 // travel only for the side panel. Pure.
 import { factName, render, type Person } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
-import { coverageGaps } from "../coverage.ts";
+import { conditionFactsNobodyAsked, coverageGaps } from "../coverage.ts";
 import { caseView, knownOf, type Participant } from "./case.ts";
 import { familiesFor, familyPeople, sampleBirthDates } from "./preview.ts";
 import { questionsFor } from "./question-count.ts";
@@ -105,7 +105,7 @@ export function questionnairesView(s: Snapshot, roleIn: string | undefined, wher
   const client = covered.filter((f) => filledByOf(place.get(f)) === "CLIENT").length;
   return {
     roles, role,
-    coverage: { needed: needed.size, client, officer: covered.length - client, gaps: gaps.map((g) => ({ fact: g.fact, meaning: field.get(g.fact)?.meaning ?? g.fact, forms: g.forms, boxes: g.boxes })) },
+    coverage: { needed: needed.size, client, officer: covered.length - client, gaps: gaps.map((g) => ({ fact: g.fact, meaning: field.get(g.fact)?.meaning ?? g.fact, forms: g.forms, boxes: g.boxes })), conditionFacts: conditionFactsNobodyAsked(s).length },
     sections, notAsked: view.summary.not_asked,
   };
 }

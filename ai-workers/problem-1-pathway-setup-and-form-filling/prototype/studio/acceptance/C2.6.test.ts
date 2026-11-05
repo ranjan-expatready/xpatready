@@ -149,9 +149,14 @@ run(async () => {
     ok("C2.6 pass (B82): the second person approves the fact", r.status < 300, words(r));
     ok("C2.6 pass (B82): the release's refusal for that fact is gone", !(await problem()).some((m: string) => m.includes(`reads ${key1},`)), await problem());
   } else ok("C2.6 pass (B82): a conditional line reads a fact the library lacks here (else this copy's library is already set up)", false, read);
-  // The paid pairs replay on the people's-steps question list: a fact only a document condition reads is not a form field,
-  // so the list a form-read question sits on never moves with it.
-  ok("C2.6 fail (B82): a fact only a condition reads is not asked by adding it (no question appears)", !key1 || sql(`select count(*) from section_question where canonical_field_key='${key1}' and status <> 'RETIRED'`) === "0");
+  // Accepting a fact does not ask it by itself: the Smart questionnaire tab's step does, and until then Review says so
+  // (the tech lead's ruling on #1058). This copy has no questions yet, so there is no section to ask it beside; the walk
+  // to a real case is tests/check_forms_b82_case_lines.ts.
+  const warned = async () => ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).filter((x: any) => x.level === "warning" && String(x.message).includes("which nobody is asked"));
+  ok("C2.6 fail (B82): a kept line whose fact nobody is asked is never silent: Review warns, in words, with the step that fixes it", !key1 || (await warned()).some((x: any) => /Ask them in their forms' sections/.test(x.message)), await warned());
+  ok("C2.6 pass (B82): accepting a fact adds no question by itself", !key1 || sql(`select count(*) from section_question where canonical_field_key='${key1}' and status <> 'RETIRED'`) === "0");
+  r = await call("POST", `/combinations/${vv}/place-from-form-parts`, {}, AUTHOR);
+  ok("C2.6 fail (B82): with no question about the person yet, the step says it has no section for the fact, and asks nothing", !key1 || (r.status < 300 && (r.body?.noSection ?? []).includes(key1) && sql(`select count(*) from section_question where canonical_field_key='${key1}' and status <> 'RETIRED'`) === "0"), r.body?.noSection);
   ok("C2.6 pass: the whole test spent US$0", items.length > 0 && T.spent() === before);
   T.done();
 });
