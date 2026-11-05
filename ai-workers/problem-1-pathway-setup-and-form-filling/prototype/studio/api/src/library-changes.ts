@@ -211,7 +211,7 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
 
 /** A Yes/No form field worked out from whether other answers are recorded ("derived: … recorded -> yes_no_code"). */
 export const isWorkedOutYesNo = (transform: string | null | undefined) => !!recordedDerivation(transform) && /\byes_no_code\b/.test(transform ?? "");
-type AskedRow = { canonicalFieldKey: string | null; transform: string | null; condition: string | null; conditionRule?: unknown; outcome: string; person: string | null; row: number | null; optionMap: unknown; listPurpose: unknown; status: string };
+type AskedRow = { canonicalFieldKey: string | null; transform: string | null; condition: string | null; conditionRule: unknown; outcome: string; person: string | null; row: number | null; optionMap: unknown; listPurpose: unknown; status: string };
 /** B83 (BR-9, breaker M3): a draft row over a released one that differs from it only by this ask: with the ask taken back
  *  it is no change at all, so it goes, and the release sees none. */
 export const onlyThisAsk = (cur: AskedRow, under: AskedRow | null | undefined, fact: string) => !!under && cur.status === "DRAFT" && under.canonicalFieldKey === fact && under.transform === cur.transform && under.condition === cur.condition && JSON.stringify(under.conditionRule ?? null) === JSON.stringify(cur.conditionRule ?? null) && under.outcome === cur.outcome && under.person === cur.person && under.row === cur.row && JSON.stringify(under.optionMap) === JSON.stringify(cur.optionMap) && JSON.stringify(under.listPurpose) === JSON.stringify(cur.listPurpose);

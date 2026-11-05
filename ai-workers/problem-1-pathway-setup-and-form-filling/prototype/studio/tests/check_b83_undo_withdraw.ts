@@ -100,6 +100,14 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   ok("onlyThisAsk fail test (Devin): a draft with changed words, ask, Undo: the draft and its words stay", u.status < 300 && wordsLeft === "DRAFT|B83 changed words on the draft" && /:DRAFT:person\.us_green_card_number$/.test(newest(USCARD)), { wordsLeft, rows: rowsOf(USCARD) });
   sql(`delete from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} and status = 'DRAFT'`);
 
+  // B86: the same when only the rule a form field holds differs: Undo takes back the ask, never that rule.
+  u = await askNew(USCARD, "B83 changed rule");
+  sql(`update form_field_map set condition_rule = '{"op":"eq","field":"person.us_permanent_resident","value":true}' where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} and status = 'DRAFT'`);
+  u = await undo(USCARD);
+  const ruleLeft = sql(`select status || '|' || coalesce(condition_rule->>'field', '') from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
+  ok("onlyThisAsk fail test (B86): a draft holding a condition rule, ask, Undo: the draft and its rule stay", u.status < 300 && ruleLeft === "DRAFT|person.us_permanent_resident", { ruleLeft, rows: rowsOf(USCARD) });
+  sql(`delete from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} and status = 'DRAFT'`);
+
   // ------------------------------------------------------------ B1: undo and ask against a release, deterministic
   u = await askNew(USCARD, "B83 race delete");
   const del = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = ${lit(USCARD)} order by version desc limit 1`);
