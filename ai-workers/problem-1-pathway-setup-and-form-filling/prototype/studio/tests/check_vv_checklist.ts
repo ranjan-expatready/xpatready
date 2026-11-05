@@ -129,6 +129,11 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   const working = caseChecklist(S3, "vv.single", people, known({ ...adults, "B|person.employed": true }), TODAY) as D;
   ok("C6.4 R3 (fail): the spouse employed → the principal's employment letter is not needed", ALL(of(working, "A")).find((l) => l.document.key === "employment_letter")?.need === "not_needed");
   ok("C6.4 R3: a child's line decided by the principal's answer is on the child's list only", has("C", "consent")?.need === "needed" && !has("A", "consent"));
+  // Devin on #1073: a line waiting on another person's answer names that person, so the panel's link reaches the question.
+  const unanswered = caseChecklist(S3, "vv.single", people, known(adults), TODAY) as D;
+  const wait = of(unanswered, "A").waiting.find((l) => l.document.key === "employment_letter");
+  ok("C6.4 (a) link: the principal's line that waits on the spouse's answer names the spouse as the one to answer (on: person, subject B)", !!wait && wait.missing.some((m) => m.key === "person.employed" && m.on === "person" && m.subject === "B"), wait?.missing);
+  ok("C6.4 (a) link (fail): it does not name the principal, the line's holder, nor the case", !!wait && !wait.missing.some((m) => m.subject === "A" || m.on === "case"), wait?.missing);
   const noSpouse = caseChecklist(S3, "vv.single", [P("case", "case"), P("A", "principal")], known(adults), TODAY) as D;
   ok("C6.4 R3 (fail): with no spouse on the case, a line about the spouse is not needed and says so", /no.*spouse|none on the case/.test(ALL(of(noSpouse, "A")).find((l) => l.document.key === "employment_letter")?.reason ?? ""));
 }

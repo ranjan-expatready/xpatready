@@ -10,7 +10,7 @@ import type { Page } from "playwright";
 import { FAMILY, call, main, needVisitorVisa, ok, openCase, yearsAgo } from "./lib/m3.ts";
 import { walker } from "./lib/browser.ts";
 
-type Line = { id: string; label: string; state: string; state_words: string; required: boolean; version: number; kept: boolean; who_words: string; reason: string; missing: { key: string; question: string; answered: boolean; on: "case" | "person" }[]; lineage: string };
+type Line = { id: string; label: string; state: string; state_words: string; required: boolean; version: number; kept: boolean; who_words: string; reason: string; missing: { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null }[]; lineage: string };
 type Person = { subject: string; label: string; applies: boolean; lines: Line[]; waiting: Line[]; not_needed: Line[] };
 type List = { derived?: boolean; people: Person[] };
 const PORT = process.argv[2] ?? "4440", BASE = `http://127.0.0.1:${PORT}`;
@@ -118,8 +118,8 @@ await main("C6.4", "Documents panel on the case page (screen, 1440 px)", async (
     const wp2 = api.people.find((p) => p.waiting.length), wl2 = wp2?.waiting[0];
     /** Answers one "answer first" question by screen: the panel's link while the line waits (else the same address), the
      *  question's Add or Edit in the Agent view, then a choice (the pick-th answer), or a date (today), and Save. */
-    const answerBy = async (m: { key: string; on: "case" | "person" }, pick: number, who = wp2!.subject, lineage = wl2!.lineage) => {
-      const anchor = `a-${m.on === "case" ? c.caseSubject : who}-${m.key.replace(/[^a-z0-9_]/gi, "-")}`;
+    const answerBy = async (m: { key: string; on: "case" | "person"; subject: string | null }, pick: number, who = wp2!.subject, lineage = wl2!.lineage) => {
+      const anchor = `a-${m.on === "case" ? c.caseSubject : m.subject ?? who}-${m.key.replace(/[^a-z0-9_]/gi, "-")}`;
       const link = page.locator(`[data-documents-person="${who}"] [data-waiting-line="${lineage}"] [data-answer-first="${m.key}"]`).first();
       if (await link.count()) await link.click(); else await page.evaluate((h) => { window.location.hash = h; }, anchor);
       const row = page.locator(`[id="${anchor}"]`);
@@ -140,7 +140,7 @@ await main("C6.4", "Documents panel on the case page (screen, 1440 px)", async (
     if (wl2) {
       const nav = await page.evaluate(() => performance.getEntriesByType("navigation").length);
       // Each question the line waits on, in turn, until it leaves "May be needed" (at most four).
-      let p1 = "waiting", last: { key: string; on: "case" | "person" } | null = null, lastKind = "";
+      let p1 = "waiting", last: { key: string; on: "case" | "person"; subject: string | null } | null = null, lastKind = "";
       for (let i = 0; i < 4 && p1 === "waiting"; i++) {
         const now = (await list()).people.find((x) => x.subject === wp2!.subject)!.waiting.find((x) => x.lineage === wl2.lineage);
         const m = now?.missing.find((x) => !x.answered) ?? now?.missing[0];

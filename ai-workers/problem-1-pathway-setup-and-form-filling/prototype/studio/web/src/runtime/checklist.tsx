@@ -12,13 +12,14 @@ import { Button, Dialog, Field, Input, Notice, Pill } from "@/components/ui/cont
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import { NOT_APPLICABLE_FROM, REQUEST_FROM, UPLOAD_FROM, type LineState, type StoredDocument } from "../../../contracts/documents";
-import type { PersonChecklist, PersonLine } from "../../../engine/runtime/case-checklist";
 import { lineId, noRetryOnRefusal } from "./questionnaire";
 
-/** A line as the API answers it (api/src/case-checklist.ts StoredLine). */
-export type ChecklistLine = Omit<PersonLine, "state" | "documents"> & { state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null;
-  version: number; documents: StoredDocument[]; kept: boolean };
-type Person = Omit<PersonChecklist, "lines" | "waiting" | "not_needed"> & { lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[] };
+/** What the panel reads of a line as the API answers it (api/src/case-checklist.ts StoredLine, from the engine's PersonLine
+ *  in engine/runtime/case-checklist.ts). Declared here, not imported: the engine file reads Node modules the web build has not. */
+type Missing = { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null };
+export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; who_words: string; quote: string | null; missing: Missing[];
+  state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean };
+type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[] };
 export type ChecklistView =
   | { derived: true; stand_in: "SI-14"; people: Person[]; basis: string; empty_release: boolean; ages_on_why: string }
   | { derived: false; why: string };
@@ -29,8 +30,9 @@ const ROLE: Record<string, string> = { principal: "Principal applicant", spouse_
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 /** A question's words as a link's text: the engine quotes it ("Current marital status"); a screen reader should not read the marks. */
 const unquoted = (q: string) => q.replace(/^["“]|["”]$/g, "");
-/** A waiting line's reason without its closing "answer … first" clause: the links below it say that (no repeat). */
-const whyWaiting = (r: string) => r.replace(/: (answer|check) .*$/s, ".");
+/** A waiting line's reason without its closing "answer … first" clause, which the links below it say (no repeat). When its
+ *  questions are all answered but do not work out together (Devin on #1073), the engine's "check …" words are kept whole. */
+const whyWaiting = (r: string) => r.replace(/: answer .* first\.$/s, ".");
 /** "n of m received": m the lines needed now (required), n those of them received, being checked or approved. */
 export const received = (lines: ChecklistLine[]) => { const need = lines.filter((l) => l.required); return { n: need.filter((l) => HAVE.includes(l.state)).length, m: need.length }; };
 
@@ -81,7 +83,7 @@ function PersonDocuments({ caseId, caseSubject, p, nameOf }: { caseId: string; c
             <li key={l.id} className="rounded-lg border border-dashed border-border px-3 py-2 text-sm" data-waiting-line={l.lineage}>
               <span className="font-medium">{l.label}</span> <span className="text-xs text-text-muted">{l.who_words}</span>
               <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]">{l.missing.length ? whyWaiting(l.reason) : l.reason}</p>
-              {l.missing.length ? <p className="text-[13px]">Answer first, in the Agent view: {l.missing.map((x, i) => { const to = lineId(x.on === "case" ? caseSubject : p.subject, x.key); return <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${to}`} data-answer-first={x.key}
+              {l.missing.length ? <p className="text-[13px]">{l.missing.every((x) => x.answered) ? "Check, in the Agent view" : "Answer first, in the Agent view"}: {l.missing.map((x, i) => { const to = lineId(x.on === "case" ? caseSubject : x.subject ?? p.subject, x.key); return <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${to}`} data-answer-first={x.key}
                 // The Agent view opens the tab the question is on (the application's, or the person's) on the address
                 // change; the same link twice is announced again.
                 onClick={() => { if (window.location.hash === `#${to}`) window.dispatchEvent(new HashChangeEvent("hashchange")); }}>{unquoted(x.question)}{x.on === "case" ? " (for the application)" : ""}</a></React.Fragment>; })}</p> : null}
