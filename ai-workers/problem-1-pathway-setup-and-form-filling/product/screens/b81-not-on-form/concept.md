@@ -50,4 +50,4 @@ Approved: all four as recommended. `married` on Applicant and Spouse goes to row
 
 ## Build discoveries
 * A form's panel opens only for the author today (`canAuthor`), so "read-only" is reached only if that changes; the controls still carry the reason.
-* A box the form marks required stays on the open list when its answer is refused (`engine/runtime/mandatory.ts`): the form's own Validate would refuse it blank. Ruling 4 is met on IMM 5645 (no required fields). IMM 0008 DEP's marital box may differ: B79a should read it.
+* A box the form marks required stays on the open list when its answer is refused (`engine/runtime/mandatory.ts`): the form's own Validate would refuse it blank. Ruling 4 holds on IMM 5645 (no required fields) and on IMM 0008 DEP's marital status box (not required).
