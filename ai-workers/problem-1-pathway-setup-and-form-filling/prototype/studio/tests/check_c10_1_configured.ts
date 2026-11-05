@@ -126,6 +126,10 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // High-wage position, which has no form, P-113), and none has a release.
   const drafts = sql(`select c.label from combination c where not exists (select 1 from config_release r where r.combination_id = c.id) order by c.label`).split("\n").filter(Boolean);
   ok("C10.1 row 10 fail: every combination the checkpoint leaves a draft is named on row 10 with its words (not submitted, or Fix N problems), and has no release", drafts.length > 0 && drafts.every((l) => { const at = (r("10").why ?? "").indexOf(`${l}: `); return at >= 0 && /^(not submitted, |Fix \d+ problems? before submitting)/.test((r("10").why ?? "").slice(at + l.length + 2)); }), { drafts, why: r("10").why?.slice(0, 200) });
+  // Lead 14 on #1052 (option A; tests/check_c101_row_ten.ts both ways): a draft with no form (High-wage position, P-239)
+  // does not keep row 10 partial; a combination with forms that is refused would.
+  const refusedWithForms = n(`select count(*) from combination c where exists (select 1 from combination_form f where f.combination_id = c.id) and not exists (select 1 from config_release r where r.combination_id = c.id)`);
+  ok("C10.1 row 10 (option A): done exactly when every combination with forms is released; a formless draft stays named on the row", r("10").status === (refusedWithForms ? "partial" : "done") && drafts.every((l) => (r("10").why ?? "").includes(`${l}: `)), { status: r("10").status, refusedWithForms, drafts });
   // B97: row 9 through B81's step: release 2 is made by the product's own duties, with only what the form does not print
   // marked; row 12's copies are generated and only a person's Validate in Adobe Reader is left (P-46, P-171).
   const vvKey = "vv.single", vvId = sql(`select id from combination where combination_key = '${vvKey}'`);
