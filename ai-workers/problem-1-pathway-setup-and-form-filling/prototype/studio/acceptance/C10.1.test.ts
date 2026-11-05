@@ -63,8 +63,12 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   // marital status (#1050).
   const ee = sql(`select id from combination where combination_key = 'pnp.express_entry' and retired_at is null limit 1`);
   const eeWhy = (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Provincial nominees › Express Entry stream: ")).join(" · ");
+  // Review m1 (#1050): the whole refusal, not row 10's first three problems: Submit asked again (it writes nothing when
+  // it refuses; a released combination is not asked).
+  const eeErrors = ee && !releasesOf(ee).length ? (((await call("POST", `/combinations/${ee}/submit`, { note: "C10.1 E10: what Submit still says" }, AUTHOR)).body?.errors ?? []) as { message: string }[]) : [];
+  const undecided = eeErrors.filter((e) => /form fields? ha(s|ve) no decision|nobody is asked for it/.test(e.message));
   ok("C10.1 E10 row 7 and 10: Express Entry is set up from its forms, and Submit refuses it for no form field without a decision and no fact nobody is asked", !!ee && /Provincial nominees › Express Entry stream/.test(r("7")?.shows ?? "")
-    && (releasesOf(ee).length >= 1 || (!!eeWhy && !/form fields? ha(s|ve) no decision|nobody is asked for it/.test(eeWhy))), eeWhy.slice(0, 300));
+    && (releasesOf(ee).length >= 1 || (eeErrors.length > 0 && undecided.length === 0)), { refusals: eeErrors.length, undecided: undecided.length, first: (undecided[0] ?? eeErrors[0])?.message?.slice(0, 200) });
   ok("C10.1 E10b row 10: Express Entry has release 1, submitted by the author and approved by the Approver", releasesOf(ee).length >= 1 && n(`select count(*) from config_release where combination_id = '${ee}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1, eeWhy.slice(0, 300));
   ok("C10.1 part B (DEMO.md row 10): each release is approved by the Approver after the SME's sign-off, never by the author", n(`select count(*) from config_release where approver_id <> '${APPROVER}'`) === 0 && n(`select count(*) from config_release`) >= 3 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1 && n(`select count(*) from review_submission where submitted_by = '${AUTHOR}' and status = 'APPROVED'`) >= 3);
   // Row 11: the thin family case, one Sample family of four (DEMO.md "The story").
