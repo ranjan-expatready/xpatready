@@ -85,6 +85,17 @@
             "onFailure": "block"
           }
         ]
+      },
+      {
+        "matcher": "(^|__)start_session$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/lane-preflight.sh --hook",
+            "timeout": 15,
+            "onFailure": "block"
+          }
+        ]
       }
     ],
     "Stop": [

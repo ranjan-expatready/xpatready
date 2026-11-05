@@ -49,7 +49,7 @@ Rows reaching Works · median approved-to-merged time · batch failure rate (tar
 * Context: `get_usage` gives each Mac session's share; report all of them when asked, with what to do.
 
 ## Sessions and tokens (2 Nov evening)
-* Start sessions only in a turn the founder typed, with `target: "cloud"`; a cron turn can only leave a card, and a card starts on the Mac.
+* Start sessions only in a turn the founder typed, with `target: "cloud"`; a cron turn can only leave a card, and a card starts on the Mac. **Before every `start_session` on the Mac:** `bash P/tools/lane-preflight.sh` (disk at least 7 GB, load at most 16, under 4 test copies; founder, 6 Nov); its hook refuses a Mac start without room.
 * One row per session. Every brief carries the founder's decision IDs, a testable "Done when" and the standard rules: Opus reviews (P-303), breaker only for money, schema, permissions or new screens, diff-only re-review, label after Approve (P-277), merge main only on conflict (P-270), live AI off, questions as "Question for the tech lead" in a PR comment. Each session ends when its PR is labelled.
 * Before saying "55 by tonight", sort the open rows: likely Works on re-score, one small PR, waits on a fix or paid run, several PRs or held. Give the forecast from that.
 * When nothing merges, measure machine waits first (a batch's final `ci` job queues even after its shards pass). The guard refuses CI cancels: ask the founder, never work around it.
