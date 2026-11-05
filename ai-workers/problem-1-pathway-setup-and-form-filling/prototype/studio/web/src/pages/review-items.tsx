@@ -68,7 +68,7 @@ export function LibraryChangePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
       {x.kind === "library_form" ? <FormUses code={x.key} changeId={x.id} /> : null}
-      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : x.status === "WITHDRAWN" ? "Withdrawn" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
       {x.accepts ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-accepts>
           <dt className="text-text-muted">Form</dt><dd className="font-semibold">{x.accepts.form}{x.accepts.edition ? ` · ${x.accepts.edition}` : ""}</dd>
@@ -80,6 +80,15 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       {x.rename ? <RenameChange change={x} /> : null}
+      {x.form_field ? (
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-form-field>
+          <dt className="text-text-muted">Form field</dt><dd className="font-semibold">{x.form_field.edition} · {x.form_field.caption || "A form field with no printed name"}</dd>
+          <dt className="text-text-muted">Its own words</dt><dd className="[overflow-wrap:anywhere]">{x.form_field.words ? `“${x.form_field.words}”` : "None"}</dd>
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.form_field.clear ? "Filled whenever the form applies" : `Filled only when ${x.form_field.sentence}`}</dd>
+          <dd className="col-span-2 text-xs text-text-muted">For every combination that files this form. {x.form_field.clear ? "Approving takes the condition off this form field: Sample, Unconfirmed: expert." : "Approving says these say the same, not that the condition is correct: Sample, Unconfirmed: expert."}</dd>
+        </dl>
+      ) : null}
+      {x.form_field?.spread || x.condition?.spread ? <div data-change-spread><Notice tone="warn" title="Other combinations">{x.form_field?.spread ?? x.condition?.spread}</Notice></div> : null}
       {x.supplies ? (
         // C4.5: what the second person compares before approving: the facts before → after, each with its official words.
         <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-supplies>
@@ -113,9 +122,9 @@ export function LibraryChangePage() {
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
         {x.status === "WAITING" && x.supplies && x.decision_note ? <div data-came-back><Notice tone="warn" title="This changed after it was proposed: decide what it does now">{x.decision_note}. What it does now is above; the reason was written for what it did before.</Notice></div> : null}
       </div>
-      <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>
+      {x.form_field ? null : <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>}
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
-        : x.status === "RETURNED" ? (x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
+        : x.status === "RETURNED" ? (x.form_field ? <><Notice title="Confirm it again">A returned change of a form field is not sent again from here: withdraw it, then confirm the form field again on Review and release.</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -129,7 +138,7 @@ export function LibraryChangePage() {
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
           <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
         </>}
-      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME") ? <Withdraw id={x.id} /> : null}
+      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field) ? <Withdraw id={x.id} label={x.form_field ? "Withdraw it" : undefined} /> : null}
     </div>
   );
 }

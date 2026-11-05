@@ -19,7 +19,7 @@
 // Run it on a fresh copy each time (review m6, 4 Nov): G5 accepts the run's Ready items, so a second run on the same copy
 // finds none left to accept.
 import { randomUUID } from "node:crypto";
-import { AUTHOR, pack2, run, VV_PEOPLE } from "./lib/pack2.ts";
+import { APPROVER, AUTHOR, pack2, REVIEWER, run, VV_PEOPLE } from "./lib/pack2.ts";
 import { WHO_HOLDERS, WHO_ROLES, type Who } from "../contracts/resolver.ts";
 
 const T = pack2("C4.11");
@@ -136,5 +136,65 @@ run(async () => {
   ok("C4.11-22 pass: Stop stops a run (its state says stopped or finished, in words)", !!stopRun && st.status < 300 && /stop|complet|finish|done/i.test(String(after?.status ?? "")), { stop: st.status, status: after?.status });
   // The run view gives its cost as { spent, worst } (US$).
   ok("C4.11-23 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd?.spent ?? view?.usd ?? NaN) === 0, view?.usd);
+  // QA-237, B86 (P-322; qa's wording on #1053, P-334 (4)): a person accepts a condition, a second person approves it, and the way
+  // out of "Hiding a value a form reads" works through the product's own routes. The draft's problems, not a full Submit, until
+  // B82 is on main (Submit on the six is still refused for other reasons, QA-233), naming the exact question.
+  const FF = "person.other_family_name", held = (await T.queued(vv)).find((x: any) => x.kind === "condition" && x.form_fields?.fact === FF);
+  const hidingOf = async () => (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as any[]).filter((p) => p.item === FF && /^Hiding a value a form reads/.test(p.message ?? ""));
+  const asSecond = { note: "Approved by the C4.11 pack as the second person (QA-237)." };
+  r = await call("POST", "/review/proposals/decide", { ids: [held?.id ?? randomUUID()], action: "accept" }, AUTHOR);
+  const accepted = r;
+  const change = (((await call("GET", "/library/changes?status=WAITING", undefined, APPROVER)).body ?? []) as any[]).find((c) => c.kind === "placement_condition" && c.key === FF);
+  const second = change ? await call("POST", `/library/changes/${change.id}/approve`, asSecond, APPROVER) : { status: 0, body: null };
+  const refused = await hidingOf();
+  ok("C4.11-24 fail (QA-237): a condition accepted and approved, its form field not confirmed: the draft holds \"Hiding a value a form reads\" for that question, in the rule's words", accepted.status < 300 && second.status < 300 && refused.length > 0 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(refused[0]?.message ?? ""), refused[0]?.message ?? { accepted: words(accepted), second: words(second as any), change: change?.id ?? null });
+  const boxes = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body?.rows ?? [];
+  const toConfirm = boxes.filter((x: any) => x.can_confirm);
+  for (const x of toConfirm) {
+    const c = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: FF, formEditionId: x.form_edition_id, dataPath: x.data_path }, AUTHOR);
+    if (c.body?.id) await call("POST", `/library/changes/${c.body.id}/approve`, asSecond, APPROVER);
+  }
+  const left = await hidingOf();
+  const inForce = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body;
+  ok("C4.11-25 pass (QA-237): the author confirms the form field through the new route, showing its own words, a second person approves: that error is gone for that question and the condition is still in force in the draft", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0 && !!inForce?.sentence && (inForce?.rows ?? []).length > 0 && inForce.rows.every((x: any) => x.state === "confirmed"), { confirmed: toConfirm.length, left: left.map((e) => e.message), rows: inForce?.rows?.map((x: any) => x.state) });
+  // qa's wording on #1053 (the fill, BR-5): on a real case of a real release, Yes, a typed name, then No leaves no name for the form.
+  // Visitor visa released through people's steps (B82 on main); its other problems are not this step's to prove, so it says them if refused.
+  await T.people(vv, VV_PEOPLE.filter((p) => p.role === "principal"));
+  await T.documentsBySteps(vv);
+  await T.sourceGate(vv);
+  const CLIENT = "user-P", OFFICER = "user-O";
+  let release: { status: number; body: any } = await call("POST", `/combinations/${vv}/submit`, { note: "C4.11 pack: a release for the fill (QA-237)" }, AUTHOR);
+  const refusedBy = release.status >= 300 ? ((release.body?.errors ?? []) as any[]).map((e) => String(e.message ?? "").slice(0, 160)) : [];
+  if (release.status < 300) {
+    const sub = (await call("GET", `/combinations/${vv}/review`, undefined, REVIEWER)).body?.submission;
+    await call("POST", `/combinations/${vv}/signoff`, { items: (sub?.changeSummary ?? sub?.change_summary ?? []).map((x: any) => `${x.kind}|${x.key}`), action: "signed" }, REVIEWER);
+    release = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
+  }
+  const opened = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `C411-${randomUUID().slice(0, 8)}`, clientActor: CLIENT, principal: { displayName: "Sample Client A" } }, OFFICER)).body;
+  const caseId = opened?.id;
+  const subject = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body?.people?.find((p: any) => p.role === "principal")?.subject_id;
+  const say = async (fact: string, value: unknown) => {
+    const view = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body;
+    const q = (view?.sections ?? []).flatMap((s: any) => s.questions).find((x: any) => x.subjectId === subject && x.fact === fact);
+    return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, CLIENT);
+  };
+  const copyOf = async (form: string) => {
+    const g = await call("POST", `/runtime/cases/${caseId}/forms/${encodeURIComponent(form)}/${subject}/generate`, { idempotencyKey: randomUUID() }, OFFICER);
+    await T.until(async () => ["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${g.body?.id}`, undefined, OFFICER)).body?.status), 90_000);
+    return (await call("GET", `/runtime/form-copies/${g.body?.id}`, undefined, OFFICER)).body;
+  };
+  const GATE = "person.has_used_other_name", OLD = "Sample Old Name";
+  // What a copy wrote, read back from its own record (the view holds no values): each form field's result and the facts frozen with it.
+  const written = (id: string) => {
+    const facts = (JSON.parse(T.sql(`select s.facts_json::text from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${id}'`) || "{}").facts ?? []) as any[];
+    const boxes = (JSON.parse(T.sql(`select result_json::text from form_instance where id = '${id}'`) || "{}").boxes ?? []) as any[];
+    return { name: facts.find((x) => x.fact === FF)?.value, gate: facts.find((x) => x.fact === GATE)?.value, box: boxes.find((x) => x.fact === FF), yesNo: boxes.find((x) => x.fact === GATE) };
+  };
+  const saidYes = await say(GATE, true), typed = await say(FF, OLD), saidNo = await say(GATE, false);
+  const whenNo = await copyOf(toConfirm[0]?.form ?? ""), no = written(whenNo?.id);
+  const saidYesAgain = await say(GATE, true);
+  const whenYes = await copyOf(toConfirm[0]?.form ?? ""), yes = written(whenYes?.id);
+  ok("C4.11-26 pass (the fill, BR-5): with the deciding answer No, that form field is not written, whatever is stored: Yes, a typed name, then No leaves no name for the form, and the form's Yes/No is written from the No", release.status < 300 && saidYes.status < 300 && typed.status < 300 && saidNo.status < 300 && whenNo?.status === "GENERATED" && no.name === undefined && no.box?.result === "not written" && /^Not needed/.test(no.box?.why ?? "") && no.gate === false && no.yesNo?.result === "written", { release: release.status, refusedBy, answers: [saidYes.status, typed.status, saidNo.status], copy: whenNo?.status, no });
+  ok("C4.11-26 control: with the answer Yes again the same form field is written with the name, so the step above can fail", saidYesAgain.status < 300 && whenYes?.status === "GENERATED" && yes.name === OLD && yes.box?.result === "written" && yes.gate === true, { copy: whenYes?.status, yes });
   T.done();
 });

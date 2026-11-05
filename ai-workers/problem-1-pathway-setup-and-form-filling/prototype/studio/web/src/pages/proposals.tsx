@@ -7,6 +7,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Check, ChevronRight, Undo2 } from "lucide-react";
 import { NearLine, ownReason, type NearView } from "@/components/near-line";
+import { FormFieldConditions } from "@/components/form-field-conditions";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
@@ -247,6 +248,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
             </blockquote>
           ) : <p className="mt-1 text-text-muted">No quote: it comes from {p.origin === "rules" ? "the rules" : "the reading"} alone.</p>}
         </section>
+        {p.form_fields ? <FormFieldConditions combinationId={p.form_fields.combination} fact={p.form_fields.fact} item={p.id} /> : null}
         <section aria-label="Rules">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Rules</h3>
           {p.rules.length ? <ul className="mt-1 space-y-1">{p.rules.map((r) => <li key={r.rule} className="flex gap-2"><Pill tone={r.passed ? "ok" : "danger"}>{r.passed ? "Passed" : "Failed"}</Pill><span>{r.rule.replace(/_/g, " ")}{r.why ? `: ${r.why}` : ""}</span></li>)}</ul> : <p className="mt-1 text-text-muted">No rule ran on this item.</p>}
