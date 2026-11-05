@@ -17,6 +17,6 @@ on #1050 + #1062 alone too (not this PR's; told the tech lead on #1052).
 4. Re-run fs/vv/sp/lmia/ee checks, C4.1 (six), C4.8 and C9.1 (checkpoint), `run-suites.sh --changed`, graph, count-any;
    Opus screen-reviewer on the diff; then ready + label `review: approved`. Delete this note in that commit.
 
-IMM 5532's pages: personal information and the tables on page 1; the declarations on pages 3 and 4 (IMM 5533 p. 10,
+IMM 5532's pages: personal information, the tables and the yes/no questions (named by the form's title) on page 1; the declarations on pages 3 and 4 (IMM 5533 p. 10,
 "Page 3, question 9 (Declaration of sponsor)", "Page 4, question 5 (Declaration of applicant)"); Part C on page 5 is
 inferred (it follows Part B's page-4 declaration). The XFA template is one flowing page, so it gives no page breaks.

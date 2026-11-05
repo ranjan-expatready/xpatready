@@ -118,9 +118,13 @@ export type FormSetup = { application: string; rules: FormRule[]; family?: strin
  *  always-needed document lines, cited, may be data too (`documentsCited`). */
 type SetupData = { combinations: Record<string, { application: string; rules: FormRule[]; ruleFacts?: (string | RuleFact)[]; familyByChannel?: string; documentsCited?: CitedDocumentLine[] }> };
 const RULE_FACTS: RuleFact[] = [GENDER_FACT, REP_FACT, RELEASE_FACT, MINOR_FACT];
-/** B79b: a rule fact given whole in the data is checked as C3.6's door would take it, so a bad entry fails the read. */
-const ruleFactOf = (key: string, f: RuleFact): RuleFact => {
-  if (!/^(person|case)\.[a-z0-9_]+$/.test(f.fact ?? "") || !f.rule || !f.label || !f.meaning || !f.cite || f.valueType !== "yes_no") throw new Error(`samples/form-setup.json, ${key}: the rule fact ${f.fact ?? "(no key)"} needs a person. or case. key, its rule's form, a label, a meaning, a cite and valueType yes_no`);
+/** B79b: a rule fact given whole in the data is checked as C3.6's door would take it, so a bad entry fails the read: a
+ *  person. or case. key, the form of one of this combination's rules (review m1), a label, a meaning, a cite, yes_no, and
+ *  `beside` (where it is asked) a list of fact keys when given. Exported for its pure check (check_qa144_fs_release.ts). */
+export const ruleFactOf = (key: string, f: RuleFact, rules: FormRule[]): RuleFact => {
+  const bad = !/^(person|case)\.[a-z0-9_]+$/.test(f.fact ?? "") || !f.rule || !rules.some((r) => r.form === f.rule && !r.retire) || !f.label || !f.meaning || !f.cite || f.valueType !== "yes_no"
+    || (f.beside !== undefined && (!Array.isArray(f.beside) || !f.beside.length || !f.beside.every((b) => typeof b === "string" && /^(person|case)\.[a-z0-9_]+$/.test(b))));
+  if (bad) throw new Error(`samples/form-setup.json, ${key}: the rule fact ${f.fact ?? "(no key)"} needs a person. or case. key, the form of one of this combination's rules, a label, a meaning, a cite, valueType yes_no, and "beside" as a list of fact keys when given`);
   return f;
 };
 const fromData = (): Record<string, FormSetup> => {
@@ -128,7 +132,7 @@ const fromData = (): Record<string, FormSetup> => {
   return Object.fromEntries(Object.entries(d.combinations).map(([key, c]) => [key, { application: c.application, rules: c.rules,
     ...(c.familyByChannel ? { family: c.familyByChannel } : {}),
     ...(c.documentsCited ? { documentsCited: c.documentsCited } : {}),
-    ruleFacts: (c.ruleFacts ?? []).map((k) => typeof k === "object" ? ruleFactOf(key, k) : RULE_FACTS.find((f) => f.fact === k) ?? (() => { throw new Error(`samples/form-setup.json, ${key}: no rule fact ${k} in api/src/form-setup.ts`); })()) }]));
+    ruleFacts: (c.ruleFacts ?? []).map((k) => typeof k === "object" ? ruleFactOf(key, k, c.rules) : RULE_FACTS.find((f) => f.fact === k) ?? (() => { throw new Error(`samples/form-setup.json, ${key}: no rule fact ${k} in api/src/form-setup.ts`); })()) }]));
 };
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older

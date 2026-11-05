@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { FORM_SETUP, ruleFactOf } from "../api/src/form-setup.ts";
 
 const PORT = Number(process.argv[2] ?? 4456), DB = process.argv[3] ?? "xr_studio_fs_rel";
 let pass = 0, fail = 0;
@@ -32,6 +33,12 @@ type Form = { form: string; person: string; applies: boolean | string };
 const LABEL = "Family sponsorship › Spouse or common-law partner";
 
 (async () => {
+  // Review m1 (pure): a rule fact given whole in samples/form-setup.json is read only when C3.6's door would take it.
+  const fsSetup = FORM_SETUP["fs.spouse"], ok5604 = fsSetup?.ruleFacts?.find((f) => f.rule === "IMM 5604");
+  const refused = (f: unknown) => { try { ruleFactOf("fs.spouse", f as never, fsSetup!.rules); return false; } catch { return true; } };
+  ok("QA-144 slice 5 pass (pure): Family sponsorship's IMM 5604 fact is read from the data, asked beside the date of birth", !!ok5604 && !refused(ok5604) && JSON.stringify(ok5604.beside) === JSON.stringify(["person.date_of_birth"]), ok5604);
+  ok("QA-144 slice 5 fail (pure): a rule fact whose rule is no form of the combination, whose \"beside\" is not a list of fact keys, or that is not Yes/No is refused at the read",
+    !!ok5604 && refused({ ...ok5604, rule: "IMM 9999" }) && refused({ ...ok5604, beside: "person.date_of_birth" }) && refused({ ...ok5604, beside: [] }) && refused({ ...ok5604, valueType: "text" }) && refused({ ...ok5604, fact: "minor" }));
   await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("QA-144 slice 5: the copy starts blank", n(`select count(*) from combination`) === 0 && n(`select count(*) from logical_section`) === 0);
   const before = ledger();
@@ -46,11 +53,15 @@ const LABEL = "Family sponsorship › Spouse or common-law partner";
   ok("QA-144 slice 5 pass: the configured checkpoint releases Family sponsorship › Spouse or common-law partner: release 1, submitted by the author, signed by the SME, approved by the Approver",
     (l.body.released as string[]).includes(LABEL) && sql(`select version || '|' || submitter_id || '|' || approver_id from config_release where combination_id = '${fs}' order by version desc limit 1`) === "1|user-A|user-B",
     { released: l.body.released, refused: fsWhy.slice(0, 300) });
+  // Review m3: the SME's sign-off is on this combination's own submission, not another's.
+  ok("QA-144 slice 5 pass: the SME (user-C) signed Family sponsorship's submission, and the submission is approved", n(`select count(*) from review_signoff s join review_submission b on b.id = s.submission_id where b.combination_id = '${fs}' and s.actor_id = 'user-C'`) >= 1
+    && n(`select count(*) from review_submission where combination_id = '${fs}' and submitted_by = 'user-A' and status = 'APPROVED'`) === 1);
   ok("QA-144 slice 5 fail: Family sponsorship is not among row 10's refusals (no form field without a decision, no fact nobody is asked)", !fsWhy && /Family sponsorship › Spouse or common-law partner/.test(r("10").shows), fsWhy.slice(0, 300));
   ok("QA-144 slice 5 fail-guard: no live AI call and nothing spent (US$0)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before && l.body.cost_usd === 0);
   // P-46, P-171, P-172: the release is the validator's own, never a simulated Validate: the draft the SME signed has no error.
-  const problems = ((await call("GET", `/combinations/${fs}`)).body?.draft?.problems ?? []) as { level: string }[];
-  ok("QA-144 slice 5 fail-guard: the validator itself finds no error on Family sponsorship's draft (nothing simulated)", problems.filter((p) => p.level === "error").length === 0, problems.filter((p) => p.level === "error").slice(0, 3));
+  // Review m2: the route must answer, so an error page never reads as "no error".
+  const got = await call("GET", `/combinations/${fs}`), problems = (got.body?.draft?.problems ?? []) as { level: string }[];
+  ok("QA-144 slice 5 fail-guard: the validator itself finds no error on Family sponsorship's draft (nothing simulated)", got.status === 200 && Array.isArray(got.body?.draft?.problems) && problems.filter((p) => p.level === "error").length === 0, { status: got.status, errors: problems.filter((p) => p.level === "error").slice(0, 3) });
   // No regression: the three combinations released before this slice keep their release.
   for (const k of ["vv.single", "sp.outside", "wp.lmia_inside"])
     ok(`QA-144 slice 5 no regression: ${k} keeps its release 1`, n(`select count(*) from config_release c join combination b on b.id = c.combination_id where b.combination_key = '${k}'`) >= 1);
@@ -85,7 +96,12 @@ const LABEL = "Family sponsorship › Spouse or common-law partner";
 
   // The rules as a case reads them (Preview): the sponsor files IMM 1344 and IMM 5532; a child of 11 files IMM 5604 only
   // when the fact says so, and never IMM 5406 or IMM 5669 (from 18).
-  const preview = async (answers: Record<string, unknown>) => ((await call("GET", `/combinations/${fs}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify(answers))}`)).body?.forms ?? []) as Form[];
+  // Review m2: Preview must answer with its forms; a refused call stops the check instead of passing the fail lines.
+  const preview = async (answers: Record<string, unknown>) => {
+    const pv = await call("GET", `/combinations/${fs}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify(answers))}`);
+    if (pv.status !== 200 || !Array.isArray(pv.body?.forms) || !pv.body.forms.length) { console.error("STOP  Preview did not answer with forms", pv.status, JSON.stringify(pv.body).slice(0, 300)); process.exit(2); }
+    return pv.body.forms as Form[];
+  };
   const applies = (fsList: Form[], form: string, person: string) => fsList.some((f) => f.form === form && f.person === person && f.applies === true);
   const yes = await preview({ "principal|person.date_of_birth": "1990-01-01", "child-1|person.date_of_birth": "2015-01-01", [`child-1|${m}`]: true });
   const no = await preview({ "principal|person.date_of_birth": "1990-01-01", "child-1|person.date_of_birth": "2015-01-01", [`child-1|${m}`]: false });
