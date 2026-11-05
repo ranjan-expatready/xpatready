@@ -177,7 +177,7 @@ async function api() {
   const missing = new Set((after?.readiness?.missing ?? []).map((m: { fact: string }) => m.fact));
   ok("C1.3 (M4): once confirmed, IMM 5710 is filled from the copies (3 more boxes written, none of them still missing)", after && before && after.draft.written_now >= before.draft.written_now + 3 && ![NAME, ADDRESS, LMIA].some((f) => missing.has(f)), { before: before?.draft, after: after?.draft });
 
-  // BR-6 (Devin review on #1051): an answer save takes no case lock, so the link locks the current answers it compared.
+  // BR-6 (outside review on #1051): an answer save takes no case lock, so the link locks the current answers it compared.
   // A session holding the lock on a kept (unticked Different) answer for 2 s makes the link wait for it; without the
   // lock the link would commit at once on what may by then be a stale view.
   const c5 = await open(wp, "held"), s5 = subjects(c5);
@@ -188,7 +188,7 @@ async function api() {
   await new Promise<void>((done, failed) => { const t = setTimeout(() => failed(new Error("setup: the holding session never took the lock (10 s)")), 10_000); holder.stdout.on("data", (d: Buffer) => { if (/held/.test(String(d))) { clearTimeout(t); done(); } }); });
   const t0 = Date.now(), held = await call("POST", `/runtime/cases/${c5.id}/employer-link`, { employerCase: EMPLOYER, seen: seenOf(l5) }, OFFICER), waited = Date.now() - t0;
   await closed;
-  ok("C1.3 BR-6 fail (Devin review): the link waits for a save holding a kept answer it compared, then links", (held.status === 201 || held.status === 200) && waited >= 1200, { status: held.status, waited });
+  ok("C1.3 BR-6 fail (outside review): the link waits for a save holding a kept answer it compared, then links", (held.status === 201 || held.status === 200) && waited >= 1200, { status: held.status, waited });
 
   // BR-6 with nothing to write ("Link without copying"): only the case row lock keeps it to one link (review M2).
   const c4 = await open(wp, "same"), s4 = subjects(c4);

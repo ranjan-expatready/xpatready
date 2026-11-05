@@ -86,7 +86,7 @@ export class EmployerLinks {
       if (await tx.filingRecord.count({ where: { caseId: r.c.id } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no employer case is linked and no employer facts are copied.");
       const before = await linkedOf(tx, r.c.workspaceId, r.c.id);
       if (before) notPossible(`This case already relies on ${before.label} (linked ${dateWords(before.created_at)}). Its facts were copied then; edit a copied value on this case.`);
-      // Devin review on #1051: an answer save takes no case lock, so the current answers of the carried facts are locked
+      // outside review on #1051: an answer save takes no case lock, so the current answers of the carried facts are locked
       // here before they are compared with what the officer saw. A save that committed first is read below and refused
       // as changed; one that comes later waits for this link (its own supersede then runs after it). A fact with no
       // answer yet is guarded by the unique current-answer index (a save at the same moment fails one of the two).
