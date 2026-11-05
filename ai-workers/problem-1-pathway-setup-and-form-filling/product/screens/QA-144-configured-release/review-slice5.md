@@ -119,3 +119,75 @@ To raise it: (a) the release lands (stack steps 1–3) → task completed 1; (b)
 The 25/25 stacked rehearsal, and main's 93 problems. A keyboard-only walk and a real screen reader. D17/D20: an
 intended user's unaided walk stays with the founder. `graph.mjs` and `run-suites.sh --changed` are the builder's step 4.
 I did not write a separate journey-test report, because the caller allowed this one file only.
+
+## Round 2 (diff-only, 03c2a2933)
+Opus, a fresh context (P-318 (1), P-293 round 2). Scope: merge `3c61c4049`, `6436ef3f3` and `03c2a2933` only. Round 1's
+commits and #1050's own lines were not reviewed again. I read the code and data, extracted the XFA templates of
+`official-sources/ircc/forms/imm5532e.pdf` and `imm5604e.pdf` (pypdf), read IMM 5533 p. 10 (pdftotext), and ran
+`product/tools/typecheck.mjs` on the head. I re-ran no studio check; I read the builder's logs in its scratchpad `runs/`
+(c10.1-configured 41/41, vv 35/35 with "all 59" passing, fs/sp/lmia/ee/C4.1/C4.8/C9.1 exit 0, C10.1 exit 1).
+
+### What I verified
+1. **The merge loses nothing and duplicates nothing.** `--remerge-diff` touches only the five files it names. For each,
+   #1050's changes from the merge base (86b721eac) appear in `10227da17..3c61c4049`, and B79b's in `5ee192c6b..3c61c4049`,
+   except lines both sides changed the same way (the `family?` lines in pack2 and demo, the "edited" fix,
+   `SET_UP_FROM_FORMS` from the table). `form-setup.ts` keeps `NotOnFormMark`, `notOnForm` in `FormSetup`, `SetupData` and
+   `fromData`, next to `ruleFactOf`, the `(string | RuleFact)[]` rule facts and `documentsCited`. In `form-setup.json`
+   (parsed): `pnp.express_entry` deep-equals #1050's entry, with `notOnForm`, and `fs.spouse` deep-equals B79b's.
+   `form-masters.ts` is the same on both sides. `pack2.ts` keeps #1050's `"field"` pass and its place-from-form-parts
+   call. Only B78's comment is dropped in `form-part-placements.ts`, which is fine. Type check: no new errors (15 known).
+2. **Section names.** The 30 appended entries deep-equal the held file round 1 read. The first 29 are unchanged, and no
+   (form, first_field) pair appears twice. 29 of the 30 `printed` strings occur in their form's template. The page
+   numbers match IMM 5533 p. 10 ("Page 3, question 9 (Declaration of sponsor)", "Page 4, question 5 (Declaration of
+   applicant)"). The template order fits too: the sponsor's signature comes after "9. Declaration of sponsor", and
+   `lastLive[1]` after Part C. The `basis` says Part C's page 5 is inferred. This closes round 1's m9.
+3. **Counts 29 → 59.** Both are exact equalities, on the file (`names.size`, `raw.length`) and on the DB (edited and landed
+   under the label). They can still fail.
+4. **check_c10_1_configured.** The new Family sponsorship line (approved by user-B, named on row 10's shows) can fail.
+   The drafts line fails if every combination is released (`drafts.length > 0`), or if any draft is missing from row 10's
+   words. The K1-absent branch asserts zero undecided form-field maps not superseded (a real `DefinitionStatus` value).
+   Because `sql` throws on a bad query, it cannot pass on a broken query. The X9a proof is still made: `C9.1.test.ts:95`
+   asserts the K1 lines on IMM 5476 grow after accepting the new edition and carry no `[0]` path. `studio.ts:259-263`
+   builds the example from a caption only.
+5. **`03c2a2933`** deletes notes only. m19's re-measure (exit 1, the line is gone) is on #1052 ("m19 re-measured on the
+   merged stack").
+
+### Blockers
+None.
+
+### Majors
+1. **An IMM 5604 entry quotes words the form does not print (`samples/section-names.json:358-365`).**
+   `IMM_5604[0].Page1[0].forCICUseOnly[0].fileNo[0]` is named "For CIC use only", with `printed` "FOR CIC USE ONLY" and
+   `basis` "printed". The 02-2023 template prints **"FOR OFFICE USE ONLY"** in that subform ("FOR OFFICE USE ONLY File
+   no. … Date (YYYY-MM-DD)"). "CIC" appears only in the subform's internal name, `forCICUseOnly`. The PR, the file's
+   `basis` and the commit all say the words are "from print". The loader writes that claim into the decision reason
+   ("page 1) (Sample)"). That breaks AGENTS rule 4 and P-170, and B78's own rule against the PDF's internal part name,
+   which `check_b78_section_names.ts`'s fail-guard regex does not catch. It went live in this commit; round 1 read it only
+   as a held file and missed it. Fix: name it "For office use only", printed "FOR OFFICE USE ONLY", page 1. Add a fail
+   line so each `basis: "printed"` entry's `printed` words must occur in its form's template text (whitespace collapsed,
+   case-insensitive). That check flags exactly this 1 of the 30. Re-run `check_b78_section_names`, `check_qa144_vv_release`
+   and fs.
+
+### Minors
+1. **The row-10 refused-draft example now proves less (`check_c10_1_configured.ts:126-128`).** On today's data its only
+   draft is High-wage position ("not submitted, no form…"), which line 100 already covers. Its "Fix N problems" half is
+   never reached. A validator-refused draft that keeps its words is now proved only conditionally (line 116, Visitor visa
+   while a form is unplaced) and by the pure `check_c101_release_two_words.ts`. The commit says so, so this is not
+   silent. Fix: say it in the line's comment, so a reader does not take it for the old guard.
+2. **The line labelled "X9a fail-guard" (`:105`) cannot fail on today's data.** With no K1 words, row 10 holds no
+   form-field words at all, so it guards only a future regression. The old guard's precondition (an undecided box with
+   a raw path and no caption exists) now holds only on the K1 branch, and `C9.1:95` does not assert it for IMM 5476. Fix:
+   rename it to a plain pass line, or have C9.1 assert that one undecided IMM 5476 box has an empty caption.
+
+### Nits
+* The fileNo box is office-use, so a separate section name for it may never reach a client. That is the expert's call,
+  not this diff's.
+* C10.1 25/27 (R12b, "every row done" listing rows 10 and 12): I did not judge it here. The row 10 "partial" question
+  goes to the tech lead.
+
+### Could not check
+CI on `03c2a2933`: every job reads "skipped" on GitHub, so there is no green run to cite. I re-ran no studio check on my
+own copy; I relied on the builder's logs.
+
+**Verdict: Block.** To fix: Major 1 (the IMM 5604 "For CIC use only" entry, plus a fail line that `printed` words occur
+in the form's print). Then re-run the three checks named there. The Minors can go in the PR or as follow-up rows.

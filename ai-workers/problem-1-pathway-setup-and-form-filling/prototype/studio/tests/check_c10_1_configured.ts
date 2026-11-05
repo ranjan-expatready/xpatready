@@ -102,7 +102,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // no validator words at all; the X9a caption rule is then proved on its own data by C9.1 (K1, its fail line on IMM 5476).
   // Here: when row 10 gives the validator's words they name a form field by caption, and it never prints a raw PDF path.
   const k1Words = /\(K1\)/.test(r("10").why ?? "");
-  ok("C10.1 row 10 / X9a fail-guard: row 10 never names a form field by its PDF path (IMM_5707[0].page1[0]…)", !/[A-Za-z0-9_]+\[\d+\]\./.test(`${r("10").shows} ${r("10").why ?? ""}`), r("10").why?.slice(0, 200));
+  ok("C10.1 row 10 / X9a (standing guard, review r2-m2: no planted case here; C9.1 plants one): row 10 never names a form field by its PDF path (IMM_5707[0].page1[0]…)", !/[A-Za-z0-9_]+\[\d+\]\./.test(`${r("10").shows} ${r("10").why ?? ""}`), r("10").why?.slice(0, 200));
   ok(k1Words ? "C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption" : "C10.1 row 10 / X9a: no combination is refused for an undecided form field (K1), so no live form field map is left undecided (a superseded one is history; C9.1 proves the caption rule)",
     k1Words ? /for example "/.test(r("10").why ?? "") && n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0
       : n(`select count(*) from form_field_map where outcome = 'unresolved' and status <> 'SUPERSEDED'`) === 0, { k1Words, why: r("10").why?.slice(0, 200) });

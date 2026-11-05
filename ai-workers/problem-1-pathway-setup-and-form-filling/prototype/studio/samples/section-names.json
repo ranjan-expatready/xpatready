@@ -358,8 +358,8 @@
     {
       "form": "IMM 5604 (02-2023)",
       "first_field": "IMM_5604[0].Page1[0].forCICUseOnly[0].fileNo[0]",
-      "name": "For CIC use only",
-      "printed": "FOR CIC USE ONLY",
+      "name": "For office use only",
+      "printed": "FOR OFFICE USE ONLY",
       "page": 1,
       "basis": "printed"
     },
