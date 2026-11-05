@@ -1,0 +1,30 @@
+C7.6 — Ready to file: the blocks and the warnings (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C7.6-1 pass: readiness is per filing with blocks and warnings, each saying who owes it and what it unblocks; no percentage — {"filing":"5c3dcc6f-9de7-446d-8cb5-a41414a78571","ready":false,"blocks":[{"code":"barcode_not_validated","item":"9db471b4-26d9-43f0-9e93-1a7bd64289e8","subject":"1413f20d-a7d9-4860-ad07-4fc1eb031213","owes":"staff","words":"IMM 5257 for Sample Client A: no val
+PASS  C7.6-2 fail (P-238): with facts unanswered, IMM 5257 has a CRITICAL "missing facts" warning (never a block) — {"blocks":["barcode_not_validated"],"warns":["missing_facts","missing_signature","missing_facts","missing_facts","missing_signature","missing_facts","missing_signature","missing_facts","missing_facts","missing_facts","representative_review","missing_facts","mi
+PASS  C7.6-3 fail: "Ready to file" is refused by the server (409) and lists the blocks — 409
+FAIL  C7.6-4 fail (QA-122, P-238): an optional date given as 1990-13-45 is saved and flagged (P-47) and is a CRITICAL "fact with a problem" on IMM 5257 — {"warns":["missing_signature","missing_signature","missing_signature","representative_review","fact_problem","fact_problem","missing_document","missing_document","missing_document"]}
+FAIL  C7.6-5 pass: with every fact confirmed, the fact warnings are gone — ["missing_signature","missing_signature","missing_signature","representative_review","fact_problem","fact_problem","missing_document","missing_document","missing_document"]
+PASS  C7.6-6 fail (P-144, VV-R18): IMM 5257 on PDF upload with no validated copy read back blocks
+PASS  C7.6-6b fail (P-237): the barcode block cannot be passed, even with a reason (409, nothing recorded) — 409
+FAIL  C7.6-7 fail (P-136, P-237): IMM 5476 (signed by hand and scanned) with no signed scan is a CRITICAL "missing signature" warning — ["missing_signature","missing_signature","missing_signature","representative_review","fact_problem","fact_problem","missing_document","missing_document","missing_document"]
+PASS  C7.6-8 fail (P-155, P-237): the representative's review not done is a CRITICAL warning
+PASS  C7.6-9 pass: a missing document (passport not received) only warns
+PASS  C7.6-10 pass: IMM 5257 validated copy read back (the built C-9 route)
+FAIL  C7.6-11 pass: IMM 5476 printed, signed by hand, and its scan uploaded — 404
+FAIL  C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains — {"blocks":[],"warns":["missing_signature","missing_signature","missing_signature","representative_review","fact_problem","fact_problem","missing_document","missing_document","missing_document"]}
+PASS  C7.6-13 fail (P-155): a case officer cannot do the representative's review (403) — 403
+PASS  C7.6-14 pass: the representative of record reviews; the warning clears; the record will read "Prepared by · Reviewed by" — {"id":"4571fc50-f6d3-422a-8d31-58baf5ba1e61","filing":"5c3dcc6f-9de7-446d-8cb5-a41414a78571","reviewed_by":"user-R","name":"Representative (Sample)","kind":"reviewed","licence_number":"R000000","at":"2026-11-05T07:30:11.942Z","words":"Reviewed by Representativ
+PASS  C7.6-15 fail: with only warnings left, Ready to file still needs each warning passed with a reason (409 names them) — {"type":"https://expatready.local/problems/readiness","title":"Not ready to file","status":409,"detail":"8 open warnings (pass each with a reason, or fix them) stand before Ready to file.","message":"8 open warnings (pass each with a reason, or fix them) stand
+PASS  C7.6-16 fail: passing a warning without a reason is refused (400) — 400
+PASS  C7.6-17 pass: a permitted person passes the warning with a written reason, recorded
+PASS  C7.6-18 fail: a client cannot pass warnings or mark ready (403)
+FAIL  C7.6-19 pass: Ready to file succeeds; the filing's status is ready_to_file — {"type":"https://expatready.local/problems/readiness","title":"Not ready to file","status":409,"detail":"5 open warnings (pass each with a reason, or fix them) stand before Ready to file.","message":"5 open warnings (pass each with a reason, or fix them) stand
+PASS  C7.6-20a pass (P-151): before IMM 5707's accepted-until date it only warns, with "Adopt update" — {"filing":"5c3dcc6f-9de7-446d-8cb5-a41414a78571","ready":false,"blocks":[],"warns":[{"code":"missing_signature","item":"247d5a99-b62e-46e4-8053-8be5f6744d5b","subject":"1413f20d-a7d9-4860-ad07-4fc1eb031213","owes":"staff","words":"CRITICAL: IMM 5257 SCH1 for S
+PASS  C7.6-20 fail (P-151, P-237): after IMM 5707's accepted-until date it is a CRITICAL warning (no longer "Adopt update"), never a block — {"blocks":[],"warns":["missing_signature","missing_signature","missing_signature","edition_expired","fact_problem","fact_problem"]}
+PASS  C7.6-20b pass: the dates are restored for the tests that follow
+PASS  C7.6-21 pass: a solo representative's review is logged "Self-reviewed" with name, licence number and time, never as a second person — {"id":"5ccb0c31-0018-47ab-8091-dde6dd0e0782","filing":"a34c5f3c-fcf2-46e8-9cdd-ba8b524201b1","reviewed_by":"user-S","name":"Solo representative (Sample)","kind":"self_reviewed","licence_number":"R000001","at":"2026-11-05T07:30:13.159Z","words":"Self-reviewed b
+PASS  C7.6-22 fail (P-315): missing facts passed as a CRITICAL warning with a reason, Ready to file is still refused by IMM 5257's missing Validate alone (409) — {"status":409,"blocks":["barcode_not_validated"],"warns":[]}
+
+19/25 passed
