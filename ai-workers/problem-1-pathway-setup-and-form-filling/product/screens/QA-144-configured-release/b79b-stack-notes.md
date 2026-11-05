@@ -17,6 +17,16 @@ on #1050 + #1062 alone too (not this PR's; told the tech lead on #1052).
 3b. #1050's a90c36e78 makes `tests/check_c10_1_configured.ts` use Family sponsorship's spouse as its refused-draft
    example ("slice 5 not built yet"): once Family sponsorship is released, move that example to a combination still
    refused (Labour market impact assessment › High-wage position: no form, P-113) or read "any refused draft", and run it.
+3c. Ruling m19 (tech lead, Lead 13, 5 Nov; question on #1052): on c41f6fb11, `GET /api/catalogue`'s Family
+   sponsorship row read "No questions yet for Sponsored spouse or partner, Child" (exit 0 = present). Family
+   sponsorship has 0 chosen sections (Visitor visa 2, Study permit 1, With an LMIA 1, Express Entry 4), because the
+   placement step chooses only among sections it just placed into. #1062 at 5fd461ac9 changes this check (BR-8 reads
+   what the release asks through `previewRender`, per role), so: after the merge, load the checkpoint on a fresh copy
+   and measure again with the exit code (script below). Child must not be named (#1050's `applicants` fix). If
+   "Sponsored spouse or partner" still reads "No questions yet", post the numbers on #1052 and wait for the ruling on
+   option A (the placement step also considers sections already holding this combination's facts). Option C (leave it)
+   is refused: a false "No questions yet" is a defect.
+       python3 -c "import json,sys,urllib.request as u; d=json.load(u.urlopen(u.Request('http://localhost:<port>/api/catalogue',headers={'x-actor':'user-A'}))); r=[x for x in d['rows'] if x.get('nodeKey')=='family_sponsorship.spouse_partner'][0]; sys.exit(0 if any('No questions yet for' in m['text'] for m in r['missing']) else 1)"; echo "exit $? (1 = the line is gone)"
 4. Re-run fs/vv/sp/lmia/ee checks, C4.1 (six), C4.8 and C9.1 (checkpoint), `run-suites.sh --changed`, graph, count-any;
    Opus screen-reviewer on the diff; then ready + label `review: approved`. Delete this note in that commit.
 
