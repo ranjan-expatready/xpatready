@@ -56,8 +56,8 @@ const after = (await call("GET", `/editions/${ed}/option-maps`)).body.groups.fin
 ok("B81: the mark reads back on the group, with no problem left and saved", !!after && after.saved && after.problems.length === 0 && after.form_fields.length === paths.length, after);
 r = await save({ notOnForm: [], baseRevision: g.revision });
 ok("B81 fail (challenge M4): a save against what someone has changed since is refused, and says so", r.status === 409 && /changed these choices/.test(r.body.message), r);
-const drafted = (await call("POST", `/editions/${ed}/option-maps/draft`)).body.option_maps.filter((o: { fact: string }) => o.fact === "person.marital_status");
-ok("B81 (challenge M6): a new rules draft keeps the mark", drafted.length >= paths.length && drafted.every((o: { optionMap: { notOnForm?: string[] } }) => o.optionMap.notOnForm?.join() === unprinted.key), drafted.map((o: { optionMap: unknown }) => o.optionMap));
+const drafted = (await call("POST", `/editions/${ed}/option-maps/draft`)).body.option_maps.filter((o: { form_field: string }) => paths.includes(o.form_field));
+ok("B81 (challenge M6): a new rules draft keeps the mark", drafted.length === paths.length && drafted.every((o: { optionMap: { notOnForm?: string[] } }) => o.optionMap.notOnForm?.join() === unprinted.key), drafted.map((o: { optionMap: unknown }) => o.optionMap));
 ok("B81: the save is in the audit trail, naming the value", sql(`select count(*) from audit_event where action = 'changed' and detail::text like '%not on this form: ${unprinted.key}%'`) >= "1");
 
 // The real fill path on IMM 1295, which the fixture's sample fills with "married": that box does print Married, so the mark
