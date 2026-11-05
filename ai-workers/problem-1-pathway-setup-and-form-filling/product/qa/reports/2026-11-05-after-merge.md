@@ -119,3 +119,6 @@ The founder's test, reproduced by screens: the page choice refuses Start Up Visa
 
 ## Records ~14:05 IST: after #1058 (B82), C2.6 Works; QA-233, QA-242 closed
 Main 53515caef. C2.6 Works, 48/48 on the six (run 41994356502). C4.8 Works, 11/11 on the checkpoint (run 41994360877), 12/12 on the six (run 41994356502). The walk by screens at 1440 px closes what gate A left open: the draft's refusal (`2026-11-05-after-merge/c26-refusal-names-the-step-1440.png`) and the ask step (`c26-ask-step-1440.png`). Not on main by screen: release and the case (gate A's head), and two of the three facts and a No (`check_forms_b82_case_lines.ts`). New QA-253, QA-254 (Minor). **M2: 57/60** (not Works: C11.15, C4.11, C10.1).
+
+## Records ~15:00 IST: C11.15 Works, C4.5 Partial; QA-252 closed; QA-255 to QA-261
+**C11.15 Works** on main 64b67d056: 37/37 on the six (run 42001975299), every offered page on Super visa walked by screens, 8 of 8. **C4.5 Partial** on main 91a62168e: QA-255 (Major, reproduced by qa as far as the published type naming a withdrawn field, K's rows made by SQL) and QA-256 (Major, confirmed in the code, not run; no owner yet). QA-257 to QA-260 (Minor) come from the B83 builder's runs on main, not re-run by qa; F2's probe failed in its own setup. QA-261 (Minor). **M2: 57/60** (not Works: C4.5, C4.11, C10.1).
