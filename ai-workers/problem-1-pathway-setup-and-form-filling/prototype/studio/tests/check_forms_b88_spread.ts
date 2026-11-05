@@ -106,14 +106,14 @@ run(async () => {
   const statusOf = (id?: string) => sql(`select status from library_change where id='${id}'`);
 
   // ---------------------------------------------------------------- review M3: a returned or withdrawn Undo leaves the record true
-  r = await ask(sp, NAME, worked!, { clear: true });
+  r = await ask(sp, NAME, worked!, { ask: undefined, clear: true });
   const u3 = r.body?.id as string | undefined;
   ok("C4.11 B88 BR-7: proposing Undo closes the approved ask it would replace (one open change per form field)", !!u3 && statusOf(again) === "WITHDRAWN", statusOf(again));
   r = await call("POST", `/library/changes/${u3}/return`, { note: "Returned by a test: keep it asked (B88)." }, APPROVER);
   ok("C4.11 B88 review M3 pass: the Undo returned, the ask it closed is approved again, and still waits for the next release", r.status < 300 && statusOf(again) === "APPROVED" && mapOf(worked!) === ASKED_STEP, [r.status, statusOf(again)]);
   r = await call("POST", `/library/changes/${u3}/withdraw`, { note: "Withdrawn by a test (B88)." }, AUTHOR);
   ok("C4.11 B88 review M3 pass: withdrawing the returned Undo changes nothing more", r.status < 300 && statusOf(again) === "APPROVED" && statusOf(u3) === "WITHDRAWN", [r.status, statusOf(again), statusOf(u3)]);
-  r = await ask(sp, NAME, worked!, { clear: true });
+  r = await ask(sp, NAME, worked!, { ask: undefined, clear: true });
   const u4 = r.body?.id as string | undefined;
   r = await call("POST", `/library/changes/${u4}/withdraw`, { note: "Withdrawn while waiting by a test (B88)." }, AUTHOR);
   ok("C4.11 B88 review M3 pass: an Undo withdrawn while it waits puts the ask back too", r.status < 300 && statusOf(again) === "APPROVED", statusOf(again));

@@ -49,7 +49,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const under = '[data-form-field-conditions="person.other_family_name"]';
   let text = await check("Review and release, Study permit", under, "review-release");
   step("the problem's way out lists the plain form field and the worked-out Yes/No, with the form's printed question and the deciding question", /Not confirmed/.test(text) && /The form asks/.test(text) && /used any other name/.test(text) && /writes Y when Yes, N when No/.test(text), text);
-  const askBtn = p.locator(under).getByRole("button", { name: /^Asks the same as / });
+  const askBtn = p.locator(under).getByRole("button", { name: /^Asks the same question: / });
   step("one button to ask the worked-out Yes/No as its deciding question", (await askBtn.count()) === 1);
   await askBtn.focus();
   step("the button takes the keyboard's focus", await askBtn.evaluate((e) => e === document.activeElement));
