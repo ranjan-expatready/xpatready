@@ -4,6 +4,9 @@
 // save and the validator are checked on an isolated copy by tests/check_forms_b81_routes.ts.
 //   tsx studio/tests/check_forms_b81_not_on_form.ts
 import { codeForValue, draftOptionMap, notOnFormValue, optionMapProblems, pdfOptions, printedAs } from "../engine/options.ts";
+import { channelProblems } from "../engine/channels.ts";
+import { formValues } from "../engine/form-values.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
 import { readFileSync } from "node:fs";
 
 let pass = 0, fail = 0;
@@ -43,6 +46,18 @@ ok("B81: a value the form prints in its own words can never be marked; one it do
 const again = draftOptionMap(list, mother, ["unknown"]);
 ok("B81: a person's mark survives a new draft, and the value is not left open", again.optionMap.notOnForm?.join() === "unknown" && again.unmatched.length === 0, again);
 ok("B81: a draft with no mark stores nothing new (older option maps stay byte for byte)", !("notOnForm" in d.optionMap));
+
+// Filling and the release check, as a fill and Submit run them.
+const path = box("Mother").data_path!, entry = { data_path: path, outcome: "mapped", fact: "person.marital_status", transform: "option_map", caption: "Marital status:", option_map: marked };
+const snapshot = { canonical_fields: [{ id: "person.marital_status", answer_list: { values: list } }], forms: [], field_maps: [{ form_number: "IMM 5645", form_edition: "IMM 5645 (01-2021)", channel: "PDF", entries: [entry, { ...entry, data_path: "second" }] }] } as unknown as Snapshot;
+const fill = (value: string) => formValues(snapshot, { entries: [entry] }, { fields: [box("Mother")] }, [{ box: path, coverage: "confirmed fact", fact: "person.marital_status", value, transform: "option_map", about: "subject_parent_1" } as never]);
+const refused = fill("unknown"), written = fill("married");
+ok("B81 fail: a fill with a marked value writes nothing and says why in words, naming the answer; never a code or a nearest choice", refused.boxes[0].result === "by hand" && !(path in refused.values) && /prints no choice for "Unknown"/.test(refused.boxes[0].why ?? "") && /nothing is guessed/.test(refused.boxes[0].why ?? "") && !/option_map|person\.marital/.test(refused.boxes[0].why ?? ""), refused.boxes[0]);
+ok("B81 pass: a printed value on the same form field is written as the form's own code", written.boxes[0].result === "written" && written.values[path] === "5", written.boxes[0]);
+const probs = channelProblems(snapshot), marks = probs.filter((p) => /not on this form/.test(p.message));
+ok("B81: the release check blocks nothing for a marked value and warns once per form and value, in the answer's words", !probs.some((p) => p.level === "error") && marks.length === 1 && marks[0].level === "warning" && /"Unknown" is marked not on this form on 2 form fields/.test(marks[0].message), probs);
+const unmarked = { ...snapshot, field_maps: [{ form_number: "IMM 5645", form_edition: "IMM 5645 (01-2021)", channel: "PDF", entries: [{ ...entry, option_map: d.optionMap }] }] } as unknown as Snapshot;
+ok("B81 fail: the same form field without the mark blocks release", channelProblems(unmarked).some((p) => p.level === "error" && /no code for "unknown"/.test(p.message)), channelProblems(unmarked));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

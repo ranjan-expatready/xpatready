@@ -12,16 +12,18 @@ IMM 5645 (01-2021), official PDF `official-sources/ircc/forms/imm5645e.pdf` (sha
 
 ## Findings that change the brief (evidence, for the tech lead)
 1. **The 13 problems are mostly a reading bug, not missing choices.** `pdfOptions` ignored the drop-down's printed two columns and parsed the field map's transform text: Section B's "1=Annulled marriage" lost every multi-word choice (and "3=Divorced" gave the code `Divorced`, not `3`); Father's and Mother's `{…}` form gave nothing, hence "no option map yet". With the form's own columns the rules draft 7 of 8 on all 13 boxes; only `unknown` is left, the one true "not on this form".
-2. **"Two list values sharing one printed code": the case does not arise.** The list has one `married`; there are no "two married values" (that came from reading the Applicant's two printed choices as list values). **Decision: the route keeps refusing two values on one code**; no form on hand needs it. Recommendation only; the tech lead rules.
-3. **The real married problem runs the other way:** one list value against two printed choices on Applicant and Spouse. The draft's first-word rule would have picked "Married-physically present" silently. Fixed: a first word two printed choices share decides nothing, so it stays with a person. Those two boxes are undecided today; when they are mapped, `married` on them is a person's decision (a further fact, an expert's question), and this step shows it open. Marking it "not on this form" is refused only when the words are exactly printed; "Married" is not exactly printed there, so a person may mark it, and a married applicant is then refused at filling, in words, never guessed.
+2. **"Two list values sharing one printed code": the case does not arise for marital status.** Both marital lists (`marital_status`, `marital_status_2`) hold one `married`; there are no "two married values" (that came from reading the Applicant's two printed choices as list values). **Decision: the route keeps refusing two values on one code.** Recommendation only; the tech lead rules.
+3. **The real married problem runs the other way:** one list value against two printed choices on Applicant and Spouse. The draft's first-word rule would have picked "Married-physically present" silently. Fixed: a first word two printed choices share decides nothing. Those two boxes are undecided today. After the challenge (B1): this step neither marks `married` there (the form does print Married) nor picks one of the two (a content guess, ruling (b)); the row says "this form prints two Married choices: the immigration expert decides", and those boxes stay off the map ("filled by hand" already exists) until the expert answers.
 
 ## Business rules
 * **BR-1** Every code comes from the form's printed choices; nothing is typed (STANDARDS §3.2).
-* **BR-2** A value is marked only if the form does not print its own words: a value printed in its own words is refused ("…is on this form: it prints …"). A form field whose choices were not read cannot take a mark.
+* **BR-2** A value is marked only if the form prints nothing that could be it: the value's own words, a choice sharing its first word, or a choice its label ends with (the draft's own matching; "Legally Separated" against a printed "Separated") each refuse the mark ("…is on this form: it prints …"). Two or more such choices also refuse a pick ("the immigration expert decides"). A form field whose choices were not read cannot take a mark.
 * **BR-3** A marked value passes the release check, and the release shows one warning per form and value ("…a case with that answer is refused at filling…"). An unmarked value with no code still blocks Submit.
-* **BR-4** Filling a marked value writes nothing and says why, on that box; a person decides. Never the nearest choice.
-* **BR-5** One printed code takes one value. Only the author saves; others read (reason on the greyed control); saving is audited; a new rules draft keeps a person's marks.
-* **BR-6** Saved on the edition's draft field map, so it holds for every combination filing that edition and reaches a case only through a release.
+* **BR-4** Filling a marked value writes nothing and says, apart from "by hand" and naming the person: "the form has no such choice: leave it blank or change the answer". Never the nearest choice. Filing is not held (IMM 5645 marks no field required); whether a blank is acceptable to IRCC is Unconfirmed: expert.
+* **BR-5** One printed code takes one value. Only the author saves; others read (reason on the greyed control); saving is audited; a stale save gets 409 with the change named; a new rules draft fills only values with no saved code or mark.
+* **BR-6** Saved on the edition's draft field map, so it holds for every combination filing that edition (the dialog says so: "Saved on IMM 5645 (01-2021): N combinations file it") and reaches a case only through a release.
+* **BR-7** A new edition carries an option map only when the box's printed choices are identical; otherwise it has none and "no option map yet" blocks release.
+* **BR-8** A release problem on an option map links to this step and names it.
 
 ## Layout (EXPERIENCE: an existing drawer, no new page)
 On the line's drawer (Forms tab › a form › its panel), a section **"Choices this form prints"** under "Reading and matching", only for a PDF form with a form field on an answer list: one sentence ("13 form fields read Marital status. 1 answer has no printed choice.") and a **Set choices** button; a Pill "Blocks release" while a group has problems. It opens a dialog (the `Dialog` used by the Tests tab's editors):
@@ -30,14 +32,15 @@ On the line's drawer (Forms tab › a form › its panel), a section **"Choices 
 * the printed choices no answer takes are listed under the table ("Printed, no answer uses it: …"); Save per group, all or none; Cancel asks nothing unless changed (`guard`).
 States: loading, a read error with Retry, no such field (the section is absent), read-only, a server refusal shown on the dialog in its words. Works at 1440 and 1024 px, keyboard only.
 
-**Best in class:** tax interviews and bank onboarding map to a form's codes behind the scenes and say "not applicable on this form" instead of forcing a nearest answer; we copy the explicit refusal. Sources for this line: none read tonight, so it is judgement, not evidence.
+**Challenge:** independent Opus, verdict "Build after these changes" (`challenge.md`); its Blocker and five Majors are taken above (B1 → BR-2, M1 → BR-4, M2 → BR-7, M3 → BR-8, M4–M6 → BR-5, BR-6).
 
 ## Contract and tests
-`GET editions/:id/option-maps` (`OptionMapsView`) · `PATCH editions/:id/option-maps` (one field, gains `notOnForm`) · `PATCH editions/:id/option-maps/group` (`SetOptionMaps`) · `WorkspaceFormLine.editionId` (additive). No migration: `option_map` is JSON and `notOnForm` is written only when present, so existing snapshots keep their checksums. Pass and fail per BR: `tests/check_forms_b81_not_on_form.ts` (offline, 16), `tests/check_forms_b81_routes.ts` (API, fill refusal, Submit), `tests/check_forms_b81_browser.cjs` (1440 px walk). No question, label or list changes, so list `vv.single-ae2133b8a398` does not move.
+`GET editions/:id/option-maps` (`OptionMapsView`) · `PATCH editions/:id/option-maps` (one field, gains `notOnForm`) · `PATCH editions/:id/option-maps/group` (`SetOptionMaps`) · `WorkspaceFormLine.editionId` (additive). No migration: `option_map` is JSON and `notOnForm` is written only when present, so existing snapshots keep their checksums. Pass and fail per BR: `tests/check_forms_b81_not_on_form.ts` (offline, 16), `tests/check_forms_b81_routes.ts` (API, fill refusal, Submit), `tests/check_forms_b81_browser.cjs` (1440 px walk). No question or list changes, so list `vv.single-ae2133b8a398` does not move. One label point to check before Approve: saved IMM 5645 codes may let a case's answer label read "Annulled marriage" instead of "Annulled Marriage" (the challenger's inference; the browser check reads it).
 
 **Capability or scaffolding:** capability. **Needed for the proof:** yes (row 9). **US$0**, no AI.
 
 ## Questions for the tech lead
 1. Approve this drawer section and dialog as the new screen part? Recommended: yes.
 2. Two values on one code: keep refusing (finding 2)? Recommended: yes.
-3. `married` on Applicant and Spouse: leave open for a person and add a question for the expert when those boxes are decided, outside this row? Recommended: yes.
+3. `married` on Applicant and Spouse: no mark and no pick; those boxes stay off the map until the expert answers, outside this row? Recommended: yes.
+4. A value refused at filling does not hold filing (BR-4)? Recommended: yes, shown to the officer, the expert's question recorded.
