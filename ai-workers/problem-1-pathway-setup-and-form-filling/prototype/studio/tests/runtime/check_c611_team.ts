@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cannotAssign, cannotBeOfficer, cannotRepresent, imm5476, openingTeam, representativeAnswers, representativeContact, representativeFacts, representativeLicence, USES_REPRESENTATIVE, type Firm, type Member } from "../../engine/runtime/team.ts";
 import { RUNTIME_ACTORS } from "../../api/src/core.ts";
+import { FORMAT_CHECKS } from "../../engine/field-format.ts";
 import { client, recorder } from "./api.ts";
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_runtime_m3a";
@@ -65,6 +66,11 @@ function pure() {
   const withCase = representativeAnswers(firm, one, "case-subject");
   ok("C6.11 pass: a case with a representative of record answers \"Uses a representative\" Yes for the application, from the firm record", withCase.some((x) => x.subjectId === "case-subject" && x.field === USES_REPRESENTATIVE && x.value === true && x.channel === "firm_record" && x.actor === REP));
   ok("C6.11 fail: without a representative of record nothing answers \"Uses a representative\"; without the case's subject it is not given", !representativeAnswers(firm, [], "case-subject").some((x) => x.field === USES_REPRESENTATIVE) && !ra.some((x) => x.field === USES_REPRESENTATIVE));
+  // The firm record's e-mail passes IRCC's own e-mail check (engine/field-format.ts: 2 to 6 letters after the last dot),
+  // so IMM 5476's representative section never shows "to fix" for a value nobody on the case can change.
+  const email = (v: string) => FORMAT_CHECKS.email.test(v, {}, {}) === null;
+  ok("C6.11 pass: every firm user's e-mail passes IRCC's e-mail check", FIRMS.every((x) => x.users.every((u) => !u.email || email(u.email))), FIRMS.flatMap((x) => x.users.map((u) => u.email)));
+  ok("C6.11 fail: the old Sample address (7 letters after the last dot) does not", !email("representative@sample-firm.example"));
   const rcKeys = representativeContact(firm, one) ?? {};
   ok("C6.11 pass: the office and e-mail also come under the keys the configured checkpoint's IMM 5476 map reads (address, phone split in two)", rcKeys["person.address_city"] === "Toronto" && rcKeys["person.email"] === rcKeys["person.email_address"] && rcKeys["person.phone_country_code"] === "1" && rcKeys["person.phone_number"] === "4165550100", rcKeys);
   ok("C6.11 fail: the first representative asks for no new IMM 5476", imm5476(one).new_needed === false);
