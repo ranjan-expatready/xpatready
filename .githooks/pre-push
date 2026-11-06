@@ -11,10 +11,10 @@ while read -r lref lsha rref rsha; do
   [ "$rref" = refs/heads/main ] && [ -z "$XR_ALLOW_MAIN_PUSH" ] && { echo "Push to main refused (P-87): push your branch and open a PR."; rc=1; continue; }
   # P-91: the scout lane (Goose) pushes only its own files and small fixes.
   case "$lref" in refs/heads/scout/*) bash "$ROOT/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh" scope "$lsha" || { rc=1; continue; };; esac
-  if [ "$rsha" = "0000000000000000000000000000000000000000" ]; then
-    "$GUARD" --unpushed "$lsha" || rc=1
-  else
-    "$GUARD" "$rsha..$lsha" || rc=1
-  fi
+  # New or existing branch alike: check every commit on the pushed head that is not on any remote yet. A commit already
+  # on GitHub passed this guard when it was pushed; checking "$rsha..$lsha" re-checked main's own commits after a merge
+  # of main and refused clean pushes (6 Nov, #1072: a canada.ca capture already on main). Never weaker: a commit on no
+  # remote is always checked; a stale remote-tracking ref only makes the check wider.
+  "$GUARD" --unpushed "$lsha" || rc=1
 done
 exit $rc
