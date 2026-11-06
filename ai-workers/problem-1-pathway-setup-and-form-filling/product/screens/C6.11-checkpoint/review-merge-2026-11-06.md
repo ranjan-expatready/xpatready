@@ -167,3 +167,21 @@ None new.
 Both round-3 Minors are fixed as asked. The C10.1 row 12 fix is correct, in the right place, and keeps main's behaviour and the M1 ruling. The one remaining item is a latent trap in test helpers, for a follow-up row.
 
 **Approve**
+
+## Merge check, 28d3137f
+
+Independent reviewer, 6 Nov 2026. This checks the merge alone, not a review round. 28d3137f merges this branch (64246654) with origin/main d506fb49 (#1174, push-guard fix). Its merge base is 237baacd, the main of the round-3 merge, so main brought only #1174's three commits: d3f22dc5, 7472cda4 and 6b0d38d2.
+
+1. **The merge brings exactly what main brought.** `diff <(git diff 64246654 28d3137f) <(git diff 237baacd d506fb49)` prints nothing; the two diffs are byte for byte the same. Both touch two files only: `.githooks/pre-push` (+5 −5) and `product/tools/push-guard.sh` (+18 −9).
+2. **No file of this PR changed, and there were no conflicts.**
+   * `git show --cc 28d3137f` shows no combined hunks (0 `diff` headers).
+   * `git diff --name-only 237baacd 64246654` holds neither `pre-push` nor `push-guard.sh`, so the two sides share no file.
+3. **#1174 changes nothing in how this PR's code or tests behave.** It touches only the local pre-push hook and the guard script, and no app, engine, contract, sample or test file.
+   * The hook's change: a push now checks `--unpushed <head> <remote>`, the commits that are not yet on that remote's branches.
+   * The guard's changes:
+     * it uses a private temp folder and refuses when it cannot make one;
+     * it holds hits in variables instead of files;
+     * it refuses when it cannot list the commits to check.
+   * CI calls the guard in range mode (`base..head`, `.github/workflows/ci.yml:67, 192, 368, 399`). That mode's checks are unchanged apart from where the temp files go.
+
+**Merge OK**
