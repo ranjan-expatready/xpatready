@@ -15,7 +15,7 @@ import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from 
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
-import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
+import { openingTeam, REPRESENTATIVE, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
@@ -36,6 +36,16 @@ const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const short = (id: string) => id.slice(0, 8);
 const nameIn = (f: { users: { id: string; name: string }[] }, id: string) => f.users.find((u) => u.id === id)?.name ?? id;
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
+type PeopleLine = { role: string; max?: number; label?: string; filingMode?: string };
+const linesOf = (s: Snapshot) => (s.combination.participants ?? []) as PeopleLine[];
+const roleWords = (p: Pick<PeopleLine, "role" | "label">) => p.label ?? p.role.replace(/_/g, " ");
+/** B115 (P-319): who a person may add to a case: every role the pinned release lists with a maximum above 0, never the
+ *  principal applicant or the application itself. One list for the case page's Add buttons and addPerson's check. */
+export const addableRoles = (s: Snapshot) => linesOf(s).filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0);
+/** B115 review M1 (C7.7): the case page's Add buttons. The representative is the case team's representative of record,
+ *  read from the firm record (engine/runtime/team.ts: "A case has no representative participant"), so the screen never
+ *  offers to add one as a person; every other role comes from the release (P-319). */
+export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
@@ -126,14 +136,20 @@ export class Runtime {
     const pin = c.pins[0];
     // C6.11: staff see the case team in the header (the client's screens come after M3, P-129).
     const team = isOfficer(actor) ? await this.teamLine(c.id) : undefined;
+    const snapshot = this.snapshotOf(c), roleOfRelease = new Map(linesOf(snapshot).map((p) => [p.role, roleWords(p)]));
+    const coFiling = new Set(linesOf(snapshot).filter((p) => p.filingMode === "co_files").map((p) => p.role));
     return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
       // G13 (QA-140): the release in the studio's own words.
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
-      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })),
+      // B115: each person's role in the release's own words (the sponsor has no fixed word on the screen).
+      // B115 review m1: co_files marks the person whose application is always sent with the principal's (the sponsor).
+      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role) })),
+      // B115 (P-319): the roles the case page offers to add, from its pinned release, with how many the case has.
+      can_add: offeredRoles(snapshot).map((p) => ({ role: p.role, label: roleWords(p), max: p.max!, has: c.participants.filter((x) => x.role === p.role).length })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
       // C1.3: and, once picked, the employer case it relies on (its facts copied then, never updated later).
-      ...(team ? { employer_link: { ...employerLinkOffer(this.snapshotOf(c)), linked: await linkedOf(this.db, c.workspaceId, c.id) } } : {}) };
+      ...(team ? { employer_link: { ...employerLinkOffer(snapshot), linked: await linkedOf(this.db, c.workspaceId, c.id) } } : {}) };
   }
 
   /** V3 B1 (runtime side, P-297 (3)): what the "Open a case" dialog may offer. Each not retired combination's newest
@@ -173,12 +189,12 @@ export class Runtime {
     return { firm: f ? { key: f.key, name: f.name, solo: f.solo } : null, stand_in: STAND_IN, representative: rep ? { id: rep.userId, name: name(rep.userId), licence: f?.users.find((u) => u.id === rep.userId)?.licence ?? null } : null, officers: rows.filter((r) => r.role === "OFFICER").map((r) => ({ id: r.userId, name: name(r.userId) })) };
   }
 
-  /** Adds a spouse or child within the pinned release's limits. The case row is locked while counting, so simultaneous
+  /** Adds a person in any role the pinned release lists (addableRoles), within its limits. The case row is locked while counting, so simultaneous
    *  adds are counted one after the other (each lawful one succeeds; the one over the limit is refused). */
   async addPerson(actor: Actor, caseId: string, body: unknown) {
     const c = await this.reach(actor, caseId, "officer");
     const b = parse(NewPerson, body);
-    const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string; filingMode?: string }[];
+    const limits = linesOf(this.snapshotOf(c));
     const limit = limits.find((p) => p.role === b.role);
     // C11.12 BR-6: a role released as Declared only starts as not travelling when the request does not say.
     if (limit?.filingMode === "declared_only" && (body as { applies?: unknown } | null)?.applies === undefined) b.applies = false;
@@ -187,7 +203,7 @@ export class Runtime {
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
-    const addable = limits.filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0).map((p) => (p.label ?? p.role.replace(/_/g, " ")).toLowerCase());
+    const addable = addableRoles(this.snapshotOf(c)).map((p) => roleWords(p).toLowerCase());
     if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add."}`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
@@ -229,7 +245,7 @@ export class Runtime {
     const p = c.participants.find((x) => x.subjectId === subjectId && x.role !== "case" && x.role !== "principal");
     if (!p) fail("Only a spouse, partner or child on this case can be marked travelling or not.", HttpStatus.NOT_FOUND);
     // C11.12 BR-6: a co-filing role (the sponsor) is not travelling or not: its application always goes with the principal's.
-    const line = ((this.snapshotOf(c).combination.participants ?? []) as { role: string; filingMode?: string; label?: string }[]).find((x) => x.role === p!.role);
+    const line = linesOf(this.snapshotOf(c)).find((x) => x.role === p!.role);
     if (line?.filingMode === "co_files") fail(`The ${(line.label ?? "sponsor").toLowerCase()}'s application is always sent with the principal's.`, HttpStatus.UNPROCESSABLE_ENTITY);
     // C8.2 review M1: under the case's row lock, so a record and this change never pass each other.
     await this.db.$transaction(async (tx) => {

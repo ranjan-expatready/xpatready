@@ -10,6 +10,8 @@ export const OwnQuestion = z.object({
   meaning: said.pipe(z.string().max(500, "Keep the meaning under 500 characters.")).optional(),
   nearReason: said.pipe(z.string().min(10, "Say in a sentence why it is not the same as the field it is close to (10 characters or more).").max(300)).optional(),
   reason: said.pipe(z.string().min(8, "Say why in a sentence (at least 8 characters).").max(300)),
+  /** B116: the form's own question, quoted, for a form field nothing fills yet whose reading prints another box's words. */
+  question: said.pipe(z.string().min(10, "Quote the form's question (10 characters or more).").max(500, "Keep the quoted question under 500 characters.")).optional(),
 }).strict();
 export const OwnQuestionUndo = z.object({ dataPath: z.string({ error: "Name the form field." }).min(1, "Name the form field.").max(300) }).strict();
 
@@ -18,7 +20,7 @@ export type AskedAs = { name: string; waiting: boolean; change_id: string | null
 export type OwnQuestionRow = { dataPath: string; question: string | null; page: string | null; field: string | null; group: string; worked_out_from: string[]; worked_out_from_names: string[]; asked: boolean; asked_as: AskedAs | null; can_ask: boolean; why_not: string | null };
 export type OwnQuestionsView = { edition: { id: string; label: string; form: string }; fields: OwnQuestionRow[]; yes_no_fields: { key: string; name: string; meaning: string | null }[] };
 /** What undo did: `kept` says why a new field stays waiting, `still_asked` names the sections that still ask it (words only). */
-export type OwnQuestionUndone = { dataPath: string; field: string; withdrew: boolean; kept: string | null; still_asked: string | null };
+export type OwnQuestionUndone = { dataPath: string; field: string | null; withdrew: boolean; kept: string | null; still_asked: string | null };
 /** What a withdrawal would leave, or has left, reading a new field, by name (BR-11). */
 export type FieldReadersView = { readers: string[]; taken_out: string[] };
 /** The answer to withdrawing a new field: form fields back to no decision, back to worked out, and what still reads it. */

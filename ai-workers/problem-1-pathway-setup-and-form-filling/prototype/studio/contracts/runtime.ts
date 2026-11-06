@@ -169,6 +169,9 @@ export type FormCopy = {
   /** C-9, C-10 (P-144, P-171 (1)): the newest validated copy read back for this copy; current: the form's facts are
    *  unchanged since; otherwise "Out of date: validate again" (kept as history, never deleted). */
   validated: { at: string; by: string; current: boolean; words: string; read_back: { written: number; equal: number } } | null;
+  /** QA-285: with no current validated copy here, the words saying its validated file is kept elsewhere (the checkpoint's
+   *  Sample, validated and read back on the Mac) while the form's facts are the ones validated; never counted as validated. */
+  validated_elsewhere?: string | null;
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
