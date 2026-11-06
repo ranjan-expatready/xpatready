@@ -11,6 +11,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { seedAnswerList } from "./seed_library.cjs";
+import { planted, tsFiles } from "./lib/ts-files.ts";
 
 const PORT = Number(process.argv[2] ?? 4447), DB = process.argv[3] ?? "xr_studio_screens_p149";
 process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
@@ -402,11 +403,15 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const scan = (files: [string, string][]) => files.flatMap(([f, text]) => text.split("\n").flatMap((line, i) => [...line.matchAll(CREATE)].map(() => ({ file: f, line: i + 1, text: line }))))
     .filter((h) => h.file !== "proposals.ts" && ![...ALLOW, ...OWED].some((a) => a.file === h.file && a.near.test(h.text)));
   const src = join(STUDIO, "api", "src");
-  const files = readdirSync(src).filter((f) => f.endsWith(".ts")).map((f) => [f, readFileSync(join(src, f), "utf8")] as [string, string]);
+  // B120: subfolders too (the configured checkpoint's steps write library rows through services, in features/checkpoint/).
+  const read = (dir: string) => tsFiles(dir).map((f) => [f, readFileSync(join(dir, f), "utf8")] as [string, string]);
+  const files = read(src);
   const hits = scan(files);
   ok("C3.6 P-149 scan pass: no library item is created outside the one door (allowlist: the P-65 merge, the C11.9 own-delete Undo)", hits.length === 0, hits.map((h) => `${h.file}:${h.line}`));
   ok("C3.6 P-149 scan pass: the door itself lands fields, sections, answer lists and document types", ["canonicalField", "logicalSection", "answerList", "documentType"].every((m) => new RegExp(`${m}\\.create\\(`).test(files.find(([f]) => f === "proposals.ts")![1])));
   ok("C3.6 P-149 scan fail: a planted free add in another file is caught", scan([["planted.ts", "await this.db.logicalSection.create({ data: {} });"]]).length === 1);
+  ok("C3.6 P-149 scan fail (B120): a free add planted in a subfolder is caught", scan(read(planted({ "features/checkpoint/combination/999-planted.ts": "await ctx.db.logicalSection.create({ data: {} });" }))).length === 1);
+  ok("C3.6 P-149 scan pass (B120): the scan reads the checkpoint's step files", files.some(([f]) => f.startsWith("features/checkpoint/combination/")), files.length);
   const owed = OWED.filter((o) => files.some(([f, t]) => f === o.file && t.split("\n").some((l) => o.near.test(l))));
   console.log(`NOTE  owed by other lanes (${owed.length}): ${owed.map((o) => `${o.file}: ${o.why}`).join(" · ")}`);
 
