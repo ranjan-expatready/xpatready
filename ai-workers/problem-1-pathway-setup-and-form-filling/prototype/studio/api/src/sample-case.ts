@@ -34,7 +34,9 @@ export type SampleCase = { caseId: string | null; release: number | null; people
   /** B99: the Sample file's answers saved, the rows added, the groups said none apply, the sections confirmed, and what was refused. */
   sampleAnswers: number; rows: number; noneApply: number; confirmed: number; answerRefused: string[];
   /** B99 (row 12b): the IMM 5257 copies whose saved validated read-back counts (same facts as the copy validated), and why not. */
-  validated: number; validatedWhy: string[] };
+  validated: number; validatedWhy: string[];
+  /** QA-285: the copies whose saved read-back counts but whose validated file is not in the local folder (kept on the Mac). */
+  validatedKeptOnMac: number };
 
 /** How long one copy may take before the next is asked for (a fill takes about a second). */
 const COPY_WAIT_MS = 60_000;
@@ -44,7 +46,7 @@ const COPY_WAIT_MS = 60_000;
  *  so the next is asked for only when the last has finished. Each refusal is kept in words; nothing is forced. */
 export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: CaseForms, combinationId: string): Promise<SampleCase> {
   const officer = RUNTIME_ACTORS.find((a) => a.id === "user-O")!;
-  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0, sampleAnswers: 0, rows: 0, noneApply: 0, confirmed: 0, answerRefused: [], validated: 0, validatedWhy: [] };
+  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0, sampleAnswers: 0, rows: 0, noneApply: 0, confirmed: 0, answerRefused: [], validated: 0, validatedWhy: [], validatedKeptOnMac: 0 };
   const said = (e: unknown) => String((e as { response?: { detail?: string; message?: string } }).response?.detail ?? (e as { response?: { message?: string } }).response?.message ?? (e as Error).message).slice(0, 200);
   let opened: { id: string; pin?: { release_version?: number }; people?: unknown[] };
   try { opened = await runtime.createCase(officer, { combinationId, reference: SAMPLE_CASE.reference, clientActor: "user-P", principal: { displayName: SAMPLE_CASE.principal }, idempotencyKey: "sample-vv-family-1" }) as typeof opened; }
@@ -79,8 +81,9 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
   }
   out.applicants = (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing && x.form === "IMM 5257").length;
   // B99 (row 12b): a person's Validate in Adobe, read back on the Mac, counts only for a copy with the same facts.
-  const v = await replaySavedReadBacks(db, opened.id, officer.id);
-  out.validated = v.written; out.validatedWhy = v.why;
+  // QA-285: each validated file from the local folder goes through the product's own upload door, as the officer sends it.
+  const v = await replaySavedReadBacks(db, opened.id, (copyId, file) => forms.validated(officer, copyId, [file]));
+  out.validated = v.written; out.validatedKeptOnMac = v.keptOnMac; out.validatedWhy = v.why;
   return out;
 }
 

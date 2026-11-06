@@ -5,6 +5,9 @@
 // A release 2 mixed) … the thin family case on release 1 with IMM 5257 filled") and stays red after #113 until the
 // rows it waits on are built. No live AI (US$0): AI in a checkpoint is saved answers replayed (DEMO.md).
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/acceptance/C10.1.test.ts 4448 xr_studio_accept
+import { createHash } from "node:crypto";
+import { request } from "node:http";
+import { localValidatedFile, savedReadBacks, VALIDATED_DIR_ENV, validatedDir } from "../api/src/sample-validated.ts";
 import { client, recorder } from "../tests/runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
@@ -13,7 +16,12 @@ const { ok, summary } = recorder();
 const n = (q: string) => Number(sql(q) || 0);
 type Row = { row: string; title: string; status: string; shows: string; why: string | null };
 const GATE = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "17"];
-const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
+const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B", OFFICER = "user-O";
+/** A download's status, bytes and file name (the API's JSON client reads text). */
+const bytes = (path: string, actor: string) => new Promise<{ status: number; body: Buffer; name: string }>((resolve, reject) => {
+  const req = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, headers: { "x-actor": actor }, agent: false }, (res) => { const c: Buffer[] = []; res.on("data", (x: Buffer) => c.push(x)); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(c), name: /filename="([^"]+)"/.exec(String(res.headers["content-disposition"] ?? ""))?.[1] ?? "" })); });
+  req.on("error", reject); req.end();
+});
 
 (async () => {
   // ── Part A: what PR #113 promises ──
@@ -91,7 +99,25 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   const filled = vvCase ? n(`select count(distinct i.subject_id) from form_instance i join config_release r on r.id = i.config_release_id where i.case_id = '${vvCase}' and i.form_number = 'IMM 5257' and i.status = 'GENERATED' and r.version = 1`) : 0;
   const readBack = vvCase ? n(`select count(*) from validated_copy v join form_instance i on i.id = v.form_instance_id where i.case_id = '${vvCase}' and i.form_number = 'IMM 5257' and v.read_back is not null`) : 0;
   ok("C10.1 R12a part B (DEMO.md row 12, C7.1): IMM 5257 is generated for each applicant of the case, on release 1", applicants === 4 && filled === applicants, { applicants, filled });
-  ok("C10.1 R12b part B (DEMO.md row 12, C7.2): each IMM 5257 copy has a validated copy read back (Validate, P-171)", filled > 0 && readBack >= filled, { filled, readBack });
+  // QA-285 (founder ~10:05 IST 6 Nov: "Files stay on the Mac"): the four validated PDFs are read from the local folder
+  // STUDIO_VALIDATED_DIR (api/src/sample-validated.ts) where it holds them, the same folder this copy's server reads. With
+  // them (the Mac), each is read back through the upload door; without them (GitHub, a fresh machine), no validated copy is
+  // recorded and each copy says in words that its validated file is kept on the Mac (Sample), never "validate again".
+  const saved = savedReadBacks()?.copies ?? [], dir = validatedDir();
+  const here = saved.length > 0 && saved.every((x) => localValidatedFile(dir, x).kind === "found");
+  const copies5257 = vvCase ? sql(`select i.id || '§' || s.label from form_instance i join answer_subject s on s.id = i.subject_id where i.case_id = '${vvCase}' and i.form_number = 'IMM 5257' and i.status = 'GENERATED' order by s.label`).split("\n").filter(Boolean).map((x) => x.split("§")) : [];
+  const views = await Promise.all(copies5257.map(async ([id, who]) => ({ id, who, v: (await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body as { validated?: { current?: boolean; words?: string } | null; validated_elsewhere?: string | null } })));
+  ok(`C10.1 R12b part B (DEMO.md row 12, C7.2): each IMM 5257 copy has its Validate read back (P-171): ${here ? "with the validated files here, a validated copy read back through the upload door for each" : "without the validated files (kept on the Mac), no validated copy recorded and each copy says so in words, Sample"}`, filled > 0 && views.length === filled && (here
+    ? readBack === filled && views.every((x) => x.v?.validated?.current === true && x.v.validated.words === "Validated copy read back" && !x.v.validated_elsewhere)
+    : readBack === 0 && views.every((x) => !x.v?.validated && /kept on the Mac/.test(x.v?.validated_elsewhere ?? "") && /Sample/.test(x.v?.validated_elsewhere ?? "")) && /kept on the Mac/.test(r("12")?.shows ?? "")) && !/validate (the|this) copy again|validate again/i.test(`${r("12")?.shows} ${r("12")?.why ?? ""}`), { here, filled, readBack, copies: views.map((x) => `${x.who}: ${x.v?.validated?.words ?? x.v?.validated_elsewhere ?? "none"}`) });
+  // R12c: Download gives the validated file itself, the one validated in Adobe (its checksum the saved read-back's). Held on
+  // GitHub only (QA-285; the PR names it): there the files are not, so it prints HELD with what the copy says instead.
+  const got = await Promise.all(views.map(async (x) => ({ ...x, d: await bytes(`/runtime/form-copies/${x.id}/file`, OFFICER), want: saved.find((s) => s.person === x.who)?.validated_sha256 })));
+  if (here) ok("C10.1 R12c part B (QA-285): Download of each IMM 5257 copy gives 200 and the validated file, its sha256 the saved read-back's", got.length === filled && filled > 0 && got.every((x) => x.d.status === 200 && !!x.want && createHash("sha256").update(x.d.body).digest("hex") === x.want && /-validated-/.test(x.d.name)), got.map((x) => `${x.who}: ${x.d.status} ${x.d.name}`));
+  else {
+    ok("C10.1 R12d part B (QA-285, files absent): without the validated files, Download of each copy says in words that its validated file is kept on the Mac (Sample), and never hands over the unvalidated copy or a 404 \"validate the copy again\"", got.length === filled && filled > 0 && got.every((x) => x.d.status === 409 && /kept on the Mac/.test(x.d.body.toString()) && !/validate the copy again/.test(x.d.body.toString()) && x.d.body.subarray(0, 5).toString() !== "%PDF-"), got.map((x) => `${x.who}: ${x.d.status} ${x.d.body.toString().slice(0, 120)}`));
+    console.log(`HELD  C10.1 R12c part B (QA-285): red, held: the validated PDFs are kept on the Mac (founder ~10:05 IST 6 Nov), not on this machine (${VALIDATED_DIR_ENV} has no checked file for ${saved.filter((x) => localValidatedFile(dir, x).kind !== "found").map((x) => x.person).join(", ") || "any copy"}); this step runs on the Mac with ${VALIDATED_DIR_ENV} set, and its run and exit code are named in the PR.`);
+  }
   ok("C10.1 part B (rows 7, 9, 11, 12, 17): every row of the gate except the Parked row 2 (P-102) is done", rows.length === GATE.length && rows.filter((x) => x.row !== "2").every((x) => x.status === "done") && (r("2")?.status === "out" || /parked/i.test(`${r("2")?.status} ${r("2")?.shows}`)), rows.filter((x) => x.status !== "done").map((x) => `${x.row} ${x.status}`));
 
   // Who may load and reset: the author only (demo.ts need(actor, "author")); case people and clients are refused.
