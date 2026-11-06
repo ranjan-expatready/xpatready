@@ -66,4 +66,23 @@ Re-run on fresh copies, 6 Nov 10:42–10:46 IST, every suite exit 0:
 | `check_c10_1_configured.ts` | 48/48 | 48/48 |
 | `check_qa285_validated_files.ts` | 13/13 (no server) | |
 
+**Round 3 (#1156 CI shard 1, gate B).** Under gate B's runner, which is the tsx CLI with no API tsconfig, the pack did not compile: "Transform failed with 3 errors … Parameter decorators only work when experimental decorators are enabled". The cause: the pack imports `sample-validated.ts`, which imported `core.ts`, and `core.ts` holds NestJS's parameter decorators.
+* My earlier pack runs went through `node --import tsx` with the API tsconfig, so they missed it. The `check_*` suites run with `--tsconfig api/tsconfig.json` in CI too, so they were not affected.
+* **Fix:** `sample-validated.ts` now imports only the `Db` type from `core.ts` (erased when the file loads) and works out STUDIO and ROOT itself. `check_qa285_validated_files.ts` checks that its default folder equals the one `core.ts`'s ROOT gives.
+* **Reproduced, then green, the way gate B runs the pack:**
+  * `tsx studio/acceptance/C10.1.test.ts PORT DB` from `prototype/`, with no `--tsconfig`, on a fresh copy prepared as gate B prepares it (no validated folder), with gate B's own `packVerdict` on steps R12a, R12b, R12d.
+  * On the six (Reset to the six, 201): **exit 0, 28/28; named steps green; R12c HELD.**
+  * On the checkpoint (reset 201, load 201): **exit 0, 28/28; named steps green; R12c HELD.**
+  * `gate-b.mjs` itself could not start its isolated copies in this sandbox, because `isolated.sh` checks the database with `pg_ctl status`, which the sandbox refuses.
+* **Also re-run, all exit 0 (11:05–11:15 IST):**
+
+| Suite | Result |
+|---|---|
+| `check_c10_1_configured.ts` (no folder) | 48/48 |
+| `check_qa144_ee_release.ts` (no folder) | 26/26 |
+| `check_forms_b99_family_hash.ts` | 8/8 |
+| `check_qa285_validated_files.ts` | 13/13 |
+
+  The type check found no new errors.
+
 **First try, not pushed.** It wrote the kept-on-the-Mac words onto the copy's result. The database guard refused that ("a generated copy is never overwritten"), and the checkpoint load stopped with a 500. So the words are now worked out when the copy is read.
