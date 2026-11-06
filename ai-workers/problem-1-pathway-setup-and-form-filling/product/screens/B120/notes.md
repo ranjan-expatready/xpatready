@@ -128,3 +128,22 @@ Each scan reads `api/src` recursively (`.ts`, not `.d.ts`). For each one, a fail
 3. **Porting the open PRs:** #1073, #1084 and #1072 will conflict once and must move their change into the new files. **Recommend:** the PR body carries the old-line → new-file map (§3), and the dry-run ports from check 3 are offered to #1073 and #1084 as patches; their builders apply them. I do not push to their branches.
 4. **M2 hot-file list:** `m2-hot-files.txt` names `studio/api/src/demo.ts`, and the checkpoint moves to `studio/api/src/features/checkpoint/`. **Recommend:** the tech lead adds `studio/api/src/features/checkpoint/` and `studio/api/src/features/placement/` in the same merge window, or retires the list once M2 = 60. Otherwise the M3 guard silently stops covering the checkpoint.
 5. **Finding, not fixed here:** Reset to the six differs from run to run on `main` (§5 baseline: 2 AI replay steps at once change which twin proposal is "first", its ready/check confidence and its near-name hints; three lists follow random-id order). **Recommend:** a small runtime or forms row that makes the replay's result independent of step order (decide twins by a stable key, not by arrival). Then the dump check can run without the serialising patch, and change 1's parity report can too.
+
+## 7. Draft measured before #1123 (6 Nov, 07:58–08:30 IST; a scratch checkout of `main` c8c65785e, never pushed)
+
+#1123 was still open (CI re-running), so the split was drafted and measured in a scratch checkout, then is replayed onto this branch once #1123 is on `main`. Numbers below are for the draft against `main` c8c65785e; the PR repeats them against the `main` it merges into.
+
+| Check | Result |
+|---|---|
+| Configured checkpoint, draft vs `main`, fresh isolated copies, AI queue serialised in both (§5) | `cmp` exit 0: 10,391 rows in 88 tables, 136 working files (45 encrypted PDFs by size) |
+| Reset to the six, draft vs `main` | `cmp` exit 0: 1,251 rows, 59 working files |
+| The dump catches a change (one question placement retired on the draft copy, dumped again) | `cmp` exit 1, 2 lines |
+| Masks added while comparing two different checkouts, each named in the tool's header | Reset's fingerprint of the code ("Engine and application source": 427 vs 386 files, the 41 new step files); the studio folder's absolute path in a filled form's report (two checkouts in two folders). Nothing else differed. |
+| Start-up refusals (`tests/check_features_registry.ts`) | 22 passed, 0 failed: one number twice, no `run`, no default export, a misnamed file, a non-lower-case name; order, `init`, per-run state; the real folders load in the old order |
+| Guard scans read subfolders (§4) | each with a planted subfolder file caught; mutation check: with a flat walk `check_irm_editions.ts` fails 2 of 13 (exit 1), restored exit 0 |
+| Two parallel changes (§5, 3) | #1084 → `checkpoint/097-j7-stage-one.ts` (with its own 57 files); #1073 → `combination/325-conditional-documents.ts` (with its samples file; its other files conflict with `main` on their own, not with the split). Shared files: 0; neither touches `demo.ts` or `form-part-placements.ts`; merge each into the other: exit 0 both orders, identical trees; merged, both steps run (10,403 rows; J7 Stage 1 and C6.4 lines in the load's log) |
+| `typecheck.mjs` | PASS, no new errors (15 known); `api/tsconfig.json` now includes `src/features/**/*.ts`, else the step files would not be type-checked at all |
+| `graph.mjs --check` | exit 0, same counts as `main` (G3 12, G6 5) |
+| `count-any.mjs --against origin/main` | exit 0, 418 = 418 |
+
+Size: `demo.ts` 1,095 → 561 lines; `form-part-placements.ts` 181 → 82; 41 new files (18 checkpoint steps, 14 combination steps, 2 placement passes, 7 helpers).
