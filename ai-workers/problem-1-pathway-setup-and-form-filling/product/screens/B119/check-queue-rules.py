@@ -83,6 +83,7 @@ CASES = [  # (what, the PR, the queue it must join)
     ("records without the review label: no queue", pr([f"{R}/STATE.md"], labels=()), None),
     ("records with ci not green: no queue", pr([f"{R}/STATE.md"], checks=()), None),
     ("records against another base: no queue", pr([f"{R}/STATE.md"], base="lead/x"), None),
+    ("a draft records PR: no queue (a draft runs no check, #875; #1139 adds -draft to m2 and m3)", pr([f"{R}/STATE.md"], draft=True), None),
     ("code without the review label: no queue", pr([f"{P}/prototype/studio/api/src/core.ts"], labels=()), None),
 ]
 
@@ -99,6 +100,8 @@ def problems(cfg):
         for need in ("base = main", "label = review: approved", "check-success = ci"):
             if need.replace(" ", "") not in [c.replace(" ", "") for c in conds]:
                 out.append(f"queue {q.get('name')}: queue_conditions lack {need!r} (no gate removed)")
+        if q.get("name") == "records" and "-draft" not in [c.strip() for c in conds]:
+            out.append("queue records: queue_conditions lack '-draft'")
         if "check-success = ci" not in [c.strip() for c in q.get("merge_conditions", []) if isinstance(c, str)]:
             out.append(f"queue {q.get('name')}: merge_conditions lack 'check-success = ci' (the batch is tested)")
     pats = set()
@@ -137,6 +140,12 @@ def mutations(cfg):
             q["queue_conditions"] = [re.sub(r"\^\(\?!.*\$\)$", "^(?!.+$)", x) if isinstance(x, str) and "files" in x else x
                                      for x in q["queue_conditions"]]
         return c
+    def drift(c):
+        c = copy.deepcopy(c)
+        for q in c["queue_rules"]:
+            if q["name"] == "m3":
+                q["queue_conditions"] = [x.replace("|history/.+", "") if isinstance(x, str) and "files" in x else x for x in q["queue_conditions"]]
+        return c
     def reorder(c):
         c = copy.deepcopy(c); c["queue_rules"] = c["queue_rules"][-1:] + c["queue_rules"][:-1]; return c
     def no_records(c):
@@ -155,6 +164,10 @@ def mutations(cfg):
         ("the records pattern matches every file", widen(cfg)),
         ("the records pattern loses its end anchor (STATE.md.bak passes)", unanchored(cfg)),
         ("records listed first (higher priority than product)", reorder(cfg)),
+        ("m3's records pattern drifts from m2's (history/ dropped)", drift(cfg)),
+        ("m2 drops base = main", drop("m2", lambda x: x.replace(" ", "") == "base=main")),
+        ("records drops base = main", drop("records", lambda x: x.replace(" ", "") == "base=main")),
+        ("records accepts drafts", drop("records", lambda x: x.strip() == "-draft")),
         ("no records queue", no_records(cfg)),
     ]
 

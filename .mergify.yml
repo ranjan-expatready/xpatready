@@ -50,6 +50,7 @@ queue_rules:
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - check-success = ci
       - -files~=^(?!ai-workers/problem-1-pathway-setup-and-form-filling/product/((STATE|DECISIONS|BACKLOG|RULES)\.md|qa/.+|screens/.+\.md|history/.+)$)
