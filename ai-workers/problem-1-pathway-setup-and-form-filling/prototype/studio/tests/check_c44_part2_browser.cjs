@@ -1,6 +1,6 @@
 // C4.4 part 2 in a real browser (runtime lane, swarm B3c; P-47 tier 2): the officer's section shows its error summary
 // (GOV.UK pattern) at the top, each line a link that moves the focus to the answer it names: an answer to fix (tier 1)
-// and a fired section check (tier 2). The forms panel names the fired check under "What blocks filing". Once the dates
+// and a fired section check (tier 2). The forms panel names the fired check under "Facts to answer or confirm". Once the dates
 // are in order the check leaves the summary and the forms panel. A pass and a fail per rule; axe-core (WCAG 2.2 A/AA)
 // on every state; no sideways scroll at 1440 and 1024 px. No AI (US$0). Sample values.
 // Screenshots: product/screens/W1-questions-and-documents/screenshots/c44-part2/.
@@ -77,8 +77,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     const target = (await link.getAttribute("href"))?.slice(1);
     await link.focus(); await o.keyboard.press("Enter");
     step("R1 pass: the summary link moves the focus to the answer it names", !!target && await eventually(async () => (await o.evaluate(() => document.activeElement?.id)) === target), { target, active: await o.evaluate(() => document.activeElement?.id) });
-    // R2: the forms panel names the fired check under "What blocks filing".
-    const blocks = o.locator("details", { hasText: "What blocks filing" }).first();
+    // R2: the forms panel names the fired check under "Facts to answer or confirm" (QA-229, B2: was "What blocks filing").
+    const blocks = o.locator("details", { hasText: "Facts to answer or confirm" }).first();
     if (await shows(blocks)) await blocks.locator("summary").click();
     step("R2 fail: the forms panel lists the fired check among what blocks filing, in its words", await shows(o.locator("details li", { hasText: CROSSED }).first()));
     await state(o, "officer-forms-blocked-by-check", [1440]);
