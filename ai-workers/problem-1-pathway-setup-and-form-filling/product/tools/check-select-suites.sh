@@ -14,9 +14,18 @@ all() { [ "$(printf '%s\n' "$1" | head -1 | cut -f1)" = ALL ]; }
 only_smoke() { printf '%s\n' "$1" | awk -F'\t' '$2 != "smoke" { bad = 1 } END { exit bad }'; }
 has() { printf '%s\n' "$1" | cut -f1 | grep -qx "$2"; }
 
-# Shared files run everything; the dependencies I1 found missing run everything too.
-o=$(sel "$S/engine/near.ts"); ok "an engine file runs everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
-o=$(sel "$Q/prototype/p2/prompts/who-can-be.v1.md"); ok "an AI prompt (.md the app reads) runs everything; before I1 it chose nothing" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+# What still runs everything (B121 kept these: they shape every copy or every run).
+for f in "$S/prisma/schema.prisma" "$S/prisma/migrations/x/migration.sql" "$S/api/src/main.ts" "$S/tools/isolated.sh" "$S/start.sh" "$Q/prototype/env/requirements-linux.lock"; do
+  o=$(sel "$f"); ok "${f#$Q/}: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+done
+# B121 (P-376 (4)): engine/, contracts/, prototype/p1, p2, p5, samples/, acceptance/, test helpers and studio/tools/ go
+# through the reference graph: the suites that use them, not everything (before B121 each of these ran everything).
+o=$(sel "$S/engine/where-used.ts"); ok "an engine file runs the suites that use it (check_sh2_where_used.ts), not everything" "$(! all "$o" && has "$o" check_sh2_where_used.ts && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$Q/prototype/p2/prompts/who-can-be.v1.md"); ok "an AI prompt (.md the app reads) runs the suites that use it (check_ai_drafting.ts); before I1 it chose nothing" "$(! all "$o" && has "$o" check_ai_drafting.ts && ! only_smoke "$o" && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$Q/prototype/p1/xfa_texts.py"); n=$(grep -c . <<< "$o"); ok "prototype/p1/xfa_texts.py runs the suites that name or reach it ($n), not everything" "$(! all "$o" && has "$o" check_b78_section_names.ts && [ "$n" -lt 100 ] && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/acceptance/C5.1.test.ts"); n=$(grep -c . <<< "$o"); ok "an acceptance pack (gate B and the queue run it, no suite does) chooses fewer than 30 suites ($n)" "$(! all "$o" && [ "$n" -lt 30 ] && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/contracts/counts.ts"); ok "a contract runs its seam check (P-376 (7)) and its users, not everything" "$(! all "$o" && has "$o" check_contract_seams.ts && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/prisma/schema.prisma"); ok "the schema still runs everything (check_prisma_schema.ts among them)" "$(all "$o" && [ -f "$S/tests/check_prisma_schema.ts" ] && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$Q/official-sources/ircc/manifest.json"); ok "official sources (the app reads the manifest) run everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$T/run-suites.sh"); ok "run-suites.sh decides how suites run: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel .github/workflows/ci.yml); ok "ci.yml: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
@@ -33,6 +42,31 @@ o=$(sel "$S/web/src/pages/history.tsx"); n=$(grep -c . <<< "$o"); ok "that page 
 o=$(dsel "$S/engine/near.ts" "$Q/prototype/p2/prompts/who-can-be.v1.md" "$T/run-suites.sh"); ok "--direct never runs everything" "$(! all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(dsel "$T/run-suites.sh"); ok "--direct: run-suites.sh still runs the suites that name it" "$(! only_smoke "$o" && echo 1)" "$(head -2 <<< "$o" | tr '\n' ' ')"
 o=$(dsel "$S/tests/check_queue_tx.ts"); ok "--direct: a changed suite still runs itself" "$(has "$o" check_queue_tx.ts && echo 1)" "$(head -2 <<< "$o" | tr '\n' ' ')"
+
+# The graph's rules, each with a passing and a failing case, on a made-up repository (fixed files, so the real code
+# changing never moves these): who uses what is read from the files themselves.
+G=$(mktemp -d); trap 'rm -rf "$G"' EXIT
+( cd "$G" && git init -q && mkdir -p "$S/engine" "$S/tests" "$S/samples" "$S/tools" "$T" && cp "$ROOT/$T/select-suites.mjs" "$T/"
+  printf 'export const core = 1;\n' > "$S/engine/core.ts"; printf 'export const other = 2;\n' > "$S/engine/other.ts"
+  printf 'export const boot = 3;\n' > "$S/engine/boot.ts"
+  printf 'import { core } from "../engine/core.ts";\nexport const h = core;\n' > "$S/tests/helper.ts"
+  printf 'import { h } from "./helper.ts";\nconsole.log(h);\n' > "$S/tests/check_a.ts"
+  printf 'import { other } from "../engine/other.ts";\nconsole.log(other);\n' > "$S/tests/check_b.ts"
+  printf 'import { readFileSync } from "node:fs";\nreadFileSync(join(STUDIO, "samples", "data.json"));\n' > "$S/tests/check_c.ts"
+  printf 'import { readdirSync } from "node:fs";\nreaddirSync(join(STUDIO, "samples"));\n' > "$S/tests/check_d.ts"
+  printf '{ "files": { "core.ts": 3 } }\n' > "$S/tools/baseline.json"
+  printf 'import { readFileSync } from "node:fs";\nreadFileSync("tools/baseline.json");\n' > "$S/tests/check_e.ts"
+  printf '{}\n' > "$S/samples/data.json"; printf '{}\n' > "$S/samples/new.json"
+  printf '# isolated copies\ntsx engine/boot.ts\n' > "$S/tools/isolated.sh" )
+gsel() { (cd "$G" && printf '%s\n' "$@" | node "$T/select-suites.mjs"); }
+o=$(gsel "$S/engine/core.ts"); ok "graph pass: a suite importing a helper that imports the file is chosen (check_a)" "$(has "$o" check_a.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "graph fail: a suite importing another file of the same folder is not (check_b; an import path is no folder use)" "$(! has "$o" check_b.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "graph fail: a JSON file naming the file is no use (check_e reads tools/baseline.json, which lists core.ts)" "$(! has "$o" check_e.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/samples/data.json"); ok "graph pass: a suite naming a data file is chosen (check_c), so is one listing its folder (check_d)" "$(has "$o" check_c.ts && has "$o" check_d.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/samples/new.json"); ok "graph fail: a suite naming only another file of the folder is not chosen (check_c), a lister is (check_d)" "$(! has "$o" check_c.ts && has "$o" check_d.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/engine/boot.ts"); ok "graph pass: a file isolated.sh names runs everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+o=$(gsel "$S/engine/other.ts"); ok "graph fail: a file nothing that runs every suite uses does not (check_b only)" "$(! all "$o" && has "$o" check_b.ts && ! has "$o" check_a.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+(cd "$G" && rm -rf .git); gsel "$S/engine/core.ts" >/dev/null 2>&1; c=$?; ok "graph fail-safe: outside a git copy the selector stops with an error (run-suites.sh then fails: exit 2)" "$([ "$c" != 0 ] && echo 1)" "exit $c"
 
 # change-kind.sh: what CI runs for each kind of pull request.
 k=$(kind "$Q/product/STATE.md" "$Q/product/reports/build-review-2026-11-03.html" "$S/screens/x/notes.md"); ok "records and reports only: notes" "$([ "$k" = notes ] && echo 1)" "$k"

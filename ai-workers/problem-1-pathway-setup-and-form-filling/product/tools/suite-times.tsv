@@ -263,3 +263,5 @@ check_vv_checklist.ts	0
 check_vv_prepare.ts	0
 check_vv_prepare_store.ts	0
 check_w1_level_tokens.ts	0
+check_contract_seams.ts	2
+check_prisma_schema.ts	7
