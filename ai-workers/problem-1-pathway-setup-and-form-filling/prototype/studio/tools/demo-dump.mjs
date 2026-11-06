@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+// B120 (P-376 (3)): a canonical dump of a Studio copy's data, so "behaviour unchanged" is compared byte for byte, not
+// asserted. Two copies loaded the same way by the same code must give the same file; then a refactor's copy must give
+// the same file as main's. Reads only (US$0, no model call, no write to the database or the files).
+//   node studio/tools/demo-dump.mjs <database url> <var dir> <out file>
+//   e.g. node studio/tools/demo-dump.mjs postgresql://xr_studio@127.0.0.1:54329/xr_studio_b120a studio/var/isolated-b120a a.dump
+// What it writes, one line each, sorted:
+//   T <table> <row as canonical JSON> [<its token>]   every row of every table but _prisma_migrations;
+//   F <path> <sha256>                    every working file under <var dir>/workspaces.
+// What it masks, because two runs of the same code differ there by design (measured on main, 6 Nov; B120 notes):
+//   * every UUID: replaced by a token made from its table and a hash of the row it identifies, refined over the rows it
+//     points at, so which row points at which is compared and the random ids are not; its first 8 hex digits (a case
+//     reference, a copy's file name) read as that token with "/8". A UUID no row owns reads <uuid?>;
+//   * timestamps (timestamp columns, ISO date-times in text and JSON): <t>. Date columns (a citation's date, an
+//     edition's capture or accepted-until date) are compared (review m3): two runs on one day agree there; a date set
+//     from today would differ across midnight, which is a run on another day, not a behaviour change;
+//   * measured durations ("… in 20.6 s"; the values of keys seconds, timings, duration_ms): <s>;
+//   * the copy's folder name in stored paths (var/isolated-<copy>/) and a merged run's time-and-random id (<run>);
+//   * the studio folder's own absolute path (<studio>), from <var dir>: two checkouts in different folders (main's and a
+//     branch's, B120) write their own paths into a filled form's report;
+//   * hashes computed over ids (plan_sha256, run_key, idempotency_fingerprint; a form copy's input_hash and its
+//     validated copy's facts_hash, which hash each fact's person id): <h>;
+//   * a generated PDF's bytes: IRCC's forms are AES-encrypted, so each write has a fresh random IV. A PDF line has its
+//     size, and any hash equal to a generated PDF's reads <pdf>. The fill's input, its request.json, is compared in full;
+//   * the order of three lists main builds in no fixed order (UNORDERED below): sorted;
+//   * Reset's fingerprint of the application's own code (its "Engine and application source" entry, and the total of
+//     files fingerprinted in its words): it changes with any code change by design, so a refactor's copy differs there
+//     and nowhere else (B120, measured 6 Nov: +41 files, the new step files). The data fingerprints stay compared.
+// A JSON working file is compared by its content masked the same way; any other file by its bytes. Anything else that
+// differs between two runs of the same code is a finding: it is named, never masked quietly. DEMO_DUMP_FULL=1 writes a
+// JSON working file's masked content instead of its hash, to see what differs.
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
+import { createRequire } from "node:module";
+
+const [url, varDir, out] = process.argv.slice(2);
+if (!url || !varDir || !out) { console.error("usage: node studio/tools/demo-dump.mjs <database url> <var dir> <out file>"); process.exit(2); }
+const pg = createRequire(import.meta.url)("pg");
+
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const SHORT = /\b[0-9a-f]{8}\b/g;
+const HEX64 = /\b[0-9a-f]{64}\b/g;
+const ISO = /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}(?::?\d{2})?)?/g;
+const SECONDS = /\b(in|after|took) \d+(?:\.\d+)? s\b/g;
+const RUN_ID = /\d{8}t\d{9}z-[0-9a-f]{6}/g; // api/src/sources.ts: studio-fieldmap-<form>-merged-<time>-<6 hex>
+const COPY = /\bvar\/isolated-[a-z0-9_]+\//g;
+const STUDIO_DIR = resolve(varDir, "..", ".."); // <studio>/var/isolated-<copy>
+const TIMED_KEYS = new Set(["seconds", "timings", "duration_ms"]);
+// input_hash, facts_hash (B99, #1123): a form copy's facts hashed with each fact's person, a random party id
+// (engine/runtime/forms.ts inputHash); measured 6 Nov: two runs of main ea8e35763 differ there and only there.
+const ID_HASH_KEYS = new Set(["plan_sha256", "run_key", "idempotency_fingerprint", "input_hash", "inputHash", "facts_hash", "factsHash"]);
+const CODE_FINGERPRINT = "Engine and application source"; // api/src/demo.ts preserved(): Reset's fingerprint of the code
+const FINGERPRINTED = /\(\d+ files fingerprinted\)/g;
+// Lists main fills in no fixed order (measured: two serial runs of main differ only in their order). Each is sorted by
+// its masked content. table → dotted paths, "*" for any key.
+const UNORDERED = {
+  answer_snapshot: ["facts_json.groups"],          // a case's answer groups, one per person, in the order of their random ids
+  proposal_item: ["work.affected.*.people",         // the people a proposed field affects
+    "identity.near"],                               // the library items a proposal is near: api/src/proposals.ts:185 reads
+                                                    // them with no order (B120 break F3; measured 6 Nov, main vs the split)
+  form_line_action: ["detail.after"],               // the form lines a line action left, read with no order
+};
+const sha = (s) => createHash("sha256").update(s).digest("hex");
+
+// Working files first: a generated PDF's hash is masked wherever it is quoted.
+const walk = (d) => (existsSync(d) ? readdirSync(d).flatMap((n) => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p]; }) : []);
+const ws = join(varDir, "workspaces");
+const files = walk(ws).map((f) => ({ f, bytes: readFileSync(f) }));
+const pdfHashes = new Set(files.filter((x) => /\.pdf$/i.test(x.f) && x.bytes.includes("/Encrypt")).map((x) => sha(x.bytes)));
+
+let short = new Map(); // first 8 hex digits → the UUID, for every UUID in the data
+const text = (s, id) => s.split(STUDIO_DIR).join("<studio>").replace(UUID, (u) => id(u.toLowerCase())).replace(SHORT, (h) => (short.has(h) ? `${id(short.get(h))}/8` : h))
+  .replace(HEX64, (h) => (pdfHashes.has(h) ? "<pdf>" : h)).replace(ISO, "<t>").replace(RUN_ID, "<run>").replace(COPY, "var/isolated-<copy>/").replace(SECONDS, "$1 <s> s").replace(FINGERPRINTED, "(<n> files fingerprinted)");
+/** A value with the masks above applied and each UUID passed to `id` (a function of the UUID). */
+function mask(v, id, key = "") {
+  if (TIMED_KEYS.has(key) && v != null) return "<s>";
+  if (ID_HASH_KEYS.has(key) && v != null) return "<h>";
+  if (typeof v === "string") return text(v, id);
+  if (Array.isArray(v)) return v.map((x) => mask(x, id));
+  if (v && typeof v === "object" && v.label === CODE_FINGERPRINT && "sha256" in v) return Object.fromEntries(Object.keys(v).sort().map((k) => [k, k === "files" || k === "sha256" ? "<code>" : mask(v[k], id, k)]));
+  if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, mask(v[k], id, k)]));
+  return v;
+}
+/** Sorts the lists at `path` (dotted, "*" for any key) inside `v`, by their masked content. */
+function sortAt(v, path) {
+  if (v == null || typeof v !== "object") return;
+  const [head, ...rest] = path;
+  for (const k of head === "*" ? Object.keys(v) : [head]) {
+    if (!(k in v)) continue;
+    if (rest.length) sortAt(v[k], rest);
+    else if (Array.isArray(v[k])) v[k] = [...v[k]].sort((a, b) => { const x = JSON.stringify(a), y = JSON.stringify(b); return x < y ? -1 : x > y ? 1 : 0; });
+  }
+}
+const canon = (table, row, id) => { const m = mask(row, id); for (const p of UNORDERED[table] ?? []) sortAt(m, p.split(".")); return JSON.stringify(m); };
+
+const db = new pg.Client({ connectionString: url });
+await db.connect();
+const tables = (await db.query(`SELECT table_name AS t FROM information_schema.tables WHERE table_schema = current_schema() AND table_type = 'BASE TABLE' AND table_name <> '_prisma_migrations' ORDER BY 1`)).rows.map((r) => r.t);
+const timeCols = new Map();
+for (const r of (await db.query(`SELECT table_name AS t, column_name AS c FROM information_schema.columns WHERE table_schema = current_schema() AND data_type LIKE 'timestamp%'`)).rows) {
+  if (!timeCols.has(r.t)) timeCols.set(r.t, new Set());
+  timeCols.get(r.t).add(r.c);
+}
+const rows = []; // { table, row, own: the UUID of its id column, or null }
+for (const t of tables) {
+  for (const { j } of (await db.query(`SELECT row_to_json(x)::text AS j FROM "${t.replace(/"/g, "")}" x`)).rows) {
+    const row = JSON.parse(j);
+    for (const c of timeCols.get(t) ?? []) if (row[c] != null) row[c] = "<t>";
+    const own = typeof row.id === "string" && new RegExp(`^${UUID.source}$`, "i").test(row.id) ? row.id.toLowerCase() : null;
+    rows.push({ table: t, row, own });
+  }
+}
+await db.end();
+for (const r of rows) for (const u of JSON.stringify(r.row).match(UUID) ?? []) short.set(u.slice(0, 8).toLowerCase(), u.toLowerCase());
+
+// A row's own id inside its own content (a form copy's path names its own id) reads <self>: otherwise twins, numbered
+// in whatever order the database returns them, would name themselves differently from run to run.
+const self = (r, name) => (u) => (u === r.own ? "<self>" : name(u));
+// Tokens: round 0 names each row by its table and its content with every UUID unnamed; each further round names it by
+// its content with the UUIDs it points at named by the round before, and by the names (round before, sorted) of the rows
+// that point at it. So rows alike in content are told apart by what they point at and by what points at them (the four
+// people of #1123's case are alike rows, told apart only by their answers; measured 6 Nov). The rounds use these names
+// unnumbered, so an arbitrary twin number never feeds a later round; rows still alike after the last round are numbered
+// once, in sorted order (~2, ~3, …): such twins swap whole lines, which leaves the sorted dump the same.
+const incoming = new Map(); // a row's own UUID → the own UUIDs of the rows that name it
+for (const r of rows) if (r.own) for (const u of new Set((JSON.stringify(r.row).match(UUID) ?? []).map((x) => x.toLowerCase()))) if (u !== r.own) { if (!incoming.has(u)) incoming.set(u, []); incoming.get(u).push(r.own); }
+let cls = new Map();
+for (let round = 0, classes = 0; round < 8; round++) {
+  const name = (u) => (round === 0 ? "<id>" : cls.get(u) ?? "<uuid?>");
+  const from = (r) => (round === 0 ? "" : (incoming.get(r.own) ?? []).map((u) => cls.get(u)).sort().join(","));
+  const next = new Map();
+  for (const r of rows) if (r.own) next.set(r.own, `${r.table}:${sha(canon(r.table, { ...r.row, id: null }, self(r, name)) + "|" + from(r)).slice(0, 12)}`);
+  cls = next;
+  const now = new Set(cls.values()).size;
+  if (round > 0 && now === classes) break; // no row told apart from another any more
+  classes = now;
+}
+const token = new Map(), seen = new Map();
+for (const [u, h] of [...cls.entries()].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0))) { const n = (seen.get(h) ?? 0) + 1; seen.set(h, n); token.set(u, n === 1 ? h : `${h}~${n}`); }
+const named = (u) => token.get(u) ?? "<uuid?>";
+const lines = rows.map((r) => `T ${r.table} ${canon(r.table, { ...r.row, id: null }, self(r, named))}${r.own ? ` ${named(r.own)}` : ""}`);
+for (const { f, bytes } of files) {
+  const path = text(relative(ws, f), named);
+  if (pdfHashes.has(sha(bytes))) { lines.push(`F ${path} <pdf, encrypted: ${bytes.length} bytes>`); continue; }
+  let content = bytes;
+  if (/\.json$/.test(f)) { try { content = JSON.stringify(mask(JSON.parse(bytes.toString("utf8")), named)); } catch { /* not JSON after all: its bytes */ } }
+  lines.push(`F ${path} ${process.env.DEMO_DUMP_FULL === "1" && /\.json$/.test(f) ? String(content) : sha(content)}`); // DEMO_DUMP_FULL=1: a JSON file's masked content, to explain a difference
+}
+
+lines.sort();
+writeFileSync(out, lines.join("\n") + "\n");
+const count = (p) => lines.filter((l) => l.startsWith(p)).length;
+console.log(`demo-dump: ${count("T ")} rows in ${tables.length} tables, ${count("F ")} working files (${pdfHashes.size} encrypted PDFs by size) → ${out} (sha256 ${sha(lines.join("\n") + "\n").slice(0, 16)})`);

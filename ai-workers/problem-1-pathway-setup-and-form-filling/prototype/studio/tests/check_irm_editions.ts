@@ -9,6 +9,7 @@
 import { Ajv } from "ajv";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { planted, tsFiles } from "./lib/ts-files.ts";
 
 const PROTOTYPE = join(import.meta.dirname, "..", "..");
 let pass = 0, fail = 0;
@@ -58,12 +59,19 @@ ok("IRM fail: a bad prefix still falls back to its own words, never an edition k
 // pattern in the studio's api, engine or the drafting path reads IMM without IRM. The one kept: finder.ts's guide numbers
 // (IRCC's guides are numbered IMM only).
 const API = join(import.meta.dirname, "..", "api", "src");
-const own = readdirSync(API).filter((f) => f.endsWith(".ts")).filter((f) => /\/\^\(?(?:\?:)?IMM \[0-9A-Z \]/.test(readFileSync(join(API, f), "utf8")));
+// B120: api/src's subfolders too (features/checkpoint/, features/placement/).
+const ownIn = (dir: string) => tsFiles(dir).filter((f) => /\/\^\(?(?:\?:)?IMM \[0-9A-Z \]/.test(readFileSync(join(dir, f), "utf8")));
+const own = ownIn(API);
 ok("IRM fail (drift): no studio API file holds its own IMM-only edition pattern", own.length === 0, own);
+ok("IRM fail (drift, B120): an IMM-only edition pattern planted in a subfolder is caught", ownIn(planted({ "features/checkpoint/999-planted.ts": "const ED = /^(IMM [0-9A-Z ]+) \\((\\d{2}-\\d{4})\\)$/;" })).length === 1);
 const dirs = [API, join(import.meta.dirname, "..", "engine"), join(PROTOTYPE, "p2")];
-const imOnly = dirs.flatMap((d) => readdirSync(d).filter((f) => f.endsWith(".ts")).flatMap((f) => readFileSync(join(d, f), "utf8").split("\n").map((line, i) => ({ at: `${f}:${i + 1}`, line }))))
+// B120: api/src is read with its subfolders (deep), the engine and p2 as before (their top level).
+const filesOf = (d: string, deep: boolean) => (deep ? tsFiles(d) : readdirSync(d).filter((f) => f.endsWith(".ts")));
+const imOnlyIn = (ds: string[], deep = (d: string) => d === API) => ds.flatMap((d) => filesOf(d, deep(d)).flatMap((f) => readFileSync(join(d, f), "utf8").split("\n").map((line, i) => ({ at: `${f}:${i + 1}`, line }))))
   .filter(({ at, line }) => !/^\s*(\/\/|\/?\*)/.test(line) && /\/[^/\n]*IMM[^/\n]*\/[gimsuy]*[.;,) ]/.test(line) && !/IRM/.test(line) && !/^finder\.ts:/.test(at)).map((x) => x.at);
+const imOnly = imOnlyIn(dirs);
 ok("IRM fail (breaker m5): no pattern in the studio's api or engine, or in p2, reads IMM without IRM (finder.ts's guide numbers aside)", imOnly.length === 0, imOnly);
+ok("IRM fail (breaker m5, B120): a pattern that reads IMM without IRM, planted in a subfolder of api/src, is caught", imOnlyIn([planted({ "features/placement/99-planted.ts": "const c = /IMM \\d{4}/.exec(x);" })], () => true).length === 1);
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
