@@ -2,14 +2,14 @@
 """Which Mergify queue a pull request joins, read from .mergify.yml itself (B119, P-376 (1), 6 Nov).
 
 Records never block code, by one route (Lead 21's ruling on #1147, 6 Nov): CI labels a records-only PR "records"
-(tools/records-merge.sh is-records, from #1139: the one definition of a record), the queue "records", listed after "m2"
+(tools/records-only.sh, from #1139: the one definition of a record), the queue "records", listed after "m2"
 and "m3" so it has the lowest priority, takes the label, and m2 and m3 skip it. This script evaluates the
 queue_conditions the way Mergify does (the first queue, in file order, whose conditions all hold; on a list such as
 label, "attr=x" holds when any item equals x and "-attr=x" when none does) on fixed PRs, and checks the rules every
 queue keeps (base main, the review label, green ci, records last and refusing drafts). Each fixed PR lists its files;
-its "records" label comes from records-merge.sh is-records when that script is on this base, and must agree with the
-case's expected label (so the definition and the cases cannot drift apart). Before #1139 lands the script is absent:
-the expected label is used and one NOTE line says so. Then it breaks the configuration on purpose and expects each
+its label comes from records-only.sh is-records and must agree with the case's expected label (so the definition and
+the cases cannot drift apart), and the label name the queues use must be the one records-only.sh prints. A missing
+records-only.sh fails the check. Then it breaks the configuration on purpose and expects each
 break to be caught, so the check is shown to fail, not only to pass. Runs no suite, US$0. It does not replace Mergify's
 own validation (the "Configuration changed" check on the PR).
   python3 -I product/screens/B119/check-queue-rules.py [path/to/.mergify.yml]
@@ -26,8 +26,9 @@ P = "ai-workers/problem-1-pathway-setup-and-form-filling"
 R = f"{P}/product"
 COND = re.compile(r"^(-)?([a-z][a-z-]*)\s*(?:(~=|=)\s*(.*))?$")
 LISTS = {"files", "label", "check-success"}
+LABEL = "records"   # read from records-only.sh label in main()
 ROOT = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip() or "."
-IS_RECORDS = os.path.join(ROOT, R, "tools", "records-merge.sh")
+IS_RECORDS = os.path.join(ROOT, R, "tools", "records-only.sh")
 
 
 def holds(cond, pr):
@@ -60,13 +61,21 @@ def queue_of(cfg, pr):
     return None
 
 
+_SEEN = {}
+
+
 def is_records(files):
-    """The one definition (#1139). None when the script is not on this base yet."""
-    if not os.path.exists(IS_RECORDS): return None
+    """The one definition (#1139, tools/records-only.sh); each file list asked once (the breaks re-ask the same ones)."""
+    key = tuple(files)
+    if key not in _SEEN: _SEEN[key] = _is_records(files)
+    return _SEEN[key]
+
+
+def _is_records(files):
     r = subprocess.run(["bash", IS_RECORDS, "is-records", "--files"], input="\n".join(files) + "\n",
                        capture_output=True, text=True, cwd=ROOT)
     if r.returncode != 0 or r.stdout.strip() not in ("yes", "no"):
-        raise ValueError(f"records-merge.sh is-records failed: {r.stdout.strip()} {r.stderr.strip()}")
+        raise ValueError(f"records-only.sh is-records failed: {r.stdout.strip()} {r.stderr.strip()}")
     return r.stdout.strip() == "yes"
 
 
@@ -114,8 +123,8 @@ def labelled(c, have_script):
     pr = copy.deepcopy(c["pr"])
     if c["record"] is None: return pr, None
     got = is_records(pr["files"]) if have_script else c["record"]
-    note = None if got == c["record"] else f"records-merge.sh is-records says {got}, the case expects {c['record']}"
-    if got and "records" not in pr["label"]: pr["label"].append("records")
+    note = None if got == c["record"] else f"records-only.sh is-records says {got}, the case expects {c['record']}"
+    if got and LABEL not in pr["label"]: pr["label"].append(LABEL)
     return pr, note
 
 
@@ -185,12 +194,16 @@ def mutations(cfg):
 
 
 def main():
+    global LABEL
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, ".mergify.yml")
     with open(path) as f:
         cfg = yaml.safe_load(f)
-    have = os.path.exists(IS_RECORDS)
-    if not have:
-        print(f"NOTE  {R}/tools/records-merge.sh is not on this base yet (#1139): each case's expected label is used")
+    have = True
+    if not os.path.exists(IS_RECORDS):
+        print(f"FAIL  {R}/tools/records-only.sh is missing: there is no definition of a record"); sys.exit(1)
+    LABEL = subprocess.run(["bash", IS_RECORDS, "label"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+    if LABEL != "records":
+        print(f"FAIL  records-only.sh label prints {LABEL!r}; the queues select 'records'"); sys.exit(1)
     passed = failed = 0
     found = problems(cfg, have)
     for c in CASES:

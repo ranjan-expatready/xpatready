@@ -15,8 +15,8 @@ merge_queue:
 # list in step with that table); everything else, including every M2 PR, goes to "m2".
 # Records never block code (B119, P-376 (1), founder 6 Nov; one route, Lead 21's ruling on #1147, 6 Nov): a third queue
 # "records", listed last (lowest priority), takes a PR labelled "records". CI applies that label to a records-only PR
-# (tools/records-merge.sh is-records, P-371 (4), #1139: every file is a record under product/, not product/tools/, and not
-# code), so there is one definition of a record. m2 and m3 skip the label. A records PR is checked only when no product
+# (tools/records-only.sh, P-371 (4), #1139: every file is a record under product/, not product/tools/, and not code),
+# so there is one definition of a record. m2 and m3 skip the label. A records PR is checked only when no product
 # PR waits ahead of it, and a product PR that arrives goes ahead of it, so a records merge never restarts a product batch;
 # records also never share a batch with code. Records merge only through this queue, never outside it.
 # product/screens/B119/check-queue-rules.py reads this file and fails when the queues stop routing that way. The daily
@@ -63,7 +63,7 @@ queue_rules:
 
 # -draft (P-371 (1), founder 6 Nov): a draft never joins a batch; a draft runs only the push guard. Records PRs carry the
 # label "records", set by ci.yml from tools/records-only.sh; the "records" queue that selects it, and the "-label=records"
-# that keeps it out of m2 and m3, come with B119 (#1147, Lead 21's ruling, 6 Nov).
+# that keeps it out of m2 and m3, are B119's (#1147, Lead 21's ruling, 6 Nov; see above).
 
 # Approved PRs join the queue by themselves (the queue_conditions above decide which); no "@mergifyio queue" needed.
 merge_protections_settings:
