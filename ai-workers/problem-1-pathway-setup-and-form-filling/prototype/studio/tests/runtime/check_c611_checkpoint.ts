@@ -34,8 +34,10 @@ await main("C6.11", "Firm, users and case team — checkpoint checks", async () 
 
   // Break n1 (round 2): undo of "Uses a representative" is refused while the case has a representative of record, as
   // typing it is; before the fix it answered 200 "Undone" and wrote a hidden row. Steps as the breaker's: no
-  // representative, the officer types Yes then No, the firm admin names the representative, the officer undoes.
-  const u = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: null, caseOfficers: [officer] });
+  // representative, the officer types Yes then No, the firm admin names the representative, the officer undoes. A case
+  // always opens with the firm's representative, so one SQL write ends it (a case whose representative left, no route).
+  const u = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [officer] });
+  sql(`update case_team_member set ended_at=now(), ended_by='${f.admin}', end_reason='Sample: no representative of record' where case_id='${u.id}' and role='LEAD_REPRESENTATIVE' and ended_at is null`);
   const yes = await call("PUT", `/runtime/cases/${u.id}/answers/${u.caseSubject}/case.uses_representative`, { value: true, expectedId: null }, officer);
   const no = await call("PUT", `/runtime/cases/${u.id}/answers/${u.caseSubject}/case.uses_representative`, { value: false, expectedId: yes.body?.answer?.id ?? null }, officer);
   const named = await call("PUT", `/runtime/cases/${u.id}/team/representative`, { userId: f.rep, reason: "Sample reason" }, f.admin!);
