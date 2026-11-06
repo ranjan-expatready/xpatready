@@ -32,6 +32,20 @@ await main("C6.11", "Firm, users and case team — checkpoint checks", async () 
   ok("C6.11 fail: staff cannot type \"Uses a representative\" (422, change the case team)", byOfficer.status === 422 && /Case team/.test(byOfficer.body?.detail ?? ""), byOfficer.body?.detail);
   ok("C6.11 fail: a client cannot type it either (403, the case team sets it)", byClient.status === 403 && /case team sets/.test(byClient.body?.detail ?? ""), [byClient.status, byClient.body?.detail]);
 
+  // Break n1 (round 2): undo of "Uses a representative" is refused while the case has a representative of record, as
+  // typing it is; before the fix it answered 200 "Undone" and wrote a hidden row. Steps as the breaker's: no
+  // representative, the officer types Yes then No, the firm admin names the representative, the officer undoes.
+  const u = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: null, caseOfficers: [officer] });
+  const yes = await call("PUT", `/runtime/cases/${u.id}/answers/${u.caseSubject}/case.uses_representative`, { value: true, expectedId: null }, officer);
+  const no = await call("PUT", `/runtime/cases/${u.id}/answers/${u.caseSubject}/case.uses_representative`, { value: false, expectedId: yes.body?.answer?.id ?? null }, officer);
+  const named = await call("PUT", `/runtime/cases/${u.id}/team/representative`, { userId: f.rep, reason: "Sample reason" }, f.admin!);
+  const rows = () => sql(`select count(*) from client_canonical_answer where subject_id='${u.caseSubject}' and canonical_field_key='case.uses_representative'`);
+  const before = rows();
+  const undo = await call("POST", `/runtime/cases/${u.id}/changes/undo`, { subjectId: u.caseSubject, fact: "case.uses_representative" }, officer);
+  ok("C6.11 pass (break n1): with no representative of record the officer types Yes, then No, then the firm admin names one", yes.status < 300 && no.status < 300 && named.status < 300, [yes.status, no.status, named.status, named.body?.detail]);
+  ok("C6.11 fail (break n1): undo of \"Uses a representative\" is refused while the case has a representative of record (422, Case team)", undo.status === 422 && /Case team/.test(undo.body?.detail ?? ""), [undo.status, undo.body?.detail ?? undo.body?.message]);
+  ok("C6.11 fail (break n1): the refused undo writes no answer row", rows() === before, [before, rows()]);
+
   // VV-R10: a dependent child from 18 fills their own IMM 5476; under 18 is covered by the applicant's.
   const fam = await openCase(vv, [
     { role: "principal", name: "Sample Client A", dob: yearsAgo(50) },
