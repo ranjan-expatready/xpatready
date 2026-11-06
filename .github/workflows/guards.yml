@@ -1,0 +1,31 @@
+# The eight guards of 6 Nov (founder, ~03:00 IST: "make them hard rules"): every test passes, and each test fails with
+# its guard switched off (product/tools/check-guards.sh --mutate). Runs only when a guard, its test or a file it reads
+# changes; separate from ci.yml (owned by the flow-fix lane) and not a merge condition. About 1 minute, US$0.
+name: guards
+on:
+  pull_request:
+    paths:
+      - ".claude/settings.json"
+      - ".claude/skills/lead/**"
+      - ".claude/skills/next/**"
+      - ".claude/skills/qa/**"
+      - ".github/workflows/label-guard.yml"
+      - ".github/workflows/guards.yml"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/isolated.sh"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/test-copies.sh"
+permissions:
+  contents: read
+concurrency:
+  group: guards-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: zsh (isolated.sh is a zsh script)
+        run: command -v zsh || (sudo apt-get update -qq && sudo apt-get install -y -qq zsh)
+      - name: every guard's test, and each fails without its guard
+        run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/check-guards.sh --mutate

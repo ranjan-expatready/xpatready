@@ -12,18 +12,21 @@ import { inSentence, LOCK_KINDS, notReady, ONLINE_LATER_WAVE, type CaseForm, typ
 import { noRetryOnRefusal } from "./questionnaire";
 import { openLines } from "../../../engine/runtime/open-lines";
 import { OutOfDate } from "./out-of-date";
+import { ReadinessPanel } from "./readiness"; // C7.6 (B2): the filings' readiness from /prepare, right after the forms
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
 
-/** The forms of one case. Under the questionnaire view's query key, so any answer change refreshes it too. */
+/** The forms of one case. Under the questionnaire view's query key, so any answer change refreshes it too. QA-229 (B2):
+ *  "Ready to file" is a filing's state, said only by the readiness panel below (the server's); a form row says whether
+ *  its own facts are confirmed. */
 
 export function FormsPanel({ caseId }: { caseId: string }) {
   const actor = useActorId();
   const q = useApi<{ forms: CaseForm[]; online?: CaseOnlineForm[] }>(["runtime", "view", caseId, "forms", actor], `/runtime/cases/${caseId}/forms`, {
     retry: noRetryOnRefusal, refetchInterval: (query) => ((query.state.data as { forms: CaseForm[] } | undefined)?.forms.some((f) => f.copies.some(busy)) ? 1000 : false),
   });
-  return (
+  return (<>
     <section aria-labelledby="forms-h" className="rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
         <h2 id="forms-h" tabIndex={-1} className="text-base font-semibold outline-none">Prepare application</h2>
@@ -38,7 +41,8 @@ export function FormsPanel({ caseId }: { caseId: string }) {
             {(q.data!.online ?? []).map((f) => <OnlineRow key={f.form} f={f} />)}
           </ul>}
     </section>
-  );
+    <ReadinessPanel caseId={caseId} />
+  </>);
 }
 
 /** QA-40: a form filed Online has no PDF copy; it is named with its people, so it is never silently missing. */
@@ -70,7 +74,9 @@ function ValidatedState({ caseId, c, form }: { caseId: string; c: FormCopy; form
   const v = c.validated;
   return (
     <span className="inline-flex items-center gap-2" data-validated={v ? (v.current ? "current" : "out_of_date") : "none"}>
-      {v ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values`}>{v.words}</Pill> : <Pill tone="warn">Not validated yet</Pill>}
+      {v && (v.current || !c.validated_elsewhere) ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values`}>{v.words}</Pill>
+        : c.validated_elsewhere ? <Pill tone="warn" title="Sample: the validated file is not in these working files, so this copy is not filed or locked as validated" data-validated-elsewhere>{c.validated_elsewhere}</Pill>
+        : <Pill tone="warn">Not validated yet</Pill>}
       {c.out_of_date ? null : <>
         <input ref={input} type="file" accept="application/pdf" className="sr-only" aria-label={`Validated copy of ${form}`} onChange={(e) => { const x = e.target.files?.[0]; if (x) void send(x); }} />
         <Button size="sm" variant="secondary" busy={busy} onClick={() => input.current?.click()}>{v && v.current ? "Read back again" : "Read back the validated copy"}</Button>
@@ -128,9 +134,10 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same confirmed facts, for reading and checking only">Copy, not for filing</Pill>
           : !f.trial_passed ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
         {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
-        {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. */}
+        {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. QA-229 (B2): nor is
+            any form: "Ready to file" is the filing's, said by the readiness panel; a form says "Facts confirmed". */}
         {f.readiness.ready && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
-          : f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
+          : f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks. Whether the filing is Ready to file is under Ready to file below."><Check className="size-3" aria-hidden />Facts confirmed</Pill>
           : <Pill tone="warn">{missing.length} fact{missing.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
         <span className="flex-1" />
         <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
@@ -141,7 +148,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       <p className="text-[13px] text-text-muted">Confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.unconfirmed ? `; ${f.draft.unconfirmed} answered but not confirmed ${f.draft.unconfirmed === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
       {missing.length ? (
         <details className="text-[13px]">
-          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">What blocks filing ({missing.length})</summary>
+          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Facts to answer or confirm ({missing.length})</summary>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{missing.map((m) => <li key={`${m.fact}|${m.about}`}>{m.label} <span className="text-text-muted">({inSentence(m.about)}): {m.reason}</span></li>)}</ul>
         </details>
       ) : null}
