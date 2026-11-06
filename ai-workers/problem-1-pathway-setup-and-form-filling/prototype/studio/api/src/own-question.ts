@@ -24,7 +24,7 @@ import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { nearLabels } from "./rule-facts.ts";
 import { landField } from "./proposals.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
-import { printedQuestion, type Box } from "./own-yes-no.ts";
+import { inFormText, printedQuestion, yesNoCodes, type Box } from "./own-yes-no.ts";
 export { printedQuestion } from "./own-yes-no.ts";
 export { isWorkedOutYesNo } from "./library-changes.ts";
 
@@ -121,18 +121,29 @@ export class OwnQuestions {
     const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.dataPath } });
     const cur = effective(rows, (m) => m.dataPath, "draft")[0];
     if (!cur || cur.status === "RETIRED") fail(`${ed.editionLabel} has no form field by that name.`, HttpStatus.NOT_FOUND);
-    if (cur!.outcome !== "mapped" || !isWorkedOutYesNo(cur!.transform)) fail(`"${wordsOfRow(cur!.caption, null)}" is not a Yes/No form field worked out from other answers: it is decided on its field map, or on To review › Form fields.`, HttpStatus.CONFLICT);
+    // B116 (founder's ruling on #1123, 6 Nov): a Yes/No form field nothing fills yet (no decision, or "filled by hand") is
+    // asked as its own question too, so a box the form's Validate insists on (IMM 5257's Background 1 a) and 6), its
+    // research-contact consent) is answered in the questionnaire, never ticked by hand in Adobe.
+    const unmapped = cur!.outcome === "unresolved" || cur!.outcome === "by_hand";
+    if (!unmapped && (cur!.outcome !== "mapped" || !isWorkedOutYesNo(cur!.transform))) fail(`"${wordsOfRow(cur!.caption, null)}" is not a Yes/No form field worked out from other answers: it is decided on its field map, or on To review › Form fields.`, HttpStatus.CONFLICT);
     const reading = readingOf(ed.inventoryFile);
     if (!reading) fail(`${ed.editionLabel}'s reading cannot be opened, so the form's own question cannot be quoted: read the form again first.`, HttpStatus.CONFLICT);
-    const question = printedQuestion(reading!.get(b.dataPath));
-    if (!question) fail(`${ed.editionLabel}'s reading has no printed question for this form field (neither its heading nor its caption is a question), so it cannot be asked in the form's words: map it on its field map instead.`, HttpStatus.CONFLICT);
-    const from = recordedDerivation(cur!.transform)!.facts;
-    if (!from.length) fail(`"${question}": ${CANNOT_CHECK}`, HttpStatus.CONFLICT);
-    const group = (from[0] ?? cur!.canonicalFieldKey ?? "person").split(".")[0];
-    const now = await this.db.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: cur!.canonicalFieldKey ?? "", status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, canonicalFieldKey: true, label: true, meaning: true } });
-    if (now && YES_NO.has(now.valueType) && !from.includes(now.canonicalFieldKey)) fail(`"${question}" is already asked as its own question ("${now.label?.trim() || now.meaning?.trim() || factName(now.canonicalFieldKey)}"). Undo it first to choose another.`, HttpStatus.CONFLICT);
-    const page = pageOf(b.dataPath);
+    const codes = unmapped ? yesNoCodes(reading!.get(b.dataPath)) : null;
+    if (unmapped && !codes) fail(`"${wordsOfRow(cur!.caption, null)}" is not a Yes/No form field (the form does not print one Yes and one No choice for it), so it cannot be asked as a Yes/No question: map it on its field map.`, HttpStatus.CONFLICT);
+    // A reading can print a neighbour's words on a box (IMM 5257's consent box carries Background 6's caption): the form's own
+    // question is then quoted, and taken only when the form's saved text holds those words exactly (P-170).
+    if (b.question && !unmapped) fail("A form field worked out from other answers is asked in the words its reading prints; quote the form's words only for a form field nothing fills yet.");
     const saved = (manifest() as { sha256?: string; path?: string; downloaded_utc?: string }[]).find((m) => m.sha256 === ed.sha256);
+    if (b.question && !inFormText(saved?.path, b.question)) fail(`"${b.question}" is not in ${ed.editionLabel}'s own saved text, so it cannot be its question: quote the form exactly.`, HttpStatus.CONFLICT);
+    const question = b.question ?? printedQuestion(reading!.get(b.dataPath));
+    if (!question) fail(`${ed.editionLabel}'s reading has no printed question for this form field (neither its heading nor its caption is a question), so it cannot be asked in the form's words: map it on its field map instead.`, HttpStatus.CONFLICT);
+    const from = unmapped ? [] : recordedDerivation(cur!.transform)!.facts;
+    if (!unmapped && !from.length) fail(`"${question}": ${CANNOT_CHECK}`, HttpStatus.CONFLICT);
+    // A form field nothing fills yet is about the person the form is for (each applicant's own copy).
+    const group = unmapped ? "person" : (from[0] ?? cur!.canonicalFieldKey ?? "person").split(".")[0];
+    const now = await this.db.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: cur!.canonicalFieldKey ?? "", status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, canonicalFieldKey: true, label: true, meaning: true } });
+    if (!unmapped && now && YES_NO.has(now.valueType) && !from.includes(now.canonicalFieldKey)) fail(`"${question}" is already asked as its own question ("${now.label?.trim() || now.meaning?.trim() || factName(now.canonicalFieldKey)}"). Undo it first to choose another.`, HttpStatus.CONFLICT);
+    const page = pageOf(b.dataPath);
     const source = `${ed.editionLabel}${page ? ` p. ${page}` : ""}: "${question}"${saved?.path ? ` (official-sources/ircc/${saved.path}${saved.downloaded_utc ? `, saved ${saved.downloaded_utc.slice(0, 10)}` : ""})` : ""}`;
     const res = await this.db.$transaction(async (tx) => {
       // One new name at a time per workspace, as on the field-map draft's new field (break M1 there).
@@ -172,8 +183,10 @@ export class OwnQuestions {
       // The form field keeps its "worked out" transformation: it now reads its own question, and the facts it names
       // stay the cross-check (QA-165). Its evidence is the printed question only (review m1: it is the box's label on the
       // list before the file); the full citation is the new field's source and the history line.
-      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason };
-      await reviseUnreleased(tx, fresh, { canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
+      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason, ...(unmapped ? { outcome: now2.outcome, person: now2.person, transform: now2.transform, canonicalFieldKey: now2.canonicalFieldKey, asked: { key, transform: `yes_no_code:${codes!.yes}/${codes!.no}` } } : {}) };
+      // B116: a form field nothing filled is now mapped to the question, written in the form's own Yes and No codes.
+      const mapping = unmapped ? { outcome: "mapped", person: "form_subject", transform: was.asked!.transform } : {};
+      await reviseUnreleased(tx, fresh, { ...mapping, canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
       return { key, created, name, was };
     }, { timeout: 30_000, maxWait: 10_000 });
     await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} asked ${source} as its own question (${res.key}${res.created ? ", a new shared field waiting for a second person" : ""}): ${b.reason}`, { edition: ed.id, undo: res.was });
@@ -191,9 +204,11 @@ export class OwnQuestions {
     const b = p.data!;
     const ed = await this.edition(editionId);
     const ws = ed.workspaceId;
-    const question = printedQuestion(readingOf(ed.inventoryFile)?.get(b.dataPath));
+    const asked = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.dataPath } }), (m) => m.dataPath, "draft")[0];
+    // B116 (review m6): a form field asked with the form's words quoted reads as those words (its reading may print a neighbour's).
+    const question = asked?.origin === "HUMAN" && asked.outcome === "mapped" && !isWorkedOutYesNo(asked.transform) && asked.evidenceQuote ? asked.evidenceQuote : printedQuestion(readingOf(ed.inventoryFile)?.get(b.dataPath));
     const words = (cap: string | null | undefined) => wordsOfRow(cap, question);
-    const { key, from, name } = await this.db.$transaction(async (tx) => {
+    const { key, from, name, unmapped } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`own-question:${ed.id}:${b.dataPath}`}))`;
       const rows = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.dataPath } });
       const cur = effective(rows, (m) => m.dataPath, "draft")[0];
@@ -201,6 +216,17 @@ export class OwnQuestions {
       const facts = isWorkedOutYesNo(cur!.transform) ? recordedDerivation(cur!.transform)!.facts : [];
       const key = cur!.canonicalFieldKey;
       const field = key ? await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, label: true, meaning: true } }) : null;
+      // B116: a form field nothing filled before its ask goes back to the decision it had (no decision, or by hand).
+      const before = !facts.length && key && field && YES_NO.has(field.valueType) && cur!.outcome === "mapped" ? (await whatAskReplaced(tx, ws, ed.id, b.dataPath)) as (Awaited<ReturnType<typeof whatAskReplaced>> & { outcome?: string; person?: string | null; transform?: string | null; canonicalFieldKey?: string | null; asked?: { key: string; transform: string } }) | null : null;
+      // Review M1: only while the form field still holds exactly what this ask wrote; a later change is never rolled back.
+      if ((before?.outcome === "unresolved" || before?.outcome === "by_hand") && before.asked?.key === key && before.asked?.transform === cur!.transform) {
+        await lockItem(tx, ws, "field", [key!]);
+        // A draft that only held this ask over a released row goes, so the release sees no change (as for a worked-out ask).
+        const under = cur!.supersedesId ? rows.find((r) => r.id === cur!.supersedesId) : undefined;
+        if (cur!.status === "DRAFT" && under && under.outcome === before.outcome && (under.canonicalFieldKey ?? null) === (before.canonicalFieldKey ?? null)) { if (!(await tx.formFieldMap.deleteMany({ where: { id: cur!.id, status: "DRAFT" } })).count) fail(`"${words(cur!.caption)}" was released just now: look at it again.`, HttpStatus.CONFLICT); }
+        else await reviseUnreleased(tx, rows, { outcome: before.outcome, canonicalFieldKey: before.canonicalFieldKey ?? null, person: before.person ?? null, transform: before.transform ?? null, origin: before.origin, confidence: before.confidence, evidenceQuote: before.evidenceQuote, reason: before.reason }, actor.id, `"${words(cur!.caption)}" was released just now: look at it again.`);
+        return { key: key!, from: [] as string[], name: field!.label?.trim() || field!.meaning?.trim() || factName(key!), unmapped: true };
+      }
       if (!key || !field || !YES_NO.has(field.valueType) || !facts.length || facts.includes(key)) fail(`"${words(cur!.caption)}" is not asked as its own question, so there is nothing to take back.`, HttpStatus.CONFLICT);
       // Breaker m1: the same locks as an ask: the fact it goes back to takes no new use once retired.
       await lockItem(tx, ws, "field", [facts[0]]); await refuseRetired(tx, ws, "field", [facts[0]]);
@@ -213,7 +239,7 @@ export class OwnQuestions {
         const was = cur!.status === "DRAFT" && under?.canonicalFieldKey !== key ? await whatAskReplaced(tx, ws, ed.id, b.dataPath) : null;
         await reviseUnreleased(tx, rows, { canonicalFieldKey: facts[0], ...(was ?? { origin: "HUMAN", reason: `Taken back by ${actor.name}: worked out from other answers again.`.slice(0, 500) }) }, actor.id, released);
       }
-      return { key: key!, from: facts, name: field!.label?.trim() || field!.meaning?.trim() || factName(key!) };
+      return { key: key!, from: facts, name: field!.label?.trim() || field!.meaning?.trim() || factName(key!), unmapped: false };
     }, { timeout: 30_000, maxWait: 10_000 });
     const change = await this.db.libraryChange.findFirst({ where: { workspaceId: ws, kind: "field", action: "ADD", key, status: { in: ["WAITING", "RETURNED"] } }, select: { id: true, proposedBy: true } });
     let withdrew = false, kept: string | null = null;
@@ -225,8 +251,8 @@ export class OwnQuestions {
     }
     const placed = withdrew ? [] : await this.sectionsAsking(ws, key);
     const still = placed.length ? `"${name}" is still asked in ${placed.map((s) => `"${s}"`).join(", ")}. If no other form needs it, remove it there on the Smart questionnaire tab.` : null;
-    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} took back ${ed.editionLabel}'s "${words(null)}", asked as "${name}": worked out from other answers again${withdrew ? "; its new field was withdrawn" : ""}`);
-    return { dataPath: b.dataPath, field: from[0], withdrew, kept, still_asked: still };
+    await this.audit.log(ws, actor.id, "decided", "form field", b.dataPath, `${actor.name} took back ${ed.editionLabel}'s "${words(null)}", asked as "${name}": ${unmapped ? "back to the decision it had before" : "worked out from other answers again"}${withdrew ? "; its new field was withdrawn" : ""}`);
+    return { dataPath: b.dataPath, field: unmapped ? null : from[0], withdrew, kept, still_asked: still };
   }
 
   /** Breaker m2: a withdrawal lost to someone else at the same moment says what really happened. */
