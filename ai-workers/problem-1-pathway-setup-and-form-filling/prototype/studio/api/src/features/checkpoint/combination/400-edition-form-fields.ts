@@ -2,7 +2,7 @@
 // ruling 2), its choice fields' option maps, and the answers it prints no choice for marked Not on this form (B81).
 // One file, not three: the three are done edition by edition, and splitting them would reorder the database writes.
 import { buildSnapshot } from "../../../../../engine/snapshot.ts";
-import { BY_HAND_REASON } from "../../../demo.ts";
+import { BY_HAND_REASON } from "../_constants.ts";
 import { Forms } from "../../../forms.ts";
 import { Screen02 } from "../../../screen02.ts";
 import { type CombinationStep, formSetup } from "../080-form-setup.ts";

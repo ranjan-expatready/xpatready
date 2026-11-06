@@ -33,7 +33,7 @@ export default {
 ```
 
 * **The number is the order.** `featureSteps` (`../features.ts`) reads the folder in number order, at start-up. Two files with one number, a step without `run`, or a file named neither `NNN-<feature>.ts` nor `_<name>.ts` stops the start-up with the file names: a step run out of order or skipped quietly would change the data.
-* **`_<name>.ts` is a helper**, not a step (the context type, shared functions).
+* **`_<name>.ts` is a helper**, not a step (the context type, shared functions). A step folder holds `.ts` files only: a `.js`, `.mjs` or `.mts` file there stops the start-up too, since it would never run.
 * **State a later step reads** belongs to the step that makes it: `export const thing = stateOf(() => ({ … }))`, read as `thing(ctx)`. A later step imports it from that file, so the dependency shows in its imports.
 * **Services** come from `ctx.get(Service)` (the app's own instance), so a new step never edits a constructor.
 * **No `try` around another step's work, no timing of its own** unless the step had one before: a refusal stops the load with its words, as before.

@@ -3,7 +3,7 @@
 // signed by hand and scanned. Then the same review as release 1: submit, the SME's sign-off, a different person approves.
 import { HttpException } from "@nestjs/common";
 import { type Listed, type ReleaseTwoStep, releaseTwoWords } from "../../checkpoint-words.ts";
-import { BY_HAND_REASON } from "../../demo.ts";
+import { BY_HAND_REASON } from "./_constants.ts";
 import { FormLibrary } from "../../form-library.ts";
 import { placeFromFormParts } from "../../form-part-placements.ts";
 import { Forms } from "../../forms.ts";

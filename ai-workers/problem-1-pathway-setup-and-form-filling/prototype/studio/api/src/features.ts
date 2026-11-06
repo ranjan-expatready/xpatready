@@ -43,7 +43,11 @@ const STEP_NAME = /^(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/;
 /** The steps in `dir`, in their file-name number order, each one's init (if any) awaited in that order. */
 export async function featureSteps<S extends Step>(dir: string): Promise<(S & { file: string })[]> {
   const where = (f: string) => { const r = relative(API_SRC, join(dir, f)); return r.startsWith("..") ? join(dir, f) : `api/src/${r}`; };
-  const files = readdirSync(dir).filter((f) => /\.ts$/.test(f) && !/\.d\.ts$/.test(f) && !f.startsWith("_")).sort();
+  const all = readdirSync(dir);
+  // Break F2: code in another language or module kind is never skipped quietly, a helper (_*) included.
+  const other = all.filter((f) => /\.(js|mjs|cjs|mts|cts|tsx|jsx)$/.test(f));
+  if (other.length) throw new Error(`${other.map(where).join(", ")}: a step folder holds .ts files only (NNN-<feature>.ts, _<name>.ts); this one would never run.`);
+  const files = all.filter((f) => /\.ts$/.test(f) && !/\.d\.ts$/.test(f) && !f.startsWith("_")).sort();
   const bad = files.filter((f) => !STEP_NAME.test(f));
   if (bad.length) throw new Error(`${bad.map(where).join(", ")}: not a step; name a step NNN-<feature>.ts (NNN its place in the run) and a helper _<name>.ts.`);
   const byNumber = new Map<number, string[]>();
@@ -54,7 +58,8 @@ export async function featureSteps<S extends Step>(dir: string): Promise<(S & { 
   for (const f of [...files].sort((a, b) => Number(STEP_NAME.exec(a)![1]) - Number(STEP_NAME.exec(b)![1]))) {
     const step = (await import(pathToFileURL(join(dir, f)).href)).default as S | undefined;
     if (!step || typeof step !== "object" || typeof step.run !== "function") throw new Error(`${where(f)}: export default { run(ctx) { … } } (a step needs a run function; check the export).`);
-    steps.push({ ...step, file: f });
+    // Break F1: the step itself is the prototype, so a run defined on a class is kept (a spread copies own fields only).
+    steps.push(Object.assign(Object.create(step) as S, { file: f }));
   }
   for (const s of steps) await s.init?.();
   return steps;

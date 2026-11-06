@@ -6,7 +6,8 @@
 // for a case fact, per row for a list row about the form's own subject, per person otherwise. A section is chosen on the
 // combination only when every applying person answers all of it anyway (see the end). The words are the library field's own.
 // QA-144 part 1 (P-318 (6), P-322): the Smart questionnaire tab's step runs it for a person (POST
-// /api/combinations/:id/place-from-form-parts, below); the configured checkpoint calls the same function (api/src/demo.ts).
+// /api/combinations/:id/place-from-form-parts, below); the configured checkpoint calls the same function
+// (features/checkpoint/combination/200-place-from-parts.ts, 130-release-two.ts).
 // B120 (P-376 (3)): the passes are one file each in api/src/features/placement/ (10-form-boxes, 20-condition-facts),
 // run in their number order; the chosen-sections check stays last (features/placement/_chosen-sections.ts).
 import { Controller, Headers, HttpCode, HttpStatus, Inject, Param, Post } from "@nestjs/common";

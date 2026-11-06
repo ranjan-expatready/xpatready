@@ -75,7 +75,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok("C10.1 row 7: sections and questions from the Visitor visa's forms (rules, US$0), approved by the Approver; partial exactly while sections wait for a name (QA-206)", r("7").status === (heldNow ? "partial" : "done") && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows) && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")), r("7").shows);
   // Row 17 (QA-207): IMM 5476 2021 in the library and 11-2025 held as the new edition, once the 2021 edition's saved field
   // map is recorded (p2/runs, the paid runner's); until then the row waits for it, in words, and the library keeps 11-2025.
-  // The same reading as the loader's gate (demo.ts ROW17): a completed, contract-valid run of the 2021 edition's field map
+  // The same reading as the loader's gate (features/checkpoint/170-new-edition.ts ROW17): a completed, contract-valid run of the 2021 edition's field map
   // on the committed inventory's checksum (review m2), never only a file name.
   const RUNS = join(import.meta.dirname, "..", "..", "p2", "runs"), inv2021 = join(import.meta.dirname, "..", "..", "p1", "inventory", "imm5476e-2021.inventory.json");
   const invSha = existsSync(inv2021) ? createHash("sha256").update(readFileSync(inv2021)).digest("hex") : "";

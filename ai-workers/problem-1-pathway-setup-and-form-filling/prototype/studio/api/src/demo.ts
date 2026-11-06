@@ -18,6 +18,7 @@ import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, isDemoWorkspace, need, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 import { FEATURES_DIR, featureSteps } from "./features.ts";
 import type { CheckpointContext, CheckpointRow, CheckpointStep } from "./features/checkpoint/_context.ts";
+import { RELEASE, SAMPLES } from "./features/checkpoint/_constants.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
 import { SAMPLE_CREATOR } from "./lifecycle.ts";
@@ -29,12 +30,9 @@ import { Forms } from "./forms.ts";
 import { FormLibrary } from "./form-library.ts";
 import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES } from "./form-setup.ts";
 export { FAMILY_FORM_BY_CHANNEL, FORM_SETUP, GENDER_FACT, LMIA_FORM_RULES, MINOR_FACT, SP_FORM_RULES, VV_FORM_RULES }; // B71: kept for the callers that read them from here
-/** QA-144 slice 1 (ruling 2): a form field no saved answer proposed is filled by hand, never "not a fact". */
-export const BY_HAND_REASON = "Not proposed by the saved AI answer, so it is filled by hand on the PDF until a person maps it on this form's field map (sample loader rule, QA-144; Sample)";
+export { BY_HAND_REASON, RELEASE, SAMPLES } from "./features/checkpoint/_constants.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
-/** The reviewed work-permit release c1-v3 (also read by the checkpoint's With an LMIA document lines). */
-export const RELEASE = join(PROTOTYPE, "p3", "releases", "c1-v3");
 export type { CheckpointRow };
 /** What the loaders read from the reviewed release's release.json (p3/releases/c1-v3). */
 type ReviewedRelease = { configuration_sha256: string; drafting_run_ids: string[]; author: { user_id: string }; submitter: { user_id: string }; approver: { user_id: string } };
@@ -47,11 +45,6 @@ export const STARTED_FROM_RELEASE = "Sample: from the outside-Canada release c1-
  *  outside the demo workspace (P-240, G2 BR-3): they write sample content or releases, or empty the workspace. */
 export const DEMO_ONLY = "This demo control works only in the demo workspace.";
 
-/** The sample programs (Screen 01): an import file, not constants in code (STANDARDS §3.1). Seven Individual and four
- *  Corporate programs covering the kinds of case in domain/TAXONOMY.md; names are illustrative and shown as Sample.
- *  Rows with a "setup" block get their combination and official files through the normal upload path; one of them
- *  starts from the reviewed work-permit release. Everything else shows as Not started. */
-export const SAMPLES = join(STUDIO, "samples", "programs.json");
 type SampleSetup = { key: string; participants: any[]; sources: string[]; import?: "release"; note: string; drop_documents?: { document_type: string; why: string }[] };
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
 /** S7 (P-148): the six agreed combinations the Demo menu loads (samples/wave1.json). */
@@ -69,7 +62,10 @@ export class Demo implements OnModuleInit {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Forms) private readonly forms: Forms, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ModuleRef) private readonly moduleRef: ModuleRef) {}
   /** B120: the configured checkpoint's steps (features/checkpoint/), read once at start-up so a bad step file stops it. */
   private steps: CheckpointStep[] = [];
-  async onModuleInit() { this.steps = await featureSteps<CheckpointStep>(join(FEATURES_DIR, "checkpoint")); }
+  async onModuleInit() {
+    this.steps = await featureSteps<CheckpointStep>(join(FEATURES_DIR, "checkpoint"));
+    if (!this.steps.length) throw new Error("api/src/features/checkpoint: no step file, so the configured checkpoint would load the six and nothing else.");
+  }
   async status() {
     const workspaceId = await this.ws.id();
     // loaded: the sample inputs are in this workspace; programsExist: something blocks loading them (QA-12).
@@ -278,7 +274,8 @@ export class Demo implements OnModuleInit {
     const official = new Set(officialFiles());
     const setUp = async (node: { programNodeKey: string; label: string }, path: string, c: SixSetup) => {
       const comp = await this.studio.createCombination(actor, { programKey: node.programNodeKey, label: node.label, key: c.key, participants: c.participants, description: c.note, sourceBasis: "ILLUSTRATIVE", basisNote: c.note });
-      // QA-207: the configured checkpoint may file another edition of a form (ROW17), by its own official file.
+      // QA-207: the configured checkpoint may file another edition of a form (ROW17, features/checkpoint/170-new-edition.ts),
+      // by its own official file.
       const sources = c.sources.map((f) => opts.swap?.[f] ?? f);
       const absent = sources.filter((f) => !official.has(f));
       const refused: { code: string; why: string }[] = [];
@@ -387,6 +384,7 @@ export class Demo implements OnModuleInit {
    *  step one context (features/checkpoint/_context.ts), then sorts the rows and writes the audit line. It catches
    *  nothing and times nothing itself: a step's refusal stops the load as before ("Loading stopped after: …"). */
   private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
+    if (!this.steps.length) throw new Error("the configured checkpoint has no steps (Demo.onModuleInit did not read api/src/features/checkpoint)"); // review m7
     const ctx = { actor, workspaceId, t0, log, db: this.db, audit: this.audit, result: {},
       get: <T>(cls: new (...a: never[]) => T) => this.moduleRef.get(cls, { strict: false }), settled: (id: string) => this.settled(id) } as CheckpointContext;
     // Before anything is written, a step may swap an official file in the six's load (row 17's IMM 5476 2021).

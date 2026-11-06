@@ -11,7 +11,9 @@
 //   * every UUID: replaced by a token made from its table and a hash of the row it identifies, refined over the rows it
 //     points at, so which row points at which is compared and the random ids are not; its first 8 hex digits (a case
 //     reference, a copy's file name) read as that token with "/8". A UUID no row owns reads <uuid?>;
-//   * timestamps (timestamp and date columns, ISO strings in text and JSON): <t>;
+//   * timestamps (timestamp columns, ISO date-times in text and JSON): <t>. Date columns (a citation's date, an
+//     edition's capture or accepted-until date) are compared (review m3): two runs on one day agree there; a date set
+//     from today would differ across midnight, which is a run on another day, not a behaviour change;
 //   * measured durations ("… in 20.6 s"; the values of keys seconds, timings, duration_ms): <s>;
 //   * the copy's folder name in stored paths (var/isolated-<copy>/) and a merged run's time-and-random id (<run>);
 //   * the studio folder's own absolute path (<studio>), from <var dir>: two checkouts in different folders (main's and a
@@ -94,7 +96,7 @@ const db = new pg.Client({ connectionString: url });
 await db.connect();
 const tables = (await db.query(`SELECT table_name AS t FROM information_schema.tables WHERE table_schema = current_schema() AND table_type = 'BASE TABLE' AND table_name <> '_prisma_migrations' ORDER BY 1`)).rows.map((r) => r.t);
 const timeCols = new Map();
-for (const r of (await db.query(`SELECT table_name AS t, column_name AS c FROM information_schema.columns WHERE table_schema = current_schema() AND (data_type LIKE 'timestamp%' OR data_type = 'date')`)).rows) {
+for (const r of (await db.query(`SELECT table_name AS t, column_name AS c FROM information_schema.columns WHERE table_schema = current_schema() AND data_type LIKE 'timestamp%'`)).rows) {
   if (!timeCols.has(r.t)) timeCols.set(r.t, new Set());
   timeCols.get(r.t).add(r.c);
 }

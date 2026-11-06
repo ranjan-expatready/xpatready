@@ -58,6 +58,13 @@ const names = (m: object, k: string) => ((Reflect.getMetadata(k, m) ?? []) as { 
     const got = await featureSteps<Step & { run: () => Promise<void> }>(steps);
     ok("B120 pass: steps run in their file-name number order (20 before 100), helpers (_*.ts) and other files skipped", JSON.stringify(got.map((x) => x.file)) === JSON.stringify(["20-sooner.ts", "100-later.ts"]), got.map((x) => x.file));
     for (const g of got) await g.run();
+    const cls = mkdtempSync(join(tmpdir(), "steps-class-"));
+    writeFileSync(join(cls, "010-class.ts"), `export default new (class { async run() { globalThis.b120Order.push("run class"); } })();\n`);
+    const fromClass = await featureSteps<Step & { run: () => Promise<void> }>(cls);
+    order.length = 0; await fromClass[0].run();
+    ok("B120 pass (break F1): a step whose run is defined on a class is kept and runs", JSON.stringify(order) === JSON.stringify(["run class"]) && fromClass[0].file === "010-class.ts", order);
+    rmSync(cls, { recursive: true, force: true });
+    order.length = 0; for (const g of got) await g.run(); order.unshift("init 20", "init 100");
     ok("B120 pass: each step's init runs once at load, in order, before any run", JSON.stringify(order) === JSON.stringify(["init 20", "init 100", "run 20", "run 100"]), order);
     rmSync(steps, { recursive: true, force: true });
     for (const [files, why, names] of [
@@ -66,6 +73,8 @@ const names = (m: object, k: string) => ((Reflect.getMetadata(k, m) ?? []) as { 
       [{ "040-none.ts": "export const run = () => 1;\n" }, "a step with no default export", ["040-none.ts"]],
       [{ "form-boxes.ts": step("x") }, "a file that is neither NNN-<feature>.ts nor _<name>.ts", ["form-boxes.ts"]],
       [{ "050-Form_Boxes.ts": step("x") }, "a step name not in lower-case words", ["050-Form_Boxes.ts"]],
+      [{ "010-a.ts": step("a"), "005-js-first.js": step("js") }, "a step file in JavaScript (.js), which would never run (break F2)", ["005-js-first.js"]],
+      [{ "_helper.mts": "export const x = 1;\n" }, "a helper of another module kind (.mts) (break F2)", ["_helper.mts"]],
     ] as [Record<string, string>, string, string[]][]) {
       const bad = mkdtempSync(join(tmpdir(), "steps-bad-"));
       for (const [f, body] of Object.entries(files)) writeFileSync(join(bad, f), body);
@@ -85,7 +94,8 @@ const names = (m: object, k: string) => ((Reflect.getMetadata(k, m) ?? []) as { 
     ok("B120 pass: each combination's form-setup steps load, in their order", JSON.stringify(combination) === JSON.stringify(["100-form-lines", "110-marital-list", "120-family-form", "130-rule-facts", "140-own-yes-no", "150-approve-library", "200-place-from-parts", "210-rule-facts-beside", "220-placement-results", "300-reviewed-release-documents", "310-checklist-documents", "320-cited-documents", "330-approve-document-types", "400-edition-form-fields"]), combination);
     ok("B120 pass: the placement passes load, in their order", JSON.stringify(placement) === JSON.stringify(["10-form-boxes", "20-condition-facts"]), placement);
     const demo = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "api", "src", "demo.ts"), "utf8");
-    ok("B120 pass: Demo reads the checkpoint's steps at start-up (onModuleInit), so a bad step file stops the start-up", /async onModuleInit\(\) \{ this\.steps = await featureSteps<CheckpointStep>\(join\(FEATURES_DIR, "checkpoint"\)\); \}/.test(demo));
+    ok("B120 pass: Demo reads the checkpoint's steps at start-up (onModuleInit), so a bad step file stops the start-up", /async onModuleInit\(\) \{\s*this\.steps = await featureSteps<CheckpointStep>\(join\(FEATURES_DIR, "checkpoint"\)\);/.test(demo));
+    ok("B120 fail (review m7): no step file stops the start-up, and a load with no steps stops in words, never loading the six alone", /if \(!this\.steps\.length\) throw new Error\("api\/src\/features\/checkpoint: no step file/.test(demo) && /loadConfigured\([^)]*\) \{\s*if \(!this\.steps\.length\) throw/.test(demo));
 
     // The real wiring: main.ts calls registerFeatures before the app is created, and the folder exists with its guide.
     const main = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "api", "src", "main.ts"), "utf8");

@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Actor } from "../../../core.ts";
-import { RELEASE, SAMPLES } from "../../../demo.ts";
+import { RELEASE, SAMPLES } from "../_constants.ts";
 import { decide } from "../../../proposals.ts";
 import { Studio } from "../../../studio.ts";
 import type { CheckpointContext } from "../_context.ts";

@@ -102,7 +102,7 @@ Five suites scan **only the top level** of `api/src` (`readdirSync(API)`). Code 
 
 Also `product/tools/m2-hot-files.txt` (read by `m3-guard.sh` in CI) lists `studio/api/src/demo.ts`. Once the checkpoint lives in `api/src/features/checkpoint/`, an M3-only PR could change it unseen. The tech lead keeps that list, so this PR does not edit it (§6, question 4).
 
-Each scan reads `api/src` recursively (`.ts`, not `.d.ts`). For each one, a fail test plants a file in a subfolder and checks that it is caught. `count-any.mjs` and `graph.mjs` already walk subfolders. `select-suites.mjs` maps a file under `api/src/features/` to ALL, which is conservative; `demo.ts` already selects 162 suites. Not changed (P-312).
+Each scan reads `api/src` recursively (every `.ts` file, `.d.ts` included: none exists there today, and a wider scan only checks more). For each one, a fail test plants a file in a subfolder and checks that it is caught. `count-any.mjs` and `graph.mjs` already walk subfolders. `select-suites.mjs` maps a file under `api/src/features/` to ALL, which is conservative; `demo.ts` already selects 162 suites. Not changed (P-312).
 
 ## 5. Checks (Done when)
 
@@ -147,3 +147,13 @@ Each scan reads `api/src` recursively (`.ts`, not `.d.ts`). For each one, a fail
 | `count-any.mjs --against origin/main` | exit 0, 418 = 418 |
 
 Size: `demo.ts` 1,095 → 561 lines; `form-part-placements.ts` 181 → 70; 41 new files (18 checkpoint steps, 14 combination steps, 2 placement passes, 7 helpers).
+
+## 8. On `main` after #1123 (ea8e35763), 6 Nov 09:45–11:30 IST
+
+#1123 merged at 09:45 IST; `main` was merged into this branch and the split replayed onto it, #1123's two `demo.ts` edits moved into `combination/140-own-yes-no.ts` and `checkpoint/150-filled-copies.ts`. These numbers replace §7's (the draft's).
+
+* **Two runs of `main` ea8e35763 differed** in the configured checkpoint (862 lines). Cause 1: `answer_snapshot.input_hash` and `validated_copy.facts_hash` hash each fact's person, a random party id (`engine/runtime/forms.ts` inputHash). Cause 2: the case's four people are alike rows told apart only by the answers that point at them, which the tool did not read. Both fixed in the tool, named in its header (d150946e4): main vs main `cmp` exit 0.
+* Configured checkpoint, the split (d150946e4) vs `main`: `cmp` exit 0, 11,022 rows in 88 tables, 130 working files (43 encrypted PDFs by size); against a second `main` run too. Reset to the six: `cmp` exit 0, 1,251 rows, 59 files; main vs main exit 0. A retired question placement on the branch copy: exit 1.
+* Protected set (`works-set.mjs`, 39 capabilities) on d150946e4: 39/39 green, exit 0 each. The picked suites (smoke set and every suite that loads the checkpoint or runs placement or a changed scan, 25): run-suites exit 0.
+* Review (Opus, d150946e4, `review.md`): Approve, no Blocker or Major, 7 minors. Fixed after it: m2 (stale pointers), m3 (date columns are compared again; the HTTP result compared in the PR), m4 (this section), m6 (`features/checkpoint/_constants.ts`: no step imports its runner), m7 (no step file stops the start-up). To the tech lead: m1 (the M2 hot-file list, §6 Q4) and m5 (below).
+* Break (`break-report.md`, d150946e4): no Blocker or Major, 4 minors. Fixed: F1 (a step written as a class lost its `run`: the step is now the prototype of what is kept), F2 (a `.js` or `.mts` file in a step folder stops the start-up). To the tech lead, the same on `main`: F3 / review m5 (two unordered reads: `api/src/proposals.ts:185`'s near names and the IMM 5484 rejections, `combination/310-checklist-documents.ts:38`, so a run can differ from another run of the same code outside the tool's masks; seen once in the breaker's three fresh runs) and F4 (place from form parts is not refused during a load).
