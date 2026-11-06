@@ -164,3 +164,51 @@ Scan results:
 * **r2-n2.** `phoneText` (`team.ts:81-88`) is now reached only on a release whose maps all read the phone whole, and no loaded release does that. It is kept as the safe fallback, which is fine. The pure tests cover it (`check_qa289_rep_phone.ts:32-50`).
 
 **Verdict (round 2): Approve.**
+
+## Diff-only check, 4eb31238
+
+* **Reviewed:** `git diff b935dd05 4eb31238 -- '*.ts'`. That range holds the merge `40040b03` (#1072's head `38b19a14` into A7) and the pre-flight fix `4eb31238`. Line numbers are those of `4eb31238`, read from a `git archive` copy. Same reviewer, US$0, no server.
+
+### Verdict
+
+**Approve.**
+
+### The merge 40040b03 brings no A7 change
+
+* `git diff a698a26d b935dd05` is A7's own change before the merge: 6 files, 267+/14−.
+* `git diff 38b19a14 40040b03` is what A7 adds on top of #1072's head after the merge.
+* With `index` lines stripped, the two patches are **IDENTICAL**: the same 6 files, the same hunks.
+* #1072's side (`git diff a698a26d 38b19a14`) touches none of A7's 6 files. So there was no conflict to resolve and no edit was hidden in the merge.
+
+### The fix 4eb31238
+
+The rule (`engine/runtime/case.ts:86`) is now:
+
+```ts
+phone: ts.some((t) => /phone_part/.test(t) || (writesParts(t) && /\bphone:/.test(t)))
+```
+
+* **A superset of main's rule.** Main's rule is the first term, unchanged, so nothing that is a phone on main stops being one. The probe agrees, comparing main's test with the new one:
+  * `"phone_part"`, `"phone_part:national_number"` and `"select primary phone; phone_part:extension (max 5 chars)"` are phones under both.
+  * `"phone:country_code_digits"` and `"phone:area_code_and_number"` were not phones on main and are now.
+  * `"select primary phone; address_part:city"`, `"as_is"`, `"telephone:x"`, `"derived:country code of … is 1 -> check_code:1/0"` and `""` are phones under neither. `\b` does not fire inside `telephone`.
+* **Scan at 4eb31238** (the same 314 JSON files as round 2, now after the merge): **0** facts lose the phone kind. Only `person.telephone_number` (10 files) and `person.fax_number` (1 single-form IMM 5476 run) gain it, the same as round 2.
+  * A grep of `studio/**/*.{ts,tsx,cjs,mjs}` and `p5/*.ts` finds no `phone:` transform in any test's own snapshot except QA-289's own check.
+  * Round 2's scan read JSON only, so it missed C4.4's in-file `transform: "phone_part"` (`tests/check_c44_question_types.ts:51`). This check covers TS sources too.
+* **C4.4 tier 1 (phone)** is reproduced on the engine with C4.4's own Sample snapshot (`check_c44_question_types.ts:37`, `:51`). Part 1 cannot run here, because the suite prepares a database copy first.
+
+  | Commit | Shape | Good value | Bad value |
+  |---|---|---|---|
+  | 4eb31238 | `true` | `[]` | two plain messages |
+  | 40040b03 | `false` | "Enter text." | "Enter text." |
+
+  This is the pre-flight failure, and the fix clears it.
+* **B1 is still fixed.** `check_qa289_rep_phone.ts` gives **17/17** at 4eb31238. The B1 lines pass: shape `true`, and the IMM 5476 boxes are written `["1","4165550100"]`. The new guard (`check_qa289_rep_phone.ts:53`, bare `"phone_part"` stays a phone) is the one FAIL with case.ts as at 40040b03 (**16/17**). It fails for exactly this reason.
+* **Typecheck at 4eb31238:** `PASS no new type errors (15 known, 0 fixed)` (api 553 files, web 124).
+* **Callers after the merge:** `representativeAnswers` is called only at `api/src/runtime.ts:281` (with `phoneParts`). `shape.phone` is read only by `case.ts:206`, `web/src/runtime/questionnaire.tsx:50`, and the answer helpers in `acceptance/lib/m3.ts:126`, `tests/runtime/check_runtime_r1d.ts:161` and `check_runtime_r1c.cjs:331`. Each of those helpers answers a phone-kind question with parts, which is right for the added kind.
+
+### Nothing else wrong in the range
+
+* **Nit, not this row:** a bare `"phone_part"` with no colon is a phone question, but the filler has no step for it (`p5/transforms.ts:147` needs `phone_part:<part>`), so such a box is "by hand". This is the same as on main, and only C4.4's Sample snapshot has one.
+
+**Verdict (diff-only, 4eb31238): Approve.**
