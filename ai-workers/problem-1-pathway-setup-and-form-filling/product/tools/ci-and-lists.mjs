@@ -3,10 +3,12 @@
 // GitHub runs a multi-line `run: |` step as `bash --noprofile --norc -eo pipefail`, and bash -e does not stop on a failed
 // command inside an `a && b && c` list unless it is the last one: the list just returns non-zero and the next line runs,
 // so `check-docs && decision-impact && graph --check` followed by a green line passed with check-docs red. This check
-// fails on such a list anywhere but the block's last line; the fix is one command per line, where -e stops at the first red.
+// fails on such a list anywhere but the step's last statement; the fix is one command per line, where -e stops at the first
+// red. A single-line `run:` is read as a block of one line, so `run: a && b; echo done` fails too.
 // Allowed, because they hide nothing: a test that guards an action ([ "$x" = y ] && z=1), a condition (if a && b; then),
-// a list inside $( ) or [[ ]], && inside quotes or a comment, a single-line `run:` (its list is the step's last command),
-// and the block's last command line (the step ends with the list's status).
+// a list inside $( ) or [[ ]], && inside quotes or a comment, and the last statement of the last line (the step ends with
+// the list's status). It errs on the strict side: a list inside an if branch or ( ) on the last line is flagged, though
+// bash would end red there; split it anyway (one rule).
 // Plain Node, no package (STANDARDS §1); reads files only, runs in well under a second, US$0.
 //   node product/tools/ci-and-lists.mjs              check every .github/workflows/*.yml; exit 0 = none, 1 = a hidden red
 //   node product/tools/ci-and-lists.mjs FILE...      check these files
@@ -23,11 +25,14 @@ const ROOT = join(HERE, "..", "..", "..", "..");
 const WORKFLOWS = join(ROOT, ".github", "workflows");
 const HINT = "bash -e passes over a failed command before the last && of a list, so a later green line hides it: put one command per line (P-376 (3))";
 
-// The multi-line run blocks of a workflow file: [{ line, lines: [{ n, text }] }], n = 1-based line in the file.
+// The run blocks of a workflow file: [{ line, lines: [{ n, text }] }], n = 1-based line in the file. A `run: |` (or >, with
+// any chomping or indentation indicator) block gives its lines; a single-line `run: cmd` gives one line, YAML-unquoted.
 export function runBlocks(text) {
   const rows = text.split("\n"), blocks = [];
   for (let i = 0; i < rows.length; i++) {
-    const m = rows[i].match(/^(\s*)(?:-\s+)?run:\s*[|>][-+]?\s*(?:#.*)?$/);
+    const one = rows[i].match(/^\s*(?:-\s+)?run:\s+([^|>\s].*)$/);
+    if (one) { blocks.push({ line: i + 1, lines: [{ n: i + 1, text: unquote(one[1].trim()) }] }); continue; }
+    const m = rows[i].match(/^(\s*)(?:-\s+)?run:\s*[|>][-+]?[1-9]?[-+]?\s*(?:#.*)?$/);
     if (!m) continue;
     const keyIndent = rows[i].search(/\S/) + (rows[i].trimStart().startsWith("-") ? 2 : 0);
     const lines = [];
@@ -42,6 +47,13 @@ export function runBlocks(text) {
     i = j - 1;
   }
   return blocks;
+}
+
+// A YAML flow scalar's text: 'a '' b' → a ' b, "a" → a (the shell sees what is inside the quotes).
+function unquote(v) {
+  if (v.length >= 2 && v.startsWith("'") && v.endsWith("'")) return v.slice(1, -1).replace(/''/g, "'");
+  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) return v.slice(1, -1).replace(/\\"/g, '"');
+  return v;
 }
 
 // Blank out what cannot hide a red: quoted text, comments, $( ) and [[ ]] contents. Keeps the length (columns stay put).
@@ -64,10 +76,12 @@ export function strip(s) {
 const isTest = (cmd) => /^(!\s+)?(\[\[|\[|test)(\s|$)/.test(cmd.trim());
 
 // The hidden-red lists on one logical line (already stripped). Returns the left commands of each && list that hides a red.
-export function hiddenLists(stripped) {
+// last = the step's last line: its last statement ends the step with the list's status, so only that one is exempt.
+export function hiddenLists(stripped, last = false) {
   const found = [];
   // Statements: split on ; and on the shell words that start a new command list.
   const parts = stripped.split(/;|\bthen\b|\bdo\b|\belse\b|\{|\}|\(\s|(?<=\S)\)\s/);
+  if (last) { let k = parts.length - 1; while (k >= 0 && parts[k].trim() === "") k--; if (k >= 0) parts.splice(k, 1); }
   for (const raw of parts) {
     let p = raw.trim();
     if (!p.includes("&&")) continue;
@@ -99,8 +113,8 @@ export function lint(text) {
       if (/\\$/.test(l.text)) cur = { n: l.n, text: l.text }; else logical.push({ n: l.n, text: l.text });
     }
     if (cur) logical.push(cur);
-    logical.slice(0, -1).forEach((l) => {
-      for (const left of hiddenLists(strip(l.text.replace(/\\$/, "")))) misses.push({ n: l.n, text: l.text, left });
+    logical.forEach((l, k) => {
+      for (const left of hiddenLists(strip(l.text.replace(/\\$/, "")), k === logical.length - 1)) misses.push({ n: l.n, text: l.text, left });
     });
   }
   return misses;
@@ -160,7 +174,16 @@ function selfTest() {
       '[ "$r" = success ] || { [ "$r" = skipped ] && [ "$c" = "[]" ]; }',
     ];
     for (const s of safe) expect(`passes: ${JSON.stringify(s)}`, lint(wf(s)).length === 0, lint(wf(s)));
-    expect("a single-line run: is never read as a block", runBlocks("    steps:\n      - run: a && b\n      - run: c\n").length === 0);
+    // The last line's exemption covers its last statement only (review m1, 6 Nov).
+    const lastSemi = gh('echo first\nbash -c "exit 3" && echo b; echo done\n');
+    expect("a list then ; on the last line hides the red under bash", lastSemi.status === 0, lastSemi.status);
+    expect("… and the check catches it", lint(wf('echo first\nbash a.sh && bash b.sh; echo done')).length === 1);
+    expect("a list inside a loop on the last line fails", lint(wf('for f in a b; do check "$f" && echo ok; echo next; done')).length === 1);
+    const single = (r) => `jobs:\n  a:\n    steps:\n      - run: ${r}\n      - run: c\n`;
+    expect("a single-line run: is one statement: a && b passes", lint(single('node t.mjs --self-test && node t.mjs')).length === 0);
+    expect("a single-line run: a && b; echo done fails", lint(single('bash a.sh && bash b.sh; echo done')).length === 1);
+    expect("a single-line run: in YAML quotes is read unquoted", lint(single("'[ -f s.md ] && cat s.md >> \"$O\" || true'")).length === 0 && lint(single("'make a && make b; echo x'")).length === 1);
+    expect("a block with an indentation indicator (run: |2) is read", lint("    steps:\n      - run: |2\n          check-a && check-b\n          echo done\n").length === 1);
 
     // 3. The real workflows pass.
     const files = readdirSync(WORKFLOWS).filter((f) => /\.ya?ml$/.test(f)).map((f) => join(WORKFLOWS, f));
