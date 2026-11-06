@@ -1,47 +1,42 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: Lead 21 · 6 Nov (session local_85990855-843e-4ee4-ba7c-5c5f4049319e; took over from Lead 20 at about 400k, P-314, P-373, P-374)
+current_lead: Lead 22 · 6 Nov (session local_b795aa55-be67-4f08-8bf1-616fb8cb7aaa; took over from Lead 21 after M2 = 60, founder's choice "Finish M2, then hand over", P-314)
 
-updated: 2026-11-06 06:00 IST by **Lead 20** (hand-over to Lead 21) · milestone: **M2 59/60 (only C10.1 left); then the P-376 scale changes; the M3 48-hour clock starts after they land (P-376 amends P-359)** · rules: **`RULES.md`** + DECISIONS P-354 to P-376 · earlier page: `history/STATE-2026-11-06-0600-lead20.md`
+updated: 2026-11-06 12:20 IST by **Lead 21** (hand-over to Lead 22) · milestone: **M2 60/60 (qa, 12:20 IST: C10.1 Works on main fd29643aa); now the P-376 scale changes, then the M3 48-hour clock** · rules: **`RULES.md`** + DECISIONS P-354 to P-376 (+ the 6 Nov rows still to write, below) · earlier page: `history/STATE-2026-11-06-1220-lead21.md`
 
-## Start here (Lead 21 takes over from Lead 20, ~06:00 IST, 6 Nov)
-**Branch** `lead/2026-11-05-lead14b`, records PR **#1128**: label it with the day's records when the queue is idle (records once a day, P-336); the founder's name is needed in your chat for your own records PR. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Lead 20's working notes, with every ruling and id: the file lead20-pending in the side-session notes folder of Lead 19 (outside the repo). Acrobat is granted to Lead 21 too; the Validate recipe that needs nobody is item 6 there.
+## Start here (Lead 22)
+**Branch** `lead/2026-11-05-lead14b` (239+ commits behind main: merge `origin/main` before the records write), records PR **#1128**. GitHub: curl + `gh auth token` with `allowed_domains` (P-363); gh's TLS is broken on the Mac, and so is Node's inside the sandbox (live AI runs only from a Terminal tab, founder-approved). Times only from `TZ=Asia/Kolkata date`. Lead 21's working notes, every id and ruling: the file lead21-pending in Lead 19's side-session notes folder; the CURRENT-LEAD file there names the current Lead (stop-gap until #1136).
 **Your to-do, in order:**
-1. Create the 30-minute check (CronCreate) **and** a Monitor on the open M2 PRs (cron checks do not fire while you are talking with the founder). Lead 20's watcher and check are stopped.
-2. **#1123** (C10.1 row 12b + B116, head `aaf2372f7`, CI red): B116's three questions moved Visitor visa's question list `vv.single-ae2133b8a398` → `fd6bb52d92bd`; `check_forms_b114_condition_other_combination.ts` and `check_forms_b86_door.ts` pin the old list ("so the saved pairs still replay"). B99 (`local_632e0756-…`) is costing the options: keep the list, re-key the saved pairs with no AI call, or a paid run (founder's Go with cost first). Fast loop (founder, ~06:00 IST): failing suites + `select-suites --direct` non-browser suites locally, push only on exit 0, exit codes per suite to you. **Validate already PASSED on all four copies (04:06-04:08 IST)**; if the fix changes what the copies write, Validate again.
-3. **#1131** (B115, QA-271, head `24ddb2a5a`, retargeted to `main` at 05:29 IST on the founder's word): gate B red: `C11.12-runtime.test.ts` needs `wp.family`, not on the six. **fix-1052** (`local_b81d9314-…`) owns it now; same fast loop; never drop a capability id (P-330 (7)).
-4. At a lane's "Ready for label": check the suites it ran against `select-suites.mjs --direct` on its diff, read failing check names, then label. Landing: #1131 and #1123 (any order), then start the C10.1 pack run (nightly.yml dispatch, `capabilities: C10.1`; the founder approved these runs, ~05:15 IST; pick six or checkpoint from qa's C10.1 row), then qa walks C10.1 on `main` with a fresh verdict → **60**.
-5. After 60 (P-376): label #1139 (flow fix) and #1136 (guardrails), then B119 (records queue), B122 (flaky retry), B120 (demo.ts split), B121 (exact affected tests), one at a time, each on its "Ready for label". Cloud lanes for B119/B120/B121/B122 were started 05:40 IST (they cannot message: read their PRs; B122 is #1145). B117 could not be started (classifier): start it at the founder's next typed turn or fold it into M3 briefs. B123 (GitHub App) is **parked until the product is done** (founder, ~05:50 IST). Then the M3 clock starts and the M3 plan follows P-376's principles.
-6. B104 #1084 (M3): label only after M2 = 60 and no M2 PR waits (P-369); its owner is `session_015r4b4…` (ruling 03:00 IST).
-7. Records at the morning write: P-373 to P-376 and B116-B123 are already committed on the Lead branch (`f11cb4546`); still to record: the B123 parking, the fast-loop rule, Lead 20's four lessons (below).
+1. Create the 30-minute check (CronCreate) and a Monitor (Lead 21's script: scratchpad `prwatch.sh <pr>...`; it reads only the latest check runs, the Mergify queue branches and the nightly runs).
+2. **P-376 merges, one at a time, each on green + approve:** **#1139** flow fix (head 021b7d90b, green; Opus approved 50c335534 in round 2; Lead 21 read the diff since then: removals and a rename only, no third review needed), then **#1136** guardrails (c0f639d66, green; check STATE ≤ 12 KB and the current_lead rule against this page first), then **#1147 B119** (needs merge of main after #1139 + diff-only re-review: start `/next evidence B119` on its branch), **#1145 B122**, **B120** (still building), **#1149 B121**. **#1148 B117** (approved 7a6db03c9, C7.7 33/33) alongside. qa's **#1157** records: label first (records).
+3. **CI hole (P-214 fix, first after #1139):** in `ci.yml` the `a && b && c` lines (check-docs, decision-impact, graph, select-suites, merge-guard) hide a red that is not last (B119's find). Split them into one command per line.
+4. Hardening queue (P-358): the three B116 questions on the six with a better-checked paid run + rework B114/B88 (US$0.56 run c4005b30 was not used); QA-283 = B117; QA-289 (firm phone "[object Object]", Major), QA-290; QA-286/287/288 minors; five tests/runtime suites never run by run-suites.sh (tools row); packs run locally the gate-B way (tsx CLI, no --tsconfig) in the builder pre-flight (lesson from #1156).
+5. B104 #1084 (M3) after the P-376 changes; then the M3 48-hour clock (P-376 amends P-359).
+6. **Records write (P-336), with the founder's name for #1128:** the rows listed under "To record" below.
+7. Disk: about 8 GB free; remove merged worktrees (fix-1052-queue, b82-checklist-facts) from a Terminal tab with the founder's OK; keep demo-main.
 
-## Where we are (06:00 IST)
-* **M2 59/60 on qa's records** (#1144 labelled, in the queue; C4.6 Works from run 42131786563). Merged tonight: #1133, #1125, #1134, #1052. Only **C10.1** left: #1123 + #1131, then its pack run and qa's walk. ETA 60: about 09:30-10:30 IST if #1123 needs no paid run.
-* **Scale window (P-376):** about 5-6 hours after 60; M3 clock about 15:00-16:00 IST.
-* Plan 7% weekly; live AI off; US$0 tonight.
+## Where we are (12:20 IST)
+* **M2 60/60 (qa, 12:20 IST: C10.1 Works on main fd29643aa).** Merged today: #1131 (B115 sponsor, C6.1; C11.12 held from gate B), #1123 (C10.1 row 12b + B116 option (a)), #1156 (QA-285: validated files from the Mac's folder, through the upload door), qa records #1144, #1151, #1154. GitHub C10.1 pack 27/27 (run 42161637249) and qa's walk by screens (four validated copies download 200 with the saved sha256; run 42175798473 28/28 with R12c held): **C10.1 Works, QA-285 closed** (records #1161).
+* Spend today **US$0.56** (one paid re-run, answers not used); ledger also holds a US$2.04 worst-case reserve from a sandboxed attempt that billed US$0. Weekly plan 18% (11:24 IST).
 
 ## In flight
 | Lane | Where | Row |
 |---|---|---|
-| B99 `local_632e0756-78a6-4e6f-9513-bf54fbdb71cd` | Mac | #1123 fix (fingerprint options) |
-| fix-1052 `local_b81d9314-9cf3-4655-af47-c2aacf2df793` | Mac | #1131 gate B |
-| qa-m2-walk `local_42b61af6-fa15-4fbf-9bcb-5c4cb6e17905` | Mac | idle; walks C10.1 when #1123 + #1131 land |
-| b104-m3 | cloud | #1084, held |
-| flow-fix / guardrails | cloud | #1139 / #1136, held to after 60 |
-| B119, B120, B121, B122 | cloud | P-376 rows, held to after 60 (B120 codes only after #1123 lands) |
-| Lead 22 `local_b795aa55-be67-4f08-8bf1-616fb8cb7aaa` | Mac | standby (P-286); top up a second standby at the founder's next typed turn |
+| B99 `local_632e0756-…` | Mac | done (#1123, #1156); warm, idle |
+| fix-1052 `local_b81d9314-…` | Mac | done (#1131); warm, idle |
+| qa-m2-walk `local_42b61af6-…` | Mac | C10.1 walk; #1157 records |
+| flow-fix, guardrails, B117, B119, B120, B121, B122, b104-m3 | cloud | P-376 rows held to after 60 (read their PRs; they cannot message) |
+| Lead 23 | — | top up two standbys at the founder's next typed turn (P-286) |
 
-## Waiting for the founder
-Nothing tonight. A paid run only if B99's options need one (cost first).
+## To record (DECISIONS, next records write)
+P-373's stop-gap (CURRENT-LEAD.md); B123 parked; the fast-loop rule; Lead 20's four lessons; B117 started (founder "Yes, start B117"); B119 ruling (one route, Mergify records queue by #1139's label); #1139 answers (no nightly issue, same-base memory); #1123 option (c) then (a) with costs and the B114/B88 finding; Lead runs paid AI from a Terminal tab (sandbox TLS); QA-285 "Files stay on the Mac" + qa's five conditions; P-314 exception "Finish M2, then hand over"; the founder's standing OK for CI re-runs ("you can initiate from on my behalf").
 
 ## Leads, in order (highest = current)
-**Lead 21** `local_85990855-843e-4ee4-ba7c-5c5f4049319e` (from ~06:00 IST) · standby **Lead 22** `local_b795aa55-be67-4f08-8bf1-616fb8cb7aaa` · **Lead 20** `local_fd377295-8ebb-4918-ab1a-180389866716` ended at about 400k (02:50-06:00 IST) · **Lead 19** `local_8acced9f-…` ended · Lead 18 (Ollama) · Leads 1-17 earlier. Hand over at about 400k (P-314).
+**Lead 22** `local_b795aa55-…` (from 12:20 IST) · **Lead 21** `local_85990855-…` ended (05:57-12:20 IST) · Lead 20, Lead 19 ended · Lead 18 (Ollama) · Leads 1-17 earlier.
 
-## Founder asks of 6 Nov (A176-A198: `history/STATE-2026-11-06-0220-lead18.md`)
-**A199** (~02:07 IST) what was done on the other account and what not; why M2 keeps failing (58 → 57); too many tokens; M2 in 3-4 hours, M3 in 24; strategy with lanes, standbys, cloud; what is needed from him; speed first without lowering quality: answered in chat; lanes started; P-369 ✓ · **A200** (~02:20) connected to his GitHub repo? Yes: fetch and API reads work from the Mac; the GitHub plugin inside Claude fails to connect (not used); cloud proven by the first cloud lane's push ✓ · **A201** (~02:25) M3 tonight: "B104 now, sprint at 60" (P-369) ✓ · **A202** (~02:25) Mac stays awake; signed in to claude.ai (verified: claude.ai/code reads as text); Acrobat approved up front (granted to Lead 19 ~02:25 IST); check what Ollama changed, overnight lessons, approvals up front, hourly plan: P-370, plan above ✓ · **A203** (~02:35) why 10-12 hours for two capabilities; Lean/Six Sigma; standby builders: answered (queue waits and redone checks, stacking B99/B115, warm fix-1052 lane as standby) ✓ · **A204** (~02:45) are we rebuilding, save and resume, M3 at scale: measured, P-371 ✓ · **A205** (~02:55) tokens burned while checking; final way; 150+ capabilities: answered ✓ · **A207** (~03:05) Acrobat for Lead 21 too, more standbys if needed, mind tokens: done, no extra lanes needed ✓ · **A208** (~03:08) truth about Leads and GitHub: answered (work and decisions on GitHub; slow patterns need daily numbers) ✓ · **A209** (~03:10) fix all of these: P-372 ✓ · **A206** (~03:00) make the flow change right away; does an M3 bug reopen M2; visual summary of decisions and how we know it works: flow-fix lane started, merges after M2; visual given ✓
-
-## Lessons (5 Nov lessons: earlier page in history)
-* 6 Nov: a lane failed to start on disk (needs 5.4 GB free per new copy); check `df -h /` before every start, and clean merged worktrees by day, not at night: the sandbox refuses deleting them, so it needs the terminal, which asks the founder.
-* Why M2 stalled 16 hours (P-360's evidence): stacks of about 8,700 lines open 14-15 hours; batches failing when PRs were first combined; qa finding real Majors at the gate; records PRs outnumbering product PRs 34 to 19; two account switches and the Ollama detour. Small PRs that land fast and walks on `main` are the fix (P-360).
-* Token burn: Leads reached 400k+ in about 2 hours by re-reading a 34 KB STATE and long PR threads; long lanes (960k); no prompt caching on the Ollama route (about US$50). Keep STATE one page and checks reading only what changed.
-* 6 Nov (Lead 20): (a) at "Ready for label", check the suites a lane ran against `select-suites --direct` on its diff (seconds) — B99's red #1123 (twice) was in suites a 14-second check names; (b) read failing check names, not `mergeable_state`; (c) when shaping a row, grep the tests for pinned values the change will move (fingerprints, saved AI pairs) and put them in "Done when" (missed on B116); (d) cron checks wait while the Lead talks with the founder: keep a Monitor on the open M2 PRs; (e) Acrobat's File > Open dialog is another process: open files from a terminal tab, then Validate and File > Save in place; (f) say a time only from the clock.
+## Lessons (6 Nov, Lead 21)
+* A monitor must read only the latest check runs (`filter=latest`): a re-run looked stuck for 13 minutes.
+* Mergify's queue runs are `pull_request` events on `mergify/merge-queue/*` branches, not `merge_group`.
+* Live AI from a sandboxed process fails with "Connection error" (Node cannot load system certificates); run paid jobs from a Terminal tab.
+* A pack must not import modules with Nest parameter decorators; run packs locally the way gate B does.
+* A fix that moves shared data turns older tests red elsewhere (four rounds on #1123): grep pinned values first (Lead 20's lesson (c)), and run every suite that names the moved file.
