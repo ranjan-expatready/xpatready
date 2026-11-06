@@ -763,7 +763,7 @@ export class Demo {
           for (const y of setup.ownYesNo ?? []) {
             const ed = await this.db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true } });
             const same = (await this.db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, valueType: "yes_no", groupKey: "person" }, select: { canonicalFieldKey: true, label: true } })).find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(y.label));
-            try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await this.ownQuestions.ask(author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }) }); } catch (e) { setUpRefused.push(`${y.label}: ${said(e)}`); }
+            try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await this.ownQuestions.ask(author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }), ...(y.question ? { question: y.question } : {}) }); } catch (e) { setUpRefused.push(`${y.label}: ${said(e)}`); }
           }
           for (const ch of await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } })) {
             try { await this.library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (QA-144 slice 1)."); } catch (e) { setUpRefused.push(`${ch.label ?? ch.key}: ${said(e)}`); }
@@ -930,9 +930,15 @@ export class Demo {
       why: !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, ...(rowEleven ? [] : [`${fam.births} of the 4 people have a date of birth on the case.`])].join(" · ") || null });
     // Row 12: a copy generated for each applicant; the read-back needs a person's Validate in Adobe Reader (P-46, P-171).
     const allFilled = !!fam && fam.applicants > 0 && fam.imm5257 === fam.applicants;
-    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: allFilled ? "partial" : "waiting",
-      shows: fam?.imm5257 ? `IMM 5257 generated for ${fam.imm5257} of ${fam.applicants} applicants on release 1 (C7.1)` : "The fill is built (C7.1)",
-      why: allFilled ? ["Validate each copy in Adobe Reader and upload the validated copy on the case's Forms tab: the checkpoint cannot press Validate (P-46, P-171), so the read-back waits for a person.", ...(fam?.copiesRefused.length ? [`Other forms' copies not made: ${fam.copiesRefused.slice(0, 4).join(" · ")}`] : [])].join(" ") : !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, ...fam.copiesRefused].join(" · ") || "IMM 5257 was not generated for every applicant." });
+    // B99 (row 12b, P-349): each copy's Validate in Adobe, read back on the Mac (samples/validated-imm5257.json), counts
+    // only when the copy reads the same facts as the one validated (api/src/sample-validated.ts); never simulated.
+    // QA-285: a copy whose saved read-back counts but whose validated file is not in the local folder (GitHub, a fresh
+    // machine) is said in words, kept on the Mac (Sample); its file is never faked or downloaded as validated.
+    const allRead = allFilled && fam!.validated + fam!.validatedKeptOnMac === fam!.applicants && !fam!.validatedWhy.length;
+    const otherCopies = fam?.copiesRefused.length ? [`Other forms' copies not made: ${fam.copiesRefused.slice(0, 4).join(" · ")}`] : [];
+    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: allRead ? "done" : allFilled ? "partial" : "waiting",
+      shows: fam?.imm5257 ? `IMM 5257 generated for ${fam.imm5257} of ${fam.applicants} applicants on release 1 (C7.1)${fam.validated ? `; ${fam.validated} validated in Adobe and read back equal, the form's own Validate passed (P-171)` : ""}${fam.validatedKeptOnMac ? `; ${fam.validatedKeptOnMac} validated in Adobe on the Mac and read back equal, the form's own Validate passed (P-171, Sample): the validated files are kept on the Mac, not in these working files, so they are not downloaded or filed here` : ""}` : "The fill is built (C7.1)",
+      why: allRead ? otherCopies.join(" ") || null : allFilled ? [...(fam!.validatedWhy.length ? fam!.validatedWhy : ["Validate each copy in Adobe Reader and upload the validated copy on the case's Forms tab: the checkpoint cannot press Validate (P-46, P-171), so the read-back waits for a person."]), ...otherCopies].join(" ") : !fam ? "Waits for the Visitor visa's release 1 (a case runs on a release)." : [...fam.refused, ...fam.copiesRefused].join(" · ") || "IMM 5257 was not generated for every applicant." });
     // Row 17 (QA-207): the current IMM 5476 arrives through the intake on no combination, as a person sends a new edition:
     // the intake holds it (C2.4), and its comparison and impact wait on To review (C9.1; saved AI comparison, #781). The
     // Visitor visa's form finder may already have held it (its replay attaches the page's forms): then this send answers

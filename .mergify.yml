@@ -27,6 +27,7 @@ queue_rules:
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - check-success = ci
       - -title~=(?i)(^M3\b|\bC1\.3\b|\bC3\.16\b|\bC6\.(4|5|9|11|12)\b|\bC7\.[3567]\b|\bC8\.[12]\b|\bC9\.2\b|\bC10\.2\b|\bC11\.[56]\b)
@@ -39,6 +40,7 @@ queue_rules:
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - check-success = ci
       - title~=(?i)(^M3\b|\bC1\.3\b|\bC3\.16\b|\bC6\.(4|5|9|11|12)\b|\bC7\.[3567]\b|\bC8\.[12]\b|\bC9\.2\b|\bC10\.2\b|\bC11\.[56]\b)
@@ -58,6 +60,10 @@ queue_rules:
     merge_conditions:
       - check-success = ci
     merge_method: merge
+
+# -draft (P-371 (1), founder 6 Nov): a draft never joins a batch; a draft runs only the push guard. Records PRs carry the
+# label "records", set by ci.yml from tools/records-only.sh; the "records" queue that selects it, and the "-label=records"
+# that keeps it out of m2 and m3, come with B119 (#1147, Lead 21's ruling, 6 Nov).
 
 # Approved PRs join the queue by themselves (the queue_conditions above decide which); no "@mergifyio queue" needed.
 merge_protections_settings:

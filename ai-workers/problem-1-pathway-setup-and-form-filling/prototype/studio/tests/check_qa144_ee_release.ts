@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { savedReadBacks } from "../api/src/sample-validated.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_ee";
 let pass = 0, fail = 0;
@@ -57,7 +58,16 @@ const EE = "Provincial nominees › Express Entry stream";
   ok("QA-144 slice 4 B81 mark fail: no code is invented for \"unknown\" on IMM 0008 DEP", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 0008 DEP (10-2024)' and m.option_map->'map' ? 'unknown' and m.status <> 'RETIRED'`) === 0);
   ok("QA-144 slice 4 B81 mark: set by the author through the option map's route (its audit line names it)", n(`select count(*) from audit_event where entity = 'option map' and actor = 'user-A' and summary like '%IMM 0008 DEP (10-2024)%not on this form: Unknown%'`) >= 1);
   ok("QA-144 slice 4 fail: Express Entry's form editions keep no form field without a decision", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id join combination_form f on f.gov_form_def_id = e.gov_form_def_id where f.combination_id = '${ee}' and f.status <> 'RETIRED' and e.channel = 'PDF' and m.outcome = 'unresolved' and m.status = 'DRAFT'`) === 0);
-  ok("QA-144 slice 4 fail-guard: no live AI call, nothing spent (US$0), and no validated copy made (no simulated Validate)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before && l.body.cost_usd === 0 && n(`select count(*) from validated_copy`) === validatedBefore);
+  // B99 (C10.1 row 12b): the checkpoint now writes the Sample family's Visitor visa IMM 5257 copies' validated copies from
+  // a person's real Validate in Adobe, saved on the Mac (samples/validated-imm5257.json). The guard stays as strict:
+  // Express Entry's cases get no validated copy at all, and every other new one is one of those saved read-backs (its
+  // file and its "Validate in Adobe by …" source), never one made here: no simulated Validate. QA-285: on the Mac the loader
+  // sends those same validated files through the upload door, so a row of the checkpoint's is one whose checksum is a
+  // saved validated file's (only the files a person validated in Adobe); without them (GitHub) it writes none.
+  const savedShas = (savedReadBacks()?.copies ?? []).map((x) => x.validated_sha256).filter((x) => /^[0-9a-f]{64}$/.test(x));
+  const eeValidated = n(`select count(*) from validated_copy v join form_instance i on i.id = v.form_instance_id join runtime_case c on c.id = i.case_id where c.combination_id = '${ee}'`);
+  const madeHere = n(`select count(*) from validated_copy where ${savedShas.length ? `sha256 not in (${savedShas.map((x) => `'${x}'`).join(", ")})` : "true"}`);
+  ok("QA-144 slice 4 fail-guard: no live AI call, nothing spent (US$0), and no validated copy made (no simulated Validate)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before && l.body.cost_usd === 0 && eeValidated === 0 && madeHere === validatedBefore, { eeValidated, madeHere, validatedBefore });
   ok("QA-144 slice 4 no regression: the Visitor visa, the Study permit and With an LMIA are still released", ["Visitors › Visitor visa", "Study permits › Study permit › Outside Canada", "Work permits › Employer-specific work permit › With an LMIA – inside Canada"].every((x) => (l.body.released as string[]).includes(x)), l.body.released);
   ok("QA-144 slice 4 row 7: names Express Entry among the combinations set up from their forms", /sections drafted from .*Provincial nominees › Express Entry stream.*approved by the Approver/.test(r("7").shows), r("7").shows.slice(0, 300));
 
