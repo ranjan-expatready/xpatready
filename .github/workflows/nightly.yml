@@ -14,7 +14,8 @@
 #   ... -f data=checkpoint   loads the configured checkpoint instead of the six (GATE_B_DATA; tech lead 4 Nov, #798 QA-144)
 # qa still walks the screens like a person and gives the verdict (P-290); the run is the independent machine re-run.
 # P-371 (3): pull requests may skip suites they already passed on the same base (tools/ci-memory.mjs), so this run is the
-# net under them: every suite, every night, on main; a red one opens a qa issue (job "red") that qa turns into a row.
+# net under them: every suite, every night, on main. A red night shows in this run's summary and in daily-numbers.sh, and
+# qa writes the row (Lead 21, 6 Nov: no GitHub issue).
 name: nightly
 on:
   schedule:
@@ -120,40 +121,3 @@ jobs:
           name: nightly-suite-logs-part-${{ matrix.shard }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
-      - name: the red suites, for the qa row (only when something failed)
-        if: failure()
-        run: mkdir -p red && { grep -E '^\| [^|]+ \| FAIL \|' suites.md || echo "| part ${{ matrix.shard }} | FAIL | | the part failed before its table (see the job log) |"; } > "red/part-${{ matrix.shard }}.md"
-      - if: failure()
-        uses: actions/upload-artifact@v4
-        with: { name: "nightly-red-part-${{ matrix.shard }}", path: red/, retention-days: 14 }
-  red:
-    # P-371 (3): a red full run on main opens a qa row: one open issue labelled "qa: nightly red" (a comment on it when
-    # one is already open) listing the red suites, the commit and the run; qa turns it into a qa/BUGS.md row (or a
-    # quarantine, P-205, when there is no code cause). Agents may not close issues, so the first green full run on main
-    # closes it by itself.
-    needs: suites
-    if: ${{ always() && (needs.suites.result == 'failure' || needs.suites.result == 'success') && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions: { contents: read, actions: read, issues: write }
-    steps:
-      - uses: actions/download-artifact@v4
-        if: needs.suites.result == 'failure'
-        with: { pattern: "nightly-red-part-*", path: red, merge-multiple: true }
-      - name: green again, so close the open qa issue
-        if: needs.suites.result == 'success'
-        env: { GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}" }
-        run: |
-          for n in $(gh issue list --label "qa: nightly red" --state open --json number --jq '.[].number' 2>/dev/null); do
-            gh issue close "$n" --comment "The nightly full run on main ${GITHUB_SHA:0:9} is green: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; done
-      - name: open or add to the qa issue
-        if: needs.suites.result == 'failure'
-        env: { GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}" }
-        run: |
-          sha="${GITHUB_SHA:0:9}"; when=$(TZ=Asia/Kolkata date '+%-d %b %H:%M IST'); n=$(cat red/*.md 2>/dev/null | grep -c '| FAIL |' || true)
-          { echo "Nightly full run on main **$sha** ($when) is red: $n suite(s). Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo; echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; cat red/*.md 2>/dev/null
-            echo; echo "qa: one qa/BUGS.md row per cause (or a quarantine in run-suites.sh with its evidence when there is no code cause, P-205), naming this issue. The next green full run on main closes it."; } > body.md
-          gh label create "qa: nightly red" --color B60205 --description "A red nightly full run on main (P-371)" >/dev/null 2>&1 || true
-          open=$(gh issue list --label "qa: nightly red" --state open --json number --jq '.[0].number // empty')
-          if [ -n "$open" ]; then gh issue comment "$open" --body-file body.md; else gh issue create --title "qa: nightly full run red on main $sha ($n suites)" --label "qa: nightly red" --body-file body.md; fi

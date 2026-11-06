@@ -11,7 +11,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 `bash P/tools/lane.sh whoami`:
 * `lead` (main copy) → you are the Lead routing a founder request: continue the qa session (`SendMessage`) or start one, prompt `/qa <mode>` (Mac: `start_session`, own worktree from main; or a cloud session from main); tell the founder it is running. Stop.
 * `unbound` → `lane.sh bind qa`. Another lane → "This is the <x> lane; /qa runs in the qa copy." Stop.
-* `qa` → `lane.sh setup`, then `git fetch origin && git merge --no-edit origin/main` (you test what is on `main`); read the message that started you and the open `qa/BUGS.md` rows, and any open `qa: nightly red` issue (a red nightly on `main`, P-371): one BUGS row per cause, or a quarantine with evidence (P-205), naming the issue (the next green night closes it).
+* `qa` → `lane.sh setup`, then `git fetch origin && git merge --no-edit origin/main` (you test what is on `main`); read the message that started you and the open `qa/BUGS.md` rows.
 
 ## 1. Modes
 | Mode | Trigger | Scope |

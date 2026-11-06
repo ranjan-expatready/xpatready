@@ -53,14 +53,14 @@ waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "m
 (alarm if waste else ok)(f"{len(waste)} CI runs on branches with no open PR" + (": cancel " + " ".join(str(r["databaseId"]) for r in waste) if waste else ""))
 
 # 2b. Records PRs (qa:, lead:) must never sit in the Mergify queue: a push to them throws out the batch (2 Nov 07:35).
-# P-371 (4): a records-only PR carries "records" (set by CI), which Mergify's queues skip; it merges by itself outside
-# the queue (records-merge). Never merge it by hand while a batch is checking (P-306 (3)).
+# P-371 (4), B119: a records-only PR carries "records" (set by CI from tools/records-only.sh); Mergify's "records" queue
+# takes it and m2 and m3 skip it. Never merge it by hand while a batch is checking (P-306 (3)).
 for p in approved:
     names = [l["name"] for l in p["labels"]]
     if p["title"].startswith(("qa:", "lead:")) and "records" not in names:
-        alarm(f"#{p['number']} is a qa/lead PR with review: approved but no records label, so it joins a product batch: it is not records-only (records-merge.sh is-records), or its CI has not run; split the code out or let it batch")
+        alarm(f"#{p['number']} is a qa/lead PR with review: approved but no records label, so it joins a product batch: it is not records-only (records-only.sh is-records), or its CI has not run; split the code out or let it batch")
     elif "records" in names and mins(p["updatedAt"]) > 60:
-        alarm(f"#{p['number']} is a labelled records PR idle over an hour: read its records-merge job and the last records-merge.yml sweep")
+        alarm(f"#{p['number']} is a labelled records PR idle over an hour: read Mergify's summary on it (the records queue, B119)")
 
 # 3. qa (P-250, narrowed by P-277): approved PRs touching money, schema or permissions with no qa verdict comment.
 RISKY = ("prisma/", "ledger", "paid", "permission", "launcher")

@@ -3,7 +3,7 @@
 # I1, 3 Nov (P-291 (3) and (8), P-292 (2)): what runs depends on what the change is (job "kind", tools/change-kind.sh):
 #   * notes   (only *.md records and files under product/reports/): check-docs.sh and decision-impact.sh, plus the push
 #             guard (excluded paths, secrets, personal names), on one GitHub machine; nothing else, about a minute.
-#             Records-only PRs merge outside the product queue (P-371 (4), below).
+#             Records-only PRs are labelled "records" for Mergify's records queue (P-371 (4), below).
 #   * records (boards, guards, settings, other workflows): the fast checks on one machine (push guard, rules files,
 #             decision impact, graph P-86, official PDFs P-31, explicit-any count, the tools' own checks); no suites.
 #   * code    (the app, its suites or their tools; select-suites.mjs decides): the fast checks on the first part, and
@@ -35,10 +35,10 @@
 #       remembered. A head already green on this base with the same title and body (ready again, a reopen) reports
 #       that verdict; a red head is always tested again.
 #       The merge queue and the nightly full run never use memory: they run their full sets as before.
-#   (4) Records out of the product queue: a records-only PR (tools/records-merge.sh is-records) is labelled "records",
-#       which Mergify's queues skip; with "review: approved" and green ci, it merges while no batch is checking, after
-#       the records checks on the base with it merged in: job "records-merge" here after a green run, records-merge.yml
-#       on the label, and its sweep every 20 minutes.
+#   (4) Records out of the product queue: a records-only PR (tools/records-only.sh, the one definition) is labelled
+#       "records" here, and the label comes off when the change stops being records only. Mergify's "records" queue
+#       (B119) selects PRs by that label and m2 and m3 skip it, so records never join a product batch (Lead 21, 6 Nov:
+#       one route, the queue; no direct merge).
 name: ci
 on:
   pull_request:
@@ -99,7 +99,7 @@ jobs:
           queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
           n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
-          records=no; [ "$queue" = true ] || records=$(bash "$P/tools/records-merge.sh" is-records "$range") || records=no
+          records=no; [ "$queue" = true ] || records=$(bash "$P/tools/records-only.sh" is-records "$range") || records=no
           { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; echo "records=$records"; } >> "$GITHUB_OUTPUT"
           case "$kind" in
             notes) why="Notes only: check-docs.sh and decision-impact.sh (and the push guard); no suites, no app build.";;
@@ -149,7 +149,7 @@ jobs:
             fi
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-      - name: the "records" label (records-only PRs skip Mergify's product queues, P-371 (4))
+      - name: the "records" label (tools/records-only.sh; Mergify's records queue selects it, P-371 (4), B119)
         if: steps.k.outputs.queue != 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ github.token }}
@@ -157,8 +157,9 @@ jobs:
           HAS: ${{ contains(github.event.pull_request.labels.*.name, 'records') }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          if [ "$RECORDS" = yes ] && [ "$HAS" != true ]; then gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=records" >/dev/null && echo "labelled records"
-          elif [ "$RECORDS" != yes ] && [ "$HAS" = true ]; then gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/records" >/dev/null && echo "records label removed: this change is not records-only"
+          L=$(bash "$P/tools/records-only.sh" label)
+          if [ "$RECORDS" = yes ] && [ "$HAS" != true ]; then gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=$L" >/dev/null && echo "labelled $L"
+          elif [ "$RECORDS" != yes ] && [ "$HAS" = true ]; then gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$L" >/dev/null && echo "$L label removed: this change is not records-only"
           else echo "records: $RECORDS (label already right)"; fi
   shard:
     # Records and code, on GitHub's machines unless BATCH_RUNNER / PR_RUNNER put them on the Mac (a fork never reaches it).
@@ -478,27 +479,3 @@ jobs:
           path: memory/
           retention-days: 7
           if-no-files-found: ignore
-  records-merge:
-    # P-371 (4): a records-only PR with "review: approved" (read by the script, not from this event) and green ci merges
-    # here, outside Mergify's product queues, while no batch is checking against its base (P-306 (3)); else it waits up
-    # to 10 minutes, then the sweep
-    # (records-merge.yml) takes it. Runs the base's own copy of the script, never the PR's. !cancelled(): the parts and
-    # the type check are skipped for records, and a skipped need would otherwise skip this job too.
-    needs: [kind, ci]
-    if: "${{ !cancelled() && needs.ci.result == 'success' && needs.kind.outputs.records == 'yes' && needs.kind.outputs.queue != 'true' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository }}"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions: { contents: write, pull-requests: write }
-    env:
-      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: "${{ github.event.pull_request.base.ref }}", fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
-      - name: merge it if no batch is checking (records checks on the base with it merged in first)
-        env: { GH_TOKEN: "${{ github.token }}" }
-        run: bash "$P/tools/records-merge.sh" merge "${{ github.event.pull_request.number }}" --wait 10 | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}
