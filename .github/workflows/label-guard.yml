@@ -1,12 +1,13 @@
 # A label never outlives a review (founder, 6 Nov ~03:00 IST: "fix it so that it becomes a hard rule and it never messes
-# up"; on 5 Nov #1052 kept `review: approved` across a new fix commit). On every push to a labelled pull request,
-# product/tools/label-guard.sh removes the label unless the reviewer's Approve names the new head, or the push is a pure
+# up"; on 5 Nov #1052 kept `review: approved` across a new fix commit). On every push to a labelled pull request, and
+# whenever `review: approved` is added (F4, founder 6 Nov: a label put on a head with no Approve comes off at once, not
+# only at the next push), product/tools/label-guard.sh removes the label unless the reviewer's Approve names the new head, or the push is a pure
 # merge of main touching none of the PR's files (P-318 (1)), and comments why. pull_request_target runs main's copy of
 # this file and the script; the PR's commits are fetched as data and never run. Test: product/tools/check-label-guard.sh.
 name: label-guard
 on:
   pull_request_target:
-    types: [synchronize]
+    types: [synchronize, labeled]
 permissions:
   contents: read
   issues: write
@@ -15,7 +16,8 @@ permissions:
 # last approved commit, so runs are independent (#1136 review M2). A run that fails or times out removes the label.
 jobs:
   guard:
-    if: "contains(github.event.pull_request.labels.*.name, 'review: approved')"
+    # A push to a labelled PR, or the label itself being added; other labels (records, queued) start no run.
+    if: "contains(github.event.pull_request.labels.*.name, 'review: approved') && (github.event.action == 'synchronize' || github.event.label.name == 'review: approved')"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,7 +35,8 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.event.after }}
+          # A labeled event carries no push, so no "after": the PR's head then (the script re-reads it from GitHub anyway).
+          AFTER: ${{ github.event.after || github.event.pull_request.head.sha }}
         run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/label-guard.sh
       - name: the guard could not finish, so the label comes off (fails closed)
         if: failure() || cancelled()
@@ -43,7 +46,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           # 200 removed, 404 not there: anything else fails this step loudly, so a kept label is never silent.
-          code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/labels/review%3A%20approved")
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/labels/review%3A%20approved" || true)
           case "$code" in 200) ;; 404) exit 0;; *) echo "::error::could not remove review: approved (HTTP $code): remove it by hand"; exit 1;; esac
           curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/comments" \
-            -d '{"body":"**Label guard:** `review: approved` removed because the guard could not finish on this push (see the label-guard run). Label again once the head has a reviewer Approve."}' >/dev/null || true
+            -d '{"body":"**Label guard:** `review: approved` removed because the guard could not finish on this push or label (see the label-guard run). Label again once the head has a reviewer Approve."}' >/dev/null || true

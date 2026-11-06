@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # A label never outlives a review (founder, 6 Nov ~03:00 IST; on 5 Nov #1052 kept `review: approved` across a new fix
-# commit). Run by .github/workflows/label-guard.yml on every push to a pull request (pull_request_target, so the guard
-# is main's copy and a PR cannot change it). When the PR carries `review: approved`, its head must be reviewed: walking
+# commit). Run by .github/workflows/label-guard.yml on every push to a pull request and whenever `review: approved` is
+# added to one (F4; pull_request_target, so the guard is main's copy and a PR cannot change it). When the PR carries `review: approved`, its head must be reviewed: walking
 # back from the head along first parents, every step must be a pure merge of main (P-318 (1): the merge is exactly what
 # git's own merge gives, its second parent is on main, and it changes none of the PR's own files) until a commit with a
 # reviewer Approve: a PR comment line "Reviewer: Approve <7 to 40 hex characters of its SHA>", or a GitHub review
@@ -9,7 +9,8 @@
 # comment says why. The walk starts from the PR's head as GitHub reads it now, never from the push's "before", so a
 # cancelled or failed earlier run cannot let an unreviewed commit through (#1136 review M2). Fails closed: comments or
 # reviews that cannot be read count as no Approve.
-# Env: GH_TOKEN, REPO (owner/name), PR, AFTER (the push's head; the PR's current head wins), BEFORE (for the comment);
+# Env: GH_TOKEN, REPO (owner/name), PR, AFTER (the push's head, or the PR's head when the label was added; the PR's
+# current head wins), BEFORE (for the comment; empty when the label was added);
 # API (default https://api.github.com); MAIN_REF (default origin/main). Runs in a git copy holding main and the PR's
 # commits. Exit 0 when nothing was wrong or the label came off; 2 when the label could not be read or removed.
 # Test: check-label-guard.sh.

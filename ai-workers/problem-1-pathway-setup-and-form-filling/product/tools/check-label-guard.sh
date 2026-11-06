@@ -101,9 +101,44 @@ guard "$c2" "$pure" "$label" "[]"
 ok "with no Approve anywhere, a pure merge alone does not keep the label" "$(removed)" "$out / $log"
 guard "$c1" "$c2" '[{"name":"queued"}]' "[]"
 ok "no label: nothing is removed or posted" "$(kept)" "$out / $log"
+# F4 (founder, 6 Nov): the label being added runs the guard too. A labeled event has no push: BEFORE is empty and AFTER is
+# the PR's head (the workflow passes github.event.pull_request.head.sha).
+guard "" "$c2" "$label" "$(cm "Reviewer: Approve ${c1:0:9}")"
+ok "F4: the label added to a head whose Approve names only an older commit comes off at once, with a comment" "$(removed)" "exit $r, $out / $log"
+echo "$log" | grep -q '(was '; ok "... and the comment names no earlier push" "$([ $? != 0 ] && echo 1)" "$log"
+guard "" "$c2" "$label" "[]"
+ok "F4: the label added to a head with no Approve at all comes off" "$(removed)" "$out / $log"
+guard "" "$c2" "$label" "$(cm "Reviewer: Approve $c2")"
+ok "F4: the label added to a head with its Approve stays" "$(kept)" "$out / $log"
+guard "" "$pure" "$label" "$(cm "Reviewer: Approve $c1")"
+ok "F4: the label added on a pure merge of main over an approved commit stays" "$(kept)" "$out / $log"
 W="$(cd "$TOOLS/../../../.." && pwd)/.github/workflows/label-guard.yml"
 grep -q 'pull_request_target' "$W" && grep -q 'synchronize' "$W" && grep -q 'tools/label-guard.sh' "$W"
 ok "the workflow runs main's label-guard.sh on every push (pull_request_target, synchronize)" "$([ $? = 0 ] && echo 1)" "$W"
+# F4 in the workflow: which events run the guard, and what AFTER it gets, read the way GitHub reads them. The job's if:
+# is evaluated for four events (only the expressions it uses are translated; anything else fails the test).
+f4=$(python3 -I - "$W" <<'PY' 2>&1
+import re, sys, yaml
+d = yaml.safe_load(open(sys.argv[1])); on = d.get(True, d.get("on")); job = d["jobs"]["guard"]
+types = on["pull_request_target"]["types"]; after = [s for s in job["steps"] if s.get("name") == "label guard"][0]["env"]["AFTER"]
+def runs(action, labels, label=None):
+    e = job["if"].strip()
+    e = e.replace("contains(github.event.pull_request.labels.*.name, 'review: approved')", repr("review: approved" in labels))
+    e = e.replace("github.event.action", repr(action)).replace("github.event.label.name", repr(label))
+    e = e.replace("&&", " and ").replace("||", " or ")
+    if re.search(r"github\.|\$\{\{", e): return "untranslated: " + e
+    return eval(e, {"__builtins__": {}}, {})
+out = []
+if not {"synchronize", "labeled"} <= set(types): out.append("types %s lack synchronize or labeled" % types)
+if runs("synchronize", ["review: approved"]) is not True: out.append("a push to a labelled PR does not run the guard")
+if runs("labeled", ["review: approved"], "review: approved") is not True: out.append("adding review: approved does not run the guard")
+if runs("labeled", ["review: approved", "records"], "records") is not False: out.append("adding another label runs the guard")
+if runs("synchronize", ["records"]) is not False: out.append("a push to an unlabelled PR runs the guard")
+if "github.event.pull_request.head.sha" not in after: out.append("AFTER has no fallback to the PR's head on a labeled event: " + after)
+print("; ".join(out) or "ok")
+PY
+)
+ok "F4: label-guard.yml runs on a push to a labelled PR and when review: approved is added, never for another label, with AFTER from the PR's head" "$([ "$f4" = ok ] && echo 1)" "$f4"
 # GitHub refuses a workflow it cannot parse, silently for pull_request_target (#1136's first push: "if: ... 'review: approved'"
 # unquoted, so the guard would never have run). Parsed here the way GitHub reads it: a YAML mapping with on/jobs.
 for wf in label-guard.yml guards.yml; do W2="${W%/*}/$wf"
