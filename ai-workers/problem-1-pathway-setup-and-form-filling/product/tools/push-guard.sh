@@ -3,7 +3,7 @@
 # an excluded path, a PDF, a secret or a personal name. Called by .githooks/pre-push for every pushed ref
 # and by the CI guard job for each pull request.
 #   push-guard.sh <old>..<new> [...]   check the given commit ranges
-#   push-guard.sh --unpushed <sha>     check every commit on <sha> that is not on any remote branch
+#   push-guard.sh --unpushed <sha> [remote]   check every commit on <sha> not on <remote>'s branches (default origin)
 # Exit 1 and print every violation; exit 0 when the range is clean.
 set -u
 HERE="$(git rev-parse --show-toplevel)"; cd "$HERE" || exit 2
@@ -59,16 +59,20 @@ check_range() {
   done < <(echo "$commits" | while read -r c; do git diff-tree --no-commit-id -r --diff-filter=AMRC --name-only "$c" | sed "s/^/$c\t/"; done)
   rm -f "$manifest_list"
   # Added lines only: secrets and personal names.
-  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > "$G_TMP/secrets"
-  [ -s "$G_TMP/secrets" ] && { cat "$G_TMP/secrets"; bad=1; }
-  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > "$G_TMP/names"
-  [ -s "$G_TMP/names" ] && { cat "$G_TMP/names"; bad=1; }
-  rm -f "$G_TMP/secrets" "$G_TMP/names"
+  # Held in variables, not files, so a failed write can never read as "nothing found" (#1174 review m4).
+  local hits
+  hits=$(git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5)
+  [ -n "$hits" ] && { printf '%s\n' "$hits" | while read -r m; do echo "GUARD: possible secret in $range: $m"; done; bad=1; }
+  hits=$(git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5)
+  [ -n "$hits" ] && { printf '%s\n' "$hits" | while read -r m; do echo "GUARD: personal name in $range: $m"; done; bad=1; }
 }
 
 if [ "${1:-}" = "--unpushed" ]; then
-  cs=$(git rev-list "$2" --not --remotes 2>/dev/null | tr '\n' ' ')
-  [ -n "$cs" ] && check_range "$2 --not --remotes"
+  # Only the pushed remote's own branches count as already checked (#1174 review m2): never a hand-made ref under
+  # refs/remotes/ (pr/, rev/ ...) or another remote. A rev-list error refuses (m3).
+  rem="${3:-origin}"
+  cs=$(git rev-list "$2" --not --remotes="$rem" 2>/dev/null) || { echo "GUARD: cannot list commits of '$2' — refusing"; exit 1; }
+  [ -n "$cs" ] && check_range "$2 --not --remotes=$rem"
 else
   for r in "$@"; do check_range "$r"; done
 fi
