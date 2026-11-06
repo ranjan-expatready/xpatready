@@ -280,7 +280,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
   const forms = o.locator("section", { has: o.getByRole("heading", { name: "Prepare application", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
-  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to answer or confirm before filing|Ready to file/)));
+  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to answer or confirm before filing|Facts confirmed/)));
   await imm.getByRole("button", { name: "Generate a copy" }).click();
   step("forms RT-13 pass: the copy is generated in the background, then shown as generated, read back and checked", await shows(imm.getByText("Generated", { exact: true })) && await shows(imm.getByText(/form fields written.* · read back and checked/)));
   await state(o, "forms-generated", [1440, 1024]);
@@ -288,7 +288,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await imm.getByRole("button", { name: /^Download the copy/ }).first().click();
   step("forms pass: the copy downloads as a PDF", await dl.then(async (d) => /\.pdf$/.test(d.suggestedFilename())).catch(() => false));
   step("P-71 fail-guard: while facts are missing, Filed and Validated copy uploaded back are disabled and say why", await imm.getByRole("button", { name: "Filed" }).isDisabled() && await shows(imm.getByText(/Not yet: \d+ facts? to answer or confirm before filing: do that/)));
-  await imm.getByText(/^What blocks filing \(\d+\)$/).click();
+  await imm.getByText(/^Facts to answer or confirm \(\d+\)$/).click(); // QA-229 (B2): was "What blocks filing" (P-238 makes it a warning)
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
   // QA-165 part 2: before the file is offered, the mandatory fields of IRCC's form a copy leaves empty are listed with why.
   const openList = imm.locator("details[data-fields-open]");
@@ -366,7 +366,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const fd = new FormData(); fd.append("file", new Blob([validatedBytes]), "imm5257-validated.pdf");
   const vr = await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/validated`, { method: "POST", headers: { "x-actor": "user-O" }, body: fd });
   await o.reload(); await idle(o);
-  step("C-9 pass (break M2): once the validated copy is read back, IMM 5257 is \"Ready to file\"", vr.status === 201 && await shows(imm.getByText("Ready to file")) && await gone(imm.getByText("Validate before filing")), vr.status);
+  // QA-229 (B2): the form row says "Facts confirmed"; "Ready to file" is the filing's, said only by the readiness panel.
+  step("C-9 pass (break M2): once the validated copy is read back, IMM 5257 says \"Facts confirmed\" (never \"Ready to file\" on a form row, QA-229)", vr.status === 201 && await shows(imm.getByText("Facts confirmed")) && await gone(imm.getByText("Ready to file")) && await gone(imm.getByText("Validate before filing")), vr.status);
   const focused = (l) => l.evaluate((el) => el === document.activeElement).catch(() => false);
   const lockBtn = imm.getByRole("group", { name: "Lock this copy" }).getByRole("button", { name: "Lock", exact: true });
   await imm.getByRole("button", { name: "Filed" }).click();
