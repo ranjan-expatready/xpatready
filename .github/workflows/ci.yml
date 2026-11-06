@@ -158,8 +158,12 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           L=$(bash "$P/tools/records-only.sh" label)
-          if [ "$RECORDS" = yes ] && [ "$HAS" != true ]; then gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=$L" >/dev/null && echo "labelled $L"
-          elif [ "$RECORDS" != yes ] && [ "$HAS" = true ]; then gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$L" >/dev/null && echo "$L label removed: this change is not records-only"
+          if [ "$RECORDS" = yes ] && [ "$HAS" != true ]; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=$L" >/dev/null
+            echo "labelled $L"
+          elif [ "$RECORDS" != yes ] && [ "$HAS" = true ]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$L" >/dev/null
+            echo "$L label removed: this change is not records-only"
           else echo "records: $RECORDS (label already right)"; fi
   shard:
     # Records and code, on GitHub's machines unless BATCH_RUNNER / PR_RUNNER put them on the Mac (a fork never reaches it).
@@ -212,13 +216,20 @@ jobs:
       - name: test databases are cleaned up (check-test-dbs.sh, part 1 only; needs the database cloud-setup.sh started)
         if: matrix.shard == 1
         run: bash "$P/tools/check-test-dbs.sh"
-      - name: rules files, decision impact, graph, official PDFs, explicit-any count, the tools' own checks (part 1 only)
+      - name: rules files, decision impact, graph, official PDFs, explicit-any count, the tools' own checks, && lists (part 1 only)
         if: matrix.shard == 1
         run: |
-          bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
+          # One command per line: bash -e passes over a failed command before the last && of a list (P-376 (3), ci-and-lists.mjs).
+          bash "$P/tools/check-docs.sh"
+          bash "$P/tools/decision-impact.sh"
+          node "$P/tools/graph.mjs" --check
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
-          bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
+          bash "$P/tools/check-select-suites.sh"
+          bash "$P/tools/check-merge-guard.sh"
+          bash "$P/tools/check-lane-bind.sh"
+          node "$P/tools/ci-and-lists.mjs"
+          node "$P/tools/ci-and-lists.mjs" --self-test
           node "$S/tools/check-gate-b.mjs"
           node "$S/tools/check-works-set.mjs"
       - name: Playwright's own Chromium
@@ -431,6 +442,11 @@ jobs:
         if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: |
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
+      - name: no && list in a workflow hides a red (tools/ci-and-lists.mjs; as on the GitHub path, P-376 (3))
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
+        run: |
+          node "$P/tools/ci-and-lists.mjs"
+          node "$P/tools/ci-and-lists.mjs" --self-test
       - name: official IRCC PDFs (manifest checksums, P-31)
         if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
