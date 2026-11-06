@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: Lead 22 · 6 Nov (session local_b795aa55-be67-4f08-8bf1-616fb8cb7aaa; took over from Lead 21 after M2 = 60, founder's choice "Finish M2, then hand over", P-314)
+current_lead: local_b795aa55-be67-4f08-8bf1-616fb8cb7aaa Lead 22 · 6 Nov 12:21 IST (took over from Lead 21 after M2 = 60, founder's choice "Finish M2, then hand over", P-314)
 
 updated: 2026-11-06 12:20 IST by **Lead 21** (hand-over to Lead 22) · milestone: **M2 60/60 (qa, 12:20 IST: C10.1 Works on main fd29643aa); now the P-376 scale changes, then the M3 48-hour clock** · rules: **`RULES.md`** + DECISIONS P-354 to P-376 (+ the 6 Nov rows still to write, below) · earlier page: `history/STATE-2026-11-06-1220-lead21.md`
 
