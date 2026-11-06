@@ -32,7 +32,8 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). **The 
 * **`main` always works:** a red check on `main`, a failed demo update or a qa Blocker is fixed first. qa runs after merges and passes every row before it counts as Works.
 * **Records daily, by you alone:** `STATE.md`, `DECISIONS.md` (appended, never rewritten), `BACKLOG.md` Owners, `qa/CAPABILITIES.md` stays qa's.
 * **No drift:** check each PR's "what and why" against the founder's decisions and the agreed boards.
-* **Money:** live AI is off on every copy; a paid run needs the founder's Go with the cost stated first.
+* **Money:** live AI is off on every copy. The tech lead approves each paid run itself inside the founder's daily cap (US$30, P-295, P-309), worst case in the ledger first, from a Terminal tab; only a run above the cap goes to the founder (founder, 7 Nov: "Yes, change it").
+* **Who decides (founder, 7 Nov):** the founder gives product direction and clarification only; the tech lead owns the rest of the pipeline. Before saying something "needs the founder", check `RULES.md`; a skill line that disagrees with it or a newer DECISIONS row is stale.
 
 ## 30-minute check (CronCreate, first minute); rules: WAY-OF-WORKING "Night playbook" (P-291)
 Batches, red checks, merges, each builder's activity and questions, the demo at :4400; three to five plain lines to the founder. Each check also asks: did anything I started stop, fail or go quiet? Restart or replace it (a cloud session idle with work left gets "continue" and its next step), and say so. Judge progress against the three goals at the top of `STATE.md`: today, this week, the M2 gate. When the situation changes, reread the options dropped earlier.
