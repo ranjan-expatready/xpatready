@@ -40,7 +40,12 @@ async function configured(id: string) {
   const added = await call("POST", `/combinations/${id}/requirements`, { ...line, documentTypeKey: type }, AUTHOR);
   ok("setup: one document line on this row", added.status < 300, words(added).slice(0, 200));
   const unasked = async () => [...new Set(((await call("GET", `/combinations/${id}`)).body?.draft?.problems ?? []).filter((p: { message?: string }) => /nobody is asked for it/.test(p.message ?? "")).map((p: { item: string }) => p.item))] as string[];
-  const section = sql(`select section_key from sqr_section_selection where combination_id='${id}' order by section_order limit 1`);
+  // #1052: on the six, pack2's steps choose no sections (sqr_section_selection is filled by the configured checkpoint's
+  // loader), so the author places each fact in a section this row's draft already asks. Before Family sponsorship's
+  // IMM 5532 lines no row here had a fact left unasked, and this lookup was never used.
+  const chosen = sql(`select section_key from sqr_section_selection where combination_id='${id}' order by section_order limit 1`);
+  const section = chosen || ((await config(id)).snapshot?.placements?.[0]?.section_id ?? "");
+  ok("setup: a section this row asks, for the facts its forms need", !!section, section);
   for (const k of await unasked()) await call("POST", `/library/fields/${encodeURIComponent(k)}/placement`, { sectionKey: section, collectedFrom: "client_questionnaire", repeats: k.startsWith("case.") ? "once_per_case" : "per_person", tier: "case" }, AUTHOR);
   await approveWaiting();
   ok(`setup: every fact this row's forms need is asked`, (await unasked()).length === 0);

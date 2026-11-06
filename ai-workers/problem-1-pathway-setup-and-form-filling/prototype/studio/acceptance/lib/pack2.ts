@@ -121,7 +121,8 @@ export function pack2(id: string) {
     const own = OWN_YES_NO[sql(`select combination_key from combination where id='${comboId}'`)];
     const ed = own?.boxes.length ? sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${own.application}' and e.channel='PDF' order by e.edition_label desc limit 1`) : "";
     const asked = new Set<string>(ed ? ((await call("GET", `/editions/${ed}/form-fields/own-questions`, undefined, AUTHOR)).body?.fields ?? []).filter((f: { asked: boolean }) => f.asked).map((f: { dataPath: string }) => f.dataPath) : []);
-    for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath))) {
+    // B116 (#1123, option (a)): a box the table asks on the configured checkpoint only is not asked on the six.
+    for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath) && !x.checkpointOnly)) {
       const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
       const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
       if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }) }, AUTHOR))) out.ownYesNo++;
@@ -132,8 +133,11 @@ export function pack2(id: string) {
     // second person. Sample, "Unconfirmed: expert".
     if (setup) {
       const set = async (form: string, body: object) => say(`set ${form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(form)}`, body, AUTHOR));
-      for (const r of setup.rules)
-        await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
+      for (const r of setup.rules) {
+        if (!(await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) }))) continue;
+        // B79b: a form IRCC's words say is filled in its portal is set Online on the Forms tab's channel route.
+        if (r.channel) say(`channel ${r.form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(r.form)}/channel`, { channel: r.channel }, AUTHOR));
+      }
       if (family) { await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 }); if (lineForms().has(family.other)) await set(family.other, { retire: true }); }
       // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
       for (const rf of setup.ruleFacts ?? []) {
