@@ -15,7 +15,8 @@
 //   node product/tools/flaky.mjs comment --body <file> --pr <n> [--queue]
 //        posts that report as a PR comment: on the PR itself, or, for a merge-queue batch (--queue, the batch body in
 //        PR_BODY), on each PR of the batch (Mergify's "pull_requests:" metadata), with a line naming the batch. The batch
-//        may still merge; the comment is how a race found this way reaches its PR. CI runs it with continue-on-error.
+//        may still merge; the comment is how a race found this way reaches its PR. CI's retry-comment job runs it, from
+//        the base commit and on the parts' artifacts, so the write token never meets the PR's own code.
 //   node product/tools/flaky.mjs --self-test
 // Without --events, the records come from GitHub's artifacts API (GITHUB_TOKEN or GH_TOKEN, else `gh auth token`;
 // curl, so the proxy and the Mac's certificates work as for gh). Only runs of this repository's own branches count:
@@ -124,7 +125,9 @@ export function report(events, logs, L, { part = "", runUrl = "" } = {}) {
     const f = join(logs, e.suite.replace(/\.[^.]+$/, "") + ".try1.log");
     const log = existsSync(f) ? readFileSync(f, "utf8") : "";
     const why = log ? firstReason(log) : "its 1st try's log is missing";
-    out.push(`| QA-? | Bug · Major (proposed; CI retry, B122 F5) | \`${e.suite}\` · P-376 (8), F5 | commit ${cell(e.commit || "?")}${runUrl ? `, [run](${runUrl})` : ""} · ${e.time.slice(0, 16)}Z | \`${e.suite}\` failed its 1st try (exit ${cell(e.exit1)}: ${cell(why) || "no FAIL line"}) and passed on retry. A race or order fault until shown otherwise | ${ownerOf(L, e.suite)} | Open: qa rates it |`);
+    // The reason is the log's own words: in a code span, so an @name never notifies and no markup renders (review m3).
+    const code = (t) => "`" + (cell(t).replace(/`/g, "'") || "no FAIL line") + "`";
+    out.push(`| QA-? | Bug · Major (proposed; CI retry, B122 F5) | \`${e.suite}\` · P-376 (8), F5 | commit ${code(e.commit || "?")}${runUrl ? `, [run](${runUrl})` : ""} · ${e.time.slice(0, 16)}Z | \`${e.suite}\` failed its 1st try (exit ${code(e.exit1)}: ${code(why)}) and passed on retry. A race or order fault until shown otherwise | ${ownerOf(L, e.suite)} | Open: qa rates it |`);
     tails.push("", `<details><summary>${e.suite}: 1st try, last 40 lines</summary>`, "", log ? tail(log) : "_(no log)_", "", "</details>");
   }
   return [...out, ...tails].join("\n").slice(0, 60000) + "\n";
@@ -142,8 +145,9 @@ function postComment(n, body, tok, repo, api) {
   const dir = mkdtempSync(join(tmpdir(), "flaky-c-")), f = join(dir, "body.json");
   try {
     writeFileSync(f, JSON.stringify({ body }));
-    execFileSync("curl", ["-fsS", "--retry", "2", "--max-time", "20", "-o", "/dev/null", "-X", "POST", "-H", "@-", "-H", "Accept: application/vnd.github+json",
-      "--data-binary", `@${f}`, `${api}/repos/${repo}/issues/${n}/comments`], { timeout: 70e3, input: `Authorization: Bearer ${tok}\n` });
+    // Short limits (review m4): up to 6 PRs of a batch must fit the job's time.
+    execFileSync("curl", ["-fsS", "--retry", "1", "--max-time", "8", "-o", "/dev/null", "-X", "POST", "-H", "@-", "-H", "Accept: application/vnd.github+json",
+      "--data-binary", `@${f}`, `${api}/repos/${repo}/issues/${n}/comments`], { timeout: 25e3, input: `Authorization: Bearer ${tok}\n` });
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 
@@ -245,7 +249,10 @@ function selfTest() {
     writeFileSync(join(d, "check_a.try1.log"), "\x1b[31mFAIL a | b\x1b[0m\n");
     const r = report(parseEvents("2026-11-06T10:00:00Z\tcheck_a.ts\tpassed on retry\t1\t0\tabc1234\n2026-11-06T10:00:00Z\tcheck_b.ts\tfailed twice\t1\t1\tabc1234\n"), d, parseLedger("owner\t*\ttech-lead\n"), { part: "3" });
     const row = r.split("\n").find((l) => l.startsWith("| QA-?"));
-    ok("F5: one bug line per pass on retry, none for failed twice; a | in the reason cannot break its row; colours dropped", r.split("\n").filter((l) => l.startsWith("| QA-?")).length === 1 && row.includes("exit 1: FAIL a / b)") && row.split(" | ").length === 7 && r.includes("`suite-retries-3`"), r);
+    ok("F5: one bug line per pass on retry, none for failed twice; a | in the reason cannot break its row; colours dropped", r.split("\n").filter((l) => l.startsWith("| QA-?")).length === 1 && row.includes("exit `1`: `FAIL a / b`)") && row.split(" | ").length === 7 && r.includes("`suite-retries-3`"), r);
+    writeFileSync(join(d, "check_m.try1.log"), "FAIL ping @someone <b>x</b> `code`\n");
+    const rm = report(parseEvents("2026-11-06T10:00:00Z\tcheck_m.ts\tpassed on retry\t1\t0\tabc1234\n"), d, parseLedger(""));
+    ok("F5 (review m3): the log's words sit in a code span, so an @name never notifies and no markup renders", rm.includes("exit `1`: `FAIL ping @someone <b>x</b> 'code'`)"), rm.split("\n").find((l) => l.startsWith("| QA-?")));
     ok("F5: no pass on retry, no report", report(parseEvents("2026-11-06T10:00:00Z\tcheck_b.ts\tfailed twice\t1\t1\tabc\n"), d, parseLedger("")) === "", "a report");
   } finally { rmSync(d, { recursive: true, force: true }); }
   const mb = "Mergify ... [#1168](/o/r/pull/1168)\n### Queued ahead of this batch\n- [#1158](/o/r/pull/1158)\n```yaml\n---\npull_requests:\n  - number: 1168\n    scopes: []\n  - number: 1171\n    scopes: []\nscopes: []\n...\n```\n";

@@ -17,11 +17,12 @@
 #        not retried: a suite that hit its 20-minute limit (exit 124), and any failure after SUITES_RETRY_MAX (default 2)
 #        retries in one run (many failures are a real break, and retrying them only spends time). Never retried either
 #        (F5, founder 6 Nov): a suite whose file name or title (the comment block at its top) says race, concurrent,
-#        parallel or upsert, and a suite on the QUARANTINE list: a pass on retry would turn the race it tests green.
+#        parallel or upsert, or whose 1st try's FAIL lines do, and a suite on the QUARANTINE list: a pass on retry would
+#        turn the race it tests green.
 #        Each retry is one line in $SUITES_OUT/retries.tsv (time, suite, outcome, both exit codes, commit; CI uploads it
 #        as suite-retries-<part>) and in the summary's "retries:" line. A pass on retry is never silent (F5): the output
 #        ends with a qa/BUGS.md-style bug line and the 1st try's log tail (tools/flaky.mjs report, also written to
-#        $SUITES_OUT/retry-bugs.md, which CI posts as a PR comment). tools/flaky.mjs counts the retries
+#        $SUITES_OUT/retry-bugs.md, which CI uploads and its retry-comment job posts as a PR comment). tools/flaky.mjs counts the retries
 #        (daily-numbers.sh) and quarantines a suite that passed only on retry in 2 different runs in 7 days
 #        (tools/flaky-ledger.tsv).
 # SUITES_QUARANTINE_AUTO="<suite>|<owner>|<fix by>|<runs> ..." (CI: from flaky.mjs quarantine in the kind job, the same
@@ -198,11 +199,14 @@ rows=(); fail=0; failed=(); RETRIES=0; RETRIED=(); AGAIN=(); NORETRY=""; RF=""
 [ "$RETRY" = 1 ] && : > "$OUT/retries.tsv" && rm -f "$OUT/retry-bugs.md"
 # F5 (founder 6 Nov, after the outside review): a suite about a race is never retried, because a pass on retry would
 # turn the very race it tests green. Its file name or its title (the comment block at its top) names one: race,
-# concurrent, parallel or upsert, as whole words (not "trace"). Prints the word, or nothing.
+# concurrent, parallel or upsert, as whole words (not "trace"). Prints the word, or nothing. Also (review of F5, Major 2):
+# a 1st try whose FAIL or STOP lines name one, so a race check inside a neutrally titled suite (check_screen01_api.ts's
+# "source-trust race: concurrent uploads") is not retried either.
 RACE_RE='(^|[^a-z])(rac(e|es|ing)|concurren[a-z]*|parallel[a-z]*|upserts?|upserting)([^a-z]|$)'
-racy() {  # $1 file name, $2 its path
+racy() {  # $1 file name, $2 its path, $3 its 1st try's log
   local w; w=$(printf '%s\n' "$1" | tr 'A-Z' 'a-z' | grep -m1 -oE "$RACE_RE" | head -1)
-  [ -z "$w" ] && [ -f "${2:-}" ] && w=$(awk '/^(#!|\/\/|\/\*| \*|[[:space:]]*$)/ { print; next } { exit }' "$2" | tr 'A-Z' 'a-z' | grep -oE "$RACE_RE" | head -1)
+  [ -z "$w" ] && [ -f "${2:-}" ] && w=$(awk '/^(#!|[[:space:]]*\/\/|\/\*|[[:space:]]*\*|[[:space:]]*$|["'"'"']use strict["'"'"'];?[[:space:]]*$)/ { print; next } { exit }' "$2" | tr 'A-Z' 'a-z' | grep -oE "$RACE_RE" | head -1)
+  [ -z "$w" ] && [ -f "${3:-}" ] && w=$(grep -E '^(FAIL|STOP)' "$3" | tr 'A-Z' 'a-z' | grep -oE "$RACE_RE" | head -1)
   printf '%s' "$w" | tr -cd 'a-z'; }
 # The line that says why a log failed: a failing check's own line first ("Error" also appears inside PASS lines that quote
 # an expected error), then an error's message ("TypeError: fetch failed"), not the "name: 'Error'," of a printed error
@@ -217,10 +221,10 @@ run() {  # $1 file, $2 label, rest: command. AGAIN readies a retry (recopy ...);
   for a in "$@"; do case "$a" in */"$f") src="$a";; esac; done   # the suite's own file, for its title (F5)
   if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fi
   if [ "$st" = FAIL ] && [ "$RETRY" = 1 ]; then
-    [ -z "$NORETRY" ] && rw=$(racy "$f" "$src")
+    [ -z "$NORETRY" ] && rw=$(racy "$f" "$src" "$log")
     if [ -n "$NORETRY" ]; then note="not retried: $NORETRY"
     elif case " $QUARANTINE " in *" $f "*) true;; *) false;; esac; then note="not retried: on the quarantine list (F5)"
-    elif [ -n "$rw" ]; then note="not retried: its name or title says \"$rw\", and a pass on retry would hide a race (F5)"
+    elif [ -n "$rw" ]; then note="not retried: its name, title or FAIL line says \"$rw\", and a pass on retry would hide a race (F5)"
     elif [ "$code" = 124 ]; then note="timed out at 20 min, not retried"
     elif [ "$RETRIES" -ge "$RETRY_MAX" ]; then note="not retried: $RETRY_MAX retries already in this run"
     else

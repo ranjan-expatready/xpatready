@@ -28,6 +28,8 @@ fx() {  # fx <case> <suite...>: a fresh fixture folder holding only these suites
     check_fx_ownflaky*) printf '%s\n' "//   tsx studio/tests/$s [port=4999] [name=fxown] (starts its own copy; DATABASE_URL)" "$(fx_flaky_js)" ;;
     check_fx_upsert_race*|check_d1_reset_to_six_browser.cjs) fx_flaky_js ;;   # F5: a race in its name; a hand-quarantined name
     check_fx_titled*) printf '%s\n' '// Two saves of one answer at once: the Concurrent path, where the loser must get a 409.' '// No browser, no model call.' "$(fx_flaky_js)" ;;
+    check_fx_strict*) printf '%s\n' "'use strict';" '// Two writers at once: a race on the version number.' "$(fx_flaky_js)" ;;
+    check_fx_failrace*) printf '%s\n' '// Uploads a document and reads it back.' 'const f=require("path").join(process.env.FX_STATE, require("path").basename(__filename)); const fs=require("fs"); const n=fs.existsSync(f)?Number(fs.readFileSync(f,"utf8")):0; fs.writeFileSync(f,String(n+1)); if(n===0){console.log("FAIL source-trust race: concurrent uploads gave 500");process.exit(1)} console.log("1 passed")' ;;
     check_fx_tracer*) printf '%s\n' '// Reads the trace of a release in its grace period; embraced edits, Bracelet, racetrack-free.' "$(fx_flaky_js)" ;;
   esac > "$d/tests/$s"; done
 }
@@ -50,7 +52,7 @@ ok "B122: the retry is one record in retries.tsv (time, suite, outcome, exits 1 
 ok "B122: the first try's log is kept beside the retry's" "$([ -s "$W/flaky/out/check_fx_flaky.try1.log" ] && echo 1)" "no try1 log"
 # F5: a pass on retry is never silent: a qa/BUGS.md-style bug line in the output (CI's job summary) and in retry-bugs.md.
 BL='| QA-? | Bug · Major (proposed; CI retry, B122 F5) | `check_fx_flaky.cjs` · P-376 (8), F5 | commit '
-ok "F5: a pass on retry prints a qa/BUGS.md-style bug line (7 columns, owner, Open)" "$(grep -F "$BL" "$W/flaky.out" | grep -F 'failed its 1st try (exit 1: FAIL read ECONNRESET) and passed on retry' | grep -qF '| tech-lead | Open: qa rates it |' && [ "$(grep -F "$BL" "$W/flaky.out" | awk -F' [|] ' '{ print NF }')" = 7 ] && echo 1)" "$(grep -F 'QA-?' "$W/flaky.out")"
+ok "F5: a pass on retry prints a qa/BUGS.md-style bug line (7 columns, owner, Open)" "$(grep -F "$BL" "$W/flaky.out" | grep -F 'failed its 1st try (exit `1`: `FAIL read ECONNRESET`) and passed on retry' | grep -qF '| tech-lead | Open: qa rates it |' && [ "$(grep -F "$BL" "$W/flaky.out" | awk -F' [|] ' '{ print NF }')" = 7 ] && echo 1)" "$(grep -F 'QA-?' "$W/flaky.out")"
 ok "F5: the bug line carries the 1st try's log tail, in a fenced block" "$(awk '/<summary>check_fx_flaky.cjs: 1st try, last 40 lines/ { s = 1 } s && /^FAIL read ECONNRESET$/ { f = 1 } END { exit !f }' "$W/flaky.out" && grep -q '^```text$' "$W/flaky.out" && echo 1)" "$(sed -n '/<details>/,/<\/details>/p' "$W/flaky.out")"
 ok "F5: the same report is in retry-bugs.md (CI posts it as the PR comment)" "$(grep -qF "$BL" "$W/flaky/out/retry-bugs.md" && grep -q 'never silent' "$W/flaky/out/retry-bugs.md" && echo 1)" "$(cat "$W/flaky/out/retry-bugs.md" 2>&1 | head -3)"
 
@@ -113,10 +115,12 @@ else echo "SKIP  B122: an isolated suite's retry runs on a fresh copy — no dat
 # 5d. F5: never retried, so a race fails on its 1st try as before: a race word in the file name, or in the title (the
 # comment block at the top); a suite on the hand-set quarantine list (run without --skip-quarantined, as by hand) and
 # one on the automatic list. "trace" is not a race: that suite is retried.
-fx race check_fx_upsert_race.cjs check_fx_titled.cjs check_fx_tracer.cjs check_d1_reset_to_six_browser.cjs check_fx_flaky_auto.cjs
+fx race check_fx_upsert_race.cjs check_fx_titled.cjs check_fx_tracer.cjs check_d1_reset_to_six_browser.cjs check_fx_flaky_auto.cjs check_fx_strict.cjs check_fx_failrace.cjs
 code=$(SUITES_QUARANTINE_AUTO="check_fx_flaky_auto.cjs|forms|2026-11-12|101,102" SUITES_RETRY_MAX=9 rs race --retry)
-ok "F5: a suite whose file name says race is not retried and fails the run" "$(row race check_fx_upsert_race.cjs | grep -q '| FAIL |.*not retried: its name or title says \"upsert\", and a pass on retry would hide a race (F5)' && [ "$(tries race check_fx_upsert_race.cjs)" = 1 ] && [ "$code" = 1 ] && echo 1)" "exit $code; $(row race check_fx_upsert_race.cjs)"
-ok "F5: a suite whose title says concurrent is not retried" "$(row race check_fx_titled.cjs | grep -q '| FAIL |.*not retried: its name or title says \"concurrent\"' && [ "$(tries race check_fx_titled.cjs)" = 1 ] && echo 1)" "$(row race check_fx_titled.cjs)"
+ok "F5: a suite whose file name says race is not retried and fails the run" "$(row race check_fx_upsert_race.cjs | grep -q '| FAIL |.*not retried: its name, title or FAIL line says \"upsert\", and a pass on retry would hide a race (F5)' && [ "$(tries race check_fx_upsert_race.cjs)" = 1 ] && [ "$code" = 1 ] && echo 1)" "exit $code; $(row race check_fx_upsert_race.cjs)"
+ok "F5: a suite whose title says concurrent is not retried" "$(row race check_fx_titled.cjs | grep -q '| FAIL |.*not retried: its name, title or FAIL line says \"concurrent\"' && [ "$(tries race check_fx_titled.cjs)" = 1 ] && echo 1)" "$(row race check_fx_titled.cjs)"
+ok "F5: a title under a 'use strict' line is read too (review m5)" "$(row race check_fx_strict.cjs | grep -q '| FAIL |.*says \"race\"' && [ "$(tries race check_fx_strict.cjs)" = 1 ] && echo 1)" "$(row race check_fx_strict.cjs)"
+ok "F5 (review Major 2): a neutral title whose 1st try FAILs on a race is not retried (check_screen01_api.ts's source-trust race)" "$(row race check_fx_failrace.cjs | grep -q '| FAIL |.*not retried: its name, title or FAIL line says \"race\"' && [ "$(tries race check_fx_failrace.cjs)" = 1 ] && echo 1)" "$(row race check_fx_failrace.cjs)"
 ok "F5: a suite on the hand-set quarantine list is not retried (when run at all)" "$(row race check_d1_reset_to_six_browser.cjs | grep -q '| FAIL |.*not retried: on the quarantine list (F5)' && [ "$(tries race check_d1_reset_to_six_browser.cjs)" = 1 ] && echo 1)" "$(row race check_d1_reset_to_six_browser.cjs)"
 ok "F5: a suite on the automatic quarantine list is not retried (when run at all)" "$(row race check_fx_flaky_auto.cjs | grep -q '| FAIL |.*not retried: on the quarantine list (F5)' && [ "$(tries race check_fx_flaky_auto.cjs)" = 1 ] && echo 1)" "$(row race check_fx_flaky_auto.cjs)"
 ok "F5: \"trace\"/\"grace\" are not a race: that suite is retried" "$(row race check_fx_tracer.cjs | grep -q '| passed on retry |' && echo 1)" "$(row race check_fx_tracer.cjs)"
@@ -218,8 +222,10 @@ ok "B122: ci.yml uploads retries.tsv and the first tries' logs as suite-retries-
 ok "B122: the quarantine step cannot fail or stall the check (time limit, continue-on-error)" "$(grep -A3 'flaky suites to quarantine' "$CIY" | grep -q . && awk '/id: q$/,/autoq=/' "$CIY" | grep -q 'timeout-minutes: 3' && awk '/id: q$/,/autoq=/' "$CIY" | grep -q 'continue-on-error: true' && echo 1)" "no limit on the q step"
 ok "B122: the nightly never passes --retry" "$(! grep -q -- '--retry' "$NY" && echo 1)" "nightly.yml has --retry"
 ok "B122 (round 2, minor 2): the kind job reads all 9 parts' records, whatever SHARDS is now" "$(grep -q 'flaky.mjs" quarantine 2> flaky.err' "$CIY" && ! grep -q 'quarantine --parts' "$CIY" && echo 1)" "$(grep 'flaky.mjs" quarantine' "$CIY")"
-ok "F5: both CI paths post retry-bugs.md as a PR comment, never failing the check (continue-on-error, a time limit)" "$([ "$(grep -c 'flaky.mjs" comment --body "$S/var/suites/retry-bugs.md" --pr "$PR"' "$CIY")" = 2 ] && [ "$(awk '/a pass on retry reaches its PR/ { s = 1 } s && /continue-on-error: true/ { n++; s = 0 }  END { print n }' "$CIY")" = 2 ] && [ "$(grep -c "hashFiles('ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retry-bugs.md')" "$CIY")" = 2 ] && echo 1)" "comment step missing or unguarded"
-ok "F5: the jobs that post have pull-requests: write" "$([ "$(grep -c 'permissions: { contents: read, pull-requests: write }' "$CIY")" = 2 ] && echo 1)" "$(grep -n permissions "$CIY")"
+RC=$(awk '/^  retry-comment:/ { s = 1; print; next } s && /^  [a-z]/ { exit } s' "$CIY")
+ok "F5: both CI paths upload retry-bugs.md with the retry records (GitHub parts and the Mac path)" "$([ "$(grep -c 'var/suites/retry-bugs.md$' "$CIY")" = 2 ] && echo 1)" "$(grep -n 'retry-bugs' "$CIY")"
+ok "F5: the job retry-comment posts it on the PR, never failing the run (continue-on-error, a time limit, after every part)" "$(grep -q 'needs: \[kind, shard, ci\]' <<< "$RC" && grep -q 'continue-on-error: true' <<< "$RC" && grep -q 'timeout-minutes: 5' <<< "$RC" && grep -q 'pattern: "suite-retries-\*"' <<< "$RC" && grep -q 'flaky.mjs comment --body retry-bugs.md --pr "$PR"' <<< "$RC" && echo 1)" "$RC"
+ok "F5 (review Major 1): only retry-comment holds pull-requests: write, and it runs the base commit's code with no kept token" "$([ "$(grep -c '^ *permissions:.*pull-requests: write' "$CIY")" = 1 ] && grep -q 'permissions: { contents: read, pull-requests: write }' <<< "$RC" && grep -q 'ref: \${{ github.event.pull_request.base.sha }}' <<< "$RC" && grep -q 'persist-credentials: false' <<< "$RC" && grep -q 'node base/ai-workers/' <<< "$RC" && ! grep -qE 'npm|run-suites|cloud-setup' <<< "$RC" && echo 1)" "$(grep -n 'pull-requests' "$CIY")"
 
 echo "$pass passed, $fail failed"
 exit $((fail > 0))
