@@ -14,16 +14,21 @@
 //   * timestamps (timestamp and date columns, ISO strings in text and JSON): <t>;
 //   * measured durations ("… in 20.6 s"; the values of keys seconds, timings, duration_ms): <s>;
 //   * the copy's folder name in stored paths (var/isolated-<copy>/) and a merged run's time-and-random id (<run>);
+//   * the studio folder's own absolute path (<studio>), from <var dir>: two checkouts in different folders (main's and a
+//     branch's, B120) write their own paths into a filled form's report;
 //   * hashes computed over ids (plan_sha256, run_key, idempotency_fingerprint): <h>;
 //   * a generated PDF's bytes: IRCC's forms are AES-encrypted, so each write has a fresh random IV. A PDF line has its
 //     size, and any hash equal to a generated PDF's reads <pdf>. The fill's input, its request.json, is compared in full;
-//   * the order of three lists main builds in no fixed order (UNORDERED below): sorted.
+//   * the order of three lists main builds in no fixed order (UNORDERED below): sorted;
+//   * Reset's fingerprint of the application's own code (its "Engine and application source" entry, and the total of
+//     files fingerprinted in its words): it changes with any code change by design, so a refactor's copy differs there
+//     and nowhere else (B120, measured 6 Nov: +41 files, the new step files). The data fingerprints stay compared.
 // A JSON working file is compared by its content masked the same way; any other file by its bytes. Anything else that
 // differs between two runs of the same code is a finding: it is named, never masked quietly. DEMO_DUMP_FULL=1 writes a
 // JSON working file's masked content instead of its hash, to see what differs.
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 
 const [url, varDir, out] = process.argv.slice(2);
@@ -37,8 +42,11 @@ const ISO = /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}(?::?
 const SECONDS = /\b(in|after|took) \d+(?:\.\d+)? s\b/g;
 const RUN_ID = /\d{8}t\d{9}z-[0-9a-f]{6}/g; // api/src/sources.ts: studio-fieldmap-<form>-merged-<time>-<6 hex>
 const COPY = /\bvar\/isolated-[a-z0-9_]+\//g;
+const STUDIO_DIR = resolve(varDir, "..", ".."); // <studio>/var/isolated-<copy>
 const TIMED_KEYS = new Set(["seconds", "timings", "duration_ms"]);
 const ID_HASH_KEYS = new Set(["plan_sha256", "run_key", "idempotency_fingerprint"]);
+const CODE_FINGERPRINT = "Engine and application source"; // api/src/demo.ts preserved(): Reset's fingerprint of the code
+const FINGERPRINTED = /\(\d+ files fingerprinted\)/g;
 // Lists main fills in no fixed order (measured: two serial runs of main differ only in their order). Each is sorted by
 // its masked content. table → dotted paths, "*" for any key.
 const UNORDERED = {
@@ -55,14 +63,15 @@ const files = walk(ws).map((f) => ({ f, bytes: readFileSync(f) }));
 const pdfHashes = new Set(files.filter((x) => /\.pdf$/i.test(x.f) && x.bytes.includes("/Encrypt")).map((x) => sha(x.bytes)));
 
 let short = new Map(); // first 8 hex digits → the UUID, for every UUID in the data
-const text = (s, id) => s.replace(UUID, (u) => id(u.toLowerCase())).replace(SHORT, (h) => (short.has(h) ? `${id(short.get(h))}/8` : h))
-  .replace(HEX64, (h) => (pdfHashes.has(h) ? "<pdf>" : h)).replace(ISO, "<t>").replace(RUN_ID, "<run>").replace(COPY, "var/isolated-<copy>/").replace(SECONDS, "$1 <s> s");
+const text = (s, id) => s.split(STUDIO_DIR).join("<studio>").replace(UUID, (u) => id(u.toLowerCase())).replace(SHORT, (h) => (short.has(h) ? `${id(short.get(h))}/8` : h))
+  .replace(HEX64, (h) => (pdfHashes.has(h) ? "<pdf>" : h)).replace(ISO, "<t>").replace(RUN_ID, "<run>").replace(COPY, "var/isolated-<copy>/").replace(SECONDS, "$1 <s> s").replace(FINGERPRINTED, "(<n> files fingerprinted)");
 /** A value with the masks above applied and each UUID passed to `id` (a function of the UUID). */
 function mask(v, id, key = "") {
   if (TIMED_KEYS.has(key) && v != null) return "<s>";
   if (ID_HASH_KEYS.has(key) && v != null) return "<h>";
   if (typeof v === "string") return text(v, id);
   if (Array.isArray(v)) return v.map((x) => mask(x, id));
+  if (v && typeof v === "object" && v.label === CODE_FINGERPRINT && "sha256" in v) return Object.fromEntries(Object.keys(v).sort().map((k) => [k, k === "files" || k === "sha256" ? "<code>" : mask(v[k], id, k)]));
   if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, mask(v[k], id, k)]));
   return v;
 }
