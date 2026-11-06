@@ -21,6 +21,11 @@ NAMES_RE='\b(Ranjan|Sanjay|Tanu|Vishrutha|Ayush|Vivek|Ishaan|Tanvi)\b'
 GUARD_REL="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"
 
 bad=0
+# Private temp folder, created up front: if it cannot be made the guard refuses (fail closed). Before 6 Nov it wrote
+# fixed /tmp files; where /tmp was not writable (the Mac's sandbox) every scan silently found nothing and said "clean".
+G_TMP=$(mktemp -d "${TMPDIR:-/tmp}/push-guard.XXXXXX" 2>/dev/null) && [ -d "$G_TMP" ] && [ -w "$G_TMP" ] \
+  || { echo "push guard: REFUSED — cannot create a temp folder under ${TMPDIR:-/tmp}, so nothing could be checked"; exit 1; }
+trap 'rm -rf "$G_TMP"' EXIT
 check_range() {
   local range="$1" commits
   # Intentionally unquoted: $range carries several rev-list args (e.g. "HEAD --not --remotes").
@@ -32,7 +37,7 @@ check_range() {
   local tip pdf_dir manifest_list
   tip=$(echo "$commits" | head -1)
   pdf_dir='ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/'
-  manifest_list="/tmp/guard-manifests.$$"
+  manifest_list="$G_TMP/manifests"
   git ls-tree -r --name-only "$tip" -- "$pdf_dir" 2>/dev/null | grep '/manifest\.json$' | while read -r m; do
     git show "$tip:$m" 2>/dev/null | grep -oE '"sha256"[[:space:]]*:[[:space:]]*"[0-9a-f]{64}"' | grep -oE '[0-9a-f]{64}'
   done | sort -u > "$manifest_list"
@@ -54,11 +59,11 @@ check_range() {
   done < <(echo "$commits" | while read -r c; do git diff-tree --no-commit-id -r --diff-filter=AMRC --name-only "$c" | sed "s/^/$c\t/"; done)
   rm -f "$manifest_list"
   # Added lines only: secrets and personal names.
-  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > /tmp/guard-secrets.$$
-  [ -s /tmp/guard-secrets.$$ ] && { cat /tmp/guard-secrets.$$; bad=1; }
-  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > /tmp/guard-names.$$
-  [ -s /tmp/guard-names.$$ ] && { cat /tmp/guard-names.$$; bad=1; }
-  rm -f /tmp/guard-secrets.$$ /tmp/guard-names.$$
+  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > "$G_TMP/secrets"
+  [ -s "$G_TMP/secrets" ] && { cat "$G_TMP/secrets"; bad=1; }
+  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > "$G_TMP/names"
+  [ -s "$G_TMP/names" ] && { cat "$G_TMP/names"; bad=1; }
+  rm -f "$G_TMP/secrets" "$G_TMP/names"
 }
 
 if [ "${1:-}" = "--unpushed" ]; then
