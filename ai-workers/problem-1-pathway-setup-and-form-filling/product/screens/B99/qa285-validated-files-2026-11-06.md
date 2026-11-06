@@ -74,7 +74,7 @@ Re-run on fresh copies, 6 Nov 10:42–10:46 IST, every suite exit 0:
   * On the six (Reset to the six, 201): **exit 0, 28/28; named steps green; R12c HELD.**
   * On the checkpoint (reset 201, load 201): **exit 0, 28/28; named steps green; R12c HELD.**
   * `gate-b.mjs` itself could not start its isolated copies in this sandbox, because `isolated.sh` checks the database with `pg_ctl status`, which the sandbox refuses.
-* **Also re-run, all exit 0 (11:05–11:15 IST):**
+* **Also re-run, all exit 0 (10:50–10:58 IST):**
 
 | Suite | Result |
 |---|---|
