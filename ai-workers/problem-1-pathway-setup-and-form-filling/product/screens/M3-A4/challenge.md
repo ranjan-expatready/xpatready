@@ -51,10 +51,10 @@ Independent challenger (did not draft the concept), 6 Nov, on main 52d2118b3 (co
 None: Q1–Q3 are the tech lead's, and the recommendations stand.
 
 ## Lead response
-_(to be written by the tech lead)_
+Tech lead (Lead 23), 6 Nov, PR #1172 comment 6689209645: **approved, to build after the challenge's changes.** Major 1 tested as (a), (b), (c) above; BR-6 reworded. Minors 1–9 as written (m2: the number from `GET /combinations/:id` `releases[0].release`; m6: C6.9 on its own freshly loaded checkpoint; m7: the end-of-tab place and the existing `questionnaires:problems` anchor; m8: `duties.includes("author")`). Q1 yes (additive, default off, the four users' suites run), Q2 yes, Q3 yes.
 
 ## Agreement
-_(to be written)_
+Builder (seat B-2) and tech lead agree: build as the revised concept (§10, §11) says; no founder question. If A1 (#1084) is not on `main` at the check, C6.9 runs on the fixture and the PR says so.
 
 ## Build discoveries
 _(to be written by the builder)_

@@ -1,6 +1,6 @@
 # M3-A4 (B106) Eligibility rules on the combination: concept
 
-Status: **DESIGN, revised after the independent challenge** (6 Nov; `challenge.md`: Build after these changes, 0 Blocker, 1 Major, 9 Minors, all taken in, §10). Row A4 of the M3 sprint plan (PR #1167), built in stream B (fix F3). No board: P-223 (4), the tech lead approves after the independent challenge (`challenge.md`). Capability **C6.9** Case check; closes QA-244's second half. No migration, no new route, no AI (US$0). Base: main 237baacd0. A1 (#1084, the checkpoint's gates) is **not merged** at writing; nothing here depends on its code, only the walk's starting data.
+Status: **APPROVED by the tech lead (Lead 23, PR #1172 comment 6689209645), to build with the challenge's changes; revised after the independent challenge** (6 Nov; `challenge.md`: Build after these changes, 0 Blocker, 1 Major, 9 Minors, all taken in, §10). Row A4 of the M3 sprint plan (PR #1167), built in stream B (fix F3). No board: P-223 (4), the tech lead approves after the independent challenge (`challenge.md`). Capability **C6.9** Case check; closes QA-244's second half. No migration, no new route, no AI (US$0). Base: main 237baacd0. A1 (#1084, the checkpoint's gates) is **not merged** at writing; nothing here depends on its code, only the walk's starting data.
 
 ## 1. Job and journey
 **Job.** A configuration author adds, changes and removes the eligibility gates and the officer's-judgement lines of one combination by screen; the change is a draft change that the content reviewer signs and a different person releases; the next case check reads it.
@@ -32,7 +32,7 @@ Status: **DESIGN, revised after the independent challenge** (6 Nov; `challenge.m
 ## 4. Layout (Workspace pattern, EXPERIENCE §3; edit in a dialog, §2.3)
 Mounted on **Smart questionnaire (SQR)**, at the end of the tab (one line in `combination.tsx`'s `WorkspaceTab`): gates read that tab's questions, and the checklist's Eligibility problems already land on its problems list (`questionnaires:problems`, `engine/setup-checklist.ts:154`); BR-7 repeats each under its gate, where it is fixed. No new focus anchor.
 ```
-┌ Eligibility rules (staff check) ⓘ ────────────────────── Draft: 1 change · Released ─ [Edit] ┐
+┌ Eligibility rules (staff check) ⓘ ────────────────────── Draft: 1 change · Released in Release 2 ─ [Edit] ┐
 │ Rules the answers settle, per person                                                             │
 │  Passport number and expiry date answered (Sample)  Met when: Passport number is answered and …  │
 │     If not met: Not eligible                                                       Released      │
@@ -75,4 +75,7 @@ Section, dialog, draft/released marks, problems under the gate: **Capability, Ne
 Acceptance: `acceptance/C6.9.test.ts` (15/15 on the checkpoint, after A1) + `tests/check_b106_gates_browser.cjs`. Row text: plan §3 row A4. Decisions: none for the founder; Q1–Q3 are the tech lead's. Gates: Opus review, breaker (new screen + permissions), qa gate A. `Fixes: QA-244`.
 
 ## 10. Changes after the challenge
-Major 1 (the author's own release cannot be a BR-14 409 here: no person holds `author` and `approve`) → BR-6 and its tests now walk the three real refusals. Minors 1–9 → remove copy (open cases keep their release), no release number, the count from `draft.changes`, BR-8a (round-trip and the waiting submission), separate copies for C6.9, end-of-tab mount with no new anchor, the author check from the session, the key fallback, declarations in Q1. AG-03 "no authoring screen" stays **Unverified** (no `code/` copy in the cloud clone).
+Major 1 (the author's own release cannot be a BR-14 409 here: no person holds `author` and `approve`) → BR-6 and its tests now walk the three real refusals. Minors 1–9 → remove copy (open cases keep their release), the release number from `GET /combinations/:id` `releases[0].release` (the header's number; the tech lead's m2), the count from `draft.changes`, BR-8a (round-trip and the waiting submission), separate copies for C6.9, end-of-tab mount with no new anchor, the author check from the session, the key fallback, declarations in Q1. AG-03 "no authoring screen" stays **Unverified** (no `code/` copy in the cloud clone).
+
+## 11. Lead response and agreement (6 Nov, tech lead, PR #1172)
+**Approved with conditions.** Major 1: J-A4's refusal is tested as the challenge's (a) author: Release disabled, API 403; (b) approver before the SME sign-off: 409; (c) approver after the sign-off: released. BR-6 reworded as the challenge says. Minors 1–9 as written; m2 uses `releases[0].release` from `GET /combinations/:id`; m6: C6.9 runs on its own freshly loaded checkpoint. Q1 yes (additive, default off; the four existing users' suites run), Q2 yes, Q3 yes. A1: if #1084 is not on `main` when the build is done, C6.9 runs on the fixture and the PR says so; Works only after qa's walk on `main`. Gates unchanged: Opus review, breaker (new screen + permissions), "Ready for label" with the exact SHA.
