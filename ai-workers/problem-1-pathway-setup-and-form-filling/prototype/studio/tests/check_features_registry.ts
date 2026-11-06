@@ -58,14 +58,14 @@ const names = (m: object, k: string) => ((Reflect.getMetadata(k, m) ?? []) as { 
     const got = await featureSteps<Step & { run: () => Promise<void> }>(steps);
     ok("B120 pass: steps run in their file-name number order (20 before 100), helpers (_*.ts) and other files skipped", JSON.stringify(got.map((x) => x.file)) === JSON.stringify(["20-sooner.ts", "100-later.ts"]), got.map((x) => x.file));
     for (const g of got) await g.run();
+    const atLoad = [...order]; // review-2 n1: what init and run wrote, kept before the class check clears the list
     const cls = mkdtempSync(join(tmpdir(), "steps-class-"));
     writeFileSync(join(cls, "010-class.ts"), `export default new (class { async run() { globalThis.b120Order.push("run class"); } })();\n`);
     const fromClass = await featureSteps<Step & { run: () => Promise<void> }>(cls);
     order.length = 0; await fromClass[0].run();
     ok("B120 pass (break F1): a step whose run is defined on a class is kept and runs", JSON.stringify(order) === JSON.stringify(["run class"]) && fromClass[0].file === "010-class.ts", order);
     rmSync(cls, { recursive: true, force: true });
-    order.length = 0; for (const g of got) await g.run(); order.unshift("init 20", "init 100");
-    ok("B120 pass: each step's init runs once at load, in order, before any run", JSON.stringify(order) === JSON.stringify(["init 20", "init 100", "run 20", "run 100"]), order);
+    ok("B120 pass: each step's init runs once at load, in order, before any run", JSON.stringify(atLoad) === JSON.stringify(["init 20", "init 100", "run 20", "run 100"]), atLoad);
     rmSync(steps, { recursive: true, force: true });
     for (const [files, why, names] of [
       [{ "010-a.ts": step("a"), "10-b.ts": step("b") }, "two steps with one number (010 and 10)", ["010-a.ts", "10-b.ts"]],

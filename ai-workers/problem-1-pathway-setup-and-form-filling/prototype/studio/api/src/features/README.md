@@ -36,4 +36,5 @@ export default {
 * **`_<name>.ts` is a helper**, not a step (the context type, shared functions). A step folder holds `.ts` files only: a `.js`, `.mjs` or `.mts` file there stops the start-up too, since it would never run.
 * **State a later step reads** belongs to the step that makes it: `export const thing = stateOf(() => ({ … }))`, read as `thing(ctx)`. A later step imports it from that file, so the dependency shows in its imports.
 * **Services** come from `ctx.get(Service)` (the app's own instance), so a new step never edits a constructor.
+* **A step is a plain object** (`export default { async run(ctx) { … } }`), as above: a class instance with `#private` fields would fail when it runs.
 * **No `try` around another step's work, no timing of its own** unless the step had one before: a refusal stops the load with its words, as before.
