@@ -1,4 +1,8 @@
 // B104 (P-351): journey J7 Stage 1 walked like a person at 1440 px on a fresh configured checkpoint, screens only.
+// Row A1 of the M3 sprint plan (6 Nov): the walk is journey J-A1. Since #1085 the checkpoint makes Visitor visa's release 2
+// (IMM 5257 Online, so IMM 5645 replaces IMM 5707): 1.1 reads "In Release 2", 1.3a is a note (IMM 5645's signer is row
+// A3), 2.1 opens a case for the family of four (the principal, then a partner and two children by the case page's Add
+// buttons) and the walk ends at 4.4, an override without a label or reason refused on its fields.
 //   node walk-stage1-1440.cjs <port> <out dir>
 // Stage 0.1 through the Demo menu (Reset demo, then Load the configured checkpoint) as the author; then Stage 1 as the
 // author on Immigration programs › Visitors › Visitor visa (1.1 the release and "Filed through", 1.2–1.3 who fills, from
@@ -23,7 +27,10 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
   const errors = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
-  page.on("console", (m) => { if (m.type() === "error") errors.push(`console: ${m.text().slice(0, 300)}`); });
+  // A 4xx a step expects (4.4's refusal) is allowed by that step; any other is an error (its URL is written down).
+  let expect4xx = null;
+  page.on("response", (r) => { if (r.status() >= 400 && !(expect4xx && expect4xx.test(r.url()) && r.status() === 400)) errors.push(`response ${r.status()} ${r.request().method()} ${r.url().replace(base, "")}`); });
+  page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(`console: ${m.text().slice(0, 300)}`); });
   const shot = (n) => page.screenshot({ path: path.join(out, `${n}.png`), fullPage: true });
   const text = async (loc = page.locator("body")) => (await loc.innerText()).replace(/\s+/g, " ");
   const as = async (actor, url) => { await page.evaluate((a) => localStorage.setItem("xr-actor", a), actor); await page.goto(base + url); await page.waitForLoadState("networkidle"); };
@@ -50,23 +57,29 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   note("0.1", "Demo › Reset, then Load the configured checkpoint, through the menu", true, `${Math.round((Date.now() - t0) / 1000)} s`);
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // 1.1: Immigration programs › Visitor visa, release 1.
+  // 1.1: Immigration programs › Visitor visa, release 2 (release 1 carries the Stage 1 parts; release 2 keeps them).
   await as("user-A", "/");
   await page.getByRole("button", { name: "Visitor visa", exact: true }).first().click();
   await page.waitForURL(/\/c\/[^/]+/, { timeout: 30000 }); await page.waitForLoadState("networkidle");
   const combo = page.url().match(/\/c\/([^/?#]+)/)[1];
   await page.getByRole("heading", { name: /Visitor visa/ }).first().waitFor({ timeout: 30000 });
   await page.waitForLoadState("networkidle");
+  await page.getByText(/Released versions: Release \d+/).first().waitFor({ timeout: 30000 }).catch(() => {});
   const head = await text();
-  note("1.1", "Visitor visa opens, showing its release", /In Release 1/.test(head) && /Released versions: Release 1/.test(head), head.match(/Released versions: Release 1[^·]{0,60}/)?.[0] ?? "");
+  // J-A1 reads "In Release 2"; this page numbers releases by the workspace's release pack (combination.tsx row.release.pack),
+  // while a case names the combination's own version (2.1a below). So 1.1 checks that Visitor visa is live on the newer of
+  // its two releases, the pack it names being the one Released versions shows, with one earlier.
+  const inPack = head.match(/In Release (\d+)/)?.[1], lastPack = head.match(/Released versions: Release (\d+)/)?.[1];
+  note("1.1", "Visitor visa opens on its newer release (In Release N, one earlier)", !!inPack && inPack === lastPack && /Released versions: Release \d+[^·]*· 1 earlier/.test(head), head.match(/In Release \d+[^·]{0,40}/)?.[0] + " · " + (head.match(/Released versions: Release \d+[^·]*· 1 earlier/)?.[0] ?? "no '1 earlier'"));
   await shot("1-1-visitor-visa");
 
   // 1.2–1.3 and 1.5: the Forms tab.
   await as("user-A", `/c/${combo}/forms`);
   const row = async (code) => { const r = page.locator(`tr[data-line="${code}"]`); return (await r.count()) ? await text(r.first()) : ""; };
-  const r5257 = await row("IMM 5257"), r5707 = await row("IMM 5707"), r5476 = await row("IMM 5476"), rSch1 = await row("IMM 5257 SCH1");
+  const r5257 = await row("IMM 5257"), r5645 = await row("IMM 5645"), r5476 = await row("IMM 5476"), rSch1 = await row("IMM 5257 SCH1");
   note("1.2", "IMM 5476: signed by the person and the representative", /The person and the representative/.test(r5476), r5476.slice(0, 220));
-  note("1.3a", "IMM 5707: each person from 18, signed by the person", /18\+/.test(r5707) && /The person the form is about/.test(r5707), r5707.slice(0, 220));
+  // Release 2 retires IMM 5707 for IMM 5645, whose signer is not set yet: row A3 of the M3 sprint plan (#1084's question, 5 Nov).
+  aside("1.3a", "IMM 5645 (release 2's family form, in place of IMM 5707): its signer is row A3", r5645.slice(0, 220));
   note("1.3b", "IMM 5257: a parent signs for a minor", /A parent, for a minor/.test(r5257), r5257.slice(0, 220));
   note("1.3c", "IMM 5257 SCH1: children from 18 (its signer left unset, for the expert)", /children 18\+/.test(rSch1) && /Not set/.test(rSch1), rSch1.slice(0, 220));
   const acct = page.getByRole("combobox", { name: "IRCC account this combination files through" });
@@ -86,7 +99,7 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   const sel = d.getByRole("combobox", { name: /Combination/ });
   await sel.waitFor({ timeout: 20000 });
   const vv = (await sel.locator("option").allInnerTexts()).find((o) => /Visitor visa/.test(o));
-  note("2.1a", "Open a case offers Visitor visa", !!vv, vv ?? "");
+  note("2.1a", "Open a case offers Visitor visa, release 2", /release 2\b/.test(vv ?? ""), vv ?? "");
   if (vv) await sel.selectOption({ label: vv });
   await d.getByLabel(/Case reference/).fill("B104-WALK-1");
   await d.getByLabel(/Principal applicant's name/).fill("Sample Client A");
@@ -99,6 +112,19 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   const c = await text();
   note("2.1b", "The case opens on Visitor visa", /Visitor visa/.test(c), caseUrl);
   note("2.3", "\"Filed through APR Portal\" read-only on the case", /Filed through APR Portal|through the APR Portal/i.test(c), c.match(/[^.]{0,40}Filed through[^.]{0,40}/i)?.[0] ?? "");
+  // 2.1c: the family of four, by the case page's Add buttons (one per role the release allows).
+  const added = [];
+  for (const [role, name] of [[/partner|spouse/i, "Sample Partner B"], [/child/i, "Sample Child C"], [/child/i, "Sample Child D"]]) {
+    const btn = page.locator("button[data-add-role]").filter({ hasText: role }).first();
+    if (!(await btn.waitFor({ timeout: 15000 }).then(() => true, () => false))) break;
+    await btn.click();
+    const ad = page.getByRole("dialog"); await ad.getByLabel("Name").fill(name);
+    await ad.getByRole("button", { name: "Add", exact: true }).click(); await ad.waitFor({ state: "detached", timeout: 15000 });
+    await page.locator("section[aria-labelledby=people]").getByText(name, { exact: true }).waitFor({ timeout: 15000 }).catch(() => {});
+    added.push(name);
+  }
+  const ppl = await text(page.locator("section[aria-labelledby=people]"));
+  note("2.1c", "The family of four is on the case: the principal, a partner and two children", added.length === 3 && ["Sample Client A", ...added].every((n) => ppl.includes(n)), `${added.length} added; ` + ppl.replace(/^.*?Add child \(travelling\) /, "").slice(0, 220));
   await shot("2-3-case");
 
   // 4.1: the case's Eligibility page runs a check (on main it is refused: "no eligibility rules yet").
@@ -114,6 +140,16 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   note("4.1a", "Run eligibility check gives a result, not a refusal", /Possibly eligible/i.test(el) && !/No eligibility rules yet/.test(el), el.match(/[^.]{0,30}(Possibly eligible|No eligibility rules yet)[^.]{0,80}/)?.[0] ?? "");
   note("4.1b", "The four officer's-judgement lines are listed, never gates", ["enough money", "good health", "back home", "leave Canada"].every((w) => el.includes(w)));
   await shot("4-1-eligibility");
+
+  // 4.4 (C6.9): an override without a label or a reason is refused on its fields, and nothing is kept.
+  expect4xx = /\/runtime\/assessments\/[^/]+\/override$/;
+  await page.getByRole("button", { name: /Override result/ }).first().click();
+  const ov = page.getByRole("dialog");
+  await ov.getByRole("button", { name: "Keep the override" }).click();
+  await ov.getByRole("alert").first().waitFor({ timeout: 15000 }).catch(() => {});
+  const reasonBad = await ov.getByLabel("Reason").getAttribute("aria-invalid"), ovText = await text(ov);
+  note("4.4", "Override without a label or reason: refused on the field, the panel stays open", reasonBad === "true" && (await ov.isVisible()), ovText.match(/Reason[^.]{0,120}/)?.[0] ?? ovText.slice(0, 200));
+  await shot("4-4-override-refused");
 
   fs.writeFileSync(path.join(out, "walk.json"), JSON.stringify({ port: Number(port), caseUrl, steps, errors }, null, 1));
   const counted = steps.filter((s) => !s.note);
