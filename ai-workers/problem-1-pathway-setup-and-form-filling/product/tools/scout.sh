@@ -97,7 +97,7 @@ prepare() {  # create or refresh the scout copy, build it and start its app on :
     pg_ctl -D "$pgd" status >/dev/null 2>&1 || LC_ALL=en_US.UTF-8 pg_ctl -D "$pgd" -l "$pgd/server.log" -w start >/dev/null || exit 1
     ./node_modules/.bin/prisma generate >/dev/null && bash tools/web-fresh.sh build >/dev/null   # stamped (QA-181)
   ) || { echo "could not prepare the scout app (database, Prisma client or web build)"; exit 5; }
-  zsh "$PS/tools/isolated.sh" scout_x1 4480 start >/dev/null || { echo "the scout app did not start (see $PS/var/isolated-scout_x1)"; exit 5; }
+  zsh "$PS/tools/isolated.sh" scout_x1 4480 start --ttl 240 >/dev/null || { echo "the scout app did not start (see $PS/var/isolated-scout_x1)"; exit 5; }
 }
 
 push_() {  # push the scout branch when it has commits main lacks
