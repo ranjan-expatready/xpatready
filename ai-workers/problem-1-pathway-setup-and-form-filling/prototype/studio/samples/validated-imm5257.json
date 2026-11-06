@@ -1,6 +1,8 @@
 {
  "label": "Sample: the read-backs of the one Sample family's four IMM 5257 copies, validated in Adobe (B99, C10.1 row 12b). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
  "basis": "Each copy was made by the product from the configured checkpoint, validated with the form's own Validate button in Adobe on the Mac (never simulated), saved, and read back through the product's upload door. The checkpoint loader (api/src/sample-validated.ts) writes a validated_copy row only when a copy's family facts hash and the hash of the values it writes equal the ones here.",
+ "case_reference": "SAMPLE-VV-FAMILY-1",
+ "form": "IMM 5257",
  "copies": [
   {
    "person": "Child (Sample)",
@@ -8,6 +10,7 @@
    "values_sha256": "933a1b0c632dfdc0e3a0c36b22610dc86b38bf3a3627b3d8188d77ebff260168",
    "copy_sha256": "013d69c138316fe398fcad4a5b5361f9fff3034d57248865f71e17c81aa2acaf",
    "validated_sha256": "377f96bd9c2bd7f6a0b6612570b3cbc520f0e817c51f319cfb9de7fa7d7fff18",
+   "file": "imm5257-child.adobe.pdf",
    "read_back": {
     "ok": true,
     "why": null,
@@ -34,6 +37,7 @@
    "values_sha256": "e5a497d089cf81b92e53066530f49f141dbcd359017e35619ce65365f2d541ea",
    "copy_sha256": "053d4a05bf0509c2243c47fa9ef69112ca74d17cdb3deab0a8ac8aea3ae01a00",
    "validated_sha256": "995faaa976b95912c77f3c4edf960eaf563cf0f3cec628001139d5a6ab0ba2be",
+   "file": "imm5257-child-18-or-over.adobe.pdf",
    "read_back": {
     "ok": true,
     "why": null,
@@ -60,6 +64,7 @@
    "values_sha256": "629d54eb45edb7610569df72cbc6e492d266a6ad761eda78473a77c68f0b175e",
    "copy_sha256": "9ea941d18f848e0c19da3e1fa886cc5e05ac5f8031cb028d7b48429e31a44524",
    "validated_sha256": "1a2aa8d8dcb23faa1e65563cc27643250285bcd4b1a2bb51c6598371b6e09e4c",
+   "file": "imm5257-client-a.adobe.pdf",
    "read_back": {
     "ok": true,
     "why": null,
@@ -86,6 +91,7 @@
    "values_sha256": "8591300ea5524d96a5edddfadd96666c0a7d7f7b32550a131c04d816418b7b64",
    "copy_sha256": "e50817ea9e7a22e518fe3b0ae558a60c01ea5f6e916761970c3955f5ae5887e6",
    "validated_sha256": "c8547b0250ddbf9feb942c8cebd6351c87691bb09c2feaf3c8dc3f917028ab1f",
+   "file": "imm5257-partner.adobe.pdf",
    "read_back": {
     "ok": true,
     "why": null,
