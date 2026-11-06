@@ -1,18 +1,18 @@
 {
- "port": 4435,
- "caseUrl": "http://127.0.0.1:4435/cases/bb170684-4b7c-428d-8426-5f0c65b7f53b",
+ "port": 4521,
+ "caseUrl": "http://127.0.0.1:4521/cases/66bb9d40-1bc3-44a7-8489-18469cc466d6",
  "steps": [
   {
    "j7": "0.1",
    "what": "Demo › Reset, then Load the configured checkpoint, through the menu",
    "seen": true,
-   "detail": "92 s"
+   "detail": "111 s"
   },
   {
    "j7": "1.1",
-   "what": "Visitor visa opens, showing its release",
+   "what": "Visitor visa opens on its newer release (In Release N, one earlier)",
    "seen": true,
-   "detail": "Released versions: Release 1, today at 8:28 a.m., approved by Approver "
+   "detail": "In Release 6  · Released versions: Release 6, today at 6:16 p.m., approved by Approver · 1 earlier"
   },
   {
    "j7": "1.2",
@@ -22,9 +22,15 @@
   },
   {
    "j7": "1.3a",
-   "what": "IMM 5707: each person from 18, signed by the person",
+   "what": "Release 2 files IMM 5645 (each person from 18) in place of IMM 5707",
    "seen": true,
-   "detail": "IMM 5707 Family Information \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\" Each applicant · 18+ Always Online (typed in by hand for now) PDF upl"
+   "detail": "IMM 5645: IMM 5645 FAMILY INFORMATION \"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the applicat · IMM 5707: no row"
+  },
+  {
+   "j7": "1.3a-signer",
+   "what": "IMM 5645's signer is not set on release 2: row A3",
+   "note": true,
+   "detail": "#1084's question, 5 Nov 21:01Z; the plan's row A3"
   },
   {
    "j7": "1.3b",
@@ -58,21 +64,27 @@
   },
   {
    "j7": "2.1a",
-   "what": "Open a case offers Visitor visa",
+   "what": "Open a case offers Visitor visa, release 2",
    "seen": true,
-   "detail": "Visitor visa · release 1"
+   "detail": "Visitor visa · release 2"
   },
   {
    "j7": "2.1b",
    "what": "The case opens on Visitor visa",
    "seen": true,
-   "detail": "http://127.0.0.1:4435/cases/bb170684-4b7c-428d-8426-5f0c65b7f53b"
+   "detail": "http://127.0.0.1:4521/cases/66bb9d40-1bc3-44a7-8489-18469cc466d6"
   },
   {
    "j7": "2.3",
    "what": "\"Filed through APR Portal\" read-only on the case",
    "seen": true,
    "detail": " Filed through APR Portal: set by the combination, not"
+  },
+  {
+   "j7": "2.1c",
+   "what": "The family of four is on the case: the principal, a partner and two children",
+   "seen": true,
+   "detail": "3 added; Sample Client A Principal applicant Sample Partner B Spouse or partner Sample Child C Child Sample Child D Child"
   },
   {
    "j7": "4.1a",
@@ -85,6 +97,12 @@
    "what": "The four officer's-judgement lines are listed, never gates",
    "seen": true,
    "detail": ""
+  },
+  {
+   "j7": "4.4",
+   "what": "Override without a label or reason: refused on both fields, the panel stays open, nothing is kept",
+   "seen": true,
+   "detail": "Give a label for the override. Give a reason for the override. · overrides kept: 0"
   }
  ],
  "errors": []

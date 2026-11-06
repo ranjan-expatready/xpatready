@@ -28,8 +28,9 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   const errors = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
   // A 4xx a step expects (4.4's refusal) is allowed by that step; any other is an error (its URL is written down).
-  let expect4xx = null;
-  page.on("response", (r) => { if (r.status() >= 400 && !(expect4xx && expect4xx.test(r.url()) && r.status() === 400)) errors.push(`response ${r.status()} ${r.request().method()} ${r.url().replace(base, "")}`); });
+  let expect4xx = null, overridesKept = 0;
+  page.on("response", (r) => { if (/\/runtime\/assessments\/[^/]+\/override$/.test(r.url()) && r.request().method() === "POST" && r.status() < 300) overridesKept++;
+     if (r.status() >= 400 && !(expect4xx && expect4xx.test(r.url()) && r.status() === 400)) errors.push(`response ${r.status()} ${r.request().method()} ${r.url().replace(base, "")}`); });
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(`console: ${m.text().slice(0, 300)}`); });
   const shot = (n) => page.screenshot({ path: path.join(out, `${n}.png`), fullPage: true });
   const text = async (loc = page.locator("body")) => (await loc.innerText()).replace(/\s+/g, " ");
@@ -70,16 +71,17 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   // while a case names the combination's own version (2.1a below). So 1.1 checks that Visitor visa is live on the newer of
   // its two releases, the pack it names being the one Released versions shows, with one earlier.
   const inPack = head.match(/In Release (\d+)/)?.[1], lastPack = head.match(/Released versions: Release (\d+)/)?.[1];
-  note("1.1", "Visitor visa opens on its newer release (In Release N, one earlier)", !!inPack && inPack === lastPack && /Released versions: Release \d+[^·]*· 1 earlier/.test(head), head.match(/In Release \d+[^·]{0,40}/)?.[0] + " · " + (head.match(/Released versions: Release \d+[^·]*· 1 earlier/)?.[0] ?? "no '1 earlier'"));
+  note("1.1", "Visitor visa opens on its newer release (In Release N, one earlier)", !!inPack && inPack === lastPack && /Released versions: Release \d+[^·]*· 1 earlier/.test(head), (head.match(/In Release \d+[^·]{0,40}/)?.[0] ?? "no 'In Release'") + " · " + (head.match(/Released versions: Release \d+[^·]*· 1 earlier/)?.[0] ?? "no '1 earlier'"));
   await shot("1-1-visitor-visa");
 
   // 1.2–1.3 and 1.5: the Forms tab.
   await as("user-A", `/c/${combo}/forms`);
   const row = async (code) => { const r = page.locator(`tr[data-line="${code}"]`); return (await r.count()) ? await text(r.first()) : ""; };
-  const r5257 = await row("IMM 5257"), r5645 = await row("IMM 5645"), r5476 = await row("IMM 5476"), rSch1 = await row("IMM 5257 SCH1");
+  const r5257 = await row("IMM 5257"), r5645 = await row("IMM 5645"), r5707 = await row("IMM 5707"), r5476 = await row("IMM 5476"), rSch1 = await row("IMM 5257 SCH1");
   note("1.2", "IMM 5476: signed by the person and the representative", /The person and the representative/.test(r5476), r5476.slice(0, 220));
   // Release 2 retires IMM 5707 for IMM 5645, whose signer is not set yet: row A3 of the M3 sprint plan (#1084's question, 5 Nov).
-  aside("1.3a", "IMM 5645 (release 2's family form, in place of IMM 5707): its signer is row A3", r5645.slice(0, 220));
+  note("1.3a", "Release 2 files IMM 5645 (each person from 18) in place of IMM 5707", /18\+/.test(r5645) && (!r5707 || /retired|removed/i.test(r5707)), `IMM 5645: ${r5645.slice(0, 120)} · IMM 5707: ${r5707 ? r5707.slice(0, 80) : "no row"}`);
+  aside("1.3a-signer", "IMM 5645's signer is not set on release 2: row A3", "#1084's question, 5 Nov 21:01Z; the plan's row A3");
   note("1.3b", "IMM 5257: a parent signs for a minor", /A parent, for a minor/.test(r5257), r5257.slice(0, 220));
   note("1.3c", "IMM 5257 SCH1: children from 18 (its signer left unset, for the expert)", /children 18\+/.test(rSch1) && /Not set/.test(rSch1), rSch1.slice(0, 220));
   const acct = page.getByRole("combobox", { name: "IRCC account this combination files through" });
@@ -147,9 +149,12 @@ const aside = (j7, what, detail = "") => { steps.push({ j7, what, note: true, de
   const ov = page.getByRole("dialog");
   await ov.getByRole("button", { name: "Keep the override" }).click();
   await ov.getByRole("alert").first().waitFor({ timeout: 15000 }).catch(() => {});
-  const reasonBad = await ov.getByLabel("Reason").getAttribute("aria-invalid"), ovText = await text(ov);
-  note("4.4", "Override without a label or reason: refused on the field, the panel stays open", reasonBad === "true" && (await ov.isVisible()), ovText.match(/Reason[^.]{0,120}/)?.[0] ?? ovText.slice(0, 200));
+  const labelBad = await ov.getByLabel("Label").getAttribute("aria-invalid"), reasonBad = await ov.getByLabel("Reason").getAttribute("aria-invalid"), ovText = await text(ov);
+  const open = await ov.isVisible();
   await shot("4-4-override-refused");
+  await ov.getByRole("button", { name: "Cancel" }).click(); await ov.waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
+  note("4.4", "Override without a label or reason: refused on both fields, the panel stays open, nothing is kept", labelBad === "true" && reasonBad === "true" && open && overridesKept === 0,
+    `${ovText.match(/Give a label[^.]*\./)?.[0] ?? "no label error"} ${ovText.match(/Give a reason[^.]*\./)?.[0] ?? "no reason error"} · overrides kept: ${overridesKept}`);
 
   fs.writeFileSync(path.join(out, "walk.json"), JSON.stringify({ port: Number(port), caseUrl, steps, errors }, null, 1));
   const counted = steps.filter((s) => !s.note);

@@ -144,3 +144,22 @@ Scope: only what the merge of origin/main (bf12209f1; old base 74aec1b58) change
 **Round 3 journey score:** 8.5 / 10, unchanged. The merge leaves the product behaviour as it was; only the test evidence is broken (M1).
 
 Verdict: Changes requested on 4003adfbc
+
+## Round 4 — diff-only review of the merge onto B120 (row A1, P-318 (1)), Claude Opus, 6 Nov
+
+**Commits reviewed:** 4c7e080e (merge of `main` 3a1bfd8d, with B104's call moved to `features/checkpoint/105-stage-one.ts`) and 9af59b75 (the walk as journey J-A1). The review read the code and the committed outputs, and ran nothing.
+
+**Verdict: APPROVE for the code.** For the evidence it asked for changes: the committed walk outputs came from the old script.
+
+**Checked and found correct (confidence high):**
+* **Nothing was dropped.** `demo.ts` is taken from `main` unchanged; the branch's only `demo.ts` edits were the one import and the one call. The branch only adds files relative to `main` (58 files).
+* **105 behaves like the old call.** It uses the same `db`, `audit`, actor and `said`. `ctx.get` returns the same shared `Studio` and `Forms` instances. The timing name and the log line, with its two-space indent, are byte-identical.
+* **It follows `features/README.md`.** It is a plain object with `satisfies CheckpointStep`, uses `ctx.get`, has no `try` and no new timing. No new import cycle (110 and 130 import `Forms` and `Studio` the same way).
+* **Running after `100-form-roles` changes nothing.** `applySampleFormRoles` writes only `formRole` where it is null. Nothing `setStageOne` calls reads it, and it is read only at submit and in the snapshot, both in 110.
+* **No clash with the other steps.** There is no other 105, no `stateOf` is used, and the registry's order check allows a step in between.
+
+**Findings and what was done:**
+* **Major (evidence): `walk/` was older than 9af59b75.** Fixed: the walk was re-run on a fresh checkpoint, and `walk/` and `walk-main/` were replaced (`runs-a1/README.md` §5).
+* **Minor: 4.4 read only the Reason field.** Fixed: it now checks that both Label and Reason are refused, that the panel stays open, and, after Cancel, that no override was saved (no successful POST to `/override`).
+* **Minor: 1.3a passed even with no IMM 5645 row.** Fixed: a counted check that release 2 files IMM 5645 (from 18) and that the IMM 5707 row is gone. IMM 5645's signer stays a note, for row A3.
+* **Nit: 1.1's detail could print "undefined".** Fixed.

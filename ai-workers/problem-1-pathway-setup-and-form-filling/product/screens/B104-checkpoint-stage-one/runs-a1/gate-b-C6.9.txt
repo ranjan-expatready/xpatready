@@ -1,0 +1,7 @@
+Gate B: the PR names C6.9; claims Works for none (no bug check).
+  packs: C6.9.test.ts
+    setup studio/tests/runtime/setup_visitor_visa.ts: exit 0
+    setup studio/acceptance/lib/setup_vv_m3.ts: exit 1 (44/46 passed)
+    C6.9.test.ts fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A): exit 0, 15/15 passed (30 s: copy 4, run 26)
+  packs took 30 s in all
+Gate B: passed.
