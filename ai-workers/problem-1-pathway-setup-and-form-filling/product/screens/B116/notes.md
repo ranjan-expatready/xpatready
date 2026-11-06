@@ -62,3 +62,17 @@
 | (c) New paid run of both pairs with the new list | Run the condition pair and the PQR-picks pair live (two rounds each, claude-opus-5-5), then repin B86, B114 and B88 to `fd6bb52d92bd`. | About **US$0.56**: the 5 Nov runs cost 0.143 + 0.150 (conditions) and 0.136 + 0.133 (picks). Needs the founder's Go (no live switch on a check copy). | Best: the AI reads the true list. The risk: new answers may differ, for example no longer proposing the Other family name condition that B86 is built on. B86 and B114 may then need rework beyond a repin. The list also moves again with every new question, which is fragile by design. |
 
 **Recommendation: (a) now, and (c) later in the hardening pass**, when the founder approves a paid refresh of the six's saved pairs. (a) keeps M2's evidence intact at US$0, and it does not reuse any AI answer for an input the AI did not read.
+
+## Paid re-run of the two saved pairs (option (c)): costs written before the run
+* **Ruling.** Lead 21 chose option (c); the founder chose it in Lead 21's chat at 05:59 IST.
+* **The founder's Go in the builder's own session.** First a US$1.20 cap. Then, after the plan showed a worst case above it, **"Go, worst US$4.87"**. One attempt; retries only for temporary errors (P-295).
+* **Plan.** `/combinations/:vv/draft-qd/plan`, mode Live, on a fresh copy of the six (`b116live`), plan `4dfe373d…360f`. It reads the question list `vv.single-fd6bb52d92bd`.
+  * Step 5, conditions, two rounds: worst US$2.51.
+  * Step 6, PQR picks, two rounds: worst US$2.36.
+  * **Total worst US$4.87**, against US$23.97 left in the ledger.
+  * Usual about US$0.56, from the 5 Nov runs on the earlier list.
+* **Live switch.** Set on this copy's server only for this run, then off. Model: claude-opus-5-5.
+* **Outcome of the builder's attempt (06:4x IST): refused before any call. US$0, nothing sent.**
+  * The guard (`p2/screen.ts useTicket`) marks each launch ticket used by creating a file in the shared spend-ledger folder. This session's sandbox may not write there, so the create failed and was reported as "launch ticket already used". Both AI steps ended "could not start on this computer, so nothing was sent and nothing was charged".
+  * The live switch was closed straight after.
+  * The founder chose that another session runs it: Lead 21, from the main copy, with "Go, worst US$4.87" typed there.
