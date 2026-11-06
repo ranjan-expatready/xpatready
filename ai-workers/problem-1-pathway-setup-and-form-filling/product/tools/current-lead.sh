@@ -10,14 +10,14 @@
 id_only=0; where=0; fetch=1; for a in "$@"; do case "$a" in --id) id_only=1;; --where) where=1;; --no-fetch) fetch=0;; esac; done
 cd "$(dirname "$0")/.." || exit 2
 rel="$(git rev-parse --show-prefix 2>/dev/null)STATE.md"
-best=""; bt=0
+best=""
 if git remote get-url origin >/dev/null 2>&1; then
   [ "$fetch" = 1 ] && git fetch -q origin main 'refs/heads/lead/*:refs/remotes/origin/lead/*' 2>/dev/null
-  for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/main 'refs/remotes/origin/lead/'); do
-    t=$(git log -1 --format=%ct "$ref" -- STATE.md 2>/dev/null); [ -n "$t" ] || continue
-    git show "$ref:$rel" 2>/dev/null | grep -q '^current_lead: ' || continue
-    [ "$t" -gt "$bt" ] && { bt=$t; best=$ref; }
-  done
+  # Newest STATE.md commit first; read files only until one has the line (a blob:none CI copy fetches each file it reads).
+  while read -r t ref; do
+    git show "$ref:$rel" 2>/dev/null | grep -q '^current_lead: ' && { best=$ref; break; }
+  done < <(for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/main 'refs/remotes/origin/lead/'); do
+    t=$(git log -1 --format=%ct "$ref" -- STATE.md 2>/dev/null); [ -n "$t" ] && echo "$t $ref"; done | sort -s -k1,1nr)
 fi
 if [ -n "$best" ]; then lines=$(git show "$best:$rel" | grep '^current_lead: '); src="$best"
 else lines=$(grep '^current_lead: ' STATE.md 2>/dev/null); src="STATE.md (this copy)"; fi

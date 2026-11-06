@@ -39,7 +39,7 @@ docs_copy "$T/m"; sed -i.bak '/^current_lead: /d' "$T/m/$PRODREL/STATE.md"; rm -
 git init -q --bare -b main "$T/m.git"; git -C "$T/m" remote add origin "$T/m.git"; git -C "$T/m" -c push.negotiate=false push -q origin main
 git clone -q "$T/m.git" "$T/mlane"; MC="$T/mlane/$PRODREL/tools/check-docs.sh"
 out=$(bash "$MC" 2>/dev/null); r=$?
-ok "no line on main and no lead branch fails check-docs" "$([ $r = 1 ] && echo "$out" | grep -q 'no origin/lead/\* branch has one' && echo 1)" "exit $r: $out"
+ok "no line on main and no lead branch fails check-docs" "$([ $r = 1 ] && echo "$out" | grep -q 'read none from an origin/lead/' && echo 1)" "exit $r: $out"
 git -C "$T/m" checkout -qb lead/y; echo 'current_lead: local_ddd-0000-1111 Lead 4 · 6 Nov 18:00 IST' >> "$T/m/$PRODREL/STATE.md"
 sleep 1; git -C "$T/m" commit -qam "lead line on the lead branch" && git -C "$T/m" -c push.negotiate=false push -q origin lead/y
 git -C "$T/mlane" fetch -q origin; out=$(bash "$MC" 2>/dev/null); r=$?
@@ -59,7 +59,11 @@ git -C "$T/m" checkout -q main; sleep 1; echo 'current_lead: local_eee-0000-1111
 git -C "$T/m" commit -qam "line on main" && git -C "$T/m" -c push.negotiate=false push -q origin main
 git -C "$T/mlane" pull -q --ff-only origin main; sed -i.bak '/^current_lead: /d' "$T/mlane/$PRODREL/STATE.md"; rm -f "$T/mlane/$PRODREL/STATE.md.bak"
 out=$(bash "$MC" 2>/dev/null); r=$?
-ok "a copy dropping main's line passes only via a lead branch, not origin/main" "$([ $r = 1 ] && echo "$out" | grep -q 'no origin/lead/\* branch has one' && echo 1)" "exit $r: $out"
+ok "a copy dropping main's line passes only via a lead branch, not origin/main" "$([ $r = 1 ] && echo "$out" | grep -q 'read none from an origin/lead/.*it read: refs/remotes/origin/main' && echo 1)" "exit $r: $out"
+git -C "$T/m" checkout -q lead/y; sleep 1; printf 'current_lead: local_fff Lead 6 · a\ncurrent_lead: local_ggg Lead 7 · b\n' >> "$T/m/$PRODREL/STATE.md"
+git -C "$T/m" commit -qam "two lines" && git -C "$T/m" -c push.negotiate=false push -q origin lead/y
+git -C "$T/mlane" fetch -q origin; out=$(bash "$MC" 2>/dev/null); r=$?
+ok "the newest lead branch with two or more lines fails check-docs and says so" "$([ $r = 1 ] && echo "$out" | grep -qE 'it read: current-lead: refs/remotes/origin/lead/y has [2-9] current_lead lines' && echo 1)" "exit $r: $out"
 
 # The skills carry the rule (guard 1's text half): lanes message the Lead after each step; the Lead's hand-over moves the line first.
 SK="$(cd "$TOOLS/../../../.." && pwd)/.claude/skills"

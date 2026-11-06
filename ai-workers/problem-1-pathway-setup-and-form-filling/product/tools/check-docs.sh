@@ -11,8 +11,8 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
 {
   check 100 10 "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md
   check 60 0 "$ROOT/CLAUDE.md" "$ROOT/AGENTS.md"
-  # STATE.md names the current Lead on exactly one line, so every lane can find whom to report to (founder, 6 Nov
-  # ~03:00 IST: "a hard rule and it never messes up"; tools/current-lead.sh reads it; test: check-current-lead.sh).
+  # STATE.md (or else the newest origin/lead/* branch's) names the current Lead on exactly one line, so every lane can
+  # find whom to report to (founder, 6 Nov ~03:00 IST: "a hard rule and it never messes up"; tools/current-lead.sh reads it; test: check-current-lead.sh).
   S="$PH/STATE.md"
   if [ -f "$S" ]; then
     n=$(grep -c '^current_lead: ' "$S")
@@ -20,12 +20,13 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
     # on an origin/lead/* branch, read by current-lead.sh (no fetch here; a copy without those refs: git fetch origin
     # 'refs/heads/lead/*:refs/remotes/origin/lead/*').
     if [ "$n" -eq 0 ]; then
-      w=$(bash "$PH/tools/current-lead.sh" --no-fetch --where 2>/dev/null); v=$(bash "$PH/tools/current-lead.sh" --no-fetch 2>/dev/null)
+      w=$(bash "$PH/tools/current-lead.sh" --no-fetch --where 2>&1); v=$(bash "$PH/tools/current-lead.sh" --no-fetch 2>/dev/null)
       case "$w" in
         refs/remotes/origin/lead/*) echo "$v" | grep -qE '^[A-Za-z]+_[A-Za-z0-9_-]{8,} .*Lead [0-9]+' || echo "CURRENT LEAD: the current_lead line on ${w#refs/remotes/} needs a session id, then a title naming \"Lead N\"";;
-        *) echo "CURRENT LEAD: STATE.md has 0 current_lead lines and no origin/lead/* branch has one, needs exactly one (current_lead: <session id> <title>)";;
+        *) echo "CURRENT LEAD: STATE.md has 0 current_lead lines and current-lead.sh read none from an origin/lead/* branch (it read: $w), needs exactly one (current_lead: <session id> <title>)";;
       esac
-    else [ "$n" -eq 1 ] || echo "CURRENT LEAD: STATE.md has $n current_lead lines, needs exactly one (current_lead: <session id> <title>)"; fi
+    fi
+    [ "$n" -gt 1 ] && echo "CURRENT LEAD: STATE.md has $n current_lead lines, needs exactly one (current_lead: <session id> <title>)"
     [ "$n" -eq 1 ] && ! grep -qE '^current_lead: [A-Za-z]+_[A-Za-z0-9_-]{8,} .*Lead [0-9]+' "$S" && echo "CURRENT LEAD: STATE.md's current_lead line needs a session id, then a title naming \"Lead N\""
     # One page (6 Nov: it reached 34 KB and every Lead re-read it; test: check-state-page.sh).
     b=$(wc -c < "$S"); [ "$b" -gt 12288 ] && echo "STATE TOO BIG ($((b / 1024)) KB > 12 KB): move the earlier page to product/history/STATE-<date>-<time>-<lead>.md and keep one page"
