@@ -76,3 +76,20 @@
   * The guard (`p2/screen.ts useTicket`) marks each launch ticket used by creating a file in the shared spend-ledger folder. This session's sandbox may not write there, so the create failed and was reported as "launch ticket already used". Both AI steps ended "could not start on this computer, so nothing was sent and nothing was charged".
   * The live switch was closed straight after.
   * The founder chose that another session runs it: Lead 21, from the main copy, with "Go, worst US$4.87" typed there.
+* **The paid re-run (Lead 21, main copy, copy `b116live2` from this branch's code, list `vv.single-fd6bb52d92bd`).**
+  * Live 07:13:43–07:14:44 IST, run `c4005b30`, done.
+  * **Spend US$0.56**: 0.142 and 0.146 (conditions), 0.143 and 0.133 (PQR picks); claude-opus-5-5.
+  * The run files are kept out of the commit, on the tech lead's ruling. They are in `prototype/p2/runs`:
+    * `studio-qd-conditions-…-6f2a5eae-live-20261106t014344422z-201835.json`
+    * `studio-qd-conditions-check-…-6f2a5eae-live-20261106t014358475z-f52fbd.json`
+    * `studio-pqr-picks-…-a056d1e6-live-20261106t014413361z-3d2d22.json`
+    * `studio-pqr-picks-check-…-a056d1e6-live-20261106t014426270z-468c8a.json`
+  * The first attempt's files (`…-9f38ae0f-…013713…`, `…-412423e1-…013714…`) were sandbox connection errors with 0 tokens. The tech lead records them on the PR.
+* **Finding (for hardening).** Only the list name was repinned, on fresh copies:
+  * B86 passes 45/45: "Other family name" is still at Check.
+  * B114 fails 58/62. Neither round of the new run proposes "criminal history details asked when criminal history is Yes", the condition B114 is built on; the 5 Nov run proposed it.
+  * B88-spread fails 34/36. The new first round proposes conditions on 4 questions, not 7, and writes "visit purpose other" at person level (`person.visit_purpose_other`) instead of `case.`.
+* **Ruling: option (a)** (Lead 21, 07:2x IST, the founder's choice "(a) Checkpoint only now (Recommended)").
+  * The three B116 boxes carry `"checkpointOnly": true` in `samples/own-yes-no.json`. `acceptance/lib/pack2.ts` (the six's people's steps) skips them, and the configured checkpoint still asks them.
+  * So the six keep `vv.single-ae2133b8a398` and the 5 Nov pairs. B86, B114 and B88 are untouched.
+* **Hardening item, right after M2's 60:** add the three questions to the six with a better-checked paid run, and rework B114 and B88 properly.

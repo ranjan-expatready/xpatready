@@ -1,5 +1,5 @@
 {
- "basis": "B52 (P-334 (5)); moved from api/src/own-yes-no.ts to data by B88 (P-319). Per combination, the application form whose Yes/No form fields worked out from other answers are each asked as their own question, in the form's words: IMM 5257 (09-2023) p. 1 Question 2 A \"Have you ever used any other name such as a nickname, maiden name or alias?\"; p. 2 \"Do you have a national identity document?\"; p. 2 \"Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?\". The library field of the same name is used when there is one (IMM 0008's and IMM 1294's field maps name them so). Sample, Unconfirmed: expert. B116 (founder's ruling on #1123, 6 Nov 2026: the product fills every box Validate insists on, never a hand tick): three form fields no saved AI answer mapped are asked too, for every applicant, minors included, in the form's words: Background information Question 1 a) \"Within the past two years, have you or a family member ever had tuberculosis of the lungs or been in close contact with a person with tuberculosis?\"; Question 6 \"Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?\"; the consent \"Do you consent to be contacted by CIC, or an organization at CIC's request, in the future?\" (its reading prints Question 6's caption on that box, so the question is quoted from the form's saved text, prototype/expected/source-text/imm5257e.xfa-template.txt). IMM 5257's own Validate stops on each when it is empty (tech lead's Validate, 6 Nov ~03:20 IST).",
+ "basis": "B52 (P-334 (5)); moved from api/src/own-yes-no.ts to data by B88 (P-319). Per combination, the application form whose Yes/No form fields worked out from other answers are each asked as their own question, in the form's words: IMM 5257 (09-2023) p. 1 Question 2 A \"Have you ever used any other name such as a nickname, maiden name or alias?\"; p. 2 \"Do you have a national identity document?\"; p. 2 \"Are you a lawful Permanent Resident of the United States with a valid alien registration card (green card)?\". The library field of the same name is used when there is one (IMM 0008's and IMM 1294's field maps name them so). Sample, Unconfirmed: expert. B116 (founder's ruling on #1123, 6 Nov 2026: the product fills every box Validate insists on, never a hand tick): three form fields no saved AI answer mapped are asked too, for every applicant, minors included, in the form's words: Background information Question 1 a) \"Within the past two years, have you or a family member ever had tuberculosis of the lungs or been in close contact with a person with tuberculosis?\"; Question 6 \"Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?\"; the consent \"Do you consent to be contacted by CIC, or an organization at CIC's request, in the future?\" (its reading prints Question 6's caption on that box, so the question is quoted from the form's saved text, prototype/expected/source-text/imm5257e.xfa-template.txt). IMM 5257's own Validate stops on each when it is empty (tech lead's Validate, 6 Nov ~03:20 IST). For now the three B116 boxes are asked by the configured checkpoint only (\"checkpointOnly\"; tech lead's ruling on #1123, 6 Nov ~07:2x IST, the founder's choice (a)): asking them on the six moves Visitor visa's question list off vv.single-ae2133b8a398, which the six's saved AI pairs (conditions 83a49fd2, PQR picks fc52039a) read, and a paid re-run on the new list (6 Nov, US$0.56) no longer proposed the conditions B114 and B88 are built on. Adding them to the six with a better-checked paid run is a hardening item.",
  "reason": "The form asks this Yes/No itself before its details: asked as its own question in the form's words (sample loader, B52; Sample)",
  "near": "The form's own Yes/No question, not the detail it leads to (sample loader, B52; Sample)",
  "combinations": {
@@ -24,18 +24,21 @@
     {
      "dataPath": "form1[0].Page3[0].BackgroundInfo[0].Choice[0]",
      "label": "Tuberculosis in past two years",
-     "meaning": "Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a)."
+     "meaning": "Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).",
+     "checkpointOnly": true
     },
     {
      "dataPath": "form1[0].Page3[0].PageWrapper[0].GovPosition[0].Choice[0]",
      "label": "Ill treatment of prisoners or civilians",
-     "meaning": "Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6)."
+     "meaning": "Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).",
+     "checkpointOnly": true
     },
     {
      "dataPath": "form1[0].Page3[0].Signature[0].Consent0[0].Choice[0]",
      "label": "Consents to research contact",
      "meaning": "Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).",
-     "question": "Do you consent to be contacted by CIC, or an organization at CIC’s request, in the future?"
+     "question": "Do you consent to be contacted by CIC, or an organization at CIC’s request, in the future?",
+     "checkpointOnly": true
     }
    ]
   }

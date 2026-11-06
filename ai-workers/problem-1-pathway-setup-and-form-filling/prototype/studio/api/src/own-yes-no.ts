@@ -48,7 +48,10 @@ export function inFormText(officialFile: string | null | undefined, words: strin
  *  Unconfirmed: expert); no combination or form number is in code. */
 /** B116: `question`, for a form field nothing fills yet whose reading prints another box's words, is the form's own question
  *  quoted from its saved text (inFormText checks it). */
-export type OwnYesNo = { dataPath: string; label: string; meaning: string; question?: string };
+/** B116 (tech lead's ruling on #1123, option (a)): `checkpointOnly`, asked by the configured checkpoint's loader but not on
+ *  the six by the packs' people's steps (acceptance/lib/pack2.ts), so the six's question list, and the saved AI pairs that
+ *  read it, stay as they are. Data, never code (P-319). */
+export type OwnYesNo = { dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean };
 type Table = { reason: string; near: string; combinations: Record<string, { application: string; boxes: OwnYesNo[] }> };
 const TABLE = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "own-yes-no.json"), "utf8")) as Table;
 export const OWN_YES_NO_REASON = TABLE.reason;
