@@ -9,8 +9,8 @@
 //     visa holds", on the M3 plan's branch, PR #1167), the four answer-only lines' facts from samples/form-setup.json.
 // Part 1 feeds both configurations to the helper without a server. Part 2 reads each live, on this copy: the fixture
 // first, then Demo › Reset and Load the configured checkpoint, each through a case opened by the helper; on the
-// checkpoint it also fills the case the packs' way and checks the helper's two other fixes (a UCI the release accepts;
-// "uses a representative" from the case team). Sample data, live AI off, no model call (US$0). It fails on a main
+// checkpoint it also fills the case the packs' way and checks the helper's UCI fix (a UCI the release's own checks
+// accept, so nothing is left to confirm). Sample data, live AI off, no model call (US$0). It fails on a main
 // without row C1 (no expectedLines).
 //   zsh studio/tools/isolated.sh rt_c1 4479 start && tsx studio/tests/check_m3_c1_expected_lines.ts 4479 xr_studio_rt_c1
 import { spawnSync } from "node:child_process";
@@ -119,10 +119,10 @@ if (expectedFor) {
   c = await openCase(needVisitorVisa());
   d = diff(await expectedFor(c.id), WANT.release2);
   ok("C1-8 checkpoint, live: a new family case opens on release 2 and expectedLines equals the hand-worked answer (seven lines for adults, five for children)", !d.length, d);
-  // The helper's other two fixes, on the same case filled the packs' way.
-  await fillEverything(c.id);
-  const rep = sql(`select value_json::text from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.uses_representative' and superseded_by_id is null`);
-  ok("C1-9 \"uses a representative\" is answered Yes: the case has a representative of record (its team), not the helper's No", rep === "true", rep);
+  // The helper's UCI fix, on the same case filled the packs' way (C7.7-9's own reading of stage 1).
+  const filled = await fillEverything(c.id);
+  const stage1 = ((await m3.call("GET", `/runtime/cases/${c.id}/prepare`)).body?.stage1 ?? []) as { filing: string; to_confirm: number }[];
+  ok("C1-9 checkpoint: filled the packs' way, every form is ready and stage 1 shows nothing left to confirm on any of the four filings (the UCI was the one fact left)", filled && stage1.length === 4 && stage1.every((x) => x.to_confirm === 0), { filled, stage1: stage1.map((x) => x.to_confirm) });
   const uciWarns = ((await prepare(c.id)).p?.readiness ?? []).flatMap((r) => r.warns).filter((w) => w.code === "fact_problem" && /Unique Client Identifier/.test(w.words));
   ok("C1-10 no \"fact with a problem\" warning on the UCI: the helper's Sample UCI is one the release's own checks accept", uciWarns.length === 0, uciWarns.map((w) => w.words.slice(0, 120)));
 }
