@@ -10,6 +10,9 @@
 #             the studio suites on the parallel parts (job "shard", run-suites.sh --shard i/n, each a fresh copy):
 #               - a builder's PR: only the suites its change can affect (run-suites.sh --changed);
 #               - a merge-queue batch: every suite but the quarantined ones (--skip-quarantined), once per change.
+#             Both retry a failed suite once (B122, P-376 (8), run-suites.sh --retry): "passed on retry" or "failed
+#             twice" in the summary, a record uploaded as suite-retries-<part>; a suite that passed only on retry on 2
+#             branches in 7 days is quarantined for every part (tools/flaky.mjs in job "kind"). The nightly never retries.
 #             US$0 model spend: every suite replays saved runs.
 # Switches (repository variables, gh variable set NAME --body VALUE):
 # Type check (P-291, the outsider audit of 29 Oct): job "types", tsc --noEmit for api and web (tools/typecheck.mjs; fails
@@ -34,9 +37,10 @@ jobs:
     if: ${{ !github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions: { contents: read }
+    permissions: { contents: read, actions: read }   # actions: read for the retry records (B122)
     concurrency: { group: "kind-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     outputs:
+      autoq: ${{ steps.q.outputs.autoq }}
       kind: ${{ steps.k.outputs.kind }}
       shards: ${{ steps.k.outputs.shards }}
       n: ${{ steps.k.outputs.n }}
@@ -63,6 +67,17 @@ jobs:
             *) [ "$queue" = true ] && why="Code, merge-queue batch: every suite but the quarantined ones, on $n parts." || why="Code, pull request: only the suites this change can affect, on $n parts (the full set runs in the merge queue).";;
           esac
           echo "**$kind** · $why" | tee -a "$GITHUB_STEP_SUMMARY"
+      - id: q
+        name: flaky suites to quarantine (B122; passed only on retry on 2 branches in 7 days; tools/flaky.mjs)
+        # Worked out once here, so every part deals and skips the same suites. A failure of the API never fails the
+        # check: no automatic quarantine this run, said in the summary.
+        if: steps.k.outputs.kind == 'code'
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        run: |
+          if q=$(node "$P/tools/flaky.mjs" quarantine 2> flaky.err); then cat flaky.err
+          else q=""; cat flaky.err; echo "::warning::flaky.mjs could not read the retry records: no automatic quarantine this run"; fi
+          echo "autoq=$q" >> "$GITHUB_OUTPUT"
+          [ -z "$q" ] || { echo "**Quarantined automatically (B122):**"; sed 's/^/- /' flaky.err; } >> "$GITHUB_STEP_SUMMARY"
   shard:
     # Records and code, on GitHub's machines unless BATCH_RUNNER / PR_RUNNER put them on the Mac (a fork never reaches it).
     needs: kind
@@ -81,6 +96,7 @@ jobs:
       KIND: ${{ needs.kind.outputs.kind }}
       QUEUE: ${{ needs.kind.outputs.queue }}
       N: ${{ needs.kind.outputs.n }}
+      SUITES_QUARANTINE_AUTO: ${{ needs.kind.outputs.autoq }}
       RANGE: "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +135,7 @@ jobs:
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
           bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
+          bash "$P/tools/check-flaky.sh"
           node "$S/tools/check-gate-b.mjs"
           node "$S/tools/check-works-set.mjs"
       - name: Playwright's own Chromium
@@ -131,12 +148,12 @@ jobs:
         if: matrix.shard == 1 && env.KIND == 'code'
         env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
         run: node "$S/tools/gate-b.mjs"
-      - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
+      - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --retry --shard; US$0 model spend)
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
         run: |
           if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct); fi
-          bash "$P/tools/run-suites.sh" --demo "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
+          bash "$P/tools/run-suites.sh" --demo --retry "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always() && env.KIND == 'code'
@@ -147,6 +164,15 @@ jobs:
         with:
           name: suite-logs-shard-${{ matrix.shard }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14
+      - name: retry records (B122; only when a suite was retried; tools/flaky.mjs reads them)
+        if: always() && env.KIND == 'code'
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-retries-${{ matrix.shard }}
+          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+          if-no-files-found: ignore
+          overwrite: true
           retention-days: 14
   types:
     # P-291: tsc --noEmit for api and web, beside the parts (no added wall time); records and code, never notes.
@@ -326,11 +352,11 @@ jobs:
       - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
         # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
-        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1", SUITES_QUARANTINE_AUTO: "${{ needs.kind.outputs.autoq }}" }
         # One at a time on the Mac (a parallel trial, 30 Oct, failed 12 suites); the chosen set, not every suite: a full
         # run there takes about 80 minutes of suites, near this job's 90-minute limit (I1 kept the Mac path as it was).
         run: |
-          bash "$P/tools/run-suites.sh" --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
+          bash "$P/tools/run-suites.sh" --retry --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
@@ -341,4 +367,13 @@ jobs:
         with:
           name: suite-logs
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14
+      - name: retry records (B122; only when a suite was retried; tools/flaky.mjs reads them)
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-retries-1
+          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+          if-no-files-found: ignore
+          overwrite: true
           retention-days: 14

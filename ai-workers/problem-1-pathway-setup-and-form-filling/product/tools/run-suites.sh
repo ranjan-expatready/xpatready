@@ -9,6 +9,15 @@
 #        batches split across n GitHub machines, each its own fresh copy). Combines with --changed and --demo.
 #   --skip-quarantined   every suite except the QUARANTINE list below (I1: the merge queue's one full run; --changed
 #        always skips them). --direct (with --changed): select-suites.mjs --direct, never everything (CI's PR_SUITES=direct).
+#   --retry   (B122, P-376 (8); PR and merge-queue checks only, never the nightly full set) a failed suite runs once more,
+#        on a fresh isolated copy when it uses one; its row says "passed on retry" (not a failure) or "failed twice".
+#        Not retried: a suite that hit its 20-minute limit (exit 124), and any failure after SUITES_RETRY_MAX (default 2)
+#        retries in one run (many failures are a real break, and retrying them only spends time). Each retry is one line
+#        in $SUITES_OUT/retries.tsv (time, suite, outcome, both exit codes, commit; CI uploads it as suite-retries-<part>)
+#        and in the summary's "retries:" line. tools/flaky.mjs counts them (daily-numbers.sh) and quarantines a suite
+#        that passed only on retry on 2 different branches in 7 days (tools/flaky-ledger.tsv).
+# SUITES_QUARANTINE_AUTO="<suite>|<owner>|<fix by>|<runs> ..." (CI: from flaky.mjs quarantine in the kind job, the same
+#        for every part): joins QUARANTINE below for this run, its row naming the owner and the fix date.
 # Each tests/check_*.ts|cjs names its run in a usage line: "isolated.sh <name> <port> start && tsx|node studio/tests/<file>
 # <args>" (an isolated copy: own database, own files, the demo is never touched) or "tsx studio/tests/<file>" (no server).
 # Never calls a model (every suite replays saved runs; US$0). Exit 1 when any suite fails; a summary table either way.
@@ -19,17 +28,18 @@ export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:
 # GNU timeout: `timeout` on Linux (CI), `gtimeout` from Homebrew coreutils on the Mac. Missing → stop loudly, never run unguarded.
 TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
-DEMO=0; NAMES=0; CHANGED=""; SHARD=1; SHARDS=1; SKIPQ=0; DIRECT=
+DEMO=0; NAMES=0; CHANGED=""; SHARD=1; SHARDS=1; SKIPQ=0; DIRECT=; RETRY=0
 while [ $# -gt 0 ]; do case "$1" in
   --demo) DEMO=1;;
   --skip-quarantined) SKIPQ=1;;
   --direct) DIRECT=--direct;;
+  --retry) RETRY=1;;
   --names) NAMES=1;;   # print the names and ports this copy would use, run nothing
   --changed) [ -n "${2:-}" ] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }; CHANGED="$2"; shift;;
   --changed=*) CHANGED="${1#--changed=}";;
   --shard) [[ "${2:-}" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] && [ "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ] || { echo "--shard wants <i>/<n>, 1 <= i <= n; no suite was run"; exit 2; }
     SHARD="${BASH_REMATCH[1]}"; SHARDS="${BASH_REMATCH[2]}"; shift;;
-  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>, --shard <i>/<n>, --skip-quarantined, --direct); no suite was run"; exit 2;;
+  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>, --shard <i>/<n>, --skip-quarantined, --direct, --retry); no suite was run"; exit 2;;
 esac; shift; done
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
@@ -64,7 +74,19 @@ SKIP="check_catalogue_scale.cjs"
 # update is a plain INSERT, so the page's first calls and the sample load each created the workspace; the losers' P2002
 # answered 409). api/src/core.ts now shares one creation; fail test tests/check_workspace_first_calls.ts (5/9 before, 9/9).
 QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
+# Automatic quarantine (B122): only well-formed entries; anything else is named and ignored, never run blind.
+AUTOQ=" "
+for e in ${SUITES_QUARANTINE_AUTO:-}; do
+  IFS='|' read -r qn qo qd qr <<< "$e"
+  if [[ "$qn" =~ ^check_[A-Za-z0-9_.-]+\.(ts|cjs)$ && "$qo" =~ ^[a-z0-9_-]+$ && "$qd" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && "${qr:--}" =~ ^[0-9,-]+$ ]]; then
+    case " $QUARANTINE " in *" $qn "*) ;; *) QUARANTINE="$QUARANTINE $qn"; AUTOQ="$AUTOQ$qn|$qo|$qd|${qr:--} ";; esac
+  else echo "SUITES_QUARANTINE_AUTO: ignored the malformed entry \"$e\"" >&2; fi
+done
+RETRY_MAX="${SUITES_RETRY_MAX:-2}"; [[ "$RETRY_MAX" =~ ^[0-9]+$ ]] || RETRY_MAX=2
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
+# SUITES_TESTS_DIR (tools/check-flaky.sh only): run the check_* files of a fixture folder instead of studio/tests, and
+# nothing else (no runtime or drafting suites, no database or web build); CI never sets it.
+TESTS="${SUITES_TESTS_DIR:-$S/tests}"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
 DB="postgresql://xr_studio@127.0.0.1:54329"
@@ -133,11 +155,11 @@ picked() { [ -z "$PICK" ] && return 0; case "$PICK" in *" $1 "*) return 0;; esac
 TURN=0; MINE=" "
 if [ "$SHARDS" -gt 1 ]; then
   units=()
-  for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac; picked "$f" && units+=("$f"); done
-  RT0="$S/tests/runtime"
+  for path in "$TESTS"/check_*.ts "$TESTS"/check_*.cjs; do [ -e "$path" ] || continue; f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac; picked "$f" && units+=("$f"); done
+  RT0="$S/tests/runtime"; [ -n "${SUITES_TESTS_DIR:-}" ] && RT0=/nonexistent
   [ -f "$RT0/check_case_engine.ts" ] && picked check_case_engine.ts && units+=(check_case_engine.ts)
   [ -f "$RT0/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && units+=(check_runtime_r1a.ts)
-  for t in check_p2_guard check_p2_launch; do [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && units+=("$t.ts"); done
+  for t in check_p2_guard check_p2_launch; do [ -z "${SUITES_TESTS_DIR:-}" ] && [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && units+=("$t.ts"); done
   TURN=${#units[@]}
   MINE=" $(printf '%s\n' "${units[@]}" | awk -v n="$SHARDS" -v me="$SHARD" -v q=" $QUARANTINE " -v tf="$P/product/tools/suite-times.tsv" '
     BEGIN { while ((getline l < tf) > 0) { if (l ~ /^#/) continue; split(l, a, "\t"); t[a[1]] = a[2] } }
@@ -148,42 +170,67 @@ if [ "$SHARDS" -gt 1 ]; then
           for (i = 1; i <= NR; i++) { b = 1; for (k = 2; k <= n; k++) if (load[k] < load[b]) b = k; load[b] += w[o[i]]; if (b == me) printf "%s ", u[o[i]] } }') "
 fi
 myturn() { [ "$SHARDS" -le 1 ] && return 0; case "$MINE" in *" $1 "*) return 0;; esac; return 1; }
-pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
+[ -n "${SUITES_TESTS_DIR:-}" ] || pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 # Fresh web bundle (runtime builder, 1 Nov): the isolated copies serve web/dist as built, so a browser suite run after an
 # edit tested the old screens. Outside CI (CI builds first), rebuild unless the bundle's stamp matches web/, contracts/
 # and engine/ (QA-181: a time check missed a bundle built today from an old branch; isolated.sh checks it too). Only when
 # a browser suite (*.cjs) is among the suites that will run.
-if [ -z "${CI:-}" ]; then
+if [ -z "${CI:-}" ] && [ -z "${SUITES_TESTS_DIR:-}" ]; then
   needweb=0; for path in "$S"/tests/check_*.cjs "$S"/tests/runtime/check_*.cjs; do [ -f "$path" ] && picked "$(basename "$path")" && { needweb=1; break; }; done
   if [ "$needweb" = 1 ]; then
     bash "$S/tools/web-fresh.sh" ensure || { echo "vite build failed; no suite was run"; exit 2; }
   fi
 fi
 
-rows=(); fail=0; failed=()
-run() {  # $1 file, $2 label, rest: command
-  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0
-  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fail=1; failed+=("$f|$code|$log"); fi
+# A quarantined suite's reason: by hand (P-205), or by the B122 rule with its owner and fix date.
+qwhy() { local e; for e in $AUTOQ; do case "$e" in "$1|"*) IFS='|' read -r _ qo qd qr <<< "$e"
+  echo "passed only on retry on 2+ branches in 7 days (runs ${qr//,/, }): owner $qo, back on $qd unless fixed sooner; nightly still runs it (B122)"; return;; esac; done
+  echo "fails at random: nightly only until its fix merges (P-205)"; }
+rows=(); fail=0; failed=(); RETRIES=0; RETRIED=(); AGAIN=()
+[ "$RETRY" = 1 ] && : > "$OUT/retries.tsv"
+# The line that says why a log failed: a failing check's own line first ("Error" also appears inside PASS lines that quote
+# an expected error), then an error's message ("TypeError: fetch failed"), not the "name: 'Error'," of a printed error
+# object (1 Nov, batch 41292621195: that was the whole reason a merge-queue log gave).
+why() { (grep -m1 -E '^(FAIL|STOP)' "$1" || grep -m1 -E 'Error: ' "$1" || grep -m1 -E 'Error' "$1") | cut -c1-80; }
+# A fresh isolated copy for a retry (B122): the first try may have left its copy in any state.
+recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1; zsh "$S/tools/isolated.sh" "$@" >/dev/null 2>&1; }
+run() {  # $1 file, $2 label, rest: command. AGAIN, when set, readies a retry (recopy ...); it is cleared after each run.
+  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0 code2=0 note=""
+  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fi
+  if [ "$st" = FAIL ] && [ "$RETRY" = 1 ]; then
+    if [ "$code" = 124 ]; then note="timed out at 20 min, not retried"
+    elif [ "$RETRIES" -ge "$RETRY_MAX" ]; then note="not retried: $RETRY_MAX retries already in this run"
+    else
+      RETRIES=$((RETRIES + 1)); local first; first="exit $code: $(why "$log")"; mv "$log" "$OUT/${f%.*}.try1.log"
+      if { [ ${#AGAIN[@]} -eq 0 ] || "${AGAIN[@]}"; } && "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st="passed on retry"
+      else code2=$?; [ -s "$log" ] || echo "STOP the copy for the retry did not start" > "$log"; st="failed twice"; fi
+      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$f" "$st" "$code" "$code2" "$(git rev-parse --short HEAD)" >> "$OUT/retries.tsv"
+      RETRIED+=("$f|$st")
+      note="1st try $first"; [ "$st" = "failed twice" ] && code=$code2
+    fi
+  fi
+  AGAIN=()
+  case "$st" in PASS|"passed on retry") ;; *) fail=1; failed+=("$f|$code|$log");; esac
   local last; last=$(grep -E "passed|/[0-9]+ passed|[0-9]+ passed" "$log" | tail -1 | cut -c1-90)
   [ -n "$last" ] || last="$(grep -c '^PASS' "$log") checks passed"
-  # A failing check's own line first: "Error" also appears inside PASS lines that quote an expected error. Then an
-  # error's message ("TypeError: fetch failed"), not the "name: 'Error'," of a printed error object (1 Nov, batch
-  # 41292621195: that was the whole reason a merge-queue log gave). The exit code says how it ended (124: timed out).
-  [ "$st" = FAIL ] && last="exit $code: $( (grep -m1 -E '^(FAIL|STOP)' "$log" || grep -m1 -E 'Error: ' "$log" || grep -m1 -E 'Error' "$log") | cut -c1-90)"
+  # The exit code says how it ended (124: timed out). A retried suite's row also gives its first try's reason.
+  case "$st" in FAIL|"failed twice") last="exit $code: $(why "$log")";; esac
+  [ -n "$note" ] && last="$last · ${note//|//}"
   rows+=("| $f | $st | $((SECONDS - t0)) s | ${last:-see $log} |")
 }
-for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
+for path in "$TESTS"/check_*.ts "$TESTS"/check_*.cjs; do
+  [ -e "$path" ] || continue   # an unmatched pattern stays literal (only a fixture folder lacks one of the two kinds)
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
   picked "$f" || continue
   myturn "$f" || continue
-  case " $QUARANTINE " in *" $f "*) { [ -n "$CHANGED" ] || [ "$SKIPQ" = 1 ]; } && { rows+=("| $f | quarantined | | fails at random: nightly only until its fix merges (P-205) |"); continue; };; esac
+  case " $QUARANTINE " in *" $f "*) { [ -n "$CHANGED" ] || [ "$SKIPQ" = 1 ]; } && { rows+=("| $f | quarantined | | $(qwhy "$f") |"); continue; };; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
     if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
       # The Mac CI runner (self-hosted, founder 30 Oct): the same suite on its own isolated copy, never the :4400 demo.
       bn=$(iname studio_browser); bp=$(iport 4429)
       zsh "$S/tools/isolated.sh" "$bn" "$bp" start >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $bn did not start |"); fail=1; continue; }
-      run "$f" isolated env STUDIO_URL="http://localhost:$bp" STUDIO_DB="xr_studio_$bn" node "$path"
+      AGAIN=(recopy "$bn" "$bp" start); run "$f" isolated env STUDIO_URL="http://localhost:$bp" STUDIO_DB="xr_studio_$bn" node "$path"
       zsh "$S/tools/isolated.sh" "$bn" "$bp" stop >/dev/null 2>&1; continue
     fi
     [ "$DEMO" = 1 ] || { rows+=("| $f | skipped | | resets the :4400 demo: --demo (CI, cloud) |"); continue; }
@@ -198,6 +245,7 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
     args=$(printf '%s' "${BASH_REMATCH[6]}" | sed -E "${keep}"'s/\[[^]]*\]//g; s/ {2,}.*//')
     [ -n "$PREFIX" ] && args=$(printf ' %s ' "$args" | sed -E "s/ ${uport} / ${port} /g; s/xr_studio_${uname}( |\$)/xr_studio_${name}\1/g")
     zsh "$S/tools/isolated.sh" "$name" "$port" start "${env[@]}" >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $name did not start |"); fail=1; continue; }
+    AGAIN=(recopy "$name" "$port" start ${env[@]+"${env[@]}"})
     if [ "$tool" = node ]; then run "$f" "$name" node "$path" $args; else run "$f" "$name" $TSX "$path" $args; fi
     zsh "$S/tools/isolated.sh" "$name" "$port" stop >/dev/null 2>&1
   else
@@ -209,7 +257,7 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
 done
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
 # plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
-RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
+RT="$S/tests/runtime"; [ -n "${SUITES_TESTS_DIR:-}" ] && RT=/nonexistent; RN=$(iname runtime_r1); RP=$(iport 4430)
 if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 # The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
 if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn check_runtime_r1a.ts; then
@@ -223,7 +271,7 @@ if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked 
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
 for t in check_p2_guard check_p2_launch; do
-  [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
+  [ -z "${SUITES_TESTS_DIR:-}" ] && [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
 # A choice that ran nothing is a fault, never a pass.
 # A shard can rightly get nothing when few suites were chosen (fewer than n): that shard says so and passes.
@@ -236,8 +284,15 @@ fi
 for x in ${failed[@]+"${failed[@]}"}; do   # (bash 3.2 on the Mac: an empty array under set -u)
   IFS='|' read -r f code log <<< "$x"
   { echo "::group::$f failed (exit $code): its FAIL lines and the last 40 lines of ${log#$ROOT/}"
+    [ -f "${log%.log}.try1.log" ] && { echo "--- 1st try (retried, B122): its FAIL lines"; grep -E '^(FAIL|STOP)' "${log%.log}.try1.log" | head -10; echo "--- 2nd try"; }
     grep -E '^(FAIL|STOP)' "$log" | head -20; echo "--- last 40 lines"; tail -40 "$log"; echo "::endgroup::"; } >&2
 done
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
+# B122: every retry in one line (flaky.mjs counts the records in retries.tsv, which CI uploads as suite-retries-<part>).
+if [ "$RETRY" = 1 ]; then
+  ok=""; bad=""; for x in ${RETRIED[@]+"${RETRIED[@]}"}; do case "$x" in *"|passed on retry") ok="$ok ${x%%|*}";; *) bad="$bad ${x%%|*}";; esac; done
+  echo; echo "retries: ${#RETRIED[@]}${ok:+ · passed on retry:$ok}${bad:+ · failed twice:$bad} (one retry per failed suite, at most $RETRY_MAX a run; never in the nightly full set)"
+  [ -s "$OUT/retries.tsv" ] || rm -f "$OUT/retries.tsv"
+fi
 echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)}$([ "$SHARDS" -gt 1 ] && echo " · shard $SHARD/$SHARDS of $TURN units") · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail
