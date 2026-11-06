@@ -7,8 +7,9 @@
 // marked in the code but not on this list, or the other way round, fails the check. US$0, no model call.
 //   zsh studio/tools/isolated.sh forms_qa53 4459 start && tsx studio/tests/check_forms_qa53.ts 4459 xr_studio_forms_qa53
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { planted, tsFiles } from "./lib/ts-files.ts";
 
 const PORT = Number(process.argv[2] ?? 4459), DB = process.argv[3] ?? "xr_studio_forms_qa53";
 const API = join(import.meta.dirname, "..", "api", "src");
@@ -17,11 +18,12 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 const status = async (path: string, actor: string | null) => (await fetch(`http://localhost:${PORT}${path}`, { headers: actor ? { "x-actor": actor } : {} })).status;
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 
-/** Every GET route in api/src: its full path, and whether the code marks it (on the route or on its controller). */
-function routes() {
+/** Every GET route in api/src (B120: its subfolders too): its full path, and whether the code marks it (on the route or
+ *  on its controller). */
+function routes(dir = API) {
   const out: { path: string; mark: "case" | "open" | null; file: string }[] = [];
-  for (const f of readdirSync(API).filter((x) => x.endsWith(".ts"))) {
-    const lines = readFileSync(join(API, f), "utf8").split("\n");
+  for (const f of tsFiles(dir)) {
+    const lines = readFileSync(join(dir, f), "utf8").split("\n");
     let prefix = "", classMark: "case" | "open" | null = null, pending: "case" | "open" | null = null;
     for (const l of lines) {
       if (l.trim() === "@CaseRead()") { pending = "case"; continue; } // a controller-level mark, on its own line
@@ -47,7 +49,7 @@ const REVIEWED: Record<string, "case" | "open"> = {
   const fill = (p: string) => p.replace(/:id\b/g, p.startsWith("/api/combinations/") ? vv : "00000000-0000-4000-8000-000000000000").replace(/:key\b/g, "individual.visitors").replace(/:code\b/g, encodeURIComponent("IMM 5257"));
 
   const all = routes();
-  const declared = readdirSync(API).filter((x) => x.endsWith(".ts")).reduce((n, f) => n + (readFileSync(join(API, f), "utf8").match(/@Get\("/g) ?? []).length, 0);
+  const declared = tsFiles(API).reduce((n, f) => n + (readFileSync(join(API, f), "utf8").match(/@Get\("/g) ?? []).length, 0);
   ok("QA-53: the check reads every GET route the code declares (none left unseen)", all.length === declared && declared > 40, { found: all.length, declared });
   const marked = all.filter((x) => x.mark && !x.path.startsWith("/api/runtime/")).map((x) => `${x.path} ${x.mark}`).sort();
   const reviewed = Object.entries(REVIEWED).map(([p, m]) => `${p} ${m}`).sort();
@@ -83,17 +85,25 @@ const REVIEWED: Record<string, "case" | "open"> = {
   // QA-65 (qa after-merge on #69): a case read still needs a known person, and a configuration read made by POST (a plan or
   // a check) is guarded like a GET. The POST reads are found in the code (@ConfigRead), and every other write names its person.
   const post = async (path: string, actor: string | null, body: unknown) => (await fetch(`http://localhost:${PORT}${path}`, { method: "POST", headers: { "content-type": "application/json", ...(actor ? { "x-actor": actor } : {}) }, body: JSON.stringify(body) })).status;
-  const configPosts: string[] = [], unnamed: string[] = [];
-  for (const f of readdirSync(API).filter((x) => x.endsWith(".ts"))) {
-    const text = readFileSync(join(API, f), "utf8"), lines = text.split("\n"), prefix = /@Controller\("([^"]*)"\)/.exec(text)?.[1] ?? "";
-    lines.forEach((l, i) => {
-      for (const m of l.matchAll(/(@ConfigRead\(\)\s*)?@(Post|Put|Patch|Delete)\("([^"]*)"\)/g)) {
-        const path = `/${prefix}/${m[3]}`.replace(/\/+/g, "/");
-        if (m[1]) configPosts.push(path);
-        else if (!/x-actor|actorOf|readerOf/.test(lines.slice(i, i + 3).join(" "))) unnamed.push(`${f}: ${path}`);
-      }
-    });
-  }
+  // B120: api/src's subfolders too.
+  const writes = (dir: string) => {
+    const configPosts: string[] = [], unnamed: string[] = [];
+    for (const f of tsFiles(dir)) {
+      const text = readFileSync(join(dir, f), "utf8"), lines = text.split("\n"), prefix = /@Controller\("([^"]*)"\)/.exec(text)?.[1] ?? "";
+      lines.forEach((l, i) => {
+        for (const m of l.matchAll(/(@ConfigRead\(\)\s*)?@(Post|Put|Patch|Delete)\("([^"]*)"\)/g)) {
+          const path = `/${prefix}/${m[3]}`.replace(/\/+/g, "/");
+          if (m[1]) configPosts.push(path);
+          else if (!/x-actor|actorOf|readerOf/.test(lines.slice(i, i + 3).join(" "))) unnamed.push(`${f}: ${path}`);
+        }
+      });
+    }
+    return { configPosts, unnamed };
+  };
+  const { configPosts, unnamed } = writes(API);
+  const plantedDir = planted({ "features/checkpoint/999-planted.ts": '@Controller("api")\nexport class P {\n  @Get("planted/read") read() {}\n  @Post("planted/write")\n  write() {}\n}\n' });
+  ok("QA-53 fail (B120): a GET route planted in a subfolder is found", routes(plantedDir).map((x) => x.path).join() === "/api/planted/read");
+  ok("QA-65 fail (B120): a write planted in a subfolder that names nobody is caught", writes(plantedDir).unnamed.join() === "features/checkpoint/999-planted.ts: /api/planted/write");
   ok("QA-65: the configuration reads made by POST are exactly the reviewed three (finder plan, AI plan, condition check)", JSON.stringify(configPosts.sort()) === JSON.stringify(["/api/ai/plan", "/api/combinations/:id/forms/find/plan", "/api/conditions/check"]), configPosts);
   ok("QA-65: every other write names its person (none answers nobody by default)", unnamed.length === 0, unnamed);
   const bodies: Record<string, unknown> = { "/api/ai/plan": { scope: vv, mode: "stub" }, "/api/combinations/:id/forms/find/plan": { mode: "rules" }, "/api/conditions/check": { condition: "", answers: {} } };
