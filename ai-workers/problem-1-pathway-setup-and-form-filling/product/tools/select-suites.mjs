@@ -382,6 +382,10 @@ function pick(f) {
   // The schema and its migrations shape every copy's database; main.ts's start-up and error filter run on every request.
   if (st !== null && /^prisma\//.test(st)) return { all: `${st}: shared`, picks: new Map(suites.has(SCHEMA_CHECK) ? [[SCHEMA_CHECK, `${st}: the schema's check (P-376 (7))`]] : []) };
   if (st !== null && /^(api\/src\/main\.ts$|api\/tsconfig\.json$|prisma\.config\.ts$)/.test(st)) return { all: `${st}: shared` };
+  // B120's step folders (api/src/features/<dir>/: the checkpoint, the placement passes) are loaded by listing the folder
+  // (features.ts featureSteps), not by an import the graph can follow, and they run inside the checkpoint that most set-up
+  // suites load: every file there, helpers included, runs everything, as before B121 (re-review after #1158, Major).
+  if (st !== null && /^api\/src\/features\/[^/]+\/.+\.ts$/.test(st)) return { all: `${st}: a step folder the app loads by listing it` };
   if (st !== null && /^api\/src\/.+\.ts$/.test(st)) return apiPick(f);
   if (st !== null && st.startsWith("web/")) return webPick(f);
   // Everything else (B121): engine/, contracts/, prototype/p1, p2, p5, samples/, acceptance/, tests/ helpers and

@@ -18,6 +18,13 @@ has() { printf '%s\n' "$1" | cut -f1 | grep -qx "$2"; }
 for f in "$S/prisma/schema.prisma" "$S/prisma/migrations/x/migration.sql" "$S/api/src/main.ts" "$S/tools/isolated.sh" "$S/start.sh" "$Q/prototype/env/requirements-linux.lock"; do
   o=$(sel "$f"); ok "${f#$Q/}: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 done
+# B121 re-review after B120 (#1158): the app loads api/src/features/<dir>/ by listing the folder (features.ts featureSteps,
+# demo.ts's checkpoint), never by an import the graph can follow. A helper there (_parts.ts, _constants.ts) runs everything,
+# as its sibling steps do; before this rule _constants.ts left out check_qa144_vv_release.ts and the other checkpoint suites.
+for f in "$S/api/src/features/placement/_parts.ts" "$S/api/src/features/placement/_chosen-sections.ts" "$S/api/src/features/checkpoint/_constants.ts" "$S/api/src/features/checkpoint/combination/200-place-from-parts.ts"; do
+  o=$(sel "$f"); ok "${f#$S/}: a step folder's file runs everything (B120 loads it by listing)" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+done
+o=$(sel "$S/api/src/runtime.ts"); ok "pass: a module directly in api/src (runtime.ts) still chooses its own suites, not everything" "$(! all "$o" && has "$o" check_s5_slice1.ts && echo 1)" "$(head -1 <<< "$o")"
 # B121 (P-376 (4)): engine/, contracts/, prototype/p1, p2, p5, samples/, acceptance/, test helpers and studio/tools/ go
 # through the reference graph: the suites that use them, not everything (before B121 each of these ran everything).
 o=$(sel "$S/engine/where-used.ts"); ok "an engine file runs the suites that use it (check_sh2_where_used.ts), not everything" "$(! all "$o" && has "$o" check_sh2_where_used.ts && echo 1)" "$(head -1 <<< "$o")"
