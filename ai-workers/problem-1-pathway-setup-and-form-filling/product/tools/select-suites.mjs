@@ -31,7 +31,7 @@
 // (I1, 3 Nov) the .md files the app or a suite reads as data: the AI prompts (prototype/**/prompts/*.md), api/src/**/*.md
 // (the features guide) and test fixtures, which go through the graph; and official-sources/ (the app reads its
 // manifests and PDFs at start): all. Of product/tools/ only the files that decide how the suites run choose everything
-// (run-suites.sh, this file, cloud-setup.sh, lane.sh, change-kind.sh); of .github/ only workflows/ci.yml.
+// (run-suites.sh, this file, cloud-setup.sh, lane.sh, change-kind.sh, ci-memory.mjs); of .github/ only workflows/ci.yml.
 // --direct (I1, a PR check that leaves the full set to the merge queue, P-291 (3)): never ALL and never "every browser
 // suite"; a file that would choose everything chooses the suites that import it (through test helpers) or name it.
 // --why: each chosen suite's reason names the chain of files by which it uses the change; SELECT_DEBUG=1 prints every
@@ -50,7 +50,7 @@ const RUNTIME_GROUP = ["check_runtime_r1c.cjs", "check_runtime_r1d.ts", "check_r
 const DOCS0 = /\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$/i;
 const DATA_MD = new RegExp(`^${P}/prototype/(.*/)?prompts/|^${P}/prototype/studio/(api/src|tests/fixtures)/`);
 const DOCS = { test: (f) => DOCS0.test(f) && !DATA_MD.test(f) && !f.startsWith(`${P}/official-sources/`) || /^ai-workers\/[^/]+\/official-sources\/.*\.md$/i.test(f) };
-const SUITE_TOOLS = /\/product\/tools\/(run-suites\.sh|select-suites\.mjs|cloud-setup\.sh|lane\.sh|change-kind\.sh)$/;
+const SUITE_TOOLS = /\/product\/tools\/(run-suites\.sh|select-suites\.mjs|cloud-setup\.sh|lane\.sh|change-kind\.sh|ci-memory\.mjs)$/;
 const DIRECT = process.argv.includes("--direct"), WHY = process.argv.includes("--why");
 
 const texts = new Map();
