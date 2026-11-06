@@ -228,3 +228,54 @@ The next Tab goes to the following control ("Source"), not "Cases home".
 **Journey score: 9½/10** (as in round 2, nothing changed).
 
 **Verdict: Approve** (ecec14a69).
+
+## Round 4 (diff-only: the B120 merge, 5cdff49c3..ad82c03ec) (6 Nov)
+**Verdict for ad82c03ec: Approve.** There is no Blocker, Major or Minor in the merge. ad82c03ec has two parents, 5cdff49c3 (the approved head) and origin/main 3a1bfd8d0 (B120, #1158). It does M3 fix F2 as the last comment on #1073 and #1158's body ask.
+
+**Merge faithfulness (git):**
+* `git diff origin/main ad82c03ec -- '*api/src/demo.ts'` is empty, so `demo.ts` equals main's.
+* `git diff origin/main ad82c03ec --stat`: 19 files. These are #1073's own 18 files from `git diff ffcfb45c8 5cdff49c3` (merge base), less `demo.ts`, plus `combination/325-conditional-documents.ts`. Nothing of main's is lost.
+* For each of those 18 files, the +/- lines of `origin/main..ad82c03ec` equal the +/- lines of `ffcfb45c8..5cdff49c3`. This includes the two conflicted files.
+* `git grep` finds no conflict markers at ad82c03ec.
+
+**325-conditional-documents.ts against the old `demo.ts` hunk:**
+* The function body is line-for-line the same, with only these swaps:
+  * `this.studio`, `this.ruleFacts`, `this.library` (Screen02 in the old constructor) and `this.audit` become `ctx.get(Studio|RuleFacts|Screen02)` and `ctx.audit`;
+  * the local `factsOf` copy becomes the import from `_facts-asked.ts:6` (same text).
+* The call (`:87-98`):
+  * `if (!cc.setup) return` replaces the old `if (setup)`;
+  * `cc.key` replaces `keyOf.get(c.id)` (`080-form-setup.ts` builds `cc.key` from `ctx.keyOf`);
+  * `placed(cc).p!` replaces `p`. Step 200 sets it on every combination without a guard, as the old code did before `if (setup)`;
+  * `formSetup(ctx)` replaces `.placedFacts`, `.refused` and `.documentLines`;
+  * `ctx.author`, `ctx.sme` (as the reviewer, as before) and `ctx.approver` replace the old people;
+  * `ctx.said` replaces `said`;
+  * the log line has the same words.
+* Order: `check_features_registry.ts` lists the steps as `…320-cited-documents, 325-conditional-documents, 330-approve-document-types, 400-…`. So the step runs after the cited lines and before the Approver's document-type loop, as the old call did.
+* `CONDITIONAL_DOCUMENTS` is defined and read only in the step file.
+
+**The two other conflicts:**
+* `tests/check_stand_ins.ts:16-17`: only SI-15 and SI-16 remain. Main's SI-10 removal is kept and this branch's SI-14 removal is kept. SI-14's chip is at `checklist.tsx:47`.
+* `web/src/runtime/cases.tsx`:
+  * against main it adds only the `DocumentsPanel` import (`:16`), `firm`/`nameOf` (`:168-170`) and the panel (`:207`);
+  * `adding` stays `useState<CanAdd | null>` (`:171`), with `CanAdd` imported from `./questionnaire` (`:11`);
+  * `roleOf`, the `co_files` pill, `ItemChannels` and `AddPersonDialog` are main's, unchanged.
+
+**What I ran at ad82c03ec** (copy rv_b1 on :4434; stopped and dropped after; live AI off):
+* Reset, then Load configured: `ok`, 91.7 s, `cost_usd` 0.
+  * The log reads "vv.single: 0 conditional document lines in, 5 waiting for the facts their condition reads (…; row 7 names them)".
+  * Row 7 is `partial` and names the five minor lines, each waiting on `person.age_years`.
+* Packs:
+  * `C6.4.test.ts`: **19/30**. C6.4-4 passes. The red steps are -8, -8a, -8b, -8d, -8e, -8e2, -8h, -8i, -9a, -9b and -19, the minor's lines, the same set as rounds 1–3.
+  * `C6.4-screen.test.ts`: **17/17**.
+  * `check_features_registry.ts` (with the api tsconfig): **27/27**.
+  * `check_stand_ins.ts`: **9/9**. The register and the 8 chips match.
+  * `check_vv_checklist.ts`: **67/67**.
+* `product/tools/typecheck.mjs`: "no new type errors (15 known, 0 fixed)"; web has 0 errors.
+
+**Note (not a finding):** `check_features_registry.ts` needs `--tsconfig studio/api/tsconfig.json`. A plain `tsx` run fails on `core.ts`'s decorators after 19 PASS. That is main's test, not this merge.
+
+**Still open (as in round 3, not new):** round 1 Minors 4 and 8, the breaker's m1, the removed "Kept" pill to be named in the PR, and the duplicated line types.
+
+**Journey score: 9½/10** (unchanged from round 3). The merge changes no screen code beyond the conflict lines above, and the browser pack walked the panel at ad82c03ec (17/17).
+
+**Verdict: Approve** (ad82c03ec).
