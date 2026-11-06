@@ -155,6 +155,13 @@ ok "F5: the comment fails open when the API is down (exit 2, said on stderr; CI'
 qd=$(GITHUB_TOKEN=tok-x GITHUB_REPOSITORY=o/r GITHUB_API_URL="$DEAD" timeout 60 node "$FL" quarantine 2> "$W/q4.err"); q4=$?
 ok "F5: quarantine still fails open when the API is down (exit 2, no list: no automatic quarantine this run)" "$([ "$q4" = 2 ] && [ -z "$qd" ] && echo 1)" "exit $q4; stdout '$qd'; $(head -2 "$W/q4.err")"
 
+# 5f. A pass on retry is never remembered green by CI memory (P-371 (3), tools/ci-memory.mjs): the next push runs it again.
+if [ -f "$T/ci-memory.mjs" ]; then
+  printf '%s\n' '| Suite | Result | Time | Last line |' '|---|---|---|---|' '| check_fx_ok.cjs | PASS | 1 s | 1 passed |' '| check_fx_flaky.cjs | passed on retry | 2 s | 1 passed · 1st try exit 1: FAIL read ECONNRESET |' > "$W/mem-suites.md"
+  node "$T/ci-memory.mjs" record --suites "$W/mem-suites.md" --base "$(printf 'a%.0s' {1..40})" --head "$(printf 'b%.0s' {1..40})" --run 1 --attempt 1 --out "$W/mem.tsv" > /dev/null 2>&1; mc=$?
+  ok "F5: CI memory never remembers a pass on retry as green (it runs again on the next push)" "$([ "$mc" = 0 ] && grep -qx $'check_fx_ok.cjs\tPASS' "$W/mem.tsv" && ! grep -q check_fx_flaky "$W/mem.tsv" && echo 1)" "exit $mc; $(cat "$W/mem.tsv" 2>&1)"
+fi
+
 # 6. The 7-day count and the quarantine rule (flaky.mjs), on fixed records; NOW is 6 Nov 12:00 UTC.
 NOW=2026-11-06T12:00:00Z; E="$W/events.tsv"; L="$W/ledger.tsv"
 cp "$T/flaky-ledger.tsv" "$L"
@@ -225,7 +232,8 @@ ok "B122 (round 2, minor 2): the kind job reads all 9 parts' records, whatever S
 RC=$(awk '/^  retry-comment:/ { s = 1; print; next } s && /^  [a-z]/ { exit } s' "$CIY")
 ok "F5: both CI paths upload retry-bugs.md with the retry records (GitHub parts and the Mac path)" "$([ "$(grep -c 'var/suites/retry-bugs.md$' "$CIY")" = 2 ] && echo 1)" "$(grep -n 'retry-bugs' "$CIY")"
 ok "F5: the job retry-comment posts it on the PR, never failing the run (continue-on-error, a time limit, after every part)" "$(grep -q 'needs: \[kind, shard, ci\]' <<< "$RC" && grep -q 'continue-on-error: true' <<< "$RC" && grep -q 'timeout-minutes: 5' <<< "$RC" && grep -q 'pattern: "suite-retries-\*"' <<< "$RC" && grep -q 'flaky.mjs comment --body retry-bugs.md --pr "$PR"' <<< "$RC" && echo 1)" "$RC"
-ok "F5 (review Major 1): only retry-comment holds pull-requests: write, and it runs the base commit's code with no kept token" "$([ "$(grep -c '^ *permissions:.*pull-requests: write' "$CIY")" = 1 ] && grep -q 'permissions: { contents: read, pull-requests: write }' <<< "$RC" && grep -q 'ref: \${{ github.event.pull_request.base.sha }}' <<< "$RC" && grep -q 'persist-credentials: false' <<< "$RC" && grep -q 'node base/ai-workers/' <<< "$RC" && ! grep -qE 'npm|run-suites|cloud-setup' <<< "$RC" && echo 1)" "$(grep -n 'pull-requests' "$CIY")"
+JOB() { awk -v j="  $1:" '$0 == j { s = 1; print; next } s && /^  [a-z]/ { exit } s' "$CIY"; }
+ok "F5 (review Major 1): the jobs that run the suites (shard, ci) hold no write token; retry-comment does, and runs the base commit's code with no kept token" "$(! JOB shard | grep -qE 'permissions:.*write' && ! JOB ci | grep -qE 'permissions:.*write' && grep -q 'permissions: { contents: read, pull-requests: write }' <<< "$RC" && grep -q 'ref: \${{ github.event.pull_request.base.sha }}' <<< "$RC" && grep -q 'persist-credentials: false' <<< "$RC" && grep -q 'node base/ai-workers/' <<< "$RC" && ! grep -qE 'npm|run-suites|cloud-setup' <<< "$RC" && echo 1)" "$(grep -n 'pull-requests' "$CIY")"
 
 echo "$pass passed, $fail failed"
 exit $((fail > 0))

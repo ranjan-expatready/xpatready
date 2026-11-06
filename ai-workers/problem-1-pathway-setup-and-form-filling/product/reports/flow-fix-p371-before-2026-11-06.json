@@ -1,0 +1,41 @@
+{
+ "window": "2026-11-04T00:00:00Z .. 2026-11-05T21:15:00Z",
+ "runs_read": 1000,
+ "pr_check_hours": 531.7,
+ "thrown_hours": 265.9,
+ "thrown_share": 50.0,
+ "cancelled": [
+  181,
+  111.3
+ ],
+ "failed": [
+  118,
+  145.0
+ ],
+ "earlier_attempt_failed_jobs": [
+  36,
+  9.6
+ ],
+ "pr_runs": 578,
+ "draft_guard_runs": [
+  0,
+  0.0
+ ],
+ "queue_runs": 158,
+ "queue_failed": 17,
+ "queue_cancelled": 1,
+ "queue_hours": 385.1,
+ "queue_thrown_hours": 63.0,
+ "merged": 176,
+ "records_merged": 89,
+ "notes_merged": 20,
+ "pr_run_wall_hours": 157.0,
+ "pr_run_wall_thrown_share": 53.4,
+ "records_share": 50.6,
+ "approved_to_merged_min": {
+  "n": 176,
+  "median": 36,
+  "p90": 123,
+  "under_1h_share": 71.6
+ }
+}

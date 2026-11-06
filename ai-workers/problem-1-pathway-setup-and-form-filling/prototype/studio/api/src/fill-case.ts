@@ -23,6 +23,7 @@ import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Cha
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
+import { keptOnMacWords } from "./sample-validated.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
 import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
@@ -108,6 +109,8 @@ export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWo
 }
 const needsValidate = (form: string, channel: Channel) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channel);
 const OUT_OF_DATE = "Out of date: validate again";
+/** QA-285: each person on the case named by their name (the saved read-backs name people, never ids). */
+const nameOfPeople = (people: { subjectId: string; label: string }[]) => (about: string) => about === "case" ? "case" : people.find((p) => p.subjectId === about)?.label ?? about;
 /** What a file check names in its refusal: the generated copy, or the validated copy read back (C-9). */
 const COPY_FILE = { name: "This copy's file", made: "made", again: "generate a new copy" };
 const VALIDATED_FILE = { name: "This copy's validated file", made: "read back", again: "validate the copy again and read it back" };
@@ -153,7 +156,7 @@ export class CaseForms implements OnModuleInit {
     const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.confirmed)
       .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
     const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply, gateOf: (fact) => { const g = gateOf(s.placements as GatePlacement[], fact); return g ? labels.get(g) ?? g : undefined; } };
-    const items = await this.itemChannels(c.id);
+    const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
     const forms: CaseForm[] = [];
     for (const p of people.filter((x) => x.role !== "case")) {
       for (const form of [...pdf].sort()) {
@@ -165,7 +168,7 @@ export class CaseForms implements OnModuleInit {
         const channel = chosen(s, items, form, p.subjectId);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
           draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channelIn(s, form) === "ONLINE")) });
+          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), channelIn(s, form) === "ONLINE", nameOf)) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case
@@ -186,9 +189,13 @@ export class CaseForms implements OnModuleInit {
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
   /** `notForFiling`: for a copy made before C11.6 recorded its stamp (`result_json.not_for_filing`), whether its release
    *  line was Online when it was made (the same fallback as `lock`). */
-  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false): FormCopy {
+  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown; inputHash: string }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false, nameOf?: { caseReference: string; of: (about: string) => string }): FormCopy {
     // C-10: a validated copy is current while the form's facts are what they were when it was read back.
     const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && formPassed(v) && v.factsHash === inputHash(today);
+    // QA-285: a validated file kept elsewhere (the checkpoint's Sample, kept on the Mac: api/src/sample-validated.ts) is
+    // named in words while the form's facts are the ones validated; it is never a validated copy here (nothing to lock,
+    // file or download as validated).
+    const keptElsewhere = !current && nameOf && x.status === "GENERATED" && x.snapshot.inputHash === inputHash(today) ? keptOnMacWords(x, nameOf.caseReference, nameOf.of) : null;
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
@@ -199,7 +206,8 @@ export class CaseForms implements OnModuleInit {
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: (x.resultJson as { not_for_filing?: boolean } | null)?.not_for_filing ?? notForFiling, source: "ircc_pdf",
       by_hand: byHand, not_on_form: notOnForm, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
-      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !formPassed(v) ? NOT_FORM_CHECKED : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
+      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !formPassed(v) ? NOT_FORM_CHECKED : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null,
+      validated_elsewhere: keptElsewhere };
   }
 
   /** RT-13: a new copy of one form for one person, from the confirmed facts as they are now (frozen with the copy).
@@ -301,7 +309,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const labels = new Map(view.sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
-    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), channelIn(s, x.formNumber) === "ONLINE");
+    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), channelIn(s, x.formNumber) === "ONLINE", { caseReference: c.reference, of: nameOfPeople(people) });
   }
 
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
@@ -433,11 +441,14 @@ export class CaseForms implements OnModuleInit {
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
     const form = x.formNumber.replace(/\s+/g, ""), s = this.runtime.snapshotOf(c);
     const v = x.validated[0], channel = chosen(s, await this.itemChannels(c.id), x.formNumber, x.subjectId);
-    if (!original && v && formPassed(v) && needsValidate(x.formNumber, channel)) { // the same rule as `lock` (a barcode form on PDF upload or paper; QA-165)
+    const elsewhere = v && formPassed(v) ? null : keptOnMacWords(x, c.reference, nameOfPeople(this.runtime.peopleOf(c)));
+    if (!original && ((v && formPassed(v)) || elsewhere) && needsValidate(x.formNumber, channel)) { // the same rule as `lock` (a barcode form on PDF upload or paper; QA-165)
       const { answers, rows } = await this.runtime.state(c);
-      const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
+      const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId), now = inputHash(cov?.facts ?? []);
       // C-10: current while the form's facts are what they were when it was read back (as `copyOf` shows it).
-      if (v.factsHash === inputHash(cov?.facts ?? [])) return { bytes: this.checkedFile(v, HttpStatus.NOT_FOUND, VALIDATED_FILE), name: `${form}-validated-${short(x.id)}.pdf` };
+      if (v && formPassed(v) && v.factsHash === now) return { bytes: this.checkedFile(v, HttpStatus.NOT_FOUND, VALIDATED_FILE), name: `${form}-validated-${short(x.id)}.pdf` };
+      // QA-285: the validated file is kept elsewhere (the Mac): said in words, and the unvalidated copy is not handed over in its place.
+      if (elsewhere && x.snapshot.inputHash === now) fail(`${elsewhere}. It is not downloaded here, and the copy as the product made it (not validated) is not handed over in its place.`, HttpStatus.CONFLICT);
     }
     const bytes = this.checkedFile(x, HttpStatus.NOT_FOUND);
     // P-145: a copy of a form filed Online is named for what it is.

@@ -52,5 +52,46 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
     if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded ? { why: r.detail } : {}) }; }
     return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
   });
-  return { boxes, values };
+  return { boxes: sameAsLeavesRowEmpty(boxes, values, box), values };
+}
+
+/** The data path of the row a form field sits in: its own subform, and the wrapper of the same name if there is one
+ *  (`…ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]` → `…ResidentialAddressRow1[0]`). */
+export function rowOfBox(path: string): string {
+  const parts = path.split(".");
+  const last = parts.pop()!, name = (s: string) => s.replace(/\[\d+\]$/, "");
+  if (parts.length && name(parts[parts.length - 1]) === name(last)) parts.pop();
+  return parts.join(".");
+}
+
+/** B99 (C10.1 row 12b; IMM 5257's own Validate in Adobe, 5 Nov rehearsal): a "Same as …?" form field worked out as
+ *  "A equals B" and written as the same answer (Yes) means the form asks A's own row only when the answer is No. The
+ *  form's Validate clears the Yes when that row holds anything ("Is the country from where you are applying the same…":
+ *  `validateCWA`; "Is your residential address the same as your mailing address?": `validateResidentialAddress`), so a
+ *  required box comes back empty and Validate fails. So every form field in the rows that A's own form fields sit in, after
+ *  the "Same as" field in the form's order, is left empty, with the reason in words. A row that holds the "Same as" field
+ *  itself is never emptied. Pure. */
+export function sameAsLeavesRowEmpty(boxes: BoxResult[], values: Record<string, string>, inv: Map<string, InventoryBox>): BoxResult[] {
+  const rows = new Map<string, string>(); // row data path → why
+  // Review on #1123 (m3): only a row the form asks after its "Same as" question (in the form's own order, its field list)
+  // is the one that question stands for; the side named first in "A equals B" is the AI's wording, never trusted alone.
+  const order = new Map([...inv.keys()].map((k, i) => [k, i]));
+  for (const b of boxes) {
+    const m = /(?:^|;|->)\s*derived:([\w.]+) equals ([\w.]+)\s*(?=;|->)/.exec(b.transform ?? ""), yes = /yes_no_code:([^/;\s]+)\//.exec(b.transform ?? "");
+    if (b.result !== "written" || !m || !yes || values[b.box] === undefined || values[b.box] !== inFormFormat(inv.get(b.box) ?? {}, yes[1])) continue;
+    const caption = (inv.get(b.box)?.caption ?? "").replace(/^\s*Question\s+\d+(?:\s*[A-Z]\b\.?)?\s*/i, "").trim() || "Same as";
+    for (const a of boxes) {
+      if (a.fact !== m[1] || a.about !== b.about || a.box === b.box) continue;
+      if (!(order.has(a.box) && order.has(b.box) && order.get(a.box)! > order.get(b.box)!)) continue;
+      const row = rowOfBox(a.box);
+      if (row && !b.box.startsWith(`${row}.`)) rows.set(row, `Not needed: "${caption}" is Yes, and the form asks this only when it is No (its own Validate clears the Yes otherwise).`);
+    }
+  }
+  if (!rows.size) return boxes;
+  return boxes.map((x) => {
+    const row = [...rows.keys()].find((r) => x.box.startsWith(`${r}.`));
+    if (!row || x.result !== "written") return x;
+    delete values[x.box];
+    return { ...x, result: "blank", written: undefined, why: rows.get(row) };
+  });
 }

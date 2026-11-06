@@ -2,8 +2,8 @@
 # needs the job "ci" green (check-success = ci), for a builder's PR and for each batch PR (branch mergify/merge-queue/...).
 # I1, 3 Nov (P-291 (3) and (8), P-292 (2)): what runs depends on what the change is (job "kind", tools/change-kind.sh):
 #   * notes   (only *.md records and files under product/reports/): check-docs.sh and decision-impact.sh, plus the push
-#             guard (excluded paths, secrets, personal names), on one GitHub machine; nothing else, about a minute. The
-#             tech lead merges these directly (P-292).
+#             guard (excluded paths, secrets, personal names), on one GitHub machine; nothing else, about a minute.
+#             Records-only PRs are labelled "records" for Mergify's records queue (P-371 (4), below).
 #   * records (boards, guards, settings, other workflows): the fast checks on one machine (push guard, rules files,
 #             decision impact, graph P-86, official PDFs P-31, explicit-any count, the tools' own checks); no suites.
 #   * code    (the app, its suites or their tools; select-suites.mjs decides): the fast checks on the first part, and
@@ -28,28 +28,71 @@
 #                        (select-suites.mjs --direct); the queue still runs every suite;
 #   BATCH_RUNNER=mac / PR_RUNNER=mac   batches / builders' PRs back on the founder's Mac (P-195, P-213): the "ci" job
 #                        then runs the fast checks there and the suites only for batches, on the chosen set, as before.
-# Each newer push to a pull request cancels its older run (one run per PR at a time).
-# A draft PR runs nothing (every job skipped) until it is marked ready for review; mergify/* batches always run (#875).
+# Flow fix (P-371, founder 6 Nov; measured 4-5 Nov: 50% of PR-check machine hours thrown away, 181 runs cancelled by a
+# newer push, 118 failed): the same checks, run once, never thrown away; no gate removed.
+#   (1) Saving work costs no check: a push to a DRAFT PR runs only the job "guard" (push guard: excluded paths, PDFs,
+#       secrets, personal names; under a minute). The full check runs when the PR is marked ready for review.
+#       Mergify's batch PRs (mergify/*, opened as drafts) always get it (#875).
+#   (2) A ready head's check is never cancelled: a newer push waits for it (workflow concurrency below; only a
+#       waiting run is replaced, before it starts, at no machine cost). Parts never stop each other (fail-fast off), so a
+#       red part is re-run alone: "Re-run failed jobs" on the run's page, or gh run rerun <run-id> --failed.
+#   (3) Results are remembered (tools/ci-memory.mjs): a PR run records which suites passed; a later run of the same PR
+#       on the same base skips each suite that passed at an earlier head whose changes since choose none of it
+#       (select-suites.mjs's full rules: a shared file, the lockfile or this file chooses everything; the smoke set
+#       always runs again), and once any app file changed only suites that start no server, browser or database are
+#       remembered. A head already green on this base with the same title and body (ready again, a reopen) reports
+#       that verdict; a red head is always tested again.
+#       The merge queue and the nightly full run never use memory: they run their full sets as before.
+#   (4) Records out of the product queue: a records-only PR (tools/records-only.sh, the one definition) is labelled
+#       "records" here, and the label comes off when the change stops being records only. Mergify's "records" queue
+#       (B119) selects PRs by that label and m2 and m3 skip it, so records never join a product batch (Lead 21, 6 Nov:
+#       one route, the queue; no direct merge).
 name: ci
 on:
   pull_request:
-    # P-214, 4 Nov (tech lead; measured 12:24–12:58 IST: 9 runs in progress, 7–28 jobs waiting up to 57 min, 12 draft
-    # PRs re-running every part on each push): a builder's DRAFT PR runs nothing; its checks start when it is marked
-    # ready for review. Mergify's batch PRs (mergify/*, opened as drafts) always run.
+    # P-214, 4 Nov: a draft ran nothing; P-371 (1): a draft runs the guard. No "labeled": a label must never start a
+    # second run whose "ci" check goes back to in progress just as Mergify queues the PR (review, 6 Nov).
     types: [opened, synchronize, reopened, ready_for_review]
+concurrency:
+  # One group per PR and mode: a draft's guard runs replace each other; a full check is never cancelled (P-371 (2)).
+  # Re-run failed jobs only on a PR's newest run: an older run re-entering the group replaces a newer one still waiting.
+  group: "ci-${{ github.event.pull_request.number }}-${{ (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) && 'full' || 'draft' }}"
+  cancel-in-progress: "${{ !(!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}"
 jobs:
-  kind:
-    if: ${{ !github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/') }}
+  guard:
+    # P-371 (1): a draft PR's push runs only this; a draft's "ci" is skipped, and Mergify's queues also refuse drafts.
+    if: "${{ !(!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions: { contents: read, actions: read }   # actions: read for the retry records (B122)
-    concurrency: { group: "kind-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    permissions: { contents: read }
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, filter: "blob:none" }
+      - name: push guard (excluded paths, PDFs, secrets, personal names); the full check runs when the PR is ready
+        run: |
+          bash "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          echo "**Draft: push guard only** (P-371). The suites run once, when the PR is marked ready for review." >> "$GITHUB_STEP_SUMMARY"
+  kind:
+    if: "${{ (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # actions: read for the PR's earlier runs (memory); pull-requests and issues: write for the "records" label.
+    permissions: { contents: read, actions: read, pull-requests: write, issues: write }
     outputs:
       autoq: ${{ steps.q.outputs.autoq }}
       kind: ${{ steps.k.outputs.kind }}
-      shards: ${{ steps.k.outputs.shards }}
-      n: ${{ steps.k.outputs.n }}
+      shards: ${{ steps.m.outputs.mode == 'same' && '[]' || steps.m.outputs.shards || steps.k.outputs.shards }}
+      n: ${{ steps.m.outputs.n || steps.k.outputs.n }}
       queue: ${{ steps.k.outputs.queue }}
+      mode: ${{ steps.m.outputs.mode }}
+      verdict: ${{ steps.m.outputs.verdict }}
+      green: ${{ steps.m.outputs.green }}
+      mbase: ${{ steps.m.outputs.mbase }}
+      mhead: ${{ steps.m.outputs.mhead }}
+      ctx: ${{ steps.m.outputs.ctx }}
+      records: ${{ steps.k.outputs.records }}
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
     steps:
@@ -65,7 +108,8 @@ jobs:
           queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
           n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
-          { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
+          records=no; [ "$queue" = true ] || records=$(bash "$P/tools/records-only.sh" is-records "$range") || records=no
+          { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; echo "records=$records"; } >> "$GITHUB_OUTPUT"
           case "$kind" in
             notes) why="Notes only: check-docs.sh and decision-impact.sh (and the push guard); no suites, no app build.";;
             records) why="Records, no code: the fast checks on one machine; no suites.";;
@@ -86,16 +130,76 @@ jobs:
           else q=""; cat flaky.err; echo "::warning::flaky.mjs could not read the retry records: no automatic quarantine this run"; fi
           echo "autoq=$q" >> "$GITHUB_OUTPUT"
           [ -z "$q" ] || { echo "**Quarantined automatically (B122):**"; sed 's/^/- /' flaky.err; } >> "$GITHUB_STEP_SUMMARY"
+      - id: m
+        name: memory (P-371 (3)) — this head already judged on this base? suites green earlier with unchanged inputs?
+        # Never for a merge-queue batch or a fork. Reads only this PR's own earlier runs of this workflow.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          KIND: ${{ steps.k.outputs.kind }}
+          QUEUE: ${{ steps.k.outputs.queue }}
+          N: ${{ steps.k.outputs.n }}
+          PR_SUITES: ${{ vars.PR_SUITES }}
+          SUITES_QUARANTINE_AUTO: ${{ steps.q.outputs.autoq }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          SWITCHES: "${{ vars.PR_RUNNER }}|${{ vars.BATCH_RUNNER }}|${{ vars.PR_SUITES }}"
+        run: |
+          mbase=$(git rev-parse HEAD^1); mhead=$(git rev-parse HEAD^2)   # the test merge's parents: the base and head tested
+          # The verdict's context: gate B and the M3 guard read the title and body; the switches choose what runs.
+          ctx=$(printf '%s\n%s\n%s' "$PR_TITLE" "$PR_BODY" "$SWITCHES" | sha256sum | cut -d' ' -f1)
+          { echo "mbase=$mbase"; echo "mhead=$mhead"; echo "ctx=$ctx"; } >> "$GITHUB_OUTPUT"
+          mode=full
+          if [ "$QUEUE" != true ] && [ "$SAME_REPO" = true ]; then
+            M="$RUNNER_TEMP/memory"; mkdir -p "$M"
+            ids=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" -f event=pull_request -f branch="$HEAD_REF" -f per_page=20 \
+              --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID and .head_repository.full_name == \"$GITHUB_REPOSITORY\") | .id" | head -8) || ids=""
+            for id in $ids; do gh run download "$id" -p 'memory-*' -D "$M/$id" >/dev/null 2>&1 || true; done
+            echo "memory: $(find "$M" -name '*.tsv' | wc -l) files from $(echo $ids | wc -w) earlier runs of this PR"
+            verdict=$(node "$P/tools/ci-memory.mjs" verdict-of --dir "$M" --base "$mbase" --head "$mhead" --ctx "$ctx")
+            if [ -n "$verdict" ]; then
+              mode=same; echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+              echo "**Already green:** this head on this base, with this title and body, passed in run ${verdict#* } ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${verdict#* }); nothing re-runs." >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$KIND" = code ]; then
+              node "$P/tools/ci-memory.mjs" reuse --dir "$M" --base "$mbase" --head "$mhead" --tested HEAD > "$RUNNER_TEMP/green.tsv"
+              g=$(grep -c . "$RUNNER_TEMP/green.tsv" || true)
+              { echo "green<<CI_MEMORY_EOF"; cat "$RUNNER_TEMP/green.tsv"; echo "CI_MEMORY_EOF"; } >> "$GITHUB_OUTPUT"
+              sel=(--changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"); [ "$PR_SUITES" = direct ] && sel+=(--direct)
+              left=$(CI=1 bash "$P/tools/run-suites.sh" --list "${sel[@]}" --skip-green "$RUNNER_TEMP/green.tsv" | grep -c . || true)
+              k=$(( left < N ? left : N )); [ "$k" -ge 1 ] || k=1   # part 1 always runs: the fast checks and gate B
+              { echo "shards=[$(seq -s, 1 "$k")]"; echo "n=$k"; } >> "$GITHUB_OUTPUT"
+              echo "**Memory:** $g suites remembered green on this base with unchanged inputs; $left units left to run, on $k parts." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+      - name: the "records" label (tools/records-only.sh; Mergify's records queue selects it, P-371 (4), B119)
+        if: steps.k.outputs.queue != 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECORDS: ${{ steps.k.outputs.records }}
+          HAS: ${{ contains(github.event.pull_request.labels.*.name, 'records') }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          L=$(bash "$P/tools/records-only.sh" label)
+          if [ "$RECORDS" = yes ] && [ "$HAS" != true ]; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=$L" >/dev/null
+            echo "labelled $L"
+          elif [ "$RECORDS" != yes ] && [ "$HAS" = true ]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$L" >/dev/null
+            echo "$L label removed: this change is not records-only"
+          else echo "records: $RECORDS (label already right)"; fi
   shard:
     # Records and code, on GitHub's machines unless BATCH_RUNNER / PR_RUNNER put them on the Mac (a fork never reaches it).
     needs: kind
-    if: ${{ needs.kind.outputs.kind != 'notes' && (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
+    if: ${{ needs.kind.outputs.shards != '[]' && (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions: { contents: read, pull-requests: read }
-    concurrency: { group: "shard-${{ github.event.pull_request.number }}-${{ matrix.shard }}", cancel-in-progress: true }
     strategy:
-      fail-fast: true   # one red part fails the run: stop the others and save their minutes
+      # P-371 (2): every part runs to its end, so a red part is re-run alone (Re-run failed jobs) and the green parts'
+      # suites are remembered; stopping them threw their work away (fail-fast cost whole re-runs before 6 Nov).
+      fail-fast: false
       matrix:
         shard: ${{ fromJSON(needs.kind.outputs.shards) }}
     env:
@@ -105,6 +209,7 @@ jobs:
       QUEUE: ${{ needs.kind.outputs.queue }}
       N: ${{ needs.kind.outputs.n }}
       SUITES_QUARANTINE_AUTO: ${{ needs.kind.outputs.autoq }}
+      GREEN: ${{ needs.kind.outputs.green }}
       RANGE: "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
     steps:
       - uses: actions/checkout@v4
@@ -136,13 +241,20 @@ jobs:
       - name: test databases are cleaned up (check-test-dbs.sh, part 1 only; needs the database cloud-setup.sh started)
         if: matrix.shard == 1
         run: bash "$P/tools/check-test-dbs.sh"
-      - name: rules files, decision impact, graph, official PDFs, explicit-any count, the tools' own checks (part 1 only)
+      - name: rules files, decision impact, graph, official PDFs, explicit-any count, the tools' own checks, && lists (part 1 only)
         if: matrix.shard == 1
         run: |
-          bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
+          # One command per line: bash -e passes over a failed command before the last && of a list (P-376 (3), ci-and-lists.mjs).
+          bash "$P/tools/check-docs.sh"
+          bash "$P/tools/decision-impact.sh"
+          node "$P/tools/graph.mjs" --check
           python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
           node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
-          bash "$P/tools/check-select-suites.sh" && bash "$P/tools/check-merge-guard.sh" && bash "$P/tools/check-lane-bind.sh"
+          bash "$P/tools/check-select-suites.sh"
+          bash "$P/tools/check-merge-guard.sh"
+          bash "$P/tools/check-lane-bind.sh"
+          node "$P/tools/ci-and-lists.mjs"
+          node "$P/tools/ci-and-lists.mjs" --self-test
           bash "$P/tools/check-flaky.sh"
           node "$S/tools/check-gate-b.mjs"
           node "$S/tools/check-works-set.mjs"
@@ -160,17 +272,33 @@ jobs:
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
         run: |
-          if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct); fi
+          if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct)
+            # P-371 (3): suites remembered green on this base with unchanged inputs (never in the merge queue).
+            if [ -n "$GREEN" ]; then printf '%s\n' "$GREEN" > "$RUNNER_TEMP/green.tsv"; sel+=(--skip-green "$RUNNER_TEMP/green.tsv"); fi; fi
           bash "$P/tools/run-suites.sh" --demo --retry "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always() && env.KIND == 'code'
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
+      - name: remember this part's green suites (P-371 (3); pull requests only, never a batch)
+        if: always() && env.KIND == 'code' && env.QUEUE != 'true'
+        run: |
+          mkdir -p memory; [ -f suites.md ] || exit 0
+          node "$P/tools/ci-memory.mjs" record --suites suites.md --base "$(git rev-parse HEAD^1)" --head "$(git rev-parse HEAD^2)" \
+            --run "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --out "memory/shard-${{ matrix.shard }}-a$GITHUB_RUN_ATTEMPT.tsv"
+      - name: upload the memory
+        if: always() && env.KIND == 'code' && env.QUEUE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-s${{ matrix.shard }}-a${{ github.run_attempt }}
+          path: memory/
+          retention-days: 7
+          if-no-files-found: ignore
       - name: logs (only when something failed)
         if: failure() && env.KIND == 'code'
         uses: actions/upload-artifact@v4
         with:
-          name: suite-logs-shard-${{ matrix.shard }}
+          name: suite-logs-shard-${{ matrix.shard }}-a${{ github.run_attempt }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
       - name: retry records (B122; only when a suite was retried; tools/flaky.mjs reads them)
@@ -190,11 +318,10 @@ jobs:
   types:
     # P-291: tsc --noEmit for api and web, beside the parts (no added wall time); records and code, never notes.
     needs: kind
-    if: ${{ needs.kind.outputs.kind != 'notes' }}
+    if: ${{ needs.kind.outputs.kind != 'notes' && needs.kind.outputs.mode != 'same' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions: { contents: read }
-    concurrency: { group: "types-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
     steps:
@@ -237,7 +364,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions: { contents: read }
-    concurrency: { group: "regression-${{ github.event.pull_request.number }}-${{ matrix.cap }}", cancel-in-progress: true }
     strategy:
       fail-fast: false   # every protected row reports, one red never hides another
       matrix:
@@ -264,60 +390,66 @@ jobs:
     # The one check Mergify reads. Notes: the two notes checks here, on a GitHub machine. Records and code on GitHub's
     # machines: only reports the parts' result. On the Mac (BATCH_RUNNER / PR_RUNNER = mac): the checks run here.
     needs: [kind, shard, types, regression-plan, regression]
-    if: ${{ !cancelled() && (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}
+    if: "${{ !cancelled() && (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}"
     runs-on: ${{ fromJSON((needs.kind.outputs.kind == 'notes' || (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
     permissions: { contents: read }
-    concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
       KIND: ${{ needs.kind.outputs.kind }}
+      MODE: ${{ needs.kind.outputs.mode }}
       SHARDED: ${{ (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     steps:
       - name: the change's kind was found
         run: |
           echo "kind: ${{ needs.kind.result }} (${KIND:-none})"; [ "${{ needs.kind.result }}" = success ] && [ -n "$KIND" ]
+      # ---- P-371 (3): this head on this base was already judged: report that verdict, test nothing again
+      - name: already judged on this head and base (the verdict of an earlier run)
+        if: env.MODE == 'same'
+        env: { VERDICT: "${{ needs.kind.outputs.verdict }}" }
+        run: |
+          echo "verdict: ${VERDICT% *} in $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${VERDICT#* }"; [ "${VERDICT% *}" = success ]
       # ---- notes only (P-292 (2)): the two notes checks, and the push guard
       - uses: actions/checkout@v4
-        if: env.KIND == 'notes'
+        if: env.MODE != 'same' && (env.KIND == 'notes')
         with: { fetch-depth: 0, filter: "blob:none" }
       - name: push guard (excluded paths, PDFs, secrets, personal names)
-        if: env.KIND == 'notes'
+        if: env.MODE != 'same' && (env.KIND == 'notes')
         run: bash "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - name: notes check 1 of 2, rules files (check-docs.sh)
-        if: env.KIND == 'notes'
+        if: env.MODE != 'same' && (env.KIND == 'notes')
         run: bash "$P/tools/check-docs.sh"
       - name: notes check 2 of 2, decision impact (decision-impact.sh)
-        if: env.KIND == 'notes'
+        if: env.MODE != 'same' && (env.KIND == 'notes')
         run: bash "$P/tools/decision-impact.sh"
       # ---- records and code, wherever they run: the type check's result (P-291)
       - name: the type check's result
-        if: env.KIND != 'notes'
+        if: env.MODE != 'same' && (env.KIND != 'notes')
         run: |
           echo "types: ${{ needs.types.result }}"; [ "${{ needs.types.result }}" = success ]
       # ---- records and code on GitHub's machines: the parts' result
       - name: the parts' result
-        if: env.KIND != 'notes' && env.SHARDED == 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED == 'true')
         run: |
           echo "parts: ${{ needs.shard.result }}"; [ "${{ needs.shard.result }}" = success ]
       - name: the protected regression set's result (merge-queue batches of code, P-320 (b))
-        if: needs.kind.outputs.queue == 'true' && env.KIND == 'code'
+        if: env.MODE != 'same' && (needs.kind.outputs.queue == 'true' && env.KIND == 'code')
         run: |
           echo "plan: ${{ needs.regression-plan.result }} · packs: ${{ needs.regression.result }} · set: ${{ needs.regression-plan.outputs.caps }}"
           [ "${{ needs.regression-plan.result }}" = success ] || exit 1
           [ "${{ needs.regression.result }}" = success ] || { [ "${{ needs.regression.result }}" = skipped ] && [ '${{ needs.regression-plan.outputs.caps }}' = '[]' ]; }
       # ---- records and code on the founder's Mac (BATCH_RUNNER / PR_RUNNER = mac), as before I1
       - uses: actions/checkout@v4
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         with: { fetch-depth: 0 }
       - name: push guard (excluded paths, PDFs, secrets, personal names)
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: |
           chmod +x "$P/tools/push-guard.sh"
           "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - id: code
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         name: does this pull request run suites? (P-201 on the Mac, only merge-queue batches)
         env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}" }
         run: |
@@ -331,39 +463,44 @@ jobs:
           fi
           echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
       - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: |
           [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
           # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
           echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
       - name: node 24
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: |
           node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
       - name: every route a pack's set-up calls has a screen (tools/route-has-screen.mjs; as on the GitHub path, P-348)
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: node "$P/tools/route-has-screen.mjs" --self-test && node "$P/tools/route-has-screen.mjs"
       - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: |
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
+      - name: no && list in a workflow hides a red (tools/ci-and-lists.mjs; as on the GitHub path, P-376 (3))
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
+        run: |
+          node "$P/tools/ci-and-lists.mjs"
+          node "$P/tools/ci-and-lists.mjs" --self-test
       - name: official IRCC PDFs (manifest checksums, P-31)
-        if: env.KIND != 'notes' && env.SHARDED != 'true'
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
       - name: web app build (the browser suites need it)
-        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true'))
         run: cd "$S" && ./node_modules/.bin/prisma generate && bash tools/web-fresh.sh build   # stamped (QA-181)
       - name: explicit-any count
-        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true')
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.changed == 'true'))
         run: node "$S/tools/count-any.mjs" --against "${{ github.event.pull_request.base.sha }}"
       - name: Playwright's own Chromium
-        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true'))
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
-        if: env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true')
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true'))
         # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
         env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1", SUITES_QUARANTINE_AUTO: "${{ needs.kind.outputs.autoq }}" }
         # One at a time on the Mac (a parallel trial, 30 Oct, failed 12 suites); the chosen set, not every suite: a full
@@ -372,13 +509,13 @@ jobs:
           bash "$P/tools/run-suites.sh" --retry --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
-        if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true'))
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
       - name: logs (only when something failed)
-        if: env.KIND != 'notes' && env.SHARDED != 'true' && (failure() && steps.code.outputs.suites == 'true')
+        if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (failure() && steps.code.outputs.suites == 'true'))
         uses: actions/upload-artifact@v4
         with:
-          name: suite-logs
+          name: suite-logs-a${{ github.run_attempt }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
       - name: retry records (B122; only when a suite was retried; tools/flaky.mjs reads them)
@@ -395,6 +532,23 @@ jobs:
           if-no-files-found: ignore
           overwrite: true
           retention-days: 14
+      # ---- P-371 (3): a green verdict, so a later run on the same head, base, title and body (ready again) reuses it.
+      # Only green: a red head is always tested again.
+      - name: remember the green verdict (pull requests only, never a batch)
+        if: success() && env.MODE != 'same' && needs.kind.outputs.queue != 'true' && needs.kind.outputs.mbase != ''
+        env: { MBASE: "${{ needs.kind.outputs.mbase }}", MHEAD: "${{ needs.kind.outputs.mhead }}", CTX: "${{ needs.kind.outputs.ctx }}" }
+        run: |
+          mkdir -p memory
+          printf '#ci-memory 1\n#base %s\n#head %s\n#ctx %s\n#run %s %s\n#verdict success\n' "$MBASE" "$MHEAD" "$CTX" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "memory/verdict-a$GITHUB_RUN_ATTEMPT.tsv"
+          echo "green verdict remembered for ${MHEAD:0:12} on ${MBASE:0:12}"
+      - name: upload the verdict
+        if: success() && env.MODE != 'same' && needs.kind.outputs.queue != 'true' && needs.kind.outputs.mbase != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-verdict-a${{ github.run_attempt }}
+          path: memory/
+          retention-days: 7
+          if-no-files-found: ignore
   retry-comment:
     # B122 F5: a pass on retry reaches its PR (or each PR of a merge-queue batch) as a comment, with its bug line and the
     # 1st try's log tail. Its own job, the only one with pull-requests: write (review of F5, Major 1): it never runs the

@@ -27,6 +27,9 @@
 #        (tools/flaky-ledger.tsv).
 # SUITES_QUARANTINE_AUTO="<suite>|<owner>|<fix by>|<runs> ..." (CI: from flaky.mjs quarantine in the kind job, the same
 #        for every part): joins QUARANTINE below for this run, its row naming the owner and the fix date.
+#   --skip-green <file>   suites remembered green (P-371 (3), tools/ci-memory.mjs): "<suite><TAB><why>" lines; each is
+#        left out of this run and shown as "remembered" with its reason. Only a pull request's check passes it.
+#   --list   print the units this run would run (all shards together, after --changed and --skip-green), run nothing.
 # Each tests/check_*.ts|cjs names its run in a usage line: "isolated.sh <name> <port> start && tsx|node studio/tests/<file>
 # <args>" (an isolated copy: own database, own files, the demo is never touched) or "tsx studio/tests/<file>" (no server).
 # Never calls a model (every suite replays saved runs; US$0). Exit 1 when any suite fails; a summary table either way.
@@ -37,18 +40,20 @@ export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:
 # GNU timeout: `timeout` on Linux (CI), `gtimeout` from Homebrew coreutils on the Mac. Missing → stop loudly, never run unguarded.
 TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
-DEMO=0; NAMES=0; CHANGED=""; SHARD=1; SHARDS=1; SKIPQ=0; DIRECT=; RETRY=0
+DEMO=0; NAMES=0; LIST=0; CHANGED=""; SHARD=1; SHARDS=1; SKIPQ=0; DIRECT=; GREEN=""; RETRY=0
 while [ $# -gt 0 ]; do case "$1" in
   --demo) DEMO=1;;
   --skip-quarantined) SKIPQ=1;;
   --direct) DIRECT=--direct;;
   --retry) RETRY=1;;
   --names) NAMES=1;;   # print the names and ports this copy would use, run nothing
+  --list) LIST=1;;
+  --skip-green) [ -f "${2:-}" ] || { echo "--skip-green wants a file of remembered suites; no suite was run"; exit 2; }; GREEN="$2"; shift;;
   --changed) [ -n "${2:-}" ] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }; CHANGED="$2"; shift;;
   --changed=*) CHANGED="${1#--changed=}";;
   --shard) [[ "${2:-}" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] && [ "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ] || { echo "--shard wants <i>/<n>, 1 <= i <= n; no suite was run"; exit 2; }
     SHARD="${BASH_REMATCH[1]}"; SHARDS="${BASH_REMATCH[2]}"; shift;;
-  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>, --shard <i>/<n>, --skip-quarantined, --direct, --retry); no suite was run"; exit 2;;
+  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --list, --changed <base>..<head>, --shard <i>/<n>, --skip-quarantined, --direct, --skip-green <file>, --retry); no suite was run"; exit 2;;
 esac; shift; done
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
@@ -82,7 +87,13 @@ SKIP="check_catalogue_scale.cjs"
 # Back on 2 Nov (runtime L1): the cause was Workspace.id() racing on an empty database (Prisma's upsert with an empty
 # update is a plain INSERT, so the page's first calls and the sample load each created the workspace; the losers' P2002
 # answered 409). api/src/core.ts now shares one creation; fail test tests/check_workspace_first_calls.ts (5/9 before, 9/9).
-QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
+# check_b78_section_names.ts (B78/B79b, forms) quarantined 6 Nov 21:45 IST by the tech lead (P-214): in merge-queue shard 2
+# it prints "11 passed, 0 failed", then does not end until the 1200 s timeout (exit 124). It failed two batches in a row
+# on two unrelated PRs: #1158 (run on draft #1169) and #1168 (run 42243001915, job 127978087862). It passes in about 5 s
+# in each PR's own check and locally. It uses no server or database and ends with process.exit, so the hang is in the
+# runner or the shard, not in the suite's checks. The nightly full set still runs it. Fix row: B122 (#1145, flaky-test
+# handling) diagnoses the hang, and takes it off this list in that PR with a fail test.
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs check_b78_section_names.ts"
 # Automatic quarantine (B122): only well-formed entries; anything else is named and ignored, never run blind.
 AUTOQ=" "
 for e in ${SUITES_QUARANTINE_AUTO:-}; do
@@ -117,7 +128,7 @@ if [ -n "$PREFIX" ]; then
     *) SLOT=$(( $(printf '%s' "$PREFIX" | cksum | cut -d' ' -f1) % 27 + 9 ));; esac
   LOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/slot-$SLOT"; mkdir -p "${LOCK%/*}"
   claim() { mkdir "$LOCK" 2>/dev/null && printf '%s %s %s\n' "$$" "$PREFIX" "$ROOT" > "$LOCK/owner"; }
-  if [ "$NAMES" = 1 ]; then :; elif ! claim; then
+  if [ "$NAMES" = 1 ] || [ "$LIST" = 1 ]; then :; elif ! claim; then
     # A lock just made may not have its owner line yet (claim is two steps): wait for it before calling it stale.
     for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "$LOCK/owner" ] && break; sleep 0.3; done
     read -r opid oprefix oroot < "$LOCK/owner" 2>/dev/null || true
@@ -126,12 +137,12 @@ if [ -n "$PREFIX" ]; then
     fi
     rm -rf "$LOCK"; claim || { echo "Could not claim the suites lock $LOCK; no suite was run."; exit 3; }
   fi
-  [ "$NAMES" = 1 ] || trap 'rm -rf "$LOCK"' EXIT
+  [ "$NAMES" = 1 ] || [ "$LIST" = 1 ] || trap 'rm -rf "$LOCK"' EXIT
 fi
 # CI first (P-183): the Mac CI job marks itself (SUITES_CI_FIRST=1); any other full run waits until it is done, so a
 # pull request check never shares the Mac with a lane's full run. --names never waits.
-CILOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/ci-active"; mkdir -p "${CILOCK%/*}"
-if [ "$NAMES" = 1 ]; then :
+CILOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/ci-active"; [ "$LIST" = 1 ] || mkdir -p "${CILOCK%/*}"
+if [ "$NAMES" = 1 ] || [ "$LIST" = 1 ]; then :
 elif [ "${SUITES_CI_FIRST:-}" = 1 ]; then echo "$$" > "$CILOCK"; trap 'rm -f "$CILOCK"; [ -n "${LOCK:-}" ] && rm -rf "$LOCK"' EXIT
 else
   said=""; while [ -s "$CILOCK" ] && kill -0 "$(cat "$CILOCK" 2>/dev/null)" 2>/dev/null; do
@@ -150,19 +161,22 @@ if [ -n "$CHANGED" ]; then
   printf '%s\n' "$sel" > "$OUT/selection.tsv"
   TAB=$(printf '\t')
   if [ "${sel%%"$TAB"*}" = ALL ]; then
-    echo "**Every suite runs** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed): ${sel#ALL"$TAB"}"; echo
+    [ "$LIST" = 1 ] || echo "**Every suite runs** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed): ${sel#ALL"$TAB"}"; [ "$LIST" = 1 ] || echo
   else
     PICK=" $(printf '%s\n' "$sel" | cut -f1 | tr '\n' ' ')"
-    echo "**$(printf '%s\n' "$sel" | grep -c .) suites chosen** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed); the full set runs nightly on main."
-    echo; echo "| Chosen suite | Why |"; echo "|---|---|"; printf '%s\n' "$sel" | awk -F'\t' '{ gsub(/\|/, "\\|", $2); print "| " $1 " | " $2 " |" }'; echo
+    [ "$LIST" = 1 ] || echo "**$(printf '%s\n' "$sel" | grep -c .) suites chosen** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed); the full set runs nightly on main."
+    [ "$LIST" = 1 ] || { echo; echo "| Chosen suite | Why |"; echo "|---|---|"; printf '%s\n' "$sel" | awk -F'\t' '{ gsub(/\|/, "\\|", $2); print "| " $1 " | " $2 " |" }'; echo; }
   fi
 fi
-picked() { [ -z "$PICK" ] && return 0; case "$PICK" in *" $1 "*) return 0;; esac; return 1; }
+# --skip-green: REMEMBER, " a b c ", the suites a green run on the same base already passed with unchanged inputs.
+REMEMBER=" "; [ -n "$GREEN" ] && REMEMBER=" $(cut -f1 "$GREEN" | grep -E '^check_[A-Za-z0-9_.-]+$' | tr '\n' ' ')"
+chosen() { [ -z "$PICK" ] && return 0; case "$PICK" in *" $1 "*) return 0;; esac; return 1; }
+picked() { case "$REMEMBER" in *" $1 "*) return 1;; esac; chosen "$1"; }
 # --shard i/n: the chosen units (a suite, or the three R1 suites together as check_runtime_r1a.ts) are dealt to n shards
 # longest first by tools/suite-times.tsv (unknown: 30 s; quarantined: 0), each to the shard with the least time so far.
 # Every machine computes the same deal, so the n shards together run each chosen unit once. myturn <unit>: is it mine?
 TURN=0; MINE=" "
-if [ "$SHARDS" -gt 1 ]; then
+if [ "$SHARDS" -gt 1 ] || [ "$LIST" = 1 ]; then
   units=()
   for path in "$TESTS"/check_*.ts "$TESTS"/check_*.cjs; do [ -e "$path" ] || continue; f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac; picked "$f" && units+=("$f"); done
   RT0="$S/tests/runtime"; [ -n "${SUITES_TESTS_DIR:-}" ] && RT0=/nonexistent
@@ -177,6 +191,9 @@ if [ "$SHARDS" -gt 1 ]; then
           for (i = 1; i <= NR; i++) for (j = i + 1; j <= NR; j++) if (w[o[j]] > w[o[i]] || (w[o[j]] == w[o[i]] && u[o[j]] < u[o[i]])) { x = o[i]; o[i] = o[j]; o[j] = x }
           for (k = 1; k <= n; k++) load[k] = 0
           for (i = 1; i <= NR; i++) { b = 1; for (k = 2; k <= n; k++) if (load[k] < load[b]) b = k; load[b] += w[o[i]]; if (b == me) printf "%s ", u[o[i]] } }') "
+fi
+if [ "$LIST" = 1 ]; then
+  for u in ${units[@]+"${units[@]}"}; do case " $QUARANTINE " in *" $u "*) { [ -n "$CHANGED" ] || [ "$SKIPQ" = 1 ]; } && continue;; esac; echo "$u"; done; exit 0
 fi
 myturn() { [ "$SHARDS" -le 1 ] && return 0; case "$MINE" in *" $1 "*) return 0;; esac; return 1; }
 [ -n "${SUITES_TESTS_DIR:-}" ] || pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
@@ -303,6 +320,11 @@ fi
 for t in check_p2_guard check_p2_launch; do
   [ -z "${SUITES_TESTS_DIR:-}" ] && [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
+# Remembered suites (--skip-green), listed once (shard 1): what they would have run is shown, never silently dropped.
+if [ "$SHARD" = 1 ] && [ "$REMEMBER" != " " ]; then
+  for f in $REMEMBER; do chosen "$f" || continue; why=$(awk -F'\t' -v n="$f" '$1 == n { print $2; exit }' "$GREEN" | tr '|' '/' | cut -c1-90)
+    rows+=("| $f | remembered | | ${why:-green on this base, inputs unchanged} |"); done
+fi
 # A choice that ran nothing is a fault, never a pass.
 # A shard can rightly get nothing when few suites were chosen (fewer than n): that shard says so and passes.
 if [ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ]; then
