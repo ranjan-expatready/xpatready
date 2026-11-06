@@ -19,7 +19,7 @@ const names = (m: object, k: string) => ((Reflect.getMetadata(k, m) ?? []) as { 
   try {
     writeFileSync(join(dir, "b-second.ts"), `export class BController {}\nexport class BService {}\nexport default { controllers: [BController], providers: [BService] };\n`);
     writeFileSync(join(dir, "a-first.ts"), `export class AController {}\nexport default { controllers: [AController] };\n`);
-    writeFileSync(join(dir, "notes.md"), "not a feature");
+    writeFileSync(join(dir, "notes.txt"), "not a feature");
     class Shared {}
     class AppModule {}
     Reflect.defineMetadata(MODULE_METADATA.CONTROLLERS, [Shared], AppModule);
@@ -54,7 +54,7 @@ const names = (m: object, k: string) => ((Reflect.getMetadata(k, m) ?? []) as { 
     writeFileSync(join(steps, "100-later.ts"), step("100"));
     writeFileSync(join(steps, "20-sooner.ts"), step("20"));
     writeFileSync(join(steps, "_helper.ts"), "export const helper = 1;\n");
-    writeFileSync(join(steps, "notes.md"), "not a step");
+    writeFileSync(join(steps, "notes.txt"), "not a step");
     const got = await featureSteps<Step & { run: () => Promise<void> }>(steps);
     ok("B120 pass: steps run in their file-name number order (20 before 100), helpers (_*.ts) and other files skipped", JSON.stringify(got.map((x) => x.file)) === JSON.stringify(["20-sooner.ts", "100-later.ts"]), got.map((x) => x.file));
     for (const g of got) await g.run();
