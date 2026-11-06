@@ -44,7 +44,7 @@ git checkout -q -b side "$c1"; echo x > d.txt; git add d.txt; git commit -qm sid
 git checkout -q main
 label='[{"name":"review: approved"},{"name":"queued"}]'
 guard() {  # $1 before, $2 after, $3 labels, $4 comments, $5 reviews, $6 the PR's head now → $out, $log
-  if [ -n "${6:-}" ]; then jq -n --arg h "$6" '{head: {sha: $h}}' > "$T/fx/pull.json"; else rm -f "$T/fx/pull.json"; fi
+  jq -n --arg h "${6:-$2}" '{head: {sha: $h}}' > "$T/fx/pull.json"; [ "${6:-}" = unreadable ] && rm -f "$T/fx/pull.json"
   echo "$3" > "$T/fx/labels.json"; echo "$4" > "$T/fx/comments.json"; echo "${5:-[]}" > "$T/fx/reviews.json"; : > "$T/fx/log"
   out=$(cd "$R" && PATH="$T/bin:$PATH" FX="$T/fx" GH_TOKEN=x REPO=o/r PR=1052 BEFORE="$1" AFTER="$2" API=https://api.test MAIN_REF=main bash "$G" 2>&1); r=$?
   log=$(cat "$T/fx/log"); }
@@ -80,6 +80,12 @@ ok "review M2: an unreviewed fix, then a pure merge of main (the fix's own run c
 echo "$out" | grep -q "${c2:0:9} is a new commit"; ok "... naming the unreviewed commit" "$([ $? = 0 ] && echo 1)" "$out"
 guard "$c1" "$c1" "$label" "$(cm "Reviewer: Approve $c1")" "[]" "$c2"
 ok "a run for an approved push checks the PR's head now (a newer unreviewed push) and removes the label" "$(removed)" "$out / $log"
+guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve ${c1:0:9} (diff since ${c2:0:9}, which was Blocked)")"
+ok "only the first SHA after 'Approve' counts (review n1)" "$(removed)" "$out / $log"
+guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve $c2")" "[]" unreadable
+ok "a PR head that cannot be read keeps no label (fails closed)" "$(removed)" "$out / $log"
+guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve $c2")" "[]" 0123456789abcdef0123456789abcdef01234567
+ok "a PR head that cannot be fetched keeps no label (fails closed)" "$(removed)" "$out / $log"
 FAIL_COMMENTS=1 guard "$c1" "$c2" "$label" "$(cm "Reviewer: Approve $c2")"
 ok "comments that cannot be read count as no Approve (fails closed)" "$(removed)" "$out / $log"
 guard "$c1" "$c2" "$label" "[]"; body=$(grep '^POST' "$T/fx/log")

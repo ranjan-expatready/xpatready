@@ -42,6 +42,8 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          curl -sS -X DELETE -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/labels/review%3A%20approved" || true
+          # 200 removed, 404 not there: anything else fails this step loudly, so a kept label is never silent.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/labels/review%3A%20approved")
+          case "$code" in 200) ;; 404) exit 0;; *) echo "::error::could not remove review: approved (HTTP $code): remove it by hand"; exit 1;; esac
           curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/comments" \
             -d '{"body":"**Label guard:** `review: approved` removed because the guard could not finish on this push (see the label-guard run). Label again once the head has a reviewer Approve."}' >/dev/null || true

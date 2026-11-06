@@ -28,9 +28,13 @@ pages() {  # every page of a list endpoint, as one JSON array
 labels=$(api "$API/repos/$REPO/issues/$PR/labels") || { echo "label-guard: cannot read labels"; exit 2; }
 echo "$labels" | jq -e --arg l "$LABEL" 'any(.[]; .name == $l)' >/dev/null || { echo "no '$LABEL' label on #$PR: nothing to guard"; exit 0; }
 now=$(api "$API/repos/$REPO/pulls/$PR" 2>/dev/null | jq -r '.head.sha // empty' 2>/dev/null)
-if [ -n "$now" ] && [ "$now" != "$AFTER" ]; then
+headless=""   # fails closed: a head that cannot be read or fetched keeps no label (#1136 Devin review)
+if [ -z "$now" ]; then headless="the PR's current head could not be read"
+elif [ "$now" != "$AFTER" ]; then
   git cat-file -e "$now^{commit}" 2>/dev/null || git fetch -q --no-tags origin "$now" 2>/dev/null
-  git cat-file -e "$now^{commit}" 2>/dev/null && { echo "the PR's head is now ${now:0:9} (this push was ${AFTER:0:9}): guarding the head"; AFTER=$now; }
+  if git cat-file -e "$now^{commit}" 2>/dev/null; then echo "the PR's head is now ${now:0:9} (this push was ${AFTER:0:9}): guarding the head"
+  else headless="the PR's current head ${now:0:9} could not be fetched"; fi
+  AFTER=$now
 fi
 
 # Approves by people with write access (anyone can comment on a public repository; #1136 review M1).
@@ -38,7 +42,8 @@ team='.author_association == "OWNER" or .author_association == "MEMBER" or .auth
 comments=$(pages "repos/$REPO/issues/$PR/comments") || { echo "label-guard: comments unreadable: no Approve counted"; comments='[]'; }
 reviews=$(pages "repos/$REPO/pulls/$PR/reviews") || { echo "label-guard: reviews unreadable: no Approve counted"; reviews='[]'; }
 named=$(echo "$comments" | jq -r ".[] | select($team) | .body // \"\"" | jq -Rr 'gsub("[*_`]"; "")
-  | select(test("\\breviewer:\\s*approve[sd]?\\b"; "i")) | [scan("\\b[0-9a-f]{7,40}\\b")][]')
+  | select(test("\\breviewer:\\s*approve[sd]?\\b"; "i")) | sub("(?i)^.*?\\breviewer:\\s*approve[sd]?"; "")
+  | [scan("\\b[0-9a-f]{7,40}\\b")] | first // empty')   # only the first SHA after "Approve" (review n1)
 approved() {  # $1 a commit → 0 when a reviewer Approve names it
   local s; for s in $named; do case "$1" in "$s"*) echo "Approve line ($s)"; return 0;; esac; done
   echo "$reviews" | jq -e --arg h "$1" "any(.[]; ($team) and .state == \"APPROVED\" and .commit_id == \$h)" >/dev/null && { echo "GitHub review"; return 0; }
@@ -50,14 +55,14 @@ pure() {  # $1 a commit → 0 when it is a pure merge of main touching none of t
   git merge-base --is-ancestor "${par[1]}" "$MAIN_REF" 2>/dev/null || { why="${1:0:9} merges a branch that is not main"; return 1; }
   t=$(git merge-tree --write-tree "${par[0]}" "${par[1]}" 2>/dev/null | head -1)
   [ -n "$t" ] && [ "$t" = "$(git rev-parse "$1^{tree}")" ] || { why="${1:0:9} differs from git's own merge of main (edited by hand or conflicted)"; return 1; }
-  mine=$(git diff --name-only "$(git merge-base "${par[0]}" "${par[1]}")" "${par[0]}")
-  touched=$(git diff --name-only "${par[0]}" "$1")
+  mine=$(git diff --no-renames --name-only "$(git merge-base "${par[0]}" "${par[1]}")" "${par[0]}")
+  touched=$(git diff --no-renames --name-only "${par[0]}" "$1")
   both=$(comm -12 <(echo "$mine" | sort -u) <(echo "$touched" | sort -u) | grep . | head -5)
   [ -z "$both" ] || { why="${1:0:9}'s merge of main changes the PR's own files ($(echo "$both" | paste -sd ' ' -))"; return 1; }
   next=${par[0]}; return 0; }
 
-c=$AFTER; merges=0; why=""
-git cat-file -e "$c^{commit}" 2>/dev/null || why="the head ${c:0:9} is not in this copy"
+c=$AFTER; merges=0; why="$headless"
+[ -n "$why" ] || git cat-file -e "$c^{commit}" 2>/dev/null || why="the head ${c:0:9} is not in this copy"
 while [ -z "$why" ] && [ "$merges" -le 50 ]; do
   if by=$(approved "$c"); then
     [ "$merges" = 0 ] && echo "kept: ${c:0:9} has a reviewer Approve ($by)" \
