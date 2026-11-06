@@ -4,10 +4,10 @@
 //   M  the migrations, replayed on a scratch database, give exactly the schema (prisma migrate diff --exit-code): a model
 //      added to the schema without its migration is caught. Drift already on main when this check came (6 Nov) is listed
 //      in KNOWN with its finding; anything else fails. Take a line out of KNOWN in the PR that fixes it.
-// A scratch shadow database (xr_studio_b121_<pid>) is made and dropped; nothing else is touched.
+// A scratch shadow database (xr_studio_b121_<pid>) is made and dropped, with a killed run's leftovers; nothing else.
 //   tsx studio/tests/check_prisma_schema.ts
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -50,11 +50,21 @@ function driftLines(out: string): string[] {
 function diff(schema: string): { code: number; lines: string[]; out: string } {
   // Prisma 7 reads the shadow database from a config file; the paths on the command line are absolute.
   const cfg = join(WORK, "prisma.config.ts");
-  writeFileSync(cfg, `import { defineConfig } from "prisma/config";\nexport default defineConfig({ schema: ${JSON.stringify(schema)}, migrations: { path: ${JSON.stringify(MIGRATIONS)} }, datasource: { url: ${JSON.stringify(url.href)}, shadowDatabaseUrl: ${JSON.stringify(new URL(`/${SHADOW}`, url).href)} } });\n`);
+  // migrate diff writes to no database; the datasource names the server's own "postgres" database, never the demo's.
+  writeFileSync(cfg, `import { defineConfig } from "prisma/config";\nexport default defineConfig({ schema: ${JSON.stringify(schema)}, migrations: { path: ${JSON.stringify(MIGRATIONS)} }, datasource: { url: ${JSON.stringify(new URL("/postgres", url).href)}, shadowDatabaseUrl: ${JSON.stringify(new URL(`/${SHADOW}`, url).href)} } });\n`);
   const r = prisma(["migrate", "diff", "--config", cfg, "--from-migrations", MIGRATIONS, "--to-schema", schema, "--exit-code"]);
   return { code: r.code, lines: driftLines(r.out), out: r.out };
 }
 
+// Leftovers of an earlier run that was killed while prisma ran (a signal cannot be handled during spawnSync): its
+// scratch database and folder go first, when its process is gone.
+const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+const left = spawnSync("psql", [...pg, "-d", "postgres", "-Atc", "select datname from pg_database where datname like 'xr\\_studio\\_b121\\_%'"], { encoding: "utf8" }).stdout ?? "";
+for (const db of left.split("\n").filter(Boolean)) if (!alive(Number(db.split("_").pop()))) spawnSync("dropdb", [...pg, "--if-exists", "--force", db], { stdio: "ignore" });
+for (const d of readdirSync(join(STUDIO, "var"), { withFileTypes: true })) { const m = d.name.match(/^schema-check-(\d+)$/); if (d.isDirectory() && m && !alive(Number(m[1]))) rmSync(join(STUDIO, "var", d.name), { recursive: true, force: true }); }
+// Cleaned up on every end, also when run-suites.sh's timeout stops it (SIGTERM) or a person does (SIGINT) between steps.
+const cleanup = () => { spawnSync("dropdb", [...pg, "--if-exists", "--force", SHADOW], { stdio: "ignore" }); rmSync(WORK, { recursive: true, force: true }); };
+for (const sig of ["SIGTERM", "SIGINT"] as const) process.on(sig, () => { cleanup(); process.exit(1); });
 mkdirSync(WORK, { recursive: true });
 try {
   execFileSync("createdb", [...pg, SHADOW], { stdio: "pipe" });
@@ -78,8 +88,7 @@ try {
 } catch (e) {
   ok("the schema check ran", false, (e as Error).message);
 } finally {
-  spawnSync("dropdb", [...pg, "--if-exists", SHADOW], { stdio: "ignore" });
-  rmSync(WORK, { recursive: true, force: true });
+  cleanup();
 }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

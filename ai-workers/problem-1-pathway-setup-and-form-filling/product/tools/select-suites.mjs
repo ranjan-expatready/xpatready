@@ -45,7 +45,7 @@ const ROOT = execSync("git rev-parse --show-toplevel", { encoding: "utf8" }).tri
 const P = "ai-workers/problem-1-pathway-setup-and-form-filling", PR = `${P}/prototype`, S = `${PR}/studio`;
 const SKIP = new Set(["check_catalogue_scale.cjs"]);   // as in run-suites.sh: not a regression suite
 const SMOKE = ["check_engine.ts", "check_case_engine.ts", "check_w1_structure.ts", "check_screen01_api.ts", "check_w1_start_setup.ts", "check_dv_backbone_browser.cjs"];
-const CONTRACT_CHECK = "check_contract_seams.ts";   // B121, P-376 (7); the schema's check_prisma_schema.ts runs with ALL
+const CONTRACT_CHECK = "check_contract_seams.ts", SCHEMA_CHECK = "check_prisma_schema.ts";   // B121, P-376 (7)
 const RUNTIME_GROUP = ["check_runtime_r1c.cjs", "check_runtime_r1d.ts", "check_runtime_r1a.ts"];
 const DOCS0 = /\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$/i;
 const DATA_MD = new RegExp(`^${P}/prototype/(.*/)?prompts/|^${P}/prototype/studio/(api/src|tests/fixtures)/`);
@@ -184,7 +184,7 @@ function endpoints(src) {
 function apiPick(f, seeds = [f]) {
   const rel = f.startsWith(`${S}/`) ? f.slice(`${S}/`.length) : f.slice(PR.length + 1);
   if (seeds.length === 1 && seeds[0] === f && !existsSync(join(ROOT, f))) return { all: `${rel}: removed or renamed` };
-  const reach = new Set();
+  const reach = new Set(), viaGraph = !(seeds.length === 1 && seeds[0] === f);
   for (const sd of seeds) for (const x of importers(sd, apiFiles, new Set([MAIN]))) reach.add(x);
   const eps = new Set();
   for (const x of reach) if (x !== MAIN) for (const e of endpoints(read(x))) eps.add(e);
@@ -201,20 +201,23 @@ function apiPick(f, seeds = [f]) {
     const usedOf = (ns) => (s) => ns.find((n) => new RegExp(`\\b${esc(n)}\\b`).test(s)), used = usedOf(names);
     const body = msrc.split("\n").filter((l) => !/^import\s|^@Module\(/.test(l)).join("\n")
       .replace(/`[^`]*`|"[^"\n]*"|'[^'\n]*'/g, (q) => /^["']/.test(q) ? '""' : q.replace(/\$\{([^}]*)\}|[^]/g, (m, e) => e === undefined ? "" : ` ${e} `));   // words in strings are not uses; ${...} code is
-    const ctrls = body.split(/(?=@Controller\()/), outside = ctrls[0] + ctrls.slice(1).map((c) => c.replace(/^@Controller[\s\S]*?\n\}\n/, "")).join("");
+    // The text before the first controller is ctrls[0] (empty when the file starts with one).
+    const ctrls = [...(body.startsWith("@Controller(") ? [""] : []), ...body.split(/(?=@Controller\()/)], outside = ctrls[0] + ctrls.slice(1).map((c) => c.replace(/^@Controller[\s\S]*?\n\}\n/, "")).join("");
     const n0 = usedOf(own)(outside);
     if (n0) return { all: `${rel}: main.ts uses ${n0} outside its controllers` };
-    for (const c of ctrls.slice(1)) {
-      const block = c.match(/^@Controller[\s\S]*?\n\}\n/)?.[0] ?? c;
-      if (used(block)) for (const e of endpoints(block)) eps.add(e);
-    }
+    // B121 review M1: the paths come from the text with its strings (the blanked one has @Post("") only).
+    const rawText = msrc.split("\n").filter((l) => !/^import\s|^@Module\(/.test(l)).join("\n");
+    const raw = [...(rawText.startsWith("@Controller(") ? [""] : []), ...rawText.split(/(?=@Controller\()/)];
+    ctrls.slice(1).forEach((c, i) => {
+      const block = c.match(/^@Controller[\s\S]*?\n\}\n/)?.[0] ?? c, rawBlock = raw[i + 1]?.match(/^@Controller[\s\S]*?\n\}\n/)?.[0] ?? raw[i + 1] ?? "";
+      if (used(block)) for (const e of endpoints(rawBlock)) eps.add(e);
+    });
   }
   const pats = [...eps].map((e) => [e, pathPattern(e)]).filter(([, p]) => p);
   const out = new Map();
   // B121: a set-up endpoint (more than a third of the suites call it: /demo/load, /demo/reset) chooses its own suites,
   // those whose file name has one of its words (check_s7_load.ts, check_s7_reset.ts, check_forms_demo.ts); the smoke set
-  // loads and resets on every run, and the merge queue runs every suite. Before, any change the sample loader imports
-  // (engine/, contracts/) chose about 300 of the 342 suites through these two.
+  // loads and resets on every run, and the merge queue runs every suite.
   const live = [];
   for (const [e, p] of pats) {
     const c = callers(p);
@@ -229,15 +232,16 @@ function apiPick(f, seeds = [f]) {
   }
   for (const n of suitesImporting([...reach].filter((x) => x !== MAIN))) if (!out.has(n)) out.set(n, `${rel}: imported by the suite`);
   // The pages that call these endpoints: their browser suites too (a double-click guard is tested through the page).
-  // B121: the shell around every page (App.tsx's Demo menu) or the home page "/" calling one is not every browser suite:
-  // a call made on every page load is opened by the smoke set's browser suite, and an action by the suites that call or
-  // name it. A change to the shell or home page itself still runs every browser suite (webPick).
+  // B121: for a change that reaches the module through the graph (engine/, contracts/, data), the shell around every page
+  // (App.tsx's Demo menu) or the home page "/" calling one of its endpoints is not every browser suite: a call made on
+  // every page load is opened by the smoke set's browser suite. A change to the module that declares the endpoint, or to
+  // the shell or home page itself, still runs every browser suite (review M2: the Demo menu's suites test it by clicks).
   let browserWhy;
   for (const w of webFiles) {
     const e = live.find(([, p]) => hit(`/${p}`, w, read(w)));
     if (!e) continue;
     const wp = webMemo(w), wrel = w.slice(`${S}/`.length);
-    if (wp.browser && !wp.shell && !wp.home && !browserWhy) browserWhy = `${rel}: /${e[0]} is called by ${wrel} (${wp.browser})`;
+    if (wp.browser && !((wp.shell || wp.home) && viaGraph) && !browserWhy) browserWhy = `${rel}: /${e[0]} is called by ${wrel} (${wp.browser})`;
     for (const [n] of wp.picks ?? []) if (!out.has(n)) out.set(n, `${rel}: /${e[0]} is called by ${wrel}`);
   }
   if (!out.size && !browserWhy) return { all: `${rel}: no suite calls its ${eps.size} endpoint(s) or imports it` };
@@ -253,6 +257,21 @@ const CODE = /\.(ts|tsx|cjs|mjs|js)$/, SCAN = /\.(ts|tsx|cjs|mjs|js|py|sh|zsh|js
 // A line that only fingerprints folders (demo.ts preserved(): reset must leave them as they were) reads no file's meaning.
 const FINGERPRINT_ONLY = /\bfp\(\s*["']/;
 const R1_SETUP = `${S}/tests/runtime/setup_visitor_visa.ts`;
+// Comments out, strings kept (review m1: "expected/*.v2.json" in a string is no comment start). A quote ends at its line's
+// end unless it is a backtick, so a regular expression holding a lone quote keeps at most a line's comments (more uses,
+// never fewer).
+function stripComments(t) {
+  let out = "", q = "", i = 0;
+  while (i < t.length) {
+    const c = t[i], n = t[i + 1];
+    if (q) { out += c; if (c === "\\") { out += n ?? ""; i += 2; continue; } if (c === q || (c === "\n" && q !== "`")) q = ""; i++; continue; }
+    if (c === "/" && n === "*") { const e = t.indexOf("*/", i + 2); i = e < 0 ? t.length : e + 2; continue; }
+    if (c === "/" && n === "/" && !/[:"'`\\]$/.test(out)) { while (i < t.length && t[i] !== "\n") i++; continue; }
+    if (c === '"' || c === "'" || c === "`") q = c;
+    out += c; i++;
+  }
+  return out;
+}
 let G = null;
 function graph() {
   if (G) return G;
@@ -268,8 +287,14 @@ function graph() {
     let t = read(x);
     if (CODE.test(x)) {
       for (const d of importsOf(x)) put(users, d, x);
-      t = t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1");
-    } else if (/\.(py|sh|zsh)$/.test(x)) t = t.replace(/(^|\s)#.*$/gm, "$1");
+      t = stripComments(t);
+    } else if (/\.(py|sh|zsh)$/.test(x)) {
+      t = t.replace(/(^|\s)#.*$/gm, "$1");
+      // review m2: "import xfa_inventory as X", "from read_validated import f": a module beside it.
+      if (/\.py$/.test(x)) for (const m of t.matchAll(/^\s*(?:from\s+([A-Za-z_]\w*)\s+import|import\s+([A-Za-z_]\w*))/gm)) {
+        const d = `${dirname(x)}/${m[1] ?? m[2]}.py`; if (existsSync(join(ROOT, d))) put(users, d, x);
+      }
+    }
     // Import paths are imports (above), not folder uses ("../engine/x.ts" does not read every file in engine/).
     t = t.split("\n").filter((l) => !FINGERPRINT_ONLY.test(l)).join("\n").replace(/((?:from|import|require)\s*\(?\s*)["'][^"'\n]+["']/g, "$1");
     for (const w of t.split(/[^A-Za-z0-9_.-]+/)) { const n = w.replace(/^\.+|\.+$/g, ""); if (n.includes(".")) put(names, n, x); }
@@ -355,7 +380,8 @@ function pick(f) {
   if (r.startsWith("env/")) return { all: "prototype/env/: the packages and Python helpers every copy installs" };
   if (RUNNERS.has(f)) return { all: `${st}: runs every suite` };
   // The schema and its migrations shape every copy's database; main.ts's start-up and error filter run on every request.
-  if (st !== null && /^(prisma\/|api\/src\/main\.ts$|api\/tsconfig\.json$|prisma\.config\.ts$)/.test(st)) return { all: `${st}: shared` };
+  if (st !== null && /^prisma\//.test(st)) return { all: `${st}: shared`, picks: new Map(suites.has(SCHEMA_CHECK) ? [[SCHEMA_CHECK, `${st}: the schema's check (P-376 (7))`]] : []) };
+  if (st !== null && /^(api\/src\/main\.ts$|api\/tsconfig\.json$|prisma\.config\.ts$)/.test(st)) return { all: `${st}: shared` };
   if (st !== null && /^api\/src\/.+\.ts$/.test(st)) return apiPick(f);
   if (st !== null && st.startsWith("web/")) return webPick(f);
   // Everything else (B121): engine/, contracts/, prototype/p1, p2, p5, samples/, acceptance/, tests/ helpers and
