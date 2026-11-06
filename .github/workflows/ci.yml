@@ -72,9 +72,11 @@ jobs:
         # Worked out once here, so every part deals and skips the same suites. A failure of the API never fails the
         # check: no automatic quarantine this run, said in the summary.
         if: steps.k.outputs.kind == 'code'
-        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        timeout-minutes: 3
+        continue-on-error: true
+        env: { GITHUB_TOKEN: "${{ github.token }}", PARTS: "${{ steps.k.outputs.n }}" }
         run: |
-          if q=$(node "$P/tools/flaky.mjs" quarantine 2> flaky.err); then cat flaky.err
+          if q=$(node "$P/tools/flaky.mjs" quarantine --parts "$PARTS" 2> flaky.err); then cat flaky.err
           else q=""; cat flaky.err; echo "::warning::flaky.mjs could not read the retry records: no automatic quarantine this run"; fi
           echo "autoq=$q" >> "$GITHUB_OUTPUT"
           [ -z "$q" ] || { echo "**Quarantined automatically (B122):**"; sed 's/^/- /' flaky.err; } >> "$GITHUB_STEP_SUMMARY"
@@ -170,7 +172,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: suite-retries-${{ matrix.shard }}
-          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+          # The records, plus each retried suite's first-try log and api.log (the evidence its owner needs).
+          path: |
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/*.try1*.log
           if-no-files-found: ignore
           overwrite: true
           retention-days: 14
@@ -373,7 +378,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: suite-retries-1
-          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+          # The records, plus each retried suite's first-try log and api.log (the evidence its owner needs).
+          path: |
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/*.try1*.log
           if-no-files-found: ignore
           overwrite: true
           retention-days: 14

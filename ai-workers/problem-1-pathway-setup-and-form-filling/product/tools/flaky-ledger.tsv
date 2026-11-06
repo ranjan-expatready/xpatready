@@ -1,13 +1,13 @@
 # Flaky-suite ledger (B122, P-376 (8)). Read by tools/flaky.mjs; one rule per line, tab-separated; # starts a comment.
-# A suite that PASSED ONLY ON RETRY in PR or merge-queue checks of at least 2 different branches within 7 days is
-# quarantined automatically (run-suites.sh skips it in PR and queue checks; the nightly full set still runs it, never
-# retried). Its fix date is its newest counted retry + 7 days: on that date it drops out of the window and comes back,
-# so an unfixed suite that keeps flaking is quarantined again, and the summary row says so each time.
+# A suite that PASSED ONLY ON RETRY in 2 different PR or merge-queue check runs within 7 days is quarantined
+# automatically (run-suites.sh skips it in PR and queue checks; the nightly full set still runs it, never retried) until
+# its fix date: the newer of those retries + 7 days. On that date it comes back by itself, so an unfixed suite that keeps
+# flaking is quarantined again, and the summary row says so each time. A release line brings it back sooner.
 # The retry records themselves are the per-run artifacts suite-retries-<part> (run-suites.sh --retry); this file only
 # says who owns a suite and when a fix landed.
 #
 #   window<TAB><days>               the counting window (default 7)
-#   needs<TAB><n>                   passes-on-retry, from different branches, that quarantine a suite (default 2)
+#   needs<TAB><n>                   passes-on-retry, in different check runs, that quarantine a suite (default 2)
 #   owner<TAB><glob><TAB><area>     the owner of matching suites; first match wins (* and ? only)
 #   release<TAB><suite><TAB><date>  a fix for <suite> landed on <date> (YYYY-MM-DD, UTC): retries before it no longer count
 #

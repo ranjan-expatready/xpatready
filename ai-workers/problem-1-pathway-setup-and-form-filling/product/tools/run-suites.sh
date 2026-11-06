@@ -10,8 +10,11 @@
 #   --skip-quarantined   every suite except the QUARANTINE list below (I1: the merge queue's one full run; --changed
 #        always skips them). --direct (with --changed): select-suites.mjs --direct, never everything (CI's PR_SUITES=direct).
 #   --retry   (B122, P-376 (8); PR and merge-queue checks only, never the nightly full set) a failed suite runs once more,
-#        on a fresh isolated copy when it uses one; its row says "passed on retry" (not a failure) or "failed twice".
-#        Not retried: a suite that hit its 20-minute limit (exit 124), and any failure after SUITES_RETRY_MAX (default 2)
+#        from a fresh start: a new isolated copy (270 suites), the demo restarted (check_studio_browser.cjs, which resets
+#        it), or a suite that starts its own copy or touches no database. Its row says "passed on retry" (not a
+#        failure) or "failed twice". Never retried, because the retry could not start fresh and a first-run-only bug
+#        would pass on it: the R1 group (three suites on one copy) and a plain suite on the shared demo database. Also
+#        not retried: a suite that hit its 20-minute limit (exit 124), and any failure after SUITES_RETRY_MAX (default 2)
 #        retries in one run (many failures are a real break, and retrying them only spends time). Each retry is one line
 #        in $SUITES_OUT/retries.tsv (time, suite, outcome, both exit codes, commit; CI uploads it as suite-retries-<part>)
 #        and in the summary's "retries:" line. tools/flaky.mjs counts them (daily-numbers.sh) and quarantines a suite
@@ -186,19 +189,22 @@ fi
 qwhy() { local e; for e in $AUTOQ; do case "$e" in "$1|"*) IFS='|' read -r _ qo qd qr <<< "$e"
   echo "passed only on retry on 2+ branches in 7 days (runs ${qr//,/, }): owner $qo, back on $qd unless fixed sooner; nightly still runs it (B122)"; return;; esac; done
   echo "fails at random: nightly only until its fix merges (P-205)"; }
-rows=(); fail=0; failed=(); RETRIES=0; RETRIED=(); AGAIN=()
+rows=(); fail=0; failed=(); RETRIES=0; RETRIED=(); AGAIN=(); NORETRY=""; RF=""
 [ "$RETRY" = 1 ] && : > "$OUT/retries.tsv"
 # The line that says why a log failed: a failing check's own line first ("Error" also appears inside PASS lines that quote
 # an expected error), then an error's message ("TypeError: fetch failed"), not the "name: 'Error'," of a printed error
 # object (1 Nov, batch 41292621195: that was the whole reason a merge-queue log gave).
 why() { (grep -m1 -E '^(FAIL|STOP)' "$1" || grep -m1 -E 'Error: ' "$1" || grep -m1 -E 'Error' "$1") | cut -c1-80; }
 # A fresh isolated copy for a retry (B122): the first try may have left its copy in any state.
-recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1; zsh "$S/tools/isolated.sh" "$@" >/dev/null 2>&1; }
-run() {  # $1 file, $2 label, rest: command. AGAIN, when set, readies a retry (recopy ...); it is cleared after each run.
-  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0 code2=0 note=""
+# The first try's api.log is kept beside its suite log (stop moves it to isolated-logs, where the retry would replace it).
+recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1
+  cp "$S/var/isolated-logs/$1-api.log" "$OUT/${RF%.*}.try1-api.log" 2>/dev/null; zsh "$S/tools/isolated.sh" "$@" >/dev/null 2>&1; }
+run() {  # $1 file, $2 label, rest: command. AGAIN readies a retry (recopy ...); NORETRY says why there is none; both cleared.
+  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0 code2=0 note=""; RF="$f"
   if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fi
   if [ "$st" = FAIL ] && [ "$RETRY" = 1 ]; then
-    if [ "$code" = 124 ]; then note="timed out at 20 min, not retried"
+    if [ -n "$NORETRY" ]; then note="not retried: $NORETRY"
+    elif [ "$code" = 124 ]; then note="timed out at 20 min, not retried"
     elif [ "$RETRIES" -ge "$RETRY_MAX" ]; then note="not retried: $RETRY_MAX retries already in this run"
     else
       RETRIES=$((RETRIES + 1)); local first; first="exit $code: $(why "$log")"; mv "$log" "$OUT/${f%.*}.try1.log"
@@ -209,7 +215,7 @@ run() {  # $1 file, $2 label, rest: command. AGAIN, when set, readies a retry (r
       note="1st try $first"; [ "$st" = "failed twice" ] && code=$code2
     fi
   fi
-  AGAIN=()
+  AGAIN=(); NORETRY=""
   case "$st" in PASS|"passed on retry") ;; *) fail=1; failed+=("$f|$code|$log");; esac
   local last; last=$(grep -E "passed|/[0-9]+ passed|[0-9]+ passed" "$log" | tail -1 | cut -c1-90)
   [ -n "$last" ] || last="$(grep -c '^PASS' "$log") checks passed"
@@ -234,7 +240,7 @@ for path in "$TESTS"/check_*.ts "$TESTS"/check_*.cjs; do
       zsh "$S/tools/isolated.sh" "$bn" "$bp" stop >/dev/null 2>&1; continue
     fi
     [ "$DEMO" = 1 ] || { rows+=("| $f | skipped | | resets the :4400 demo: --demo (CI, cloud) |"); continue; }
-    zsh "$S/start.sh" >/dev/null 2>&1; run "$f" demo node "$path"; continue
+    zsh "$S/start.sh" >/dev/null 2>&1; AGAIN=(zsh "$S/start.sh"); run "$f" demo node "$path"; continue
   fi
   # A usage line may pass server settings after "start" (isolated.sh start KEY=VALUE ..., e.g. a test-only pause).
   if [[ "$usage" =~ isolated\.sh\ ([a-z0-9_]+)\ ([0-9]+)\ start((\ [A-Z_][A-Z0-9_]*=[^ ]+)*)\ \&\&\ (tsx|node)\ studio/tests/$f(.*) ]]; then
@@ -252,6 +258,8 @@ for path in "$TESTS"/check_*.ts "$TESTS"/check_*.cjs; do
     # A check that starts its own copy says so as "[port=N] [name=x]" (check_ai_orchestration): with a prefix it gets this
     # copy's port and name, so two lanes never start the same copy (PR #72 review).
     own=""; if [ -n "$PREFIX" ] && [[ "$usage" =~ \[port=([0-9]+)\]\ \[name=([a-z0-9_]+)\] ]]; then own="$(iport "${BASH_REMATCH[1]}") $(iname "${BASH_REMATCH[2]}")"; fi
+    # A plain suite that touches the database runs on the shared demo database, which a retry cannot start fresh.
+    if ! [[ "$usage" =~ \[port=[0-9]+\]\ \[name= ]] && grep -qE 'xr_studio_demo|DATABASE_URL|prisma' "$path"; then NORETRY="it runs on the shared demo database"; fi
     case "$f" in *.cjs) run "$f" plain node "$path";; *) run "$f" plain env DATABASE_URL="$DB/xr_studio_demo" $TSX "$path" $own;; esac
   fi
 done
@@ -263,10 +271,11 @@ if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn ch
 if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn check_runtime_r1a.ts; then
   if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
-    [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
+    # Never retried one by one (review M2): the three share one copy, so a retry would start from the first try's data.
+    [ -f "$RT/check_runtime_r1c.cjs" ] && NORETRY="the R1 suites share one copy" && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
     # R1d next on the same copy (it fills forms from the cases R1c made); R1a last: its --reset empties the workspace.
-    [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts "$RN" $TSX "$RT/check_runtime_r1d.ts" "$RP" "xr_studio_$RN"
-    run check_runtime_r1a.ts "$RN" $TSX "$RT/check_runtime_r1a.ts" "$RP" "xr_studio_$RN" --reset
+    [ -f "$RT/check_runtime_r1d.ts" ] && NORETRY="the R1 suites share one copy" && run check_runtime_r1d.ts "$RN" $TSX "$RT/check_runtime_r1d.ts" "$RP" "xr_studio_$RN"
+    NORETRY="the R1 suites share one copy"; run check_runtime_r1a.ts "$RN" $TSX "$RT/check_runtime_r1a.ts" "$RP" "xr_studio_$RN" --reset
   else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
