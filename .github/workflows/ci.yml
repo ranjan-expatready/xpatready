@@ -11,8 +11,11 @@
 #               - a builder's PR: only the suites its change can affect (run-suites.sh --changed);
 #               - a merge-queue batch: every suite but the quarantined ones (--skip-quarantined), once per change.
 #             Both retry a failed suite once (B122, P-376 (8), run-suites.sh --retry): "passed on retry" or "failed
-#             twice" in the summary, a record uploaded as suite-retries-<part>; a suite that passed only on retry on 2
-#             branches in 7 days is quarantined for every part (tools/flaky.mjs in job "kind"). The nightly never retries.
+#             twice" in the summary, a record uploaded as suite-retries-<part>; a suite that passed only on retry in 2
+#             runs in 7 days is quarantined for every part (tools/flaky.mjs in job "kind"). The nightly never retries.
+#             F5 (founder 6 Nov): a suite named or titled race, concurrent, parallel or upsert, or on the quarantine
+#             list, is never retried; a pass on retry is never silent: a bug line in the job summary and a PR comment
+#             (on each PR of a merge-queue batch) with the 1st try's log tail; the batch may still merge.
 #             US$0 model spend: every suite replays saved runs.
 # Switches (repository variables, gh variable set NAME --body VALUE):
 # Type check (P-291, the outsider audit of 29 Oct): job "types", tsc --noEmit for api and web (tools/typecheck.mjs; fails
@@ -68,15 +71,16 @@ jobs:
           esac
           echo "**$kind** · $why" | tee -a "$GITHUB_STEP_SUMMARY"
       - id: q
-        name: flaky suites to quarantine (B122; passed only on retry on 2 branches in 7 days; tools/flaky.mjs)
+        name: flaky suites to quarantine (B122; passed only on retry in 2 runs in 7 days; tools/flaky.mjs)
         # Worked out once here, so every part deals and skips the same suites. A failure of the API never fails the
-        # check: no automatic quarantine this run, said in the summary.
+        # check: no automatic quarantine this run, said in the summary. It reads all 9 parts' records (SHARDS may have
+        # been higher in the last 14 days; review round 2, minor 2).
         if: steps.k.outputs.kind == 'code'
         timeout-minutes: 3
         continue-on-error: true
-        env: { GITHUB_TOKEN: "${{ github.token }}", PARTS: "${{ steps.k.outputs.n }}" }
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
         run: |
-          if q=$(node "$P/tools/flaky.mjs" quarantine --parts "$PARTS" 2> flaky.err); then cat flaky.err
+          if q=$(node "$P/tools/flaky.mjs" quarantine 2> flaky.err); then cat flaky.err
           else q=""; cat flaky.err; echo "::warning::flaky.mjs could not read the retry records: no automatic quarantine this run"; fi
           echo "autoq=$q" >> "$GITHUB_OUTPUT"
           [ -z "$q" ] || { echo "**Quarantined automatically (B122):**"; sed 's/^/- /' flaky.err; } >> "$GITHUB_STEP_SUMMARY"
@@ -86,7 +90,8 @@ jobs:
     if: ${{ needs.kind.outputs.kind != 'notes' && (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    permissions: { contents: read, pull-requests: read }
+    # pull-requests: write only for F5's comment on a pass on retry (a fork's PR gets a read-only token whatever this says).
+    permissions: { contents: read, pull-requests: write }
     concurrency: { group: "shard-${{ github.event.pull_request.number }}-${{ matrix.shard }}", cancel-in-progress: true }
     strategy:
       fail-fast: true   # one red part fails the run: stop the others and save their minutes
@@ -160,6 +165,15 @@ jobs:
       - name: summary
         if: always() && env.KIND == 'code'
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
+      - name: a pass on retry reaches its PR (B122 F5; tools/flaky.mjs comment; never fails the check)
+        # The bug line is already in the job summary (suites.md); this posts it on the PR, or on each PR of a batch.
+        if: always() && env.KIND == 'code' && hashFiles('ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retry-bugs.md') != ''
+        continue-on-error: true
+        timeout-minutes: 2
+        env: { GITHUB_TOKEN: "${{ github.token }}", PR_BODY: "${{ github.event.pull_request.body }}", PR: "${{ github.event.pull_request.number }}", QUEUE: "${{ needs.kind.outputs.queue }}" }
+        run: |
+          q=(); if [ "$QUEUE" = true ]; then q=(--queue); fi
+          node "$P/tools/flaky.mjs" comment --body "$S/var/suites/retry-bugs.md" --pr "$PR" "${q[@]}" || { echo "::warning::flaky.mjs could not post the pass-on-retry comment; the bug line is in the job summary"; exit 1; }
       - name: logs (only when something failed)
         if: failure() && env.KIND == 'code'
         uses: actions/upload-artifact@v4
@@ -259,7 +273,7 @@ jobs:
     if: ${{ !cancelled() && (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}
     runs-on: ${{ fromJSON((needs.kind.outputs.kind == 'notes' || (vars.BATCH_RUNNER != 'mac' && (startsWith(github.event.pull_request.head.ref, 'mergify/') || vars.PR_RUNNER != 'mac' || !(github.event.pull_request.head.repo.full_name == github.repository))) || !(github.event.pull_request.head.repo.full_name == github.repository)) && '["ubuntu-latest"]' || '["self-hosted","macOS","xr-mac"]') }}
     timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
-    permissions: { contents: read }
+    permissions: { contents: read, pull-requests: write }   # write only for F5's pass-on-retry comment (B122)
     concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
@@ -366,6 +380,15 @@ jobs:
       - name: summary
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
+      - name: a pass on retry reaches its PR (B122 F5; tools/flaky.mjs comment; never fails the check)
+        # The bug line is already in the job summary (suites.md); this posts it on the PR, or on each PR of a batch.
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true') && hashFiles('ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retry-bugs.md') != ''
+        continue-on-error: true
+        timeout-minutes: 2
+        env: { GITHUB_TOKEN: "${{ github.token }}", PR_BODY: "${{ github.event.pull_request.body }}", PR: "${{ github.event.pull_request.number }}", QUEUE: "${{ needs.kind.outputs.queue }}" }
+        run: |
+          q=(); if [ "$QUEUE" = true ]; then q=(--queue); fi
+          node "$P/tools/flaky.mjs" comment --body "$S/var/suites/retry-bugs.md" --pr "$PR" "${q[@]}" || { echo "::warning::flaky.mjs could not post the pass-on-retry comment; the bug line is in the job summary"; exit 1; }
       - name: logs (only when something failed)
         if: env.KIND != 'notes' && env.SHARDED != 'true' && (failure() && steps.code.outputs.suites == 'true')
         uses: actions/upload-artifact@v4

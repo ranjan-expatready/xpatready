@@ -15,10 +15,15 @@
 #        failure) or "failed twice". Never retried, because the retry could not start fresh and a first-run-only bug
 #        would pass on it: the R1 group (three suites on one copy) and a plain suite on the shared demo database. Also
 #        not retried: a suite that hit its 20-minute limit (exit 124), and any failure after SUITES_RETRY_MAX (default 2)
-#        retries in one run (many failures are a real break, and retrying them only spends time). Each retry is one line
-#        in $SUITES_OUT/retries.tsv (time, suite, outcome, both exit codes, commit; CI uploads it as suite-retries-<part>)
-#        and in the summary's "retries:" line. tools/flaky.mjs counts them (daily-numbers.sh) and quarantines a suite
-#        that passed only on retry on 2 different branches in 7 days (tools/flaky-ledger.tsv).
+#        retries in one run (many failures are a real break, and retrying them only spends time). Never retried either
+#        (F5, founder 6 Nov): a suite whose file name or title (the comment block at its top) says race, concurrent,
+#        parallel or upsert, and a suite on the QUARANTINE list: a pass on retry would turn the race it tests green.
+#        Each retry is one line in $SUITES_OUT/retries.tsv (time, suite, outcome, both exit codes, commit; CI uploads it
+#        as suite-retries-<part>) and in the summary's "retries:" line. A pass on retry is never silent (F5): the output
+#        ends with a qa/BUGS.md-style bug line and the 1st try's log tail (tools/flaky.mjs report, also written to
+#        $SUITES_OUT/retry-bugs.md, which CI posts as a PR comment). tools/flaky.mjs counts the retries
+#        (daily-numbers.sh) and quarantines a suite that passed only on retry in 2 different runs in 7 days
+#        (tools/flaky-ledger.tsv).
 # SUITES_QUARANTINE_AUTO="<suite>|<owner>|<fix by>|<runs> ..." (CI: from flaky.mjs quarantine in the kind job, the same
 #        for every part): joins QUARANTINE below for this run, its row naming the owner and the fix date.
 # Each tests/check_*.ts|cjs names its run in a usage line: "isolated.sh <name> <port> start && tsx|node studio/tests/<file>
@@ -187,10 +192,18 @@ fi
 
 # A quarantined suite's reason: by hand (P-205), or by the B122 rule with its owner and fix date.
 qwhy() { local e; for e in $AUTOQ; do case "$e" in "$1|"*) IFS='|' read -r _ qo qd qr <<< "$e"
-  echo "passed only on retry on 2+ branches in 7 days (runs ${qr//,/, }): owner $qo, back on $qd unless fixed sooner; nightly still runs it (B122)"; return;; esac; done
+  echo "passed only on retry in 2+ runs in 7 days (runs ${qr//,/, }): owner $qo, back on $qd unless fixed sooner; nightly still runs it (B122)"; return;; esac; done
   echo "fails at random: nightly only until its fix merges (P-205)"; }
 rows=(); fail=0; failed=(); RETRIES=0; RETRIED=(); AGAIN=(); NORETRY=""; RF=""
-[ "$RETRY" = 1 ] && : > "$OUT/retries.tsv"
+[ "$RETRY" = 1 ] && : > "$OUT/retries.tsv" && rm -f "$OUT/retry-bugs.md"
+# F5 (founder 6 Nov, after the outside review): a suite about a race is never retried, because a pass on retry would
+# turn the very race it tests green. Its file name or its title (the comment block at its top) names one: race,
+# concurrent, parallel or upsert, as whole words (not "trace"). Prints the word, or nothing.
+RACE_RE='(^|[^a-z])(rac(e|es|ing)|concurren[a-z]*|parallel[a-z]*|upserts?|upserting)([^a-z]|$)'
+racy() {  # $1 file name, $2 its path
+  local w; w=$(printf '%s\n' "$1" | tr 'A-Z' 'a-z' | grep -m1 -oE "$RACE_RE" | head -1)
+  [ -z "$w" ] && [ -f "${2:-}" ] && w=$(awk '/^(#!|\/\/|\/\*| \*|[[:space:]]*$)/ { print; next } { exit }' "$2" | tr 'A-Z' 'a-z' | grep -oE "$RACE_RE" | head -1)
+  printf '%s' "$w" | tr -cd 'a-z'; }
 # The line that says why a log failed: a failing check's own line first ("Error" also appears inside PASS lines that quote
 # an expected error), then an error's message ("TypeError: fetch failed"), not the "name: 'Error'," of a printed error
 # object (1 Nov, batch 41292621195: that was the whole reason a merge-queue log gave).
@@ -200,10 +213,14 @@ why() { (grep -m1 -E '^(FAIL|STOP)' "$1" || grep -m1 -E 'Error: ' "$1" || grep -
 recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1
   cp "$S/var/isolated-logs/$1-api.log" "$OUT/${RF%.*}.try1-api.log" 2>/dev/null; zsh "$S/tools/isolated.sh" "$@" >/dev/null 2>&1; }
 run() {  # $1 file, $2 label, rest: command. AGAIN readies a retry (recopy ...); NORETRY says why there is none; both cleared.
-  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0 code2=0 note=""; RF="$f"
+  local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0 code2=0 note="" a src="" rw=""; RF="$f"
+  for a in "$@"; do case "$a" in */"$f") src="$a";; esac; done   # the suite's own file, for its title (F5)
   if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fi
   if [ "$st" = FAIL ] && [ "$RETRY" = 1 ]; then
+    [ -z "$NORETRY" ] && rw=$(racy "$f" "$src")
     if [ -n "$NORETRY" ]; then note="not retried: $NORETRY"
+    elif case " $QUARANTINE " in *" $f "*) true;; *) false;; esac; then note="not retried: on the quarantine list (F5)"
+    elif [ -n "$rw" ]; then note="not retried: its name or title says \"$rw\", and a pass on retry would hide a race (F5)"
     elif [ "$code" = 124 ]; then note="timed out at 20 min, not retried"
     elif [ "$RETRIES" -ge "$RETRY_MAX" ]; then note="not retried: $RETRY_MAX retries already in this run"
     else
@@ -302,6 +319,15 @@ if [ "$RETRY" = 1 ]; then
   ok=""; bad=""; for x in ${RETRIED[@]+"${RETRIED[@]}"}; do case "$x" in *"|passed on retry") ok="$ok ${x%%|*}";; *) bad="$bad ${x%%|*}";; esac; done
   echo; echo "retries: ${#RETRIED[@]}${ok:+ · passed on retry:$ok}${bad:+ · failed twice:$bad} (one retry per failed suite, at most $RETRY_MAX a run; never in the nightly full set)"
   [ -s "$OUT/retries.tsv" ] || rm -f "$OUT/retries.tsv"
+  # F5: a pass on retry is never silent. A qa/BUGS.md-style bug line per suite, with the 1st try's log tail, in this
+  # output (CI's job summary) and in retry-bugs.md (CI posts it as a PR comment). If the report itself fails, a plain line
+  # still names the suites.
+  if [ -n "$ok" ]; then
+    echo
+    if node "$P/product/tools/flaky.mjs" report --events "$OUT/retries.tsv" --logs "$OUT" --part "$SHARD" > "$OUT/retry-bugs.md" 2> "$OUT/retry-bugs.err"; then :
+    else echo "**Passed only on retry, a possible race (B122, F5):**$ok. The bug report failed: $(head -c 300 "$OUT/retry-bugs.err")" > "$OUT/retry-bugs.md"; fi
+    cat "$OUT/retry-bugs.md"
+  fi
 fi
 echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)}$([ "$SHARDS" -gt 1 ] && echo " · shard $SHARD/$SHARDS of $TURN units") · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail
