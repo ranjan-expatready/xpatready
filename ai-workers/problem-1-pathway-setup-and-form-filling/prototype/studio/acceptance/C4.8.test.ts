@@ -7,9 +7,10 @@
 // every number is answered "None published" (test words) through the API, as the suites do.
 // Needs first: Visitor visa has questions (J3 / C4.11) — until then exit 2; meanwhile `wp.family` as 4th argument.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.8.test.ts 4440 xr_studio_accept [wp.family]
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AUTHOR, APPROVER, REVIEWER, pack2, run } from "./lib/pack2.ts";
+import { planted, tsFiles } from "../tests/lib/ts-files.ts";
 
 const T = pack2("C4.8");
 const { call, sql, ok, words } = T;
@@ -18,6 +19,12 @@ run(async () => {
   await T.ready();
   const wp = T.combo(T.key("vv.single"));
   await T.needQuestions(wp);
+  // B82 (QA-233; #868's P-248 rule refuses Submit with "No document line yet"): on the six the lines come from the
+  // people's own steps too, with the facts their conditions read. The checkpoint already has its lines, so nothing runs.
+  if (sql(`select count(*) from document_requirement where combination_id='${wp}' and status <> 'RETIRED'`) === "0") {
+    const docs = await T.documentsBySteps(wp);
+    console.log(`SETUP document lines through the people's steps: ${JSON.stringify(docs).slice(0, 300)}`);
+  }
   const releases = () => Number(sql(`select count(*) from config_release where combination_id='${wp}'`));
   const r0 = releases();
   const fs = (await call("GET", `/combinations/${wp}/fact-sources`)).body?.facts ?? [];
@@ -30,8 +37,11 @@ run(async () => {
 
   // No side door: no API route approves or releases a questionnaire or a PQR on its own (read from the controllers).
   const src = join(import.meta.dirname, "..", "api", "src");
-  const routes = readdirSync(src).filter((f) => f.endsWith(".ts")).flatMap((f) => [...readFileSync(join(src, f), "utf8").matchAll(/@(?:Post|Put|Patch)\("([^"]+)"\)/g)].map((m) => `${f}: ${m[1]}`));
-  const side = routes.filter((x) => /(pqr|sqr|questionnaire|prequal|fact-sources|sections)[^"]*\/(approve|release|publish|signoff)/i.test(x));
+  // B120: api/src's subfolders too.
+  const routesIn = (dir: string) => tsFiles(dir).flatMap((f) => [...readFileSync(join(dir, f), "utf8").matchAll(/@(?:Post|Put|Patch)\("([^"]+)"\)/g)].map((m) => `${f}: ${m[1]}`));
+  const sideOf = (rs: string[]) => rs.filter((x) => /(pqr|sqr|questionnaire|prequal|fact-sources|sections)[^"]*\/(approve|release|publish|signoff)/i.test(x));
+  const routes = routesIn(src), side = sideOf(routes);
+  ok("C4.8 fail (B120): a side door planted in a subfolder is caught", sideOf(routesIn(planted({ "features/x/planted.ts": '@Post("combinations/:id/pqr/approve")' }))).length === 1);
   ok("C4.8 pass: no route approves, signs off or releases a PQR or questionnaire on its own", routes.length > 20 && side.length === 0, side);
   ok("C4.8 pass: nothing is released by the tick or the section change", releases() === r0);
   // P-279: the source gate refuses Submit and release while a published number (a date counts) has no source entry.

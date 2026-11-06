@@ -6,7 +6,166 @@
   "#subform.page1": {
    "heading": "Schedule abackground / declaration",
    "printed": "SCHEDULE ABACKGROUND / DECLARATION",
-   "how": "banner"
+   "how": "banner",
+   "sub": {
+    "familyName": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "givenName": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "OriginalLanguage2": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "birthDate3": {
+     "heading": "Your full name",
+     "printed": "1. Your full name",
+     "group": "CompletName1"
+    },
+    "fathersFamilyName": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersGivenName": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersBirthDate": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "FathersBirthCity": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersBirthCountry": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "fathersDeathDate": {
+     "heading": "Personal details of your father",
+     "printed": "4. Personal details of your father",
+     "group": "fatherDetails4"
+    },
+    "mothersBirthFamilyName": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersGivenName": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersBirthDate": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersBirthCity": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersBirthCountry": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    },
+    "mothersDeathDate": {
+     "heading": "Personal details of your mother",
+     "printed": "5. Personal details of your mother",
+     "group": "mothersdetails5"
+    }
+   }
+  },
+  "#subform.page2": {
+   "heading": null,
+   "how": "none",
+   "sub": {
+    "elementary": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "secondary": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "university": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "trade": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "educationTable": {
+     "heading": "Education",
+     "printed": "7. Education",
+     "group": "Education7"
+    },
+    "personalHistoryTable": {
+     "heading": "Personal history",
+     "printed": "8. Personal history",
+     "group": "personalHistory8"
+    },
+    "membershipTable": {
+     "heading": "Membership of association with organizations",
+     "printed": "9. Membership of association with organizations",
+     "group": "membership9"
+    },
+    "governmentPositionsTable": {
+     "heading": "Government positions",
+     "printed": "10. Government positions",
+     "group": "governmentPositions10"
+    }
+   }
+  },
+  "#subform.page3": {
+   "heading": null,
+   "how": "none",
+   "sub": {
+    "country1": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "militaryServiceTable1": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "country2": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "militaryServiceTable2": {
+     "heading": "Military and/or paramilitary service",
+     "printed": "11. Military and/or paramilitary service",
+     "group": "militaryService11"
+    },
+    "addressTable": {
+     "heading": "Addresses",
+     "printed": "12. Addresses",
+     "group": "addresses12"
+    }
+   }
   }
  }
 }

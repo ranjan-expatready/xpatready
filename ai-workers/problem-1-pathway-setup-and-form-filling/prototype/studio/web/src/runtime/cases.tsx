@@ -8,8 +8,9 @@ import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useTo
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
+import { noRetryOnRefusal, Questionnaire, useCaseView, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
+import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
 import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
@@ -30,7 +31,11 @@ const PEOPLE = [
 const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
 const isOfficer = (id: string) => STAFF.has(id);
 const isClient = (id: string) => id === "user-P" || id === "user-Q";
-const ROLE: Record<CasePerson["role"], string> = { case: "Application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
+/** "Sponsor" → "sponsor"; an abbreviation in capitals ("IMM", "PR") keeps its case. */
+const lower = (w: string) => w.replace(/\b([A-Z])([a-z])/g, (_, a: string, b: string) => a.toLowerCase() + b);
+const ROLE: Record<string, string> = { case: "Application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
+/** B115: a role the words above do not name (the sponsor) is shown in the release's own words. */
+const roleOf = (p: CasePerson) => ROLE[p.role] ?? p.role_label ?? p.role.replace(/_/g, " ");
 
 export function RuntimeApp() {
   const actor = useActorId();
@@ -163,7 +168,7 @@ function CasePage() {
   const firm = useFirm();
   // C6.4 (a), challenge r2 m5: a person's name, never their id (the firm's people, then the simulated clients).
   const nameOf = React.useCallback((who: string) => firm.data?.users.find((u) => u.id === who)?.name ?? PEOPLE.find((p) => p.id === who)?.name ?? "someone at the firm", [firm.data]);
-  const [adding, setAdding] = React.useState<"spouse_or_partner" | "child" | null>(null);
+  const [adding, setAdding] = React.useState<CanAdd | null>(null);
   // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
   const { hash } = useLocation(), loaded = !!view.data;
   React.useEffect(() => { if (loaded && hash === "#agent-view") document.getElementById("agent-view")?.scrollIntoView({ block: "start" }); }, [loaded, hash]);
@@ -179,7 +184,7 @@ function CasePage() {
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
-          {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} /></div> : null}
+          {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
@@ -192,33 +197,35 @@ function CasePage() {
         <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
           <h2 id="people" className="text-base font-semibold">People on this case</h2>
           <span className="flex-1" />
-          <Button size="sm" variant="secondary" onClick={() => setAdding("spouse_or_partner")}><UserPlus aria-hidden />Add spouse or partner</Button>
-          <Button size="sm" variant="secondary" onClick={() => setAdding("child")}><UserPlus aria-hidden />Add child</Button>
+          {/* B115 (P-319): one Add button per role this case's release lets a person add, never a fixed list. */}
+          {(c.can_add ?? []).map((r) => <Button key={r.role} size="sm" variant="secondary" data-add-role={r.role} onClick={() => setAdding(r)}><UserPlus aria-hidden />Add {lower(r.label)}</Button>)}
         </header>
         <ul className="flex flex-wrap gap-2 px-4 py-3">
-          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{ROLE[p.role]}</span>{p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
+          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{roleOf(p)}</span>{p.co_files ? <Pill title="Their forms are sent with the principal applicant's application, never on their own">Sent with the principal's application</Pill> : p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
         </ul>
       </section>
       <DocumentsPanel caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} nameOf={nameOf} />
       <EligibilityCard caseId={c.id} people={c.people} />
+      <ItemChannels caseId={c.id} />
       <FormsPanel caseId={c.id} />
       <FindingsPanel caseId={c.id} people={c.people} />
       <SubmissionPanel caseId={c.id} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>
-      {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
+      {adding ? <AddPersonDialog caseId={c.id} line={adding} close={() => setAdding(null)} /> : null}
     </div>
   );
 }
 
-function AddPersonDialog({ caseId, role, close }: { caseId: string; role: "spouse_or_partner" | "child"; close: () => void }) {
+function AddPersonDialog({ caseId, line, close }: { caseId: string; line: CanAdd; close: () => void }) {
+  const role = line.role;
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const key = React.useMemo(() => crypto.randomUUID(), []); // one person per dialog, however often Add is pressed (QA-28)
-  const add = useAction(() => api(`/runtime/cases/${caseId}/people`, { method: "POST", json: { role, displayName: name, idempotencyKey: key } }), { success: `${role === "child" ? "Child" : "Spouse or partner"} added: their questions are now asked`, invalidate: [["runtime"]], onDone: close });
+  const add = useAction(() => api(`/runtime/cases/${caseId}/people`, { method: "POST", json: { role, displayName: name, idempotencyKey: key } }), { success: `${line.label} added: their questions are now asked`, invalidate: [["runtime"]], onDone: close });
   const submit = () => add.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("displayName") ?? e.message : e.message) });
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={role === "child" ? "Add a child" : "Add a spouse or partner"} description="Within the limits of this case's release. Their questions are added to the Client questionnaire at once."
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Add ${/^[aeiou]/i.test(line.label) ? "an" : "a"} ${lower(line.label)}`} description="Within the limits of this case's release. Their questions are added to the Client questionnaire at once."
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={add.isPending} onClick={submit}>Add</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <Field label="Name" hint="Sample names only in the prototype" error={error}><Input value={name} onChange={(e) => { setName(e.target.value); setError(null); }} autoFocus /></Field>

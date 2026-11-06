@@ -20,13 +20,14 @@ import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/
 import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, wholeFormOutput, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
 import { pdfBoxFormats } from "../../engine/field-format.ts";
+import { spellOutCodeRange } from "../../engine/options.ts";
 import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 import { ledgerRead } from "./cost-gate.ts";
-import { keyFor, sameName } from "./library-changes.ts";
+import { freeKey, sameName } from "./library-changes.ts";
 import { BATCH_MAX, bulkWhy, decide, identityKeyOf, insertProposals, QUEUE_TX, landField, recordChoice, reviewRow, UNDO_SECONDS, type NewProposal, type Work } from "./proposals.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
@@ -817,7 +818,7 @@ export class Sources {
       const taken = new Set([...(await tx.canonicalField.findMany({ where: { workspaceId: job.workspaceId }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey),
         ...(await tx.proposalItem.findMany({ where: { workspaceId: job.workspaceId, choice: "NEW", decidedKey: { not: null }, id: { not: it.id }, run: { status: { in: ["COMPLETED", "APPLIED"] } } }, select: { decidedKey: true } })).map((x) => x.decidedKey!),
         ...(await tx.proposalItem.findMany({ where: { runId: job.id, decidedKey: { not: null }, id: { not: it.id } }, select: { decidedKey: true } })).map((x) => x.decidedKey!)]);
-      const key = keyFor(group, label, taken);
+      const key = await freeKey(tx, job.workspaceId, group, label, taken); // Breaker M1 on B83: never over a withdrawn field's readers
       const raw = await tx.proposalItem.findUniqueOrThrow({ where: { id: it.id } });
       return reviewRow(await recordChoice(tx, it.id, { choice: "NEW", decidedKey: key, by: actor.id, reason: reason || null,
         payload: { ...(raw.payload as any), label, meaning, ...(b.valueType ? { valueType: b.valueType } : {}) }, work: { ...(raw.work as object), advisory: best ? { key: best.key, score: best.score } : null } }));
@@ -914,7 +915,7 @@ export class Sources {
         return { workspaceId: ws, formEditionId: ed!.id, dataPath: e.data_path, caption: box.get(e.data_path)?.caption?.slice(0, 500) ?? null, heading: box.get(e.data_path)?.section ?? null,
           outcome: returned ? "unresolved" : e.outcome, person: e.person ?? null, row: e.row ?? null, canonicalFieldKey: returned ? null : (d?.decidedKey ?? e.fact ?? null),
           // A part of a composite library value (address) reads that value through the executor's part transformation.
-          transform: !returned && d?.decidedKey && d.decidedKey !== e.fact && (d.evidence as any)?.recommendation?.transform && (d.evidence as any).recommendation.key === d.decidedKey ? (d.evidence as any).recommendation.transform : e.transform ?? null, condition: e.condition ?? null, confidence: e.confidence ?? null,
+          transform: !returned && d?.decidedKey && d.decidedKey !== e.fact && (d.evidence as any)?.recommendation?.transform && (d.evidence as any).recommendation.key === d.decidedKey ? (d.evidence as any).recommendation.transform : spellOutCodeRange(e.transform, box.get(e.data_path)), condition: e.condition ?? null, confidence: e.confidence ?? null,
           // A4: an entry reused from an earlier edition of the form is a code match (no AI saw it), and says where from.
           evidenceQuote: e.reused_from ? `${e.evidence_quote ?? ""} (as released in ${e.reused_from})`.slice(0, 500) : e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: e.reused_from ? "CODE_MATCH" : "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });

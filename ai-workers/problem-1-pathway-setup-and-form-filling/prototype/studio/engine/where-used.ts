@@ -2,7 +2,7 @@
 // no framework, no vendor call; api/src/where-used.ts reads the rows and passes them in. Callers: the shared library's
 // used-in lists and lifecycle guard (library-sources.ts, library-items.ts), a library form's uses (form-uses.ts), a new
 // edition's impact review (impact.ts), and G-CORE's impact preview.
-import { newestEdition } from "./programs.ts";
+import { newestEdition } from "./editions.ts";
 
 type Versioned = { version: number; status: string };
 

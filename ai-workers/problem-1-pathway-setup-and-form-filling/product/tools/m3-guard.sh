@@ -31,7 +31,7 @@ while IFS= read -r f; do
   [ -n "$f" ] || continue
   while IFS= read -r h; do
     case "$h" in ''|\#*) continue;; esac
-    case "$f" in "$h"*) printf '%s\n' "${PR_BODY:-}" | tr -d '\r' | sed 's/[[:space:]]*$//' | grep -qxF "Hot file approved by the tech lead: $f" || bad="$bad"$'\n'"  $f"; break;; esac
+    case "$f" in "$h"*) printf '%s\n' "${PR_BODY:-}" | tr -d '\r' | sed 's/[[:space:]]*$//' | grep -xF "Hot file approved by the tech lead: $f" >/dev/null || bad="$bad"$'\n'"  $f"; break;; esac
   done <<< "$hot"
 done <<< "$changed"
 if [ -n "$bad" ]; then

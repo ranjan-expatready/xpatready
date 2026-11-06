@@ -76,7 +76,7 @@ export function WherePanel({ uses, loading, error, onRetry }: { uses?: UsesView;
 /** The confirm, in the right panel (it may collect a reason, so never a centred modal): what goes or what is kept,
  *  who approves and when it takes effect, then the one button. An author's own draft deletes at once (no reason). */
 export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate, again, busy, error, onCancel, onSend, takesEffect, body }: {
-  /** C11.9: a body that replaces the standard one (a library item restores at approval, not at the next release). */ body?: string;
+  /** C11.9: a body that replaces the standard one (a library item restores at approval, not at the next release; B83: a withdrawal names what still reads the field). */ body?: string;
   kind: LifecycleWord; name: string; goes?: { num?: string | null; label: string }[]; kept?: string[]; withCombination?: boolean; immediate?: boolean; busy?: boolean; error?: string | null;
   /** Send again (QA-59): a returned change goes back to a second person with what changed. */
   again?: boolean;
@@ -97,7 +97,7 @@ export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-sm">
         {again ? <p data-send-again-body>{SAY.sendAgainBody}</p> : null}
         {kind === "DELETE" ? (goes?.length ? <><p>{SAY.deleteGoesWith}</p><ul className="ml-5 list-disc" data-goes-with>{goes.map((g, i) => <li key={i}>{g.num ? `${g.num} ` : ""}{g.label}</li>)}</ul></> : <p>{SAY.deleteNothingUses}</p>)
-          : kind === "RETIRE" ? <p>{SAY.retireBody}</p> : kind === "RESTORE" ? <p>{body ?? SAY.restoreBody}</p> : <p>{SAY.withdrawBody}</p>}
+          : kind === "RETIRE" ? <p>{SAY.retireBody}</p> : kind === "RESTORE" ? <p>{body ?? SAY.restoreBody}</p> : <p>{body ?? SAY.withdrawBody}</p>}
         {kept?.length ? <div><p className="text-xs font-semibold text-text-ok">Kept</p><ul className="ml-5 list-disc" data-kept>{kept.map((k, i) => <li key={i}>{k}</li>)}</ul></div> : null}
         {withCombination && (kind === "RETIRE" || kind === "RESTORE") ? <p data-with-combination>{SAY.withCombination(kind)}</p> : null}
         {immediate ? <p className="rounded-lg bg-surface p-3" data-own-draft>{SAY.ownDraft}</p> : kind !== "WITHDRAW" ? (

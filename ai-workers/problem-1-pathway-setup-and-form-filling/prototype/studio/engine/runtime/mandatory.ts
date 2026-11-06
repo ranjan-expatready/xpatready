@@ -15,7 +15,7 @@ import type { BoxResult, Inventory } from "../form-values.ts";
  *  - "fill it in Adobe": the configuration decided it is not a fact the case keeps (IRCC's form may ask it only for some
  *    answers, such as a Taiwan passport number), so the person completes it in Adobe if the form asks for it;
  *  - "filled by hand": the value cannot be written in the form's own code, so it is typed in Adobe. */
-export type OpenReason = "needs an answer" | "no question asks it yet" | "fill it in Adobe" | "filled by hand";
+export type OpenReason = "needs an answer" | "no question asks it yet" | "fill it in Adobe" | "filled by hand" | "not on this form";
 export type OpenField = { box: string; label: string; reason: OpenReason; why: string };
 type MapEntry = { data_path: string; fact?: string | null; outcome?: string | null; caption?: string | null; evidence_quote?: string | null };
 /** The form's own words for a field: the map's evidence quote (the text the field answers) before the inventory caption,
@@ -52,6 +52,7 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     if (!f.required || !path || f.ui === "button" || byAPerson(inv.fields, f)) continue;
     if ((values[path] ?? "") !== "") continue; // written from a fact
     const e = entryOf.get(path), b = boxOf.get(path);
+    if (b?.coverage === "not needed") continue; // B86 BR-5: its own condition is not true, so the form leaves it empty
     // Review M-1 on #592: a line a question fills is named by that question, as the case asks it; only a field no
     // question fills keeps the form's own words.
     const asked = e?.fact ? words.labelOf?.(e.fact) : undefined;
@@ -60,6 +61,7 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     const settled = b?.about && e?.fact && b.row !== null && b.row !== undefined ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
     if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
     else if (b?.result === "by hand") out.push({ box: path, label, reason: "filled by hand", why: b.why ?? "type it in Adobe" });
+    else if (b?.result === "not on this form") out.push({ box: path, label, reason: "not on this form", why: b.why ?? "the form has no such choice" });
     // A derived "is anything recorded?" Yes/No (C7.2 cause 3): an answer can only make it Yes; its No needs a question
     // that records "none" (a confirmed "none apply" group does; other names, the national ID and the US card have none yet).
     // Devin on #715: a box held back by a fix (a confirmed answer with a problem, or a gate answered No with a detail

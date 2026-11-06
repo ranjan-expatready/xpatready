@@ -14,7 +14,6 @@ const REGISTER = join(STUDIO, "..", "..", "product", "STAND-INS.md");
  *  chip there. A row leaves this list in the change that adds its chip; the check fails while a listed row has a chip,
  *  so the list cannot go stale. */
 const NOT_ON_SCREEN_YET: Record<string, string> = {
-  "SI-10": "M3-7 employer case link, not built",
   "SI-15": "client list and case shell: the runtime lane's page adds the chip", "SI-16": "case page frame: the runtime lane's page adds the chip",
 };
 

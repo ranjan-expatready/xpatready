@@ -1,0 +1,127 @@
+{
+ "about": "QA-144 slices 4 and on (B79, P-319: data, never code): what IRCC's own words set on a combination's form lines when the configured checkpoint sets it up from its forms (api/src/demo.ts) and when the packs take the people's steps (acceptance/lib/pack2.ts). Read by api/src/form-setup.ts into FORM_SETUP beside the first three slices. Per combination: the application form; each form line's rule, cited with page, quote and date (P-170); the facts only a rule reads (by their key in form-setup.ts); a family information form picked by the application form's channel only when 'familyByChannel' is given (a permanent residence application names its own family form in its rules). Status: Sample, Unconfirmed: expert (AGENTS rule 4).",
+ "combinations": {
+  "pnp.express_entry": {
+   "about": "Provincial nominees › Express Entry stream (QA-144 slice 4, B79a). The canada.ca form pages are official-sources/ircc/canada/pages/*.html (recorded 27 Oct 2026, official-sources/ircc/canada/index.json), each quoted from its paper-application section; IMM 5476's is official-sources/ircc/web-pages/page-imm5476.html (saved 19 Oct 2026). IMM 0008 DEP keeps its line as the sample file sets it (the principal applicant files it): its page says it is for each dependant IMM 0008 does not hold, a count no line can read yet (for the expert). The police certificates and medical exam are not form lines: their block stays the runtime's one named exception (P-172, P-315).",
+   "application": "IMM 0008",
+   "rules": [
+    { "form": "IMM 0008", "who": "principal_applicant",
+      "cite": "canada.ca \"Generic Application Form for Canada (IMM 0008)\" (page modified 2026-09-11, recorded 27 Oct 2026), Who must fill out this application form?: \"This form must be completed by : you, the principal applicant\"" },
+    { "form": "IMM 5669", "who": "principal_partner_adult_children", "minAge": 18,
+      "cite": "canada.ca \"Schedule A: Background / Declaration Form (IMM 5669)\" (page modified 2025-06-26, recorded 27 Oct 2026): \"This form must be completed by: you, the principal applicant; your spouse or common-law partner (whether accompanying you to Canada or not), and your dependent children aged 18 years or older (whether accompanying you to Canada or not).\"" },
+    { "form": "IMM 5406", "who": "principal_partner_adult_children", "minAge": 18,
+      "cite": "canada.ca \"Additional Family Information (IMM 5406)\" (page modified 2026-06-03, recorded 27 Oct 2026): \"This form must be completed by: You, as the principal applicant, Your spouse or common-law partner (whether accompanying you to Canada or not), and Your dependent children aged 18 or over (whether accompanying you to Canada or not).\"" },
+    { "form": "IMM 5562", "who": "principal_applicant",
+      "cite": "canada.ca \"Supplementary Information: Your Travels (IMM 5562)\" (page modified 2025-06-26, recorded 27 Oct 2026): \"This form must be completed by: you, the principal applicant; You must complete all sections including those for your spouse or common law partner (whether accompanying or not) and each dependent child over the age of 18 (whether accompanying or not).\"" },
+    { "form": "IMM 5476", "condition": { "subjectKind": "CASE", "op": "eq", "field": "case.uses_representative", "value": true },
+      "cite": "canada.ca \"Use of a Representative Form (IMM 5476)\" (page modified 2025-12-12, saved 19 Oct 2026), When to use this form: \"Complete this form only if you are: appointing a representative; updating contact information for your previously appointed representative; cancelling a representative’s appointment; cancelling the appointment of a representative and appointing a new representative; or withdrawing your role as a representative\"" }
+   ],
+   "ruleFacts": ["case.uses_representative"],
+   "notOnForm": [
+    { "form": "IMM 0008 DEP", "fact": "person.marital_status", "values": ["unknown"],
+      "cite": "IMM 0008 DEP (10-2024), Additional Dependants / Declaration, question 16 a) \"Your current marital status\": its drop-down prints Annulled Marriage (09), Common-Law (03), Divorced (04), Legally Separated (05), Married (01), Single (02), Widowed (06), from the form's own list MaritalStatusList (official-sources/ircc/forms/imm0008depe.pdf, read in prototype/p1/inventory/imm0008depe.inventory.json); it prints no Unknown, which IMM 0008 (05-2026) prints as code 00 (tech lead on #1050: B81's Not on this form)." }
+    ]
+  },
+  "fs.spouse": {
+   "about": "Family sponsorship › Spouse or common-law partner (QA-144 slice 5, B79b). Guide 5289 is official-sources/ircc/instructions/guide-5289.html (canada.ca, modified 2026-04-23, saved 27 Oct 2026); IMM 5533 (09-2022), the document checklist for a spouse, is official-sources/ircc/checklists/imm5533e.pdf (checked 21 Oct 2026). Its people are the sponsored spouse or partner (the principal applicant), the sponsor, children and a representative. The saved field maps of IMM 1344 and IMM 5532 read the sponsor as the form's subject (their 'Sponsor' boxes), so both lines are the sponsor's. IMM 0008, IMM 5406 and IMM 5669 are Online: IMM 5533 says each 'is now digital and can be completed online'. Its family information form is IMM 5406, in its rules, so none is picked by channel. A fact a rule reads is given whole here when no other combination has it (IMM 5604's), and its always-needed document lines are cited (documentsCited). Not added: IMM 5409 (neither source names it for this application; IMM 5532 asks about the relationship), IMM 1283 (only when a sponsored child has a child of their own) and IMM 5562 ('if it applies to you'), neither in the six's sample (samples/wave1.json): for the expert. The sponsor's own documents (status in Canada, income) need a 'the sponsor' document line, not in the cited lines' shape yet: a follow-up row.",
+   "application": "IMM 1344",
+   "rules": [
+    {
+     "form": "IMM 1344",
+     "who": "sponsor",
+     "cite": "IMM 5533 (09-2022) p. 1, Part A, Sponsor, item 2: \"Application to Sponsor, Sponsorship Agreement and Undertaking (IMM 1344) To be completed and signed by you, the sponsor and the person you are sponsoring.\"; Guide 5289: \"The sponsor must download and complete these forms digitally sign, along with the principal applicant (PA) Application to Sponsor, Sponsorship Agreement and Undertaking [IMM 1344] [...] Relationship Information and Sponsorship Evaluation Form [IMM 5532]\""
+    },
+    {
+     "form": "IMM 5532",
+     "who": "sponsor",
+     "cite": "IMM 5533 (09-2022) p. 3, Part A, Both the sponsor and principal applicant, item 10: \"Relationship Information and Sponsorship Evaluation (IMM 5532) The sponsor and principal applicant should complete the form and sign the declarations where indicated.\"; Guide 5289: \"If you’re sponsoring a spouse or partner (with or without dependent children), you must fill out Sponsorship Evaluation and Relationship Questionnaire [IMM 5532]\""
+    },
+    {
+     "form": "IMM 0008",
+     "who": "principal_applicant",
+     "channel": "ONLINE",
+     "cite": "IMM 5533 (09-2022) p. 2, Part A, item 6: \"Generic Application Form for Canada (IMM 0008) You (the principal applicant) must complete this form for yourself and your dependents, when applying online. [...] This form is now digital and can be completed online.\"; Guide 5289 (canada.ca, modified 2026-04-23, saved 27 Oct 2026), Filling out your forms: \"The principal applicant must fill out these digital forms online: Generic Application Form for Canada (IMM 0008) [...] Schedule A – Background/Declaration (IMM 5669) [...] Additional Family Information (IMM 5406)\""
+    },
+    {
+     "form": "IMM 5406",
+     "who": "principal_partner_adult_children",
+     "minAge": 18,
+     "channel": "ONLINE",
+     "cite": "IMM 5533 (09-2022) p. 2, Part A, item 8: \"Additional Family Information (IMM 5406) The following person(s) must fill out their own copy of this form when applying online: You (the principal applicant), and any of your family members 18 years of age or older (who are not already Canadian citizens or permanent residents). [...] This form is now digital and can be completed online.\"; Guide 5289 (canada.ca, modified 2026-04-23, saved 27 Oct 2026), Filling out your forms: \"The principal applicant must fill out these digital forms online: Generic Application Form for Canada (IMM 0008) [...] Schedule A – Background/Declaration (IMM 5669) [...] Additional Family Information (IMM 5406)\""
+    },
+    {
+     "form": "IMM 5669",
+     "who": "principal_partner_adult_children",
+     "minAge": 18,
+     "channel": "ONLINE",
+     "cite": "IMM 5533 (09-2022) p. 3, Part A, item 9: \"Schedule A - Background / Declaration (IMM 5669) When applying online, you (the principal applicant) and any of your family members 18 years of age or older (who are not already Canadian citizens or permanent residents) must complete this form. This form is now digital and can be completed online.\"; Guide 5289 (canada.ca, modified 2026-04-23, saved 27 Oct 2026), Filling out your forms: \"The principal applicant must fill out these digital forms online: Generic Application Form for Canada (IMM 0008) [...] Schedule A – Background/Declaration (IMM 5669) [...] Additional Family Information (IMM 5406)\""
+    },
+    {
+     "form": "IMM 5604",
+     "who": "each_dependent_child",
+     "condition": {
+      "subjectKind": "EACH_APPLICANT",
+      "op": "eq",
+      "field": "person.minor_other_parent_not_sponsor",
+      "value": true
+     },
+     "cite": "IMM 5533 (09-2022) p. 6, Part B, item 3: \"For Minor Child(ren): If any child(ren) under 18 will be issued an immigrant visa as part of this application, and your sponsor is not their other legal parent, you must complete the Declaration from non-accompanying parent/guardian for minors immigration to Canada (IMM5604) form [...] for each child\"; Guide 5289: \"If sponsoring a dependent child (under the age of 18) and they have another parent who is not immigrating to Canada, the parent/guardian applying from Canada must submit a signed copy of the Declaration From Non-Accompanying Parent/Guardian For Minors Immigrating to Canada [IMM 5604]\""
+    },
+    {
+     "form": "IMM 5476",
+     "condition": {
+      "subjectKind": "CASE",
+      "op": "eq",
+      "field": "case.uses_representative",
+      "value": true
+     },
+     "cite": "IMM 5533 (09-2022) p. 3, Part A, item 11: \"Use this form if you (the sponsor, the principal applicant, and/or any dependants 18 years of age or older) want to name a representative (such as an immigration consultant, lawyer, friend or family member) to represent you.\""
+    },
+    {
+     "form": "IMM 5475",
+     "condition": {
+      "subjectKind": "CASE",
+      "op": "eq",
+      "field": "case.authorizes_release_to_designated_individual",
+      "value": true
+     },
+     "cite": "IMM 5533 (09-2022) p. 3, Part A, item 12: \"Use this form if you want to authorize IRCC to give your personal information to someone who will not act as your representative.\""
+    }
+   ],
+   "ruleFacts": [
+    {
+     "fact": "person.minor_other_parent_not_sponsor",
+     "rule": "IMM 5604",
+     "cite": "IMM 5533 (09-2022) p. 6, Part B, item 3",
+     "label": "Child under 18 whose other parent is not the sponsor",
+     "valueType": "yes_no",
+     "meaning": "Whether the person is a child under 18 who will be issued an immigrant visa with this application and whose other legal parent is not the sponsor, so that parent or guardian signs IMM 5604 (IMM 5533 p. 6; Guide 5289).",
+     "beside": [
+      "person.date_of_birth"
+     ]
+    },
+    "case.uses_representative",
+    "case.authorizes_release_to_designated_individual"
+   ],
+   "documentsCited": [
+    {
+     "type": "Fee payment receipt",
+     "who": "principal_applicant",
+     "reuse": true,
+     "quote": "IMM 5533 (09-2022), canada.ca PDF dated 2022-09-21, p. 1, Part A, Sponsor, item 3 (Application Fees; held by the principal applicant until a sponsor document line exists, B92): \"Attach a single receipt with the sponsorship fee, the application fee, and the biometric fee for the principal applicant you are sponsoring and the application fee and biometric fee for any other dependents on the application.\" (Sample, Unconfirmed: expert)"
+    },
+    {
+     "type": "Passport information page copy",
+     "who": "each_applicant",
+     "reuse": true,
+     "quote": "IMM 5533 (09-2022), canada.ca PDF dated 2022-09-21, p. 5, Part B, Supporting documents for sponsored persons, item 1: \"Most recently issued passport or travel document for you and all family members (who will accompany you to Canada) • Include only copies of pages showing the passport or travel document number, date of issue and expiration, photo, name, surname, date and place of birth of holder.\" (Sample, Unconfirmed: expert)"
+    },
+    {
+     "type": "Birth or baptismal certificate",
+     "who": "each_applicant",
+     "quote": "IMM 5533 (09-2022), canada.ca PDF dated 2022-09-21, p. 6, Part B, item 1: \"Birth certificates or baptismal certificates for yourself (and all your dependents, if applicable – whether they are accompanying you to Canada or not).\" (Sample, Unconfirmed: expert)"
+    }
+   ]
+  }
+ }
+}
