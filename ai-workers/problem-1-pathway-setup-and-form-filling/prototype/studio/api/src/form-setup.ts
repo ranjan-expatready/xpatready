@@ -143,7 +143,8 @@ const fromData = (): Record<string, FormSetup> => {
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps.
- *  The configured checkpoint sets up from its forms exactly the combinations this table holds (api/src/demo.ts). */
+ *  The configured checkpoint sets up from its forms exactly the combinations this table holds
+ *  (features/checkpoint/060-sections-from-forms.ts). */
 export const FORM_SETUP: Record<string, FormSetup> = {
   "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
   "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true,

@@ -13,9 +13,10 @@
 //   zsh studio/tools/isolated.sh accept 4475 start
 //   tsx studio/tests/runtime/setup_visitor_visa.ts 4475 xr_studio_accept
 //   tsx studio/acceptance/C11.1.test.ts 4475 xr_studio_accept
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { TABS } from "../contracts/workspace.ts";
+import { planted, tsFiles } from "../tests/lib/ts-files.ts";
 import { AUTHOR, pack2, run } from "./lib/pack2.ts";
 import { walker } from "./lib/browser.ts";
 
@@ -37,7 +38,10 @@ run(async () => {
   const STUDIO = join(import.meta.dirname, "..");
 
   // ---------------------------------------------------------------- 1. gone from the API and the web app
-  const api = readdirSync(join(STUDIO, "api", "src")).filter((f) => f.endsWith(".ts")).flatMap((f) => [...readFileSync(join(STUDIO, "api", "src", f), "utf8").matchAll(/@(?:Get|Post|Put|Patch|Delete|Controller)\("([^"]*)"\)/g)].map((m) => `${f}: ${m[1]}`));
+  // B120: api/src's subfolders too.
+  const routesIn = (dir: string) => tsFiles(dir).flatMap((f) => [...readFileSync(join(dir, f), "utf8").matchAll(/@(?:Get|Post|Put|Patch|Delete|Controller)\("([^"]*)"\)/g)].map((m) => `${f}: ${m[1]}`));
+  const api = routesIn(join(STUDIO, "api", "src"));
+  ok("C11.1 fail (B120): a capture route planted in a subfolder is caught", routesIn(planted({ "features/x/planted.ts": '@Post("captures")' })).some((r) => GONE.test(r.split(": ")[1])));
   ok("C11.1 pass: no API route serves capture, pairing, the extension, screen maps or online forms (read from the controllers)", api.length > 50 && !api.some((r) => GONE.test(r.split(": ")[1])), api.filter((r) => GONE.test(r.split(": ")[1])));
   const routes = [...readFileSync(join(STUDIO, "web", "src", "App.tsx"), "utf8").matchAll(/path="([^"]+)"/g)].map((m) => m[1]);
   ok("C11.1 pass: no web page serves them (App.tsx routes)", routes.length > 10 && !routes.some((r) => GONE.test(r)), routes.filter((r) => GONE.test(r)));
