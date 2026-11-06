@@ -91,6 +91,9 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   await row(page, 0).getByRole("button", { name: "Remove this comparison" }).last().click();
   await page.waitForTimeout(800);
   ok("break B1: a comparison's bin removes it and saves nothing", (await dialog(page).count()) === 1 && (await row(page, 0).locator('input[aria-label="Field"]').count()) === 2 && (await gates()).version === before.version);
+  await row(page, 1).locator("input").first().press("Enter");
+  await page.waitForTimeout(800);
+  ok("re-review N1: Enter in gate 2's label removes nothing from gate 1's rule and saves nothing", (await row(page, 0).locator('input[aria-label="Field"]').count()) === 2 && (await gates()).version === before.version && (await dialog(page).count()) === 1);
   await page.locator("[data-gate-add]").click();
   await page.waitForTimeout(800);
   ok("break B1: Add a gate saves nothing, so the new row shows no refusal before Save", (await dialog(page).count()) === 1 && !/Give the gate a label/.test(await dialog(page).innerText()) && (await gates()).version === before.version);
@@ -100,7 +103,7 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   ok("break M1: 'is' with no value is said on the row", (await row(page, 2).locator("[data-empty-value]").count()) === 1);
   await save(page);
   await page.getByText("Give the gate a label").first().waitFor();
-  ok("break M1 fail: the save refuses the empty value on the gate's rule", /compares person\.passport_number with an empty value/.test(await dialog(page).innerText()));
+  ok("break M1 fail: the save refuses the empty value on the gate's rule", /compares "Passport number" with an empty value/i.test(await dialog(page).innerText()));
   ok("break M1 fail: 'is one of' with no value is refused by route too", (await call("PUT", `/combinations/${vv}/eligibility-gates`, { gates: [...before.gates, { key: "gate.x", label: "X", condition: { op: "in", field: "person.passport_number", value: [] } }], judgement: before.judgement, version: before.version })).status === 400);
   await row(page, 2).locator('input[aria-label="Field"]').first().fill("");
   await row(page, 2).locator('input[aria-label="Field"]').first().blur();

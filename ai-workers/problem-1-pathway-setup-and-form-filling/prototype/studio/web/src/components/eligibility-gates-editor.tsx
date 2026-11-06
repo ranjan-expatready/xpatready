@@ -53,7 +53,7 @@ export function EligibilityGatesSection({ id }: { id: string }) {
   const fields = useLibraryFields();
   const [open, setOpen] = React.useState(false);
   const editRef = React.useRef<HTMLButtonElement>(null);
-  const head = <h2 id="eligibility-head" className="flex items-center gap-2 font-semibold">Eligibility rules (staff check) <Tip tip={TIP} focusable><span aria-label={TIP} role="img" className="inline-flex size-4 cursor-help items-center justify-center rounded-full border border-border-strong text-[10px] text-text-muted">i</span></Tip></h2>;
+  const head = <h2 id="eligibility-head" className="flex items-center gap-2 font-semibold">Eligibility rules (staff check) <Tip tip={TIP} focusable><span aria-label="About eligibility rules" role="img" className="inline-flex size-4 cursor-help items-center justify-center rounded-full border border-border-strong text-[10px] text-text-muted">i</span></Tip></h2>;
   const box = "space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm";
   if (g.isLoading || o.isLoading) return <section aria-labelledby="eligibility-head" className={box} data-eligibility-gates="loading">{head}<div className="h-4 w-2/3 animate-pulse rounded bg-text/10" /><div className="h-4 w-1/2 animate-pulse rounded bg-text/10" /></section>;
   if (g.isError || !g.data) return <section aria-labelledby="eligibility-head" className={box} data-eligibility-gates="error">{head}<Notice tone="danger" title="The eligibility rules could not be loaded" action={<Button size="sm" variant="ghost" onClick={() => void g.refetch()}>Try again</Button>}>{(g.error as Error | null)?.message ?? "No answer from the studio."}</Notice></section>;
@@ -162,7 +162,8 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
     <Dialog open wide guard onOpenChange={(o) => { if (!o) close(); }} title="Edit the eligibility rules"
       description="Gates are rules the answers on file settle, checked for each person. Anything only an officer can weigh (money, health, ties, leaving Canada) goes under Officer's judgement. Saving changes the draft; a content reviewer signs it and an approver releases it."
       footer={<><Button variant="ghost" onClick={() => { if (!dirty || window.confirm("Discard your unsaved changes?")) close(); }}>Cancel</Button><Button busy={busy} onClick={() => void save()} data-eligibility-save>Save the eligibility rules</Button></>}>
-      <form className="space-y-5" aria-label="Eligibility rules" onChangeCapture={() => setDirty(true)} onSubmit={(e) => e.preventDefault() /* break B1: a button inside (Add a comparison, a bin, Add a gate) never saves; only Save does */} data-editor="eligibility">
+      {/* Re-review N1: a group, not a <form>: inside a form, Enter in a field "clicks" its first button (a comparison's bin), and every button there submits. Only Save saves. */}
+      <div role="group" className="space-y-5" aria-label="Eligibility rules" onChangeCapture={() => setDirty(true)} data-editor="eligibility">
         {stale ? <Notice tone="warn" title="Changed by someone else" action={<Button size="sm" variant="outline" onClick={reload}>Reload</Button>}>{stale}</Notice> : null}
         {top ? <Notice tone="danger" title="Not saved">{top}</Notice> : null}
         {Object.keys(errors).length ? <Notice tone="danger" title="Some details need fixing">{others.length ? others.join(" ") : "Each one is said under its field."}</Notice> : null}
@@ -210,7 +211,7 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
         <Field label="Disclaimer" hint="Shown on every check, never dismissible. Leave it empty to use the Sample default." error={errors.disclaimer}>
           <Textarea value={disclaimer} onChange={(e) => { setDirty(true); setDisclaimer(e.target.value); }} placeholder="Empty: the Sample default disclaimer goes into the release" />
         </Field>
-      </form>
+      </div>
     </Dialog>
   );
 }

@@ -85,7 +85,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
 
   React.useEffect(() => {
     if (!value) { setErrors([]); return; }
-    const h = setTimeout(() => { api("/conditions/check", { method: "POST", json: { condition: value } }).then((r) => setErrors([...r.errors, ...(gate && value?.subjectKind && value.subjectKind !== "PERSON" ? ["a gate is checked for each person: subjectKind must be PERSON"] : [])])).catch((e) => setErrors([e.message])); }, 250);
+    const h = setTimeout(() => { api("/conditions/check", { method: "POST", json: { condition: value } }).then((r) => setErrors([...r.errors, ...(gate && value?.subjectKind && value.subjectKind !== "PERSON" ? ["an eligibility gate is checked for each person: use the simple editor, or set it to each person (PERSON)"] : [])])).catch((e) => setErrors([e.message])); }, 250);
     return () => clearTimeout(h);
   }, [JSON.stringify(value)]);
 

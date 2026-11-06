@@ -61,7 +61,9 @@ export class EligibilityGates {
       this.db.derivedField.findMany({ where: { workspaceId: c.workspaceId }, select: { derivedKey: true } }),
     ]);
     const checked = checkGates(b, new Map(fields.filter((f) => f.status !== "RETIRED").map((f) => [f.canonicalFieldKey, f.valueType])), new Set(derived.map((d) => d.derivedKey)));
-    const empty = b.gates.flatMap((g, i) => emptyValues(g.condition).map((f) => ({ field: `gates.${i}.condition`, message: `The rule compares ${f} with an empty value, which no answer meets: give the value, or choose "is answered".` })));
+    // Re-review minor 1: the question's name, not its key.
+    const words = new Map((await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true, label: true } })).filter((f) => f.label).map((f) => [f.canonicalFieldKey, `"${f.label}"`]));
+    const empty = b.gates.flatMap((g, i) => emptyValues(g.condition).map((f) => ({ field: `gates.${i}.condition`, message: `The rule compares ${words.get(f) ?? f} with an empty value, which no answer meets: give the value, or choose "is answered".` })));
     const errors = [...checked.errors, ...empty.filter((e) => !checked.errors.some((x) => x.field === e.field))];
     if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors.map((e) => e.message).join(" "), errors }, HttpStatus.BAD_REQUEST);
     const before = c.eligibility as StoredEligibility | null;
