@@ -21,13 +21,17 @@ import { join } from "node:path";
 import { ROOT, STUDIO, type Db } from "./core.ts";
 
 export const VALIDATED_FILE = "samples/validated-imm5257.json";
-/** QA-285: the env var naming the local folder that holds the validated PDFs, and its default (outside git). */
+/** QA-285: the env var naming the local folder that holds the validated PDFs (an absolute path: a relative one is read
+ *  from each process's own working folder, so the server and a test could read different folders), and its default
+ *  (outside git). */
 export const VALIDATED_DIR_ENV = "STUDIO_VALIDATED_DIR";
 export const validatedDir = (env: NodeJS.ProcessEnv = process.env) => env[VALIDATED_DIR_ENV]?.trim() || join(ROOT, ".tools", "solution-1-prototype", "validated-imm5257");
 type Fact = { box: string; fact: string; about: string; row: number | null; value: unknown };
 /** One copy's saved read-back, as the upload door recorded it on the Mac. */
 export type SavedReadBack = { person: string; family_facts_hash: string; values_sha256: string; copy_sha256: string; validated_sha256: string; file?: string; read_back: { ok: boolean; validation?: { passed?: boolean; flag?: string | null; date_last_validated?: string | null } } & Record<string, unknown>; read_at: string; source: string };
-type SavedFile = { label: string; basis: string; copies: SavedReadBack[] };
+/** case_reference and form: the one Sample case and the form the read-backs belong to (QA-285: the kept-on-the-Mac words
+ *  are said only on that case's copies of that form, never on a real case with the same answers). */
+type SavedFile = { label: string; basis: string; case_reference?: string; form?: string; copies: SavedReadBack[] };
 
 /** The facts hash of a copy with each person named by their name on the case (engine/runtime/forms.ts inputHash, the
  *  same order and fields), so the same family's same answers give the same hash on every load. */
@@ -82,11 +86,14 @@ export function localValidatedFile(dir: string, s: Pick<SavedReadBack, "person" 
 }
 
 /** QA-285: for a copy with no validated copy read back here, the words that its validated file is kept on the Mac
- *  (Sample), only when the saved read-back is this copy's (it passed the form's own Validate; the same family facts and
+ *  (Sample), only on the Sample case's copies of the saved form (its case reference and form, from the saved file) and
+ *  only when the saved read-back is this copy's (it passed the form's own Validate; the same family facts and
  *  the same written values, as the loader checks) and the local folder has no file for it. Read when the copy is shown
  *  (fill-case.ts copyOf and file): nothing is stored, and a copy with other answers or values never gets the words. */
-export function keptOnMacWords(copy: { subjectId: string; path: string | null; snapshot: { factsJson: unknown } | null }, nameOf: (about: string) => string, dir = validatedDir(), saved = savedReadBacks()): string | null {
-  const person = nameOf(copy.subjectId), s = saved?.copies.find((x) => x.person === person);
+export function keptOnMacWords(copy: { subjectId: string; formNumber: string; path: string | null; snapshot: { factsJson: unknown } | null }, caseReference: string, nameOf: (about: string) => string, dir = validatedDir(), saved = savedReadBacks()): string | null {
+  // Only the Sample case's copies of the form the saved file names (both read from the saved file, never assumed).
+  if (!saved?.case_reference || !saved.form || caseReference !== saved.case_reference || copy.formNumber !== saved.form) return null;
+  const person = nameOf(copy.subjectId), s = saved.copies.find((x) => x.person === person);
   if (!s || s.read_back?.ok !== true || s.read_back?.validation?.passed !== true) return null;
   if (s.family_facts_hash !== familyFactsHash(((copy.snapshot?.factsJson as { facts?: Fact[] } | null)?.facts ?? []), nameOf)) return null;
   const values = valuesHash(copy.path);

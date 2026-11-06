@@ -1,6 +1,8 @@
 {
  "label": "Sample: the read-backs of the one Sample family's four IMM 5257 copies, validated in Adobe (B99, C10.1 row 12b). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
  "basis": "Each copy was made by the product from the configured checkpoint, validated with the form's own Validate button in Adobe on the Mac (never simulated), saved, and read back through the product's upload door. The checkpoint loader (api/src/sample-validated.ts) writes a validated_copy row only when a copy's family facts hash and the hash of the values it writes equal the ones here.",
+ "case_reference": "SAMPLE-VV-FAMILY-1",
+ "form": "IMM 5257",
  "copies": [
   {
    "person": "Child (Sample)",

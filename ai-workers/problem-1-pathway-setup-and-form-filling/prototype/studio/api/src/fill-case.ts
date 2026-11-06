@@ -156,7 +156,7 @@ export class CaseForms implements OnModuleInit {
     const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.confirmed)
       .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
     const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply, gateOf: (fact) => { const g = gateOf(s.placements as GatePlacement[], fact); return g ? labels.get(g) ?? g : undefined; } };
-    const items = await this.itemChannels(c.id), nameOf = nameOfPeople(people);
+    const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
     const forms: CaseForm[] = [];
     for (const p of people.filter((x) => x.role !== "case")) {
       for (const form of [...pdf].sort()) {
@@ -189,13 +189,13 @@ export class CaseForms implements OnModuleInit {
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
   /** `notForFiling`: for a copy made before C11.6 recorded its stamp (`result_json.not_for_filing`), whether its release
    *  line was Online when it was made (the same fallback as `lock`). */
-  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown; inputHash: string }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false, nameOf?: (about: string) => string): FormCopy {
+  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown; inputHash: string }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = [], notForFiling = false, nameOf?: { caseReference: string; of: (about: string) => string }): FormCopy {
     // C-10: a validated copy is current while the form's facts are what they were when it was read back.
     const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && formPassed(v) && v.factsHash === inputHash(today);
     // QA-285: a validated file kept elsewhere (the checkpoint's Sample, kept on the Mac: api/src/sample-validated.ts) is
     // named in words while the form's facts are the ones validated; it is never a validated copy here (nothing to lock,
     // file or download as validated).
-    const keptElsewhere = !current && nameOf && x.status === "GENERATED" && x.snapshot.inputHash === inputHash(today) ? keptOnMacWords(x, nameOf) : null;
+    const keptElsewhere = !current && nameOf && x.status === "GENERATED" && x.snapshot.inputHash === inputHash(today) ? keptOnMacWords(x, nameOf.caseReference, nameOf.of) : null;
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
@@ -309,7 +309,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const labels = new Map(view.sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
-    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), channelIn(s, x.formNumber) === "ONLINE", nameOfPeople(people));
+    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), channelIn(s, x.formNumber) === "ONLINE", { caseReference: c.reference, of: nameOfPeople(people) });
   }
 
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
@@ -441,7 +441,7 @@ export class CaseForms implements OnModuleInit {
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
     const form = x.formNumber.replace(/\s+/g, ""), s = this.runtime.snapshotOf(c);
     const v = x.validated[0], channel = chosen(s, await this.itemChannels(c.id), x.formNumber, x.subjectId);
-    const elsewhere = v && formPassed(v) ? null : keptOnMacWords(x, nameOfPeople(this.runtime.peopleOf(c)));
+    const elsewhere = v && formPassed(v) ? null : keptOnMacWords(x, c.reference, nameOfPeople(this.runtime.peopleOf(c)));
     if (!original && ((v && formPassed(v)) || elsewhere) && needsValidate(x.formNumber, channel)) { // the same rule as `lock` (a barcode form on PDF upload or paper; QA-165)
       const { answers, rows } = await this.runtime.state(c);
       const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId), now = inputHash(cov?.facts ?? []);

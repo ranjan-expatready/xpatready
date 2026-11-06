@@ -36,5 +36,6 @@ if (missing.length || out.length !== applicants) { console.error(`Not written: n
 writeFileSync(join(STUDIO, VALIDATED_FILE), JSON.stringify({
   label: "Sample: the read-backs of the one Sample family's four IMM 5257 copies, validated in Adobe (B99, C10.1 row 12b). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
   basis: "Each copy was made by the product from the configured checkpoint, validated with the form's own Validate button in Adobe on the Mac (never simulated), saved, and read back through the product's upload door. The checkpoint loader (api/src/sample-validated.ts) writes a validated_copy row only when a copy's family facts hash and the hash of the values it writes equal the ones here.",
+  case_reference: SAMPLE_CASE.reference, form: "IMM 5257",
   copies: out.sort((a, b) => a.person.localeCompare(b.person)) }, null, 1) + "\n");
 console.log(JSON.stringify({ written: out.length, file: VALIDATED_FILE, people: out.map((x) => x.person) }));
