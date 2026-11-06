@@ -127,8 +127,12 @@ const route = async (method, p, actor, body) => {
     await td.getByLabel("Reason").fill("Sample: the first representative leaves the firm");
     await td.getByRole("button", { name: "Change representative" }).click();
     await td.getByText("A new IMM 5476 is needed").waitFor(T);
-    const dt = await td.innerText();
-    ok("J-A2 [2.5]: the history keeps the earlier representative, who changed it and why", /Sample: the first representative leaves the firm/.test(dt) && /R000002/.test(dt), dt.replace(/\s+/g, " ").slice(0, 300));
+    // Review round 3 m2: read the History list itself, not the dialog's other text.
+    const hist = (await td.locator("section[aria-labelledby='t-hist'] li").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim());
+    const earlier = hist.find((t) => /^Representative \(Sample\) Representative of record from .+ to .+ by Representative \(Sample\)/.test(t));
+    const now = hist.find((t) => /^Second representative \(Sample\) Representative of record from .+ by Representative \(Sample\) · now/.test(t));
+    ok("J-A2 [2.5]: the history keeps the earlier representative's ended line, who changed it and why", !!earlier && /Sample: the first representative leaves the firm/.test(earlier), hist);
+    ok("J-A2 [2.5]: the history shows the new representative of record as current, named by the firm admin", !!now, hist);
     await shot("case-team-history");
     await axe("Case team dialog after the change");
     await r.keyboard.press("Escape");
