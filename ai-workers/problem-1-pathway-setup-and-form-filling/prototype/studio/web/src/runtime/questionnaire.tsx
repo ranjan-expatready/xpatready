@@ -13,13 +13,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
-import type { EmployerLink } from "./employer";
+import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
-export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
+/** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
+export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean };
+/** B115 (P-319): a role a person may add to this case, from its pinned release; has = how many the case has now. */
+export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
 export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
-export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; team?: CaseTeamLine; employer_link?: EmployerLink };
+export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
 export type View = QuestionnaireView & { case: CaseInfo };
 type Section = ViewSection;
 type Question = ViewQuestion;
@@ -27,7 +30,7 @@ type Answer = ViewAnswer;
 type SaveResult = { answer: { id: string; problems: string[] }; fills: Question["fills"]; message: string };
 type Mode = "sqr" | "agent";
 
-const ROLE_WORDS: Record<CasePerson["role"], string> = { case: "the whole application", principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
+const ROLE_WORDS: Record<string, string> = { case: "the whole application", principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
 const keyOf = (q: Question, row?: string) => `${q.subjectId}|${q.fact}${row ? `|${row}` : ""}`;
 const cellAnswer = (q: Question, row?: string) => (row ? q.rows.find((r) => r.row === row)?.answer ?? null : q.answer);
 
@@ -527,7 +530,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role]})` : " (you)"}.</>}
+        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
 
@@ -622,7 +625,9 @@ function ConfirmPill({ a }: { a: Answer }) {
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+/** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
+const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -707,7 +712,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}

@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { ModePill, StatusPill } from "@/pages/combination";
 import { cn } from "@/lib/utils";
 import type { FormFieldsView } from "../../../contracts/screen02";
+import { OwnQuestions } from "@/components/own-questions";
 
 export const PERSON: Record<string, string> = { form_subject: "the form's subject", subject_spouse_or_partner: "the subject's spouse or partner", subject_parent_1: "the subject's first parent", subject_parent_2: "the subject's second parent", subject_child: "the subject's child", subject_sibling: "the subject's sibling", representative: "the representative", none: "the application" };
 /** DV-d1-3 (QA-94): a role's system key written inside stored prose ("holding the role subject_spouse_or_partner") is
@@ -258,6 +259,7 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
   const open_ = q.data.fields.filter((f) => f.outcome === "unresolved" || unanswered(f));
   const decided = q.data.fields.filter((f) => !unanswered(f) && (f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT")));
   return (
+    <>
     <section aria-labelledby="ff-decide" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4" data-form-field-decisions>
       <div><h2 id="ff-decide" ref={heading} tabIndex={-1} className="font-semibold outline-none">Form fields with no decision ({open_.length})</h2>
         <p className="text-sm text-text-muted">Each form field is mapped to a shared field, marked "not a fact" (nothing is filled from case facts), or "filled by hand" with a reason. {open_.some((f) => !f.carried) ? "Release waits until every new one is decided." : open_.length ? "These come from an earlier release: decide them when you can." : "Every form field has a decision."}</p></div>
@@ -278,6 +280,8 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
       {open_.length > 50 ? <p className="text-xs text-text-muted">Showing 50 of {open_.length}.</p> : null}
       {decided.length ? <p className="text-xs text-text-muted">{decided.length} decided in this draft.</p> : null}
     </section>
+    <OwnQuestions editionId={q.data.edition.id} />
+    </>
   );
 }
 

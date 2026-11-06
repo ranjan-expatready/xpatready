@@ -1,0 +1,479 @@
+{
+  "about": "B78 (C10.1 row 7; P-343 (10), P-319): the names a person gives the 59 sections (29 from B78; 30 from B79b for Family sponsorship's IMM 5532 and IMM 5604, 15 each) the rules pass holds because it read no printed heading over their form fields. The configured checkpoint's loader gives each through the same naming edit a person uses on To review (POST /api/review/proposals/decide, action edit). Each entry is one section: its form edition and its first form field. A name the library already holds lands on that section. A section with no entry here stays waiting on To review and is listed on row 7.",
+  "basis": "printed: the words the form itself prints above or beside these form fields, read from its XFA template on 5 Nov 2026 (official-sources/ircc/forms, IMM 5476 (11-2021) from its previous-editions folder; page is the page of the form's template that prints the words; the banner is on the page but not in the part the heading reader looks in). sample: a person's wording built from the form's own captions, Sample, Unconfirmed: expert. IMM 5532 (02-2021)'s template is one flowing page, so it gives no page breaks: its pages are from IMM 5533 (09-2022) p. 10 (\"Page 3, question 9 (Declaration of sponsor)\", \"Page 4, question 5 (Declaration of applicant)\"); the yes/no group and tables take the form's title printed on page 1; Part C's page 5 is inferred (it follows Part B's page-4 declaration).",
+  "read_on": "2026-11-05",
+  "sections": [
+    {
+      "form": "IMM 1294 (06-2026)",
+      "first_field": "form1[0].Page3[0].PhoneNumbers[0].Phone[0].Type[0]",
+      "name": "Contact information",
+      "printed": "CONTACT INFORMATION",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1294 (06-2026)",
+      "first_field": "form1[0].Page3[0].FaxEmail[0].Phone[0].CanadaUS[0]",
+      "name": "Contact information",
+      "printed": "CONTACT INFORMATION",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1294 (06-2026)",
+      "first_field": "form1[0].Page3[0].Contacts_Row1[0].tuition[0].amount[0]",
+      "name": "Details of intended study in Canada",
+      "printed": "DETAILS OF INTENDED STUDY IN CANADA",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1294 (06-2026)",
+      "first_field": "form1[0].Page4[0].Consent0[0].Choice[0]",
+      "name": "Signature",
+      "printed": "SIGNATURE",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1294 (06-2026)",
+      "first_field": "form1[0].Page4[0].TextField2[0]",
+      "name": "Signature",
+      "printed": "SIGNATURE",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5257 (09-2023)",
+      "first_field": "form1[0].Page3[0].Signature[0].Consent0[0].Choice[0]",
+      "name": "Signature",
+      "printed": "SIGNATURE",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5257 SCH1 (09-2023)",
+      "first_field": "Schedule1[0].PrincipalApplicant[0]",
+      "name": "Indicate whether you are",
+      "printed": "*Indicate whether you are",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5257 SCH1 (09-2023)",
+      "first_field": "Schedule1[0].FamilyName[0]",
+      "name": "Full name",
+      "printed": "Full name",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5257 SCH1 (09-2023)",
+      "first_field": "Schedule1[0].ApplicantBirthDate[0].Year[0]",
+      "name": "Date of birth and UCI",
+      "printed": "UCI",
+      "page": 1,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 5257 SCH1 (09-2023)",
+      "first_field": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]",
+      "name": "Military service",
+      "printed": "Military Service",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5257 SCH1 (09-2023)",
+      "first_field": "Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]",
+      "name": "Ill treatment of prisoners or civilians",
+      "printed": "Have you ever witnessed or participated in the ill treatment of prisoners or civilians",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5409 (01-2023)",
+      "first_field": "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]",
+      "name": "Statutory declaration of common-law union",
+      "printed": "STATUTORY DECLARATION OF COMMON-LAW UNION",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5409 (01-2023)",
+      "first_field": "IMM_5409[0].Page1[0].Section4[0].TextField2[0]",
+      "name": "Other documentary evidence",
+      "printed": "what other documentary evidence do you have",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5475 (12-2022)",
+      "first_field": "IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]",
+      "name": "Your full name, date of birth and application",
+      "printed": "1. Your full name",
+      "page": 1,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 5475 (12-2022)",
+      "first_field": "IMM_5475[0].Page1[0].Five[0].AppFamily[0]",
+      "name": "Your designated individual",
+      "printed": "5. Your designated individual's full name",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5476 (11-2021)",
+      "first_field": "IMM_5476[0].Page1[0].appoint[0]",
+      "name": "Appointing or cancelling a representative",
+      "printed": "I am:",
+      "page": 1,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 5476 (11-2021)",
+      "first_field": "IMM_5476[0].Page1[0].cancel[0]",
+      "name": "Appointing or cancelling a representative",
+      "printed": "I am:",
+      "page": 1,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 5646 (01-2023)",
+      "first_field": "IMM_5646[0].Page1[0].subCustodian[0].FamilyName[0]",
+      "name": "Custodian information",
+      "printed": "CUSTODIAN INFORMATION",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5646 (01-2023)",
+      "first_field": "IMM_5646[0].Page1[0].subDeclaration[0].nameCustodian[0]",
+      "name": "Custodianship declaration",
+      "printed": "CUSTODIANSHIP DECLARATION - CUSTODIAN FOR MINORS STUDYING IN CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].UCIClientID[0]",
+      "name": "Personal details",
+      "printed": "PERSONAL DETAILS",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page1[0].MaritalStatus[0].Current[0].MaritalStatus[0]",
+      "name": "Personal details",
+      "printed": "PERSONAL DETAILS (CONTINUED)",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page2[0].Languages[0].nativeLang[0]",
+      "name": "Language(s)",
+      "printed": "LANGUAGE(S)",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page2[0].Passport[0].PassportNum[0]",
+      "name": "Passport",
+      "printed": "PASSPORT",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page2[0].ContactInformation[0].Mailing[0].AddrLine1[0].POBox[0]",
+      "name": "Contact information",
+      "printed": "CONTACT INFORMATION",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page3[0].ComingIntoCda[0].OrigEntry[0].DateLastEntry[0]",
+      "name": "Coming into Canada",
+      "printed": "COMING INTO CANADA",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page3[0].Education[0].EducationIndicator[0]",
+      "name": "Education",
+      "printed": "EDUCATION",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page3[0].Employment[0].EmpRec1[0].Line1[0].From[0].YYYY[0]",
+      "name": "Employment",
+      "printed": "EMPLOYMENT",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page4[0].EmpRec2[0].Line1[0].From[0].YYYY[0]",
+      "name": "Employment",
+      "printed": "EMPLOYMENT (CONTINUED)",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5710 (09-2023)",
+      "first_field": "form1[0].Page4[0].EmpRec3[0].Line1[0].From[0].YYYY[0]",
+      "name": "Employment",
+      "printed": "EMPLOYMENT (CONTINUED)",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].familyNameSponsor[0]",
+      "name": "Personal information about sponsor",
+      "printed": "PERSONAL INFORMATION ABOUT SPONSOR",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].givenNameSponsor[0]",
+      "name": "Personal information about sponsor",
+      "printed": "PERSONAL INFORMATION ABOUT SPONSOR",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].DOBSponsor[0]",
+      "name": "Personal information about sponsor",
+      "printed": "PERSONAL INFORMATION ABOUT SPONSOR",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].clientIDSponsor[0]",
+      "name": "Personal information about sponsor",
+      "printed": "PERSONAL INFORMATION ABOUT SPONSOR",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].familyNamePartner[0]",
+      "name": "Personal information about spouse or partner being sponsored",
+      "printed": "PERSONAL INFORMATION ABOUT SPOUSE OR PARTNER BEING SPONSORED (PRINCIPAL APPLICANT)",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].givenNamePartner[0]",
+      "name": "Personal information about spouse or partner being sponsored",
+      "printed": "PERSONAL INFORMATION ABOUT SPOUSE OR PARTNER BEING SPONSORED (PRINCIPAL APPLICANT)",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].DOBPartner[0]",
+      "name": "Personal information about spouse or partner being sponsored",
+      "printed": "PERSONAL INFORMATION ABOUT SPOUSE OR PARTNER BEING SPONSORED (PRINCIPAL APPLICANT)",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].clientIDPartner[0]",
+      "name": "Personal information about spouse or partner being sponsored",
+      "printed": "PERSONAL INFORMATION ABOUT SPOUSE OR PARTNER BEING SPONSORED (PRINCIPAL APPLICANT)",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].Table1[0].Row2[0].Cell2[0]",
+      "name": "Relationship information and sponsorship evaluation",
+      "printed": "RELATIONSHIP INFORMATION AND SPONSORSHIP EVALUATION",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].yesNo[3]",
+      "name": "Relationship information and sponsorship evaluation",
+      "printed": "RELATIONSHIP INFORMATION AND SPONSORSHIP EVALUATION",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].lastLive[1]",
+      "name": "Information about relationship",
+      "printed": "PART C - INFORMATION ABOUT RELATIONSHIP - TO BE FILLED OUT BY THE SPONSOR AND THE PRINCIPAL APPLICANT",
+      "page": 5,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].signatureSponsor[0]",
+      "name": "Declaration of sponsor",
+      "printed": "9. Declaration of sponsor",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].dateSignSponsor[0]",
+      "name": "Declaration of sponsor",
+      "printed": "9. Declaration of sponsor",
+      "page": 3,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].signatureApplicant[0]",
+      "name": "Declaration of applicant",
+      "printed": "5. Declaration of applicant",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5532 (02-2021)",
+      "first_field": "IMM_5532[0].page1[0].dateSignApplicant[0]",
+      "name": "Declaration of applicant",
+      "printed": "5. Declaration of applicant",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].forCICUseOnly[0].fileNo[0]",
+      "name": "For office use only",
+      "printed": "FOR OFFICE USE ONLY",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].IName[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].childName[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].childBirthDate[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].parentGuardian1[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].relationship1[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].parentGuardian2[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].relationiship2[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].otherName[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].otherRelationship[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].signedDate[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].telephoneNumber[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].notaryName[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].notaryStamp[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 5604 (02-2023)",
+      "first_field": "IMM_5604[0].Page1[0].notarySignedDate[0]",
+      "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
+      "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
+      "page": 1,
+      "basis": "printed"
+    }
+  ]
+}

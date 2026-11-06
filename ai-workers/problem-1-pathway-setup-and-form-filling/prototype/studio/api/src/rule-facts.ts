@@ -6,6 +6,7 @@
 // any library item (proposals.ts LANDERS.field). No model call, US$0. Every value stays Sample (AGENTS rule 4).
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Snapshot } from "../../engine/snapshot.ts";
 import { canonical } from "../../../contracts/rules.ts";
@@ -14,7 +15,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
 import { insertProposals } from "./proposals.ts";
 import { answerValues } from "./answer-values.ts";
-import { keyFor } from "./library-changes.ts";
+import { keyFor, refuseTakingOverReaders } from "./library-changes.ts";
 import { LibrarySources } from "./library-sources.ts";
 
 /** A rule that reads facts: where it sits, its key there, its sentence and its condition tree. */
@@ -146,7 +147,7 @@ export class RuleFacts {
       buildSnapshot(this.db, c.workspaceId, c.id, "draft"),
       this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } }),
       this.db.derivedField.findMany({ where: { workspaceId: c.workspaceId }, select: { derivedKey: true } }),
-      this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "field", status: "waiting", step: "rule_fact" }, select: { id: true, work: true } }),
+      this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], not: Prisma.AnyNull } }, select: { id: true, work: true } }), // B82: a checklist's reading proposes these too, once per library
     ]);
     const rules = rulesOf(snapshot);
     const library = new Set(fields.map((f) => f.canonicalFieldKey));
@@ -178,6 +179,7 @@ export class RuleFacts {
     if (!factsRead(rule!.tree).includes(b.fact)) fail(`${rule!.sentence.split(":")[0]} does not read ${b.fact}: name the rule that needs it.`);
     const ruleValues = ruleValuesKnown(rules.filter((r) => factsRead(r.tree).includes(b.fact)), b.fact, values);
     if (library.has(b.fact)) fail(`${b.fact} is already in the library: the rule can use it as it is.`, HttpStatus.CONFLICT);
+    await refuseTakingOverReaders(this.db, c.workspaceId, b.fact, c.id, b.rule); // Breaker M6 on B83
     // MA3 (review c36 r3): a retired field keeps its key, so it cannot be added again: it is restored.
     if (await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: b.fact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } }))
       fail(`${b.fact} is a retired library field: restore it in Library › Fields, and the rule can read it again.`, HttpStatus.CONFLICT);
@@ -193,7 +195,7 @@ export class RuleFacts {
     // per combination and fact, so a second add waits, then sees the first and is refused (409).
     const { proposalId } = await this.db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${b.fact}`}))`;
-    if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "field", status: "waiting", step: "rule_fact", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
+    if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
       fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });

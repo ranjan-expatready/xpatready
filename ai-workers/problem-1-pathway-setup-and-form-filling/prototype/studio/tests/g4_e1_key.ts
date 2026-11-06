@@ -12,7 +12,10 @@ const STUDIO = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const e1 = JSON.parse(readFileSync(join(STUDIO, "..", "evidence-lane", "E1", "imm5257", "values.complete.json"), "utf8")).values as Record<string, string>;
 export const sample = JSON.parse(readFileSync(join(STUDIO, "samples", "answer-key-families.json"), "utf8")).families[0];
 
-/** Where today's IMM 5257 map gives something other than E1's checked fill. Each is an open point for the immigration
+/** Where today's IMM 5257 map gives something other than E1's checked fill. B99 (C10.1 row 12b, #1123): the applying-from
+ *  country and the residential address are no longer amended: the product now leaves them blank when "Same as …?" is Yes,
+ *  as E1 did and as the form's own Validate requires (its validateCWA and validateResidentialAddress empty the Yes when that
+ *  row holds anything; engine/form-values.ts sameAsLeavesRowEmpty), so the key is E1's checked value there again. Each is an open point for the immigration
  *  expert (the PR's Questions); the key holds what the map gives today, and the E1 run below fails on exactly these. */
 export const AMENDED: Record<string, { value: string; why: string }> = {
   "Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": { value: "", why: "E1 writes N; no question asks other names yet (C7.2)" },
@@ -24,10 +27,7 @@ export const AMENDED: Record<string, { value: string; why: string }> = {
   "Page3[0].BackgroundInfo[0].Choice[0]": { value: "", why: "E1 writes N (tuberculosis question); the map has no fact on this box" },
   "Page3[0].PageWrapper[0].GovPosition[0].Choice[0]": { value: "", why: "E1 writes N (government position); the map has no fact on this box" },
   "Page3[0].DetailsOfVisit[0].Contacts_Row1[0].AddressInCanada[0].AddressInCanada[0]": { value: "100 SAMPLE STREET, TORONTO, ON M5V 0A1, Canada", why: "E1 writes \"100 SAMPLE STREET, TORONTO ON M5V 0A1\"; the map's one-line address adds commas and the country" },
-  "Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]": { value: "205", why: "E1 leaves it blank when the country where applying is the country of residence; the map writes it" },
   "Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]": { value: "0", why: "E1 leaves the Canada/US switch unset; the map writes it off" },
-  ...Object.fromEntries(["ResidentialAddressRow1[0].CityTown[0].CityTown[0]", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]", "ResidentialAddressRow2[0].Country[0].Country[0]", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]"]
-    .map((b) => [`Page2[0].ContactInformation[0].contact[0].${b}`, { value: ({ "ResidentialAddressRow1[0].CityTown[0].CityTown[0]": "NEW DELHI", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]": "EXAMPLE ROAD", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]": "12", "ResidentialAddressRow2[0].Country[0].Country[0]": "205", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]": "110001" } as Record<string, string>)[b], why: "E1 leaves the residential address blank when it is the mailing address (Y); the map writes it too" }])),
 };
 
 /** E1's values as they stand (they fail on exactly the AMENDED boxes), and the key: E1 with the amendments. */

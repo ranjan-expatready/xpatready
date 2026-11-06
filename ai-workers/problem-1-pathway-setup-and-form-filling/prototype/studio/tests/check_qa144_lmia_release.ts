@@ -10,6 +10,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { FORM_SETUP } from "../api/src/form-setup.ts";
+/** QA-144 slice 4 (P-319): the combinations set up from their forms are the form setup table's, never a list here. */
+const FROM_FORMS = Object.keys(FORM_SETUP).map((k) => `'${k}'`).join(", ");
 
 const PORT = Number(process.argv[2] ?? 4471), DB = process.argv[3] ?? "xr_studio_b8_lmia";
 let pass = 0, fail = 0;
@@ -50,7 +53,7 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
 
   // Row 7: its forms' sections by rules (no AI), approved by a second person.
   // QA-206 (tech lead on #883): partial exactly while sections the forms print no heading over wait on To review for a name.
-  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true'`);
+  const heldNow = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and coalesce(form_edition, '') not like 'IMM 5645 (%'`); // IMM 5645's are row 9's (B97)
   ok("QA-144 slice 2 row 7: done (partial exactly while sections wait for a name, QA-206), and names With an LMIA among the combinations set up from their forms", r("7").status === (heldNow ? "partial" : "done") && (!heldNow || /held on To review for a person to name/.test(r("7").why ?? "")) && /sections drafted from .*With an LMIA – inside Canada.*approved by the Approver/.test(r("7").shows), r("7"));
   // One rules pass per edition in the workspace (P-138): IMM 5710's is With an LMIA's own; the forms it shares with the
   // Visitor visa reuse that pass, and the placement step reads it for both.
@@ -93,7 +96,9 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
   // there is nothing to unchoose, and it is not chosen at the end either (the invariant R1-m4 guards).
   ok("QA-144 R1-m4 pass: the IRM 0002 fact's section, once chosen on the Visitor visa, is unchosen by the Visitor visa's own step, before With an LMIA's first selection (or was never chosen there)", rfSec !== "" && lmFirst !== "" && (vvAdded === "" ? vvRemoved === "" : vvRemoved !== "" && vvRemoved < lmFirst)
     && n(`select count(*) from sqr_section_selection where combination_id = '${vv}' and section_key = '${rfSec}'`) === 0, { rfSec, vvAdded, vvRemoved, lmFirst });
-  ok("QA-144 R2-m1 fail-guard: the Visitor visa keeps chosen sections (C4.1 can still order them)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3);
+  // QA-144 slice 4 (qa's ruling on #1050, P-314): two are enough for C4.1's order (its pack reads the current last
+  // section); Express Entry's IMM 0008 address parts make the Visitor visa unchoose "Contact information" (review M2).
+  ok("QA-144 R2-m1 fail-guard: the Visitor visa keeps chosen sections (at least two: C4.1 can still order them)", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 2);
 
   // K1 and its list values: a form field no saved answer proposed is filled by hand; IMM 5710's own marital codes.
   ok("QA-144 slice 2 K1 pass: IMM 5710's form fields no saved answer proposed are filled by hand, with the rule's words", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IMM 5710 (%' and m.outcome = 'by_hand' and m.reason like 'Not proposed by the saved AI answer%'`) > 0);
@@ -102,7 +107,7 @@ const bySection = (pv: Awaited<ReturnType<typeof preview>>, who: string) => (pv?
 
   // The rest keep their words: only the two slices are set up from their forms.
   // Slice 3 adds the Study permit (check_qa144_sp_release.ts).
-  ok("QA-144 slice 2 scope: only the Visitor visa, With an LMIA and the Study permit have a rules pass", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
+  ok("QA-144 slice 2 scope: only the combinations the form setup table holds have a rules pass", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in (${FROM_FORMS})`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();

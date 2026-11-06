@@ -7,6 +7,7 @@
 //   are "cannot tell yet" (listed, asked) before anyone answers; on main their "exists" rule made them never apply. On a
 //   firm case (C6.11, #1072) "Uses a representative" is Yes from the case team, so IMM 5476 is listed on each;
 // * the route's refusals, each in words, and a new field waiting for a second person.
+// B83 (QA-234): undo (BR-9), the withdraw path (BR-10), the near-name check (BR-5), a step that names no facts refused (BR-1).
 //   zsh studio/tools/isolated.sh s9_yesno 4440 start && tsx studio/tests/check_b52_own_yes_no.ts 4440 xr_studio_s9_yesno
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -48,7 +49,7 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   ok("B52/QA-227: the checkpoint's sections and questions step refuses nothing of B52's or QA-227's", !!row7 && ["done", "partial"].includes(row7.status) && !ours.some((w) => (row7.why ?? "").includes(w)), row7);
   const vv = sql("select id from combination where combination_key = 'vv.single'");
   const ed = sql("select e.id from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = 'IMM 5257' and e.channel = 'PDF' order by e.edition_label desc limit 1");
-  const box = (p: string) => sql(`select canonical_field_key || '|' || origin || '|' || coalesce(reason, '') || '|' || transform || '|' || coalesce(evidence_quote, '') from form_field_map where form_edition_id = '${ed}' and data_path = '${p}' order by version desc limit 1`).split("|");
+  const box = (p: string) => sql(`select coalesce(canonical_field_key, '') || '|' || origin || '|' || coalesce(reason, '') || '|' || transform || '|' || coalesce(evidence_quote, '') from form_field_map where form_edition_id = '${ed}' and data_path = '${p}' order by version desc limit 1`).split("|");
 
   // ------------------------------------------------------------ B52: the three Yes/No form fields
   const want: [string, string, RegExp][] = [[ALIAS, "person.has_used_other_name", /p\. 1: "Have you ever used any other name/], [NATID, "person.has_national_id", /p\. 2: "Do you have a national identity document\?"/], [USCARD, "person.us_permanent_resident", /p\. 2: "Are you a lawful Permanent Resident of the United States/]];
@@ -68,8 +69,22 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   // ------------------------------------------------------------ B52: the route's refusals, each in words
   const ask = (b: unknown, actor: string | null = AUTHOR, edition = ed) => call("POST", `/editions/${edition}/form-fields/own-question`, b, actor);
   const why = "The form asks this Yes/No itself (B52 check)";
-  const open = list.fields.find((f: { dataPath: string; asked: boolean }) => !f.asked && /PCRIndicator/.test(f.dataPath)) as { dataPath: string; question: string } | undefined;
-  ok("B52 pass (review M2): Question 8 A is offered with its own words, never its neighbour's heading (\"* Date of birth\")", /^During the past 5 years have you lived in any country other than your country of citizenship/.test(open?.question ?? ""), open);
+  const undoAsk = (dataPath: unknown, actor: string | null = AUTHOR) => call("POST", `/editions/${ed}/form-fields/own-question/undo`, { dataPath }, actor);
+  // B83 (challenge B2): a step that names no facts cannot be checked (QA-165), so it is listed with its own words and refused.
+  const q8a = list.fields.find((f: { dataPath: string }) => /PCRIndicator/.test(f.dataPath)) as { dataPath: string; question: string; can_ask: boolean; why_not: string } | undefined;
+  ok("B83 pass (review M2): Question 8 A is listed with its own words, never its neighbour's heading (\"* Date of birth\")", /^During the past 5 years have you lived in any country other than your country of citizenship/.test(q8a?.question ?? ""), q8a);
+  ok("B83 fail (challenge B2): Question 8 A names no facts, so it cannot be asked, and says why", q8a?.can_ask === false && /cannot be checked/.test(q8a?.why_not ?? ""), q8a);
+  let u = await ask({ dataPath: q8a?.dataPath, label: "B83 check not asked", meaning: "Whether this is refused (B83 check, Sample).", reason: why });
+  ok("B83 fail (challenge B2): the route refuses Question 8 A in the same words (409), nothing changed", u.status === 409 && /cannot be checked/.test(words(u)) && sql("select count(*) from canonical_field where label = 'B83 check not asked'") === "0", u);
+  // BR-9: undo. Its refusals, then the US card's form field is taken back, for the tests below to ask again.
+  u = await undoAsk(USCARD, null); ok("B83 fail: undo with no person is refused (401)", u.status === 401, u);
+  u = await undoAsk(USCARD, APPROVER); ok("B83 fail: the Approver cannot undo (403: the author's step)", u.status === 403, u);
+  u = await undoAsk(q8a?.dataPath); ok("B83 fail: a form field not asked has nothing to take back (409, in words)", u.status === 409 && /nothing to take back/.test(words(u)), u);
+  u = await undoAsk(USCARD);
+  ok("B83 pass (BR-9): undo puts the form field back to the fact its step names; the library's field stays", u.status < 300 && box(USCARD)[0] === "person.us_green_card_number" && sql("select count(*) from canonical_field where canonical_field_key = 'person.us_permanent_resident'") !== "0" && u.body?.withdrew === false, u);
+  const open = (await call("GET", `/editions/${ed}/form-fields/own-questions`)).body.fields.find((f: { dataPath: string }) => f.dataPath === USCARD) as { dataPath: string; question: string; can_ask: boolean; asked: boolean } | undefined;
+  ok("B83 pass: after undo it can be asked again", open?.can_ask === true && open?.asked === false, open);
+
   let r = await ask({ dataPath: open?.dataPath, label: "B52 check lived elsewhere", meaning: "Whether the person lived elsewhere (B52 check, Sample).", reason: why }, null);
   ok("B52 fail: with no person it is refused (401)", r.status === 401, r);
   r = await ask({ dataPath: open?.dataPath, label: "B52 check lived elsewhere", meaning: "Whether the person lived elsewhere (B52 check, Sample).", reason: why }, APPROVER);
@@ -90,11 +105,11 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   r = await ask({ dataPath: open?.dataPath, field: "person.has_national_id", reason: "short" });
   ok("B52 fail: a reason under 8 characters is refused (400)", r.status === 400 && /at least 8/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, field: "person.national_id_number", reason: why });
-  ok("B52 fail: a field not answered Yes or No is refused (400), in words", r.status === 400 && /not Yes or No/.test(words(r)), r);
+  ok("B52 fail: a field not answered Yes or No is refused (400), in words", r.status === 400 && /not answered Yes or No/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, label: "Has national ID", meaning: "Whether the person has a national identity document (B52 check).", reason: why });
   ok("B52 fail: a new name the library already has is refused (409): choose that field", r.status === 409 && /already a shared field/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, field: "case.uses_representative", reason: why });
-  ok("B52 fail: a field about the application on a person's form field is refused (400), in words", r.status === 400 && /is about case, but this form field is about person/.test(words(r)), r);
+  ok("B52 fail: a field about the application on a person's form field is refused (400), in words", r.status === 400 && /is about the application, but this form field is about a person/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, label: "B52 check lived elsewhere", meaning: "Too short", reason: why });
   ok("B52 fail: a meaning under 10 characters is refused (400)", r.status === 400 && /10 characters or more/.test(words(r)), r);
   r = await ask({ dataPath: open?.dataPath, label: "!!!", meaning: "Whether the person lived elsewhere (B52 check, Sample).", reason: why });
@@ -119,6 +134,30 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
     ok("B52 pass: the Approver approves it", r.status < 300, r);
     const placed = await call("POST", `/combinations/${vv}/place-from-form-parts`, {});
     ok("B52 pass: the Smart questionnaire's step then asks it in the section of its form field", placed.status < 300 && (placed.body?.placed ?? []).some((p: { fact: string }) => p.fact === k), placed.body);
+    // BR-9, BR-10, BR-5 (B83, challenge B1, M2, M6) on the same form field.
+    u = await undoAsk(USCARD);
+    ok("B83 pass (BR-9): undo after a second person approved keeps the approved field in the library", u.status < 300 && u.body?.withdrew === false && !u.body?.kept && sql(`select count(*) from canonical_field where canonical_field_key = '${k}'`) !== "0", u);
+    const live = sql("select label from canonical_field where label ~ ' ' and status in ('DRAFT', 'PUBLISHED') and canonical_field_key like 'person.%' order by canonical_field_key limit 1");
+    const nearName = `${live} B83 check`, plain = { dataPath: USCARD, meaning: "Whether something near is meant (B83 check, Sample).", reason: why };
+    u = await ask({ ...plain, label: nearName });
+    ok("B83 fail (BR-5): a name close to a live field needs a one-line reason (400), naming it", u.status === 400 && /is close to the library/.test(words(u)) && words(u).includes(live), u);
+    u = await ask({ ...plain, label: nearName, nearReason: "It is the form's Yes/No, not that detail (B83 check)." });
+    const nearKey = u.body?.field as string;
+    ok("B83 pass (BR-5): with its reason the near name is proposed, and the second person reads the reason", u.status < 300 && u.body?.name === nearName && sql(`select reason from library_change where key = '${nearKey}'`).includes("not that detail"), u);
+    u = await undoAsk(USCARD);
+    ok("B83 pass (BR-9): undo withdraws a new field still waiting that nothing else reads", u.status < 300 && u.body?.withdrew === true && sql(`select count(*) from canonical_field where canonical_field_key = '${nearKey}'`) === "0" && sql(`select status from library_change where key = '${nearKey}'`) === "WITHDRAWN" && box(USCARD)[0] === "person.us_green_card_number", u);
+    u = await ask({ ...plain, label: "B83 check withdrawn" });
+    const wKey = u.body?.field as string, wChange = sql(`select id from library_change where key = '${wKey}'`);
+    u = await call("POST", `/library/changes/${wChange}/withdraw`, { note: "Withdrawn on To review (B83 check)." }, AUTHOR);
+    const [wFact, , , wTransform] = box(USCARD);
+    ok("B83 pass (BR-10, challenge M2): withdrawing on To review puts the asked form field back to worked out, never unresolved", u.status < 300 && wFact === "person.us_green_card_number" && /^derived:/.test(wTransform ?? "") && sql(`select outcome from form_field_map where form_edition_id = '${ed}' and data_path = '${USCARD}' order by version desc limit 1`) === "mapped", { u, wFact, wTransform });
+    u = await ask({ ...plain, label: "B83 check read by a rule" });
+    const rKey = u.body?.field as string;
+    const rule = await call("POST", `/combinations/${vv}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: rKey, value: true }, whenPlain: "a rule that reads it (B83 check)", thenPlain: "nothing, it is a check (B83 check)", forWhom: "each_applicant" });
+    u = await undoAsk(USCARD);
+    ok("B83 fail (BR-9): a waiting new field a rule reads is not withdrawn; the answer says why", rule.status < 300 && u.status < 300 && u.body?.withdrew === false && /the rule "nothing, it is a check \(B83 check\)"/.test(u.body?.kept ?? "") && sql(`select count(*) from canonical_field where canonical_field_key = '${rKey}'`) !== "0", { rule: rule.status, u });
+    u = await undoAsk(USCARD);
+    ok("B83 fail: a second undo has nothing to take back (409)", u.status === 409, u);
   }
 
   // ------------------------------------------------------------ QA-227: IMM 5476 and IMM 5475 on a represented case
@@ -137,7 +176,9 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
   // (never typed: 422) and IMM 5476 is listed on each; IMM 5475 still follows its typed question.
   let typedRep = null as { status: number; detail?: string } | null; // set inside caseFor (a closure), so TS must not narrow it to null
   const caseFor = async (ref: string, answer: boolean | null, combinationId = vv) => {
-    const id = (await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER)).body?.id as string;
+    const opened = await call("POST", "/runtime/cases", { combinationId, reference: `B52-${ref}-${Date.now()}`, clientActor: CLIENT, principal: { displayName: `Sample Client ${ref}` } }, OFFICER);
+    if (!opened.body?.id) throw new Error(`QA-227: case ${ref} did not open (${opened.status}): ${JSON.stringify(opened.body?.missing ?? opened.body).slice(0, 400)}`);
+    const id = opened.body.id as string;
     const people = (await call("GET", `/runtime/cases/${id}`, undefined, OFFICER)).body.people as { role: string; subject_id: string }[];
     const subject = people.find((p) => p.role === "case")!.subject_id;
     if (answer !== null) {

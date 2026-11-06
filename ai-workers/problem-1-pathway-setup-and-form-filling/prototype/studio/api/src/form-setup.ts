@@ -1,7 +1,10 @@
 // QA-144, P-319 (moved out of demo.ts for B71, so a pack's setup can read it without the loader's Nest services): the
 // one per-combination table of what IRCC's own words set on a combination's form lines, read by the configured
 // checkpoint's loader (api/src/demo.ts) and by the six's people's steps in the packs (acceptance/lib/pack2.ts). Each
-// value is Sample, "Unconfirmed: expert" (AGENTS rule 4). No decorators and no imports, on purpose.
+// value is Sample, "Unconfirmed: expert" (AGENTS rule 4). No decorators and no Nest imports, on purpose. From QA-144
+// slice 4 (B79, P-319) a combination's words are data: samples/form-setup.json, read below into the same table.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { OWN_YES_NO, type OwnYesNo } from "./own-yes-no.ts";
 /** QA-227 (Major): IMM 5476's and IMM 5475's rules read "exists" on the form's own choice (appointing, updating, cancelling
  *  a representative; authorizing or withdrawing a release), which only IMM 5476 or IMM 5475 itself asks: unanswered,
@@ -9,7 +12,9 @@ import { OWN_YES_NO, type OwnYesNo } from "./own-yes-no.ts";
  *  IRCC's words (REP_FACT, RELEASE_FACT), added through C3.6's door for its rule and asked of the application. */
 const REPRESENTED = { subjectKind: "CASE", op: "eq", field: "case.uses_representative", value: true };
 const RELEASES = { subjectKind: "CASE", op: "eq", field: "case.authorizes_release_to_designated_individual", value: true };
-export type FormRule = { form: string; condition?: object; minAge?: number; who?: string; retire?: true; cite: string };
+/** `channel`: how IRCC takes the form on this combination when its words say so (B79b: a form "now digital", filled in
+ *  IRCC's portal), set on the Forms tab's channel route; otherwise the line keeps the library's channel. */
+export type FormRule = { form: string; condition?: object; minAge?: number; who?: string; channel?: "ONLINE"; retire?: true; cite: string };
 /** QA-144 slice 1 (ruling 3): the Visitor visa's form lines as IRCC's own words set them. Each is Sample, "Unconfirmed:
  *  expert" (AGENTS rule 4). IMM 5484 (05-2026) is official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; Guide
  *  5256 is official-sources/ircc/instructions/guide-5256.html, modified 2026-03-31, saved 19 Oct 2026. */
@@ -105,14 +110,49 @@ export const REP_FACT = { fact: "case.uses_representative", rule: "IMM 5476", ci
 export const RELEASE_FACT = { fact: "case.authorizes_release_to_designated_individual", rule: "IMM 5475", cite: "IMM 5484 (05-2026) p. 1: \"Complete this form only if you authorize … (IRCC) and … (CBSA) to release information from your case file to someone other than yourself.\"", label: "Authorizes release of information to a designated individual", valueType: "yes_no",
   meaning: "Whether the applicant authorizes IRCC and the CBSA to release information from their case file to someone other than themselves (IMM 5484 p. 1; IMM 5475).", beside: ["case.service_language", "case.visa_type_requested"] };
 type RuleFact = typeof GENDER_FACT & { beside?: string[] };
+/** One combination's setup. `family`: why each person 18 or older fills the family information form that the application
+ *  form's channel picks (FAMILY_FORM_BY_CHANNEL); absent, no family form is picked by channel (a permanent residence
+ *  application names its own family form among its rules, QA-144 slice 4). */
+/** QA-144 slice 4 (B81): an answer a form prints no choice for, marked Not on this form on each of its form fields that
+ *  read the fact; cited with the form's printed choices. */
+export type NotOnFormMark = { form: string; fact: string; values: string[]; cite: string };
+export type FormSetup = { application: string; rules: FormRule[]; notOnForm?: NotOnFormMark[]; family?: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] };
+/** QA-144 slice 4 (B79, P-319): samples/form-setup.json, each combination's words as data. A fact only a rule reads is
+ *  named there by its key and taken from the facts above; an unknown key fails the read, never a rule without its fact. */
+/** B79b (P-319): a fact only a rule reads is named by its key when this file holds it, or given whole in the data (its
+ *  label, meaning and the form whose rule reads it), as Family sponsorship's IMM 5604 fact is; and a combination's
+ *  always-needed document lines, cited, may be data too (`documentsCited`). */
+type SetupData = { combinations: Record<string, { application: string; rules: FormRule[]; ruleFacts?: (string | RuleFact)[]; familyByChannel?: string; notOnForm?: NotOnFormMark[]; documentsCited?: CitedDocumentLine[] }> };
+const RULE_FACTS: RuleFact[] = [GENDER_FACT, REP_FACT, RELEASE_FACT, MINOR_FACT];
+/** B79b: a rule fact given whole in the data is checked as C3.6's door would take it, so a bad entry fails the read: a
+ *  person. or case. key, the form of one of this combination's rules (review m1), a label, a meaning, a cite, yes_no, and
+ *  `beside` (where it is asked) a list of fact keys when given. Exported for its pure check (check_qa144_fs_release.ts). */
+export const ruleFactOf = (key: string, f: RuleFact, rules: FormRule[]): RuleFact => {
+  const bad = !/^(person|case)\.[a-z0-9_]+$/.test(f.fact ?? "") || !f.rule || !rules.some((r) => r.form === f.rule && !r.retire) || !f.label || !f.meaning || !f.cite || f.valueType !== "yes_no"
+    || (f.beside !== undefined && (!Array.isArray(f.beside) || !f.beside.length || !f.beside.every((b) => typeof b === "string" && /^(person|case)\.[a-z0-9_]+$/.test(b))));
+  if (bad) throw new Error(`samples/form-setup.json, ${key}: the rule fact ${f.fact ?? "(no key)"} needs a person. or case. key, the form of one of this combination's rules, a label, a meaning, a cite, valueType yes_no, and "beside" as a list of fact keys when given`);
+  return f;
+};
+const fromData = (): Record<string, FormSetup> => {
+  const d = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "form-setup.json"), "utf8")) as SetupData;
+  return Object.fromEntries(Object.entries(d.combinations).map(([key, c]) => [key, { application: c.application, rules: c.rules, ...(c.notOnForm ? { notOnForm: c.notOnForm } : {}),
+    ...(c.familyByChannel ? { family: c.familyByChannel } : {}),
+    ...(c.documentsCited ? { documentsCited: c.documentsCited } : {}),
+    ruleFacts: (c.ruleFacts ?? []).map((k) => typeof k === "object" ? ruleFactOf(key, k, c.rules) : RULE_FACTS.find((f) => f.fact === k) ?? (() => { throw new Error(`samples/form-setup.json, ${key}: no rule fact ${k} in api/src/form-setup.ts`); })()) }]));
+};
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
- *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps. */
-export const FORM_SETUP: Record<string, { application: string; rules: FormRule[]; family: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] }> = {
-  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], ownYesNo: OWN_YES_NO["vv.single"].boxes, documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
+ *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps.
+ *  The configured checkpoint sets up from its forms exactly the combinations this table holds (api/src/demo.ts). */
+export const FORM_SETUP: Record<string, FormSetup> = {
+  "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
   "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true,
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
   "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFacts: [MINOR_FACT, REP_FACT, RELEASE_FACT], documentsCited: SP_DOCUMENT_LINES,
     family: "IMM 5483 (08-2025) p. 1: \"Family Information (IMM 5707) Note: Must be completed by those 18 years of age or older or a minor travelling alone to Canada.\"; Guide 5269, Step 2: \"Family Information (IMM 5707)\"" },
+  ...fromData(),
 };
+// B88 (P-319): the Yes/No form fields asked as their own questions come from their table (samples/own-yes-no.json), by
+// combination, never named here.
+for (const [key, own] of Object.entries(OWN_YES_NO)) if (FORM_SETUP[key] && own.application === FORM_SETUP[key].application) FORM_SETUP[key].ownYesNo = own.boxes;
