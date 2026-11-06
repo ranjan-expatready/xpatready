@@ -13,6 +13,13 @@ merge_queue:
 # broken M3 PR can never throw out M2 work, and M2 is checked first (the queue listed first has the higher priority).
 # A PR goes to "m3" when its title names an M3 capability, or starts with "M3" (the M3 rows of qa/CAPABILITIES.md; the tech lead keeps this
 # list in step with that table); everything else, including every M2 PR, goes to "m2".
+# Records never block code (B119, P-376 (1), founder 6 Nov): a third queue "records", listed last (lowest priority), takes
+# a PR whose files are ALL records: product/STATE.md, DECISIONS.md, BACKLOG.md, RULES.md, product/qa/**,
+# product/screens/**/*.md, product/history/**. It is checked only when no product PR waits ahead of it, and a product PR
+# that arrives goes ahead of it, so a records merge never restarts a product batch; records also never share a batch
+# with code. m2 and m3 take a PR only when at least one file is not a record. The pattern is the same in all three queues
+# ("files~=^(?!records$)": some file is not a record; with "-" in front: none is); tools/check-queue-rules.py reads this
+# file and fails when the queues stop routing that way. The daily records PR (P-336) stays.
 queue_rules:
   - name: m2
     batch_size: 6
@@ -22,6 +29,7 @@ queue_rules:
       - "label = review: approved"
       - check-success = ci
       - -title~=(?i)(^M3\b|\bC1\.3\b|\bC3\.16\b|\bC6\.(4|5|9|11|12)\b|\bC7\.[3567]\b|\bC8\.[12]\b|\bC9\.2\b|\bC10\.2\b|\bC11\.[56]\b)
+      - files~=^(?!ai-workers/problem-1-pathway-setup-and-form-filling/product/((STATE|DECISIONS|BACKLOG|RULES)\.md|qa/.+|screens/.+\.md|history/.+)$)
     merge_conditions:
       - check-success = ci
     merge_method: merge
@@ -33,6 +41,18 @@ queue_rules:
       - "label = review: approved"
       - check-success = ci
       - title~=(?i)(^M3\b|\bC1\.3\b|\bC3\.16\b|\bC6\.(4|5|9|11|12)\b|\bC7\.[3567]\b|\bC8\.[12]\b|\bC9\.2\b|\bC10\.2\b|\bC11\.[56]\b)
+      - files~=^(?!ai-workers/problem-1-pathway-setup-and-form-filling/product/((STATE|DECISIONS|BACKLOG|RULES)\.md|qa/.+|screens/.+\.md|history/.+)$)
+    merge_conditions:
+      - check-success = ci
+    merge_method: merge
+  - name: records
+    batch_size: 6
+    batch_max_wait_time: 2 min
+    queue_conditions:
+      - base = main
+      - "label = review: approved"
+      - check-success = ci
+      - -files~=^(?!ai-workers/problem-1-pathway-setup-and-form-filling/product/((STATE|DECISIONS|BACKLOG|RULES)\.md|qa/.+|screens/.+\.md|history/.+)$)
     merge_conditions:
       - check-success = ci
     merge_method: merge
