@@ -7,7 +7,7 @@
 export type Duty = "case" | "represent" | "firm_admin";
 export type Licence = { body: string; category: string; number: string };
 export type FirmUser = { id: string; name: string; duties: Duty[]; licence: Licence | null; family_name?: string; given_names?: string; email?: string };
-export type Office = { unit?: string | null; street_number?: string | null; street_name?: string | null; city?: string | null; province_state?: string | null; postal_code?: string | null; country?: string | null; phone?: { country_code: string; number: string } | null };
+export type Office = { unit?: string | null; street_number?: string | null; street_name?: string | null; city?: string | null; province_state?: string | null; postal_code?: string | null; country?: string | null; phone?: { country_code: string; number: string; extension?: string } | null };
 export type Firm = { key: string; name: string; solo: boolean; defaultRepresentative?: string; office?: Office; users: FirmUser[] };
 export type TeamRole = "LEAD_REPRESENTATIVE" | "OFFICER";
 export type Member = { userId: string; role: TeamRole; assignedBy: string; assignedAt: Date; endedAt: Date | null; endedBy: string | null; endReason: string | null };
@@ -89,8 +89,8 @@ export function phoneText(phone: unknown): unknown {
 
 /** IMM 5476's representative block from the firm record. QA-289: the office phone goes on in the shape the release's
  *  question reads: its parts (country code, number) where a form writes the phone part by part (`phoneParts`, the
- *  questionnaire's phone kind), else as text a person can read, never the parts object shown as "[object Object]". */
-export function representativeContact(firm: Firm, members: Member[], phoneParts = true): Record<string, unknown> | null {
+ *  questionnaire's phone kind, case.ts shapeOf); required, so no caller can forget it (review m1); else as text a person can read, never the parts object shown as "[object Object]". */
+export function representativeContact(firm: Firm, members: Member[], phoneParts: boolean): Record<string, unknown> | null {
   const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
   if (!u) return null;
   const o = firm.office ?? {};
@@ -147,7 +147,7 @@ export function inStoredOrder(v: unknown): unknown {
 
 /** The same facts as confirmed answers about the representative (channel "firm_record", by the representative of
  *  record), so the case view, readiness and the filler read them like any other confirmed fact. Never stored. */
-export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId?: string, phoneParts = true): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
+export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId: string | undefined, phoneParts: boolean): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
   const rep = representativeOf(members), facts = representativeContact(firm, members, phoneParts);
   if (!rep || !facts) return [];
   const answer = (subjectId: string, field: string, value: unknown) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED" as const, channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null });

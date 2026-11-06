@@ -10,6 +10,7 @@ import { join } from "node:path";
 import * as team from "../../engine/runtime/team.ts";
 import type { Firm, Member } from "../../engine/runtime/team.ts";
 import { shapeOf } from "../../engine/runtime/case.ts";
+import { runTransform } from "../../../p5/transforms.ts";
 
 const results: boolean[] = [];
 const ok = (name: string, pass: boolean, detail: unknown = "") => { results.push(pass); console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail === "" ? "" : ` — ${JSON.stringify(detail)}`}`); };
@@ -40,7 +41,6 @@ const asParts = representativeContact(firm, one, true)?.[PHONE];
 ok("QA-289 fail (the bug): a release that reads the phone as text never gets the parts object", typeof asText === "string" && !String(asText).includes("[object Object]"), asText);
 ok("QA-289 pass: a release that reads the phone as text gets a number a person can read", asText === `+${office?.country_code} ${office?.number}`, asText);
 ok("QA-289 pass: a release whose form writes the phone part by part still gets the parts (C7.7, as before)", typeof asParts === "object" && (asParts as { number?: string }).number === office?.number, asParts);
-ok("QA-289 pass: with no shape said, the parts stay (every caller before this row)", JSON.stringify(representativeContact(firm, one)?.[PHONE]) === JSON.stringify(asParts));
 
 // representativeAnswers (what the case reads, runtime.ts state): the same answer, from the firm record.
 const ans = (parts: boolean) => representativeAnswers(firm, one, undefined, parts).find((a) => a.field === PHONE);
@@ -51,6 +51,18 @@ ok("QA-289 pass: and parts on a part-by-part release", typeof ans(true)?.value =
 const snap = (transform: string | null) => ({ field_maps: [{ form: "IMM 5476", channel: "PDF", entries: [{ fact: PHONE, transform, outcome: "mapped", data_path: "IMM_5476[0].Page1[0].SectionB[0].question7[0]" }] }], canonical_fields: [{ id: PHONE, value_type: "text" }] });
 ok("QA-289 pass: a map that writes the phone part by part makes it a phone (parts)", shapeOf(snap("phone_part:national_number") as never, PHONE).phone === true);
 ok("QA-289 fail: a map that reads it whole (text) does not (text)", shapeOf(snap(null) as never, PHONE).phone === false && shapeOf(snap("max 20 characters") as never, PHONE).phone === false);
+
+// Review B1, m3: the real IMM 5476 map (the work-permit release fixture, from c1-v3) writes the phone with "phone:" steps,
+// which the fill splits (p5/transforms.ts). The shape follows the same rule, so the parts go on and both boxes are written.
+const release = JSON.parse(readFileSync(join(import.meta.dirname, "..", "fixtures", "screen01-work-permit-release.json"), "utf8"));
+const boxes = (release.field_maps as { entries: { fact?: string; transform?: string; data_path: string }[] }[]).flatMap((m) => m.entries).filter((e) => e.fact === PHONE);
+ok("QA-289 setup: the fixture's IMM 5476 reads the representative's telephone in two \"phone:\" boxes", boxes.length === 2 && boxes.every((b) => /^phone:/.test(b.transform ?? "")), boxes.map((b) => b.transform));
+const parts = shapeOf(release as never, PHONE).phone;
+ok("QA-289 pass (review B1): on that release the telephone is a phone, so the parts go on", parts === true, parts);
+const given = representativeContact(firm, one, parts)?.[PHONE];
+const written = boxes.map((b) => runTransform(b.transform, given, {}));
+ok("QA-289 pass (review B1): both IMM 5476 phone boxes are written with digits (country code, number)", written.every((o) => o.ok) && written.map((o) => (o as { value?: unknown }).value).join("|") === `${office?.country_code}|${office?.number}`, written.map((o) => (o.ok ? (o as { value: unknown }).value : (o as { reason: string }).reason)));
+ok("QA-289 fail (review B1): the same boxes given text write nothing, which is why the shape must follow the fill", boxes.map((b) => runTransform(b.transform, phoneText(office), {})).every((o) => !o.ok));
 
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed}/${results.length} passed`);
