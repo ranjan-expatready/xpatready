@@ -146,4 +146,4 @@ Each scan reads `api/src` recursively (`.ts`, not `.d.ts`). For each one, a fail
 | `graph.mjs --check` | exit 0, same counts as `main` (G3 12, G6 5) |
 | `count-any.mjs --against origin/main` | exit 0, 418 = 418 |
 
-Size: `demo.ts` 1,095 → 561 lines; `form-part-placements.ts` 181 → 82; 41 new files (18 checkpoint steps, 14 combination steps, 2 placement passes, 7 helpers).
+Size: `demo.ts` 1,095 → 561 lines; `form-part-placements.ts` 181 → 70; 41 new files (18 checkpoint steps, 14 combination steps, 2 placement passes, 7 helpers).
