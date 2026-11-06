@@ -76,7 +76,21 @@ export function representativeFacts(firm: Firm, members: Member[]): Record<strin
  *  facts are about "representative" (the renderer's own key for that role) and count as confirmed, because the firm
  *  record, not the client, is their source. A missing value is left out (asked as before). Sample values. */
 export const REPRESENTATIVE = "representative", FIRM_RECORD = "firm_record";
-export function representativeContact(firm: Firm, members: Member[]): Record<string, unknown> | null {
+/** QA-289: the firm's office phone as a person reads it ("+1 4165550100"), for a release whose questions read the telephone
+ *  as text; a value that is not the firm record's phone object is left as it is. */
+export function phoneText(phone: unknown): unknown {
+  if (!phone || typeof phone !== "object") return phone;
+  const p = phone as { country_code?: unknown; number?: unknown; extension?: unknown };
+  const number = String(p.number ?? "").trim();
+  if (!number) return null;
+  const cc = String(p.country_code ?? "").replace(/^\+/, "").trim(), ext = String(p.extension ?? "").trim();
+  return `${cc ? `+${cc} ` : ""}${number}${ext ? ` ext. ${ext}` : ""}`;
+}
+
+/** IMM 5476's representative block from the firm record. QA-289: the office phone goes on in the shape the release's
+ *  question reads: its parts (country code, number) where a form writes the phone part by part (`phoneParts`, the
+ *  questionnaire's phone kind), else as text a person can read, never the parts object shown as "[object Object]". */
+export function representativeContact(firm: Firm, members: Member[], phoneParts = true): Record<string, unknown> | null {
   const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
   if (!u) return null;
   const o = firm.office ?? {};
@@ -84,7 +98,7 @@ export function representativeContact(firm: Firm, members: Member[]): Record<str
     "person.family_name": u.family_name, "person.given_names": u.given_names, "person.email_address": u.email,
     "person.mailing_address_unit": o.unit, "person.mailing_address_street_number": o.street_number, "person.mailing_address_street_name": o.street_name,
     "person.mailing_address_city": o.city, "person.mailing_address_province_state": o.province_state, "person.mailing_address_postal_code": o.postal_code,
-    "person.mailing_address_country": o.country, "person.telephone_number": o.phone,
+    "person.mailing_address_country": o.country, "person.telephone_number": phoneParts ? o.phone : phoneText(o.phone),
   };
   // C6.11 (tech lead's ruling on #1072, AGENTS rule 4): never also under the keys the configured checkpoint's maps read
   // (person.address_*, person.email, person.phone_*): its IMM 5475 map puts its designated individual on those, and IRCC
@@ -133,8 +147,8 @@ export function inStoredOrder(v: unknown): unknown {
 
 /** The same facts as confirmed answers about the representative (channel "firm_record", by the representative of
  *  record), so the case view, readiness and the filler read them like any other confirmed fact. Never stored. */
-export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId?: string): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
-  const rep = representativeOf(members), facts = representativeContact(firm, members);
+export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId?: string, phoneParts = true): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
+  const rep = representativeOf(members), facts = representativeContact(firm, members, phoneParts);
   if (!rep || !facts) return [];
   const answer = (subjectId: string, field: string, value: unknown) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED" as const, channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null });
   return [
