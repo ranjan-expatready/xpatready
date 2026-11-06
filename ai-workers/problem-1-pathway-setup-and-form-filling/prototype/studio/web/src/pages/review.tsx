@@ -12,6 +12,7 @@ import { itemCell } from "@/lib/item-words";
 import { UnsourcedNumbers } from "@/components/unsourced-numbers";
 import { Link } from "react-router-dom";
 import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
+import { FormFieldsHeld, FormFieldsPanel, useFormFieldsOfCombination } from "@/components/form-field-conditions";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
@@ -24,6 +25,8 @@ const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? role
 /** B81 (challenge M3): a problem on a form's option map says where it is fixed: the form's panel on the Forms tab. */
 const choicesAt = (p: { where?: unknown; message?: unknown }): string | null => { const m = /^Field map ((.+) \([^)]*\))$/.exec(String(p.where ?? "")); return m && /no code for|no option map yet|neither mapped|not on this form|the answer list does not have|has a code, but the form prints/.test(String(p.message ?? "")) ? `choices=${encodeURIComponent(m[2])}&edition=${encodeURIComponent(m[1])}` : null; };
 
+/** B86: the rule's own opening words; the problem's item is the question it names. */
+const HIDING = /^Hiding a value a form reads/;
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
 export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
@@ -43,6 +46,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   // S5 m7 (P-123, AGENTS rule 4): the second person sees which forms AI picked, with IRCC's words, and confirms they apply.
   const cfg = useApi<{ snapshot: { forms: { form_number: string; title: string; origin?: string; source_quote?: string | null }[] } }>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
   const aiPicked = (cfg.data?.snapshot.forms ?? []).filter((f) => f.origin === "AI_PROPOSAL" || f.origin === "AI_FOUND");
+  const formFieldsView = useFormFieldsOfCombination(id); // B86 (break B2): above the early return, as every hook
   if (r.isLoading || !session.data) return <Spinner label="Loading review" />;
   const v = r.data;
   const me = session.data.actor;
@@ -62,7 +66,10 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   const noFormLine = errors.find((p: { code?: string }) => p.code === "no_form_line"); // engine/programs.ts NO_FORM_LINE
   const noDocLine = errors.find((p: { code?: string }) => p.code === "no_document_line"); // engine/programs.ts NO_DOCUMENT_LINE
   const lineBox = noFormLine || noDocLine;
-  const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine);
+  const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine)
+    .sort((a: { message?: string }, b: { message?: string }) => Number(HIDING.test(b.message ?? "")) - Number(HIDING.test(a.message ?? ""))); // B86: its way out is on the row, so never behind "Show all"
+  const formFields = formFieldsView.data?.questions ?? [];
+  const underProblem = new Set<string>(others.filter((p: { message?: string; item?: string }) => HIDING.test(p.message ?? "") && p.item).map((p: { item?: string }) => p.item as string));
   const ref = (c: any) => `${c.kind}|${c.key}`;
   const needSme = changes.filter((c) => c.needs_sme), unsignedSme = needSme.filter((c) => !signed.has(ref(c)));
   const can = (duty: string) => me.duties.includes(duty);
@@ -88,9 +95,12 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
           <p className="font-medium">Validation of the draft</p>
           <p className="mt-1 text-xs text-text-muted">{others.length}{unsourced || lineBox ? " other" : ""} error{others.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
           <ul className="mt-2 space-y-1 text-sm">{[...others, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem className="min-w-0 [overflow-wrap:anywhere]"><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}{can("author") && choicesAt(p) ? <> <Link data-choices-link className="text-text-link underline" to={`/c/${id}/forms?${choicesAt(p)}`}>Set this form's choices</Link></> : null}</span>{p.where === "Tests" && p.item ? <> <Link className="text-text-link hover:underline" to={fixOnTests(id, p.item === "eligibility" ? "rule_set" : "field_map", p.item)} aria-label={`Fix on Tests: ${p.label ?? p.item}`} data-fix-tests>Fix on Tests</Link></> : null}</li>)}</ul>
+          {underProblem.size ? <div className="mt-3 space-y-3 border-t border-border pt-3" data-hiding-way-out>{formFieldsView.isLoading ? <Spinner label="Loading the form fields that read these answers" /> : formFieldsView.isError ? <div data-hiding-way-out-failed><Notice tone="warn" title="The form fields that read these answers could not be read" action={<Button size="sm" variant="secondary" onClick={() => void formFieldsView.refetch()}>Try again</Button>}>Nothing has changed. The way to confirm them shows here when they can be read.</Notice></div> : formFields.filter((q) => underProblem.has(q.fact)).map((q) => <FormFieldsPanel key={q.fact} combinationId={id} view={q} />)}</div> : null}
           {others.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${others.length + warnings.length}`}</Button> : null}
         </div>
       ) : unsourced || lineBox ? null : <Notice tone="ok" title="The draft passes validation" />}
+      {formFieldsView.isError && !underProblem.size ? <div data-held-failed><Notice tone="warn" title="The form fields holding a question's condition could not be read" action={<Button size="sm" variant="secondary" onClick={() => void formFieldsView.refetch()}>Try again</Button>}>Nothing has changed. Their Undo shows here when they can be read.</Notice></div> : null}
+      <FormFieldsHeld combinationId={id} questions={formFields} shown={underProblem} />
       <AnswerKeyBlock combinationId={id} v={v.draft.answer_keys} />
       <div className="rounded-xl border border-border bg-surface-raised">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">

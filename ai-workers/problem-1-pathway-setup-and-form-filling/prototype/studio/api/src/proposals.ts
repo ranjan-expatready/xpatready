@@ -15,7 +15,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { DRAFT_FIELDS_STEP, FIELD_ID, FIELD_ID_MAX } from "./field-draft-items.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, SOLUTION, type Actor, type Audit, type Db } from "./core.ts";
-import { keyFor } from "./library-changes.ts";
+import { freeKey, keyFor, refuseTakingOverReaders, withdrawnStillRead } from "./library-changes.ts";
 import { checkedFieldValues, dropFieldList, type AnswerValue } from "./answer-values.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
 import { usedInLabels } from "./where-used.ts";
@@ -589,14 +589,15 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
       const retired = await tx.canonicalField.findFirst({ where: { workspaceId: l.ws, canonicalFieldKey: ruleFact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } });
       fail(retired ? `${ruleFact} is a retired library field: reject this one and restore it in Library › Fields.` : `${ruleFact} is already in the library (added since it was proposed): reject this one; the rule can use it as it is.`, HttpStatus.CONFLICT);
     }
+    if (typeof ruleFact === "string") await refuseTakingOverReaders(tx, l.ws, ruleFact, r.combinationId, rule?.key); // Breaker M9 on B83: checked again as it lands
     // C11.13 (review of #427): a field drafted from a form edition keeps the id the AI proposed (the key later drafts are
     // matched by), when it is a library key and still free; otherwise a key is made from the name, as for any field.
     const proposed = r.step === DRAFT_FIELDS_STEP ? (r.work as { proposedKey?: unknown } | null)?.proposedKey : undefined;
-    const draftedKey = typeof proposed === "string" && proposed.length <= FIELD_ID_MAX && FIELD_ID.test(proposed) && !used.has(proposed) ? proposed : null;
+    const draftedKey = typeof proposed === "string" && proposed.length <= FIELD_ID_MAX && FIELD_ID.test(proposed) && !used.has(proposed) && !(await withdrawnStillRead(tx, l.ws, proposed)) ? proposed : null;
     // A drafted field whose proposed id is taken gets a key from that id's own name (its label may carry the area or a
     // number added to keep names apart); every other field keeps its whole label, as before (Devin #427).
     const proposedName = typeof proposed === "string" && proposed.includes(".") ? proposed.split(".").slice(1).join(" ").replace(/_/g, " ") : null;
-    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? keyFor(f.subject ?? "case", proposedName ?? f.label, used);
+    const key = typeof ruleFact === "string" ? ruleFact : draftedKey ?? await freeKey(tx, l.ws, f.subject ?? "case", proposedName ?? f.label, used); // Breaker M1 on B83
     // C3.6 (Lead, 2 Nov): a choice fact's answer values land as its answer list, checked again here so an edit on To
     // review passes the add's rules (break M2); the list rides with the field (api/src/answer-values.ts).
     const values = checkedFieldValues(f.valueType, f.values, r.step === "rule_fact"); // both add routes (review m-r2a)
@@ -805,7 +806,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       const no = rows.map((r) => [r, bulkWhy(r) ?? (needsNearReason(r, libPool!, reuses) ? NEAR_BULK_WHY : null)] as const).filter(([, why]) => why);
       if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${nameOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
     }
-    const out: { id: string; landedAs: string | null }[] = [];
+    const out: { id: string; landedAs: string | null; joined?: boolean }[] = [];
     for (const r of rows) {
       let payload = r.payload as ProposalPayload;
       if (d.action === "edit") {
@@ -819,7 +820,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       // #883) may carry the PDF's internal part name ("Page wrapper"), and its edition's one draft (P-138) is never redone:
       // it too is accepted only as an edit with a name a person typed (keeping its name is then the person's choice).
       // A reuse of a named library item adds no name to the library (it lands on that item), so it is left as it was
-      // (review r5 M6: an edit always lands a new item, so refusing its plain accept would make a duplicate). A twin waiting
+      // (review r5 M6: an edit lands a new item, except a held section named what the library holds (B78), so refusing its plain accept would make a duplicate). A twin waiting
       // on another edition's copy (reuse with no key yet) may still resolve to a new item below, so it stays guarded
       // (Devin review on c0f65af62).
       const reuseOf = r.reuse as { match?: string; existingKey?: string | null } | null;
@@ -837,7 +838,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           fail(legacy ? `"${was}" was drafted before the form's printed headings were read, so its name may be the PDF's own part name. ${UNNAMED_WHY} Keeping this name is fine once you have checked it.${rows.length > 1 ? " Nothing was accepted." : ""}`
             : `"${was}" has no name from the form yet. ${UNNAMED_WHY}${rows.length > 1 ? " Nothing was accepted." : ""}`, HttpStatus.CONFLICT);
       }
-      let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
+      let landedAs: string | null = null, reused = false, joined = false, pqr: (PqrWork & { stamp: string }) | null = null;
       let resolved: { match: string; existingKey: string | null } | null = null;
       // QA-192 (P-120: a near duplicate needs a one-line reason, shown to the second person at release): an item that adds
       // to the library while close to a library item is accepted only with a person's reason why it is not the same, its
@@ -845,11 +846,15 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       const nearIds = (r.identity ?? {}) as { near?: string[]; nearReason?: string | null; nearReasonBy?: string };
       let identity = r.identity as Prisma.InputJsonValue | null, nearGiven = false;
       if (d.action !== "reject") {
-        if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
+        // B78 (review M1): a section waiting for a name, given a name the library already holds, is that section: it lands
+        // there with the person's name on the item, so its form fields are asked there and no second section is made.
+        const namedTwin = d.action === "edit" && r.kind === "section" && r.landsOn === "library" && (r.work as { unnamed?: unknown } | null)?.unnamed === true ? await sameInLibrary(tx, workspaceId, payload) : null;
+        if (!namedTwin && r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
           if (twin) fail(`"${nameOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
+        if (namedTwin) { resolved = { match: "reuse", existingKey: namedTwin }; reuse.match = resolved.match; reuse.existingKey = resolved.existingKey; joined = true; }
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
         // C11.13 (review M1–M2): a twin drafted for another edition reuses the item its first copy added; when that one
         // is not in the library (waiting, rejected or undone), the twin adds it itself, unless the library already has it.
@@ -867,7 +872,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         // Review M3: a plain accept compares with the library only (a waiting item proposed later carries the pair itself);
         // an edit's new name is compared with the waiting new fields too. Review r2 m2: an edit never rests on the
         // proposer's reason for the old name.
-        // Devin r3 on #726: an edit always lands its reading as a new item (only an accept reuses), so every edit that lands
+        // Devin r3 on #726: an edit lands its reading as a new item (only an accept, or a held section's name the library holds, reuses), so every edit that lands
         // on the library is checked, a resolved twin or a reuse match included.
         if (r.landsOn === "library" && !ON_ITS_PAGE.has(r.step) && (d.action === "edit" || (reuse.match === "new" && !personNearReason(r)))) {
           let found: string[] = [];
@@ -891,7 +896,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         // stored with an AI reader for an identity document is refused here too, alone or in a batch.
         const noIdentity = r.kind === "document_type" ? docTypeWhy(payload) : null;
         if (noIdentity) fail(noIdentity, HttpStatus.CONFLICT);
-        if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
+        if (r.landsOn === "library" && reuse.match === "reuse" && (d.action === "accept" || namedTwin)) {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${nameOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           // QA-195 break B2 (P-134): a reuse never lands on a library document type that is itself an identity document
           // read by AI (one stored before the guard knew names): its reader is corrected in the library first.
@@ -924,7 +929,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         ...(d.action === "edit" || landedStamp || pqr || nearGiven ? { work: work as Prisma.InputJsonValue } : {}), ...(nearGiven ? { identity: identity as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
-      out.push({ id: r.id, landedAs });
+      out.push({ id: r.id, landedAs, ...(joined ? { joined } : {}) });
     }
     return out;
   // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
@@ -1014,6 +1019,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       const { beforeEdit, landedStamp, pqr, nearBefore, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown; nearBefore?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null, ...(ON_ITS_PAGE.has(r.step) ? { choice: null } : {}),
         ...((r.work as { twinOf?: string } | null)?.twinOf ? { reuse: { match: "reuse", existingKey: null } } : {}),
+        ...(r.kind === "section" && (r.work as { unnamed?: unknown } | null)?.unnamed === true ? { reuse: { match: "new", existingKey: null } } : {}), // B78: it waits for a name again
         ...(beforeEdit || landedStamp || pqr || nearBefore ? { work: work as Prisma.InputJsonValue } : {}), ...(nearBefore ? { identity: nearBefore as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }

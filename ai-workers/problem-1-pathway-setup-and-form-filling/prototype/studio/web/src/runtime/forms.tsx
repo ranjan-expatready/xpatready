@@ -70,7 +70,9 @@ function ValidatedState({ caseId, c, form }: { caseId: string; c: FormCopy; form
   const v = c.validated;
   return (
     <span className="inline-flex items-center gap-2" data-validated={v ? (v.current ? "current" : "out_of_date") : "none"}>
-      {v ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values`}>{v.words}</Pill> : <Pill tone="warn">Not validated yet</Pill>}
+      {v && (v.current || !c.validated_elsewhere) ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values`}>{v.words}</Pill>
+        : c.validated_elsewhere ? <Pill tone="warn" title="Sample: the validated file is not in these working files, so this copy is not filed or locked as validated" data-validated-elsewhere>{c.validated_elsewhere}</Pill>
+        : <Pill tone="warn">Not validated yet</Pill>}
       {c.out_of_date ? null : <>
         <input ref={input} type="file" accept="application/pdf" className="sr-only" aria-label={`Validated copy of ${form}`} onChange={(e) => { const x = e.target.files?.[0]; if (x) void send(x); }} />
         <Button size="sm" variant="secondary" busy={busy} onClick={() => input.current?.click()}>{v && v.current ? "Read back again" : "Read back the validated copy"}</Button>

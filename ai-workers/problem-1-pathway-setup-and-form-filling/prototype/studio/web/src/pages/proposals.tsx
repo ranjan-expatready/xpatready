@@ -7,6 +7,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Check, ChevronRight, Undo2 } from "lucide-react";
 import { NearLine, ownReason, type NearView } from "@/components/near-line";
+import { FormFieldConditions } from "@/components/form-field-conditions";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
@@ -141,7 +142,7 @@ function UndoBar({ batchId, n, until, onGone }: { batchId: string; n: number; un
   const undo = useAction(() => api(`/review/proposals/undo/${batchId}`, { method: "POST" }), { invalidate: inv, success: `Undone: ${plural(n, "proposal")} waiting again.`, onDone: onGone });
   return (
     <Notice tone="ok" title={`Decided ${plural(n, "proposal")}`} action={<Button size="sm" variant="secondary" busy={undo.isPending} onClick={() => undo.mutate(undefined)}><Undo2 className="size-4" aria-hidden />Undo ({left} s)</Button>}>
-      New library items wait for a second person on To review. Undo is offered for {left} more second{left === 1 ? "" : "s"}.
+      Any new library item waits for a second person on To review. Undo is offered for {left} more second{left === 1 ? "" : "s"}.
     </Notice>
   );
 }
@@ -159,7 +160,7 @@ function Reading({ label, r, rules = false }: { label: string; r: QueueProposal[
 function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => void; onDone: (r: DecideResult | null, n: number) => void }) {
   const [reason, setReason] = React.useState("");
   const run = useAction((b: { action: "accept" | "edit" | "reject"; payload?: unknown }) => api<DecideResult>("/review/proposals/decide", { method: "POST", json: { ids: [p.id], action: b.action, reason: reason.trim() || null, payload: b.payload } }),
-    { invalidate: inv, success: (r) => (r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
+    { invalidate: inv, success: (r) => (r.items[0]?.joined ? "Decided. The library already holds a section of that name, so this part joins it; nothing new was added." : r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
   const checkPayload = p.readings.check?.payload ?? null;
   const differ = p.agreement === "differ" && !!checkPayload;
   // QA-196 (tech lead, 4 Nov): a form check warns unless the person makes it a serious warning before Accept (an edit).
@@ -247,6 +248,7 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
             </blockquote>
           ) : <p className="mt-1 text-text-muted">No quote: it comes from {p.origin === "rules" ? "the rules" : "the reading"} alone.</p>}
         </section>
+        {p.form_fields ? <FormFieldConditions combinationId={p.form_fields.combination} fact={p.form_fields.fact} item={p.id} /> : null}
         <section aria-label="Rules">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Rules</h3>
           {p.rules.length ? <ul className="mt-1 space-y-1">{p.rules.map((r) => <li key={r.rule} className="flex gap-2"><Pill tone={r.passed ? "ok" : "danger"}>{r.passed ? "Passed" : "Failed"}</Pill><span>{r.rule.replace(/_/g, " ")}{r.why ? `: ${r.why}` : ""}</span></li>)}</ul> : <p className="mt-1 text-text-muted">No rule ran on this item.</p>}

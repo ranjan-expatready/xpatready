@@ -13,6 +13,7 @@ import { applyFills } from "./who-fills.ts";
 import { applySupplies } from "./document-supplies.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 import { applyCondition, COND_KIND } from "./question-condition.ts";
+import { applyFormFieldCondition, FORM_FIELD_KIND } from "./form-field-condition.ts";
 import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 
 /** The entity an audit line names for a library change (the same on every line about it). */
@@ -465,6 +466,7 @@ export class Lifecycle {
     if (c.kind === "form_accepts") return this.applyAccepts(actor, c);
     if (c.kind === "form_role") return this.applyRole(actor, c); // P-319 (Lead 4 on #833): a form's role, at a second person's approval
     if (c.kind === COND_KIND) return applyCondition(this.db, this.audit, actor, c); // C4.11 part 3 (forms lane): a draft question version with its condition
+    if (c.kind === FORM_FIELD_KIND) return applyFormFieldCondition(this.db, this.audit, actor, c); // B86: a draft form field holding the condition
     if (c.kind === "placement_fills") return applyFills(this.db, this.audit, actor, c); // C4.9 (runtime lane): a draft placement
     if (c.kind === SUPPLIES_KIND) return applySupplies(this.db, this.audit, actor, c); // C4.5: a draft document type with its facts
     // QA-64, P-116 amended (28 Oct): a library retire or restore takes effect at approval (a structure name or a

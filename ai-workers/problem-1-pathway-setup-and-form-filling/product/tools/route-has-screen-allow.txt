@@ -6,7 +6,6 @@
 # The set-up read: acceptance/lib/ and the set-up scripts a pack names under tests/ (tests/runtime/setup_visitor_visa.ts).
 
 # Dead ends a person meets today (the gap is logged; the line goes with the fix):
-POST /editions/:id/form-fields/own-question  # QA-234 (Major): no screen asks a Yes/No form field as its own question; B83 builds it (draft #1036)
 POST /runtime/filings/:id/review  # QA-229 (Major), C7.6 Partial: the representative's review of a filing has no screen; the case page's Prepare panel does not show /prepare's readiness
 POST /runtime/filings/:id/warnings/:code/pass  # QA-229 (Major), C7.6 Partial: passing a CRITICAL warning with a reason (P-238) has no screen
 POST /runtime/filings/:id/ready  # QA-229 (Major), C7.6 Partial (L-SA3): "Ready to file" has no screen; the panel shows its own pill instead
