@@ -95,3 +95,75 @@ None.
 The merge keeps main's behaviour and the PR's approved behaviour. The n1 fix is correct and complete for every route that writes the fact. The tests are sound. m1 and m2 are small and do not block.
 
 **Approve**
+
+## Round 4 (diff-only, `git diff 520bdea2 59d23a5a`, code only)
+
+Independent reviewer, 6 Nov 2026. Round 4 covers four commits:
+
+* f85cbb54: m1, the packs keep a conditional line's minimum age.
+* 6ad6cf8c: m2, the J-A2 check reads the History list.
+* 03f86fe2: the J-A2 screenshots, taken again. Not reviewed (PNGs).
+* 59d23a5a: the Sample case loader leaves the firm record's answer out of `seen`.
+
+Paths are under `prototype/studio/`. No server was started, so the builder's 19/19 and 48/48 were not re-run. Typecheck at 59d23a5a: `PASS no new type errors (15 known, 0 fixed)`. `node --check` on the walk passes.
+
+### What was checked, and holds
+
+1. **m1 is fixed: `acceptance/lib/pack2.ts:137`.**
+   * The conditional body is now the same as in `api/src/demo.ts:740`: `minAge: r.minAge` and then `who`.
+   * Only Visitor visa IMM 5476 holds a `minAge` on a conditional rule (round 3, point 2), so no other line built by the packs changes.
+   * Every `check_qa144_*_release.ts` test reads IMM 5476's line by its predicate only, so `|18|` breaks none of them.
+2. **m2 is fixed: `tests/runtime/check_c611_ja2_browser.cjs:130-135`.**
+   * The check now reads `section[aria-labelledby='t-hist'] li`, which is the History list in `web/src/runtime/team.tsx:133-136`.
+   * The "earlier" pattern asks for three things on one row: the ended line of "Representative (Sample)" (`… to … by Representative (Sample)`), the firm admin who ended it, and the reason. The reason renders on its row (`h.reason`).
+   * The "now" pattern asks for "Second representative (Sample)", named by the firm admin, with `· now`.
+   * The case-officer row carries the "Case officer" pill, so neither pattern can match it, and the Representative of record paragraph is outside the list.
+   * One check became two, so 18 became 19, which matches the builder's 19/19.
+3. **The regression fix is correct for the loader: `api/src/sample-case.ts:136-141`.**
+   * The cause holds. The view hands out the firm-given "Uses a representative" with id `firm_record:<user>:case.uses_representative` (`engine/runtime/team.ts:139`).
+   * `ConfirmSection.seen` accepts UUIDs only (`contracts/runtime.ts:96`), so the whole case section was refused with a 400. `case.service_language` and `case.visa_type_requested` then stayed DECLARED, and confirmed answers alone fill the copies.
+   * The filter reads `q.answer?.channel === FIRM_RECORD` and matches the screen (`questionnaire.tsx`, `seen`). The view's answers carry `channel`, and `FIRM_RECORD` is `"firm_record"`.
+   * Firm-record answers are never in rows (`rowKey: null`), so not filtering the rows is right.
+   * A section whose ids are all firm-given now leaves `seen` empty and is skipped (`continue`), instead of a refusal kept in `answerRefused`.
+4. **Fixing it in the loader, not in `confirmSection`, is the right choice for this PR.**
+   * It keeps main's strict contract: a `seen` entry that is not a UUID is a 400. `tests/runtime/check_runtime_r1a.ts:275` relies on that.
+   * It keeps the round-1 M1 ruling. A stored answer that the firm replaces is filtered from `current` (`runtime.ts:461`) and is neither asked for nor confirmed, whatever `seen` holds.
+   * It is also the caller rule the round-2 breaker recorded: "the firm-record id in `seen` (400)".
+   * Changing `confirmSection` instead would widen the route's contract in the last round, for no case the PR needs.
+
+### Findings
+
+#### Blocker
+None.
+
+#### Major
+None.
+
+#### Minor
+
+**r4-m1. Other callers still build `seen` from every answer id the view shows, and none of them reads the confirm's status.**
+* The callers:
+  * `acceptance/lib/m3.ts:121` (`confirmAll`, used by `fillEverything` at `:147` and called on `c.caseSubject` by `acceptance/C7.5.test.ts:56`);
+  * `tests/check_b52_own_yes_no.ts:214`;
+  * `tests/check_c72_imm5257_fill.ts:118`;
+  * `tests/runtime/check_runtime_r1c.cjs:345`;
+  * `tests/runtime/check_runtime_r1d.ts:46`;
+  * `tests/qa/check_qa_r1d_walk.cjs:34`.
+* On a release that asks "Uses a representative", each of them gets the same 400 on the case section and silently leaves that section DECLARED. Those releases are the configured checkpoint and every release `pack2.ts` builds from `FORM_SETUP`.
+* Today none of them turns wrong:
+  * the R1 and M3 releases (`setup_visitor_visa.ts`, `setup_vv_m3.ts`) do not place the fact;
+  * `check_b52` asserts only the principal's IMM 5257 box after its `confirmAll`;
+  * `acceptance/C1.3.test.ts:170-174` asserts the confirm's status, so it would show red rather than pass wrongly.
+* The trap stays, though. `contracts/runtime.ts:96` tells callers to send each id "as the questionnaire view gives it", and the view gives one id that confirm refuses.
+* Suggested follow-up row, not blocking:
+  * either `confirmSection` drops from `seen` exactly the ids of answers the firm record gives this subject (`state()` already computes them) before it checks the rest, keeping the 400 for any other id that is not a UUID. That keeps main's behaviour and M1;
+  * or the shared helpers, at least `acceptance/lib/m3.ts`, filter `channel === "firm_record"` as the loader now does.
+
+#### Nit
+None new.
+
+### Verdict
+
+Both round-3 Minors are fixed as asked. The C10.1 row 12 fix is correct, in the right place, and keeps main's behaviour and the M1 ruling. The one remaining item is a latent trap in test helpers, for a follow-up row.
+
+**Approve**
