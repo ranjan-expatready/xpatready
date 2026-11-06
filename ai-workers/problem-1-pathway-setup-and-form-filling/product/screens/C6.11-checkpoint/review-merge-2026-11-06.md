@@ -185,3 +185,31 @@ Independent reviewer, 6 Nov 2026. This checks the merge alone, not a review roun
    * CI calls the guard in range mode (`base..head`, `.github/workflows/ci.yml:67, 192, 368, 399`). That mode's checks are unchanged apart from where the temp files go.
 
 **Merge OK**
+
+## Merge check, 96ad6eaa (B120)
+
+Independent reviewer, 6 Nov 2026. This checks the merge alone. 96ad6eaa merges this branch (a698a26d) with origin/main 0f9cb406. Its merge base is d506fb49, so main brought 65 commits, B120 (#1158) among them. Paths are under `prototype/studio/`.
+
+1. **`api/src/demo.ts` is main's, and the PR's line moved into the step file unchanged.**
+   * `git diff 0f9cb406 96ad6eaa -- api/src/demo.ts` is empty.
+   * The only change to a step file is in `api/src/features/checkpoint/combination/100-form-lines.ts:24-25`. It is the PR's old demo.ts line exactly, with its comment: `minAge: r.minAge` on the conditional body. Who the form is for, `continue` after a refusal and the Online channel are kept.
+   * No other step file sets a conditional form line:
+     * `combination/120-family-form.ts:11` and `130-release-two.ts:32` set mandatory lines with `minAge: 18`;
+     * `130-release-two.ts:60` sets only IMM 5476's channel and signature;
+     * `combination/300-reviewed-release-documents.ts:45` sets document lines.
+   * So nothing in the step files undoes IMM 5476's minimum age.
+2. **Every other PR file auto-merged correctly.**
+   * After leaving out demo.ts and the step file, `git diff --name-only d506fb49 a698a26d` and `git diff --name-only 0f9cb406 96ad6eaa` list the same 28 files.
+   * Their added and removed lines are identical; `diff` of the two prints nothing. This covers `runtime.ts`, `case-prepare.ts`, `case-changes.ts`, `sample-case.ts`, `engine/runtime/team.ts`, `questionnaire.tsx`, `acceptance/lib/pack2.ts`, `check_b52_own_yes_no.ts`, the C6.11 tests and `firms.json`.
+   * `git show --cc 96ad6eaa` has one combined hunk: the step file.
+   * Only `api/src/form-setup.ts` was changed on both sides besides demo.ts, and main's change there is a comment. `vv.single` still reads `VV_FORM_RULES`, whose IMM 5476 holds `minAge: 18` (`form-setup.ts:32`). `samples/form-setup.json` holds only `pnp.express_entry` and `fs.spouse`.
+3. **B120's code calls the PR's code the same way demo.ts did.**
+   * `features/checkpoint/120-family-case.ts:18` calls `openSampleFamilyCase(ctx.db, ctx.get(Runtime), ctx.get(CaseForms), vvId)`, which matches the old `demo.ts:866`. So the loader's firm-record filter on `seen` (`sample-case.ts:140`, round 4) still runs for the checkpoint's family case.
+   * No step file calls `representativeAnswers`, `confirmSection`, `putAnswer`, undo, or the case team.
+   * The PR adds no Nest provider or injection. Its new imports are constants from `engine/runtime/team.ts`, so B120's feature registry, including `features/visitor-visa-filings.ts` for `CasePrepare`, needs no change.
+   * Main's 65 commits add no new caller of `case.uses_representative`, `representativeAnswers`, section confirm, or undo. The `+` lines that name them are QA notes and saved test output.
+4. **Typecheck at HEAD 78a0782e** (96ad6eaa plus screenshots only): `PASS no new type errors (15 known, 0 fixed)`; the API now has 553 source files.
+
+No server was started, so the builder's runs on a fresh checkpoint (C6.11 25/25, 14/14, J-A2 19/19, 14/14, C10.1 48/48) were not repeated.
+
+**Merge OK**
