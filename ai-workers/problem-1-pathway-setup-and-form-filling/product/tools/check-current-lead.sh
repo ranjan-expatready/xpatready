@@ -31,6 +31,28 @@ out=$(bash "$L" --id); ok "a branch whose STATE lost the line is skipped" "$([ "
 out=$(cd "$T" && mkdir solo && cp -r "$T/c/ai-workers" solo/ && sed -i.bak '/^current_lead: /d' "solo/$PRODREL/STATE.md" && bash "solo/$PRODREL/tools/current-lead.sh" 2>&1); r=$?
 ok "no line anywhere: exit 1 with the ListAgents fallback" "$([ $r = 1 ] && echo "$out" | grep -q ListAgents && echo 1)" "exit $r: $out"
 
+# Main's STATE.md may carry no line: the tech lead keeps STATE on its lead/* branch (#1136 after #1139). check-docs then
+# passes only when current-lead.sh finds the line on an origin/lead/* branch, read without a fetch.
+docs_copy "$T/m"; sed -i.bak '/^current_lead: /d' "$T/m/$PRODREL/STATE.md"; rm -f "$T/m/$PRODREL/STATE.md.bak"; git -C "$T/m" commit -qam "main without the line"
+git init -q --bare -b main "$T/m.git"; git -C "$T/m" remote add origin "$T/m.git"; git -C "$T/m" -c push.negotiate=false push -q origin main
+git clone -q "$T/m.git" "$T/mlane"; MC="$T/mlane/$PRODREL/tools/check-docs.sh"
+out=$(bash "$MC" 2>/dev/null); r=$?
+ok "no line on main and no lead branch fails check-docs" "$([ $r = 1 ] && echo "$out" | grep -q 'no origin/lead/\* branch has one' && echo 1)" "exit $r: $out"
+git -C "$T/m" checkout -qb lead/y; echo 'current_lead: local_ddd Lead 4 · 6 Nov 18:00 IST' >> "$T/m/$PRODREL/STATE.md"
+sleep 1; git -C "$T/m" commit -qam "lead line on the lead branch" && git -C "$T/m" -c push.negotiate=false push -q origin lead/y
+git -C "$T/mlane" fetch -q origin; out=$(bash "$MC" 2>/dev/null); r=$?
+ok "no line on main, one on an origin/lead/* branch: check-docs passes" "$([ $r = 0 ] && echo 1)" "exit $r: $out"
+out=$(bash "$T/mlane/$PRODREL/tools/current-lead.sh" --no-fetch --where); ok "--where names the lead branch it read" "$([ "$out" = refs/remotes/origin/lead/y ] && echo 1)" "got: $out"
+sed -i.bak 's/^current_lead: .*/current_lead: Lead 4/' "$T/m/$PRODREL/STATE.md"; rm -f "$T/m/$PRODREL/STATE.md.bak"
+sleep 1; git -C "$T/m" commit -qam "malformed" && git -C "$T/m" -c push.negotiate=false push -q origin lead/y
+git -C "$T/mlane" fetch -q origin; out=$(bash "$MC" 2>/dev/null); r=$?
+ok "a lead branch's line with no session id fails check-docs" "$([ $r = 1 ] && echo "$out" | grep -q 'line on origin/lead/y needs a session id' && echo 1)" "exit $r: $out"
+git -C "$T/m" checkout -q main; sleep 1; echo 'current_lead: local_eee Lead 5 · 6 Nov 19:00 IST' >> "$T/m/$PRODREL/STATE.md"
+git -C "$T/m" commit -qam "line on main" && git -C "$T/m" -c push.negotiate=false push -q origin main
+git -C "$T/mlane" pull -q --ff-only origin main; sed -i.bak '/^current_lead: /d' "$T/mlane/$PRODREL/STATE.md"; rm -f "$T/mlane/$PRODREL/STATE.md.bak"
+out=$(bash "$MC" 2>/dev/null); r=$?
+ok "a copy dropping main's line passes only via a lead branch, not origin/main" "$([ $r = 1 ] && echo "$out" | grep -q 'no origin/lead/\* branch has one' && echo 1)" "exit $r: $out"
+
 # The skills carry the rule (guard 1's text half): lanes message the Lead after each step; the Lead's hand-over moves the line first.
 SK="$(cd "$TOOLS/../../../.." && pwd)/.claude/skills"
 for s in next qa; do grep -q 'current-lead.sh' "$SK/$s/SKILL.md" && grep -q 'SendMessage' "$SK/$s/SKILL.md"; ok "skill $s reports each step to the current Lead" "$([ $? = 0 ] && echo 1)" "no current-lead.sh + SendMessage in $s"; done

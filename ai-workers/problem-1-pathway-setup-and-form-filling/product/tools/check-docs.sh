@@ -16,7 +16,16 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
   S="$PH/STATE.md"
   if [ -f "$S" ]; then
     n=$(grep -c '^current_lead: ' "$S")
-    [ "$n" -eq 1 ] || echo "CURRENT LEAD: STATE.md has $n current_lead lines, needs exactly one (current_lead: <session id> <title>)"
+    # The tech lead keeps STATE on its lead/* branch (P-336), so main's STATE.md may carry no line: then the line must be
+    # on an origin/lead/* branch, read by current-lead.sh (no fetch here; a copy without those refs: git fetch origin
+    # 'refs/heads/lead/*:refs/remotes/origin/lead/*').
+    if [ "$n" -eq 0 ]; then
+      w=$(bash "$PH/tools/current-lead.sh" --no-fetch --where 2>/dev/null); v=$(bash "$PH/tools/current-lead.sh" --no-fetch 2>/dev/null)
+      case "$w" in
+        refs/remotes/origin/lead/*) echo "$v" | grep -qE '^[^ ]+ .*Lead [0-9]+' || echo "CURRENT LEAD: the current_lead line on ${w#refs/remotes/} needs a session id, then a title naming \"Lead N\"";;
+        *) echo "CURRENT LEAD: STATE.md has 0 current_lead lines and no origin/lead/* branch has one, needs exactly one (current_lead: <session id> <title>)";;
+      esac
+    else [ "$n" -eq 1 ] || echo "CURRENT LEAD: STATE.md has $n current_lead lines, needs exactly one (current_lead: <session id> <title>)"; fi
     [ "$n" -eq 1 ] && ! grep -qE '^current_lead: [^ ]+ .*Lead [0-9]+' "$S" && echo "CURRENT LEAD: STATE.md's current_lead line needs a session id, then a title naming \"Lead N\""
     # One page (6 Nov: it reached 34 KB and every Lead re-read it; test: check-state-page.sh).
     b=$(wc -c < "$S"); [ "$b" -gt 12288 ] && echo "STATE TOO BIG ($((b / 1024)) KB > 12 KB): move the earlier page to product/history/STATE-<date>-<time>-<lead>.md and keep one page"
