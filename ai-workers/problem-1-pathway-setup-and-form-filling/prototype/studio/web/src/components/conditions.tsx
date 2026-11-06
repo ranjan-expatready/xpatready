@@ -13,7 +13,7 @@ export type FieldInfo = { key: string; meaning: string; value_type: string; name
 const baseName = (f: FieldInfo) => f.name || fieldName(f.key);
 const OPS: [string, string][] = [["eq", "is"], ["neq", "is not"], ["in", "is one of"], ["gt", "is after / more than"], ["gte", "is on or after / at least"], ["lt", "is before / less than"], ["lte", "is on or before / at most"], ["exists", "is answered"]];
 const SUBJECTS: [string, string][] = [["EACH_APPLICANT", "each applicant"], ["CASE", "the application (once)"], ["PRINCIPAL", "the principal applicant"], ["SPOUSE", "the spouse or partner"], ["DEPENDENT", "each child"], ["EACH_PERSON", "each person"]];
-export const subjectLabel = (k?: string) => SUBJECTS.find(([v]) => v === k)?.[1] ?? k ?? "";
+export const subjectLabel = (k?: string) => SUBJECTS.find(([v]) => v === k)?.[1] ?? (k === "PERSON" ? "each person" : k) ?? ""; // PERSON: an eligibility gate (B106)
 
 export function plainCondition(t: Tree, meaning: (k: string) => string = (k) => k): string {
   if (!t) return "always";
@@ -53,7 +53,12 @@ export const derivedType = (key: string) => {
   return w.some((x) => ["days", "age", "years", "months", "count", "number"].includes(x)) ? "number" : "text";
 };
 
-export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EACH_APPLICANT" }: { value: Tree; onChange: (t: Tree | null) => void; fields: FieldInfo[]; defaultSubject?: string }) {
+/** `only="person-questions"` (B106 Q1, eligibility gates; default off, so the other users are unchanged): the rule is
+ *  checked for each person (subjectKind PERSON, the one kind a gate takes, C6.9 BR-2a), only the library's questions
+ *  are offered (a calculated value is refused at release, engine/eligibility-gates.ts gateProblems), and a yes/no
+ *  declaration is compared as true or false, as a yes/no question is (break M1 (b): the text "false" never equals no). */
+export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EACH_APPLICANT", only }: { value: Tree; onChange: (t: Tree | null) => void; fields: FieldInfo[]; defaultSubject?: string; only?: "person-questions" }) {
+  const gate = only === "person-questions";
   const [json, setJson] = React.useState(!isFlat(value));
   const [text, setText] = React.useState(value ? JSON.stringify(value, null, 1) : "");
   const [errors, setErrors] = React.useState<string[]>([]);
@@ -64,18 +69,18 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
   // moves the rows below up under the text being typed, and "Add a comparison" shows its new row. The condition sent out
   // leaves empty rows out; a condition that changes from outside (Edit as JSON, a reload) is read in again.
   const norm = (t: Tree) => JSON.stringify(t ?? null);
-  const [local, setLocal] = React.useState(() => ({ subject: (value?.subjectKind ?? defaultSubject) as string, ...toRows(value) }));
+  const [local, setLocal] = React.useState(() => ({ subject: (gate ? "PERSON" : value?.subjectKind ?? defaultSubject) as string, ...toRows(value) }));
   const emitted = React.useRef(norm(value));
   React.useEffect(() => {
     if (norm(value) === emitted.current) return;
-    emitted.current = norm(value); setLocal({ subject: value?.subjectKind ?? defaultSubject, ...toRows(value) }); setTyping({});
+    emitted.current = norm(value); setLocal({ subject: gate ? "PERSON" : value?.subjectKind ?? defaultSubject, ...toRows(value) }); setTyping({});
   }, [norm(value)]);
   const { subject, combine, rows } = local;
   // Break R2-M2: calculated values (age, days until expiry) are offered by name beside the library's fields.
-  const derivedQ = useApi<{ key: string; plain: string; executable?: boolean }[]>(["library-derived"], "/library/derived", { staleTime: 60_000 });
+  const derivedQ = useApi<{ key: string; plain: string; executable?: boolean }[]>(["library-derived"], gate ? null : "/library/derived", { staleTime: 60_000 });
   const derived: (FieldInfo & { executable?: boolean })[] = React.useMemo(() => (derivedQ.data ?? []).map((d) => ({ key: d.key, meaning: d.plain, value_type: derivedType(d.key), executable: d.executable !== false, name: `${fieldName(d.key)} (calculated)` })), [derivedQ.data]);
   const offered = React.useMemo(() => [...fields, ...derived], [fields, derived]);
-  const typeOf = (k: string) => offered.find((f) => f.key === k)?.value_type ?? derivedType(k);
+  const typeOf = (k: string) => { const t = offered.find((f) => f.key === k)?.value_type ?? derivedType(k); return gate && t === "declaration" ? "yes_no" : t; };
   const listId = React.useId();
 
   React.useEffect(() => {
@@ -109,8 +114,9 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
+        {gate ? <span className="text-text-muted" data-subject-fixed>Checked for each person</span> : <>
         <span className="text-text-muted">Evaluate for</span>
-        <Select className="w-auto" value={subject} onChange={(e) => build(e.target.value, combine, rows)} aria-label="Whom the condition is evaluated for">{SUBJECTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
+        <Select className="w-auto" value={subject} onChange={(e) => build(e.target.value, combine, rows)} aria-label="Whom the condition is evaluated for">{SUBJECTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></>}
         <span className="text-text-muted">when</span>
         <Select className="w-auto" value={combine} onChange={(e) => build(subject, e.target.value, rows)} aria-label="Combine">{[["and", "all of these are true"], ["or", "any of these is true"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
       </div>
@@ -120,7 +126,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
         const set = (p: Partial<Row>) => build(subject, combine, rows.map((x, j) => (j === i ? { ...x, ...p } : x)));
         return (
           <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
-            <Input list={listId} value={typing[i] ?? shownField(r.field)} placeholder="field, e.g. Marital status" onChange={(e) => { const v = e.target.value; setTyping((t) => ({ ...t, [i]: v })); set({ field: keyOf(v) }); }} onBlur={() => setTyping((t) => { const { [i]: _drop, ...rest } = t; return rest; })} aria-label="Field" />
+            <Input list={listId} value={typing[i] ?? shownField(r.field)} placeholder={gate ? "question, e.g. Passport number" : "field, e.g. Marital status"} onChange={(e) => { const v = e.target.value; setTyping((t) => ({ ...t, [i]: v })); set({ field: keyOf(v) }); }} onBlur={() => setTyping((t) => { const { [i]: _drop, ...rest } = t; return rest; })} aria-label="Field" />
             <Select className="w-44" value={r.op} onChange={(e) => set({ op: e.target.value })} aria-label="Comparison">{OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
             {r.op === "exists" ? <span className="text-xs text-text-muted">(no value)</span>
               : t === "yes_no" && r.op !== "in" ? <Select value={r.value} onChange={(e) => set({ value: e.target.value })} aria-label="Value"><option value="">choose</option><option value="true">yes</option><option value="false">no</option></Select>
@@ -129,6 +135,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
             {!r.field ? null
               : derived.some((f) => f.key === r.field) ? <p className={`col-span-4 -mt-1 text-xs ${derived.find((f) => f.key === r.field)?.executable ? "text-text-muted" : "text-text-warn"}`}>Calculated: {derived.find((f) => f.key === r.field)?.meaning}{derived.find((f) => f.key === r.field)?.executable ? "" : " Not worked out by the studio yet, so a condition on it cannot be decided on a case."}</p>
               : fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p>
+              : gate ? <p className="col-span-4 -mt-1 text-xs text-text-warn">"{shownField(r.field)}" is not a question in the library. Choose one from the list: a gate reads only the answers a case is asked.</p>
               : sameName(typing[i] ?? r.field).length > 1 ? <p className="col-span-4 -mt-1 text-xs text-text-warn">{sameName(typing[i] ?? r.field).length} fields are named "{(typing[i] ?? r.field).trim()}": choose one from the list ({sameName(typing[i] ?? r.field).map(nameOf).join(" or ")}).</p>
               : <p className="col-span-4 -mt-1 text-xs text-text-warn">"{shownField(r.field)}" is not a library field or a calculated value yet. The draft saves; release waits until the fact is added from Smart questionnaire (SQR) › Facts a rule needs, or a calculated value is chosen from the list.</p>}
           </div>
