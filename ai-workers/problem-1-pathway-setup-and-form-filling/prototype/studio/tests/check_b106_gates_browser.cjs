@@ -84,15 +84,36 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   ok("BR-3 (Q1): no choice of whom a rule is checked for, it is 'each person'", (await dialog(page).locator('select[aria-label="Whom the condition is evaluated for"]').count()) === 0 && (await dialog(page).locator("[data-subject-fixed]").count()) === 2);
   const offered = await dialog(page).locator("datalist option").evaluateAll((os) => os.map((o) => o.value));
   ok("BR-3 (Q1): only the library's questions are offered, no calculated value", offered.length > 20 && !offered.some((v) => /\(calculated\)/.test(v)), offered.filter((v) => /calculated/.test(v)).slice(0, 3));
+  // Break B1: a button inside the dialog never saves; only Save does.
+  await row(page, 0).getByRole("button", { name: "Add a comparison" }).click();
+  await page.waitForTimeout(800);
+  ok("break B1: Add a comparison adds a row and saves nothing (the dialog stays, the version is unchanged)", (await dialog(page).count()) === 1 && (await row(page, 0).locator('input[aria-label="Field"]').count()) === 3 && (await gates()).version === before.version);
+  await row(page, 0).getByRole("button", { name: "Remove this comparison" }).last().click();
+  await page.waitForTimeout(800);
+  ok("break B1: a comparison's bin removes it and saves nothing", (await dialog(page).count()) === 1 && (await row(page, 0).locator('input[aria-label="Field"]').count()) === 2 && (await gates()).version === before.version);
   await page.locator("[data-gate-add]").click();
+  await page.waitForTimeout(800);
+  ok("break B1: Add a gate saves nothing, so the new row shows no refusal before Save", (await dialog(page).count()) === 1 && !/Give the gate a label/.test(await dialog(page).innerText()) && (await gates()).version === before.version);
+  // Break M1: a comparison with an empty value is met by nobody: said on the row, refused by the save.
+  await row(page, 2).locator('input[aria-label="Field"]').first().fill("Passport number");
+  await row(page, 2).locator('input[aria-label="Field"]').first().blur();
+  ok("break M1: 'is' with no value is said on the row", (await row(page, 2).locator("[data-empty-value]").count()) === 1);
   await save(page);
   await page.getByText("Give the gate a label").first().waitFor();
+  ok("break M1 fail: the save refuses the empty value on the gate's rule", /compares person\.passport_number with an empty value/.test(await dialog(page).innerText()));
+  ok("break M1 fail: 'is one of' with no value is refused by route too", (await call("PUT", `/combinations/${vv}/eligibility-gates`, { gates: [...before.gates, { key: "gate.x", label: "X", condition: { op: "in", field: "person.passport_number", value: [] } }], judgement: before.judgement, version: before.version })).status === 400);
+  await row(page, 2).locator('input[aria-label="Field"]').first().fill("");
+  await row(page, 2).locator('input[aria-label="Field"]').first().blur();
+  await save(page);
+  await page.getByText("A gate needs a rule").first().waitFor();
   const err1 = await dialog(page).innerText();
   ok("BR-1 fail: an empty label and no rule are refused on their fields, in words", /Give the gate a label: what a person reads beside its result/.test(err1) && /A gate needs a rule the answers on file can settle/.test(err1), err1.slice(0, 500));
   ok("BR-1 fail: nothing was saved (the version is unchanged)", (await gates()).version === before.version);
   await axeOf(page, "the open dialog, with its field errors", "[role=dialog]");
   await row(page, 2).locator("input").first().fill("Passport number answered");
   await setRule(page, 2, "Passport number");
+  await row(page, 2).getByLabel(/The representative reviews it/).check();
+  await row(page, 2).getByLabel(/^Not eligible$/).check();
   await page.screenshot({ path: path.join(OUT, "2-dialog-new-gate-1440.png") });
   await save(page); await saved(page);
   const g1 = await gates();
@@ -100,6 +121,7 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   ok("BR-1 pass: the gate is saved to the draft by screen, at the next version", !!added && g1.version === before.version + 1, g1);
   ok("BR-3 pass: stored as a rule per person (subjectKind PERSON): Passport number is answered", added?.condition?.subjectKind === "PERSON" && added?.condition?.op === "exists" && added?.condition?.field === "person.passport_number", added);
   ok("BR-4 pass (Q3): its key is made from the label", added?.key === "gate.passport_number_answered", added?.key);
+  ok("BR-3: 'If not met: Not eligible' (the default) is stored as no whenNotMet", added && added.whenNotMet === undefined, added);
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   ok("BR-8a (m5): the save lost nothing: the two gates as they were, 'needs_review' kept, the 4 lines and the disclaimer", same(g1.gates.slice(0, 2), before.gates) && g1.gates[1].whenNotMet === "needs_review" && same(g1.judgement, before.judgement) && g1.disclaimer === before.disclaimer, { was: before.gates, now: g1.gates.slice(0, 2) });
   await section(page).locator('[data-gate="gate.passport_number_answered"]').waitFor();
@@ -129,13 +151,16 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   await page.locator("[data-gate-add]").click();
   await row(page, 3).locator("input").first().fill("Intended job title answered");
   await setRule(page, 3, "person.intended_job_title"); // a key typed is taken as the field (conditions.tsx keyOf)
+  await row(page, 3).getByLabel(/The representative reviews it/).check();
   await save(page); await saved(page);
+  ok("BR-3 pass: 'If not met: the representative reviews it' is stored as needs_review", (await gates()).gates.find((g) => g.key === "gate.intended_job_title_answered")?.whenNotMet === "needs_review");
   const probe = section(page).locator('[data-gate="gate.intended_job_title_answered"] [data-gate-problem]');
   await probe.first().waitFor();
   ok("BR-7 pass: the release check's problem shows under its gate", /which no case of this application is asked/.test(await probe.first().innerText()), await probe.first().innerText());
   await section(page).screenshot({ path: path.join(OUT, "3-section-problem-under-gate-1440.png") });
   await openDialog(page);
   await row(page, 3).getByRole("button", { name: /Remove the gate Intended job title/ }).click();
+  ok("break m4: the keyboard lands on the confirm (Keep)", await page.evaluate(() => document.activeElement?.textContent === "Keep"));
   ok("remove: a saved gate asks first, with what happens to cases and tests", /Cases already open keep it; cases opened after this change is released do not\. A test that expects this gate fails/.test(await dialog(page).locator("[data-gate-confirm]").innerText()));
   await dialog(page).locator("[data-gate-confirm]").getByRole("button", { name: "Remove" }).click();
   await save(page); await saved(page);
@@ -152,8 +177,16 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   await dialog(page).getByRole("button", { name: "Reload" }).click();
   await page.waitForFunction(() => document.querySelector('[data-gate-row="2"] input')?.value === "Passport number answered");
   ok("BR-8 pass: Reload reads their version", (await row(page, 2).locator("input").first().inputValue()) === "Passport number answered");
+  // Break m3: Cancel with unsaved edits asks first; dismissing keeps the dialog.
+  await row(page, 2).locator("input").first().fill("Passport number answered (not kept)");
+  let asked = "";
+  page.once("dialog", (d) => { asked = d.message(); void d.dismiss(); });
   await page.getByRole("button", { name: "Cancel" }).click();
-  await dialog(page).waitFor({ state: "detached" }).catch(() => undefined);
+  await page.waitForTimeout(300);
+  ok("break m3: Cancel with unsaved edits asks first, and staying keeps them", /Discard your unsaved changes/.test(asked) && (await dialog(page).count()) === 1);
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await dialog(page).waitFor({ state: "detached" });
 
   // ------------------------------------------------------------------ BR-6, J-A4: submit, sign, release, case check
   const caseBefore = await openCase(`ACC-B106-before-${Date.now() % 100000}`);
@@ -192,6 +225,7 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   await cycle("J-A4 add");
   await openTab(page);
   await section(page).getByText("Draft matches the release").waitFor().catch(() => undefined);
+  ok("BR-5 pass: with no disclaimer in the draft, the release carries the Sample default", /^Indicative only\./.test((await gates()).released?.disclaimer ?? ""));
   ok("BR-6: after release the new gate reads Released and the draft matches the release", /Passport number answered\s+Released/.test(await section(page).innerText()) && /Draft matches the release/.test(await section(page).innerText()));
   // The next case check uses it: a case opened now, on its Eligibility page, by screen.
   const off = await as(OFFICER); off.on("pageerror", (e) => errors.push(String(e)));
@@ -244,12 +278,21 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   await small.close();
 
   // ------------------------------------------------------------------ BR-9: retired, read-only
+  // Break m5: a save refused because the combination was retired while the dialog was open says so, not "changed by someone else".
+  const late = await as(AUTHOR); late.on("pageerror", (e) => errors.push(String(e)));
+  await openTab(late); await openDialog(late);
+  await row(late, 0).locator("input").first().fill("Renamed after retiring");
   // Retired the way a person does it: proposed on Structure, approved, released (tests/check_w1_structure.ts).
   const ret = await call("POST", `/combinations/${vv}/retire`, { reason: "B106 read-only check (Sample)" });
   const appr2 = await call("POST", `/library/changes/${ret.body?.id}/approve`, {}, APPROVER);
   const pack = (await call("GET", "/draft", undefined, APPROVER)).body;
   const rel = await call("POST", "/pack/release", { expectedChanges: pack?.changes }, APPROVER);
   ok("BR-9 set-up: Visitor visa retired through Structure (proposed, approved, released)", ret.status < 300 && appr2.status < 300 && rel.status < 300 && sql(`select retired_at is not null from combination where id='${vv}'`) === "t", { ret: ret.body?.detail ?? ret.status, appr: appr2.body?.detail ?? appr2.status, rel: rel.body?.detail ?? rel.status });
+  await save(late);
+  await late.getByText("Not saved").first().waitFor();
+  const lateText = await dialog(late).innerText();
+  ok("break m5: a save after the combination was retired says it is retired, with no Reload", /is retired: its eligibility gates are not changed/.test(lateText) && !/Changed by someone else/.test(lateText), lateText.slice(0, 300));
+  await late.close();
   await openTab(page);
   await section(page).getByText(/Retired: restore it on Structure/).waitFor().catch(() => undefined);
   ok("BR-9: a retired combination's rules are read-only, saying how to change them", (await section(page).locator("[data-eligibility-edit]").count()) === 0 && /Retired: restore it on Structure/.test(await section(page).innerText()));

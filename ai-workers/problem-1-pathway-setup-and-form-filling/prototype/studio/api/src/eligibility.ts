@@ -8,6 +8,22 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { checkGates, snapshotEligibility, type StoredEligibility } from "../../engine/eligibility-gates.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
 
+/** B106 break M1: a comparison with an empty value ("is" nothing, "is one of" none) is met by no answer, so a gate with it
+ *  gives Not met to everyone who answered and Not answered to everyone else, for ever. Refused on the gate's rule. */
+export function emptyValues(tree: unknown): string[] {
+  const out: string[] = [];
+  const stack: unknown[] = [tree];
+  while (stack.length) {
+    const n = stack.pop() as { op?: string; field?: string; value?: unknown; args?: unknown[]; arg?: unknown } | null;
+    if (!n || typeof n !== "object") continue;
+    if (n.field && ["eq", "neq", "gt", "gte", "lt", "lte"].includes(n.op ?? "") && (n.value === "" || (typeof n.value === "string" && !n.value.trim()))) out.push(n.field);
+    if (n.field && n.op === "in" && Array.isArray(n.value) && !n.value.some((v) => !(typeof v === "string" && !v.trim()))) out.push(n.field);
+    if (Array.isArray(n.args)) stack.push(...n.args);
+    if (n.arg) stack.push(n.arg);
+  }
+  return [...new Set(out)];
+}
+
 const nameOf = (id: string | null | undefined) => [...ACTORS].find((a) => a.id === id)?.name ?? (id ? "Someone else" : null);
 
 @Injectable()
@@ -45,7 +61,9 @@ export class EligibilityGates {
       this.db.derivedField.findMany({ where: { workspaceId: c.workspaceId }, select: { derivedKey: true } }),
     ]);
     const checked = checkGates(b, new Map(fields.filter((f) => f.status !== "RETIRED").map((f) => [f.canonicalFieldKey, f.valueType])), new Set(derived.map((d) => d.derivedKey)));
-    if (checked.errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: checked.errors.map((e) => e.message).join(" "), errors: checked.errors }, HttpStatus.BAD_REQUEST);
+    const empty = b.gates.flatMap((g, i) => emptyValues(g.condition).map((f) => ({ field: `gates.${i}.condition`, message: `The rule compares ${f} with an empty value, which no answer meets: give the value, or choose "is answered".` })));
+    const errors = [...checked.errors, ...empty.filter((e) => !checked.errors.some((x) => x.field === e.field))];
+    if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors.map((e) => e.message).join(" "), errors }, HttpStatus.BAD_REQUEST);
     const before = c.eligibility as StoredEligibility | null;
     const current = before?.version ?? 0;
     // BR-3: the first save needs no version; every later one names the version it read (checked after the fields, so

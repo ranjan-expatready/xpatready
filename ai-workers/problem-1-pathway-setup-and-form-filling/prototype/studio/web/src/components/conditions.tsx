@@ -85,7 +85,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
 
   React.useEffect(() => {
     if (!value) { setErrors([]); return; }
-    const h = setTimeout(() => { api("/conditions/check", { method: "POST", json: { condition: value } }).then((r) => setErrors(r.errors)).catch((e) => setErrors([e.message])); }, 250);
+    const h = setTimeout(() => { api("/conditions/check", { method: "POST", json: { condition: value } }).then((r) => setErrors([...r.errors, ...(gate && value?.subjectKind && value.subjectKind !== "PERSON" ? ["a gate is checked for each person: subjectKind must be PERSON"] : [])])).catch((e) => setErrors([e.message])); }, 250);
     return () => clearTimeout(h);
   }, [JSON.stringify(value)]);
 
@@ -132,6 +132,7 @@ export function ConditionBuilder({ value, onChange, fields, defaultSubject = "EA
               : t === "yes_no" && r.op !== "in" ? <Select value={r.value} onChange={(e) => set({ value: e.target.value })} aria-label="Value"><option value="">choose</option><option value="true">yes</option><option value="false">no</option></Select>
               : <Input type={t === "date" && r.op !== "in" ? "date" : "text"} value={r.value} placeholder={r.op === "in" ? "values, separated by commas" : t === "number" ? "number" : "value"} onChange={(e) => set({ value: e.target.value })} aria-label="Value" />}
             <Button size="icon" variant="ghost" aria-label="Remove this comparison" onClick={() => build(subject, combine, rows.filter((_, j) => j !== i))}><Trash2 /></Button>
+            {gate && r.field && r.op !== "exists" && (r.value.trim() === "" || (r.op === "in" && !r.value.split(",").some((x) => x.trim()))) ? <p className="col-span-4 -mt-1 text-xs text-text-danger" data-empty-value>Give the value to compare with, or choose "is answered": with no value nobody's answer can meet this rule.</p> : null}
             {!r.field ? null
               : derived.some((f) => f.key === r.field) ? <p className={`col-span-4 -mt-1 text-xs ${derived.find((f) => f.key === r.field)?.executable ? "text-text-muted" : "text-text-warn"}`}>Calculated: {derived.find((f) => f.key === r.field)?.meaning}{derived.find((f) => f.key === r.field)?.executable ? "" : " Not worked out by the studio yet, so a condition on it cannot be decided on a case."}</p>
               : fields.some((f) => f.key === r.field) ? <p className="col-span-4 -mt-1 text-xs text-text-muted">{fields.find((f) => f.key === r.field)?.meaning} · {t}</p>

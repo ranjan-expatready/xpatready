@@ -12,6 +12,8 @@ import { api, ApiError, useApi, useSessionView, useToast } from "@/lib/api";
 import { ConditionBuilder, plainCondition, type Tree } from "@/components/conditions";
 import { Button, Dialog, Field, Input, Notice, Pill, Textarea } from "@/components/ui/controls";
 import { useLibraryFields } from "@/pages/configuration";
+import { Tip } from "@/components/status";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 /** contracts/eligibility.ts EligibilityGatesView, as the web reads it (that module's type imports reach engine files
@@ -25,7 +27,12 @@ type Errors = Record<string, string>;
 export const TIP = "Checked per person against the answers on file when a case officer runs Eligibility: Met, Not met or Not answered. Never a guarantee: an IRCC officer decides.";
 const WAITING = "A submission is waiting for review: saving changes the draft, so it must be submitted again.";
 const NOT_MET: Record<"not_eligible" | "needs_review", string> = { not_eligible: "Not eligible", needs_review: "The representative reviews it (Possibly eligible)" };
-const MARK: Record<Change["change"], [string, string]> = { added: ["info", "New in draft"], changed: ["warn", "Changed in draft"], removed: ["danger", "Removed in draft"] };
+const MARK: Record<Change["change"] | "released", [string, string, string]> = {
+  added: ["info", "New in draft", "Added in the draft: cases read it once the draft is reviewed and released."],
+  changed: ["warn", "Changed in draft", "Changed in the draft: cases keep the released version until the draft is reviewed and released."],
+  removed: ["danger", "Removed in draft", "Removed in the draft: cases opened before the next release keep it."],
+  released: ["ok", "Released", "In the newest release: cases opened on it are checked against it."],
+};
 const KEY_MAX = 80;
 
 /** BR-4 (Q3, m9): a new gate's key, made from its label at its first save and never changed after; `gate.rule_<n>`
@@ -45,7 +52,8 @@ export function EligibilityGatesSection({ id }: { id: string }) {
   const { canAuthor } = useSessionView(); // m8: the author duty itself, never the answer-key flags (author or expert)
   const fields = useLibraryFields();
   const [open, setOpen] = React.useState(false);
-  const head = <h2 id="eligibility-head" className="flex items-center gap-2 font-semibold">Eligibility rules (staff check) <span title={TIP} aria-label={TIP} role="img" className="inline-flex size-4 cursor-help items-center justify-center rounded-full border border-border-strong text-[10px] text-text-muted">i</span></h2>;
+  const editRef = React.useRef<HTMLButtonElement>(null);
+  const head = <h2 id="eligibility-head" className="flex items-center gap-2 font-semibold">Eligibility rules (staff check) <Tip tip={TIP} focusable><span aria-label={TIP} role="img" className="inline-flex size-4 cursor-help items-center justify-center rounded-full border border-border-strong text-[10px] text-text-muted">i</span></Tip></h2>;
   const box = "space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm";
   if (g.isLoading || o.isLoading) return <section aria-labelledby="eligibility-head" className={box} data-eligibility-gates="loading">{head}<div className="h-4 w-2/3 animate-pulse rounded bg-text/10" /><div className="h-4 w-1/2 animate-pulse rounded bg-text/10" /></section>;
   if (g.isError || !g.data) return <section aria-labelledby="eligibility-head" className={box} data-eligibility-gates="error">{head}<Notice tone="danger" title="The eligibility rules could not be loaded" action={<Button size="sm" variant="ghost" onClick={() => void g.refetch()}>Try again</Button>}>{(g.error as Error | null)?.message ?? "No answer from the studio."}</Notice></section>;
@@ -62,13 +70,13 @@ export function EligibilityGatesSection({ id }: { id: string }) {
   // Edit waits until the summary says whether the combination is retired (never offered, then taken away).
   const action = sum.isLoading ? null : retired ? <p className="text-xs text-text-muted" data-eligibility-readonly="retired">Retired: restore it on Structure to change its eligibility rules.</p>
     : !canAuthor ? <p className="text-xs text-text-muted" data-eligibility-readonly="duty">An author changes these; you can read them.</p>
-    : <Button size="sm" variant={empty ? "default" : "outline"} onClick={() => setOpen(true)} data-eligibility-edit>{empty ? "Add eligibility rules" : "Edit"}</Button>;
+    : <Button ref={editRef} size="sm" variant={empty ? "default" : "outline"} onClick={() => setOpen(true)} data-eligibility-edit>{empty ? "Add eligibility rules" : "Edit"}</Button>;
   return (
     <section aria-labelledby="eligibility-head" className={box} data-eligibility-gates>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>{head}<p className="text-xs text-text-muted">Rules the answers settle, per person</p></div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">
-          <span data-eligibility-count={changes.length}>{changes.length ? `Draft: ${changes.length} change${changes.length === 1 ? "" : "s"}` : release !== undefined ? "Draft matches the release" : "Draft"}</span>
+          <span data-eligibility-count={changes.length}>{changes.length ? `Draft: ${changes.length} change${changes.length === 1 ? "" : "s"}` : release !== undefined ? "Draft matches the release" : null}</span>
           <span data-eligibility-release={release ?? ""}>{release !== undefined && v.released ? `Released in Release ${release}` : "Not released yet"}</span>
           {action}
         </div>
@@ -77,27 +85,27 @@ export function EligibilityGatesSection({ id }: { id: string }) {
       {v.gates.length || removed.length ? (
         <ul className="divide-y divide-border rounded-lg border border-border" aria-label="Gates">
           {v.gates.map((x) => {
-            const c = changeOf.get(x.key), mark = c ? MARK[c.change] : v.released?.gates.some((r) => r.key === x.key) ? ["ok", "Released"] : null;
+            const c = changeOf.get(x.key), mark = c ? MARK[c.change] : v.released?.gates.some((r) => r.key === x.key) ? MARK.released : null;
             const mine = problems.filter((p) => p.item === x.key);
             return (
               <li key={x.key} className="space-y-1 px-3 py-2" data-gate={x.key}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p className="min-w-0 text-sm font-medium">{x.label}</p>
-                  {mark ? <Pill tone={mark[0]}>{mark[1]}</Pill> : null}
+                  {mark ? <Pill tone={mark[0]} title={mark[2]}>{mark[1]}</Pill> : null}
                 </div>
                 <p className="text-xs text-text-muted"><span className="font-medium text-text">Met when:</span> {words(x.condition)} · <span className="font-medium text-text">If not met:</span> {NOT_MET[x.whenNotMet ?? "not_eligible"]}</p>
                 {mine.map((p, i) => <p key={i} className="text-xs text-text-warn" data-gate-problem>⚠ {p.message}</p>)}
               </li>
             );
           })}
-          {removed.map((x) => <li key={x.key} className="flex flex-wrap items-start justify-between gap-2 px-3 py-2" data-gate={x.key} data-gate-removed><p className="text-sm text-text-muted line-through">{x.label}</p><Pill tone="danger">Removed in draft</Pill></li>)}
+          {removed.map((x) => <li key={x.key} className="flex flex-wrap items-start justify-between gap-2 px-3 py-2" data-gate={x.key} data-gate-removed><p className="text-sm text-text-muted line-through">{x.label}</p><Pill tone="danger" title={MARK.removed[2]}>Removed in draft</Pill></li>)}
         </ul>
       ) : null}
       {problems.filter((p) => !v.gates.some((x) => x.key === p.item)).map((p, i) => <p key={i} className="text-xs text-text-warn" data-gate-problem>⚠ {p.message}</p>)}
       {v.judgement.length ? <div className="text-sm"><p className="font-medium">Officer's judgement, not checked by rules</p><ul className="ml-5 list-disc text-text-muted">{v.judgement.map((l) => <li key={l}>{l}</li>)}</ul></div> : null}
-      {!empty ? <p className="text-xs text-text-muted"><span className="font-medium text-text">Disclaimer:</span> {v.disclaimer ?? (v.released?.disclaimer ? `${v.released.disclaimer} (Sample default)` : "the Sample default goes into the release")}</p> : null}
-      {v.savedBy || waiting ? <p className="text-xs text-text-muted">{v.savedBy ? `Saved by ${v.savedBy}${v.savedAt ? `, ${new Date(v.savedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}. ` : ""}{waiting ? <span data-eligibility-waiting>{WAITING}</span> : changes.length ? "Submit it on Review and release; a content reviewer signs it and an approver releases it." : null}</p> : null}
-      {open ? <GatesEditor id={id} taken={new Set((v.released?.gates ?? []).map((x) => x.key))} waiting={waiting} close={() => setOpen(false)} /> : null}
+      {!empty ? <p className="text-xs text-text-muted"><span className="font-medium text-text">Disclaimer:</span> {v.disclaimer ?? (v.released?.disclaimer && !changeOf.has("disclaimer") ? `${v.released.disclaimer} (Sample default)` : "the Sample default goes into the release")}</p> : null}
+      {v.savedBy || waiting ? <p className="text-xs text-text-muted">{v.savedBy ? `Saved by ${v.savedBy}${v.savedAt ? `, ${new Date(v.savedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}. ` : ""}{waiting ? <span data-eligibility-waiting>{WAITING}</span> : changes.length ? <>Submit it on <Link className="text-text-link underline" to={`/c/${id}/review`}>Review and release</Link>; a content reviewer signs it and an approver releases it.</> : null}</p> : null}
+      {open ? <GatesEditor id={id} taken={new Set((v.released?.gates ?? []).map((x) => x.key))} waiting={waiting} close={() => { setOpen(false); setTimeout(() => editRef.current?.focus(), 0); }} /> : null}
     </section>
   );
 }
@@ -124,6 +132,8 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
   const [errors, setErrors] = React.useState<Errors>({}), [top, setTop] = React.useState<string | null>(null), [stale, setStale] = React.useState<string | null>(null), [busy, setBusy] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
   React.useEffect(() => { if (!dirty) return; const ask = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; }; window.addEventListener("beforeunload", ask); return () => window.removeEventListener("beforeunload", ask); }, [dirty]);
+  const addRef = React.useRef<HTMLButtonElement>(null);
+  const focusAdd = () => setTimeout(() => addRef.current?.focus(), 0);
   const set = (u: number, p: Partial<Row>) => { setDirty(true); setRows((rs) => rs.map((r) => (r.uid === u ? { ...r, ...p } : r))); };
   const save = async () => {
     if (busy) return;
@@ -138,7 +148,7 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
       toast.push({ tone: "ok", text: `Eligibility rules saved to the draft. They reach cases once the draft is reviewed and released.${waiting ? ` ${WAITING}` : ""}` });
       setDirty(false); close();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) setStale(e.message);
+      if (e instanceof ApiError && e.status === 409 && e.problem.title === "Changed by someone else") setStale(e.message);
       else if (e instanceof ApiError && e.status === 400 && e.problem.errors?.length) {
         const f: Errors = {};
         for (const x of e.problem.errors) f[x.field] = f[x.field] ? `${f[x.field]} ${x.message}` : x.message;
@@ -151,8 +161,8 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
   return (
     <Dialog open wide guard onOpenChange={(o) => { if (!o) close(); }} title="Edit the eligibility rules"
       description="Gates are rules the answers on file settle, checked for each person. Anything only an officer can weigh (money, health, ties, leaving Canada) goes under Officer's judgement. Saving changes the draft; a content reviewer signs it and an approver releases it."
-      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} onClick={() => void save()} data-eligibility-save>Save the eligibility rules</Button></>}>
-      <form className="space-y-5" aria-label="Eligibility rules" onChangeCapture={() => setDirty(true)} onSubmit={(e) => { e.preventDefault(); void save(); }} data-editor="eligibility">
+      footer={<><Button variant="ghost" onClick={() => { if (!dirty || window.confirm("Discard your unsaved changes?")) close(); }}>Cancel</Button><Button busy={busy} onClick={() => void save()} data-eligibility-save>Save the eligibility rules</Button></>}>
+      <form className="space-y-5" aria-label="Eligibility rules" onChangeCapture={() => setDirty(true)} onSubmit={(e) => e.preventDefault() /* break B1: a button inside (Add a comparison, a bin, Add a gate) never saves; only Save does */} data-editor="eligibility">
         {stale ? <Notice tone="warn" title="Changed by someone else" action={<Button size="sm" variant="outline" onClick={reload}>Reload</Button>}>{stale}</Notice> : null}
         {top ? <Notice tone="danger" title="Not saved">{top}</Notice> : null}
         {Object.keys(errors).length ? <Notice tone="danger" title="Some details need fixing">{others.length ? others.join(" ") : "Each one is said under its field."}</Notice> : null}
@@ -178,13 +188,13 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
               {r.confirm ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-md bg-danger/10 px-3 py-2 text-xs" role="group" aria-label={`Remove ${r.label || `gate ${i + 1}`}?`} data-gate-confirm>
                   <span>Remove "{r.label || `gate ${i + 1}`}"? Cases already open keep it; cases opened after this change is released do not. A test that expects this gate fails until its expected values change.</span>
-                  <Button size="sm" variant="destructive" onClick={() => { setDirty(true); setRows((rs) => rs.filter((x) => x.uid !== r.uid)); }}>Remove</Button>
-                  <Button size="sm" variant="ghost" onClick={() => set(r.uid, { confirm: false })}>Keep</Button>
+                  <Button size="sm" variant="destructive" onClick={() => { setDirty(true); setErrors({}); setRows((rs) => rs.filter((x) => x.uid !== r.uid)); focusAdd(); }}>Remove</Button>
+                  <Button size="sm" variant="ghost" autoFocus onClick={() => set(r.uid, { confirm: false })}>Keep</Button>
                 </div>
-              ) : <Button size="sm" variant="ghost" onClick={() => (r.key ? set(r.uid, { confirm: true }) : setRows((rs) => rs.filter((x) => x.uid !== r.uid)))} aria-label={`Remove the gate ${r.label || i + 1}`}><Trash2 /> Remove</Button>}
+              ) : <Button size="sm" variant="ghost" onClick={() => (r.key ? set(r.uid, { confirm: true }) : (setErrors({}), setRows((rs) => rs.filter((x) => x.uid !== r.uid)), focusAdd()))} aria-label={`Remove the gate ${r.label || i + 1}`}><Trash2 /> Remove</Button>}
             </div>
           ))}
-          <Button size="sm" variant="outline" onClick={() => { setDirty(true); setRows((rs) => [...rs, { uid: uid(), label: "", condition: null, whenNotMet: "not_eligible" }]); }} data-gate-add><Plus /> Add a gate</Button>
+          <Button ref={addRef} size="sm" variant="outline" onClick={() => { setDirty(true); setRows((rs) => [...rs, { uid: uid(), label: "", condition: null, whenNotMet: "not_eligible" }]); }} data-gate-add><Plus /> Add a gate</Button>
         </fieldset>
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">Officer's judgement, not checked by rules</legend>
