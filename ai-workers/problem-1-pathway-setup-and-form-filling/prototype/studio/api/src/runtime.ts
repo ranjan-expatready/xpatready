@@ -15,7 +15,7 @@ import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from 
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
-import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
+import { openingTeam, representativeAnswers, REPRESENTATIVE, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
@@ -187,9 +187,14 @@ export class Runtime {
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
-    const addable = limits.filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0).map((p) => (p.label ?? p.role.replace(/_/g, " ")).toLowerCase());
-    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add."}`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // B117 (P-373, C7.7): the representative of record comes from the case team, never from this list (see below).
+    const addable = limits.filter((p) => p.role !== "principal" && p.role !== "case" && p.role !== REPRESENTATIVE && (p.max ?? 0) > 0).map((p) => (p.label ?? p.role.replace(/_/g, " ")).toLowerCase());
+    const canAdd = addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add.";
+    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // B117: a representative added here would be a person on the case whose answers displace the firm record's (C7.7),
+    // though no screen offers it. The representative of record is chosen in the case team ("Case team" on the case page).
+    if (b.role === REPRESENTATIVE) fail(`The ${(limit!.label ?? "representative").toLowerCase()} is not added as a person: the case's representative of record comes from its case team ("Case team" on the case page). ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;

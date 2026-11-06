@@ -167,6 +167,17 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   const kNow = await call("GET", `/runtime/cases/${K}`, undefined, "user-O");
   ok("C6.2 QA-135 fail: the application itself as a person is refused in words, never the internal role name 'case', and nothing is added", r.status === 422 && /application itself is not a person/.test(r.body.detail) && /can add: .*sponsor/i.test(r.body.detail) && !/\ba case\b/.test(r.body.detail) && kNow.body.people.filter((p: { role: string }) => p.role === "case").length === 1, { detail: r.body.detail, people: kNow.body?.people?.length });
   ok("C6.2 QA-135 pass: a listed role still adds (the Sponsor above), so only the application is refused", kNow.body.people.some((p: { role: string }) => p.role === "sponsor"), kNow.body?.people);
+  // B117 (P-373, C7.7): this release lists a Representative (P above), yet the representative of record comes from the case
+  // team: one added as a person displaced the firm record's answers. The route refuses it; no allowed-roles list names it.
+  const caseRefusal = r.body.detail as string;
+  const teamBefore = (await call("GET", `/runtime/cases/${K}/team`, undefined, "user-O")).body?.representative?.id;
+  r = await call("POST", `/runtime/cases/${K}/people`, { role: "representative", displayName: "Representative R" }, "user-O");
+  const kRep = await call("GET", `/runtime/cases/${K}`, undefined, "user-O");
+  ok("C7.7 B117 fail: a representative added as a person is refused in words (422), names the case team, and nothing is added", r.status === 422 && /representative is not added as a person/.test(r.body.detail) && /case team/.test(r.body.detail) && !kRep.body.people.some((p: { role: string }) => p.role === "representative") && kRep.body.people.length === kNow.body.people.length, { status: r.status, detail: r.body?.detail, people: kRep.body?.people?.map((p: { role: string }) => p.role) });
+  const lists = [caseRefusal, r.body.detail as string].map((d) => (d.match(/can add: ([^.]*)\./)?.[1] ?? "").split(", "));
+  ok("C7.7 B117 pass: both refusals list what this release really lets a person add (spouse or partner, child, sponsor) and never the representative", lists.every((l) => ["spouse or partner", "child", "sponsor"].every((x) => l.includes(x)) && !l.some((x) => /representative/.test(x))), lists);
+  const teamAfter = (await call("GET", `/runtime/cases/${K}/team`, undefined, "user-O")).body?.representative?.id;
+  ok("C7.7 B117 pass: the case keeps its representative of record from the case team, unchanged by the refused request", !!teamBefore && teamAfter === teamBefore, { teamBefore, teamAfter });
   r = await call("GET", `/runtime/cases/${K}/forms`, undefined, "user-O");
   // P-145 (forms slice 1, plan-slice1-channels.md §10): an Online form whose IRCC PDF is in the release keeps a PDF row,
   // but only as a "Copy, not for filing" (for_filing false); it is never offered as a copy to file.
