@@ -194,7 +194,7 @@ export class Runtime {
     if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
     // B117: a representative added here would be a person on the case whose answers displace the firm record's (C7.7),
     // though no screen offers it. The representative of record is chosen in the case team ("Case team" on the case page).
-    if (b.role === REPRESENTATIVE) fail(`The ${(limit!.label ?? "representative").toLowerCase()} is not added as a person: the case's representative of record comes from its case team ("Case team" on the case page). ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (b.role === REPRESENTATIVE) fail(`The ${(limit!.label ?? "representative").toLowerCase()} cannot be added as a person: the case's representative of record comes from its case team ("Case team" on the case page). ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;

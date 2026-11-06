@@ -3,7 +3,7 @@
 Row: BACKLOG B117 (Lead 20 on #1131; P-373; hardening pass P-358). Branch from origin/main a45b4aee7.
 
 ## What changed
-* `api/src/runtime.ts` `addPerson`: a request with the role `representative` is refused (422) in plain words, naming the
+* `api/src/runtime.ts` `addPerson`: a request with the role `representative` is refused (422) in plain words ("The representative cannot be added as a person: …", review n1), naming the
   case team as where the representative of record is chosen. The role key is the engine's own `REPRESENTATIVE`
   (`engine/runtime/team.ts`, the renderer's key for that role): no new fixed string, no combination or form number (P-319).
 * The allowed-roles list in the 422 answers ("This application can add: …") leaves the representative out; it is shared
@@ -48,3 +48,24 @@ The walk now shows the firm-record answers, and three are wrong on main (Sample 
 3. **Country** shows `canada` with "No fixed list for this answer yet".
 Recommendation: one runtime fix row for C7.7 (shape the firm record's values to the questions' types, with a fail
 test each), logged by qa; not in this PR so that B117 stays one small change.
+
+## Review (Opus reviewer, Block on eba4db3db; `review.md`)
+* M1 (QA-76 walk 19/20 at eba4db3db): fixed at d1c10d58b (`(?!@)`); the reviewer ran it there, 21/21.
+* m1 (on the old code the new check crashed on `r.body.detail` undefined instead of printing FAIL): fixed with `?? ""`.
+  Proof: main's `runtime.ts` on a fresh copy gives two FAIL lines (status 201, a representative added; the list names
+  "representative") and finishes 58/60, exit 1; no crash.
+* n1 (words): "cannot be added as a person" instead of "is not added as a person".
+* m2 (`acceptance/C11.12-runtime.test.ts:36` picks the first non-principal role with max 1–4; a release listing the
+  representative first would now get 422): **not changed here.** Not live (`wp.family` lists the spouse first), and it is
+  C11.12's pack, which this C7.7 PR does not name. Recommendation: leave the representative out of that pick in the next
+  runtime PR that touches C11.12.
+* Open point: the reviewer agrees with leaving cases stored before B117, with a caveat: no route removes a person, so a
+  stored representative keeps displacing the firm record on that case until a Reset. Every local database here holds 0;
+  qa can run `select count(*) from case_participant where role='representative'` on the Mac demo to close the point.
+
+## Pre-flight gap found: five chosen suites that run-suites.sh never runs
+`select-suites.mjs --direct` names five suites under `tests/runtime/` (`check_c115_employer.ts`, `check_c611_team.ts`,
+`check_qa122_generate.ts`, `check_vv_filings.ts`, `check_vv_filings_api.ts`), but `run-suites.sh` only loops
+`tests/check_*` plus the engine and the R1 group, so neither a local run nor CI runs them. Run here by hand, by their usage
+lines (results in the PR). Recommendation for the tech lead: a tools row so run-suites.sh runs every chosen
+`tests/runtime/` suite by its usage line, or select-suites stops naming them.
