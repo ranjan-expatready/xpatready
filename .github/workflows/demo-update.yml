@@ -30,5 +30,7 @@ jobs:
           # The runner ends every process a job leaves behind ("Terminate orphan process", 31 Oct: the demo went down at
           # 11:49 UTC). An empty RUNNER_TRACKING_ID keeps the demo running after the job ends.
           RUNNER_TRACKING_ID="" PGDATA="$ROOT/.tools/solution-1-prototype/pg18-data" zsh "$D/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/start.sh"
-          curl -fsS -o /dev/null --retry 10 --retry-delay 3 --retry-all-errors http://localhost:4400/ && echo "demo answers on :4400"
+          # One command per line (P-376 (3)): with "&& echo", a demo that never answered still left this step green.
+          curl -fsS -o /dev/null --retry 10 --retry-delay 3 --retry-all-errors http://localhost:4400/
+          echo "demo answers on :4400"
           { echo "### What's new on the demo (:4400)"; git -C "$D" log --no-merges --format='- %s' "$old..$new" | head -30 || true; } >> "$GITHUB_STEP_SUMMARY"
