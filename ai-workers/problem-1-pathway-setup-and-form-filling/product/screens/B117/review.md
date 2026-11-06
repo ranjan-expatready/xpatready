@@ -84,3 +84,23 @@ A real screen reader.
 **Verdict: Block** (commit eba4db3db)
 To fix: **M1**, the QA-76 walk exits 1 at eba4db3db. It is already fixed at d1c10d58b (walk 21/21 on my copy). Re-check
 and label d1c10d58b. m1, m2 and n1 are optional and do not block.
+
+## Re-review (diff only) at 226964dd1
+Diff: `git diff eba4db3db..226964dd1` (code: runtime.ts 1 line, check_s5_slice1.ts 4 reads, the walk regex; the rest notes, review files, one png).
+* **M1 closed.** The walk's `representative\b(?!@)` is unchanged since d1c10d58b, where I ran it: 21/21, exit 0.
+* **m1 closed.** All four reads of `r.body.detail` in the B117 block now use `r.body?.detail ?? ""`
+  (check_s5_slice1.ts:172, 176 ×2, 177). On the old code the builder's run gives 2 FAIL lines, 58/60, exit 1, and no crash.
+  I re-ran it on head on :4438 (a fresh copy, then stopped and dropped): 60/60, all three B117 checks PASS.
+* **n1 closed.** runtime.ts:197 now says "cannot be added as a person", and the test's regex matches the new words. No
+  other test asserts the old words (grep).
+* **m2 deferred, with a reason.** It is recorded in notes.md for the next runtime PR that touches C11.12. It is not live,
+  so it is acceptable.
+* notes.md records the findings and a new pre-flight gap: five `tests/runtime/` suites that select-suites names are never
+  run by run-suites.sh. That is a tools row for the tech lead, not a B117 defect. Run them by hand before the merge,
+  as the builder is doing.
+* Not mine: three tracked screenshots under `product/qa/reports/2026-11-01-after-merge-4/` are modified in this shared
+  working tree, from a walk run that wrote to its default folder. My runs wrote to the scratchpad. Keep them out of the commit.
+
+No open Blocker or Major.
+
+**Verdict: Approve** (commit 226964dd1)
