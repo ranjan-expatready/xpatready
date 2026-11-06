@@ -91,3 +91,44 @@ Journey: a builder opens a PR → CI reads the diff → the "suites chosen / why
 The full suite set (hours). The replay against GitHub's runs API. CI on the six parts. graph.mjs and GRAPH.md (no screen capability).
 
 **Verdict: Block.** Fix M1 and M2 (each with a pass and a fail case in check-select-suites.sh), then request a re-review of the new commit.
+
+## Re-review (e8c6bc80a)
+Verdict: Approve
+
+Diff-only re-review: `git diff 5eaf0dec4 e8c6bc80a` (select-suites.mjs, check-select-suites.sh, check_prisma_schema.ts, the replay notes). US$0, port 4400 not used.
+
+**Ran (exit codes):**
+* `check-select-suites.sh`: **exit 0**, 58/58 (24.6 s).
+* `check_contract_seams.ts`: **exit 0**, 98/98.
+* `check_prisma_schema.ts`: **exit 0**, 5/5.
+* `check-test-dbs.sh`: **exit 0**, 27/27.
+* origin/main's selector against this one on all 126 `api/src` modules, and on the 12 real merged PRs among the last 40 that did not run everything.
+
+**Per finding:**
+* **M1: closed.**
+  * main.ts's endpoints now come from the raw controller text (`select-suites.mjs:209-214`). main.ts has 6 controller splits in both the raw and the blanked text, so the two stay index-aligned.
+  * demo.ts: 163 on origin/main, 171 now, with `check_s7_load.ts`, `check_s7_reset.ts`, `check_s7_dialogs_browser.cjs`, `check_forms_demo.ts` and both D1 suites. The set-up rule now fires (7 lines).
+  * fill.ts: 219. engine/near.ts: 303, snapshot.ts: 328, contracts/counts.ts: 328, samples/wave1.json: 259. All of these include s7_load and s7_reset.
+  * The false "about 300 through these two" comment is gone.
+* **M2: closed.** `viaGraph` (`:187`, `:244`) keeps origin/main's behaviour for a direct change to an API module. Of the 126 modules, **none loses a suite** compared with origin/main (72 gain, 54 the same); demo-reset-to-six.ts is 160 = 160. For a change that reaches a module through the graph, the shell and home-page exemption still applies, as intended, and both directions are now tested.
+* **m1: closed.** The quote-aware `stripComments` (`:263-274`) never drops a file name that the old regex kept: 0 of 933 code files (13.9 MB) lose one, in 256 ms in total.
+* **m2: closed for sibling modules.** Imports through `sys.path` into another folder are still not import edges: studio/tools/read_form.py and read_validated.py importing p1's xfa_inventory and e5_roundtrip. Both files are still reached through name edges and the sibling chain (read_validated.py ← simulate_validate.py), so there is no miss.
+* **m3: closed.** Under `--direct`, a migration alone chooses `check_prisma_schema.ts` (tested).
+* **m4: closed, with one new minor (n1).**
+  * The datasource is now `postgres`, and dropdb uses `--force`.
+  * I tested the start-up cleanup with a dead pid (999999) and a live one: the dead pid's database and folder are dropped, the live pid's are kept.
+  * After `timeout -s TERM 3`, the scratch database was still there (the signal lands during spawnSync, as the builder says). The next run removed it. In CI each part is a fresh machine.
+* **m5:** not changed, accepted as a speed cost only.
+* **m6: closed.** 10 new pass/fail cases on the synthetic repo.
+* **m7: closed.** P-376 is on `origin/lead/2026-11-05-lead14b` (DECISIONS.md line 6, BACKLOG.md line 181).
+
+**New findings:**
+* **n1 (Minor).** `check_prisma_schema.ts:64` calls `readdirSync(join(STUDIO, "var"))` before `mkdirSync(WORK)`. In a fresh copy with no `studio/var/`, the check stops with ENOENT, exit 1, before checking anything. I reproduced this in a scratch clone of e8c6bc80a. Under run-suites.sh it works, because run-suites.sh creates `var/suites` first (`run-suites.sh:67`). CI is unaffected, but running the file by its own usage line in a new copy fails. Fix: `existsSync(...) ? readdirSync(...) : []`, or `mkdirSync(WORK)` first.
+* **n2 (Minor).** `alive()` treats EPERM, a live process owned by another user, as dead. That would drop that run's scratch database. Only possible on a machine shared across users, which no copy here is. Fix: treat `e.code === "EPERM"` as alive.
+* **n3 (for the tech lead, not a code defect).** BACKLOG.md:181 B121 "Done when" also asks for:
+  * (a) the Prisma client and web build cached across parts (`actions/cache`), which is not in this PR;
+  * (b) a replayed 75th percentile under 10 min, which predicts 28.8 min.
+
+  The deviation is not silent. `replay-2026-11-06.md` measures that caching would save about 2 s, and that exact per-file selection cannot reach the target on this window (most code PRs still reach 275-328 suites). Approving this commit's code does not make B121 Done: the tech lead accepts that evidence or keeps the row open.
+
+**Verdict: Approve** for e8c6bc80a: no Blocker or Major open. n1 and n2 can follow; n3 is the tech lead's call on the row.
