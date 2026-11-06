@@ -22,14 +22,24 @@ type Readiness = { filing: string; ready: boolean; blocks: Line[]; warns: Line[]
 type Filing = { id: string; label: string; status: string; read_only?: boolean };
 type PrepareView = { derived: boolean; why?: string; filings: Filing[]; readiness?: Readiness[] };
 type TeamView = { representative: { id: string; name: string } | null; officers: { id: string; name: string }[] };
-type NotReady = { detail: string; lines: string[] };
+/** A refusal from the server, shown under the filing until its lines change again (`key`: the open lines it was shown on). */
+type Refusal = { title: string; detail: string; lines: string[]; key: string };
+type OnRefused = (title: string, e: unknown) => Promise<void>;
 
 /** The owners in the server's order (engine/runtime/readiness.ts ORDER), in people's words. */
 const OWNERS: [Owes, string][] = [["staff", "The case team"], ["representative", "The representative of record"], ["client", "The client"], ["employer", "The employer"], ["ircc", "IRCC"]];
 /** The filing's status words: the same as the Submission to IRCC panel's (submission.tsx), from /prepare's own status. */
-const STATUS: Record<string, { words: string; tone: string }> = { not_started: { words: "Not started", tone: "neutral" }, ready_to_file: { words: "Ready to file", tone: "info" }, submitted: { words: "Submitted", tone: "ok" } };
-const statusOf = (s: string) => STATUS[s.toLowerCase()] ?? { words: s.toLowerCase().replace(/_/g, " "), tone: "neutral" };
-const SEVERITY: Record<Line["severity"], { words: string; tone: string }> = { block: { words: "Blocks: fix it", tone: "danger" }, critical: { words: "Critical warning", tone: "warn" }, warning: { words: "Warning", tone: "neutral" } };
+const STATUS: Record<string, { words: string; tone: string; title: string }> = {
+  not_started: { words: "Not started", tone: "neutral", title: "Not marked Ready to file yet" },
+  ready_to_file: { words: "Ready to file", tone: "info", title: "Marked Ready to file: record the submission once IRCC acknowledges it" },
+  submitted: { words: "Submitted", tone: "ok", title: "Recorded as submitted: read-only" },
+};
+const statusOf = (s: string) => STATUS[s] ?? { words: s.replace(/_/g, " "), tone: "neutral", title: "" };
+/** A tag only where the server's words do not already say it: a block, and a plain warning (CRITICAL lines say "CRITICAL:"). */
+const SEVERITY: Partial<Record<Line["severity"], { words: string; tone: string; title: string }>> = {
+  block: { words: "Blocks: fix it", tone: "danger", title: "A block is never passed with a reason: fix it, then it is gone" },
+  warning: { words: "Warning", tone: "neutral", title: "Fix it, or pass it with a written reason" },
+};
 const when = (at: string) => new Date(at).toLocaleString("en-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 /** The count line: what stands before Ready to file, as counts of the server's lines (never a percentage). */
@@ -37,12 +47,15 @@ const standing = (r: Readiness) => {
   const n = r.blocks.length, w = r.warns.length;
   return `${n ? plural(n, "block") : ""}${n && w ? " and " : ""}${w ? plural(w, "open warning") : ""} ${n + w === 1 ? "stands" : "stand"} before Ready to file.`;
 };
+const openKeyOf = (r: Readiness | undefined) => (r ? [...r.blocks, ...r.warns].map((l) => `${l.code}|${l.key}`).join("\n") : "");
 const focusLater = (el: () => HTMLElement | null | undefined) => requestAnimationFrame(() => el()?.focus());
+/** The view's query key: the same as the Submission to IRCC panel's, so the case page reads /prepare once for both. */
+const viewKey = (caseId: string) => ["runtime", "view", caseId, "prepare"];
 
 /** Every filing's readiness on one case. Under the case view's query key, so any answer change re-reads it. */
 export function ReadinessPanel({ caseId }: { caseId: string }) {
   const actor = useActorId();
-  const q = useApi<PrepareView>(["runtime", "view", caseId, "prepare", actor], `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
+  const q = useApi<PrepareView>(viewKey(caseId), `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
   const team = useApi<TeamView>(["runtime", "team", caseId], `/runtime/cases/${caseId}/team`, { retry: noRetryOnRefusal });
   const firm = useFirm();
   const nameOf = (id: string) => (team.data?.representative?.id === id ? team.data.representative.name : null) ?? team.data?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? id;
@@ -68,27 +81,32 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
 function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: string; f: Filing; r: Readiness | undefined; actor: string; nameOf: (id: string) => string; officers: string[] }) {
   const qc = useQueryClient(), toast = useToast();
   const heading = React.useRef<HTMLHeadingElement>(null);
-  const [notReady, setNotReady] = React.useState<NotReady | null>(null);
+  const [refusal, setRefusal] = React.useState<Refusal | null>(null);
   const [marking, setMarking] = React.useState(false);
   // /prepare says a derived status as stored (NOT_STARTED) and a marked one in lower case (ready_to_file): one spelling here.
   const st = f.status.toLowerCase(), s = statusOf(st), open = st !== "submitted" && !f.read_only;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
-  // The refusal names the lines open when it was given: once they change (a pass, a review, a fix) it is gone, never left
-  // listing lines that are passed now.
-  const openKey = r ? [...r.blocks, ...r.warns].map((l) => `${l.code}|${l.key}`).join("\n") : "";
-  React.useEffect(() => { setNotReady(null); }, [openKey]);
+  // A refusal stays while the lines it was shown on are open (break F1: a stale tab's refusal is read again after the
+  // refresh, never wiped by it); a later change (a pass, a review, a fix) takes it away.
+  const openKey = openKeyOf(r);
+  React.useEffect(() => { setRefusal((x) => (x && x.key !== openKey ? null : x)); }, [openKey]);
+  /** BR-11: any refusal not about one field is shown with the server's own words under the filing, after the view is read
+   *  again (a 403 or 409 means the screen was out of date), and the focus goes to the filing's heading (breaks F3, F4, F5). */
+  const refused: OnRefused = async (title, e) => {
+    const p = (e instanceof ApiError ? e.problem : {}) as { blocks?: Line[]; warns?: Line[] };
+    await refresh();
+    const now = qc.getQueryData<PrepareView>(viewKey(caseId))?.readiness?.find((x) => x.filing === f.id);
+    setRefusal({ title, detail: (e as Error).message, lines: [...(p.blocks ?? []), ...(p.warns ?? [])].map((l) => l.words), key: openKeyOf(now) });
+    focusLater(() => heading.current);
+  };
   async function ready() {
-    setMarking(true); setNotReady(null);
+    setMarking(true); setRefusal(null);
     try {
       await api(`/runtime/filings/${f.id}/ready`, { method: "POST", json: {} });
       toast.push({ tone: "ok", text: `${f.label}: Ready to file` });
       await refresh(); focusLater(() => heading.current);
-    } catch (e) {
-      const p = (e instanceof ApiError ? e.problem : {}) as { blocks?: Line[]; warns?: Line[] };
-      if (e instanceof ApiError && e.status === 409) setNotReady({ detail: e.message, lines: [...(p.blocks ?? []), ...(p.warns ?? [])].map((l) => l.words) });
-      else toast.push({ tone: "danger", text: (e as Error).message });
-      await refresh();
-    } finally { setMarking(false); }
+    } catch (e) { await refused("Not ready to file", e); }
+    finally { setMarking(false); }
   }
   if (!r) return (
     <article className="px-4 py-3" data-readiness-filing={f.id} data-status={st}>
@@ -97,15 +115,16 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
     </article>
   );
   const lines = [...r.blocks, ...r.warns];
-  const isRep = !!r.representative && r.representative === actor;
-  const reviewOpen = r.warns.some((w) => w.code === "representative_review");
+  // P-155: the representative of record's own; shown while the filing has no current review (break F6: also when someone
+  // passed the review warning with a reason, since the representative may still review it).
+  const canReview = open && !!r.representative && r.representative === actor && !r.reviewed;
   return (
     <article aria-labelledby={`rd-${f.id}`} className="space-y-3 px-4 py-3" data-readiness-filing={f.id} data-status={st} data-ready={r.ready ? "yes" : "no"}>
       <div className="flex flex-wrap items-center gap-2">
         <h3 ref={heading} id={`rd-${f.id}`} tabIndex={-1} className="min-w-0 text-sm font-semibold outline-none [overflow-wrap:anywhere]">{f.label}</h3>
-        <Pill tone={s.tone}>{s.words}</Pill>
+        <Pill tone={s.tone} title={s.title}>{s.words}</Pill>
         <span className="flex-1" />
-        {open && isRep && reviewOpen ? <ReviewButton caseId={caseId} f={f} r={r} /> : null}
+        {canReview ? <ReviewButton f={f} r={r} onRefused={refused} onDone={() => { setRefusal(null); void refresh().then(() => focusLater(() => heading.current)); }} /> : null}
         {open && st !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
       </div>
       <p className="text-[13px] text-text-muted" data-standing>
@@ -113,11 +132,11 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
           : st === "ready_to_file" ? "Ready to file. Record the submission below once IRCC acknowledges it."
           : lines.length ? standing(r) : "Nothing stands before Ready to file."}
       </p>
-      {notReady ? (
-        <div data-not-ready>
-          <Notice tone="danger" title="Not ready to file">
-            <p>{notReady.detail}</p>
-            {notReady.lines.length ? <ul className="mt-1 list-disc space-y-0.5 pl-5">{notReady.lines.map((w, i) => <li key={i} className="[overflow-wrap:anywhere]">{w}</li>)}</ul> : null}
+      {refusal ? (
+        <div data-refusal data-not-ready={refusal.title === "Not ready to file" ? "" : undefined}>
+          <Notice tone="danger" title={refusal.title}>
+            <p className="[overflow-wrap:anywhere]">{refusal.detail}</p>
+            {refusal.lines.length ? <ul className="mt-1 list-disc space-y-0.5 pl-5">{refusal.lines.map((w, i) => <li key={i} className="[overflow-wrap:anywhere]">{w}</li>)}</ul> : null}
           </Notice>
         </div>
       ) : null}
@@ -126,7 +145,7 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
         return (
           <div key={o} data-owes={o}>
             <h4 className="text-[13px] font-semibold">{words} <span className="font-normal text-text-muted">· {plural(mine.length, "line")}</span></h4>
-            <ul className="mt-1 space-y-2">{mine.map((l) => <OpenLine key={`${l.code}|${l.key}`} caseId={caseId} f={f} l={l} canPass={open} onPassed={() => focusLater(() => heading.current)} />)}</ul>
+            <ul className="mt-1 space-y-2">{mine.map((l) => <OpenLine key={`${l.code}|${l.key}`} caseId={caseId} f={f} l={l} canPass={open} onRefused={refused} onPassed={() => { setRefusal(null); focusLater(() => heading.current); }} />)}</ul>
           </div>
         );
       }) : null}
@@ -151,40 +170,39 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
 }
 
 /** One open block or warning: the server's words; a warning is passed with a written reason, a block never. */
-function OpenLine({ caseId, f, l, canPass, onPassed }: { caseId: string; f: Filing; l: Line; canPass: boolean; onPassed: () => void }) {
+function OpenLine({ caseId, f, l, canPass, onRefused, onPassed }: { caseId: string; f: Filing; l: Line; canPass: boolean; onRefused: OnRefused; onPassed: () => void }) {
   const qc = useQueryClient(), toast = useToast();
   const [passing, setPassing] = React.useState(false), [reason, setReason] = React.useState(""), [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState<{ reason?: string; form?: string }>({});
+  const [err, setErr] = React.useState<string | null>(null);
   const opener = React.useRef<HTMLButtonElement>(null), box = React.useRef<HTMLFormElement>(null);
   React.useEffect(() => { if (passing) box.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus(); }, [passing]);
-  const cancel = () => { setPassing(false); setReason(""); setErr({}); focusLater(() => opener.current); };
+  const cancel = () => { setPassing(false); setReason(""); setErr(null); focusLater(() => opener.current); };
   async function pass(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setErr({});
+    e.preventDefault(); setBusy(true); setErr(null);
     try {
       await api(`/runtime/filings/${f.id}/warnings/${encodeURIComponent(l.code)}/pass`, { method: "POST", json: { reason, key: l.key } });
       toast.push({ tone: "ok", text: "Passed with your reason: who and when are recorded." });
       await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); onPassed();
     } catch (x) {
       const field = x instanceof ApiError ? x.field("reason") : null;
-      setErr(field ? { reason: field } : { form: (x as Error).message });
-      if (x instanceof ApiError && x.status === 409) void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
-      focusLater(() => box.current?.querySelector<HTMLElement>('[aria-invalid="true"], [role="alert"]'));
+      if (field) { setErr(field); focusLater(() => box.current?.querySelector<HTMLElement>('[aria-invalid="true"]')); }
+      // Not about the reason (passed meanwhile, no longer allowed): shown under the filing, which outlives this line.
+      else { setPassing(false); await onRefused("Not passed", x); }
     } finally { setBusy(false); }
   }
   const sev = SEVERITY[l.severity];
   return (
     <li className="rounded-lg border border-border bg-surface px-3 py-2" data-line={l.key} data-code={l.code} data-severity={l.severity}>
       <div className="flex flex-wrap items-start gap-2">
-        <Pill tone={sev.tone}>{sev.words}</Pill>
+        {sev ? <Pill tone={sev.tone} title={sev.title}>{sev.words}</Pill> : null}
         <span className="min-w-0 flex-1 text-[13px] [overflow-wrap:anywhere]" data-words>{l.words}</span>
         {canPass && l.severity !== "block" && !passing ? <Button ref={opener} size="sm" variant="secondary" onClick={() => setPassing(true)} aria-label={`Pass with a reason: ${l.words}`}>Pass with a reason…</Button> : null}
       </div>
       {passing ? (
-        <form ref={box} onSubmit={(e) => void pass(e)} className="mt-2 space-y-2" aria-label="Pass this warning with a reason" data-pass-form>
-          <Field label="Why is this passed?" hint="Kept with the filing, with your name and the time." error={err.reason ?? null}>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={400} className="min-h-16" />
+        <form ref={box} onSubmit={(e) => void pass(e)} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); cancel(); } }} className="mt-2 space-y-2" aria-label="Pass this warning with a reason" data-pass-form>
+          <Field label="Why is this passed?" hint="Kept with the filing, with your name and the time. Up to 300 characters." error={err}>
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} className="min-h-16" />
           </Field>
-          {err.form ? <p role="alert" className="text-xs text-text-danger [overflow-wrap:anywhere]">{err.form}</p> : null}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" busy={busy}>Pass</Button>
             <Button type="button" size="sm" variant="ghost" onClick={cancel}>Cancel</Button>
@@ -195,43 +213,43 @@ function OpenLine({ caseId, f, l, canPass, onPassed }: { caseId: string; f: Fili
   );
 }
 
-/** The representative of record's review (P-155): of the facts in the view they read (facts_hash). When they prepared
- *  the filing themself, the server asks them to confirm it is self-reviewed; the box appears then. */
-function ReviewButton({ caseId, f, r }: { caseId: string; f: Filing; r: Readiness }) {
-  const qc = useQueryClient(), toast = useToast();
-  const [open, setOpen] = React.useState(false), [note, setNote] = React.useState(""), [self, setSelf] = React.useState<boolean | null>(null), [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState<{ note?: string; self?: string; form?: string }>({});
+/** The representative of record's review (P-155): of the facts they read when they opened it (`read`, break F2: a
+ *  refusal closes the form, so a second press never sends facts read in the background). When they prepared the filing
+ *  themself, the server asks them to confirm it is self-reviewed; the box appears then. */
+function ReviewButton({ f, r, onRefused, onDone }: { f: Filing; r: Readiness; onRefused: OnRefused; onDone: () => void }) {
+  const toast = useToast();
+  const [read, setRead] = React.useState<string | null>(null), [note, setNote] = React.useState(""), [self, setSelf] = React.useState<boolean | null>(null), [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<{ note?: string; self?: string }>({});
   const opener = React.useRef<HTMLButtonElement>(null), box = React.useRef<HTMLFormElement>(null);
-  React.useEffect(() => { if (open) box.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus(); }, [open]);
-  const cancel = () => { setOpen(false); setNote(""); setSelf(null); setErr({}); focusLater(() => opener.current); };
+  React.useEffect(() => { if (read) box.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus(); }, [read]);
+  const close = () => { setRead(null); setNote(""); setSelf(null); setErr({}); };
+  const cancel = () => { close(); focusLater(() => opener.current); };
   async function review(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr({});
     try {
-      const done = await api<{ words: string }>(`/runtime/filings/${f.id}/review`, { method: "POST", json: { facts_hash: r.facts_hash, ...(note.trim() ? { note } : {}), ...(self ? { self: true } : {}) } });
+      const done = await api<{ words: string }>(`/runtime/filings/${f.id}/review`, { method: "POST", json: { facts_hash: read, ...(note.trim() ? { note } : {}), ...(self ? { self: true } : {}) } });
       toast.push({ tone: "ok", text: done.words });
-      setOpen(false);
-      await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
-      focusLater(() => document.getElementById(`rd-${f.id}`));
+      close(); onDone();
     } catch (x) {
       const a = x instanceof ApiError ? x : null;
-      if (a?.field("self")) setSelf(false);
-      setErr({ note: a?.field("note") ?? undefined, self: a?.field("self") ?? undefined, form: a?.field("note") || a?.field("self") ? undefined : (x as Error).message });
-      if (a?.status === 409) void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
-      focusLater(() => box.current?.querySelector<HTMLElement>('[aria-invalid="true"], [role="alert"]'));
+      if (a?.field("note") || a?.field("self")) {
+        if (a.field("self")) setSelf(false);
+        setErr({ note: a.field("note") ?? undefined, self: a.field("self") ?? undefined });
+        focusLater(() => box.current?.querySelector<HTMLElement>('[aria-invalid="true"]'));
+      } else { close(); await onRefused("Not reviewed", x); }
     } finally { setBusy(false); }
   }
-  if (!open) return <Button ref={opener} size="sm" variant="secondary" onClick={() => setOpen(true)} data-review-filing>Review the filing</Button>;
+  if (!read) return <Button ref={opener} size="sm" variant="secondary" onClick={() => setRead(r.facts_hash)} data-review-filing>Review the filing</Button>;
   return (
-    <form ref={box} onSubmit={(e) => void review(e)} className="basis-full space-y-2 rounded-lg border border-border bg-surface px-3 py-2" aria-label={`Review ${f.label}`} data-review-form>
-      <p className="text-[13px]">You review this filing as the representative of record, for its facts as they are now. A later change reopens the review.</p>
-      <Field label="Note (optional)" error={err.note ?? null}><Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={400} className="min-h-16" /></Field>
+    <form ref={box} onSubmit={(e) => void review(e)} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); cancel(); } }} className="basis-full space-y-2 rounded-lg border border-border bg-surface px-3 py-2" aria-label={`Review ${f.label}`} data-review-form>
+      <p className="text-[13px]">You review this filing as the representative of record, for its facts as they are on this page now. A later change reopens the review.</p>
+      <Field label="Note (optional)" hint="Up to 400 characters." error={err.note ?? null}><Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={400} className="min-h-16" /></Field>
       {self !== null ? (
         <label className="flex items-start gap-2 text-[13px]">
           <input type="checkbox" checked={self} onChange={(e) => setSelf(e.target.checked)} aria-invalid={err.self ? true : undefined} aria-describedby={err.self ? `self-${f.id}` : undefined} className="mt-0.5 size-4" />
           <span>I prepared and reviewed this filing myself (logged as Self-reviewed).{err.self ? <span id={`self-${f.id}`} role="alert" className="block text-xs text-text-danger">{err.self}</span> : null}</span>
         </label>
       ) : null}
-      {err.form ? <p role="alert" className="text-xs text-text-danger [overflow-wrap:anywhere]">{err.form}</p> : null}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" busy={busy}><Check aria-hidden />Confirm the review</Button>
         <Button type="button" size="sm" variant="ghost" onClick={cancel}>Cancel</Button>

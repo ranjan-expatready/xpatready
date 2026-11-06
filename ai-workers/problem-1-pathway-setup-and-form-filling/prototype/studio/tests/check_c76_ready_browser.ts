@@ -16,7 +16,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { chromium, type Locator, type Page } from "playwright";
-import { CLIENT, PORT, call, fillEverything, filingOf, firms, needVisitorVisa, openCase, prepare, readinessOf, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { CLIENT, PORT, agent, answer, call, confirmAll, fillEverything, filingOf, firms, needVisitorVisa, openCase, prepare, readinessOf, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const BASE = `http://localhost:${PORT}`, STUDIO = join(import.meta.dirname, "..");
 const SHOTS = join(STUDIO, "..", "..", "product", "screens", "C7.6", "screenshots"); mkdirSync(SHOTS, { recursive: true });
@@ -125,10 +125,23 @@ ok("C7.6 fail: a reason without words (\"1234\") is refused on the field too; no
 await press(lineOf(firstWarn).getByRole("button", { name: "Cancel" }));
 ok("keyboard: Cancel gives the focus back to the line's \"Pass with a reason…\"", await lineOf(firstWarn).getByRole("button", { name: /^Pass with a reason/ }).evaluate((el) => el === document.activeElement));
 
-// Each warning (except the representative's review) passed with a reason, by keyboard.
+// Break F1 (#1171): a stale tab. Another tab passes the first warning (the API, as the same case officer); this page
+// still shows it and presses Ready to file: the server's refusal stays on the screen after the page reads the view
+// again (never wiped by the refresh), names the lines open now, and the focus goes to the filing's heading.
+const other = await call("POST", `/runtime/filings/${fid}/warnings/${firstWarn.code}/pass`, { reason: "Sample: checked with the client by phone (0)", key: firstWarn.key }, officer);
+await press(filing().locator("[data-mark-ready]"));
+await p.waitForTimeout(1500);
+const nowOpen = [...((await read()).rd?.blocks ?? []), ...((await read()).rd?.warns ?? [])].map((l) => l.words);
+const staleListed = await words(filing().locator("[data-not-ready] li"));
+ok("F1 fail (stale tab): a refused Ready to file stays on the screen after the refresh, with the server's words and the lines open now; the passed line is gone from the list",
+  other.status === 200 && await filing().locator("[data-not-ready]").isVisible() && [...staleListed].sort().join("\n") === [...nowOpen].sort().join("\n") && (await lineOf(firstWarn).count()) === 0, { other: other.status, staleListed, nowOpen });
+ok("F1 / F3 (keyboard): after the refusal the focus is on the filing's heading, never the page", await filing().locator("h3").evaluate((el) => el === document.activeElement));
+await state("ready-refused-stale-tab");
+
+// Each other warning (except the representative's review) passed with a reason, by keyboard.
 const toPass = (rd?.warns ?? []).filter((w) => w.code !== "representative_review");
-let i = 0;
-for (const w of toPass) {
+let i = 1;
+for (const w of toPass.filter((x) => x !== firstWarn)) {
   i++;
   await press(lineOf(w).getByRole("button", { name: /^Pass with a reason/ }));
   await p.keyboard.type(`Sample: checked with the client by phone (${i})`);
@@ -181,6 +194,36 @@ await dlg.getByRole("button", { name: "Record the submission" }).click(); await 
 const number = dlg.getByRole("textbox", { name: "Application number" }).first();
 ok("C8.2 fail: a missing application number is refused on its field", await number.isVisible() && (await number.getAttribute("aria-invalid")) === "true", await dlg.innerText().catch(() => ""));
 ok("C8.2 fail: nothing recorded (still ready_to_file)", (await read()).fl?.status === "ready_to_file");
+await p.keyboard.press("Escape");
+
+// ---------------------------------------------------------------- break F2: a review refused because the facts changed
+// The representative opens the review on a second case; meanwhile a fact IMM 5257 reads changes (the API, as the case
+// officer). Confirm is refused (409, the server's words, nothing stored) and the form closes, so a second press cannot send
+// facts the page read in the background; pressing "Review the filing" again reviews the facts as they are now.
+const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client B", dob: yearsAgo(35) }], { representative: rep, caseOfficers: [officer] });
+const P2 = c2.subjects["Sample Client B"];
+await fillEverything(c2.id);
+const fid2 = filingOf((await prepare(c2.id, officer)).p, P2)?.id ?? "";
+type Q = { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; collected_from: string; fills: { form: string }[]; value?: unknown };
+const q2 = ((await agent(c2.id))?.sections ?? []).flatMap((x: { questions: Q[] }) => x.questions)
+  .find((q: Q) => q.subjectId === P2 && q.required && !q.hidden && !q.group && q.value_type === "text" && q.fills.some((x) => x.form === "IMM 5257"));
+await as(rep!); await p.goto(`${BASE}/cases/${c2.id}`);
+const filing2 = () => panel().locator(`[data-readiness-filing="${fid2}"]`);
+await filing2().waitFor({ timeout: 60_000 }); await settle();
+await press(filing2().getByRole("button", { name: "Review the filing" }));
+const changed = q2 ? await answer(c2.id, P2, q2.fact, "Sample Changed Value", officer) : null;
+if (q2) await confirmAll(c2.id, P2);
+await press(filing2().getByRole("button", { name: "Confirm the review" }));
+await p.waitForTimeout(1000);
+const reviews2 = () => Number(sql(`select count(*) from filing_review where filing_id = '${fid2}'`) ?? -1);
+const refusal2 = await filing2().locator("[data-refusal]").innerText().catch(() => "");
+ok("F2 fail: a review of facts changed since the page read them is refused with the server's words, the form closes and nothing is stored",
+  !!q2 && (changed?.status ?? 500) < 300 && /Not reviewed/.test(refusal2) && /changed after you read it/.test(refusal2) && (await filing2().locator("[data-review-form]").count()) === 0 && reviews2() === 0, { fact: q2?.fact, status: changed?.status, refusal2, n: reviews2() });
+ok("F2 / F3 (keyboard): after the refusal the focus is on the filing's heading", await filing2().locator("h3").evaluate((el) => el === document.activeElement));
+await press(filing2().getByRole("button", { name: "Review the filing" }));
+await press(filing2().getByRole("button", { name: "Confirm the review" }));
+await filing2().locator("[data-reviewed]").waitFor({ timeout: 15_000 }).catch(() => null);
+ok("F2 pass: pressed again (the facts read now), the review is recorded and the refusal is gone", reviews2() === 1 && (await filing2().locator("[data-refusal]").count()) === 0);
 await p.keyboard.press("Escape");
 
 // ---------------------------------------------------------------- the client never reaches the panel
