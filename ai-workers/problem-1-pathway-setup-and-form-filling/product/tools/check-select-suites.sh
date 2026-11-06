@@ -49,8 +49,4 @@ for f in "$Q/product/DECISIONS.md" "$Q/product/qa/CAPABILITIES.md"; do
   k=$(kind "$f"); ok "$(basename "$f") feeds graph.mjs --check: records, not notes (I1 review)" "$([ "$k" = records ] && echo 1)" "$k"
 done
 k=$(printf '' | bash "$T/change-kind.sh" --files); ok "no files changed: notes" "$([ "$k" = notes ] && echo 1)" "$k"
-# The merge queues route by the same idea (B119, P-376 (1)): records-only PRs to "records", below m2 and m3. CI runs
-# this file, so the queue check rides here and ci.yml (a shared file: every suite) stays as it is.
-q=$(python3 -I "$T/check-queue-rules.py" 2>&1); qrc=$?
-ok "merge queues (.mergify.yml, check-queue-rules.py): $(tail -1 <<< "$q")" "$([ $qrc = 0 ] && echo 1)" "$(grep -E '^FAIL' <<< "$q" | head -3 | tr '\n' ' ')"
 echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

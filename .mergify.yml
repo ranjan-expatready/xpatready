@@ -18,8 +18,8 @@ merge_queue:
 # product/screens/**/*.md, product/history/**. It is checked only when no product PR waits ahead of it, and a product PR
 # that arrives goes ahead of it, so a records merge never restarts a product batch; records also never share a batch
 # with code. m2 and m3 take a PR only when at least one file is not a record. The pattern is the same in all three queues
-# ("files~=^(?!records$)": some file is not a record; with "-" in front: none is); tools/check-queue-rules.py reads this
-# file and fails when the queues stop routing that way. The daily records PR (P-336) stays.
+# ("files~=^(?!records$)": some file is not a record; with "-" in front: none is). product/screens/B119/
+# check-queue-rules.py reads this file and fails when the queues stop routing that way. The daily records PR (P-336) stays.
 queue_rules:
   - name: m2
     batch_size: 6

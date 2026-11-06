@@ -9,7 +9,9 @@ in file order, whose conditions all hold; on a list such as files or label, "att
 ci, records listed last, one records pattern for all queues). Then it breaks the configuration on purpose and expects
 each break to be caught, so the check is shown to fail, not only to pass. Runs no suite, US$0. It does not replace
 Mergify's own validation (the "Configuration changed" check on the PR).
-  python3 -I product/tools/check-queue-rules.py [path/to/.mergify.yml]
+  python3 -I product/screens/B119/check-queue-rules.py [path/to/.mergify.yml]
+It lives in B119's row folder because product/tools/ is the tech lead's; the PR proposes running it in CI from
+tools/check-select-suites.sh (the tech lead's change to make).
 """
 import copy, os, re, subprocess, sys
 
