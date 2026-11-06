@@ -56,7 +56,9 @@ const FINGERPRINTED = /\(\d+ files fingerprinted\)/g;
 // its masked content. table → dotted paths, "*" for any key.
 const UNORDERED = {
   answer_snapshot: ["facts_json.groups"],          // a case's answer groups, one per person, in the order of their random ids
-  proposal_item: ["work.affected.*.people"],        // the people a proposed field affects
+  proposal_item: ["work.affected.*.people",         // the people a proposed field affects
+    "identity.near"],                               // the library items a proposal is near: api/src/proposals.ts:185 reads
+                                                    // them with no order (B120 break F3; measured 6 Nov, main vs the split)
   form_line_action: ["detail.after"],               // the form lines a line action left, read with no order
 };
 const sha = (s) => createHash("sha256").update(s).digest("hex");
