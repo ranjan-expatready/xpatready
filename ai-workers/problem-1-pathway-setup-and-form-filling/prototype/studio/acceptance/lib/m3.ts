@@ -193,7 +193,8 @@ export type ReleaseLine = { form: string; who: string; minAge: number | null; wa
 export type Release = { combinationId: string; version: number; sha256: string; portal: string | null; lines: ReleaseLine[] };
 /** What one person is expected to have, worked out by expectedLines. `signers` in /prepare's own words ("person",
  *  "parent", "representative"). The four kinds the packs ask for by meaning, not by form number: the Online form, the
- *  barcode PDF, the family form, the hand-signed form. */
+ *  barcode PDF, the family form, the hand-signed form. `barcode` is the form's kind (IMM 5257 is one even when filed
+ *  Online, as on release 2); `barcodePdf` is a barcode form filed as a PDF upload, the one a pack validates. */
 export type ExpectedLine = { form: string; channel: string; signature: string; signers: string[]; online: boolean; barcode: boolean; barcodePdf: boolean; family: boolean; handSigned: boolean; waitsOn: string[] | null };
 export type Expected = { name: string; role: Person["role"]; age: number | null; forms: ExpectedLine[]; waiting: ExpectedLine[] };
 
@@ -209,13 +210,16 @@ const FAMILY_FORMS = ["IMM 5707", "IMM 5645"];
 /**  - VV-R07 (line 40): IMM 5707 by each person 18 or older; the same minimum age is the line's `min_age`, read as
  *    configured. "principal_partner_adult_children" (IMM 5257 SCH1): its own words, "The principal applicant, his or her
  *    spouse or common-law partner, if applicable, and all dependent children aged 18 years or older" — no row in
- *    compliance-trace.md yet; the quote is in samples/form-setup.json (QA-221, the tech lead's ruling C, 4 Nov): the minimum
+ *    compliance-trace.md yet; the quote is in api/src/form-setup.ts VV_FORM_RULES (QA-221, the tech lead's ruling C, 4 Nov): the minimum
  *    age gates dependent children only.
  *  - VV-R09 (line 42): 18 or older signs their own; under 18 a parent signs (a line signed "parent_for_minor").
  *  - VV-R10 (line 43): IMM 5476 is signed by the applicant and the representative (a line signed
  *    "person_and_representative"); it applies when a representative is used (its condition, read as configured).
  *  - IMM 5409, IMM 5475, IRM 0002 apply only on an answer: their conditions are read as configured, never decided here
- *    (no row in compliance-trace.md; their quotes are in samples/form-setup.json). */
+ *    (no row in compliance-trace.md; their quotes are in api/src/form-setup.ts VV_FORM_RULES).
+ *  Read as configured, so where a release departs from a cited rule the answer follows the release (release 2 today: no
+ *  line has "signed by" set, and IMM 5476 has no minimum age, unlike VV-R10's "under 18 covered by the applicant's form");
+ *  a pack that matches it exactly records the release's gap, it does not bless it. */
 const ageOn = (dob: string | null, today = new Date().toISOString().slice(0, 10)) => {
   if (!dob) return null;
   const [y, m, d] = dob.split("-").map(Number), [ty, tm, td] = today.split("-").map(Number);
@@ -232,18 +236,23 @@ function reaches(l: ReleaseLine, p: Person, principalName: string | undefined): 
     case "principal_applicant": return p.name === principalName;
     case "spouse_or_partner": return p.role === "spouse_or_partner";
     case "each_dependent_child": return p.role === "child" && (l.minAge ? adult(l.minAge) : true);
-    default: return false; // a `who` the rules above do not name (couple_once, case, sponsor…): not expected per person
+    // each_person, couple_once, case, sponsor, representative…: not decided here (no data set uses them today, and no
+    // rule above names them); expectedLines leaves such a line out. A pack that meets one adds its rule and row first.
+    default: return false;
   }
 }
 function signersFor(l: ReleaseLine, p: Person): string[] {
-  const minor = (ageOn(p.dob) ?? 99) < 18;
-  if (l.signedBy === "parent_for_minor") return [minor ? "parent" : "person"];                 // VV-R09
+  // A child whose age is not known stays a minor (as the resolver does: engine/resolver.ts formSigners).
+  const minorChild = p.role === "child" && (ageOn(p.dob) ?? 0) < 18;
+  if (l.signedBy === "parent_for_minor") return [minorChild ? "parent" : "person"];         // VV-R09: a parent on the case is the principal
+  if (l.signedBy === "principal_for_family") return [p.role === "principal" ? "person" : minorChild ? "parent" : "principal"];
   if (l.signedBy === "person_and_representative") return ["person", "representative"];      // VV-R10
-  return ["person"];                                                                          // the person signs their own
+  if (l.signedBy === "none") return [];
+  return ["person"];                                                                          // not set: the person signs their own
 }
 /** Row C1: for each of the pack's own people (by name), the exact forms the release gives them: `forms` (to fill) and
  *  `waiting` (lines that apply only on an answer, with the facts they wait on). Pure: no route is called here, so the
- *  same lines and people always give the same answer (tests/check_c1_expected_lines.ts holds it by hand). */
+ *  same lines and people always give the same answer (tests/check_m3_c1_expected_lines.ts holds it by hand). */
 export function expectedLines(release: Release, people: Person[]): Record<string, Expected> {
   const principal = people.find((p) => p.role === "principal")?.name;
   const out: Record<string, Expected> = {};
@@ -358,8 +367,10 @@ export async function readyToFile(caseId: string, rep: string | null): Promise<s
   const officer = officerOf(caseId);
   await fillEverything(caseId);
   const expected = await expectedFor(caseId), nameOf = new Map([...(PEOPLE.get(caseId) ?? new Map<string, Person>())].map(([s, p]) => [s, p.name]));
-  if (!expected) console.log(`NOTE  readyToFile: no expected lines for case ${caseId.slice(0, 8)} (not opened by openCase, or its release unread): no copy is validated`);
-  const barcode = (form: string | undefined, subject: string) => !!expected?.[nameOf.get(subject) ?? ""]?.forms.some((l) => l.form === form && l.barcode);
+  // A case whose expected lines cannot be read (not opened by openCase, or pinned to a release older than the newest)
+  // keeps the helper's earlier rule, IMM 5257, so no check is lowered; the NOTE line says so.
+  if (!expected) console.log(`NOTE  readyToFile: no expected lines for case ${caseId.slice(0, 8)} (not opened by openCase, or its release unread): IMM 5257 is taken as the barcode form, as before row C1`);
+  const barcode = (form: string | undefined, subject: string) => expected ? !!expected[nameOf.get(subject) ?? ""]?.forms.some((l) => l.form === form && l.barcode) : form === "IMM 5257";
   let p = (await prepare(caseId)).p;
   for (const i of (p?.items ?? []).filter((x) => x.kind === "form" && !["ready", "done"].includes(x.state))) {
     if (i.channel === "PDF_UPLOAD" && barcode(i.form, i.subject)) await validateRoundTrip(caseId, i.form!, i.subject);

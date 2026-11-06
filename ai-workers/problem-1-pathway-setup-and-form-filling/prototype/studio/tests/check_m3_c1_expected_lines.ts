@@ -6,7 +6,7 @@
 //     (IMM 5257 a PDF upload with a typed name, IMM 5707 Online, IMM 5476 signed by hand and scanned), a child one;
 //   * release 2 of the configured checkpoint (Demo › Load the configured checkpoint): its seven form lines as the
 //     configuration dump of 6 Nov reads them (product/screens/M3-plan/packs-2026-11-06.md, "What the checkpoint's Visitor
-//     visa holds", on the M3 plan's branch, PR #1167), the four answer-only lines' facts from samples/form-setup.json.
+//     visa holds", on the M3 plan's branch, PR #1167), the four answer-only lines' facts from api/src/form-setup.ts VV_FORM_RULES.
 // Part 1 feeds both configurations to the helper without a server. Part 2 reads each live, on this copy: the fixture
 // first, then Demo › Reset and Load the configured checkpoint, each through a case opened by the helper; on the
 // checkpoint it also fills the case the packs' way and checks the helper's UCI fix (a UCI the release's own checks
@@ -43,7 +43,7 @@ const FIXTURE_LINES: Snap[] = [
 /** Release 2 of the checkpoint, from the dump (newest version per lineage; IMM 5707 retired): "IMM 5257 v2 PUBLISHED
  *  who=each_applicant ch=ONLINE sig=NONE", "IMM 5257 SCH1 who=principal_partner_adult_children ch=PDF_UPLOAD minAge=18",
  *  "IMM 5645 who=each_applicant ch=PDF_UPLOAD minAge=18", and IMM 5409, IMM 5475, IMM 5476 (sig=HAND_SCANNED), IRM 0002
- *  attach=ANSWER_CONDITIONAL; no line has "signed by" set. The conditions are samples/form-setup.json's. */
+ *  attach=ANSWER_CONDITIONAL; no line has "signed by" set. The conditions are api/src/form-setup.ts VV_FORM_RULES'. */
 const RELEASE2_LINES: Snap[] = [
   { form_number: "IMM 5257", who: "each_applicant", status: "always", channel: "ONLINE" },
   { form_number: "IMM 5257 SCH1", who: "principal_partner_adult_children", status: "always", min_age: 18 },
@@ -94,6 +94,11 @@ if (expectedLines && releaseLines) {
   ok("C1-3 release 2: a principal of 16 still fills Schedule 1 (the age gates dependent children only) and no IMM 5645 (from 18)", sorted((minorPrincipal?.forms ?? []).map((l) => l.form)).join("|") === "IMM 5257|IMM 5257 SCH1", minorPrincipal?.forms.map((l) => l.form));
   const away = expectedLines(release(FIXTURE_LINES), [...FAMILY.slice(0, 1), { role: "spouse_or_partner", name: "Sample Spouse A", dob: m3.yearsAgo(38), applies: false }])["Sample Spouse A"];
   ok("C1-4 a person on the case who is not travelling (applies: false) is expected no form", away?.forms.length === 0 && away.waiting.length === 0, away);
+  // VV-R09 as the resolver reads it: a child whose age is not known stays a minor (a parent signs); a principal under 18
+  // has no parent on the case, so signs their own.
+  const kids = expectedLines(release(FIXTURE_LINES), [{ role: "principal", name: "Sample Teen", dob: m3.yearsAgo(16) }, { role: "child", name: "Sample Child X", dob: null }]);
+  const signer = (n: string) => kids[n]?.forms.find((l) => l.form === "IMM 5257")?.signers.join("+");
+  ok("C1-4b IMM 5257 signed \"a parent for a minor\": a child with no date of birth is signed by a parent; a principal of 16 signs their own", signer("Sample Child X") === "parent" && signer("Sample Teen") === "person", { child: signer("Sample Child X"), principal: signer("Sample Teen") });
 }
 
 // ---- Part 2: each data set live on this copy, through a case the helper opens. ----
@@ -121,7 +126,7 @@ if (expectedFor) {
   ok("C1-8 checkpoint, live: a new family case opens on release 2 and expectedLines equals the hand-worked answer (seven lines for adults, five for children)", !d.length, d);
   // The helper's UCI fix, on the same case filled the packs' way (C7.7-9's own reading of stage 1).
   const filled = await fillEverything(c.id);
-  const stage1 = ((await m3.call("GET", `/runtime/cases/${c.id}/prepare`)).body?.stage1 ?? []) as { filing: string; to_confirm: number }[];
+  const stage1 = ((await m3.call("GET", `/runtime/cases/${c.id}/prepare`, undefined, m3.officerOf(c.id))).body?.stage1 ?? []) as { filing: string; to_confirm: number }[];
   ok("C1-9 checkpoint: filled the packs' way, every form is ready and stage 1 shows nothing left to confirm on any of the four filings (the UCI was the one fact left)", filled && stage1.length === 4 && stage1.every((x) => x.to_confirm === 0), { filled, stage1: stage1.map((x) => x.to_confirm) });
   const uciWarns = ((await prepare(c.id)).p?.readiness ?? []).flatMap((r) => r.warns).filter((w) => w.code === "fact_problem" && /Unique Client Identifier/.test(w.words));
   ok("C1-10 no \"fact with a problem\" warning on the UCI: the helper's Sample UCI is one the release's own checks accept", uciWarns.length === 0, uciWarns.map((w) => w.words.slice(0, 120)));
