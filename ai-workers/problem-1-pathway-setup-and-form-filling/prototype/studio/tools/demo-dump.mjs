@@ -16,7 +16,8 @@
 //   * the copy's folder name in stored paths (var/isolated-<copy>/) and a merged run's time-and-random id (<run>);
 //   * the studio folder's own absolute path (<studio>), from <var dir>: two checkouts in different folders (main's and a
 //     branch's, B120) write their own paths into a filled form's report;
-//   * hashes computed over ids (plan_sha256, run_key, idempotency_fingerprint): <h>;
+//   * hashes computed over ids (plan_sha256, run_key, idempotency_fingerprint; a form copy's input_hash and its
+//     validated copy's facts_hash, which hash each fact's person id): <h>;
 //   * a generated PDF's bytes: IRCC's forms are AES-encrypted, so each write has a fresh random IV. A PDF line has its
 //     size, and any hash equal to a generated PDF's reads <pdf>. The fill's input, its request.json, is compared in full;
 //   * the order of three lists main builds in no fixed order (UNORDERED below): sorted;
@@ -44,7 +45,9 @@ const RUN_ID = /\d{8}t\d{9}z-[0-9a-f]{6}/g; // api/src/sources.ts: studio-fieldm
 const COPY = /\bvar\/isolated-[a-z0-9_]+\//g;
 const STUDIO_DIR = resolve(varDir, "..", ".."); // <studio>/var/isolated-<copy>
 const TIMED_KEYS = new Set(["seconds", "timings", "duration_ms"]);
-const ID_HASH_KEYS = new Set(["plan_sha256", "run_key", "idempotency_fingerprint"]);
+// input_hash, facts_hash (B99, #1123): a form copy's facts hashed with each fact's person, a random party id
+// (engine/runtime/forms.ts inputHash); measured 6 Nov: two runs of main ea8e35763 differ there and only there.
+const ID_HASH_KEYS = new Set(["plan_sha256", "run_key", "idempotency_fingerprint", "input_hash", "inputHash", "facts_hash", "factsHash"]);
 const CODE_FINGERPRINT = "Engine and application source"; // api/src/demo.ts preserved(): Reset's fingerprint of the code
 const FINGERPRINTED = /\(\d+ files fingerprinted\)/g;
 // Lists main fills in no fixed order (measured: two serial runs of main differ only in their order). Each is sorted by
@@ -111,17 +114,26 @@ for (const r of rows) for (const u of JSON.stringify(r.row).match(UUID) ?? []) s
 // in whatever order the database returns them, would name themselves differently from run to run.
 const self = (r, name) => (u) => (u === r.own ? "<self>" : name(u));
 // Tokens: round 0 names each row by its table and its content with every UUID unnamed; each further round names it by
-// its content with the UUIDs it points at named by the round before, so rows alike in content are told apart by what
-// they point at. Rows still alike after the last round are numbered in sorted order (~2, ~3, …).
-let token = new Map();
-for (let round = 0; round < 4; round++) {
-  const name = (u) => (round === 0 ? "<id>" : token.get(u) ?? "<uuid?>");
-  const next = new Map(), seen = new Map();
-  const named = rows.filter((r) => r.own).map((r) => ({ r, h: `${r.table}:${sha(canon(r.table, { ...r.row, id: null }, self(r, name))).slice(0, 12)}` }));
-  named.sort((a, b) => (a.h < b.h ? -1 : a.h > b.h ? 1 : 0));
-  for (const { r, h } of named) { const n = (seen.get(h) ?? 0) + 1; seen.set(h, n); next.set(r.own, n === 1 ? h : `${h}~${n}`); }
-  token = next;
+// its content with the UUIDs it points at named by the round before, and by the names (round before, sorted) of the rows
+// that point at it. So rows alike in content are told apart by what they point at and by what points at them (the four
+// people of #1123's case are alike rows, told apart only by their answers; measured 6 Nov). The rounds use these names
+// unnumbered, so an arbitrary twin number never feeds a later round; rows still alike after the last round are numbered
+// once, in sorted order (~2, ~3, …): such twins swap whole lines, which leaves the sorted dump the same.
+const incoming = new Map(); // a row's own UUID → the own UUIDs of the rows that name it
+for (const r of rows) if (r.own) for (const u of new Set((JSON.stringify(r.row).match(UUID) ?? []).map((x) => x.toLowerCase()))) if (u !== r.own) { if (!incoming.has(u)) incoming.set(u, []); incoming.get(u).push(r.own); }
+let cls = new Map();
+for (let round = 0, classes = 0; round < 8; round++) {
+  const name = (u) => (round === 0 ? "<id>" : cls.get(u) ?? "<uuid?>");
+  const from = (r) => (round === 0 ? "" : (incoming.get(r.own) ?? []).map((u) => cls.get(u)).sort().join(","));
+  const next = new Map();
+  for (const r of rows) if (r.own) next.set(r.own, `${r.table}:${sha(canon(r.table, { ...r.row, id: null }, self(r, name)) + "|" + from(r)).slice(0, 12)}`);
+  cls = next;
+  const now = new Set(cls.values()).size;
+  if (round > 0 && now === classes) break; // no row told apart from another any more
+  classes = now;
 }
+const token = new Map(), seen = new Map();
+for (const [u, h] of [...cls.entries()].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0))) { const n = (seen.get(h) ?? 0) + 1; seen.set(h, n); token.set(u, n === 1 ? h : `${h}~${n}`); }
 const named = (u) => token.get(u) ?? "<uuid?>";
 const lines = rows.map((r) => `T ${r.table} ${canon(r.table, { ...r.row, id: null }, self(r, named))}${r.own ? ` ${named(r.own)}` : ""}`);
 for (const { f, bytes } of files) {
