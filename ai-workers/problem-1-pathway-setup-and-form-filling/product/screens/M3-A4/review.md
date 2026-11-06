@@ -226,3 +226,29 @@ Journeys 1–8 as above, plus Enter in every field kind, Enter while stale, keyb
 **Could not check:** a real screen reader. The 200 % zoom pass was not repeated, because the diff does not touch the layout. D17 and D20 stay with the founder.
 
 **Verdict: Approve** (commit 06f1c4d1c). No Blocker or Major is open.
+
+## Re-review 3 (diff c9d77b32f..8345e53a4)
+
+Diff-only review of commit **8345e53a4** on PR #1172 (branch `claude/funny-gates-pgthb4`, PR head 8345e53a4 when checked). I reviewed it read-only on that HEAD.
+
+### What the diff does
+* There is one file and one deletion: `product/tools/route-has-screen-allow.txt`, which loses parent line 18, `PUT /combinations/:id/eligibility-gates  # QA-244, C6.9 Partial: … row B106 builds it. …`. No other line is touched, and no other file is in the diff (`git diff --stat`: 1 file changed, 1 deletion).
+* **Approval.** The tech lead approved this deletion in this PR: PR #1172 comment 6690886001 (Lead 24, 22:47 IST, 2026-11-06T17:17:47Z) says "approved: delete line 18 of route-has-screen-allow.txt in this PR itself". Line 18 at c9d77b32f is the gates line, so the commit deletes exactly the approved line.
+
+### Checks
+* **The route check passes without the line.** `node product/tools/route-has-screen.mjs` exits **0**. It reports 51 mutating routes: 40 have a screen, 11 are allowed with a reason, and 0 have neither. There are 0 stale lines and 0 bad lines. The one note, `PUT /library/fees` with no API route, was there before and is not about this diff.
+* **The route is found called from a screen.** `check()` at HEAD gives `PUT /combinations/:id/eligibility-gates` → screen `web/src/components/eligibility-gates-editor.tsx:146`. That line is the editor's `api(\`/combinations/${id}/eligibility-gates\`, { method: "PUT", … })`.
+* **No other route loses its allowance.** I ran `check()` with the c9d77b32f allow-list (taken with `git show`, into scratch) against the same tree:
+  * The 11 allowed routes are the same list both times.
+  * No route's result changes ("changed: []").
+  * With the old list, the gates line is reported as **stale**, so the check would exit 1. The deletion is therefore needed, not just allowed.
+* **The self-test passes.** `route-has-screen.mjs --self-test`: all 12 checks pass, exit 0.
+* **Not part of the commit.** The working tree has an uncommitted change to `prototype/studio/evidence/forms-channels/check_forms_channels.json`, left by a suite run. It is not in 8345e53a4 and not in this review.
+
+### Journey test (reviewer)
+I did not run it again. This diff touches only a check's allow-list: no app, API or web code changed. The screen's behaviour is the same as in 06f1c4d1c, and the score from Re-review 2 stands: **10 / 10** (Pass).
+
+### Findings
+None. No Blocker, Major or Minor.
+
+**Verdict: Approve** (commit 8345e53a4). No Blocker or Major is open.
