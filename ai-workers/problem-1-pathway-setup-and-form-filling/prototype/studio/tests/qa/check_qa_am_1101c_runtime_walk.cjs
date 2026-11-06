@@ -40,7 +40,9 @@ const step = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : 
   const text = await p.locator("main").innerText();
   const tips = await p.locator("[title]").evaluateAll((els) => els.map((e) => e.getAttribute("title")).join(" | "));
   await p.screenshot({ path: path.join(SHOTS, "04-case-with-representative-1440.png"), fullPage: true });
-  const lower = [...`${text}\n${tips}`.matchAll(/(^|[\n•·|:] ?)representative\b/g)].length;
+  // B117: with the case team's representative of record, C7.7 now shows their firm-record e-mail on its own line
+  // ("representative@sample-firm.example"): an address, not a sentence or label, so it is not a lower-case start.
+  const lower = [...`${text}\n${tips}`.matchAll(/(^|[\n•·|:] ?)representative\b(?!@)/g)].length;
   step("QA-76 C7.x: a sentence or label never starts with lower-case \"representative\"", lower === 0, lower);
   step(`QA-76 C7.x: the representative of record is named (${repName}) on the case page`, !!repName && text.includes(repName));
   step("QA-76 C7.x: no slice or lane word a person cannot act on (\"forms slice\", \"lane\", P-nn)", !/forms slice|\blane\b|\bP-\d+\b/.test(`${text}\n${tips}`), (`${text}`.match(/.{0,60}(forms slice|\blane\b|\bP-\d+\b).{0,40}/) ?? [""])[0]);

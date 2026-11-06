@@ -31,3 +31,20 @@ kept as they are): `tests/runtime/check_case_engine.ts:279` (QA-76 fail-guard), 
 Cases stored before B117 may already hold a representative participant (only through the API; no screen offered it).
 B117 stops new ones; it does not remove existing ones. Recommendation: leave them (Sample data only; the demo resets),
 unless qa finds one on the demo.
+
+## The QA-76 walk after the change (isolated copy runtime_b117 on :4433, 1440 px)
+First run 20/21: "a sentence or label never starts with lower-case representative" counted 1. The match was the
+representative's e-mail, `representative@sample-firm.example`, on its own line: the case team's representative of
+record now fills IMM 5476's block from the firm record (C7.7), which the person added through the route used to
+displace. An address is not a sentence or label, so the check now skips a match followed by `@`. Second run: 20/20,
+exit 0 (Load sample was already done on the copy). Screenshot: `case-team-representative-1440.png`.
+
+## Found while walking (C7.7, already on main; not fixed here, outside B117)
+The walk now shows the firm-record answers, and three are wrong on main (Sample firm record, `samples/firms.json`):
+1. **Person's telephone number including country code** shows `[object Object]` with "Enter text.": the office phone is
+   an object `{country_code, number}` and the question is text. Likely Major (it can reach IMM 5476).
+2. **E-mail address** `representative@sample-firm.example` (from the firm record) carries "Enter an email address like
+   name@example.com…": the firm record's own value fails the e-mail rule.
+3. **Country** shows `canada` with "No fixed list for this answer yet".
+Recommendation: one runtime fix row for C7.7 (shape the firm record's values to the questions' types, with a fail
+test each), logged by qa; not in this PR so that B117 stays one small change.
