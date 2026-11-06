@@ -23,8 +23,11 @@ type ConditionalDocuments = { lines: { type: string; who: string; condition: unk
  *  content reviewer accepts (C3.6). Then each fact a line reads is added for that line's rule with its answer values
  *  (Questionnaires › "Facts a rule needs"), accepted by the content reviewer and approved into the library by the Approver,
  *  and asked per person beside the fact it is about (Library › Fields › placement), as acceptance/lib/setup_vv_m3.ts S6
- *  and S6a do by route. A step a rule refuses is named in `refused`, never dropped. Returns how many lines went in and how
- *  many wait for their facts. */
+ *  and S6a do by route. A step a rule refuses is named in `refused`, never dropped. Returns how many lines went in and the
+ *  lines that wait for their facts, each named. A waiting line is not a refusal (#1073 after B120, the tech lead on CI at
+ *  ad82c03ec): it waits by design for a fact a later row adds (the minor's lines read `person.age_years`, row B102), so
+ *  it is named in the load's log, never on row 7, which is partial only while something is refused or a section waits
+ *  for a name (C10.1, QA-206, B78). */
 async function conditionalDocumentLines(ctx: CheckpointContext, author: Actor, reviewer: Actor, approver: Actor, workspaceId: string, combinationId: string, spec: ConditionalDocuments, parts: PlacedFromParts, placedFacts: string[], refused: string[], say: (e: unknown) => string) {
   const db = ctx.db, studio = ctx.get(Studio), ruleFacts = ctx.get(RuleFacts), library = ctx.get(Screen02);
   type Save = Parameters<Studio["saveRequirement"]>[3];
@@ -48,8 +51,7 @@ async function conditionalDocumentLines(ctx: CheckpointContext, author: Actor, r
       n++;
     } catch (e) { refused.push(`${l.type}: ${say(e)}`); }
   }
-  if (waiting.length) refused.push(`${waiting.length} conditional document line${waiting.length === 1 ? " waits" : "s wait"}: ${waiting.join("; ")}`);
-  if (!n) return { n, waiting: waiting.length }; // no line reads the facts, so they are not added (C3.6 adds a fact only for a rule that reads it)
+  if (!n) return { n, waiting }; // no line reads the facts, so they are not added (C3.6 adds a fact only for a rule that reads it)
   const needed = (await ruleFacts.list(combinationId)).facts;
   for (const f of spec.facts) {
     try {
@@ -81,7 +83,7 @@ async function conditionalDocumentLines(ctx: CheckpointContext, author: Actor, r
       catch (e) { refused.push(`${r.lineageKey}: ${say(e)}`); }
     }
   }
-  return { n, waiting: waiting.length };
+  return { n, waiting };
 }
 
 export default {
@@ -94,6 +96,6 @@ export default {
     if (!conditional || typeof conditional !== "object") return;
     const d = await conditionalDocumentLines(ctx, ctx.author, ctx.sme, ctx.approver, ctx.workspaceId, cc.c.id, conditional, placed(cc).p!, out.placedFacts, out.refused, ctx.said);
     out.documentLines += d.n;
-    ctx.log.push(`  ${cc.key}: ${d.n} conditional document lines in, ${d.waiting} waiting for the facts their condition reads (samples/conditional-documents.json; Sample, Unconfirmed: expert; row 7 names them)`);
+    ctx.log.push(`  ${cc.key}: ${d.n} conditional document lines in, ${d.waiting.length} waiting for the facts their condition reads (samples/conditional-documents.json; Sample, Unconfirmed: expert)${d.waiting.length ? `: ${d.waiting.join("; ")}` : ""}`);
   },
 } satisfies CombinationStep;
