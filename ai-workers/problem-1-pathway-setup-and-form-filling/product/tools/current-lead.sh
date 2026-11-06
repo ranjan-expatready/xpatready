@@ -25,4 +25,7 @@ n=$(printf '%s' "$lines" | grep -c '^current_lead: ')
 [ "$n" -eq 1 ] || { echo "current-lead: $src has $n current_lead lines, needs exactly one; ask with ListAgents (highest \"Lead N ·\", not ended or standby)" >&2; exit 1; }
 v=${lines#current_lead: }
 if [ "$where" = 1 ]; then echo "$src"; exit 0; fi
+# A session id first (letters, "_", then at least 8 of [A-Za-z0-9_-]: local_<uuid>, session_<id>), then a title naming
+# "Lead N"; "current_lead: Lead 21 · … Lead 20" would give --id "Lead" and route every lane nowhere (#1136 Devin review).
+echo "$v" | grep -qE '^[A-Za-z]+_[A-Za-z0-9_-]{8,} .*Lead [0-9]+' || { echo "current-lead: $src's current_lead line does not start with a session id, then a title naming \"Lead N\": $v" >&2; exit 1; }
 if [ "$id_only" = 1 ]; then echo "${v%% *}"; else echo "$v"; fi

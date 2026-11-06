@@ -9,7 +9,7 @@ PRODREL="ai-workers/problem-1-pathway-setup-and-form-filling/product"
 docs_copy() {  # $1 dir → a git copy at $1 with product/tools/check-docs.sh and STATE.md (one current_lead line)
   mkdir -p "$1/$PRODREL/tools" && cp "$TOOLS/check-docs.sh" "$TOOLS/current-lead.sh" "$1/$PRODREL/tools/"
   git -C "$1" init -q -b main && git -C "$1" config user.email t@t && git -C "$1" config user.name t && git -C "$1" config commit.gpgsign false
-  printf '# State\n\nupdated: %s IST by Lead 1\ncurrent_lead: local_aaa Lead 1 · 6 Nov 01:00 IST\n' \
+  printf '# State\n\nupdated: %s IST by Lead 1\ncurrent_lead: local_aaa-0000-1111 Lead 1 · 6 Nov 01:00 IST\n' \
     "$(TZ=Asia/Kolkata date '+%Y-%m-%d %H:%M')" > "$1/$PRODREL/STATE.md"
   git -C "$1" add -A && git -C "$1" commit -qm init
 }
