@@ -50,6 +50,7 @@ ok("QA-289 pass: and parts on a part-by-part release", typeof ans(true)?.value =
 // shapeOf decides which: the release's own maps (a "phone_part" transform), as the questionnaire shows its phone kind.
 const snap = (transform: string | null) => ({ field_maps: [{ form: "IMM 5476", channel: "PDF", entries: [{ fact: PHONE, transform, outcome: "mapped", data_path: "IMM_5476[0].Page1[0].SectionB[0].question7[0]" }] }], canonical_fields: [{ id: PHONE, value_type: "text" }] });
 ok("QA-289 pass: a map that writes the phone part by part makes it a phone (parts)", shapeOf(snap("phone_part:national_number") as never, PHONE).phone === true);
+ok("QA-289 pass (pre-flight, C4.4): a bare \"phone_part\" map stays a phone, as before this row (the rule only adds the kind)", shapeOf(snap("phone_part") as never, PHONE).phone === true);
 ok("QA-289 fail: a map that reads it whole (text) does not (text)", shapeOf(snap(null) as never, PHONE).phone === false && shapeOf(snap("max 20 characters") as never, PHONE).phone === false);
 
 // Review B1, m3: the real IMM 5476 map (the work-permit release fixture, from c1-v3) writes the phone with "phone:" steps,
