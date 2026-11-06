@@ -100,6 +100,8 @@ Five suites scan **only the top level** of `api/src` (`readdirSync(API)`). Code 
 * `check_irm_editions.ts`: no IMM-only edition pattern;
 * `check_forms_qa53.ts`, `acceptance/C11.1.test.ts`, `acceptance/C4.8.test.ts`: route guards (steps have no routes, but a future feature file may).
 
+Also `product/tools/m2-hot-files.txt` (read by `m3-guard.sh` in CI) lists `studio/api/src/demo.ts`. Once the checkpoint lives in `api/src/features/checkpoint/`, an M3-only PR could change it unseen. The tech lead keeps that list, so this PR does not edit it (§6, question 4).
+
 Each scan reads `api/src` recursively (`.ts`, not `.d.ts`). For each one, a fail test plants a file in a subfolder and checks that it is caught. `count-any.mjs` and `graph.mjs` already walk subfolders. `select-suites.mjs` maps a file under `api/src/features/` to ALL, which is conservative; `demo.ts` already selects 162 suites. Not changed (P-312).
 
 ## 5. Checks (Done when)
@@ -124,3 +126,5 @@ Each scan reads `api/src` recursively (`.ts`, not `.d.ts`). For each one, a fail
 1. **Scope:** `loadSix` (6 commits since 3 Nov) and the core stay in `demo.ts`; change 1 (recipes) replaces `loadSix` anyway. **Recommend: keep.** Splitting it now puts the byte-equal risk on Reset to the six, the route gate B calls, for little gain.
 2. **The "one `demo.ts` PR at a time" rule (P-337, P-348 (8))** has a new subject after this lands. **Recommend:** it becomes "one PR per step file". A PR that adds a step file needs no slot; a PR that changes an existing step or the runner keeps the one-at-a-time rule.
 3. **Porting the open PRs:** #1073, #1084 and #1072 will conflict once and must move their change into the new files. **Recommend:** the PR body carries the old-line → new-file map (§3), and the dry-run ports from check 3 are offered to #1073 and #1084 as patches; their builders apply them. I do not push to their branches.
+4. **M2 hot-file list:** `m2-hot-files.txt` names `studio/api/src/demo.ts`, and the checkpoint moves to `studio/api/src/features/checkpoint/`. **Recommend:** the tech lead adds `studio/api/src/features/checkpoint/` and `studio/api/src/features/placement/` in the same merge window, or retires the list once M2 = 60. Otherwise the M3 guard silently stops covering the checkpoint.
+5. **Finding, not fixed here:** Reset to the six differs from run to run on `main` (§5 baseline: 2 AI replay steps at once change which twin proposal is "first", its ready/check confidence and its near-name hints; three lists follow random-id order). **Recommend:** a small runtime or forms row that makes the replay's result independent of step order (decide twins by a stable key, not by arrival). Then the dump check can run without the serialising patch, and change 1's parity report can too.
