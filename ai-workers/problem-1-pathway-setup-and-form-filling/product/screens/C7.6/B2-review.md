@@ -42,3 +42,33 @@ No Blocker. No Major.
 A real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); the self-reviewed path (a representative who is also the officer: only read in code, `readiness.tsx:217`, `:228-233`, which looks right); a second representative who is not of record (read in code only, `:100`). `graph.mjs` runs clean (G1 0, G4 0, G5 0); it does not map runtime case pages, so the three routes show `viaBrowser: false` there, a tool limit that predates this PR. While I worked, other processes on this machine (a `roles.ts` on :4435 and other copies) rewrote tracked screenshots under `screens/C6.1-open-case/`, `K13-sqr-names/` and `W1-questions-and-documents/`. I did not change them, and nobody should commit them with this review.
 
 **Verdict: Approve** — commit `804c044306eb0fdb80eb1f4c08fe2a5953d50f51`. No open Blocker or Major; m1–m8 are Minor (m1 and m2 first if the builder takes any).
+
+## Re-review (diff 43ecdeecd..a391f5dc1)
+**Scope:** only `git diff 43ecdeecd..a391f5dc12d859d4a556389a1ae429b6233ef16e`, which changes `web/src/runtime/readiness.tsx`, `tests/check_c76_ready_browser.ts`, the breaker's `B2-break-report.md` and the B2 screenshots. Rebuilt `web/dist` at a391f5dc1, isolated copy `rv_b2` on :4434, live AI off.
+**Runs:** the builder's check gave 53/53, exit 0, including the new F1 and F2 checks and their focus checks. My own re-walk used scratch scripts, not committed. I did not re-run the old-code failure proof the builder reports (4 FAIL with 43ecdeecd's panel). I read the new steps: each checks a state the old code could not reach (the F1 notice after the refresh; the F2 form closed and 0 reviews), so it can fail.
+
+| Change | Result | Evidence |
+|---|---|---|
+| F1: a stale tab's Ready to file refusal | Fixed | `refused()` re-reads the view, then sets the notice keyed to the lines open now (`readiness.tsx:95-102`). The effect at `:92` clears it only when that key changes. Check: the notice stays and lists the lines open now. |
+| F2: a review after a facts-changed 409 | Fixed | `read` holds the `facts_hash` taken when the form opened (`:242`, `:230`). A refusal that is not about a field closes the form (`:239`). Check: refused, form closed, 0 rows; a second "Review the filing" records 1 row. |
+| My m1 (F3, F4): a pass 409 never seen, focus lost | Fixed | Two tabs: tab 2 shows "Not passed: There is no open "A missing signature" warning on this filing to pass. Reload." under the filing, with the focus on the filing heading. The notice goes once tab 2 passes another line. axe 0 and no sideways scroll at 1024 px in that state. |
+| F6: Review when the review warning was passed | Fixed | `canReview` reads `!r.reviewed` (`:120`). `reviewed` is null unless the representative of record reviewed these facts (`api/src/readiness-inputs.ts:99`, `:103`). Walk: the officer passed the review warning, user-R still saw Review the filing, reviewed (1 row), then the button left; the officer never sees it. |
+| F8: Escape closes the forms | Fixed | Keyboard path: Escape in the reason box returns focus to its "Pass with a reason…" (focus events traced). Escape in the review form behaves the same. |
+| My m8 (F9): the reason length | Fixed | `maxlength="300"`, with the hint "Up to 300 characters." |
+| My m4 (F7c), my m7 | Fixed | No tag on CRITICAL lines (their words say "CRITICAL:"). Pills have a `title`, e.g. "Not started": "Not marked Ready to file yet". |
+| F10: the shared `/prepare` key | Fine | The key no longer includes the actor (`:53`, `:58`), the same key as `submission.tsx:50`. `/prepare` is the same for every staff member; who may review is still worked out from the actor (`:120`), and the server still refuses (403). |
+
+**Still open, all Minor, reasons accepted:**
+* m2: "before filing" comes from the shared `notReady()`.
+* m3: `status_rule` carries a decision code, which EXPERIENCE §5 keeps off the main path.
+* m5: there is no block on the checkpoint's filing by screens.
+* m6: the status-words map is still a copy.
+
+None blocks; I raise no new scope.
+
+**New, Minor (Could):**
+* n1: after a refused pass or review the page has already re-read the view, yet the server's words still end "Reload." (`api/src/readiness.ts:95`, `:74`; the other-tab case can also get `:106`; the screen shows them as given, BR-11). A later API change could say "This was passed meanwhile". This PR need not change it.
+
+No Blocker, no Major. My score stays 8.5/10. Feedback and state is better now (the refused passes show), but the open plain-words points (m2, m3) keep it at ½.
+
+**Verdict: Approve** — commit `a391f5dc12d859d4a556389a1ae429b6233ef16e`.
