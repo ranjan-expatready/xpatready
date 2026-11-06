@@ -31,6 +31,16 @@ All started at 12:10 IST on `fd29643aa`. Each trap printed "port listener after 
 | `acceptance/C10.1.test.ts`, no folder | qa_c101g | **exit 0, 28/28 (72 s).** R12b "without the validated files (kept on the Mac), no validated copy recorded and each copy says so in words, Sample" (`here: false, readBack: 0`). **R12d PASS:** each Download is 409 with the kept-on-the-Mac words, never the unvalidated copy and never a 404 "validate the copy again". It prints `HELD  C10.1 R12c part B (QA-285): red, held: … not on this machine …; this step runs on the Mac with STUDIO_VALIDATED_DIR set` |
 | `tests/check_qa285_validated_files.ts` (no server) | qa_c101g | exit 0, 13/13. These include: "a file whose checksum differs from the saved one is refused in words naming the person and the file, never used"; "a file name that leaves the folder (a path) is never read"; "the checked file goes through the upload door for its copy, once … no direct validated_copy write"; "absent … never 'validate again'"; "not the Sample case … gets no kept-on-the-Mac words" |
 
+**GitHub runners (P-339).** `nightly.yml` run **42175798473** concluded success; the tech lead dispatched it, `workflow_dispatch`, at 12:09 IST.
+* It ran on head `fd29643aa`, tree `076c3284c760…`, which is `fd29643aa`'s own tree.
+* Job "packs (C10.1)" 127753871673, success:
+  * `GATE_B_DATA: checkpoint`
+  * "C10.1.test.ts on the checkpoint: exit 0, 28/28 passed (159 s: copy 4, Load the configured checkpoint 82, run 72)"
+  * `HELD  C10.1 R12c part B (QA-285): red, held: the validated PDFs are kept on the Mac (founder ~10:05 IST 6 Nov), not on this machine (…); this step runs on the Mac with STUDIO_VALIDATED_DIR set, and its run and exit code are named in the PR.`
+  * "Gate B: passed."
+* Job "suites" was skipped (the dispatch ran packs only).
+* Main has since moved to `56978e48d` (#1157, qa records). `git diff --stat fd29643aa 56978e48d` shows only `product/qa/BUGS.md` (2 insertions) and nothing under `prototype/`.
+
 ## By screens, folder set (browser pane, 1024 px, copy qa_c101h :4472)
 1. **Load.** Acting as Configuration author, Demo › Load the configured checkpoint… › Load the configured checkpoint. "Configured checkpoint loaded", "No live AI call was made (US$0)". Rows: 1 Done, 2 Parked (P-102, W6), 3–11 Done, **12 Done: "IMM 5257 generated for 4 of 4 applicants on release 1 (C7.1); 4 validated in Adobe and read back equal, the form's own Validate passed (P-171)"**, 17 Done (`1-mac-row-12-1024.jpg`).
 2. **Underneath.** Four `validated_copy` rows, one per IMM 5257 copy, each with `read_by user-O`. Each `path` is a file in the copy's own working files (`…/var/isolated-qa_c101h/…`), not a note. The sha256 values are `1a2aa8d8…` (Client A), `c8547b02…` (Partner), `377f96bd…` (Child) and `995faaa9…` (Child 18 or over). Read-back is written/equal 66/66, 66/66, 63/63 and 63/63, and the form's Validate passed for each.
