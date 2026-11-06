@@ -172,3 +172,57 @@ Journeys 1–8 as above, plus Enter in fields (found N1).
 | **Total** | **8.5 / 10** | At the pass mark, but Major N1 is open |
 
 **Verdict: Block** (commit 86070c912). To fix: **N1**. Remove implicit submission: drop the `<form>` for a `role="group"` div, or put `type="button"` on every button in the dialog including the `ConditionBuilder` buttons. Add the Enter fail test. New Minors 1–3 should be fixed in the same pass.
+
+## Re-review 2 (diff 86070c912..06f1c4d1c)
+Reviewer (same as above, did not build), 6 Nov. Diff only: `eligibility-gates-editor.tsx`, `conditions.tsx`, `api/src/eligibility.ts`, `tests/check_b106_gates_browser.cjs`, `build-notes.md`, plus walk screenshots (06f1c4d1c). HEAD stayed at 06f1c4d1c; no file changed, restored or checked out by me. Web built from 06f1c4d1c. Own copy `rev106d` on :4442, stopped and dropped at the end. Live AI off, US$0.
+
+### Verdict for 06f1c4d1c: **Approve**
+N1 is gone. The dialog body is now `<div role="group" aria-label="Eligibility rules">` (`eligibility-gates-editor.tsx:166`) and the open dialog has no `<form>` (checked in the DOM). With no form there is no implicit submission, so no button in the dialog can be "clicked" by Enter. No Blocker or Major is open.
+
+### N1: checked by my own walk (Playwright, Visitor visa fixture, author)
+Each field got a typed character and then Enter. After each one, gate 1 still had its 2 comparisons, both gates were still there, the dialog stayed open, no PUT was sent and the version did not change:
+* gate 1 label and gate 2 label;
+* the comparison Field on gate 1 and on gate 2;
+* a comparison Value: I added "Passport number is …" on gate 2 and typed `AB123`, Enter;
+* the "If not met" radio;
+* judgement Line 1;
+* the disclaimer textarea: Enter puts a newline in, and nothing is saved.
+
+No confirm dialog came up from any Enter.
+
+**Stale case:** I opened the dialog, someone else saved by route, and my Save got 409 with "Changed by someone else" and Reload. I then typed in gate 2's label and pressed Enter. The label kept "Mine typed!", the notice stayed, the version did not change, and Reload was not triggered. BR-8 ("keeps the edit") holds.
+
+### Nothing else broken (checked)
+* **Keyboard Save.** Tab from the disclaimer reaches "Save the eligibility rules", and Enter on it saves once (200, v1→v2). Gate 1's stored rule is unchanged: `and(exists passport_number, exists passport_expiry_date)`. The disclaimer is stored with its newline, and the new text comparison is stored.
+* **A short disclaimer** (12 characters) is still refused on its field: "A disclaimer needs more than 20 characters…". This is BR-5 and it is shown in words.
+* **Dirty tracking and the leave guard.** `onChangeCapture` now sits on the div. With edits, Escape asks "Discard your unsaved changes?" and dismissing keeps the dialog. Cancel asks the same. Closing the page with edits raises `beforeunload`.
+* There were no page errors.
+* Nothing else selects the old `form` (grep: only the check uses `[data-editor=eligibility]`), and nothing calls `requestSubmit`.
+* **Tests.** `check_b106_gates_browser.cjs` passes **69/69, exit 0** on my fresh copy. That includes axe (WCAG 2.2 AA) on the section and on the open dialog with its errors, and 1024 px with no sideways scroll.
+* **The new fail test would fail on 86070c912.** It presses Enter in gate 2's label when gate 1 has 2 comparisons. On 86070c912 that clicks gate 1's first bin, leaving 1 comparison, and the test asserts 2. It does not cover Enter while the stale notice shows; my walk did. Nit, no fix needed for this verdict.
+
+### The three Minors
+1. **Fixed.** The server's empty-value refusal now names the question by its library label (`api/src/eligibility.ts:65-66`). It falls back to the key only when the question has no label. The test asserts `compares "Passport number" with an empty value`. It is one extra query per save, not one per row.
+2. **Fixed.** The gate-mode subject message is now in words: "an eligibility gate is checked for each person: use the simple editor, or set it to each person (PERSON)" (`conditions.tsx:88`). It still starts in lower case like the other checker messages, which is a nit. It is shown only in Edit as JSON, and the other `ConditionBuilder` users are untouched (`gate` only).
+3. **Fixed.** The ⓘ is named "About eligibility rules", and the tooltip text comes through the Tip's description, so it is read once.
+
+### Journey test (reviewer, re-run on 06f1c4d1c)
+Journeys 1–8 as above, plus Enter in every field kind, Enter while stale, keyboard-only save, and the leave guards.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Add, edit, save by keyboard, release (69/69) |
+| Next step obvious | 1 | Unchanged; Review and release link |
+| Plain words | 1 | Server refusal names "Passport number"; JSON-mode message in words (`yes_no` under rows stays listed, builder row) |
+| Feedback and state | 1 | Row messages, toast, waiting line, stale notice |
+| Correct data | 1 | Enter changes nothing; the keyboard save stores gate 1 intact, v+1 once |
+| Error recovery | 1 | Enter while stale keeps the edit; Escape and Cancel ask; beforeunload |
+| Accessibility, sizes | 1 | No implicit submit; ⓘ named once; axe 0; 1024 px with no sideways scroll |
+| Speed | 1 | Under 1 s, unchanged |
+| Visual quality | 1 | Unchanged |
+| Trust and sources | 1 | Unchanged (Sample marked, release carried) |
+| **Total** | **10 / 10** | Pass |
+
+**Could not check:** a real screen reader. The 200 % zoom pass was not repeated, because the diff does not touch the layout. D17 and D20 stay with the founder.
+
+**Verdict: Approve** (commit 06f1c4d1c). No Blocker or Major is open.
