@@ -70,8 +70,13 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
   const heading = React.useRef<HTMLHeadingElement>(null);
   const [notReady, setNotReady] = React.useState<NotReady | null>(null);
   const [marking, setMarking] = React.useState(false);
-  const s = statusOf(f.status), open = f.status !== "submitted" && !f.read_only;
+  // /prepare says a derived status as stored (NOT_STARTED) and a marked one in lower case (ready_to_file): one spelling here.
+  const st = f.status.toLowerCase(), s = statusOf(st), open = st !== "submitted" && !f.read_only;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+  // The refusal names the lines open when it was given: once they change (a pass, a review, a fix) it is gone, never left
+  // listing lines that are passed now.
+  const openKey = r ? [...r.blocks, ...r.warns].map((l) => `${l.code}|${l.key}`).join("\n") : "";
+  React.useEffect(() => { setNotReady(null); }, [openKey]);
   async function ready() {
     setMarking(true); setNotReady(null);
     try {
@@ -86,7 +91,7 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
     } finally { setMarking(false); }
   }
   if (!r) return (
-    <article className="px-4 py-3" data-readiness-filing={f.id} data-status={f.status}>
+    <article className="px-4 py-3" data-readiness-filing={f.id} data-status={st}>
       <h3 className="text-sm font-semibold [overflow-wrap:anywhere]">{f.label}</h3>
       <p className="text-[13px] text-text-muted">This filing's readiness could not be worked out (it is not on the application now).</p>
     </article>
@@ -95,17 +100,17 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
   const isRep = !!r.representative && r.representative === actor;
   const reviewOpen = r.warns.some((w) => w.code === "representative_review");
   return (
-    <article aria-labelledby={`rd-${f.id}`} className="space-y-3 px-4 py-3" data-readiness-filing={f.id} data-status={f.status} data-ready={r.ready ? "yes" : "no"}>
+    <article aria-labelledby={`rd-${f.id}`} className="space-y-3 px-4 py-3" data-readiness-filing={f.id} data-status={st} data-ready={r.ready ? "yes" : "no"}>
       <div className="flex flex-wrap items-center gap-2">
         <h3 ref={heading} id={`rd-${f.id}`} tabIndex={-1} className="min-w-0 text-sm font-semibold outline-none [overflow-wrap:anywhere]">{f.label}</h3>
         <Pill tone={s.tone}>{s.words}</Pill>
         <span className="flex-1" />
         {open && isRep && reviewOpen ? <ReviewButton caseId={caseId} f={f} r={r} /> : null}
-        {open && f.status !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
+        {open && st !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
       </div>
       <p className="text-[13px] text-text-muted" data-standing>
-        {f.status === "submitted" ? "Recorded as submitted: its review and warnings are closed (correct the record in Submission to IRCC)."
-          : f.status === "ready_to_file" ? "Ready to file. Record the submission below once IRCC acknowledges it."
+        {st === "submitted" ? "Recorded as submitted: its review and warnings are closed (correct the record in Submission to IRCC)."
+          : st === "ready_to_file" ? "Ready to file. Record the submission below once IRCC acknowledges it."
           : lines.length ? standing(r) : "Nothing stands before Ready to file."}
       </p>
       {notReady ? (
@@ -116,7 +121,7 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
           </Notice>
         </div>
       ) : null}
-      {f.status !== "submitted" && lines.length ? OWNERS.filter(([o]) => lines.some((l) => l.owes === o)).map(([o, words]) => {
+      {st !== "submitted" && lines.length ? OWNERS.filter(([o]) => lines.some((l) => l.owes === o)).map(([o, words]) => {
         const mine = lines.filter((l) => l.owes === o);
         return (
           <div key={o} data-owes={o}>
@@ -131,11 +136,11 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers }: { caseId: st
         </p>
       ) : null}
       {r.passed.length ? (
-        <details className="text-[13px]" open={f.status !== "submitted"} data-passed>
+        <details className="text-[13px]" open={st !== "submitted"} data-passed>
           <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Passed with a reason ({r.passed.length})</summary>
           <ul className="mt-1 space-y-1.5 pl-1">{r.passed.map((p) => (
             <li key={`${p.code}|${p.key}`} className="[overflow-wrap:anywhere]" data-passed-line={p.key} data-code={p.code}>
-              <span className="text-text-muted line-through decoration-text-muted/50">{p.words}</span>
+              <span className="text-text-muted">{p.words}</span>
               <span className="block">“{p.reason}” <span className="text-text-muted">— passed by {nameOf(p.by)}, {when(p.at)}</span></span>
             </li>
           ))}</ul>
