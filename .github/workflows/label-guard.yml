@@ -4,10 +4,18 @@
 # only at the next push), product/tools/label-guard.sh removes the label unless the reviewer's Approve names the new head, or the push is a pure
 # merge of main touching none of the PR's files (P-318 (1)), and comments why. pull_request_target runs main's copy of
 # this file and the script; the PR's commits are fetched as data and never run. Test: product/tools/check-label-guard.sh.
+# B134 (Lead 30 on #1232): a PR's own ci.yml can label it with GITHUB_TOKEN, and that label starts no run here. So the
+# job "sweep" also runs every 10 minutes and whenever a ci run completes (Mergify queues on a green ci), main's copy
+# only: product/tools/label-sweep.sh removes `review: approved` that github-actions[bot] put on. Test: check-label-sweep.sh.
 name: label-guard
 on:
   pull_request_target:
     types: [synchronize, labeled]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
 permissions:
   contents: read
   issues: write
@@ -50,3 +58,21 @@ jobs:
           case "$code" in 200) ;; 404) exit 0;; *) echo "::error::could not remove review: approved (HTTP $code): remove it by hand"; exit 1;; esac
           curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR/comments" \
             -d '{"body":"**Label guard:** `review: approved` removed because the guard could not finish on this push or label (see the label-guard run). Label again once the head has a reviewer Approve."}' >/dev/null || true
+  sweep:
+    # B134: no PR labels itself. Main's code only (a schedule and workflow_run always run the default branch's copy); it
+    # reads labels and issue events through the API and checks out no pull request.
+    if: "github.event_name == 'schedule' || github.event_name == 'workflow_run'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency: { group: label-sweep, cancel-in-progress: false }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: ai-workers/problem-1-pathway-setup-and-form-filling/product/tools
+      - name: "label sweep (review: approved put on by github-actions[bot] comes off)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/label-sweep.sh
