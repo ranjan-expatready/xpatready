@@ -203,9 +203,14 @@ export class Runtime {
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
-    const addable = addableRoles(this.snapshotOf(c)).map((p) => roleWords(p).toLowerCase());
-    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add."}`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // B117 (P-373, C7.7): the representative of record comes from the case team, never from this list (see below).
+    const addable = offeredRoles(this.snapshotOf(c)).map((p) => roleWords(p).toLowerCase());
+    const canAdd = addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add.";
+    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // B117: a representative added here would be a person on the case whose answers displace the firm record's (C7.7),
+    // though no screen offers it. The representative of record is chosen in the case team ("Case team" on the case page).
+    if (b.role === REPRESENTATIVE) fail(`The ${(limit!.label ?? "representative").toLowerCase()} cannot be added as a person: the case's representative of record comes from its case team ("Case team" on the case page). ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;

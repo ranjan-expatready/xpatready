@@ -14,9 +14,25 @@ all() { [ "$(printf '%s\n' "$1" | head -1 | cut -f1)" = ALL ]; }
 only_smoke() { printf '%s\n' "$1" | awk -F'\t' '$2 != "smoke" { bad = 1 } END { exit bad }'; }
 has() { printf '%s\n' "$1" | cut -f1 | grep -qx "$2"; }
 
-# Shared files run everything; the dependencies I1 found missing run everything too.
-o=$(sel "$S/engine/near.ts"); ok "an engine file runs everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
-o=$(sel "$Q/prototype/p2/prompts/who-can-be.v1.md"); ok "an AI prompt (.md the app reads) runs everything; before I1 it chose nothing" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+# What still runs everything (B121 kept these: they shape every copy or every run).
+for f in "$S/prisma/schema.prisma" "$S/prisma/migrations/x/migration.sql" "$S/api/src/main.ts" "$S/tools/isolated.sh" "$S/start.sh" "$Q/prototype/env/requirements-linux.lock"; do
+  o=$(sel "$f"); ok "${f#$Q/}: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+done
+# B121 re-review after B120 (#1158): the app loads api/src/features/<dir>/ by listing the folder (features.ts featureSteps,
+# demo.ts's checkpoint), never by an import the graph can follow. A helper there (_parts.ts, _constants.ts) runs everything,
+# as its sibling steps do; before this rule _constants.ts left out check_qa144_vv_release.ts and the other checkpoint suites.
+for f in "$S/api/src/features/placement/_parts.ts" "$S/api/src/features/placement/_chosen-sections.ts" "$S/api/src/features/checkpoint/_constants.ts" "$S/api/src/features/checkpoint/combination/200-place-from-parts.ts"; do
+  o=$(sel "$f"); ok "${f#$S/}: a step folder's file runs everything (B120 loads it by listing)" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+done
+o=$(sel "$S/api/src/runtime.ts"); ok "pass: a module directly in api/src (runtime.ts) still chooses its own suites, not everything" "$(! all "$o" && has "$o" check_s5_slice1.ts && echo 1)" "$(head -1 <<< "$o")"
+# B121 (P-376 (4)): engine/, contracts/, prototype/p1, p2, p5, samples/, acceptance/, test helpers and studio/tools/ go
+# through the reference graph: the suites that use them, not everything (before B121 each of these ran everything).
+o=$(sel "$S/engine/where-used.ts"); ok "an engine file runs the suites that use it (check_sh2_where_used.ts), not everything" "$(! all "$o" && has "$o" check_sh2_where_used.ts && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$Q/prototype/p2/prompts/who-can-be.v1.md"); ok "an AI prompt (.md the app reads) runs the suites that use it (check_ai_drafting.ts); before I1 it chose nothing" "$(! all "$o" && has "$o" check_ai_drafting.ts && ! only_smoke "$o" && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$Q/prototype/p1/xfa_texts.py"); n=$(grep -c . <<< "$o"); ok "prototype/p1/xfa_texts.py runs the suites that name or reach it ($n), not everything" "$(! all "$o" && has "$o" check_b78_section_names.ts && [ "$n" -lt 100 ] && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/acceptance/C5.1.test.ts"); n=$(grep -c . <<< "$o"); ok "an acceptance pack (gate B and the queue run it, no suite does) chooses fewer than 30 suites ($n)" "$(! all "$o" && [ "$n" -lt 30 ] && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/contracts/counts.ts"); ok "a contract runs its seam check (P-376 (7)) and its users, not everything" "$(! all "$o" && has "$o" check_contract_seams.ts && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/prisma/schema.prisma"); ok "the schema still runs everything (check_prisma_schema.ts among them)" "$(all "$o" && [ -f "$S/tests/check_prisma_schema.ts" ] && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$Q/official-sources/ircc/manifest.json"); ok "official sources (the app reads the manifest) run everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$T/run-suites.sh"); ok "run-suites.sh decides how suites run: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel .github/workflows/ci.yml); ok "ci.yml: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
@@ -33,6 +49,63 @@ o=$(sel "$S/web/src/pages/history.tsx"); n=$(grep -c . <<< "$o"); ok "that page 
 o=$(dsel "$S/engine/near.ts" "$Q/prototype/p2/prompts/who-can-be.v1.md" "$T/run-suites.sh"); ok "--direct never runs everything" "$(! all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(dsel "$T/run-suites.sh"); ok "--direct: run-suites.sh still runs the suites that name it" "$(! only_smoke "$o" && echo 1)" "$(head -2 <<< "$o" | tr '\n' ' ')"
 o=$(dsel "$S/tests/check_queue_tx.ts"); ok "--direct: a changed suite still runs itself" "$(has "$o" check_queue_tx.ts && echo 1)" "$(head -2 <<< "$o" | tr '\n' ' ')"
+
+# The graph's rules, each with a passing and a failing case, on a made-up repository (fixed files, so the real code
+# changing never moves these): who uses what is read from the files themselves.
+G=$(mktemp -d); [ -n "${KEEP_G:-}" ] && echo "synthetic repo: $G" || trap 'rm -rf "$G"' EXIT
+( cd "$G" && git init -q && mkdir -p "$S/engine" "$S/tests" "$S/samples" "$S/tools" "$T" && cp "$ROOT/$T/select-suites.mjs" "$T/"
+  printf 'export const core = 1;\n' > "$S/engine/core.ts"; printf 'export const other = 2;\n' > "$S/engine/other.ts"
+  printf 'export const boot = 3;\n' > "$S/engine/boot.ts"
+  printf 'import { core } from "../engine/core.ts";\nexport const h = core;\n' > "$S/tests/helper.ts"
+  printf 'import { h } from "./helper.ts";\nconsole.log(h);\n' > "$S/tests/check_a.ts"
+  printf 'import { other } from "../engine/other.ts";\nconsole.log(other);\n' > "$S/tests/check_b.ts"
+  printf 'import { readFileSync } from "node:fs";\nreadFileSync(join(STUDIO, "samples", "data.json"));\n' > "$S/tests/check_c.ts"
+  printf 'import { readdirSync } from "node:fs";\nreaddirSync(join(STUDIO, "samples"));\n' > "$S/tests/check_d.ts"
+  printf '{ "files": { "core.ts": 3 } }\n' > "$S/tools/baseline.json"
+  printf 'import { readFileSync } from "node:fs";\nreadFileSync("tools/baseline.json");\n' > "$S/tests/check_e.ts"
+  printf '{}\n' > "$S/samples/data.json"; printf '{}\n' > "$S/samples/new.json"
+  printf '# isolated copies\ntsx engine/boot.ts\n' > "$S/tools/isolated.sh"
+  # review m6: ./x.js resolving to x.ts; a lister of code under tests/ (a use) and outside it (none); a fingerprint line;
+  # the R1 set-up; Python imports.
+  printf 'import { core } from "../engine/core.js";\nconsole.log(core);\n' > "$S/tests/check_l.ts"
+  printf 'import { readdirSync } from "node:fs";\nreaddirSync(join(STUDIO, "engine"));\n' > "$S/tests/check_n.ts"
+  printf 'import { readdirSync } from "node:fs";\nexport const all = readdirSync(join(STUDIO, "engine"));\n' > "$S/tools/scan.mjs"
+  printf 'import { execSync } from "node:child_process";\nexecSync("node tools/scan.mjs");\n' > "$S/tests/check_m.ts"
+  printf 'import { readdirSync } from "node:fs";\nreaddirSync(join(STUDIO, "logs"));\nconst k = fp("kept", under(join(STUDIO, "samples")));\n' > "$S/tests/check_k.ts"
+  mkdir -p "$S/tests/runtime" "$Q/prototype/p1"
+  printf 'import { other } from "../../engine/other.ts";\n' > "$S/tests/runtime/setup_visitor_visa.ts"
+  printf 'console.log(1);\n' > "$S/tests/runtime/check_runtime_r1a.ts"
+  printf 'import helper_b\n' > "$Q/prototype/p1/helper_a.py"; printf 'X = 1\n' > "$Q/prototype/p1/helper_b.py"
+  printf 'execSync("python3 prototype/p1/helper_a.py");\n' > "$S/tests/check_p.ts"
+  # The API rules: demo.ts imports the engine; main.ts's DemoController serves /demo/load (a set-up endpoint: called by
+  # more than a third of the suites) and /demo/pack; the shell (App.tsx) calls /demo/pack; one browser suite.
+  mkdir -p "$S/api/src" "$S/web/src"
+  printf 'import { core } from "../../engine/core.ts";\nexport class Demo { load() { return core; } pack() { return 1; } }\n' > "$S/api/src/demo.ts"
+  printf 'import { Demo } from "./demo.ts";\n@Controller("api/demo")\nexport class DemoController {\n  constructor(private d: Demo) {}\n  @Post("load") load() { return this.d.load(); }\n  @Post("pack") pack() { return this.d.pack(); }\n}\n' > "$S/api/src/main.ts"
+  printf 'export function App() { return fetch("/api/demo/pack"); }\n' > "$S/web/src/App.tsx"
+  for n in check_s7_load check_q1 check_q2 check_q3 check_q4 check_q5 check_q6 check_q7; do printf 'await fetch(`${BASE}/api/demo/load`);\n' > "$S/tests/$n.ts"; done
+  printf 'await fetch(`${BASE}/api/demo/pack`);\n' > "$S/tests/check_i.ts"
+  printf 'const { chromium } = require("playwright");\nawait page.goto(`${BASE}/other`);\n' > "$S/tests/check_j_browser.cjs" )
+gsel() { (cd "$G" && printf '%s\n' "$@" | node "$T/select-suites.mjs"); }
+o=$(gsel "$S/engine/core.ts"); ok "graph pass: a suite importing a helper that imports the file is chosen (check_a)" "$(has "$o" check_a.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "graph fail: a suite importing another file of the same folder is not (check_b; an import path is no folder use)" "$(! has "$o" check_b.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "graph fail: a JSON file naming the file is no use (check_e reads tools/baseline.json, which lists core.ts)" "$(! has "$o" check_e.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/samples/data.json"); ok "graph pass: a suite naming a data file is chosen (check_c), so is one listing its folder (check_d)" "$(has "$o" check_c.ts && has "$o" check_d.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/samples/new.json"); ok "graph fail: a suite naming only another file of the folder is not chosen (check_c), a lister is (check_d)" "$(! has "$o" check_c.ts && has "$o" check_d.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/engine/boot.ts"); ok "graph pass: a file isolated.sh names runs everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
+o=$(gsel "$S/engine/other.ts"); ok "graph fail: a file nothing that runs every suite uses does not (check_b only)" "$(! all "$o" && has "$o" check_b.ts && ! has "$o" check_a.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/engine/core.ts")
+ok "graph pass: an import of ./x.js reaches x.ts (check_l)" "$(has "$o" check_l.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "graph pass: a suite listing a folder of code is chosen (check_n); fail: a tool listing it is no use (check_m runs tools/scan.mjs)" "$(has "$o" check_n.ts && ! has "$o" check_m.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "set-up endpoint pass: /demo/load's own suite (check_s7_load) is chosen; fail: its other callers are not (check_q1..q7)" "$(has "$o" check_s7_load.ts && ! has "$o" check_q1.ts && ! has "$o" check_q7.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "a reached endpoint below the set-up share is chosen through main.ts's controller (check_i calls /demo/pack)" "$(has "$o" check_i.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+ok "shell rule fail: an engine change reaching an endpoint the shell calls runs no browser suite (check_j_browser)" "$(! has "$o" check_j_browser.cjs && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/api/src/demo.ts"); ok "shell rule pass: a change to the module serving that endpoint still runs every browser suite (check_j_browser)" "$(has "$o" check_j_browser.cjs && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/samples/new.json"); ok "graph fail: a folder named only on a fingerprint line (fp(...)) is no use (check_k)" "$(! has "$o" check_k.ts && has "$o" check_d.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$S/engine/other.ts"); ok "graph pass: the R1 set-up (setup_visitor_visa.ts) using the file runs the R1 suites" "$(has "$o" check_runtime_r1a.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(gsel "$Q/prototype/p1/helper_b.py"); ok "graph pass: a Python import (helper_a.py imports helper_b) reaches the suite running helper_a.py (check_p)" "$(has "$o" check_p.ts && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(dsel "$S/prisma/migrations/x/migration.sql"); ok "--direct: a migration alone chooses check_prisma_schema.ts (review m3)" "$(has "$o" check_prisma_schema.ts && echo 1)" "$(head -2 <<< "$o" | tr '\n' ' ')"
+(cd "$G" && rm -rf .git); gsel "$S/engine/core.ts" >/dev/null 2>&1; c=$?; ok "graph fail-safe: outside a git copy the selector stops with an error (run-suites.sh then fails: exit 2)" "$([ "$c" != 0 ] && echo 1)" "exit $c"
 
 # change-kind.sh: what CI runs for each kind of pull request.
 k=$(kind "$Q/product/STATE.md" "$Q/product/reports/build-review-2026-11-03.html" "$S/screens/x/notes.md"); ok "records and reports only: notes" "$([ "$k" = notes ] && echo 1)" "$k"

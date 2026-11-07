@@ -9,7 +9,7 @@ command -v jq >/dev/null || { echo "jq is missing; nothing was checked"; exit 2;
 pass=0; fail=0
 ok() { if [ "$2" = 1 ]; then pass=$((pass + 1)); echo "PASS  $1"; else fail=$((fail + 1)); echo "FAIL  $1 — $3"; fi; }
 # A throwaway copy whose lane.sh answers what FAKE_LANE says: the Lead's copy only exists on the Mac's main branch.
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; trap 'rm -rf "$T"' EXIT
 git init -q "$T/copy" && mkdir -p "$T/copy/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools"
 printf '#!/bin/bash\necho "$FAKE_LANE"\n' > "$T/copy/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/lane.sh"
 guard() {  # $1 lane, $2 cwd, $3 command → "allow" or "deny"
