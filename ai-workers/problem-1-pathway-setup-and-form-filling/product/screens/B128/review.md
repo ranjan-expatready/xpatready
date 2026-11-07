@@ -141,3 +141,25 @@ Verdict: Approve
 **Journey score:** 9/10, unchanged (no runtime screen changed; the Preview shows what it showed before B128).
 
 Verdict: Approve
+
+## Round 5 (the merge of origin/main 05d52c06c into the branch, `2372bc4`; asked for by Lead 32, P-270)
+**The resolution:** the one conflict, in caseView's fills loop (`engine/runtime/case.ts:300-306`), keeps main's B107 condition `!gatedOff(c, b)` and its line, and puts B128's two statements (`applies.add`; `boxesOf` for a parent) inside the loop as before.
+* A box whose gate does not hold now neither asks a parent's question nor names the parent. That is consistent: such a box is never written.
+* `gatedOff` evaluates a parent's box on its owner (`b.about.split("/")[0]`), as B128's REQUIRE handling already does (`case.ts` caseView).
+* Main's other new code reads no relative key wrongly:
+  * `putAnswer`'s `isFilingFact` / `ONCE_WORDS` check still compares with the owner's role, so a parent is a person, not the application.
+  * The scope tag's `read_for` (`case.ts:266`) is per form subject.
+  * `previewFamily`'s `documentLineHolders` sits next to B128's unchanged relative filter.
+
+**Nothing else entered with the merge:** the changed lines of `git diff 05d52c06c 2372bc4` (prototype files) are identical to B128's own `git diff 05d52c06c...f5d21ce`: same 12 files, +405/−43, and the `+`/`−` line sets compare equal. So the merge adds no change beyond what rounds 1-4 reviewed, on main's newer base.
+
+**Ran on 2372bc4** (my own copy on :4455, fresh database, configured checkpoint loaded in 103 s; stopped after; live AI off):
+* `check_b128_relatives.ts` **13/13**.
+* `check_b128_parents.ts` **23/23**.
+* qa's `check_qa153_imm5645_parents.ts` **3/3**.
+
+Not re-run by me: C4.1 on the six, C7.7 (checkpoint and fixture), R1 r1a/r1c/r1d, and tsc. The coordinator reports them green or matching main's verdicts (C7.7 checkpoint 21/33 = main 05d52c0).
+
+**Journey score:** 9/10, unchanged. The follow-up Minors from rounds 1-4 stand.
+
+Verdict: Approve
