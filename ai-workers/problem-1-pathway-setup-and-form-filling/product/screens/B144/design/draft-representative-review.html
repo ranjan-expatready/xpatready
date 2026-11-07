@@ -25,7 +25,7 @@ textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-
 <div class="frame"><h2>1 · Officer: Send for review</h2><p class="note">At the head of the readiness panel. Filings with no open block are ticked by default.</p>
 <div class="dialog"><h3 style="font-size:17px">Send for review</h3><p class="muted">The representative of record checks each form and approves it or sends it back with reasons.</p>
 <label><input type="checkbox" checked> Sample Client A's filing <span class="pill warn">1 open warning</span></label>
-<label><input type="checkbox" checked> Sample Client B's filing</label>
+<label><input type="checkbox" checked> Sample Spouse A's filing</label>
 <label><input type="checkbox"> Sample Child A2's filing <span class="pill bad">Blocked: IMM 5257 not validated</span></label>
 <div style="text-align:right;margin-top:8px"><button class="btn">Cancel</button> <button class="btn primary">Send 2 filings for review</button></div></div></div>
 
@@ -33,20 +33,20 @@ textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-
 <div class="split"><div class="left">
 <h3>Sample Client A's filing · Round 2 <span class="pill">Under review · opened by the representative 8 Nov</span></h3>
 <div class="item sel"><span>IMM 5257 · Application for visitor visa</span><span class="pill warn">Changed since review</span></div>
-<div class="item"><span>IMM 5707 · Family information</span><span class="pill ok">Approved round 1, still current</span></div>
+<div class="item"><span>IMM 5707 · Family information <span class="muted">(Online: stamped with its facts, no file)</span></span><span class="pill ok">Approved round 1, still current</span></div>
 <div class="item"><span>IMM 5476 · Use of a representative</span><span class="pill ok">Approved round 1, still current</span></div>
 <h3>Checklist · Sample Client A's filing</h3>
 <div class="item"><span><input type="checkbox" checked> No open critical warnings <span class="muted">(live: 0)</span></span></div>
 <div class="item"><span><input type="checkbox" checked> All required documents verified <span class="muted">(live: 5 of 5)</span></span></div>
 <div class="item"><span><input type="checkbox"> Purpose of travel matches the invitation and itinerary <span class="pill">Visitor visa · Sample</span></span></div>
-<div class="item"><span><input type="checkbox" checked> Values checked against documents: 4, by the case officer</span></div>
-<h3>Sample Client B's filing · Round 1 <span class="pill">Approved 7 Nov</span></h3>
+<div class="item"><span><input type="checkbox" checked> Values confirmed: 4 sections, by the case officer</span></div>
+<h3>Sample Spouse A's filing · Round 2 <span class="pill ok">Approved 8 Nov</span> <span class="muted">(each filing has its own status in a round)</span></h3>
 </div>
 <div class="right"><h3 style="font-size:15px">IMM 5257 · Sample Client A <span class="pill warn">Approval withdrawn: Date of birth changed by the case officer, 8 Nov</span></h3>
-<p class="muted">Round 1 sent back: "Date of birth does not match the passport." Filled copy 8 Nov (fingerprint shown in Details).</p>
+<p class="muted">Round 1 sent back: "Date of birth does not match the passport." File stamped: the validated copy read back 8 Nov (fingerprint in Details). Changed by: the case officer typed the new value.</p>
 <table><thead><tr><th>Box</th><th>Value</th><th>Source</th></tr></thead><tbody>
 <tr><td>Date of birth</td><td><del>1986-04-12</del> → <ins>1986-04-21</ins></td><td>Passport, confirmed · changed by the case officer 8 Nov</td></tr>
-<tr><td>Family name</td><td>SAMPLE</td><td>Passport, checked against document by the case officer</td></tr>
+<tr><td>Family name</td><td>SAMPLE</td><td>Passport, confirmed by the case officer</td></tr>
 <tr><td>Purpose of visit</td><td>Family visit</td><td>Client questionnaire</td></tr></tbody></table>
 <p class="muted">Compare: Round 2 ▾ with Round 1 ▾ · only changed facts ☑</p></div></div>
 <div class="foot"><span class="muted" style="flex:1">1 checklist item not ticked · 1 form changed since review</span><button class="btn">Send back…</button><button class="btn primary">Approve</button></div></div>
