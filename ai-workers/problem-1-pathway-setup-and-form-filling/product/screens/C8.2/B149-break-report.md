@@ -83,32 +83,23 @@ What I tried to break: `POST /api/runtime/filings/:id/record/fee-receipt`, the R
 **Keyboard:** Enter on the filing's button opens the file chooser; a refused upload shows "Not stored: …" with `role=alert` and takes focus; a good upload clears the error.
 
 ## Notes (not findings, P-26)
-- **Content is judged only by its first bytes, as the contract says.** These were stored as receipts:
-  - `%PDF-<html><script>…` as a PDF;
-  - a PNG signature followed by `<svg onload>`;
-  - the 3 bytes `FF D8 FF` as a JPEG;
-  - a PDF with planted instructions ("IGNORE ALL PREVIOUS INSTRUCTIONS…").
-
-  No route serves these files back and no model reads them, so nothing runs today. If a download is added later, it needs `Content-Disposition: attachment` and `nosniff`.
-- user-A (configuration) reads all the fee receipt lines in `/api/activity`. That is the feed's existing rule ("configuration people read every line", `api/src/case-feed.ts:11`), not something B149 added.
+- **Content is judged only by its first bytes, as the contract says.** Stored as receipts: `%PDF-<html><script>…` as a PDF, a PNG signature followed by `<svg onload>`, the 3 bytes `FF D8 FF` as a JPEG, and a PDF with planted instructions. No route serves the files back and no model reads them, so nothing runs today. A later download needs `Content-Disposition: attachment` and `nosniff`.
+- user-A (configuration) reads all the fee receipt lines in `/api/activity`. That is the feed's existing rule (`api/src/case-feed.ts:11`), not B149's.
 
 ## Reproduction
-- Start the copy: `zsh studio/tools/isolated.sh brk_b149 4449 start --ttl 60`.
-- Set it up: `tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c82_record_api.ts 4449 xr_studio_brk_b149`.
-- Run the attack scripts (in the scratchpad, outside the repo): `attack1.mts` (permissions, shapes, size, names, feed), `attack2.mts` and `attack3.mts` (races, cascade, integrity), `ui.mts` (dialog and button, 1024 px, ×2, client page).
-- Screenshots are in the same scratchpad `brk/shots/` folder (01–05). I kept them out of the repo so this report is the only file I add.
+Run `isolated.sh brk_b149 4449 start`, then `tests/check_c82_record_api.ts 4449 xr_studio_brk_b149`, then my scratchpad scripts (outside the repo): `attack1.mts`, `attack2.mts`, `attack3.mts`, `ui.mts` and `recheck.mts`. Screenshots 01–05 are in the scratchpad `brk/shots/`.
 
-## Re-check at 343ecb757 (diff `e9f2e6e79..343ecb757`, server side: `api/src/main.ts` +3, `api/src/submission.ts` +2/−1)
-**Not run live.** `isolated.sh brk_b149 4449 start` refused with "start the demo database first": Postgres on 127.0.0.1:54329 was down (its log ends with no shutdown line). The cluster is shared (`.tools` links to `/home/user/xpatready/.tools`), and the sandbox refused `runuser postgres`. So I did not start it any other way. This section is from the code plus the e9f2e6e79 run above; the probes should run again once the database is up. Nothing was started on :4449 and nothing on :4400 was touched.
+## Re-check, live at 019f95794 (after 343ecb757 and 019f95794: `main.ts` 413 words, `submission.ts` reach rethrow)
+At 343ecb757 the database was down, so that round was read from the code only. This round ran live on `brk_b149` :4449 (stopped after; never :4400). The setup check passed 71/71; my probes are in `recheck.mts`.
 
-**No Blocker, no Major.** From the code:
-- **m2 fixed for staff.** `submission.ts:191` turns only a 404 from `reach` into "No such filing.". A 403 from `reach` ("works on configuration", "Only the case officer"), its 409 (pin does not match) and any other error are thrown again unchanged. So 403 stays 403, and the rethrow neither hides another status nor adds a new message. Configuration people still stop at `CaseActorGuard` before the file is read. Staff of another firm, a filing in another workspace, and a made-up id now all read the same "No such filing.".
-- **m1 fixed on the normal path.** `main.ts:192-193` gives the fee-receipt route its own 413 words: "larger than 20 MB … Nothing was stored." and "Send one file: the Transaction Approved page. Nothing was stored.".
-  - Exactly 20 MB is still taken, since the limit is unchanged (`fileSize: MAX+1`).
-  - As before, a file of 20 MB + 1 is refused by multer, so it now gets the 20 MB words.
-- **Nothing stored on a refusal.** That path is unchanged since e9f2e6e79, where it held: 27 rows, 27 files, no leftover on any refusal.
-- **m7 (Minor, already in e9f2e6e79, not new).** A client can still tell a real filing id from a made-up one, in any firm.
-  - Why: `reach` refuses a non-officer with 403 "Only the case officer can do this." (`runtime.ts:67`) before it looks for the case. So any existing filing answers 403, while a made-up id answers 404 "No such filing." (`submission.ts:189`).
-  - Seen live in the first run: user-Q, who is not Client C's client, got 403 on Client C's filing.
-  - The ids are UUIDv4, so this tells a client little. It is m2's class, but for clients.
-- **Note (not tested live).** Express matches routes regardless of case by default, but the new filter regex is case-sensitive. So a hand-made `…/record/Fee-Receipt` would still get the intake's 25 MB words. The web always sends lower case.
+**Blocker or Major: none.**
+- **Staff and no actor:** user-O, persona `officer`, user-R and user-T get 200. Nobody, `null` and "user-A, user-O" get 401.
+- **Clients:** user-P, user-Q and persona `client` get 403.
+- **Configuration people:** user-A, user-B and user-C get 403, including with a 25 MB body (refused before the file is read).
+- **Another firm, real vs made-up id (m2 fixed):** user-S gets the same 404 "No such filing." for a real filing, a made-up UUID, a non-UUID, and an unrecorded filing. 403 stays 403: the reach rethrow changes only 404s.
+- **Unrecorded filing:** the officer gets 409; a client gets 403; user-S gets 404; user-A gets 403.
+- **Sizes (m1 fixed):** exactly 20 MB is stored (200). 20 MB + 1 gets 413 "The file is larger than 20 MB: save the Transaction Approved page as a smaller PDF, JPEG or PNG. Nothing was stored." The words are the same for `/record/Fee-Receipt`, `/RECORD/FEE-RECEIPT`, a trailing `/`, and `/api/RUNTIME/FILINGS/…`.
+- **Two files:** 413 "Send one file: the Transaction Approved page. Nothing was stored.", in both letter cases.
+- **Nothing stored on a refusal:** rows and files went 2 → 7, exactly the 5 uploads that succeeded (4 staff plus exactly 20 MB). None of the 28 refusals (401, 403, 404, 409, 413, 400, 422) left a row or a file.
+- **m7 (Minor, already there at e9f2e6e79):** a client still tells a real filing id from a made-up one, live. user-P gets 403 on any real filing (`runtime.ts:67` refuses non-officers before the case lookup) but 404 on a made-up id. The ids are UUIDv4, so this tells a client little; it is m2's class, for clients.
+- **Not re-tested at this head (said fixed by the builder):** m3 (focus) and m4 (dialog pre-check, lasting notice). m5 and m6 stay as follow-ups.

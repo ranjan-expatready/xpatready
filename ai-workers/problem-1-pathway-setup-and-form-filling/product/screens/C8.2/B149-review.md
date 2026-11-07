@@ -67,3 +67,52 @@ A real screen reader. An intended user's unaided walk (D17 and D20 stay with the
 Blockers: none · Majors: 1 (focus lost after upload), 2 (record first, refusal only in a 9 s toast, 25 MB words) · Minors: 1–5 above.
 
 **Verdict: Block** (fix Major 1 and Major 2, then re-review the new commit)
+
+## Re-review (diff-only, P-293 (3)): `e9f2e6e79..019f9579491d36f089d9437ef8cebd0b9fefcba3`
+**Scope:** commits 5f13720a7, 343ecb757 and 019f95794, read line by line, then re-run on isolated `rev_b149` :4447, which was restarted on 019f95794. The copy is stopped and dropped. Live AI was off; the cost was US$0.
+
+**Database note:** the container restarted at about 13:25 IST, so no Postgres was running. I started this worktree's own cluster (`.tools/solution-1-prototype/pg18-data`, PID 1770) with start.sh's `pg_ctl` command. I left it running for the other lanes.
+
+**Ran:**
+* `check_c82_record_api`: 71/71.
+* My round-2 journeys: 12/12, keyboard, axe 0 on the refused dialog and on the notice, 400 and 1024 px with no sideways scroll, no console errors.
+* curl with a 20 MB + 1 page: 413 "The file is larger than 20 MB: save the Transaction Approved page as a smaller PDF, JPEG or PNG. Nothing was stored." The same answer comes back on `/record/Fee-Receipt`, because of the new `i` flag.
+* `tsc`: web 0 errors; api the same 15 as before, none in the changed files.
+* I did not re-run `check_c82_record_browser` myself, because it writes the committed screenshots. My own journeys cover its new steps.
+
+**Major 1 (focus after an upload): fixed.**
+* `submission.tsx:181-182`: `aria-busy` with a spinner, never `disabled`, and a click while busy is ignored.
+* `back()` (`:161`, C6.4's rAF + setTimeout) runs after the re-read.
+* Keyboard check: Enter, choose a file, and focus is on "Upload a new page… for Sample Spouse Q's filing".
+* A refusal on the filing still puts focus on its alert.
+
+**Major 2 (record first, refusal only in a toast): fixed.**
+* `receiptProblem` (`:113-118`) applies the server's own rule: `mediaOf` on the first 16 bytes, plus empty and `MAX_DOCUMENT_BYTES`.
+* In the dialog, a `.heic` file reads "not a PDF, JPEG or PNG" and a 21 MB file reads "larger than 20 MB", each on its own field (`aria-invalid`).
+* "Record the submission" then saves nothing (0 `filing_record` rows) and focuses the first refused field. Choosing good pages clears both errors.
+* A page the server refuses after the record is saved (a 503 put in place with `page.route`) is named in the `data-receipt-missed` notice. The notice has `role=alert` and is still there after 10.5 s. It reads: "Recorded, but a fee receipt page was not stored · Sample Spouse Q's Transaction Approved page: The service is busy. Nothing was stored. Upload it again with "Upload the Transaction Approved page…" on Sample Spouse Q's filing."
+* The toast now just points to the notice. Dismiss, by keyboard, puts focus on the panel heading.
+* The other page was stored (1 row). The 413 wording is fixed (`main.ts:191-193`).
+* New tests: browser steps for the refusal before saving, the lasting notice, focus after upload and Dismiss; an API step for 20 MB + 1.
+
+**Minors from round 1:**
+* m1 is fixed: the hint now reads "The receipt number printed on that page".
+* m2 is fixed: the hint uses `MAX_DOCUMENT_MB`.
+* m3, the native file control, is kept. The reason is in build-notes: it is labelled and reached by Tab. I accept that.
+* m4 is fixed: build-notes has a B149 entry, the screenshots are committed, and the comment at `:107-108` is corrected.
+* m5 (breaker m2) is fixed: another firm now gets 404 "No such filing.", and that is asserted.
+
+**New in this diff (Minor, Should, none blocking):**
+* n1: a refusal on the filing reads "Not stored: This file is not a PDF … one of those. Nothing was stored." It says "not stored" twice (`:168` plus `:183`). Drop the trailing sentence from the browser-side message.
+* n2: `screenshots/zz-stopped-1440.png`, which a failed run leaves behind, is now committed. Remove it, or regenerate it from a green run.
+* n3: `choose()` (`:200-204`) sets the file before its check resolves. There is a window of a few milliseconds where a press on Record would send an unchecked page. If the server refused it, the lasting notice would catch it, so this is acceptable.
+
+**Seen but not from this diff:** for about 1 s after recording, the panel still shows "Record the submission…" and "Ready to file" until the view reloads. A second press would be refused (409, BR-15). This was already so before B149.
+
+**C7.6:** the tech lead has ruled it is judged "unchanged from main". Base and head are both 15/25 on the checkpoint (round 1 above), so it is not counted against this PR.
+
+**Journey score, round 2: 9/10** (task 1 · next step 1 · plain words 1 · feedback 1 · data 1 · recovery 1 · accessibility 1 · speed 1 · visual ½ for the native control · trust 1). That passes, with no criterion at 0.
+
+Blockers: none · Majors: none open (1 and 2 fixed) · Minors: n1–n3 (Should), round-1 m3 accepted with its reason.
+
+**Verdict: Approve 019f9579491d36f089d9437ef8cebd0b9fefcba3**
