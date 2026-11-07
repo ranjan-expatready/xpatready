@@ -110,3 +110,17 @@ Journeys, all as the case officer unless named:
 * Whether release 2's acceptance of IMM 5257 Online, PDF upload and Paper on the APR Portal is right. That is an immigration value (rule 4), and the pack asserts nothing about it.
 
 **Verdict: Approve** (abe28c251fd989e51343568f75c8ed19b5ee9564). Blockers: none. Majors: none. Minors: m1, m2, m3.
+
+## Round 2 (diff only, 7 Nov)
+Diff `abe28c251..dc8a36fcb4b662c1e266f4dd3f226bdd2917de3d`, one commit. The pack changes in two lines (+2/−2) and `C11.6.md` gains two lines. This file is committed byte-identical to what I wrote. No other file under `prototype/studio/` changed, so `lib/m3.ts` is still untouched.
+* **m1, fixed.** -6 (line 34) now reads `!!HL && … channel === HL.channel` instead of `"PDF_UPLOAD"`. The value is PDF_UPLOAD on both data sets, so the meaning is unchanged.
+* **m2, fixed.** `C11.6.md:27-28` says that on release 2, -8a rests on IMM 5476's form-wide record, the same one -6 uses, and that the account-specific choice is tested on the fixture only.
+* **m3, fixed.** -8b (line 47) now needs `!!i5257`.
+* **Nothing else moved.** The step ids and labels are unchanged; no step was weakened, dropped or added; no form number or channel was added to a check.
+* **Run logs not refreshed.** The `runs/C11.6-*.txt` logs are not in this diff, although the round-2 message says they were refreshed. The logs on the branch are still those of abe28c251. No step label changed, so their text still matches this head, and my runs below cover dc8a36fcb. Not a finding.
+* **My runs on this head.** I ran dc8a36fcb's pack against the unchanged `lib/m3.ts` on fresh copies: `rv_c116b` on :4471 and `rv_c116bfx` on :4472, both stopped; live AI off; US$0.
+  * checkpoint: **14/14, exit 0**; -8a says "here PAPER on IMM 5476";
+  * fixture: setup 15/15 and 44/46 (only S2w and S7a red, as before); the pack gives **14/14, exit 0**; -8a says "here ONLINE on IMM 5257".
+* **Journey score:** 8.5/10, unchanged.
+
+**Verdict: Approve (dc8a36fcb4b662c1e266f4dd3f226bdd2917de3d).** Blockers: none. Majors: none. Minors: none open.
