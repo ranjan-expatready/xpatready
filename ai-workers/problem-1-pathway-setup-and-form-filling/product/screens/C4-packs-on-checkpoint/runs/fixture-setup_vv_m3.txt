@@ -1,0 +1,51 @@
+Setup — Visitor visa release 2 for the M3 path (Super Admin, M2)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  S1 the IRCC account is the APR Portal (Sample, FQ-1) — 200
+PASS  S2 IMM 5476 joins the combination from the library — 201
+FAIL  S2w (G8) a form line with no signer set is named by the release check before release — [{"level":"warning","where":"Forms","item":"IMM 5476","message":"Not decided yet (from an earlier release): 7 form fields (for example \"If you do not have an email address, provide either your…\"). Decide them when this edition is drafted again.","forms":["IM
+PASS  S2 IMM 5476: each applicant 18 or older, signed by the person and the representative — 200
+PASS  S3 IMM 5707: each person 18 or older signs their own — 200
+PASS  S3 IMM 5257: each applicant; a parent signs for a minor — 200
+PASS  S4a what IRCC accepts for IMM 5257 on the APR Portal: PDF upload, Paper (Sample) — 201
+PASS  S4 IMM 5257: PDF_UPLOAD, TYPED_NAME (Sample, FQ-2) — 200
+PASS  S4 IMM 5707: ONLINE, TYPED_NAME (Sample, FQ-2) — 200
+PASS  S4 IMM 5476: PDF_UPLOAD, HAND_SCANNED (Sample, FQ-2) — 200
+PASS  S5 (M3-0) every Visitor visa role files its own application (filing mode files_own, VV-R03), and the draft keeps it — [{"role":"principal","label":"Principal applicant","min":1,"max":1,"preview":1,"applies":true,"filingMode":"files_own"},{"role":"spouse_or_partner","label":"Spouse or partner (travelling)","min":0,"max":1,"preview":1,"applies":true,"filingMode":"files_own"},{"
+PASS  S6 new document type proposed and accepted: Passport or travel document — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Passport or travel document — 201
+PASS  S6 document requirement: Passport or travel document (each_applicant) — 201
+PASS  S6 new document type proposed and accepted: Proof of financial support — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Proof of financial support — 201
+PASS  S6 document requirement: Proof of financial support (principal_applicant) — 201
+PASS  S6 new document type proposed and accepted: Letter of authorization for a minor — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Letter of authorization for a minor — 201
+PASS  S6 document requirement: Letter of authorization for a minor (each_applicant) — 201
+PASS  S6 new document type proposed and accepted: Copy of the minor's birth certificate — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Copy of the minor's birth certificate — 201
+PASS  S6 document requirement: Copy of the minor's birth certificate (each_applicant) — 201
+PASS  S6 new document type proposed and accepted: Copy of the absent parent's signed passport or national ID — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Copy of the absent parent's signed passport or national ID — 201
+PASS  S6 document requirement: Copy of the absent parent's signed passport or national ID (each_applicant) — 201
+PASS  S6 new document type proposed and accepted: Custody documents — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Custody documents — 201
+PASS  S6 document requirement: Custody documents (each_applicant) — 201
+PASS  S6 new document type proposed and accepted: Adoption or guardianship papers — [202,201,null]
+PASS  S6 new document type approved into the library by a third person: Adoption or guardianship papers — 201
+PASS  S6 document requirement: Adoption or guardianship papers (each_applicant) — 201
+PASS  S6a (R3) person.travels_with proposed with its 4 answer values through C3.6 — 201
+PASS  S6a (R3) person.travels_with accepted by the second person — 201
+PASS  S6a (R3) person.travels_with approved into the library, its answer list with it — 201
+PASS  S6a (R3) "If under 18: who is this person travelling to Canada with?" is asked per person in Your visit — 201
+PASS  S6a (R3) person.custody proposed with its 5 answer values through C3.6 — 201
+PASS  S6a (R3) person.custody accepted by the second person — 201
+PASS  S6a (R3) person.custody approved into the library, its answer list with it — 201
+PASS  S6a (R3) "If under 18: what is the custody arrangement for this person?" is asked per person in Your visit — 201
+PASS  S7 (M3-8) eligibility gates saved as data on the draft (2 gates, 4 officer's judgement lines) — 200
+FAIL  S7a (W4, C6.12) the Visitor visa fee lines saved as a dated fee table, each with its source — "Cannot PUT /api/library/fees"
+PASS  S7b (G1) the Visitor visa's numbers answered with Sample sources by the demo seed (demo workspace only) — {"missing":0,"cited":0,"none_published":0,"sample":7,"changed":0,"fee_table":8,"validity_cite":0,"total":15,"held_back":0}
+PASS  S8 submitted for review — 201
+PASS  S8 signed off by the content reviewer — 38
+PASS  S8 release 2 approved by a different person — 201
+
+44/46 passed
