@@ -26,10 +26,10 @@ label.f{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 2px}input
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.two{grid-template-columns:1fr}}
 </style></head><body><div class="wrap">
 <h1>C6.17 · A multi-stage case (draft board, B139)</h1>
-<p class="muted">Intent, not pixels (P-44). Sample names (Client A principal; Client C, a child, in the states). <b>Sample route "Study, then work"</b>: Study permit (outside Canada) → Employer-specific work permit with an LMIA (inside Canada). It shows the mechanism and is not an IRCC route; the immigration expert names real routes. Dates, key details and the deadline rule are Sample (canada.ca not read from this session). Form and document counts are read from the releases at run time, never fixed (P-319).</p>
+<p class="muted">Intent, not pixels (P-44). Sample names (Client A principal; Client C, a child, in the states). <b>Sample route "Study, then work"</b>: Study permit (outside Canada) → Employer-specific work permit with an LMIA (inside Canada). It shows the mechanism; <b>not a recommended route</b> (TAXONOMY case 3 has the post-graduation work permit after the study permit); the immigration expert names real routes. Revised after the fresh challenge (challenge.md). Dates, key details and the deadline rule are Sample (canada.ca not read from this session). Form and document counts are read from the releases at run time, never fixed (P-319).</p>
 
 <div class="frame"><h2>1 · Open a case at a later stage (SA-1B-212)</h2>
-<p class="note">Dialog pattern, ≤3 steps. Step 2 appears only when the chosen combination is a later stage of a route. Key details are optional and are saved as Client A's answers (one fact, read by the work permit's questions and forms).</p>
+<p class="note">Dialog pattern, ≤3 steps. Step 2 appears only when the chosen combination is a later stage of a route. Key details are optional and are kept on the stage record (the team's StageRecord). Only a fact the same at every stage (UCI) is also written as Client A's answer, by the case officer.</p>
 <div class="dialog">
  <div class="steps"><span>1 Application and client</span><span class="on">2 Earlier stages</span><span>3 Case team</span></div>
  <h2 style="font-size:16px">Work permit with an LMIA is stage 2 of "Study, then work" <span class="pill">Sample</span></h2>
@@ -38,13 +38,13 @@ label.f{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 2px}input
   <div class="r"><span><label><input type="checkbox" checked> <b>Study permit</b> · Done before we started</label></span><span class="pill">Stage 1</span></div>
   <div class="r" style="grid-template-columns:1fr 1fr"><span><label class="f">UCI (optional)</label><input class="t" value="Sample 0000-0000"></span><span><label class="f">Study permit valid until (optional) ⓘ</label><input class="t" value="3 Feb 2027"></span></div>
  </div>
- <p class="muted">Will be created as: case on <b>Work permit with an LMIA, release 1</b> · Study permit recorded as done before we started · deadline "Apply before the study permit expires · due 3 Feb 2027" (Sample).</p>
+ <p class="muted">Will be created as: case on <b>Work permit with an LMIA, release 1</b> · Study permit recorded as done before we started · deadline "Apply before the study permit expires · due 3 Feb 2027" <span class="pill">Sample</span>, shown on the stage strip (not a task).</p>
  <p><button class="btn">Back</button> <button class="btn primary">Next: case team</button></p>
  <div class="notice crit"><span>"Study permit valid until" must be a date, for example 3 Feb 2027. Nothing was created.</span></div>
 </div></div>
 
 <div class="frame"><h2>2 · Case page: the stage strip and Start next stage (SA-1B-67, SA-1B-68 rule 1)</h2>
-<p class="note">Workspace pattern. GOV.UK task-list statuses in sentence case; "Cannot start yet" is grey and not linked. The button shows only when the case has a next stage. Answers are read where they are; nothing is copied.</p>
+<p class="note">Workspace pattern. GOV.UK task-list statuses in sentence case; "Cannot start yet" is grey and not linked. The button shows only when the case has a next stage. Person answers are read where they are; answers about the application are asked again for the new one. Nothing is copied.</p>
 <div class="card">
  <div class="head"><b>Case SP-0031 · Client A</b> <span class="pill">Study permit</span> <span class="pill">Release 1</span> <span class="muted">· Preparing</span></div>
  <div class="strip">
@@ -65,15 +65,17 @@ label.f{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 2px}input
    <div class="g"><div class="r"><span>Client A · principal applicant</span><span class="pill ok">Files</span></div>
     <div class="r"><span class="muted">Everyone on the case has a role in the work permit.</span><span></span></div></div>
    <h3>What comes along, what is new</h3>
-   <div class="g"><div class="r"><span><b>14 answers</b> already given are used as they are</span><span class="pill ok">Carried</span></div>
+   <div class="g"><div class="r"><span><b>14 answers about Client A</b> are used as they are</span><span class="pill ok">Carried</span></div>
+    <div class="r"><span><b>5 questions about this application</b> (number, date, office, country where applying, type) are asked again: they were the study permit's</span><span class="pill">Asked again</span></div>
     <div class="r"><span><b>9 new questions</b> for Client A</span><span class="pill">New</span></div>
     <div class="r"><span><b>6 forms</b> of this application</span><span class="pill">Added</span></div>
     <div class="r"><span><b>4 documents</b>; Passport is on file (uploaded 9 Nov): you check it again for this application</span><span class="pill">Added</span></div>
     <div class="r"><span><b>Deadline</b>: Apply before the study permit expires · due 3 Feb 2027 <span class="pill">Sample</span></span><span class="pill info">Step</span></div></div>
-   <h3>Study permit details (from Client A's answers)</h3>
+   <h3>Study permit details (kept on this stage; empty: none recorded on it)</h3>
    <div class="g"><div class="r" style="grid-template-columns:1fr 1fr"><span><label class="f">UCI</label><input class="t" value="Sample 0000-0000"></span><span><label class="f">Study permit valid until</label><input class="t" value="3 Feb 2027"></span></div></div>
    <div class="notice warn"><span>Client A's study permit has no filing record. Say why you are starting the next stage anyway.</span></div>
-   <textarea rows="2" placeholder="Reason (required)">Study permit filed by the client before the firm took over</textarea>
+   <textarea rows="2" placeholder="Reason (required)">Study permit approved; the client recorded the submission in the IRCC account</textarea>
+   <p class="muted"><b>This cannot be undone.</b> The study permit's filings become read only.</p>
    <p style="margin-top:12px"><button class="btn primary">Start the work permit</button> <button class="btn">Cancel</button></p>
   </div>
  </div>
@@ -86,22 +88,24 @@ label.f{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 2px}input
   <div class="head"><b>Case SP-0031 · Client A</b> <span class="pill">Work permit with an LMIA</span> <span class="pill">Release 1</span></div>
   <div class="strip">
    <div class="stage"><b>Study permit</b><span class="s">Ended — next stage started</span></div><span class="arrow">→</span>
-   <div class="stage cur"><b>Work permit with an LMIA</b><span class="s pill info">Current</span></div>
+   <div class="stage cur"><b>Work permit with an LMIA</b><span class="s pill info">Current</span><span class="s">Apply before the study permit expires · due 3 Feb 2027 <span class="pill">Sample</span></span></div>
   </div>
   <div class="list">
-   <div class="row"><span>Apply before the study permit expires · Client A</span><span class="pill warn">Due 3 Feb 2027 · Sample</span></div>
+   <div class="row"><span>5 questions about this application · Client A</span><span class="pill">Asked again</span></div>
    <div class="row"><span>Passport · Client A · on file from Study permit</span><span class="pill">Received: check it</span></div>
    <div class="row"><span>9 new questions for Client A</span><span class="pill">Open</span></div>
   </div>
  </div>
  <div class="panel" style="border:1px solid var(--border);border-radius:12px">
   <h2 style="font-size:16px">Study permit · Ended — next stage started</h2>
-  <p class="muted">Ended 12 Nov by the case officer: "Study permit filed by the client before the firm took over".</p>
+  <p class="muted">Ended 12 Nov by the case officer: "Study permit approved; the client recorded the submission in the IRCC account". ⓘ The firm moved to the next application; IRCC's decision is recorded on the filing.</p>
   <h3>Filings</h3>
   <div class="g"><div class="r"><span>Study permit · Client A · no filing record</span><span class="pill">Read only</span></div></div>
   <h3>Details</h3>
-  <div class="g"><div class="r"><span>UCI · Sample 0000-0000</span><span class="muted">Client A's answer</span></div><div class="r"><span>Study permit valid until · 3 Feb 2027</span><span class="muted">Client A's answer</span></div></div>
-  <p class="muted">Forms and documents of this stage are kept as they were; they are not this stage's work any more.</p>
+  <div class="g"><div class="r"><span>UCI · Sample 0000-0000</span><span class="muted">entered by the case officer · also Client A's answer</span></div><div class="r"><span>Study permit valid until · 3 Feb 2027</span><span class="muted">entered by the case officer · on this stage only</span></div></div>
+  <h3>Documents</h3>
+  <div class="g"><div class="r"><span>Passport · Client A · uploaded 9 Nov (this stage's file; later uploads are not shown here)</span><span class="pill">Kept</span></div></div>
+  <p class="muted">Forms, copies and documents of this stage are kept as they were and never shown as the work permit's.</p>
  </div>
 </div></div>
 
@@ -113,9 +117,9 @@ label.f{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 2px}input
  <div class="stage grey"><b>Next application</b><span class="s">Cannot start yet</span></div>
 </div>
 <div class="notice warn"><span>Apply before the study permit expires: can't set the date, "Study permit valid until" is missing. Answer it and the date is worked out.</span><button class="btn">Answer it</button></div>
-<div class="notice crit"><span>Can't start the work permit: its release is not ready for cases (2 items). Nothing was changed.</span><button class="btn off">Start the work permit</button></div>
+<div class="notice crit"><span>Can't start the work permit: its release is not ready for cases (2 items), or it was retired. Nothing was changed.</span><button class="btn off">Start the work permit</button></div>
 <div class="notice info"><span>(Another case) Client C, child: Work permit with an LMIA has no child role. Client C stays on the case and files nothing in this stage.</span></div>
 <div class="notice warn"><span>This case changed while you read it.</span><button class="btn">Read it again</button></div>
-<p><span class="toast">Work permit with an LMIA started. 14 answers already given; 9 new questions; 6 forms and 4 documents added; deadline 3 Feb 2027 (Sample). <a>See them</a></span></p>
+<p><span class="toast">Work permit with an LMIA started. 14 answers about Client A used; 5 questions about this application asked again; 9 new questions; 6 forms and 4 documents added; deadline 3 Feb 2027 (Sample). <a>See them</a></span></p>
 </div>
 </div></body></html>
