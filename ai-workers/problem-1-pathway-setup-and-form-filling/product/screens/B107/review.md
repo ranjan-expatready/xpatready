@@ -1,0 +1,72 @@
+# B107 review: representative facts on the forms (PR #1231, forms lane)
+
+**Commit reviewed:** `7a673ee575dfd2ed957b3a049a6595b5add135b8` (product code identical to `5e5cdd86b`), diff `766a11319..7a673ee57`. Reviewer agent, fresh context, 7 Nov 2026. Live AI off, US$0, no priced button. No `concept.md` for B107: judged against BACKLOG B107, QA-296/299/300 (qa's BUGS.md and `qa/reports/2026-11-07-c611-c81.md`), STANDARDS, EXPERIENCE and QUALITY.
+
+**Verdict: Block** (Ship after fixes). One Major. QA-296, QA-299 and QA-300 are fixed in the filled PDFs, and every rule I tested holds on the server. The approval card for the 26 new library changes shows the raw action code and gets the decision's sentence wrong.
+
+## What I re-ran (exact commit, builder's copy :4450 unless noted)
+* Pure: check_b107_form_field_gates 21/21, check_p5_engine 33/33, check_forms_b86_fill 35/35, check_forms_b88_fill 34/34, check_engine 44/44, check_case_engine 76/76.
+* Checkpoint: check_b107_representative_copies 20/20; qa's check_qa296_qa299_qa300_representative_forms **7/7** (the untracked file is byte-identical to qa's branches `c611-c81-91bd90` and `c81-qa235-qa153`); C6.11.test 25/25; check_c611_checkpoint 14/14; check_qa296_imm5475 17/17; check_qa293_rep_answers 10/10; J-A2 browser 19/19; B107 walk 8/8.
+* My own copy `rvb107` on :4456, started and stopped in one command (fresh DB, Load the configured checkpoint 201 in 79 s, log "26 proposed by the Configuration author, 26 approved by the Approver"). I added a WAITING SET_FORM_FIELD_GATE change shaped as `propose` writes it, then used the real approve route: proposer approves → **403** "A different person decides". Form field's transform changed → **409** "Changed since", and the card's re-check says so before the click. Reverted, then approved by user-B → **201**: draft v2 holds the new gate, `updated_by` = the proposer. B86's list for `representative.membership_id` → `rows: []`. B86 propose on the gated row → **404**.
+
+## The seven questions
+1. **Forms' own words: yes.** I extracted the XFA template of `official-sources/ircc/previous-editions/imm5476e-2021.pdf`. The scripts at template lines 2931–3275 match every quoted fragment: the ICCRC/provincial/quebec ticks open their own box and null the other two plus questionI's; the questionI ticks null questionII's; `questionII.compensated.rawValue = null` and `questionI.uncompensated.rawValue = null` are on the opposite group. Question 7's words "If student-at-law, write the name of the supervising lawyer", "Supervising lawyer membership ID" and "Fax number" are in the template. The IMM 5475 quotes are in `web-pages/page-imm5475.html` ("will not act as your representative") and in the form's own template ("will not be a representative who can conduct business with CIC and CBSA…"). Every entry says Sample, Unconfirmed: expert (json `about`, the card's footer, the diff words).
+2. **B86 not broken.** Every B86 reader skips a gate: the door's `reads` (form-field-condition.ts:205), `listAll` (:252), `rowsOf` and so `propose` (404). `propose` refuses to put a gate over B86's own rule (form-field-gates.ts:223). `rulesInForce` keeps B86's rule as before (B107-11/12). Release diff words: validate.ts:301-305. Undo/Return goes through `restoreReplaced` (`replaces` is recorded). Reachability (validate.ts:217-224) treats a gate as "no rule", the same as before. Latent gap: see m3.
+3. **Second-person rule: holds.** Shown by experiment (above); `appliedBy` = the proposer, so library-changes.ts:128-130 refuses both ways. The re-check compares outcome, fact, person, transform and rule. It has no test of its own (m1).
+4. **Firm-record keys reach only IMM 5476.** On the checkpoint, IMM 5476 (11-2021) is the only edition with any `person = representative` row (query over all 19 editions). The guard reads the map, not the form number (team.ts:130-140). On the six, the saved IMM 5475 runs have 13 rows about `representative` and no `representative.*` fact, so `namesRepresentative` is false and the firm record never reaches them.
+5. **Owes: right for this row's cases.** A representative fact is owed by staff (case-prepare.ts:368, readiness-inputs.ts:83; C14, C14b). It is keyed by fact, not by fact and subject: m4.
+6. **Transforms: nothing that ran before changes.** `max N characters` and `digits_only` used to fall to "not in the executable set" → by hand. No earlier branch matched them. On the checkpoint only 7 IMM 5476 rows use them (query). Pure suites unchanged. They have no unit pass/fail tests: m2.
+7. **J-A2 / Prepare:** 19/19 and 8/8 on my re-run. Question 7 is filled from the firm record on the tab. The IMM 5475 copy writes 0 fields and lists part 5 as by hand. No page errors.
+
+## Issues
+**M1 (Major, Must). The approval card and the Release list show a raw code and a wrong sentence for both new actions.** Screenshots: my re-run shots `rv/gate-change-1440.png` and `rv/byhand-change-1024.png` (scratch, see the journey report).
+* The heading reads "SET_FORM_FIELD_GATE when a form field is filled: …" and "SET_FORM_FIELD_BY_HAND …". `ACTION_WORD` has no entry for either action (api/src/library-changes.ts:32), so `actionWord` returns the code. The same code reaches web/src/pages/release.tsx:19.
+* "Proposed" reads "Filled only when filled only when the representative is…", and for by-hand "Filled only when filled by hand: …", which says the opposite of the decision. Cause: the card prefixes "Filled only when " (web/src/pages/review-items.tsx:88) to a `sentence` that already starts "filled only when"/"filled by hand" (api/src/form-field-gates.ts:227).
+* "Its own words" (review-items.tsx:86) puts the builder's sentence in quotes as if the form printed it. For by-hand that sentence is the builder's own ("…so the case holds no such person: the applicant writes…"). The footer (:89) says "not that the condition is correct", but a by-hand change has no condition.
+* This misses EXPERIENCE.md:46 [M] (no IDs or codes on the main path). It is the second person's own evidence screen. **Fix:** add ACTION_WORD entries ("Set when it is filled:" / "Mark filled by hand:"). Either store `sentence` without the lead words or give the card a gate/by-hand branch. Label the by-hand words "Why" and the gate words "The form's words (summarised)". Add a fail test that no library change's `action_word` matches `/^[A-Z_]+$/`.
+
+**Minors (Should; fix or list in the PR)**
+* m1 No test fails if the gate door's re-check (form-field-gates.ts:243-249) or the "holds its question's condition" refusal (:223) is removed. B107-C18 only reads the loader's data. Add the 403/409/201 sequence above as a check.
+* m2 New transform steps without pass/fail tests (prototype/p5/transforms.ts:133-137): over-long value → by hand; `digits_only` on "+1" → "1", on "abc" → by hand. Add them to check_p5_engine.
+* m3 Latent dead end: if a question that a gated box reads ever gets a SHOW condition, reachability (validate.ts:224) and `spreadOf` (form-field-condition.ts:47) count the gated box as "a different condition". B86's door no longer lists that box, so the release error has no fix on screen. No such question exists today (no placement condition on any gated fact). Say so in the code or the PR.
+* m4 Owes is keyed by fact (readiness-inputs.ts:83). On IMM 5476 `person.family_name`/`given_names` are read for the applicant and the representative. If both were missing, the representative's name would be listed on the client's line. The firm record holds both today. Key it by fact and subject when it is touched next.
+* m5 The question 7 student-at-law gate (samples/form-field-gates.json:64-75) fires for every law-society member, while its words say "is a student-at-law". The library has no student-at-law fact, so a non-student lawyer would be asked two facts nobody answers. No Sample representative is a lawyer (all CICC). Say "written for every law-society member (whether a student-at-law is not a library fact)".
+* m6 Stale file names in comments: `combination/410-form-field-gates.ts` (api/src/form-field-gates.ts:8; samples/form-field-gates.json:2) and `085-form-field-gates.ts` (engine/form-field-condition.ts:62; tests/check_b107_representative_copies.ts:5). The step is `045-form-field-gates.ts`.
+* m7 The cites store `\"open\"` with literal backslashes (samples/form-field-gates.json:13 and others), shown on the card as `access = \"open\"`. Use plain quotes or `'open'`.
+* m8 The release diff says "is filled only when …, as the form prints it" (validate.ts:304), but `words` is a summary; the quote is in `cite`. Drop "as the form prints it" or say "in the form's words (summarised)".
+
+## Dimensions (1–5)
+D1 4 the three QA Done lines met in the PDFs (C2–C16, qa 7/7) · D2 5 second person, advisory lock, stale re-check (experiment) · D3 5 a column B86 already has, no migration, data in samples/ · D4 4 gates validated against the library and runnable (gateProblems); m3 latent · D5 4 a load that finds a decision already held does nothing (`kept`); a bad file proposes nothing · D6 4 audit lines proposed/approved by name; cites dated · D7 5 no AI; hand-written from the form · D8 4 breadcrumb on the change page · D9 4 Prepare lists by-hand parts · D10 2 M1 · D11 4 re-check said before the click · D12 3 four-line heading with a code (M1), backslashes (m7) · D13 4 axe clean on the change page at 1440 and 1024; no sideways scroll; focus visible; 400 px and 200 % not walked · D14 4 team card reused · D15 4 change page 0.6–1.7 s; load 79 s (demo) · D16 3 strong PDF tests; m1, m2 · D17 simulated only · D18 5 every decision carries page, quote, date · D19 4 J-A2 through Prepare green; print waits for B3 · D20 simulated only.
+
+## Graph
+`graph.mjs`: G1 0, G2 0, G4 0, G5 0. G6 lists `features/checkpoint/045-form-field-gates.ts` as "nothing imports". That is a false positive: step files load by directory scan (demo.ts:66). No new page or route, so there is nothing untested to list.
+
+## Could not check
+Rendering in Adobe (XFA data read only). 400 px and 200 % zoom on these pages. A real screen reader. The six end to end (its IMM 5476 edition has no gates: known, row 17). An intended user's unaided walk (D17, D20).
+
+Journey score (reviewer): **8.5/10** (`journey-test-reviewer-2026-11-07.md`).
+
+Verdict: Block. Fix M1, with a fail test, then a diff-only re-review.
+
+## Round 2 (diff only, `7a673ee57..464943d4405a8f68b395d937aae30c92c3b40641`, 7 Nov 2026)
+Read the whole code diff and ran it on the builder's copy :4450, which serves the new head after a fresh checkpoint load. My checkout was fast-forwarded to the head. The builder committed this file and the journey report unchanged.
+
+**Round 1 findings**
+* **M1: fixed.** `ACTION_WORD` now has both actions (library-changes.ts:32). The heading reads "Change when a form field is filled: …". `sentence` no longer carries the lead words (form-field-gates.ts:64-66). The card has its own gate/by-hand branch: "The form's words (summarised)" or "Why", then "Source"; by-hand reads "Filled by hand: the product writes nothing in it", with its own footer (review-items.tsx:86-93). The contract addition is optional (contracts/screen02.ts). Seen on my re-run's `06-review-by-hand-change-1440.png`; walk 10/10. Tests C19–C21 cover it.
+* **m2, m5, m6, m7, m8: fixed.** B107-22…26 pass. The words, the file names, the plain quotes and the release words are all as asked. m3 and m4 are noted in the PR, which is acceptable.
+* **m1: the tests are written, but they fail on a second run on the same copy (R2-M1).**
+
+**Re-run on :4450:** check_b107_form_field_gates all passed (with 22–26). qa's check 7/7, C6.11 25/25, check_c611_checkpoint 14/14, J-A2 19/19 and the B107 walk 10/10 all pass with the leftover state below. **check_b107_representative_copies: 23/26, exit 1, on both of my runs.** C22, C23 and C24 get `404 "Not found"`.
+
+**R2-M1 (Major, Must): the new C22–C24 cannot be re-run, and they leave a library draft behind.** tests/check_b107_representative_copies.ts:118-136.
+* The test inserts a WAITING gate change on the ICCRCMember key and approves it, leaving it APPROVED, with a DRAFT v2 of IMM 5476's CICC box whose gate words are "B107 check words". Nothing undoes either.
+* On the next run on the same copy, the insert hits `library_change_one_open` (unique while WAITING or APPROVED). `sql` returns no id, the route answers 404, and C22–C24 fail. On :4450 now: `APPROVED|user-A|user-B|IMM 5476 · B107 check gate`; `form_field_map` ICCRCMember v2 DRAFT `user-A`, "B107 check words".
+* The next release on such a copy carries those words onto the CICC box ("Not needed: written only when B107 check words").
+* These checkpoint suites run by hand on copies, not in CI. Re-running on the same copy is how an independent session confirms a row (P-291), and every other suite here re-runs cleanly. As written, the evidence "26/26" cannot be reproduced on the copy the builder handed over.
+* **Fix:** clean up at the end of the test, in a `finally`: set the test change to WITHDRAWN and delete the DRAFT row it created. Also remove any earlier run's leftover first (match its label `IMM 5476 · B107 check gate`). Then run the file twice in a row on one copy and give both exit codes in the PR. On :4450, the current leftover row and change need removing, or reload the checkpoint.
+
+**New Minor:** on the gate and by-hand cards the source is shown twice, as "Source" and again as "Reason:" below. The reason is the cite (form-field-gates.ts:235). It is cosmetic: drop one, or store a short reason.
+
+Product code: no new issue. The approval rules hold, as in round 1 and in the builder's C22–C24 on a fresh copy.
+
+Verdict: Block. Fix R2-M1 (test clean-up and two consecutive runs), then a diff-only check of the test file.
