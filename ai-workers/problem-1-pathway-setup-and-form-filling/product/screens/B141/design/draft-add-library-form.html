@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C7.8 Add a library form: draft board</title>
+<style>
+:root{--primary:#0862c5;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--line:#ececec;--warn-t:#663200;--warn-tint:#fff1e0;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--info-tint:#e8f1fb;--info-t:#054e9c;--bg:#e9ecef}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 60px}.frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:22px 0;padding:16px}
+.frame>h2{font-size:15px}.note,.muted{color:var(--muted);font-size:12.5px}.note{margin:2px 0 12px}
+.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.ok{background:var(--ok-tint);color:var(--ok-t);border-color:transparent}.warn{background:var(--warn-tint);color:var(--warn-t);border-color:transparent}.info{background:var(--info-tint);color:var(--info-t);border-color:transparent}
+.btn{display:inline-flex;gap:4px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 12px;font:inherit;font-size:13px}.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.lay{display:grid;grid-template-columns:1fr 520px;gap:0;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}@media(max-width:1000px){.lay{grid-template-columns:1fr}}
+.list .row{display:flex;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line)}.list .row span:first-child{flex:1}.list h3{font-size:14px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.new{background:#f3f9ff}.panel{border-left:1px solid var(--border);padding:14px 18px}.panel input,.panel select,.panel textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit}
+.res{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0}.res.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}.res.dim{opacity:.7}
+label{display:block;font-weight:500;margin-top:10px}
+</style></head><body><div class="wrap">
+<h1>C7.8 · Add a library form to one filing (draft board, B141)</h1>
+<p class="muted">Intent, not pixels (P-44). On the founder's Prepare the filing list (P-122). Form numbers below are placeholders ("IMM xxxx"): the build and the pack pick real forms from the firm's library by their state, never a fixed number (P-319). Sample names.</p>
+<div class="frame"><h2>1 · Prepare the filing → + Add a form → side panel</h2><p class="note">The side panel searches the firm's library. Each result says in words whether it fills from the case (with coverage) or is the blank official PDF. Forms already on this filing are shown, not addable, with the reason.</p>
+<div class="lay"><div class="list"><h3>Sample Client A's filing · forms</h3>
+<div class="row"><span>IMM 5257 · Application for visitor visa</span><span class="pill">PDF upload</span><span class="pill ok">Ready</span></div>
+<div class="row"><span>IMM 5707 · Family information</span><span class="pill">PDF upload</span><span class="pill">In progress</span></div>
+<div class="row new"><span>IMM xxxx · Supplementary form (Sample) <span class="pill info" title="Added by the case officer on 8 Nov: Client travels often; officer asks for travel history in full. Not part of the combination.">Added by the case officer ⓘ</span></span><span class="pill">PDF upload</span><span class="pill warn">To do · 6 boxes by hand</span></div>
+<div class="row"><span><button class="btn">+ Add a form</button></span></div></div>
+<div class="panel"><h3 style="font-size:16px">Add a form to Sample Client A's filing</h3><p class="muted">From the firm's library. Only this filing gets it; the combination does not change.</p>
+<label for="q">Search by number or title</label><input id="q" value="supplementary">
+<div class="res sel"><b>IMM xxxx</b> · Supplementary form (Sample) · edition 2024-05<br><span class="pill ok" title="The library has an approved map for this edition">Fills from the case · 18 of 24 boxes</span> <span class="muted">6 by hand: not on file</span></div>
+<div class="res"><b>IMM yyyy</b> · Declaration (Sample) · edition 2023-11<br><span class="pill" title="No approved map: download, fill by hand, upload the completed copy">Blank official PDF</span></div>
+<div class="res dim"><b>IMM 5707</b> · Family information<br><span class="muted">Already on this filing (from the combination)</span></div>
+<label for="who">For</label><select id="who"><option>Sample Client A (principal applicant)</option><option>…</option></select>
+<label for="ch">Channel</label><select id="ch"><option>PDF upload (what IRCC accepts for this form)</option></select>
+<label for="why">Why this filing needs it</label><textarea id="why">Client travels often; officer asks for travel history in full.</textarea>
+<div style="text-align:right;margin-top:12px"><button class="btn">Cancel</button> <button class="btn primary">Add to Sample Client A's filing</button></div></div></div></div>
+<div class="frame"><h2>2 · After adding: it is a form like any other</h2><p class="note">Filled from confirmed facts only (P-72). "Not on file" boxes listed. Ready to file (C7.6): a blank form without its completed upload is a CRITICAL warning passable with a reason; a barcode form still needs its own Validate. Frozen when added; a newer edition shows "Adopt update". Remove with a reason until the filing is recorded.</p></div>
+</div></body></html>
