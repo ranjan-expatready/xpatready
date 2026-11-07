@@ -17,7 +17,7 @@ import { noRetryOnRefusal, type CanAdd, type CasePerson } from "./questionnaire"
 type Kind = "make_principal" | "remove_filing" | "add_back";
 type Preview = { kind: Kind; subject: string; title: string; stays: string; changes: { person: string; label: string; words: string[] }[]; totals: { before_cents: number; after_cents: number } | null; basis: string };
 type Applicant = { subject: string; mode: string };
-type Filing = { id: string; status: string; applicants: Applicant[]; record?: { submitted_on?: string } | null };
+type Filing = { id: string; status: string; applicants: Applicant[]; record?: { submitted_on?: string; application_number?: string } | null };
 type PrepareView = { derived: boolean; filings: Filing[] };
 type Change = { kind: string; subject: string; other: string | null; reason: string | null; by: string; at: string };
 
@@ -25,6 +25,8 @@ const cad = (c: number) => `CAD ${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
 const day = (at: string) => new Date(at).toLocaleDateString("en-CA", { day: "numeric", month: "short" });
 const STATUS: Record<string, string> = { not_started: "Not started", ready_to_file: "Ready to file", submitted: "Submitted" };
 const ROLE_TIP = "The principal applicant carries the family's capped fees and signs for a minor child. Change it with Make principal.";
+/** Review M4: after a change or Cancel, focus goes back to the person's row (its menu button), once the table re-renders. */
+const focusRow = (subject: string) => { let n = 0; const go = () => { const el = document.querySelector<HTMLElement>(`[data-person-row="${subject}"] [data-person-menu]`); if (el && document.activeElement !== el) { el.focus(); return; } if (++n < 20) setTimeout(go, 100); }; setTimeout(go, 50); };
 const ITEM = "flex cursor-pointer select-none flex-col gap-0.5 rounded px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[highlighted]:bg-surface";
 
 export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf }: { caseId: string; people: CasePerson[]; canAdd: CanAdd[]; onAdd: (r: CanAdd) => void; roleOf: (p: CasePerson) => string; nameOf: (who: string) => string }) {
@@ -36,7 +38,8 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
   const filingOf = (s: string) => filings.find((f) => f.applicants[0]?.subject === s);
   /** On someone else's filing (C11.12: on the principal's application, applying or declared only). */
   const onFiling = (s: string) => { const f = filings.find((x) => x.applicants[0]?.subject !== s && x.applicants.some((a) => a.subject === s)); return f ? { f, mode: f.applicants.find((a) => a.subject === s)!.mode, owner: people.find((p) => p.subject_id === f.applicants[0]?.subject)?.label ?? "the principal" } : null; };
-  const recorded = filings.some((f) => f.status.toLowerCase() === "submitted" || !!f.record);
+  const recordedFiling = filings.find((f) => f.status.toLowerCase() === "submitted" || !!f.record), recorded = !!recordedFiling;
+  const recordedWords = recordedFiling?.record?.submitted_on ? `Recorded as submitted to IRCC on ${recordedFiling.record.submitted_on}${recordedFiling.record.application_number ? ` (${recordedFiling.record.application_number})` : ""}: no person or filing of this case changes here. Taking back a submitted application is done in the case's lifecycle (not built here).` : "Recorded as submitted: no person or filing of this case changes here. Taking back a submitted application is done in the case's lifecycle (not built here)."; 
   const lastRemoval = (s: string) => hist.data?.changes.find((c) => c.subject === s && (c.kind === "remove_filing" || c.kind === "travelling_flag"));
   const lastSwap = hist.data?.changes.find((c) => c.kind === "make_principal");
   const shown = people.filter((p) => p.role !== "case");
@@ -49,11 +52,11 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
         {canAdd.map((r) => <Button key={r.role} size="sm" variant="secondary" data-add-role={r.role} onClick={() => onAdd(r)}><UserPlus aria-hidden />Add {r.label.toLowerCase()}</Button>)}
       </header>
       {last ? <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-2 text-sm" role="status" data-change-done>{last.words}
-        <Button size="sm" variant="ghost" onClick={() => setOpen({ ...last.undo, reason: `Undo: ${last.reason}` })} data-undo><Undo2 aria-hidden />Undo</Button></div> : null}
+        <Button size="sm" variant="ghost" onClick={() => setOpen({ ...last.undo, reason: `Undo: ${last.reason}`.slice(0, 500) })} data-undo><Undo2 aria-hidden />Undo</Button></div> : null}
       {prep.isLoading ? <div className="space-y-2 p-4"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div> : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="px-4 py-2 font-medium">Person</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1" title={ROLE_TIP}>Role<Info className="size-3" aria-label={ROLE_TIP} /></span></th><th className="px-2 py-2 font-medium">Filing</th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="px-4 py-2 font-medium">Person</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Role<span tabIndex={0} role="img" title={ROLE_TIP} aria-label={ROLE_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"><Info className="size-3" aria-hidden /></span></span></th><th className="px-2 py-2 font-medium">Filing</th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {shown.map((p) => {
                 const f = filingOf(p.subject_id), on = f ? null : onFiling(p.subject_id), removal = !p.applies ? lastRemoval(p.subject_id) : undefined;
@@ -67,14 +70,14 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
                       : <span className="text-text-muted">No filing: not travelling</span>}
                       {removal ? <div className="text-xs text-text-muted [overflow-wrap:anywhere]" data-change-reason>{removal.reason ? `Removed ${day(removal.at)} by ${nameOf(removal.by)}: “${removal.reason}”` : `Marked not travelling ${day(removal.at)} by ${nameOf(removal.by)}`}</div> : null}</td>
                     <td className="px-2 py-2">{(f ?? on?.f) ? <Pill>{(({ status }) => STATUS[status.toLowerCase()] ?? status.toLowerCase().replace(/_/g, " "))((f ?? on?.f)!)}</Pill> : "—"}</td>
-                    <td className="px-4 py-2 text-right">{recorded ? <span className="text-xs text-text-muted" data-recorded-note>Recorded as submitted: no person or filing changes here</span>
+                    <td className="px-4 py-2 text-right">{recorded ? <span className="block max-w-xs text-left text-xs text-text-muted" data-recorded-note>{recordedWords}</span>
                       : p.co_files ? null : <RowMenu p={p} onPick={(kind) => setOpen({ kind, subject: p.subject_id })} />}</td>
                   </tr>);
               })}
             </tbody>
           </table>
         </div>)}
-      {open ? <ChangeDialog caseId={caseId} kind={open.kind} subject={open.subject} initialReason={open.reason} close={() => setOpen(null)} done={(r, reason) => { setLast({ words: r.words, undo: r.undo, reason }); setOpen(null); }} /> : null}
+      {open ? <ChangeDialog caseId={caseId} kind={open.kind} subject={open.subject} initialReason={open.reason} close={() => { const s = open.subject; setOpen(null); focusRow(s); }} done={(r, reason) => { const s = open.subject; setLast({ words: r.words, undo: r.undo, reason }); setOpen(null); focusRow(s); }} /> : null}
     </section>
   );
 }
@@ -86,10 +89,10 @@ function RowMenu({ p, onPick }: { p: CasePerson; onPick: (k: Kind) => void }) {
       <DropdownMenu.Trigger asChild><Button size="sm" variant="ghost" aria-label={`Actions for ${p.label}`} data-person-menu><MoreHorizontal /></Button></DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={4} className="z-50 w-[300px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
-          {!principal ? <DropdownMenu.Item className={ITEM} disabled={!spouse} onSelect={() => onPick("make_principal")} data-action="make-principal">
+          {!principal ? <DropdownMenu.Item className={ITEM} aria-disabled={!spouse || undefined} data-refused={!spouse || undefined} onSelect={(e) => { if (!spouse) { e.preventDefault(); return; } onPick("make_principal"); }} data-action="make-principal">
             <span className={spouse ? "" : "text-text-muted"}>Make principal…</span>
-            <small className="text-xs text-text-muted">{spouse ? "Swaps roles with the principal applicant. Answers stay with each person." : "Only the spouse or partner can swap with the principal: a child cannot swap with a parent."}</small></DropdownMenu.Item> : null}
-          {principal ? <DropdownMenu.Item className={ITEM} disabled data-action="remove-filing"><span className="text-text-muted">Remove filing</span><small className="text-xs text-text-muted">Make someone else principal first.</small></DropdownMenu.Item>
+            <small className="text-xs text-text-muted">{spouse ? "Swaps roles with the principal applicant. Answers stay with each person." : p.role === "child" ? `Refused: a child cannot swap with a parent. To make ${p.label} the principal applicant, open a case for them.` : "Refused: only the spouse or partner can swap with the principal."}</small></DropdownMenu.Item> : null}
+          {principal ? <DropdownMenu.Item className={ITEM} aria-disabled data-refused onSelect={(e) => e.preventDefault()} data-action="remove-filing"><span className="text-text-muted">Remove filing</span><small className="text-xs text-text-muted">Refused: make someone else principal first.</small></DropdownMenu.Item>
             : p.applies ? <DropdownMenu.Item className={ITEM} onSelect={() => onPick("remove_filing")} data-action="remove-filing"><span>Remove filing…</span><small className="text-xs text-text-muted">{p.label} stays on the case, not travelling.</small></DropdownMenu.Item>
             : <DropdownMenu.Item className={ITEM} onSelect={() => onPick("add_back")} data-action="add-back"><span>Add filing back…</span><small className="text-xs text-text-muted">The same filing, with its items, comes back.</small></DropdownMenu.Item>}
         </DropdownMenu.Content>
@@ -102,6 +105,8 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
   const qc = useQueryClient();
   const [view, setView] = React.useState<Preview | null>(null);
   const [refusal, setRefusal] = React.useState<string | null>(null);
+  /** Review M3, break M3: a 409 on apply says why the preview changed; a reload of the preview never clears it. */
+  const [stale, setStale] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState(initialReason ?? "");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -120,7 +125,7 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
       done(r, reason.trim());
     } catch (e) {
       const status = e instanceof ApiError ? e.status : 0;
-      if (status === 409) { setRefusal((e as Error).message); void load(); }
+      if (status === 409) { setStale(`${(e as Error).message} What changes now is shown below; nothing was changed.`); void load(); }
       else setError(e instanceof ApiError ? e.field("reason") ?? e.message : (e as Error).message);
     } finally { setBusy(false); }
   };
@@ -130,6 +135,7 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} wide title={view?.title ?? verb} description={view?.stays}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button>{view ? <Button variant={kind === "remove_filing" ? "destructive" : "default"} busy={busy} onClick={() => void apply()} data-confirm>{verb}</Button> : null}</>}>
       <div className="space-y-3" data-change-dialog>
+        {stale ? <Notice tone="warn" title="Changed since you opened this" data-change-stale>{stale}</Notice> : null}
         {refusal ? <Notice tone="warn" title="Not possible">{refusal}</Notice> : null}
         {!view && !refusal ? <div className="space-y-2"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-16 w-full" /></div> : null}
         {view ? <>

@@ -65,6 +65,13 @@ const plainA = confirmation(snap, ans("a"), fam().find((p) => p.subjectId === "a
 ok("C6.13 BR-3b pass: the former principal's own answers stay confirmed after the swap (they are the client)", plainA.confirmed && confA.confirmed, { plainA, confA });
 ok("C6.13 BR-3b fail: the new principal's answers, typed by the client, do not become confirmed by the swap", !plainB.confirmed && !confB.confirmed && /client/.test(confB.why), { plainB, confB });
 
+const kidAdult = withClient([...mpa!, P("k3", "child", "Child A3")], "a");
+const confK = confirmation(snap, ans("k3"), kidAdult.find((p) => p.subjectId === "k3"), "2006-01-01", today);
+const confMinor = confirmation(snap, ans("k1"), kidAdult.find((p) => p.subjectId === "k1"), "2016-01-01", today);
+ok("C6.13 BR-3b pass (break M1): after a swap an adult child's answers typed by the client say \"Answered by the client\"", !confK.confirmed && /^Answered by the client/.test(confK.why), confK);
+ok("C6.13 BR-3b pass: after a swap a minor child's answers typed by the client still count (the client is their parent)", confMinor.confirmed, confMinor);
+ok("C6.13 BR-3b fail: before any swap the words stay \"Answered by the principal\"", /^Answered by the principal/.test(plainB.why), plainB);
+
 // BR-4, BR-5: the dependants are named, from the same derivation (Visitor visa: biometrics capped for 3 eligible).
 type D = Extract<CaseFilings, { derived: true }>;
 const people = fam();

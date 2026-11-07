@@ -31,7 +31,9 @@ const problem = (status: number, title: string, detail: string, errors?: { field
   throw new HttpException({ type: "https://expatready.local/problems/filing-change", title, status, detail, ...(errors ? { errors } : {}) }, status);
 };
 // eslint-disable-next-line no-control-regex
-const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/;
+/** Break m: a reason says something (a letter or a digit), never only spaces or invisible characters. */
+const SAYS = /[\p{L}\p{N}]/u;
 const KIND_WORDS: Record<ChangeKind, string> = { make_principal: "made the principal applicant", remove_filing: "filing removed", add_back: "filing added back" };
 const inverse = (kind: ChangeKind, subject: string, other: string | null): { kind: ChangeKind; subject: string } =>
   kind === "make_principal" ? { kind, subject: other! } : { kind: kind === "remove_filing" ? "add_back" : "remove_filing", subject };
@@ -52,8 +54,8 @@ export class FilingChanges {
     return (role: string) => (role === "principal" ? "files_own" : modes.get(role) ?? defaultModeOf(key, role) ?? null);
   }
 
-  private async recorded(c: Reached) {
-    const r = await this.db.filingRecord.findFirst({ where: { caseId: c.id }, orderBy: { recordedAt: "asc" }, include: { filing: { select: { subjectId: true } } } });
+  private async recorded(c: Reached, q: Pick<Db, "filingRecord"> = this.db) {
+    const r = await q.filingRecord.findFirst({ where: { caseId: c.id }, orderBy: { recordedAt: "asc" }, include: { filing: { select: { subjectId: true } } } });
     if (!r) return null;
     return { name: c.participants.find((p) => p.subjectId === r.filing.subjectId)?.subject.label ?? "A person", on: r.submittedOn.toISOString().slice(0, 10), number: r.applicationNumber };
   }
@@ -89,14 +91,12 @@ export class FilingChanges {
         if (items) add(subject, `${items} item${items === 1 ? "" : "s"} stop applying${signed ? ` (${signed} signed by hand)` : ""}: kept, and they come back if the filing is added back`);
       }
     }
-    // BR-6 (M2): every filing that changes and is marked Ready to file goes back to Not started on apply.
-    const changed = new Set(diffFilings(before, then, people).lines.map((l) => l.person));
-    for (const x of filings) if (x.status === "READY_TO_FILE" && changed.has(x.subjectId)) add(x.subjectId, "Marked Ready to file → Not started");
     // BR-4 (M6): the principal signs for a minor child (signing.ts, by role): the signer moves with the principal.
     if (kind === "make_principal" && other) {
       const { answers } = await this.r.state(c), today = new Date();
       const nameOf = (s: string) => people.find((p) => p.subjectId === s)?.label ?? "someone";
-      for (const child of people.filter((p) => p.role === "child")) {
+      // Review m: only a child who files (a child not travelling signs nothing for this application).
+      for (const child of people.filter((p) => p.role === "child" && p.applies)) {
         const age = ageOn(answers.find((a) => a.subjectId === child.subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value as string | undefined, today);
         if (age === null || age >= MINOR.underAge) continue;
         add(child.subjectId, `Signed for as their parent by ${nameOf(subject)} instead of ${nameOf(other)}`);
@@ -105,18 +105,23 @@ export class FilingChanges {
         if (signed) add(child.subjectId, `${signed} form${signed === 1 ? "" : "s"} already signed by hand by ${nameOf(other)}: to be signed again (warning)`);
       }
     }
+    // BR-6 (review M1, break M4): every filing named in the preview, for any reason (fees, applicants, items, a minor's
+    // signer), is the set the apply takes back from Ready to file; the words name each one, so nothing resets unsaid.
+    const changed = new Set([...diffFilings(before, then, people).lines.map((l) => l.person), ...extra.keys()]);
+    for (const x of filings) if (x.status === "READY_TO_FILE" && x.active && changed.has(x.subjectId)) add(x.subjectId, "Marked Ready to file → Not started");
     return extra;
   }
 
   async change(actor: Actor, caseId: string, body: unknown) {
+    // Break m: who may act is checked first, so a client's malformed body is a 403, not a 400.
+    const c = await this.r.reach(actor, caseId, "officer");
     const p = Change.safeParse(body ?? {});
     if (!p.success) throw new HttpException(problemFromZod(p.error), HttpStatus.BAD_REQUEST);
     const b = p.data;
-    const c = await this.r.reach(actor, caseId, "officer");
     const { view, after, other } = await this.preview(c, b.kind, b.subject);
     if (b.preview) return view;
     const reason = (b.reason ?? "").trim();
-    if (!reason || CONTROL.test(reason)) problem(400, "Some details need fixing", "Write a reason: it is kept with the change.", [{ field: "reason", message: "Write a reason: it is kept with the change." }]);
+    if (!reason || CONTROL.test(reason) || !SAYS.test(reason)) problem(400, "Some details need fixing", "Write a reason: it is kept with the change.", [{ field: "reason", message: "Write a reason: it is kept with the change." }]);
     if (!b.basis) problem(400, "Some details need fixing", "Send the basis from the preview you read.", [{ field: "basis", message: "Look at what changes first (preview), then apply." }]);
     if (b.basis !== view.basis) problem(409, "Changed since you looked", "This case changed since you opened this. Look again before changing it; nothing was changed.");
     const roles = (list: { subjectId: string; role: string; applies: boolean }[]) => Object.fromEntries(list.filter((x) => x.role !== "case").map((x) => [x.subjectId, { role: x.role, applies: x.applies }]));
@@ -126,7 +131,9 @@ export class FilingChanges {
       // BR-8: the people are still as the preview read them, and nothing was recorded meanwhile (BR-7).
       const now = await tx.caseParticipant.findMany({ where: { caseId: c.id }, select: { subjectId: true, role: true, applies: true } });
       if (JSON.stringify(roles(now)) !== JSON.stringify(roles(c.participants))) problem(409, "Changed since you looked", "This case changed since you opened this. Look again before changing it; nothing was changed.");
-      if (await tx.filingRecord.count({ where: { caseId: c.id } })) problem(409, "Not changed here", "A filing of this case was recorded as submitted meanwhile, so the people and filings of this case are not changed here.");
+      // Review m: the same words as before the lock (BR-7: the name, the date, the number and where it is done instead).
+      const rec = await this.recorded(c, tx);
+      if (rec) { const out = applyChange(b.kind, b.subject, this.r.peopleOf(c), { modeOf: this.modeOf(c), combination: "", recorded: rec }); problem(409, "Not changed here", "words" in out ? out.words : "Recorded as submitted meanwhile."); }
       for (const a of changedPeople) await tx.caseParticipant.update({ where: { subjectId: a.subjectId }, data: { role: a.role, applies: a.applies } });
       await tx.filingChange.create({ data: { id: randomUUID(), workspaceId: c.workspaceId, caseId: c.id, kind: b.kind, subjectId: b.subject, otherSubjectId: other, rolesBefore: roles(c.participants), rolesAfter: roles(after.map((x) => ({ ...x, subjectId: x.subjectId }))), reason, basis: view.basis, changedBy: actor.id } });
       // BR-6 (M2): a changed filing marked Ready to file is not ready for the new shape: back to Not started.

@@ -51,11 +51,11 @@ const yearsAgo = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYea
 
     await section.getByRole("button", { name: "Actions for Sample Client A" }).click();
     const menuA = p.getByRole("menu");
-    ok("C6.13 walk 2 fail (BR-2): the principal's Remove filing is refused in words before any click", await menuA.getByText("Make someone else principal first.").isVisible() && (await menuA.locator("[data-action=remove-filing][data-disabled]").count()) === 1);
+    ok("C6.13 walk 2 fail (BR-2): the principal's Remove filing is refused in words before any click", await menuA.getByText("Refused: make someone else principal first.").isVisible() && (await menuA.locator("[data-action=remove-filing][aria-disabled=true]").count()) === 1);
     await shot("02-principal-menu-refused");
     await p.keyboard.press("Escape");
     await section.getByRole("button", { name: "Actions for Sample Child A1" }).click();
-    ok("C6.13 walk 3 fail (BR-3): a child's Make principal is refused in words", await p.getByRole("menu").getByText(/a child cannot swap with a parent/).isVisible());
+    ok("C6.13 walk 3 fail (BR-3): a child's Make principal is refused in words", await p.getByRole("menu").getByText(/a child cannot swap with a parent\. To make Sample Child A1 the principal applicant, open a case for them/).isVisible());
     await p.keyboard.press("Escape");
 
     await section.getByRole("button", { name: "Actions for Sample Spouse A" }).click();

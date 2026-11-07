@@ -68,9 +68,10 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
     if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})` };
-    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
+    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${who.client === false ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal} (the child is ${age})` };
   }
-  return { confirmed: false, why: who?.role === "principal" ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal };
+  // C6.13 (review, break M1): after a swap (`client` is set) the client answered for this adult, whoever the principal is.
+  return { confirmed: false, why: who?.client === false ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal };
 }
 
 /** How the forms that read a field write it (from the release's field maps): the precision and limits a value needs. */

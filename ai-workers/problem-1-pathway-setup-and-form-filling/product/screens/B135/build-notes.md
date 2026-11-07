@@ -30,3 +30,16 @@ Built 7 Nov 2026 (screens lane) on the concept approved by the tech lead (#1242;
 * Removing a person from the case (AG-7-107).
 * Taking back a submitted application (C8.4, SI-18).
 * `qa/built/C6.13.md`: not added, because this lane's brief says never to edit `qa/`. The PR body carries the line instead.
+
+## Round 1 fixes (review.md: Block, 4 Majors; break-report.md: 4 Majors), on top of 5c5f72659
+| Finding | Fix | Fail test |
+|---|---|---|
+| Review M1, break M4: the preview named fewer Ready to file resets than the apply made | one changed set (fees, applicants, items and a minor's signer), built after the signer lines; the apply resets exactly the named filings | pack C6.13-13, -13a, -13b |
+| Review M2: the reset had no test | as above | pack C6.13-13b fails if the reset reaches an unnamed filing; -13a if it is removed |
+| Review M3, break M3: the 409 "changed since you opened this" was cleared by the reload | a separate notice that a preview reload never clears | walk (dialog) |
+| Review M4: focus lost after a change or Cancel | focus returns to the person's menu button | walk |
+| Break M1: the client's page called the new principal "(you)"; their answers read "Answered by the principal" | the case view's people carry `client` after a swap; "(you)" and the badge follow it; `confirmation` says "Answered by the client" for a non-client after a swap | pack C6.13-6e; engine BR-3b (3 more) |
+| Break M2: the travelling-flag door left Ready to file marks on filings whose fees it changed | the door takes back every Ready to file mark of the case when it changes a filing (it has no preview to name them) | pack C6.13-13c |
+| Minors | refused menu items keyboard-reachable (aria-disabled, not removed from the order); the role ⓘ focusable; the child's words say "open a case for them"; the recorded row and the refusal under the lock name the date, number and the case's lifecycle; reasons need a letter or a digit and refuse invisible and direction-override characters (API and CHECK, which also refuses NULL); the Undo reason is cut to 500; a row is not deleted while its case exists (trigger; a case delete still cascades); a client's malformed body is 403 before 400; Add filing back is in C6.13-10; signer lines only for a child who files; route paths written out so the graph sees them | pack C6.13-2a, -10, -11c, -13d |
+
+**Still differs from the concept (said here, review m):** the PATCH travelling-flag door does not apply BR-0, because C11.12's "declared only" switch for on-the-principal's combinations uses it. It keeps its existing refusal words and writes `reason` NULL (the CHECK allows NULL only for this kind). Whether it should apply BR-0 is a call for the tech lead. TRUNCATE is not guarded (only a full database reset uses it). Long unbroken names wrap mid-word at 400 px (the shared dialog component). The menu does not say before the click that a combination with people on the principal's application refuses the changes; the dialog shows the server's words.

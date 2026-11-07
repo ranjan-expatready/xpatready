@@ -154,7 +154,9 @@ export class Runtime {
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
       // B115: each person's role in the release's own words (the sponsor has no fixed word on the screen).
       // B115 review m1: co_files marks the person whose application is always sent with the principal's (the sponsor).
-      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role) })),
+      people: (() => { const client = new Map(this.peopleOf(c).map((x) => [x.subjectId, x.client])); return c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role),
+        // C6.13 BR-3b (break M1): who the client is, once roles were swapped (absent before any swap: the principal).
+        ...(client.get(p.subjectId) !== undefined ? { client: client.get(p.subjectId) } : {}) })); })(),
       // B115 (P-319): the roles the case page offers to add, from its pinned release, with how many the case has.
       can_add: offeredRoles(snapshot).map((p) => ({ role: p.role, label: roleWords(p), max: p.max!, has: c.participants.filter((x) => x.role === p.role).length })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
@@ -272,6 +274,9 @@ export class Runtime {
       if (p!.applies !== b.applies) {
         const roles = Object.fromEntries(c.participants.filter((x) => x.role !== "case").map((x) => [x.subjectId, { role: x.role, applies: x.applies }]));
         await tx.filingChange.create({ data: { workspaceId: c.workspaceId, caseId, kind: "travelling_flag", subjectId, rolesBefore: roles, rolesAfter: { ...roles, [subjectId]: { role: p!.role, applies: b.applies } }, changedBy: actor.id } });
+        // C6.13 BR-6 (break M2): a filing starting or stopping changes the others' fees, so no filing of the case stays
+        // marked Ready to file on the old shape (this door has no preview to name them; the case page uses the preview).
+        await tx.filing.updateMany({ where: { caseId, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
       }
     });
     await this.audit.log(c.workspaceId, actor.id, "changed", "person", caseId, `${actor.name} marked a ${p!.role.replace(/_/g, " ")} on case ${short(caseId)} as ${b.applies ? "travelling" : "not travelling"}`);
