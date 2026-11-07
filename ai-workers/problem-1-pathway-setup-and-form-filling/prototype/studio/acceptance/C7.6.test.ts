@@ -52,17 +52,23 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
 
   await fillEverything(c.id);
   // QA-122: an optional fact with a problem, confirmed, still blocks the form it fills.
+  // Row C4: release 2 asks the principal no optional fact at all (121 questions, all required, on the checkpoint), so
+  // where the release has no optional date on the barcode form a required one stands in (not the date of birth or an
+  // expiry date, which other rules read); the rule tested is the same (P-47 saved and flagged; a CRITICAL "fact with a
+  // problem" on the form it fills), and its earlier answer is put back after. The fixture still takes the optional one.
+  type DateQ = { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; collected_from: string; fills: { form: string }[]; answer: { value?: unknown } | null };
   const v = await agent(c.id);
-  const opt = v?.sections?.flatMap((s: { questions: { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; collected_from: string; fills: { form: string }[] }[] }) => s.questions)
-    .find((q: { subjectId: string; required: boolean; hidden: boolean; group: string | null; value_type: string; fills: { form: string }[] }) => q.subjectId === P && !q.required && !q.hidden && !q.group && q.value_type === "date" && q.fills.some((x) => x.form === BC));
-  // The principal answers their own optional date (P-78: counts as confirmed). P-47 (contracts/runtime.ts PutAnswer):
+  const dates = ((v?.sections ?? []) as { questions: DateQ[] }[]).flatMap((s) => s.questions)
+    .filter((q) => q.subjectId === P && !q.hidden && !q.group && q.value_type === "date" && q.fills.some((x) => x.form === BC) && q.fact !== "person.date_of_birth" && !/expiry/.test(q.fact));
+  const opt = dates.find((q) => !q.required) ?? dates.find((q) => q.required), kind = opt ? (opt.required ? "required: the release has no optional date there" : "optional") : "none found";
+  // The principal answers their own date (P-78: counts as confirmed). P-47 (contracts/runtime.ts PutAnswer):
   // an invalid value is saved and flagged, never refused, so QA-122's fix is that it blocks the form it fills.
   const by = opt?.collected_from === "client_questionnaire" ? CLIENT : officer;
   const bad = opt ? await answer(c.id, P, opt.fact, "1990-13-45", by) : null;
   if (opt && by !== CLIENT) await confirmAll(c.id, P);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok(`C7.6-4 fail (QA-122, P-238): an optional date given as 1990-13-45 is saved and flagged (P-47) and is a CRITICAL "fact with a problem" on ${BC}`, !!opt && (bad?.status ?? 0) < 300 && critical(rd?.warns).includes("fact_problem") && (rd?.warns ?? []).some((b) => b.code === "fact_problem" && !!BC && b.words.includes(BC)), { fact: opt?.fact, status: bad?.status, warns: codes(rd?.warns) });
-  if (opt) await answer(c.id, P, opt.fact, "1990-01-15", by);
+  ok(`C7.6-4 fail (QA-122, P-238): a date given as 1990-13-45 (an optional one where the release has one, else a required one; here ${kind}) is saved and flagged (P-47) and is a CRITICAL "fact with a problem" on ${BC}`, !!opt && (bad?.status ?? 0) < 300 && critical(rd?.warns).includes("fact_problem") && (rd?.warns ?? []).some((b) => b.code === "fact_problem" && !!BC && b.words.includes(BC)), { fact: opt?.fact, status: bad?.status, warns: codes(rd?.warns) });
+  if (opt) await answer(c.id, P, opt.fact, typeof opt.answer?.value === "string" ? opt.answer.value : "1990-01-15", by);
   await fillEverything(c.id);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
   ok("C7.6-5 pass: with every fact confirmed, the fact warnings are gone", !!rd && ![...codes(rd?.blocks), ...codes(rd?.warns)].some((x) => ["missing_facts", "fact_problem", "open_check"].includes(x)), codes(rd?.warns));
