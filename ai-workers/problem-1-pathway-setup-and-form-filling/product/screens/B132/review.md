@@ -100,3 +100,22 @@ Own copy `rev_b132` on :4444 (stopped after: database and files removed). Live A
 - Nothing new found in this diff. No Blocker or Major is open.
 
 Verdict: Approve — commit 17484897c695f5bf7c43b38f7c168cd193d403a5
+
+## Round 3 (Devin's finding) — diff `5727b0aff..e0546f73c` only
+
+Own copy `rev_b132` on :4447 (stopped after; database and files removed). Live AI off, US$0. `check_c81_signing_api.ts`: **41/41, exit 0**. `check_vv_prepare_store.ts`: **28/28**. My probe script was a scratch file and is deleted.
+
+- **Devin's finding (#1278): fixed.** On a Paper barcode form:
+  - `sign_in_pen` is refused (409, nothing recorded) unless the printed copy is the current validated copy.
+  - A re-print is allowed once a newer validated copy was read back (`restart` now also covers a printed copy that is not `validated.copy`).
+  - `case-prepare.ts` hands paperLine the recorded steps only when they were done on the current validated copy, so readiness counts no old signature.
+  - Probe on IMM 5257:
+    1. Print v1, change a fact, then Signed in pen: 409.
+    2. Validate v2, then re-print the stale v1: 409 (out of date).
+    3. Print v2, then Signed in pen: 200; a second Signed in pen: 409.
+  - Section (7)'s four new lines cover the refusal, the line, the restart and readiness.
+- **n1 (Minor, Should):** with a fact changed and no newer read-back, the sign_in_pen refusal says "a newer validated copy was read back since it was printed. Print the validated copy…". Neither part is true: no newer copy was read back, and there is no current validated copy yet. When `!validated?.current`, the words should say the printed copy is out of date and must be validated again and re-printed.
+- **n2 (Minor, Should):** reading back a newer copy with the facts unchanged also voids a recorded pen signature. The line then shows Printed and Signed in pen not done, and readiness warns `missing_signature`, while `GET /runtime/items/:id` still lists both steps as done. That is defensible (the filed copy is the newest validated one), but the item read and the line should agree: either filter the item read the same way, or say why on the line.
+- No Blocker or Major.
+
+Verdict: Approve — commit e0546f73cf36a4dd05ff641cd05427228ef173d5
