@@ -66,14 +66,15 @@ const SIGNER_WORDS: Record<string, string> = { person: "the person", parent: "a 
 /** Row C3 (founder Q3, 6 Nov; P-144, P-237): the line is the person's own Paper choice, so its copy is for filing even
  *  when the release's line is Online (IMM 5257 on release 2): it shows its steps and its read-back, never "Ask the Lead".
  *  Who may move a line to Paper, and only with a written accommodation reason, stays `channelChange`'s. */
-export function paperLine(form: string, opts: { barcode: boolean; missing: number; validated: PaperValidated; signers: string[] }): PaperLine {
+export function paperLine(form: string, opts: { barcode: boolean; missing: number; validated: PaperValidated; signers: string[]; done?: { print?: unknown; sign_in_pen?: unknown } }): PaperLine {
   const { barcode, missing, validated } = opts;
+  // B132: Printed and Signed in pen are recorded steps now (sign-steps.ts); Mail is not yet (null).
   const who = opts.signers.map((x) => SIGNER_WORDS[x] ?? x);
   const signedBy = who.length ? who.join(" and ") : "each person who signs it";
   const steps: PaperStep[] = [
     ...(barcode ? [{ key: "validate" as const, words: `Make the copy, press Validate in Adobe (this adds ${form}'s barcode page), save it and read the validated copy back here`, done: !!validated?.current, neededBefore: "filing" as const }] : []),
-    { key: "print", words: barcode ? `Print the validated copy with its barcode page, the barcode page on top` : `Make the copy and print it (${form} makes no barcode page)`, done: null, neededBefore: "filing" },
-    { key: "sign_in_pen", words: `Signed in pen by ${signedBy}`, done: null, neededBefore: "filing" },
+    { key: "print", words: barcode ? `Print the validated copy with its barcode page, the barcode page on top` : `Make the copy and print it (${form} makes no barcode page)`, done: !!opts.done?.print, neededBefore: "filing" },
+    { key: "sign_in_pen", words: `Signed in pen by ${signedBy}`, done: !!opts.done?.sign_in_pen, neededBefore: "filing" },
     { key: "mail", words: "Mailed to IRCC once the filing is Ready to file", done: null, neededBefore: "after_ready" },
   ];
   // A form with no barcode page needs no read-back, so none is shown for it.

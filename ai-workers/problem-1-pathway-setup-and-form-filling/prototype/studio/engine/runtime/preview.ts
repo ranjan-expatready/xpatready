@@ -8,6 +8,7 @@ import { caseView, knownOf, type Answer, type Participant } from "./case.ts";
 import { CHANNEL_WORDS, SIGNATURE_WORDS, type Channel, type Signature } from "../../contracts/forms.ts";
 import { lineOf } from "../channels.ts";
 import { questionsFor } from "./question-count.ts";
+import { isAskedRelative } from "./relatives.ts";
 import { MINOR, ONLINE_LATER_WAVE } from "../../contracts/runtime.ts";
 import { minorFromAnswers, signersOf } from "./signing.ts";
 import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewForm, type PreviewSets, type PreviewSign, type PreviewView } from "../../contracts/workspace.ts";
@@ -108,7 +109,12 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     const holders = documentLineHolders(s, renderPeople, subjectId, fact, abouts, partnerOf);
     return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name) && !missing.has(`${d.person}|${key}`)) ? name : null;
   };
-  const questionnaire = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });
+  // B128 (#1256, merge batch #1280, C4.1): a case asks a person's parents on their own key (engine/runtime/relatives.ts);
+  // the Preview shows, counts and skips by document only the people of its Sample family (its parts, chips and the
+  // passport's facts are per person), so its questionnaire leaves the relatives out, as its parts and counts do (review
+  // m4 on #1256: the Preview showing the parents is a follow-up). A parent's "Family name" is never a passport fact.
+  const sqrView = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });
+  const questionnaire = { ...sqrView, sections: sqrView.sections.filter((x) => !isAskedRelative(x.subjectId)), checks: sqrView.checks.filter((x) => !isAskedRelative(x.subjectId)) };
   const agentView = caseView(s, people, answers, [], "agent", today);
   // The answers that change what applies: yes/no questions from the family before any tweak (so a tweak never vanishes
   // once answered).
