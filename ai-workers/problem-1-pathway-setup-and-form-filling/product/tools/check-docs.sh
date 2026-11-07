@@ -4,7 +4,7 @@
 # records have no size limit (git history is the archive); backticked product paths must exist next to the citing file,
 # in the product or problem folder, or at the root. Prints problems; exit 1 if any. Used by the Stop hook and the tech lead.
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"; PH="$ROOT/ai-workers/problem-1-pathway-setup-and-form-filling/product"
-out=$(mktemp); trap 'rm -f "$out"' EXIT
+out=$(mktemp "${TMPDIR:-/tmp}/check-docs.XXXXXXXX"); trap 'rm -f "$out"' EXIT
 check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue; n=$(wc -l < "$f"); b=$(wc -c < "$f")
   [ "$n" -gt "$max" ] && echo "TOO LONG ($n lines > $max): ${f#$ROOT/}"
   [ "$kb" -gt 0 ] && [ "$b" -gt $((kb * 1024)) ] && echo "TOO BIG ($((b / 1024)) KB > $kb KB): ${f#$ROOT/}"; done; }

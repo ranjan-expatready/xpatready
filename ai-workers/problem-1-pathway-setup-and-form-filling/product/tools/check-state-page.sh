@@ -5,7 +5,7 @@
 #   bash product/tools/check-state-page.sh
 set -u
 . "$(dirname "$0")/guard-test-lib.sh"
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; trap 'rm -rf "$T"' EXIT
 docs_copy "$T/c"; S="$T/c/$PRODREL/STATE.md"; CD="$T/c/$PRODREL/tools/check-docs.sh"
 run() { out=$(bash "$CD" 2>/dev/null); r=$?; }
 # 6. Size.

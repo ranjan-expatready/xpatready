@@ -22,7 +22,7 @@ bad=$(names COPY_PREFIX='no-good!' ; echo "exit=$?")
 ok "fail: a prefix that is not letters, digits and _ is refused" "$([[ "$bad" == *"COPY_PREFIX:"* && "$bad" == *"exit=2"* ]] && echo 1)" "$bad"
 # Two copies at once: a run already holds the forms slot (a live pid: this shell), so a second run is refused, says
 # whose run it is, and starts no suite.
-locks=$(mktemp -d); mkdir -p "$locks/slot-3"; printf '%s %s %s\n' "$$" forms "/another/copy" > "$locks/slot-3/owner"
+locks=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$locks" ] || { echo "no temp dir: nothing was checked"; exit 2; }; mkdir -p "$locks/slot-3"; printf '%s %s %s\n' "$$" forms "/another/copy" > "$locks/slot-3/owner"
 second=$(SUITES_LOCKS=$locks COPY_PREFIX=forms bash "$RS" 2>&1; echo "exit=$?")
 ok "fail: a second run with the same names is refused before any suite runs, naming the other copy" "$([[ "$second" == *"Another run of the suites uses the same names"* && "$second" == *"/another/copy"* && "$second" == *"exit=3"* && "$second" != *"| Suite |"* ]] && echo 1)" "$second"
 printf '%s %s %s\n' 999999 forms "/gone/copy" > "$locks/slot-3/owner"
