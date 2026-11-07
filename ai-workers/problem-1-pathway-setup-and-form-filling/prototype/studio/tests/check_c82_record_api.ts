@@ -87,7 +87,7 @@ ok("data: none of the refusals recorded anything", sql(`select count(*) from fil
 
 // B149 (P-408): the fee receipt's evidence goes on a recorded filing only.
 const receipt = (label: string) => Buffer.from(`%PDF-1.4\n% SYNTHETIC SPECIMEN: IRCC Transaction Approved page, ${label} (Sample)\n%%EOF\n`, "latin1");
-const upload = (filing: string | undefined, file: Buffer, name = "transaction-approved.pdf", actor = officer) => sendFile(`/runtime/filings/${filing ?? "none"}/record/fee-receipt`, file, name, actor);
+const upload = (filing: string | undefined, file: Buffer, name = "transaction-approved.pdf", actor = officer) => sendFile(`/runtime/filings/${filing}/record/fee-receipt`, file, name, actor);
 let u = await upload(fP, receipt("early"));
 ok("B149 fail: a fee receipt before the submission is recorded is refused (409, says to record first), nothing stored", u.status === 409 && /Record the submission first/.test(JSON.stringify(u.body)) && sql(`select count(*) from fee_receipt_file where case_id='${c.id}'`) === "0", u);
 

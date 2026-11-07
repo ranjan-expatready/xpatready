@@ -8,7 +8,8 @@
 //   * refuseIfRecorded: the read-only lock (C8.2-9): a recorded filing is never changed (channel, split, entered, number).
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { RUNTIME_ACTORS, type Db } from "./core.ts";
-import type { CaseTaskView, FilingRecordView } from "../../contracts/submission-record.ts";
+import type { CaseTaskView } from "../../contracts/submission-record.ts";
+import type { RecordWithReceipts } from "../../contracts/fee-receipt.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { changedSince, filedEarlierWords } from "../../engine/runtime/submission-record.ts";
 
@@ -56,7 +57,7 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
     if (!rec) { if (row?.status === "READY_TO_FILE") f.status = "ready_to_file"; continue; }
     const person = (s: string | null) => (s ? a.label.get(s) ?? "a person" : null);
     const applying = f.applicants.filter((x) => (x.mode ?? "applying") === "applying").map((x) => x.subject);
-    const view: FilingRecordView = {
+    const view: RecordWithReceipts = {
       portal: rec.portal, our_reference: rec.ourReference, submitted_on: day(rec.submittedOn), application_number: rec.applicationNumber, fee_receipt: rec.feeReceipt,
       fee_receipt_files: rec.feeReceipts.map((x) => ({ id: x.id, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, uploaded_by: nameOf(x.uploadedBy)!, uploaded_at: x.uploadedAt.toISOString() })),
       prepared_by: { id: rec.preparedBy, name: nameOf(rec.preparedBy)! },

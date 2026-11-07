@@ -44,9 +44,6 @@ export type CorrectNumber = z.infer<typeof CorrectNumber>;
 /** The record of one filing as the Prepare view shows it. */
 export type FilingRecordView = {
   portal: string | null; our_reference: string; submitted_on: string; application_number: string; fee_receipt: string | null;
-  /** B149 (P-408): the fee receipt's evidence, IRCC's "Transaction Approved" page, every upload oldest first; the last
-   *  is the receipt, earlier ones are kept as history. Empty: none uploaded (the typed number is optional either way). */
-  fee_receipt_files: { id: string; file_name: string; media_type: string; size_bytes: number; uploaded_by: string; uploaded_at: string }[];
   prepared_by: { id: string; name: string }; reviewed_by: { id: string; name: string; self: boolean } | null; recorded_by: string; recorded_at: string;
   /** Every person applying on the filing, with the UCI recorded for them (null: none given yet). */
   ucis: { subject: string; person: string; uci: string | null }[];

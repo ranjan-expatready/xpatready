@@ -11,12 +11,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CaseTaskView, FilingRecordView } from "../../../contracts/submission-record";
+import type { CaseTaskView } from "../../../contracts/submission-record";
+import type { RecordWithReceipts } from "../../../contracts/fee-receipt";
 import { MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, mediaOf } from "../../../contracts/documents";
 import { noRetryOnRefusal } from "./questionnaire";
 
 type Applicant = { subject: string; label: string; role: string; mode: string };
-type Filing = { id: string; label: string; status: string; number: string | null; applicants: Applicant[]; group: string; record?: FilingRecordView; read_only?: boolean };
+type Filing = { id: string; label: string; status: string; number: string | null; applicants: Applicant[]; group: string; record?: RecordWithReceipts; read_only?: boolean };
 type Group = { id: string; kind: string; label?: string; filings: string[] };
 type PrepareView = { derived: boolean; reference: string; version: string | number; portal: string | null; filings: Filing[]; groups: Group[]; tasks?: CaseTaskView[]; why?: string };
 
@@ -149,7 +150,7 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
 
 /** B149: the fee receipt on a recorded filing: the "Transaction Approved" page uploaded (the newest; earlier uploads
  *  are counted, never removed) and the typed number, both optional; "Upload the page" adds one. */
-function FeeReceipt({ f, r }: { f: Filing; r: FilingRecordView }) {
+function FeeReceipt({ f, r }: { f: Filing; r: RecordWithReceipts }) {
   const qc = useQueryClient(), toast = useToast();
   const input = React.useRef<HTMLInputElement>(null), button = React.useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
