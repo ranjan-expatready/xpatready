@@ -169,3 +169,52 @@ A fresh, narrow review of what changed since `0c56c6f6a`, the approved code; tha
 **Journey (reviewer role):** not walked again this round. No B145 screen or route file changed since `0c56c6f6a`. Main's B149 words change only the never-reviewed readiness line. Per the caller's scope, no other file was written. The score stays **9/10, pass**, from the walk on `468ea98e5`, and D1-D20 are unchanged. Not checked: browser walks on the merged build, and the full CI suite.
 
 **Verdict: Approve** on `133f3251da79c688c5cd72e1fa1716bb89a0e75d`: no open Blocker or Major. Minors n1-n2 and the earlier f1-f5 can follow.
+
+## Main merge check (da111d045)
+A diff-only check of the merge of origin/main (P-318 (1)). **Exact head: `da111d0457db619a71dca5177006df6e47b0fd6f`.** Its parents are `781de9f21` (B145, approved) and `f647a467d` (origin/main); the merge-base is `093c073b0`. Copy `rev4_c95` on :4443 only, started and stopped in one command (trap), never :4400. Live AI off, US$0. Nothing committed or pushed.
+
+**1. Conflict (`api/src/runtime.ts` imports): right**
+* Both imports are kept, once each: B145's `pinChain` from `engine/runtime/release-update.ts` (`:24`) and main's `ASKED_RELATIONS, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation` from `engine/runtime/relatives.ts` (`:25`).
+* Main's `import type { z }` → `import { z }` is kept. It is needed because `ConfirmSubject` now calls `z.string()` at run time.
+
+**2. Files both sides changed: nothing dropped, doubled or broken**
+* Five files were changed on both sides: `acceptance/C7.7.test.ts`, `api/src/case-prepare.ts`, `api/src/runtime.ts`, `prisma/schema.prisma`, `web/src/runtime/questionnaire.tsx`.
+* For each, the sorted changed lines of main's side (`093c073b0` → `f647a467d`) equal the merge against B145 (`781de9f21` → `da111d045`). The same holds for B145's side against main. All five are identical on both sides.
+* Over the whole tree, `git diff 093c073b0 781de9f21` and `git diff f647a467d da111d045` differ only in hunk line offsets and the one added import line. Both are 57 files, +2401 −59.
+* **runtime.ts and pins.** `relativesOf(c)` and `subjectFor(c, …)` take the `Reached` case from `reach()` (`:71-86`). That case orders `pins` by `revision desc`, checks `pinChain`, and reads the release through `snapshotOf(c)`, which is `c.pins[0]`, the newest revision (`:114`).
+  * Main adds no read of `pins`, `packWorkPin` or `pack_work_pin` in product code.
+  * `case-filings.ts` changed only its return line. Its `pin = c.pins[0]` still comes from `reach()`.
+  * B152's `case-prepare.ts` fee freeze and B132's pen steps add no pin read.
+  * The only new `pack_work_pin` read on main is a test: `tests/runtime/check_b128_parents.ts`, a `join pack_work_pin … where w.case_id`, with no revision filter. Its case is never moved, and `string_agg(distinct …)` would union releases on a moved case. See r2.
+
+**3. Migrations: the order is the reverse of what I was asked to confirm, and that is harmless**
+* Main adds `20261108000000_b152_recorded_fees` (one nullable column on `submission_group`) and `20261108010000_b132_sign_in_pen` (it widens `sign_step_key_check`).
+* Neither touches `pack_work_pin` or `readiness_pass`.
+* They sort **after** B145's `20261107180000_c95_pin_revisions` and `20261107220000_c95_pin_guards`, not before. The tables do not overlap, so order does not matter.
+* I tested the upgrade path on a scratch database, `xr_studio_rev4_order`, dropped afterwards:
+  * Main's 64 migrations, then the merged tree: `migrate deploy` applied B145's two after main's. Result: "All migrations have been successfully applied", and `migrate status` reports up to date.
+  * Its catalog (columns, constraints and indexes, 2409 lines) is identical to the fresh merged copy `rev4_c95`.
+  * So the demo database, which already has main's two, takes B145's two cleanly.
+
+**4. Runs on the merged code**
+* Pack `tsx acceptance/C9.5.test.ts 4443 xr_studio_rev4_c95` on a fresh copy: **49/49, exit 0** (3 min 34 s). It picked `person.alternate_telephone_number`, `typeSet [200,200]`. "(US$0): no model call at any step" passed.
+* `tests/check_c95_release_update.ts`: **34/34, exit 0**.
+* `tests/check_c76_readiness.ts`: **77/77, exit 0**.
+* `product/tools/typecheck.mjs`: **PASS**. api has 15 known errors, 0 new and 0 fixed. web has 0.
+* The copy stopped: no listener on :4443, and no `xr_studio_rev4*` database is left.
+
+**Findings**
+* Blockers: none. Majors: none.
+* **r1 (Minor, Should): parents are named wrongly in the release update.** The merge combines B128's parents with B145's release update. I found this by reading the code; no test covers it.
+  * After the merge, `Runtime.state()` returns a parent's answers under `<person>/parent_1`, and `caseView` makes sections with that key.
+  * In `api/src/release-update.ts:89`/`:128-130`, `names` holds only the people on the case. So a parent's answer that the target release no longer accepts still refuses the move, which is correct. But the answer is named **"The application's answer"** and sorted after the people's.
+  * `engine/runtime/release-update.ts:109-118` walks `x.people` only. So "What changes" leaves out a parent's new or no-longer-asked questions, and a type-change row for a parent's answer says "The application".
+  * Fix: add the relatives' labels to `names` and `people` there (`relativeLabel`). Then add one pack or engine step: a parent's fact changes type, and the refusal names the parent.
+* **r2 (Nit): the B128 test's pin read ignores revisions.** `tests/runtime/check_b128_parents.ts` reads `pack_work_pin` without `order by revision desc limit 1`. It is safe today because its case is never moved. Filter it to the newest revision, as B145 did for the other test reads.
+* Earlier Minors n1-n2 and f1-f5 are unchanged.
+
+**Journey (reviewer role):** not walked again. No B145 screen or route changed in this merge. The score stays **9/10, pass**, from the walk on `468ea98e5`. D1-D20 are unchanged.
+
+**Not checked:** browser walks on the merged build, the full CI suite, B128's and B152's own packs, and r1 run live.
+
+**Verdict: Approve** on `da111d0457db619a71dca5177006df6e47b0fd6f`: no open Blocker or Major. r1 and r2 can follow as rows, or the tech lead can accept them.
