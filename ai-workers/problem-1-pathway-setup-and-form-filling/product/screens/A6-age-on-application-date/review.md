@@ -131,3 +131,27 @@ Scope: the move of the breaker's MA2 and MA3 fix out of `api/src/proposals.ts` (
 Round 2's other closures still hold; r2-m1 is now closed for one combination and lives on only as R3-M1 (b).
 
 Verdict: Block
+
+## Round 4 (diff-only, ruled by the tech lead, Lead 33; `9760a1b9b..efb0580a0` and the merge `8561bd567`, 7 Nov 2026, about 02:40 IST on 8 Nov)
+Scope: `git diff 9760a1b9b fef13c342`, `git show 4dfcfc320`, `git show efb0580a0`, and the merge commit's two conflicted files. Everything was read from git, not the working tree. Runs used a scratch worktree of `efb0580a0` with its own Prisma client, served by hand on :4472 because the sandbox refuses `isolated.sh` there; the merge was checked in the main copy, whose studio code equals `8561bd567`. Server stopped, databases dropped, worktree removed. US$0.
+
+| Check | Result |
+|---|---|
+| `check_b102_worked_out.ts` at `efb0580a0`, fresh sample copy | **41/41**. R3-M1 (b): 6 rounds, 0 both accepted. R3-M1 (a): lands as `person.b102_rn_years_2` |
+| My round-3 probe script, unchanged, same head | across combinations **0 both / 8 one** (was 6/8 both). Rename at accept: `landedAs: "person.rvn_years_2"`; `person.rvn_years` has 0 library fields and 1 worked-out value (it had both) |
+| `check_forms_c36_rule_facts.ts` at `efb0580a0`, fresh copy | **42/42** |
+| Merged head `8561bd567`: `typecheck.mjs` · `check_vv_checklist.ts` | **PASS** (no new errors; web 0) · **76/76** |
+
+* **R3-M1 (b): closed.** Both routes now take `rule-fact:${workspaceId}:${fact}` (`rule-facts.ts` add(), `worked-out.ts` add()): the same lock string, per workspace, as the library is. The new test fails first (6/6 both, per the builder) and is meaningful: the two requests run on two combinations.
+* **R3-M1 (a): closed.** Round 2's five lines are back in `proposals.ts` LANDERS.field (`:587-591` at `efb0580a0`, under the emptied hot list, P-415):
+  * they run before the rule-key refusal and before `freeKey` (`:605`), so a worked-out key is taken for adds by a rule's key, by name, by rename at accept, and for an AI-drafted key;
+  * a by-name ask racing a work-out (different locks, by label vs by fact) can still leave a waiting preview of the worked-out key, but it lands under another key, so the fact is never both.
+* **K13 (`efb0580a0`):** one string, "Smart questionnaire (SQR) › Facts a rule needs › Work it out instead". That is the tab's current name in PRODUCT §3, and nothing else changed.
+* **Merge `8561bd567`: clean.**
+  * I compared the changed lines of the two conflicted files mechanically. Merge vs main equals this PR's own change: identical. Merge vs this PR equals main's own change: identical. Nothing was dropped on either side.
+  * `DocType` carries main's `sets?`, and `Derived` keeps `calculation?`. `ChecklistLine` keeps C6.15's `set`/`set_status`, and `Person` keeps `age?`.
+  * The age logic does not touch C6.15's sets.
+* Still open, Minor and unchanged: m2 (flagged birth date wording), m7 and r2-m2 (the release check on worked-out values; the tech lead's follow-up row).
+* **No Blocker or Major remains open, on `efb0580a0` or on the merge `8561bd567`.**
+
+Verdict: Approve
