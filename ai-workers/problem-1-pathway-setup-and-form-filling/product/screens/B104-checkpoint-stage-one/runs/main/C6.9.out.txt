@@ -1,0 +1,20 @@
+C6.9 — Staff eligibility page (Visitor visa gates, stand-in SI-1)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.9-1 fail: a client cannot run or read an assessment (403); the client never sees a verdict
+FAIL  C6.9-2 pass: a run returns AG-03's shape: pack id and version (our release pin), rules as at, disclaimer, who and when, source stand-in — {"type":"https://expatready.local/problems/not-possible","title":"Not possible now","status":409,"detail":"This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.","message":"This application's release has no 
+FAIL  C6.9-3 pass: with passport and convictions unanswered: Possibly eligible, needs those facts (missing inputs named)
+FAIL  C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads
+FAIL  C6.9-5 pass: the officer's judgement items (money for the stay, good health, ties, leaving at the end) are listed, never gates (FQ-5)
+FAIL  C6.9-6 pass (SI-1 adapter): never below the cut-off, no score, no breakdown, no recommendations
+FAIL  C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Possibly eligible, never Not eligible (P-230 (1))
+FAIL  C6.9-8 pass: every gate met gives Likely eligible
+FAIL  C6.9-9 pass (AG-3-1): an earlier run is a frozen snapshot; it is unchanged and marked out of date after the facts changed
+FAIL  C6.9-10 fail (AG-3-28): running again after a change without a reason is refused (400) — 409
+FAIL  C6.9-11 fail: an override without a reason is refused on the field (400) — 404
+FAIL  C6.9-12 pass: an override with a reason is kept beside the result (AssessmentOverride), the result itself unchanged
+FAIL  C6.9-13 pass: Mark reviewed records reviewer, time and note — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"No such eligibility check.","message":"No such eligibility check."}
+FAIL  C6.9-14 pass: the page is rules only: no model call in any run
+PASS  C6.9-15 pass: the list says which stand-in fills it (SI-1, a row in STAND-INS.md)
+
+2/15 passed
