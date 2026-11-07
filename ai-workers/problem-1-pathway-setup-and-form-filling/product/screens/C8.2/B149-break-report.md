@@ -97,3 +97,18 @@ What I tried to break: `POST /api/runtime/filings/:id/record/fee-receipt`, the R
 - Set it up: `tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c82_record_api.ts 4449 xr_studio_brk_b149`.
 - Run the attack scripts (in the scratchpad, outside the repo): `attack1.mts` (permissions, shapes, size, names, feed), `attack2.mts` and `attack3.mts` (races, cascade, integrity), `ui.mts` (dialog and button, 1024 px, ×2, client page).
 - Screenshots are in the same scratchpad `brk/shots/` folder (01–05). I kept them out of the repo so this report is the only file I add.
+
+## Re-check at 343ecb757 (diff `e9f2e6e79..343ecb757`, server side: `api/src/main.ts` +3, `api/src/submission.ts` +2/−1)
+**Not run live.** `isolated.sh brk_b149 4449 start` refused with "start the demo database first": Postgres on 127.0.0.1:54329 was down (its log ends with no shutdown line). The cluster is shared (`.tools` links to `/home/user/xpatready/.tools`), and the sandbox refused `runuser postgres`. So I did not start it any other way. This section is from the code plus the e9f2e6e79 run above; the probes should run again once the database is up. Nothing was started on :4449 and nothing on :4400 was touched.
+
+**No Blocker, no Major.** From the code:
+- **m2 fixed for staff.** `submission.ts:191` turns only a 404 from `reach` into "No such filing.". A 403 from `reach` ("works on configuration", "Only the case officer"), its 409 (pin does not match) and any other error are thrown again unchanged. So 403 stays 403, and the rethrow neither hides another status nor adds a new message. Configuration people still stop at `CaseActorGuard` before the file is read. Staff of another firm, a filing in another workspace, and a made-up id now all read the same "No such filing.".
+- **m1 fixed on the normal path.** `main.ts:192-193` gives the fee-receipt route its own 413 words: "larger than 20 MB … Nothing was stored." and "Send one file: the Transaction Approved page. Nothing was stored.".
+  - Exactly 20 MB is still taken, since the limit is unchanged (`fileSize: MAX+1`).
+  - As before, a file of 20 MB + 1 is refused by multer, so it now gets the 20 MB words.
+- **Nothing stored on a refusal.** That path is unchanged since e9f2e6e79, where it held: 27 rows, 27 files, no leftover on any refusal.
+- **m7 (Minor, already in e9f2e6e79, not new).** A client can still tell a real filing id from a made-up one, in any firm.
+  - Why: `reach` refuses a non-officer with 403 "Only the case officer can do this." (`runtime.ts:67`) before it looks for the case. So any existing filing answers 403, while a made-up id answers 404 "No such filing." (`submission.ts:189`).
+  - Seen live in the first run: user-Q, who is not Client C's client, got 403 on Client C's filing.
+  - The ids are UUIDv4, so this tells a client little. It is m2's class, but for clients.
+- **Note (not tested live).** Express matches routes regardless of case by default, but the new filter regex is case-sensitive. So a hand-made `…/record/Fee-Receipt` would still get the intake's 25 MB words. The web always sends lower case.
