@@ -52,7 +52,7 @@ export function copyText(v: unknown): string {
   return String(v);
 }
 /** The person-facing source of an answer (its first channel): a document read, the client, or the case officer. */
-export const sourceOf = (channel: string | null | undefined): SheetAnswer["source"] => (/document/.test(channel ?? "") ? "Document" : channel === "questionnaire" ? "Client" : "Case officer");
+export const sourceOf = (channel: string | null | undefined): SheetAnswer["source"] => (/document/.test(channel ?? "") ? "Document" : channel === "questionnaire" || channel === "own_link" ? "Client" : "Case officer");
 /** A section's fingerprint over what it shows: changes when any answer's value changes. */
 export const sectionHash = (answers: { fact: string; subject: string; row: number | null; value: unknown }[]) =>
   createHash("sha256").update(JSON.stringify(answers.map((a) => [a.subject, a.fact, a.row, a.value]).sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y))))).digest("hex");

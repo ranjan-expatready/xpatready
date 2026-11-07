@@ -20,6 +20,8 @@ export type Row = { rowKey: string; subjectId: string; group: string; order: num
 /** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
 export type GroupAnswer = { id: string; subjectId: string; group: string; noneApply: boolean; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
 export type Confirmation = { confirmed: boolean; why: string };
+/** C6.16: the channel of an answer a person saves on their own link (source actor "person:<subject id>"). */
+export const OWN_LINK = "own_link";
 
 /** Fields the client answers (P-72 "the client's fields"): placed in the questionnaire or the client's profile, and
  *  about a person, a relationship or the application (never the representative's own facts). */
@@ -58,6 +60,8 @@ export function ageOn(birth: unknown, today: Date): number | null {
  *  adult or the officer confirms; everything else waits for "Confirm section". */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
+  // C6.16 (P-78, challenge M2): saved by the person on their own link: their own answer (client fields only reach it).
+  if (a.channel === OWN_LINK) return isClientField(s, a.field) ? { confirmed: true, why: CONFIRM_WORDS.person_own } : { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
   if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
   if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
