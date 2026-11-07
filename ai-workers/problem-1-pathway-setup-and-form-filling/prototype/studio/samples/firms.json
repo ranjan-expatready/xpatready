@@ -1,5 +1,5 @@
 {
-  "_note": "C6.11 (M3-11, BR-20, P-164 (3), stand-in SI-9): the Sample firm and the Sample solo firm, seeded; no sign-up, invitations or user screens. The team's AG-01 owns firm setup and users and AG-07 CaseTeamMember the case team; this file stands in until they plug in. Every name, licence body and number is Sample (not a real licence). The Sample firm has a second representative so that changing the representative of record can be shown (BR-20 names two users; tech lead asked on the PR). defaultRepresentative is the one Open a case offers first. Duties: represent (licensed, may be the representative of record, named on IMM 5476), case (works on the firm's cases), firm_admin (assigns and reassigns the case team). Legal points: Unconfirmed: no counsel. The simulated people in api/src/core.ts RUNTIME_ACTORS must agree (tests/runtime/check_c611_team.ts checks). C7.7: each firm's office (address and phone) and each user's family name, given names and e-mail fill IMM 5476's representative block on a case; all Sample (example.com-style addresses, 555 numbers).",
+  "_note": "C6.11 (M3-11, BR-20, P-164 (3), stand-in SI-9): the Sample firm and the Sample solo firm, seeded; no sign-up, invitations or user screens. The team's AG-01 owns firm setup and users and AG-07 CaseTeamMember the case team; this file stands in until they plug in. Every name, licence body and number is Sample (not a real licence). The Sample firm has a second representative so that changing the representative of record can be shown (BR-20 names two users; tech lead asked on the PR). defaultRepresentative is the one Open a case offers first. Duties: represent (licensed, may be the representative of record, named on IMM 5476), case (works on the firm's cases), firm_admin (assigns and reassigns the case team). Legal points: Unconfirmed: no counsel. The simulated people in api/src/core.ts RUNTIME_ACTORS must agree (tests/runtime/check_c611_team.ts checks). C7.7: each firm's office (address and phone) and each user's family name, given names and e-mail fill IMM 5476's representative block on a case; all Sample (example.com addresses that pass IRCC's e-mail check, 2 to 6 letters after the last dot; 555 numbers).",
   "firms": [
     {
       "key": "sample-firm",
@@ -8,9 +8,9 @@
       "defaultRepresentative": "user-R",
       "office": { "unit": "200", "street_number": "100", "street_name": "Example Street", "city": "Toronto", "province_state": "ON", "postal_code": "M5V 1A1", "country": "canada", "phone": { "country_code": "1", "number": "4165550100" } },
       "users": [
-        { "id": "user-R", "family_name": "Representative", "given_names": "Sample", "email": "representative@sample-firm.example", "name": "Representative (Sample)", "duties": ["case", "represent", "firm_admin"], "licence": { "body": "CICC", "category": "rcic", "number": "R000000" } },
+        { "id": "user-R", "family_name": "Representative", "given_names": "Sample", "email": "representative@sample-firm.example.com", "name": "Representative (Sample)", "duties": ["case", "represent", "firm_admin"], "licence": { "body": "CICC", "category": "rcic", "number": "R000000" } },
         { "id": "user-O", "name": "Case officer (Sample)", "duties": ["case"], "licence": null },
-        { "id": "user-T", "family_name": "Representative", "given_names": "Second Sample", "email": "second.representative@sample-firm.example", "name": "Second representative (Sample)", "duties": ["case", "represent"], "licence": { "body": "CICC", "category": "rcic", "number": "R000002" } }
+        { "id": "user-T", "family_name": "Representative", "given_names": "Second Sample", "email": "second.representative@sample-firm.example.com", "name": "Second representative (Sample)", "duties": ["case", "represent"], "licence": { "body": "CICC", "category": "rcic", "number": "R000002" } }
       ]
     },
     {
@@ -19,7 +19,7 @@
       "solo": true,
       "office": { "unit": null, "street_number": "1", "street_name": "Sample Road", "city": "Ottawa", "province_state": "ON", "postal_code": "K1A 0A1", "country": "canada", "phone": { "country_code": "1", "number": "6135550100" } },
       "users": [
-        { "id": "user-S", "family_name": "Representative", "given_names": "Solo Sample", "email": "representative@sample-solo.example", "name": "Solo representative (Sample)", "duties": ["case", "represent", "firm_admin"], "licence": { "body": "CICC", "category": "rcic", "number": "R000001" } }
+        { "id": "user-S", "family_name": "Representative", "given_names": "Solo Sample", "email": "representative@sample-solo.example.com", "name": "Solo representative (Sample)", "duties": ["case", "represent", "firm_admin"], "licence": { "body": "CICC", "category": "rcic", "number": "R000001" } }
       ]
     }
   ]

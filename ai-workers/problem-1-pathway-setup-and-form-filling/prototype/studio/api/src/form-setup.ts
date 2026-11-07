@@ -26,8 +26,11 @@ export const VV_FORM_RULES: FormRule[] = [
     cite: "IMM 5257 SCH1 (09-2023) p. 1: \"The principal applicant, his or her spouse or common-law partner, if applicable, and all dependent children aged 18 years or older listed in the application for temporary residence must complete their own copy of this form.\"" },
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
-  { form: "IMM 5476", condition: REPRESENTED,
-    cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"" },
+  // C6.11 (VV-R10): who fills it, in the form page's own words (canada.ca "Use of a Representative Form (IMM 5476)",
+  // official-sources/ircc/web-pages/page-imm5476.html, modified 2025-12-12): the principal applicant and a spouse or
+  // partner always, a dependent child from 18 (contracts/resolver.ts principal_partner_adult_children).
+  { form: "IMM 5476", condition: REPRESENTED, who: "principal_partner_adult_children", minAge: 18,
+    cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"; canada.ca IMM 5476 page (modified 2025-12-12): \"If you have dependent children aged 18 years or older, they are required to complete their own copy of this form if a representative is also conducting business on their behalf.\", \"By signing, you authorize IRCC to complete your request for yourself and your dependent children under 18 years of age.\" and \"Separate authorization forms are required for a spouse or common-law partner even if they are included in the same application.\"" },
   { form: "IMM 5475", condition: RELEASES,
     cite: "IMM 5484 p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
   // Guide 5256, Question 3 note: the form for a person whose gender identifier differs from their documents.
