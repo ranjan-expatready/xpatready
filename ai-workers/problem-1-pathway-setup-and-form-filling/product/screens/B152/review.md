@@ -44,3 +44,26 @@ A real screen reader; an intended user's unaided walk (D17 and D20 stay with the
 Schema PRs need the tech lead's slot. The builder asked on #1274 (13:46 UTC). There was no answer there or on #1279 when I read them. Four other migrations are in flight: #1261 (new table), #1268 (columns on `document_type` and `document_requirement`), #1252 (`pack_work_pin`) and #1242 (new table). None touches `submission_group`. P-228 (8) allows parallel migrations only when they are additive on different tables, with the Lead reading the SQL. So `review: approved` waits for the tech lead's migration line.
 
 **Verdict: Block** for 557bfbbb0754a24f99710ad93fb6083c450b92af. To fix first: **M1**, refuse to record (or to mark Ready to file) while a fee line waits, so that no `waiting` line is ever frozen, with a fail-first test; **M2**, check under the lock that the answers behind the fees and the filed facts are the ones read, with a race test. Doing m2 (`/filings` reads the snapshot) at the same time is cheapest. m1, m3 and the FQ-7 question are follow-ups. Even after those fixes, the label still waits for the tech lead's P-228 slot.
+
+## Round 2 (diff only, 4a7cf359b)
+Diff `557bfbbb0..4a7cf359b` (studio only; the records commit e0991f8f4 is ignored). Fresh copy `rev_b152` on :4445 with the configured checkpoint, live AI off, US$0. Results: `check_b152_recorded_fees_api.ts` **19/19**, `acceptance/C8.2.test.ts` **17/17** and `acceptance/C6.12.test.ts` **24/24**, all exit 0. No screenshot and no `qa/graph.json` was overwritten.
+* **M1 (waiting fee frozen): fixed.** `record()` now refuses with 409 when any fee line of the group waits (`submission.ts:123-126`), after the not-Ready refusal and before the transaction. My `waiting.ts` got 409 with the server's words "Record the submission once every fee of this group is worked out: Waits for Sample Child W1's date of birth …", 0 snapshots and 0 records. After the DOB was answered, the group priced CAD 370 with nothing waiting. The builder's test then records 200 and freezes 37000. A waiting line cannot reach the lock: answering the DOB changes the answers key (next point).
+* **M2 / break M3 (answer race): fixed.** `answersKey` (`submission.ts:62-67`) counts the case's subjects' rows in the three answer tables. It is read before the view and again under the case lock (`:144`), and any difference is `stale()`. The key is sound because of the database's own rules:
+  * those tables refuse any UPDATE except the one-time superseded stamp (`20261023233000_runtime_r1_fix/migration.sql:35-42`, `20261025010000_runtime_r1d_none_apply/migration.sql:26`);
+  * no code outside the demo deletes from them;
+  * it covers the same subjects and tables `Runtime.state()` reads (`runtime.ts:269-275`).
+  So any new answer changes the count. My `waiting.ts` race (0, 0 and 10 ms) gave **409** each time, with nothing recorded (it was 3/3 inconsistent at 557bfbbb0). The builder's run took both branches: 409 at 0 and 15 ms; at 40 ms a 200 with consistent data (under 14 frozen, old DOB `2012-11-09` filed). Any answer by anyone on the case during a record makes it stale. That errs on the safe side, and the officer reloads.
+* **m2 / break M1 (`/filings`): fixed.** `frozenIn` (`case-filings.ts:41-54`) maps the snapshot back to the engine's shape: `filing-<owner>` ids, `person/line/label/why`, and `source` only on exempt or waiting lines, as the engine writes it. The recorded case reads CAD 285 there too, and the unrecorded control still follows today's prices (CAD 170).
+* **Unchanged and still held:** my `race.ts` gave three records at once `[409, 200, 409]`, 1 snapshot, 2 records; refusals (400, 409, 403) left 0 snapshots; split after recording 409.
+* **Still open, not blocking:**
+  * m1: items and ages on a recorded filing are worked out as at today (follow-up row).
+  * m3: the basis sentence still says "age as at today" (B151).
+  * n1: `fees_worked_out` and `fees_why` are never read back.
+  * New n4: Ready to file does not block on a waiting fee, so a filing can show Ready to file and still be refused at Record. The refusal says what to answer, so this is Minor.
+  * FQ-7 (which date ages count on; as built, the recording day) is asked on #1279. It is not settled here.
+* **Fail-first:** at 557bfbbb0 I reproduced all three failures myself in round 1 (waiting record 200; race 3/3 inconsistent; `/filings` CAD 370). The new checks assert the opposite, which agrees with the builder's "fail 5 of 19 on 557bfbbb0".
+* **Journey score round 2: 8.5 / 10** (pass, no 0): correct data ½ (m1 remains), error recovery 1 (refused in words, then recorded once answered), plain words ½ and feedback ½ (m3), all others 1.
+
+**Label:** it still waits for the tech lead's P-228 migration slot line (#1274 / #1279), which is pending.
+
+**Verdict: Approve** for 4a7cf359be16632bfad4dbd049bcc72ad7a4f35e. No open Blocker or Major. Follow-ups: m1, m3, n1, n4 and FQ-7. `review: approved` goes on only once the tech lead has granted the P-228 slot.
