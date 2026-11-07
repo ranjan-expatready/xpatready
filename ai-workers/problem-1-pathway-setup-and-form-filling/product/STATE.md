@@ -7,7 +7,7 @@ updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · mil
 ## Hand-over to Lead 30 (14:47 IST): do first
 1. **Done 14:52 IST.** #1221 (B3): concept approved; rulings 1-4; new rows B129 (holds C8.1 Works) and B130; the Lead pushed 642d02d61 (two allow-list lines removed). #1225 (C3): diagnose first; facts no screen asks are product bugs (QA-300/QA-299/QA-296 = B107), never answered in the pack; C10 needs nothing (QA-235 closed); C4 moves go to a fresh runtime session at the founder's next typed turn.
 2. **Done 14:58 IST:** counts in `design/next-12-hours-2026-11-07.md` section 2. Exit 0 on the checkpoint: C1.3, C6.11, C6.9, C8.1, C8.2. C3.16 and C11.5 have no pack on main; C6.5 runs with no server, so its green proves nothing.
-3. **Queue:** #1197 (B124), #1212 (B126) and #1229 (records) are queued. When #1197 and #1212 merge, dispatch `capabilities="C8.2 C6.9"`, `data=checkpoint` on main, read the lines, and send qa (`local_0868d426-…`) the run, with QA-228's retest.
+3. **#1197 and #1212 merged 14:57 IST.** The dispatch of `capabilities="C8.2 C6.9"`, `data=checkpoint` on main was **refused at 15:02 IST** (auto-mode classifier, despite P-402): the founder names it. Then read the lines and send qa (`local_0868d426-…`) the run, with QA-228's retest. #1229 and #1224 are still queued.
 4. **#1226 (qa records):** qa merges main into it after #1229 lands; then read the diff and label (P-385, P-402).
 5. **Watchdog:** Lead 30's watchdog deleted; Lead 32 messaged "start the watchdog" 14:50 IST. Lead 30's check: cron c0793609 (:13/:43). Lead 31 stays a spare. At the founder's next typed turn, start one more standby.
 6. **Report hourly** against `design/next-12-hours-2026-11-07.md` section 7. Trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. Weekly 5% at 14:46 IST.
@@ -53,7 +53,10 @@ updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · mil
 | B124 #1197 | Labelled 14:16 IST on Approve e3a7d5522, C6.9 20/20 | queue; lane done |
 | B126 #1212 | Labelled 14:16 IST on Approve 708eae6ba, C8.2 17/17 | queue; lane done |
 | C9 QA-246 (cloud) | #1223 | C7.7 forms waiting on an answer |
-| C3 (cloud) | #1225 | channel decides for filing → C4 pack moves → C10 |
+| C3 (cloud) | #1225 labelled 14:29 IST | lane ends at the label |
+| C4 (cloud) | task_3a2d7beb, requested 15:04 IST (P-404) | C7.6 → C9.2 → C11.6 → C7.7, the Lead approves pack lines before each label |
+| B3 → B129 | #1221 (Lead pushed 642d02d61) | after its label, B129 as warm row (P-341) |
+| Lead 33 (Mac) | `local_b49efef4-ce4b-4e6d-b821-507aac4b653b` | standby |
 | B3 (cloud) | #1221 | sign and scan by screens, QA-251 |
 | A6 B102 (cloud) | #1222; concept approved 14:17 IST | calculated age, C6.4, QA-226 |
 | B127 QA-296 (cloud) | #1224 |
