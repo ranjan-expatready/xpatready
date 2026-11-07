@@ -113,3 +113,62 @@ Verdict: Block
 * Major 2: the reset has no pass or fail test.
 * Major 3: 409 conflict words never shown (`S/web/src/runtime/filing-changes.tsx:109,123`).
 * Major 4: focus not returned to the row after a change (`filing-changes.tsx:77`).
+
+## Re-review (diff 5c5f72659..37750f8ad)
+This is the second and last round (P-293): I reviewed only the diff `5c5f72659..37750f8ad`, on a fresh copy `rv135b` (:4445, stopped after) with the web rebuilt at `37750f8ad`.
+
+**Re-run results:**
+* pack C6.13 **32/32**, exit 0;
+* engine checks **26/26**;
+* walk **13/13**;
+* my earlier probe **4/4** (probe 1, which failed on the first round, now passes);
+* my keyboard and stale walk, axe clean on all four states, and no sideways scroll at 1024, 720 and 400 px.
+
+**My four Majors, all fixed:**
+* **Major 1, preview vs apply (also break M4):** fixed.
+  * The Ready to file words are now built after the signer lines, over the same set the apply resets (`S/api/src/filing-changes.ts:108-111`, `:140-141`).
+  * Probe 1 again (all four filings Ready to file, then Make principal): the preview names all four, Child A1 and Child A2 included, and the apply resets exactly those four.
+* **Major 2, no test:** fixed. C6.13-13 and -13a (pass) and -13b (fail: the 10-year-old's unnamed filing keeps READY_TO_FILE) now fail if the reset is removed or widened.
+* **Major 3, swallowed 409 (also break M3):** fixed.
+  * A separate `stale` notice survives the preview reload (`filing-changes.tsx:108-109,128,138`).
+  * My walk showed "Changed since you opened this" at 150 ms and still at 1.5 s, above the new preview; nothing changed until a second press. Walk 7a covers it.
+* **Major 4, focus:** fixed. After apply, focus is on "Actions for <the person>"; Cancel does the same (walks 6a and 7b; my walk).
+
+**The breaker's other two Majors, both fixed:**
+* **M1, the client's page after a swap:** fixed.
+  * The case view's people carry `client` (`S/api/src/runtime.ts:157-159`). "(you)" and the badge key on it (`questionnaire.tsx:535,630`), and `confirmation` says "Answered by the client" once `client === false` (`case.ts:71-74`).
+  * In my browser check, after the swap the client reads "Answering for Sample Client A (you)" and "Answering for Sample Spouse A (principal applicant)".
+  * C6.13-6e and 3 more engine checks cover it.
+* **M2, the PATCH door:** fixed.
+  * The door now takes back every Ready to file mark of the case when it changes a filing (`S/api/src/runtime.ts:279`), after `refuseIfCaseRecorded`.
+  * It names nothing, because the door has no preview and no screen. That is said in the build notes and acceptable. C6.13-13c covers it.
+
+**Minors listed as fixed:** checked, and fixed. Each was confirmed by a run or a read:
+* refused menu items are reachable by keyboard: focus lands on the `aria-disabled` item with its reason, and Enter keeps the menu open without opening a dialog;
+* the role ⓘ is focusable, with a label;
+* the child's words now include "open a case for them";
+* the recorded-case words (the row and the refusal under the lock) now name the date, the number and the case's lifecycle;
+* a reason of invisible characters is refused (C6.13-2a), and the CHECK also refuses a whitespace reason: a direct insert of `E'\t '` failed;
+* a 403 now comes before a 400 (C6.13-11c);
+* Add filing back is in C6.13-10;
+* the signer line is added only for a child who files;
+* the Undo reason is cut to 500 characters;
+* the DELETE trigger refuses a delete while the case exists (C6.13-13d), and a case delete still cascades: in a rolled-back transaction, 15 rows → 10.
+* The migration file was edited in place. That is acceptable because it is not on `main` and no shared database has applied it.
+
+**"Still differs from the concept":** I accept it as written, as these are tech-lead calls or outside the [M] bar:
+* The PATCH door skips BR-0 so that C11.12's "declared only" switch keeps working. The tech lead should rule on it in the PR.
+* TRUNCATE is not guarded.
+* The pre-click BR-0 words appear in the dialog, not in the menu.
+* One correction to the notes: at 400 px the mid-word break is in the table's Person column (`[overflow-wrap:anywhere]`, `filing-changes.tsx:66`), not the shared dialog.
+
+**Left over (Minor, Should; none blocks):**
+1. Graph G3 still lists both `/runtime/cases/:id/filing-changes` routes as reached by no test, after `node product/tools/graph.mjs`. The written-out `${c.id}` paths in `acceptance/` are not picked up, so the build-notes line "route paths written out so the graph sees them" did not take effect. Fix: a literal path in a file under `tests/` the graph reads, or a graph rule; or drop the claim.
+2. The preview's Ready to file line skips inactive filings (`x.active`, `S/api/src/filing-changes.ts:111`), but the apply resets by person (`:141`). An inactive filing still marked READY_TO_FILE would be reset on Add filing back without being named. The current doors no longer leave such a filing (Remove resets it, the PATCH resets all), so only older data can hit this. Fix: drop `x.active` from the words, or add it to the reset.
+
+The journey score after the fixes, in the same walk:
+* rises to about 9: feedback, correct data, recovery and accessibility move from ½ to 1;
+* stays at ½ for plain words (the 400 px break, and the menu not saying BR-0 before the click).
+That is a pass. The first-round report stays as the record.
+
+Verdict: Approve 37750f8ad4bd400c32db378830861e61d3fa5d53
