@@ -1,8 +1,16 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023 Lead 29 · 7 Nov 12:35 IST (new account after the switch, P-398)
+current_lead: local_f37a22d1-8132-4984-bf1a-8433da2ad65e Lead 30 · 7 Nov 14:47 IST (took over from Lead 29 at ~409k context, P-314)
 
-updated: 2026-11-07 14:46 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-403 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
+updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-403 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead30` (from lead29, whose records PR #1229 is queued)
+
+## Hand-over to Lead 30 (14:47 IST): do first
+1. **Two questions for the tech lead:** #1225 (C3) and #1221 (B3). Read them and answer on the PR.
+2. **All-17-packs baseline, run 42357755876 on main 9dc77d1ac (`data=checkpoint`):** jobs green: C1.3, C11.5, C3.16, C6.11, C6.5, C6.9, C8.1, C8.2. Red: C10.2, C11.6, C6.12, C6.4, C7.3, C7.5, C7.6, C7.7, C9.2. **Read each pack line** ("on the checkpoint" or "fixture only", and N/M); C3.16 and C6.5 green is unexpected. Put the counts in `design/next-12-hours-2026-11-07.md` section 2.
+3. **Queue:** #1197 (B124), #1212 (B126) and #1229 (records) are queued. When #1197 and #1212 merge, dispatch `capabilities="C8.2 C6.9"`, `data=checkpoint` on main, read the lines, and send qa (`local_0868d426-…`) the run, with QA-228's retest.
+4. **#1226 (qa records):** qa merges main into it after #1229 lands; then read the diff and label (P-385, P-402).
+5. **Watchdog:** you delete yours; **message Lead 32 "start the watchdog"** (its brief has the steps). Lead 31 stays a spare. At the founder's next typed turn, start one more standby.
+6. **Report hourly** against `design/next-12-hours-2026-11-07.md` section 7. Trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. Weekly 5% at 14:46 IST.
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
 * **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
@@ -50,16 +58,16 @@ updated: 2026-11-07 14:46 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 | A6 B102 (cloud) | #1222; concept approved 14:17 IST | calculated age, C6.4, QA-226 |
 | B127 QA-296 (cloud) | #1224 |
 | B107 (cloud) | task_fb1531a2, started ~14:28 IST | QA-296, QA-299, QA-300: C6.11's path |
-| Lead 32 (Mac) | `local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3` | standby | representative's names on IMM 5475 |
+| Lead 32 (Mac) | `local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3` | standby + watchdog (after Lead 30 messages it) | representative's names on IMM 5475 |
 | Canary (cloud) | task_acca4ca2 | pushed; ends by itself |
 | qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
-| Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | standby + watchdog |
+| Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | **current Lead** |
 | Lead 31 (Mac) | `local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e` | standby |
 
 **Released 14:34 IST (P-403), cloud lanes:** A5 #1054 (task_91f8e1f6), C2 #1075 (task_142d777f, after #1223 and #1225), B5 (task_909c403b), CI fixes kind token then b78 (task_11a034e6). Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
 
 ## Leads, in order (highest = current)
-**Lead 29** `local_ef20bc85-…` (from 12:35 IST 7 Nov) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 30 (watchdog), Lead 31, Lead 32.
+**Lead 29** `local_ef20bc85-…` (from 12:35 IST 7 Nov) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 31.
 
 ## Lessons (7 Nov, Leads 25-29)
 * A run said "checkpoint" but gate B used fixtures: read the pack lines ("on the checkpoint" vs "fixture only"), not the input (fixed by B125).
