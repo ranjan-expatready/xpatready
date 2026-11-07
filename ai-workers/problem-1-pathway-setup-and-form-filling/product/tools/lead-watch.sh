@@ -13,6 +13,14 @@ act=0; say() { echo "$1"; }; ACT() { act=$((act+1)); echo "ACT   $1"; }
 
 say "time  $(TZ=Asia/Kolkata date '+%d %b %H:%M IST')"
 
+# 0. Stall guard (founder, 7 Nov, P-388): the previous check must have run. Lead 24 stalled ~7.4 h on one prompt and no
+# check fired. Checks run every 30 min; a gap over 45 min means at least one check was missed: tell the founder at once.
+stamp="$STATE_DIR/last-check"; now=$(date +%s)
+if [ -s "$stamp" ]; then last=$(cat "$stamp"); gap=$(( (now - last) / 60 ))
+  [ "$gap" -gt 45 ] && ACT "previous check ran ${gap} min ago ($(TZ=Asia/Kolkata date -r "$last" '+%d %b %H:%M IST')): checks were missed; tell the founder at once (P-388)"
+fi
+echo "$now" > "$stamp"
+
 # 1. Disk and test databases (P-308 disk rule: under 10 GB the Lead frees space, under 4 GB Mac suites pause).
 free=$(df -g / | awk 'NR==2 {print $4}')
 pg="psql -h 127.0.0.1 -p 54329 -U xr_studio -d postgres -Atc"
