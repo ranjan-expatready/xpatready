@@ -4,7 +4,7 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
-import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
+import { checkFormat, snapshotFieldFormat, writesParts } from "../field-format.ts";
 import { isCodeRange } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
@@ -80,7 +80,10 @@ export function shapeOf(s: Snapshot, field: string) {
   // C3.1 AT-10 (IRCC-F07, P-162): the form's own box limit for the whole answer (read from the PDF) counts too.
   const boxMax = snapshotFieldFormat(s as never, field).rules.filter((r) => r.check === "max_length" && !r.part).map((r) => Number(r.params.n)).filter((n) => n > 0);
   maxes.push(...boxMax);
-  return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
+  // QA-289: a field is a phone where any form's map says "phone_part" (as before), and also where the fill writes it part by
+  // part with "phone:" steps (field-format.ts writesParts), so the question, its answer and the form's boxes agree (IMM 5476's
+  // "phone:" boxes wrote nothing from text). Only ever adds the phone kind: no question that had it loses it (pre-flight, C4.4).
+  return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t) || (writesParts(t) && /\bphone:/.test(t))), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 
 
