@@ -59,11 +59,12 @@ await main("C6.11", "Firm, users and case team — checkpoint checks", async () 
   ok("C6.11 fail (VV-R10): a dependent child of 17 has none", itemsOf(p, fam.subjects["Sample Child 17"], "IMM 5476").length === 0);
 
   // Tech lead's ruling on #1072: IMM 5475's designated individual (on the checkpoint, its boxes read the representative's
-  // person.address_*, person.email and person.phone_*) is never newly filled from the firm record.
+  // person.address_*, person.email and person.phone_*) is never newly filled from the firm record. B107: those boxes are
+  // now filled by hand (IRCC: "someone who will not act as your representative"), so IMM 5475 reads none of them.
   const rv = (await call("GET", `/runtime/cases/${fam.id}/questionnaire?mode=agent`, undefined, officer)).body;
   const repQs = (rv?.sections ?? []).filter((x: { subjectId: string }) => x.subjectId === "representative").flatMap((x: { questions: { fact: string; answer: { channel: string } | null; fills: { form: string }[] }[] }) => x.questions);
   const on5475 = repQs.filter((q: { fact: string; fills: { form: string }[] }) => /^person\.(address_|phone_|email$)/.test(q.fact) && q.fills.some((x) => x.form === "IMM 5475"));
-  ok("C6.11 fail (ruling on #1072): no address, e-mail or phone IMM 5475 reads about the representative is filled from the firm record", on5475.length > 0 && on5475.every((q: { answer: { channel: string } | null }) => q.answer?.channel !== "firm_record"), on5475.map((q: { fact: string; answer: { channel: string } | null }) => `${q.fact}=${q.answer?.channel ?? "—"}`));
+  ok("C6.11 fail (ruling on #1072, B107): IMM 5475 reads no address, e-mail or phone about the representative (its part 5 and 6 are filled by hand)", on5475.length === 0, on5475.map((q: { fact: string; answer: { channel: string } | null }) => `${q.fact}=${q.answer?.channel ?? "—"}`));
   ok("C6.11 pass: the representative's licence part (membership ID) is still from the firm record", repQs.some((q: { fact: string; answer: { channel: string } | null }) => q.fact === "representative.membership_id" && q.answer?.channel === "firm_record"));
 
   // Break M3: the IMM 5476 item names the representative of record; IMM 5475 (its designated individual) is not tagged.

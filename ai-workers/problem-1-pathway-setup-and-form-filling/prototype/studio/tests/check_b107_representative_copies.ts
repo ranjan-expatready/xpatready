@@ -26,7 +26,7 @@ function pdfValues(pdf: Buffer): Record<string, string> {
     return JSON.parse(execFileSync(PY, ["-I", "-c", code, join(STUDIO, "..", "p1"), file], { encoding: "utf8" }).trim().split("\n").pop()!);
   } catch { return {}; } finally { rmSync(dir, { recursive: true, force: true }); }
 }
-type Box = { box: string; fact: string | null; result: string; detail?: string };
+type Box = { box: string; fact: string | null; result: string; why?: string | null };
 const boxesOf = (copy: string | null): Box[] => JSON.parse(sql(`select coalesce(result_json->'boxes', '[]') from form_instance where id='${copy}'`) ?? "[]");
 type FirmFile = { firms: { key: string; name: string; office: { unit: string; street_number: string; street_name: string; city: string; province_state: string; postal_code: string; phone: { country_code: string; number: string } }; users: { id: string; family_name?: string; given_names?: string; email?: string; licence: { number: string } | null }[] }[] };
 const FIRMS = JSON.parse(readFileSync(join(STUDIO, "samples", "firms.json"), "utf8")) as FirmFile;
@@ -58,7 +58,7 @@ await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — c
   ok("B107-C4 fail (QA-299): no other body's membership box, no uncompensated part, no student-at-law or fax box is written for a compensated CICC representative", filled.length === 0, filled);
   ok("B107-C5 fail (QA-299): the membership number is in exactly one box of the PDF", Object.values(v).filter((x) => x === rep.licence!.number).length === 1, Object.entries(v).filter(([, x]) => x === rep.licence!.number).map(([k]) => k));
   const notNeeded = boxes.filter((b) => empty.includes(b.box));
-  ok("B107-C6 pass: those boxes say why on the copy (\"Not needed\" or \"Waiting\", from the form's own gate), never \"written\"", notNeeded.length === empty.length && notNeeded.every((b) => b.result !== "written"), notNeeded.map((b) => `${b.box.replace(B, "")}=${b.result}: ${b.detail ?? ""}`));
+  ok("B107-C6 pass: those boxes say why on the copy, in the form's own words (\"Not needed: written only when …\"), never \"written\"", notNeeded.length === empty.length && notNeeded.every((b) => b.result !== "written" && /^Not needed: written only when /.test(b.why ?? "")), notNeeded.map((b) => `${b.box.replace(B, "")}=${b.result}: ${b.why ?? ""}`));
 
   // ---- IMM 5475: the designated individual is never the representative (QA-296).
   const c5475 = await generateCopy(c.id, "IMM 5475", P);

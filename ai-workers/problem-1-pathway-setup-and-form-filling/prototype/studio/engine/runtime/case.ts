@@ -9,6 +9,7 @@ import { isCodeRange } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { gatesInForce } from "../form-field-condition.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
@@ -278,7 +279,15 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
   const namingRep = formsNamingRepresentative(s.field_maps);
-  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
+  // B107 (QA-299, QA-300): a form field whose gate does not hold writes nothing (engine/runtime/forms.ts formCoverage), so
+  // its question is not asked for that form either: IMM 5476's membership boxes of the other bodies, its uncompensated part
+  // for a compensated representative, its student-at-law and fax boxes. A gate that cannot tell yet keeps it asked.
+  const gates = new Map<string, Map<string, unknown>>();
+  const gatedOff = (c: { form: string; edition: string | null }, b: { box: string; about: string | null }) => {
+    const k = `${c.form}|${c.edition}`, g = (gates.get(k) ?? gates.set(k, gatesInForce(s, c.form, c.edition)).get(k)!).get(b.box);
+    return !!g && evalCondition(s, known, g, b.about === "case" ? "case" : b.about!.split("/")[0]).applies === false;
+  };
+  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && !gatedOff(c, b) && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
     const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
     // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
     // question fills the box too (P-62: every question asked fills a box or decides something).
