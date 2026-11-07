@@ -8,7 +8,7 @@
 --   DELETE FROM "sign_step" WHERE "key" = 'sign_in_pen';
 --   ALTER TABLE "sign_step" DROP CONSTRAINT "sign_step_key_check";
 --   ALTER TABLE "sign_step" ADD CONSTRAINT "sign_step_key_check" CHECK ("key" IN ('print', 'signed', 'scan_received', 'uploaded_to_ircc'));
---   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261107180000_b132_sign_in_pen';
+--   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261108010000_b132_sign_in_pen';
 --   COMMIT;
 -- A rollback loses the "Signed in pen" steps (superseded ones too: the check covers every row); the audit line of each
 -- ("… marked IMM 5257 "Signed in pen" …") stays. NOT VALID is not a way round it: the old code updates those rows.
