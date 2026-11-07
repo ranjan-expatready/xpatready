@@ -17,7 +17,7 @@ Read: P/`PRODUCT.md`, `EXPERIENCE.md`, `STANDARDS.md` §2–§6, `domain/` files
 3. **Business rules** BR-1… each with its source.
 4. **Layout** — one pattern from `EXPERIENCE.md` §3; scoped menu; team tokens; every state; realistic Sample data; real IRCC codes only when certain. Save each board's source as self-contained HTML in `screens/NN/design/` (the builder cannot see the canvas).
 4b. **Best in class (founder, 4 Nov):** study how the best products handle this job: case-management tools (`reports/verify-2026-11-03/V4-best-in-class.md`), tax-filing interviews, bank onboarding, from primary sources and screenshots; name what each does best. Copy what is already the best; beat the rest. Show how the screen saves effort and prevents errors: auto-fill from known facts, one clear next step, errors caught where they happen, numbers that agree across screens, nothing typed twice.
-4c. **Scorecard (P-407):** answer each check BIC-01–BIC-20 of `EXPERIENCE.md` §6 in one line: how the screen meets it, or N/A and why.
+4c. **Scorecard (P-407; case-side screens, §6 scope):** answer each check BIC-01–BIC-20 of `EXPERIENCE.md` §6 in one line: how the screen meets it, or N/A and why.
 5. **Copy** — tooltips, empty states, errors.
 6. **Contract and tests** — endpoints and shapes; one pass + one fail per BR; scale and keyboard checks.
 6b. **Capability or scaffolding** (P-33) and *Needed for the proof* or *Not built* (P-26) for each element; demo steps use the capability's own path.
