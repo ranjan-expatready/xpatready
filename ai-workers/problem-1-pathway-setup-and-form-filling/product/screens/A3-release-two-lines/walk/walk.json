@@ -1,0 +1,54 @@
+{
+ "port": 4571,
+ "steps": [
+  {
+   "j": "0.1",
+   "what": "Demo › Reset, then Load the configured checkpoint, through the menu",
+   "seen": true,
+   "detail": "81 s"
+  },
+  {
+   "j": "1.3",
+   "what": "IMM 5645: signed by the person the form is about, as a typed name",
+   "seen": true,
+   "detail": "chosen: PDF upload | Typed name"
+  },
+  {
+   "j": "1.4",
+   "what": "IMM 5257 SCH1: a typed name (who signs it stays for the expert)",
+   "seen": true,
+   "detail": "chosen: PDF upload | Typed name"
+  },
+  {
+   "j": "1.4a",
+   "what": "What IRCC accepts for IMM 5257: nothing recorded by this row",
+   "note": true,
+   "detail": "tech lead's ruling on #1167 (6 Nov 22:14 IST): release 2 keeps IMM 5257 Online; C11.6-8a, -8b, -9 move with the C11.6 pack (row C4, H4)"
+  },
+  {
+   "j": "2.1",
+   "what": "Case for one adult, on Visitor visa release 2",
+   "seen": true,
+   "detail": "Visitor visa · release 2"
+  },
+  {
+   "j": "2.4",
+   "what": "How each form is filed: IMM 5645 and Schedule 1 are a typed name for the principal (not \"No signature\")",
+   "seen": true,
+   "detail": "IMM 5645 Channel: PDF upload Signature: Typed name IRCC accepts: Online · PDF upload · Pap · IMM 5257 SCH1 Channel: PDF upload Signature: Typed name IRCC accepts: Online · PDF upload "
+  },
+  {
+   "j": "4.x",
+   "what": "The readiness list (\"must be signed (how it is signed is not set…)\") has no screen yet: row B2",
+   "note": true,
+   "detail": "the review route is read by tests/check_b104_checkpoint.ts A3-L4 and by C7.6-5 and -12 (no missing_signature left)"
+  },
+  {
+   "j": "5.2",
+   "what": "IMM 5476 › Change channel: Online is greyed, with IRCC's line",
+   "seen": true,
+   "detail": "IRCC accepts IMM 5476 here only as PDF upload. The Form library’s record: “Upload this form along with your online application”."
+  }
+ ],
+ "errors": []
+}

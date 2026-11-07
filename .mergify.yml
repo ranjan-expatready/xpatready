@@ -24,7 +24,9 @@ merge_queue:
 queue_rules:
   - name: m2
     batch_size: 6
-    batch_max_wait_time: 2 min
+    # F6 (founder 6 Nov, "Yes, apply all seven"): a 24-hour trial of 5 min (was 2 min), so batches fill; review 7 Nov
+    # ~21:00 IST: kept if PRs per batch rises (baseline 1.6) and approved-to-merged median does not get worse.
+    batch_max_wait_time: 5 min
     queue_conditions:
       - base = main
       - -draft
@@ -37,7 +39,9 @@ queue_rules:
     merge_method: merge
   - name: m3
     batch_size: 6
-    batch_max_wait_time: 2 min
+    # F6 (founder 6 Nov, "Yes, apply all seven"): a 24-hour trial of 5 min (was 2 min), so batches fill; review 7 Nov
+    # ~21:00 IST: kept if PRs per batch rises (baseline 1.6) and approved-to-merged median does not get worse.
+    batch_max_wait_time: 5 min
     queue_conditions:
       - base = main
       - -draft

@@ -10,7 +10,7 @@ ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT" || exit 2
 P=ai-workers/problem-1-pathway-setup-and-form-filling; LANE="$ROOT/$P/product/tools/lane.sh"; FRESH="$ROOT/$P/prototype/studio/tools/web-fresh.sh"
 pass=0; fail=0
 ok() { if [ "$2" = 1 ]; then pass=$((pass + 1)); echo "PASS  $1"; else fail=$((fail + 1)); echo "FAIL  $1 — $3"; fi; }
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; trap 'rm -rf "$T"' EXIT
 export GIT_AUTHOR_NAME=check GIT_AUTHOR_EMAIL=check@example.invalid GIT_COMMITTER_NAME=check GIT_COMMITTER_EMAIL=check@example.invalid
 g() { git -C "$1" "${@:2}"; }
 old=$(( $(date +%s) - 3 * 86400 ))

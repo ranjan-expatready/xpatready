@@ -10,6 +10,26 @@
 * The notes folder is `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/`, outside the repository.
 * `find ~` runs past the 2-minute limit; `mdfind -name` finds a note at once.
 
+## Ollama Cloud (P-361): read this first if you run on Ollama. Not yet tested on this project.
+**Route chosen by the founder, ~23:58 IST: the desktop app (P-362).** Ollama app → Apps → Connect Claude, restart Claude, then a new session in the Code tab in this folder. Models: Ollama → Settings → Apps. Main and Sonnet `glm-5.3`; Opus `kimi-k3.1-pro`, since reviews ask for `opus`; Haiku `glm-5.3-flash`; Fable `glm-5.3`, our flow doesn't use it. "You can use the same model for more than one option" (Ollama's docs). The founder saw a picture of a mapping in that screen; no public page was found with one (5 Nov): if it differs from these, tell the founder and follow the evidence from the canary. Ollama's docs list subagents, web search, Cowork and auto mode; the Code tab and computer use aren't mentioned, and Remote Control and Anthropic-hosted cloud are off on third-party inference. **While connected, every desktop session uses Ollama, standbys and qa included. Disconnecting, quitting Ollama or `ollama launch claude-desktop --restore` puts Claude back, so a quit Ollama means Claude's plan is being spent without notice: check the route at each check.** A Claude re-check or the Acrobat step, if computer use fails on Ollama: disconnect at a clean pause, run it, reconnect. Add to the test below: 7. `start_session`, `list_sessions` and `get_usage` still work; 8. computer use can open Acrobat (the founder approves it). Terminal route, kept as the fallback:
+
+**Start, in a terminal (the desktop app is untouched and stays on Claude; don't set its third-party inference):**
+`ollama signin`, then in this folder: `ANTHROPIC_DEFAULT_OPUS_MODEL=kimi-k3.1-pro:cloud ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.3-flash:cloud ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-5.3-flash:cloud ollama launch claude --model glm-5.3:cloud`.
+The `glm-5.3:cloud` tag is on Ollama's page; the other two `:cloud` tags and whether the launcher passes these variables on are inferred: test 2 proves them. **Fallback, by Ollama's docs, with a key from Ollama's settings, never in a file in this repository or in chat:** `ANTHROPIC_BASE_URL=https://ollama.com ANTHROPIC_AUTH_TOKEN="$OLLAMA_API_KEY" ANTHROPIC_API_KEY="" claude --model glm-5.3`, with the aliases named `kimi-k3.1-pro` and `glm-5.3-flash`.
+
+**Connection test, before any lane; exit codes, not prose. Report each line to the founder:**
+1. `/status` shows the Ollama base URL. `bash product/tools/lane.sh whoami` says `lead`; `gh auth status` passes; the session-start hook printed STATE; `/lead` loads.
+2. An Agent call with `model: opus` works and says which model answered; `model: sonnet` likewise.
+3. AskUserQuestion reaches the founder. CronCreate fires once. A commit on the lead branch pushes past the push guard.
+4. WebFetch reads a canada.ca page (hosted WebSearch is not fully supported; immigration facts still need page, quote and date).
+5. A Playwright screenshot of :4400 can be read back by the qa model (GLM-5.3 lists no vision).
+6. After about ten calls read `ollama.com/settings/usage`: cached input or not? Report tokens per call. If uncached, tell the founder the cost per lane-hour before starting lanes.
+Any failure goes to the founder at once with a proposal. If tests 1 to 3 cannot pass, use the fallback in STATE.
+
+**Canary row:** B115 when #1052 lands: a new lane on `glm-5.3`, Kimi review, then a Claude qa re-check in the desktop app. Report the misses and the tokens. Only then more lanes. Prefer rows with clear tests first; keep money, permissions and schema PRs for a Claude review while plan remains.
+
+**What is different on the CLI, the terminal route only:** no `mcp__ccd_*` tools, so no `start_session`, cards, sidebar, standbys, `list_sessions` or `get_usage`; lanes are terminals or background `ollama launch claude --model glm-5.3:cloud --yes -- -p "<brief>"` runs, one worktree each, permission rules decide what runs unattended; never `--dangerously-skip-permissions` here. No Remote Control, no claude.ai cloud lanes, no built-in browser. Computer use (Acrobat): desktop app. Concurrency: 3 on Pro, 10 on Max, over that queued, then refused. Claude Code assumes a 200K window for these model names and compacts there: write rulings to PR comments first. Cross-session messages from the CLI to a desktop lane are unproven: use PR comments, and ask the founder if a lane must be woken.
+
 ## Before the switch (the Lead, if there is warning)
 1. `get_usage`: note the weekly figure and time.
 2. Rewrite `STATE.md`, push; message each Mac lane "push now"; check with `gh pr list` that each row's last push is recent.
