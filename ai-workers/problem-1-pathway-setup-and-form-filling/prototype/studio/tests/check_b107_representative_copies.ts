@@ -44,6 +44,11 @@ const post = (path: string, body: unknown) => new Promise<number>((done) => {
 });
 
 await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — checkpoint, field by field", async () => {
+  // Review (test-only check at 188dcc316): a reset only ever goes to this copy. The database must answer, and must be the
+  // one the server on PORT uses: isolated.sh records "isolated.sh server pid N port P" as the database's comment.
+  // Otherwise nothing is reset, and the run stops here in words (a bare run, a wrong database name, a stale copy).
+  const thisCopy = sql("select 1") === "1" && new RegExp(`isolated\\.sh server pid \\d+ port ${PORT}( |$)`).test(sql(`select coalesce(shobj_description(oid, 'pg_database'), '') from pg_database where datname = current_database()`) ?? "");
+  if (!thisCopy) { ok(`B107-C0 setup: the database given is this copy's (the one isolated.sh started on port ${PORT}); nothing was reset`, false, "run it as its usage line says"); return; }
   const held = Number(sql(`select count(*) from library_change where action = 'SET_FORM_FIELD_GATE' and status = 'RELEASED'`) ?? "0") > 0;
   if (!held) {
     const reset = await post("/demo/reset", { confirm: "RESET" }), load = reset < 300 ? await post("/demo/load", { sample: "configured" }) : 0;
