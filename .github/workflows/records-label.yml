@@ -1,0 +1,48 @@
+# The "records" label (P-371 (4), B119): Mergify's records queue selects a records-only PR by it. Moved out of ci.yml's
+# job "kind" (P-214 fix, 7 Nov; #1145's builder, #1202): under pull_request that job ran the PR's own change-kind.sh,
+# records-only.sh, flaky.mjs and ci-memory.mjs while holding pull-requests: write and issues: write, with the token also
+# kept in .git/config by checkout, so a PR's script could label its own PR (even `review: approved`; a label set with
+# GITHUB_TOKEN starts no label-guard run). Here pull_request_target runs main's copy of this file and of
+# product/tools/records-label.sh; the PR's commits are fetched as data and only their file names are read (GitHub's
+# guidance: never check out or build a PR's code in a pull_request_target workflow). Only PRs into main: a PR into
+# another branch would run that branch's copy. Not covered here: a PR that edits a pull_request workflow (ci.yml) can
+# still give its own new job a write token; write-token.py fails such a job in the PR's own check (W0), and the
+# question of a boundary the PR cannot edit is on #1232. Test: product/tools/check-write-token.sh.
+name: records-label
+on:
+  pull_request_target:
+    branches: [main]
+    # edited: a PR moved back onto main is judged again; labeled: a records label put on by hand is judged again (a label
+    # this job sets with GITHUB_TOKEN starts no run). #1232 breaker, minor 5.
+    types: [opened, synchronize, reopened, ready_for_review, edited, labeled]
+permissions: {}
+concurrency:
+  # The newest push decides; an older run still going is replaced (it would judge an older head).
+  group: records-label-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  label:
+    # As the step it replaces: a ready PR (or a mergify/* branch) from this repository, never Mergify's own batch PR.
+    if: "${{ (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) && github.event.pull_request.head.repo.full_name == github.repository && !(startsWith(github.event.pull_request.head.ref, 'mergify/') && github.event.pull_request.user.login == 'mergify[bot]') }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # pull-requests: write is enough to add or remove a pull request's label; no issues: write.
+    permissions: { contents: read, pull-requests: write }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}   # main's commit this run's workflow file came from
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: fetch the pull request's commits (data only, never checked out)
+        env: { PR: "${{ github.event.pull_request.number }}" }
+        run: git fetch --no-tags origin "+refs/pull/$PR/head:refs/remotes/pr/head"
+      - name: the records label (product/tools/records-label.sh, main's copy)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/records-label.sh
