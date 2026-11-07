@@ -1,0 +1,25 @@
+PASS  B104-1 pass: the Visitor visa has Stage 1 data, and the sample file passes its guard
+PASS  B104-2 pass: a combination with no entry gets nothing (no combination is assumed, P-319)
+PASS  B104-3 pass: each form whose signer is set is a line of the configured Visitor visa
+PASS  B104-4 pass: the account is APR Portal and the gates are the two Sample gates and four officer's-judgement lines (S7)
+PASS  B104-5 fail: a signer the product does not know is refused, naming the known ones
+PASS  B104-6 fail: an IRCC account the product does not know is refused
+PASS  B104-7 fail: a value with no source quoted is refused (P-170)
+PASS  B104-8 fail: a form named twice is refused
+PASS  B104-9 fail: gates with no source quoted are refused
+PASS  B104-10 pass: on a fresh draft the account, the three signers (each over the revision read) and the gates are written, and said in plain words
+PASS  B104-11 fail (review m2): gates the gates check refuses stop the whole step before any write, and are said
+PASS  B104-12 fail: a form that is not a line (IMM 5476) or was removed (IMM 5707) is said and never saved; the rest still is
+PASS  B104-13 fail: a save the service refuses is said in its own words, not counted as done; the next form is still saved
+PASS  B104-14 pass: what is already set is not saved again, and gates already saved are left as they are
+PASS  B104-15 fail: a gates save the service refuses is said, and not reported as done
+PASS  B104-16 fail: a bad data file writes nothing at all
+PASS  A3-1 pass: release 2's data passes the guard: IMM 5645 signed by the person; IMM 5645 and Schedule 1 a typed name (Sample); no account, gates or accept record
+PASS  A3-2 pass: IMM 5645 is the family form a release filing IMM 5257 Online files, and Stage 1 (release 1) leaves it alone
+PASS  A3-3 fail: a signature the product does not know is refused, naming the known ones
+PASS  A3-4 fail: how a line is signed with no source quoted, or named twice, is refused
+PASS  A3-5 pass: on release 2's draft, IMM 5645's signer, then each signature on the line's own channel over the signature seen, said in plain words
+PASS  A3-6 fail: a removed line (Schedule 1) is said and never saved; what is already set is not saved again
+PASS  A3-7 fail: a signature the service refuses is said in its own words, not counted as done; the next line is still saved
+
+all passed

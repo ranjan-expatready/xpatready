@@ -113,7 +113,7 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
           <dd><ul className="space-y-0.5" data-ucis>{r.ucis.map((u) => <li key={u.subject} className="flex flex-wrap items-center gap-2 [overflow-wrap:anywhere]" data-uci={u.subject}>
             <span>{u.person}: {u.uci ? <span className="font-mono">{u.uci}</span> : <span className="text-text-muted">none given</span>}</span>
             <Button size="sm" variant="ghost" aria-label={`${u.uci ? "Correct" : "Add"} ${u.person}’s UCI`} onClick={(e) => onCorrect(e.currentTarget, u as UciLine)}>{u.uci ? "Correct…" : "Add…"}</Button></li>)}</ul></dd>
-          <dt className="text-text-muted">Prepared by · Reviewed by</dt><dd data-prepared-reviewed>{r.prepared_by.name} · {r.reviewed_by ? (r.reviewed_by.self ? "Self-reviewed" : r.reviewed_by.name) : "no representative of record"}</dd>
+          <dt className="text-text-muted">Prepared by · Reviewed by</dt><dd data-prepared-reviewed>{r.prepared_by.name} · {r.reviewed_by ? (r.reviewed_by.self ? "Self-reviewed" : r.reviewed_by.name) : "Not reviewed (the review was passed with a reason)"}</dd>
         </dl>
         {r.corrections.length ? <div className="mt-2" data-corrections>
           <p className="text-[12px] font-medium text-text-muted">Corrections</p>
