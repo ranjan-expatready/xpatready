@@ -31,6 +31,7 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "source entry", "source", "structure", "upload",
   "form edition" /* C7.6 accepted-until date of an edition, readiness.ts (#861) */,
   "placement step" /* placing a form's parts into sections, form-part-placements.ts (#936) */,
+  "worked-out value" /* B102 (A6): a fact worked out from library dates instead of asked, worked-out.ts */,
   "pathway", "program", "category", "sub-category" /* structure levels, structure.ts and studio.ts */,
 ]);
 /** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;
