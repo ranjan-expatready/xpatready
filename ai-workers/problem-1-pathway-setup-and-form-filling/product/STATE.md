@@ -2,14 +2,14 @@
 
 current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-406 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1555-lead31.md` · this branch: `lead/2026-11-07-lead30`
+updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-408 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1555-lead31.md` · this branch: `lead/2026-11-07-lead30`
 
 ## Lead 31 progress (15:55 IST)
 * Check cron **4b7708bc** (:13/:43, prompt exactly `run lead-watch; read STATE Start here`). Weekly **10% at 15:53 IST**; Lead 31 context 142k.
 * **#1238 labelled 15:46 IST** (Approve 6221a4f54, green). **#1221 (B3) labelled ~15:48 IST** (Approve 40319be52, green; P-402); its lane then takes B129, B132.
 * **#1222 (A6) answered 15:52 IST:** round 3 diff-only by the same reviewer after CI is green; two code-cause reds: `check_case_feed` ("worked-out value" on neither audit list) and `check_b83_undo_withdraw` (C4.11 M7 now refused on 3 problems; likely the PR's conditional-documents sample).
 * **#1054 (A5):** Approve 65069b4b6 (notes-only head), CI on 714f5d77a still queued; schema change (P-278): the Lead reads the diff before any label.
-* **Drift audit landed** (`reports/m3-screens-vs-boards-2026-11-07.md`): verdict **"Not yet"**. Real drifts: (1) C7.7's two-stage Prepare application tab (P-122) not built, the case is one stacked page; (2) C6.9 keeps "Eligibility / Likely" though P-236's words were released by P-316 (1), BACKLOG still says held; (3) C11.6 channel in its own panel, each form listed twice; (4) C7.6 "Nothing reaches IRCC unreviewed" beside a "Pass with a reason" button; (5) C8.2 fee receipt typed, not the IRCC page uploaded. Also: only C6.9 has a best-in-class study; B1, A2/QA-293, B124, B126 not on "For the founder" (P-392). To post on the UX lane's PR 1 when it opens.
+* **Drift audit landed** (`reports/m3-screens-vs-boards-2026-11-07.md`): verdict **"Not yet"**. Real drifts: (1) C7.7's two-stage Prepare application tab (P-122) not built, the case is one stacked page; (2) C6.9 keeps "Eligibility / Likely" though P-236's words were released by P-316 (1), BACKLOG still says held; (3) C11.6 channel in its own panel, each form listed twice; (4) C7.6 "Nothing reaches IRCC unreviewed" beside a "Pass with a reason" button; (5) C8.2 fee receipt typed, not the IRCC page uploaded. Also: only C6.9 has a best-in-class study; B1, A2/QA-293, B124, B126 not on "For the founder" (P-392). **Ruled P-408 (16:05 IST): rows B147 (the tab, UX lane first), B148 (C6.9 words), B149 (C7.6 words, C8.2 upload); F8 below.** Post the audit and B147 on the UX lane's PR 1 when it opens; give B148/B149 to the next free lane.
 * New lanes (UX, concepts, build): no push yet at 15:55 IST. C4 pushed `claude/zen-fermi-poiqv8` 15:34 IST, no PR yet.
 
 ## Hand-over to Lead 31 (15:45 IST): do first
@@ -26,13 +26,13 @@ updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone:
 Word for word in `history/STATE-2026-11-07-1555-lead31.md` (account switch done 12:35-13:11 IST; Lessons, Leads 25-29).
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
-F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403); rows word for word in `history/STATE-2026-11-07-1545-lead30.md`.
+F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`).
 
 | # | Question | Lead's recommendation | Blocks | Since | Status |
 |---|---|---|---|---|---|
 | F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open: qa's walk screenshots landed with #1199 |
 | F6 | A hard boundary for `.github/**` changes: a Mergify condition (a GitHub approving review or a founder-only label) or a CODEOWNERS ruleset (#1232's breaker Blocker 1) | after B134 lands, a Mergify condition | nothing now (B134 is the interim) | 7 Nov 15:25 | open |
-| F7 | Coverage of preparation and filing (audit 7 Nov 15:30 IST, `reports/coverage-prep-filing-2026-11-07.md`; 94 requirement rows: 32 in M3's 17, 30 elsewhere, 22 out of scope by decision, **7 gaps**, 3 ambiguous; 8 rows labelled M3 not scheduled: B3, B6, B8, B9, B10, L-SA6, L-SA8, L-SA10) | add the 7 gaps as rows (3 need his call: withdrawing a filing, readiness score, representative's stored signature); schedule or rule out the 8; run S8's card-by-card trace | M3's true size | 7 Nov 15:32 | **answered "Yes, add them"** and three calls (P-406) |
+| F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 16:05 | open (P-408) |
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
