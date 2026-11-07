@@ -32,7 +32,7 @@ const CHANGE_GROUPS: { key: keyof ReleaseUpdate["changes"]; title: string; none:
   { key: "forms", title: "Forms", none: "No form changes for this case." }, { key: "documents", title: "Documents", none: "No document line changes." },
   { key: "questions", title: "Questions", none: "No question changes." }, { key: "eligibility", title: "Eligibility", none: "No eligibility rule changes." },
 ];
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { day: "numeric", month: "short" });
+const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const LONG = 6;
 
 export function useReleaseUpdate(caseId: string) {
@@ -202,7 +202,7 @@ export function MovedGroups({ caseId }: { caseId: string }) {
       <section aria-labelledby="release-moved-h" className="border-b border-border bg-surface px-4 py-3" data-release-moved>
         <h3 id="release-moved-h" tabIndex={-1} className="text-sm font-semibold outline-none">Moved to {m.to.label} on {day(m.at)}</h3>
         <p className="mb-2 text-[13px] text-text-muted">From {m.from.label}{m.reason ? ` · reason: ${m.reason}` : ""}. Nothing finished was changed; this list empties as you make each copy again.</p>
-        <EffectGroups effects={m.effects} fill={(l) => l.form && l.subject ? <Button size="sm" busy={busy === l.id} onClick={() => void fill(l)} data-release-fill={l.id}>Fill</Button> : null} />
+        <EffectGroups effects={m.effects} fill={(l) => l.form && l.subject ? <Button size="sm" variant="secondary" busy={busy === l.id} onClick={() => void fill(l)} data-release-fill={l.id} aria-label={`Fill ${l.form} for ${l.who} on ${m!.to.label}`}>Fill</Button> : null} />
       </section>
     </TipProvider>
   );

@@ -147,7 +147,7 @@ export function effectsOf(diff: ReleaseDiff, x: CaseInputs, work: Work[], review
     if (d.kinds.includes("channel") || d.kinds.includes("signing")) { e.filed_another_way.push(line(`${labels.to} files ${w.form} as ${d.after}${w.finished ? `; this ${w.kind === "signed_scan" ? "signed scan" : "copy"} is kept and is not what you file` : ""}.`)); continue; }
     if (d.kinds.includes("map") || d.kinds.includes("edition")) {
       if (w.finished) e.kept_out_of_date.push(line(`Never changed: marked out of date because ${labels.to} ${d.kinds.includes("edition") ? `files ${w.form} on ${d.after}` : `fills ${w.form}'s form fields differently`}.`));
-      else e.fill_again.push(line(`Its form changed in ${labels.to}: press Fill after the move to make it on ${labels.to}; this copy stays in the history.`));
+      else e.fill_again.push(line(`Its form changed in ${labels.to}: press Fill to make it on ${labels.to} (the move fills nothing); this copy stays in the history.`));
       continue;
     }
     e.unchanged.count++; // a change of who needs it, for a person who still needs it, leaves the work as it is
