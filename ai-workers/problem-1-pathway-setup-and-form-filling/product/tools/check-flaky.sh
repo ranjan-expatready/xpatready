@@ -31,6 +31,10 @@ fx() {  # fx <case> <suite...>: a fresh fixture folder holding only these suites
     check_fx_strict*) printf '%s\n' "'use strict';" '// Two writers at once: a race on the version number.' "$(fx_flaky_js)" ;;
     check_fx_failrace*) printf '%s\n' '// Uploads a document and reads it back.' 'const f=require("path").join(process.env.FX_STATE, require("path").basename(__filename)); const fs=require("fs"); const n=fs.existsSync(f)?Number(fs.readFileSync(f,"utf8")):0; fs.writeFileSync(f,String(n+1)); if(n===0){console.log("FAIL source-trust race: concurrent uploads gave 500");process.exit(1)} console.log("1 passed")' ;;
     check_fx_tracer*) printf '%s\n' '// Reads the trace of a release in its grace period; embraced edits, Bracelet, racetrack-free.' "$(fx_flaky_js)" ;;
+    # b78 hang (6 Nov): a suite that waits for its stdin to end (it ends at once on /dev/null, never on an open pipe), and
+    # a suite that ignores the TERM at the limit (only a KILL ends it). Each writes its pid, so the test can clean up.
+    check_fx_stdin*) echo 'require("fs").writeFileSync(require("path").join(process.env.FX_STATE, "pid-stdin"), String(process.pid)); let n = 0; process.stdin.on("data", (d) => { n += d.length; }); process.stdin.on("end", () => { console.log("PASS stdin ended after " + n + " bytes"); console.log("1 passed"); process.exit(0); });' ;;
+    check_fx_termproof*) echo 'require("fs").writeFileSync(require("path").join(process.env.FX_STATE, "pid-termproof"), String(process.pid)); process.on("SIGTERM", () => console.log("ignored a TERM")); console.log("11 passed, 0 failed"); setInterval(() => {}, 1000);' ;;
   esac > "$d/tests/$s"; done
 }
 rs() {  # rs <case> <run-suites args...>: run the fixture folder; output in $W/<case>.out, exit code echoed
@@ -221,6 +225,30 @@ c1=$(SUITES_QUARANTINE_AUTO="$AQ" rs sh --retry --skip-quarantined --shard 1/2);
 c2=$(SUITES_QUARANTINE_AUTO="$AQ" rs sh --retry --skip-quarantined --shard 2/2)
 ran=$(cat "$W/sh1.out" "$W/sh.out" | grep -E '^\| check_fx_ok_[a-d]\.cjs \| PASS' | cut -d'|' -f2 | sort | tr -d ' ' | tr '\n' ' ')
 ok "B122: two parts with the same automatic quarantine run every other suite exactly once and skip the quarantined one" "$([ "$ran" = "check_fx_ok_a.cjs check_fx_ok_b.cjs check_fx_ok_c.cjs check_fx_ok_d.cjs " ] && [ "$(tries sh check_fx_broken.cjs)" = 0 ] && [ "$c1$c2" = 00 ] && echo 1)" "exits $c1 $c2; ran: $ran"
+
+# 7b. The b78 hang (6 Nov): the runner gives every suite /dev/null as stdin and timeout -k, and writes a hung suite's
+# processes to its log. Each case runs under an outer limit, on this runner and on a copy with main's old plain
+# `timeout <limit> "$@" > "$log"` (the suite inherits the runner's stdin, no -k): the old one fails, this one passes.
+OLD="$W/run-suites.plain.sh"
+sed 's|^  if guarded "\$log" "\$@"; then st=PASS;|  if "$TIMEOUT" "$LIMIT" "$@" > "$log" 2>\&1; then st=PASS;|' "$T/run-suites.sh" > "$OLD"
+ok "b78: the old-runner copy for the fail test really has the plain timeout" "$(grep -q '^  if "\$TIMEOUT" "\$LIMIT" "\$@" > "\$log" 2>&1; then st=PASS;' "$OLD" && echo 1)" "sed found no guarded line"
+rsx() {  # rsx <runner> <case> <outer limit s> [args]: like rs, stdin a pipe that stays open, never written; exit code echoed
+  local r="$1" c="$2" lim="$3" fifo="$W/$2.fifo"; shift 3; mkfifo "$fifo"; exec 7<>"$fifo"
+  CI= COPY_PREFIX= SUITES_LOCKS="$W/locks" SUITES_TESTS_DIR="$W/$c/tests" SUITES_OUT="$W/$c/out" FX_STATE="$W/$c/state" \
+    SUITES_TIMEOUT=4 SUITES_KILL_AFTER=2 timeout -k 2 "$lim" bash "$r" "$@" <&7 > "$W/$c.out" 2> "$W/$c.err"; local code=$?
+  exec 7>&-; rm -f "$fifo"; for p in "$W/$c/state"/pid-*; do [ -f "$p" ] && kill -9 "$(cat "$p")" 2>/dev/null; done; echo "$code"; }
+fx stdin_old check_fx_stdin.cjs; code=$(rsx "$OLD" stdin_old 30)
+ok "b78 fail test: on the old runner a suite waiting on stdin (an open pipe) runs into the limit" "$(row stdin_old check_fx_stdin.cjs | grep -q '| FAIL |.*exit 124' && echo 1)" "exit $code; $(row stdin_old check_fx_stdin.cjs)"
+fx stdin check_fx_stdin.cjs; t0=$SECONDS; code=$(rsx "$T/run-suites.sh" stdin 30)
+ok "b78: this runner gives the suite /dev/null, so it ends at once and passes" "$(row stdin check_fx_stdin.cjs | grep -q '| PASS |.*1 passed' && [ "$code" = 0 ] && [ $((SECONDS - t0)) -lt 4 ] && echo 1)" "exit $code in $((SECONDS - t0)) s; $(row stdin check_fx_stdin.cjs)"
+fx term_old check_fx_termproof.cjs; code=$(rsx "$OLD" term_old 15)
+ok "b78 fail test: on the old runner a suite ignoring the TERM never ends (the outer limit stops the whole run, no row)" "$([ "$code" = 124 ] && ! row term_old check_fx_termproof.cjs >/dev/null && echo 1)" "exit $code; $(row term_old check_fx_termproof.cjs)"
+fx term check_fx_termproof.cjs; t0=$SECONDS; code=$(rsx "$T/run-suites.sh" term 30)
+ok "b78: this runner kills a suite ignoring the TERM (-k), gives its row and fails the run" "$(row term check_fx_termproof.cjs | grep -q '| FAIL |.*exit 137: STOP still running at 4 s' && [ "$code" = 1 ] && [ $((SECONDS - t0)) -lt 12 ] && echo 1)" "exit $code in $((SECONDS - t0)) s; $(row term check_fx_termproof.cjs)"
+ok "b78: the hung suite's log names its processes (pid, state, wait channel, command) under the STOP line" "$(grep -A3 '^STOP still running at 4 s' "$W/term/out/check_fx_termproof.log" | grep -q 'check_fx_termproof.cjs' && echo 1)" "$(head -8 "$W/term/out/check_fx_termproof.log" 2>&1)"
+fx termr check_fx_termproof.cjs; code=$(rsx "$T/run-suites.sh" termr 30 --retry)
+ok "b78: a suite killed at the limit (exit 137) counts as timed out: not retried" "$(row termr check_fx_termproof.cjs | grep -q 'timed out at 4 s, not retried' && [ ! -e "$W/termr/out/retries.tsv" ] && echo 1)" "$(row termr check_fx_termproof.cjs)"
+ok "b78: run-suites.sh never runs a suite under a plain timeout" "$(! grep -nE '"\$TIMEOUT" ' "$T/run-suites.sh" | grep -vE -- '"\$TIMEOUT" (-k |\])' | grep -q . && echo 1)" "$(grep -nE '"\$TIMEOUT" ' "$T/run-suites.sh")"
 
 # 8. Wiring: CI's PR and queue checks pass --retry and the rule's list; the nightly never retries.
 CIY=.github/workflows/ci.yml; NY=.github/workflows/nightly.yml
