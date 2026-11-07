@@ -5,11 +5,11 @@ current_lead: local_f37a22d1-8132-4984-bf1a-8433da2ad65e Lead 30 · 7 Nov 14:47 
 updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-403 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead30` (from lead29, whose records PR #1229 is queued)
 
 ## Hand-over to Lead 30 (14:47 IST): do first
-1. **Two questions for the tech lead:** #1225 (C3) and #1221 (B3). Read them and answer on the PR.
-2. **All-17-packs baseline, run 42357755876 on main 9dc77d1ac (`data=checkpoint`):** jobs green: C1.3, C11.5, C3.16, C6.11, C6.5, C6.9, C8.1, C8.2. Red: C10.2, C11.6, C6.12, C6.4, C7.3, C7.5, C7.6, C7.7, C9.2. **Read each pack line** ("on the checkpoint" or "fixture only", and N/M); C3.16 and C6.5 green is unexpected. Put the counts in `design/next-12-hours-2026-11-07.md` section 2.
+1. **Done 14:52 IST.** #1221 (B3): concept approved; rulings 1-4; new rows B129 (holds C8.1 Works) and B130; the Lead pushed 642d02d61 (two allow-list lines removed). #1225 (C3): diagnose first; facts no screen asks are product bugs (QA-300/QA-299/QA-296 = B107), never answered in the pack; C10 needs nothing (QA-235 closed); C4 moves go to a fresh runtime session at the founder's next typed turn.
+2. **Done 14:58 IST:** counts in `design/next-12-hours-2026-11-07.md` section 2. Exit 0 on the checkpoint: C1.3, C6.11, C6.9, C8.1, C8.2. C3.16 and C11.5 have no pack on main; C6.5 runs with no server, so its green proves nothing.
 3. **Queue:** #1197 (B124), #1212 (B126) and #1229 (records) are queued. When #1197 and #1212 merge, dispatch `capabilities="C8.2 C6.9"`, `data=checkpoint` on main, read the lines, and send qa (`local_0868d426-…`) the run, with QA-228's retest.
 4. **#1226 (qa records):** qa merges main into it after #1229 lands; then read the diff and label (P-385, P-402).
-5. **Watchdog:** you delete yours; **message Lead 32 "start the watchdog"** (its brief has the steps). Lead 31 stays a spare. At the founder's next typed turn, start one more standby.
+5. **Watchdog:** Lead 30's watchdog deleted; Lead 32 messaged "start the watchdog" 14:50 IST. Lead 30's check: cron c0793609 (:13/:43). Lead 31 stays a spare. At the founder's next typed turn, start one more standby.
 6. **Report hourly** against `design/next-12-hours-2026-11-07.md` section 7. Trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. Weekly 5% at 14:46 IST.
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
@@ -67,7 +67,7 @@ updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · mil
 **Released 14:34 IST (P-403), cloud lanes:** A5 #1054 (task_91f8e1f6), C2 #1075 (task_142d777f, after #1223 and #1225), B5 (task_909c403b), CI fixes kind token then b78 (task_11a034e6). Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
 
 ## Leads, in order (highest = current)
-**Lead 29** `local_ef20bc85-…` (from 12:35 IST 7 Nov) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 31.
+**Lead 30** `local_f37a22d1-…` (from 14:48 IST 7 Nov) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 31.
 
 ## Lessons (7 Nov, Leads 25-29)
 * A run said "checkpoint" but gate B used fixtures: read the pack lines ("on the checkpoint" vs "fixture only"), not the input (fixed by B125).
