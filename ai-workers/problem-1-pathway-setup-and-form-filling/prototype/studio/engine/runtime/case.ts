@@ -276,14 +276,17 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const { known, confirm } = knownOf(s, people, answers, rows, today);
   const r = render(s, renderPeople, known, { today });
   // B128 (QA-153): a parent a form describes is asked on their own key (`<person>/parent_1`), so their answers never land
-  // on the person whose parent they are; any other relative (a sibling, a list) is not asked yet (engine/runtime/relatives.ts).
+  // on the person whose parent they are, and only for a form that applies to that person (not while it may be needed:
+  // a child's form waiting for a date of birth asks no parents); any other relative (a sibling, a list) is not asked yet
+  // (engine/runtime/relatives.ts).
   const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : isAskedRelative(about) ? about : about.split("/")[0]);
-  const asked = (about: string) => !about.includes("/") || isAskedRelative(about);
+  const applies = new Set<string>();
+  const asked = (q: { about: string; fact: string }) => !q.about.includes("/") || (isAskedRelative(q.about) && applies.has(`${q.about}|${q.fact}`));
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
   const namingRep = formsNamingRepresentative(s.field_maps);
   for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
-    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
+    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); if (c.applies === true) applies.add(k); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
     // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
     // question fills the box too (P-62: every question asked fills a box or decides something).
     const d = recordedDerivation(b.transform);
@@ -298,9 +301,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const derivedYes = hasChildrenOf(people);
-  const needed = r.questions.filter((q) => asked(q.about) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
-  const notAsked = r.questions.filter((q) => asked(q.about)).length - needed.length;
+  const notAsked = r.questions.filter((q) => asked(q)).length - needed.length;
   const fromDocuments = new Map<string, { subjectId: string; document: string; facts: string[] }>();
   const skipped = (q: (typeof needed)[number]) => {
     const doc = opts.skipDocumentFacts?.(subjectOf(q.about), q.fact);

@@ -63,6 +63,13 @@ await main("B128", "IMM 5645's parents are asked, stored on their own, waited fo
   const forms = async () => ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body?.forms ?? []) as { form: string; subject?: string; readiness: { ready: boolean; missing: { fact: string; about: string }[] } }[];
   await fillEverything(c.id); // the pack's helper: answers and confirms everything else, parents included (never a date of birth)
 
+  // Only for a form that applies to the person: a spouse whose date of birth is not known yet (the family form "may be
+  // needed") and a child of 10 (under its minimum age) are asked no parents.
+  const fam = await openCase(vv, [{ role: "principal", name: "Sample Client G", dob: yearsAgo(41) }, { role: "spouse_or_partner", name: "Sample Spouse G", dob: null }, { role: "child", name: "Sample Child G", dob: yearsAgo(10) }], { representative: f.rep, caseOfficers: [officer] });
+  const famKeys = new Set((await sectionsOf(fam.id)).map((x) => x.subjectId)), [PG, SG, KG] = ["Sample Client G", "Sample Spouse G", "Sample Child G"].map((n) => fam.subjects[n]);
+  ok("B128-5a pass: on a family case the adult principal's parents are asked", famKeys.has(`${PG}/parent_1`) && famKeys.has(`${PG}/parent_2`), [...famKeys]);
+  ok("B128-5b fail: no parent is asked for the spouse whose date of birth is unknown, nor for the child of 10", ![`${SG}/parent_1`, `${SG}/parent_2`, `${KG}/parent_1`, `${KG}/parent_2`].some((k) => famKeys.has(k)), [...famKeys]);
+
   // ---- Answered on the parent's own key: two path parts, or the key written as one (%2F). ----
   const before = sql(`select value_json::text from client_canonical_answer where subject_id = '${P}' and canonical_field_key = 'person.date_of_birth' and superseded_by_id is null`);
   const r1 = await answer(c.id, M, "person.full_name", "Sample Mother F", CLIENT);
