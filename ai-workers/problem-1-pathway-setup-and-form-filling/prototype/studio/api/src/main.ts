@@ -121,8 +121,11 @@ class SourcesController {
   @Post("jobs/:id/apply") apply(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.apply(actorOf(a), id, b ?? {}); }
   @Get("ledger") ledger() { return this.s.ledger(); }
   @Get("official-library") official() { return this.s.officialLibrary(); }
-  @Post("combinations/:id/fill") fill(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.f.fill(actorOf(a), id, b); }
-  @OpenRead("a file link the browser opens") @Get("artifacts/:id/file") async artifact(@Param("id") id: string, @Res() res: any) { const d = await this.f.artifact(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
+  // QA-270: Preview's filled PDF takes Preview's own check (readerOf, the config read guard's): case people are refused here as on Preview.
+  @Post("combinations/:id/fill") fill(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.f.fill(readerOf(a), id, b); }
+  // QA-270 (file half): the filled PDF is read like Preview that made it, by the config read guard (no mark): nobody and an
+  // unknown name 401, case people (clients, any firm's staff) 403. Preview downloads it with the person header (preview.tsx).
+  @Get("artifacts/:id/file") async artifact(@Param("id") id: string, @Res() res: any) { const d = await this.f.artifact(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
 }
 
 @Controller("api/demo")

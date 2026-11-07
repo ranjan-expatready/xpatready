@@ -15,6 +15,10 @@ export type LibraryChangeView = {
   rename?: { before: string | null; after: string | null; undo: boolean };
   /** C4.5: the facts a document supplies, before → after, each new fact's official words (contracts/document-supplies.ts). */
   supplies?: SuppliesView;
+  /** B86: a question's condition (only what the page reads: what approving it holds on other combinations). */
+  condition?: { spread: string | null };
+  /** B86: a form field's condition: the form field, its own words, what is proposed, what approving it holds elsewhere. */
+  form_field?: { form: string; edition: string; caption: string; words: string; sentence: string; clear: boolean; spread: string | null; reason: string; ask?: { printed: string; deciding: string; writes: string } | null };
 };
 export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string; /** C3.6: the answer list the field carries, approved with it. */ answer_list?: { key: string; label: string; status: string; values: { code: string; label: string }[] } | null } | null;
   /** A structure name (P-128): the names a branch delete takes with it, and whether a retire or restore takes its combination. */

@@ -12,5 +12,5 @@
     "types": ["node"],
     "typeRoots": ["../node_modules/@types"]
   },
-  "include": ["src/*.ts", "src/features/*.ts", "../engine/*.ts", "../tests/*.ts"]
+  "include": ["src/*.ts", "src/features/**/*.ts", "../engine/*.ts", "../tests/*.ts"]
 }

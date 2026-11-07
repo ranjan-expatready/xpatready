@@ -46,7 +46,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // QA-144 slice 1: row 7 is built (the rules pass's sections and the shared placement step on the Visitor visa).
   // QA-206 (tech lead on #883): row 7 is partial, and says so, while sections the forms print no heading over wait for a name.
   step("C10.1: row 7 says what the forms' own parts set up, in words; row 17 holds IMM 5476's new edition or waits for its 2021 map, in words (QA-207)", (r("7").status === "done" || (r("7").status === "partial" && /held on To review for a person to name/.test(r("7").text))) && /Sections and questions from the forms' own parts/.test(r("7").text) && /sections drafted from .*Visitor visa/.test(r("7").text) && ((r("17").status === "waiting" && /Waits for a saved field map of IMM 5476 \(11-2021\)/.test(r("17").text)) || (r("17").status === "done" && /held as a new edition over the library's IMM 5476 \(11-2021\)/.test(r("17").text))), `${r("7").text.slice(0, 120)} | ${r("17").text.slice(0, 160)}`);
-  step("C10.1: a waiting row says why (IMM 5257 waits for the founder's paid run)", r("12").status === "waiting" && /IMM 5257 has no saved field-map answer/.test(r("12").text), r("12").text);
+  // B97: row 9 is done. B99 (C10.1 row 12b, #1123): row 12 is now Done, from the four copies a person validated in Adobe and
+  // read back on the Mac (samples/validated-imm5257.json), so it may say Done only with that read-back, which the database
+  // must hold; any row still not done (apart from the parked row 2) must say why in words. QA-285: without the validated
+  // files (GitHub), row 12 says they are kept on the Mac (Sample) and the database holds no validated copy; the pack
+  // (acceptance/C10.1.test.ts R12b, R12c) decides which from the folder itself.
+  const notDone = rows.filter((x) => x.status !== "done" && x.status !== "out");
+  const validated = Number(sql("select count(*) from validated_copy v join form_instance i on i.id = v.form_instance_id join answer_snapshot a on a.id = i.snapshot_id where i.form_number = 'IMM 5257' and v.facts_hash = a.input_hash and (v.read_back -> 'validation' ->> 'passed') = 'true'"));
+  step("C10.1: row 12 is Done only with its read-back (4 copies validated in Adobe and read back equal, the form's own Validate passed), as the database holds; a row not done says why", r("12").status === "done" && !/Validate each copy in Adobe Reader|validate again/.test(r("12").text)
+    && ((validated === 4 && /4 validated in Adobe and read back equal, the form's own Validate passed/.test(r("12").text) && !/kept on the Mac/.test(r("12").text))
+      || (validated === 0 && /4 validated in Adobe on the Mac and read back equal, the form's own Validate passed .*kept on the Mac/.test(r("12").text))) && notDone.every((x) => /\b(waits?|because|not |no |until|needs?|only )/i.test(x.text)), JSON.stringify({ row12: r("12").text, validated, notDone: notDone.map((x) => x.text) }).slice(0, 400));
   step("C10.1: rows 4 and 5 show the decisions and the second person's approvals", /accepted, 1 edited, 1 returned with a reason/.test(r("4").text) && /approved by the Approver, not by the author/.test(r("5").text), `${r("4").text} | ${r("5").text}`);
   step("C10.1: the database agrees: no library item waits, none approved by its proposer", Number(sql("select count(*) from library_change where status = 'WAITING'")) === 0 && Number(sql("select count(*) from library_change where decided_by = proposed_by")) === 0);
   await shoot("c10-1-02-configured-result");

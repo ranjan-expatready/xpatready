@@ -13,6 +13,9 @@
 #   gh workflow run nightly.yml -f capabilities="C11.10 C5.4"        (on main; --ref <branch> for a branch)
 #   ... -f data=checkpoint   loads the configured checkpoint instead of the six (GATE_B_DATA; tech lead 4 Nov, #798 QA-144)
 # qa still walks the screens like a person and gives the verdict (P-290); the run is the independent machine re-run.
+# P-371 (3): pull requests may skip suites they already passed on the same base (tools/ci-memory.mjs), so this run is the
+# net under them: every suite, every night, on main. A red night shows in this run's summary and in daily-numbers.sh, and
+# qa writes the row (Lead 21, 6 Nov: no GitHub issue).
 name: nightly
 on:
   schedule:

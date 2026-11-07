@@ -1,0 +1,20 @@
+// B52: the application form's Yes/No form fields worked out from other answers, each asked as its own question in the
+// form's words (To review › Form fields), with the library's field of the same name when it has one. The form-field
+// step is the one a person takes there, as the same service (no extra provider).
+import { normalizeLabel } from "../../../../../contracts/programs.ts";
+import { OwnQuestions } from "../../../own-question.ts";
+import { OWN_YES_NO_NEAR, OWN_YES_NO_REASON } from "../../../own-yes-no.ts";
+import { type CombinationStep, formSetup } from "../080-form-setup.ts";
+
+export default {
+  async run(ctx, cc) {
+    const { setup } = cc;
+    if (!setup) return;
+    const { db, workspaceId } = ctx;
+    for (const y of setup.ownYesNo ?? []) {
+      const ed = await db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true } });
+      const same = (await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, valueType: "yes_no", groupKey: "person" }, select: { canonicalFieldKey: true, label: true } })).find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(y.label));
+      try { if (!ed) throw new Error(`${setup.application} has no PDF edition in the library`); await new OwnQuestions(db, ctx.audit).ask(ctx.author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }), ...(y.question ? { question: y.question } : {}) }); } catch (e) { formSetup(ctx).refused.push(`${y.label}: ${ctx.said(e)}`); }
+    }
+  },
+} satisfies CombinationStep;

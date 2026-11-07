@@ -13,15 +13,25 @@ merge_queue:
 # broken M3 PR can never throw out M2 work, and M2 is checked first (the queue listed first has the higher priority).
 # A PR goes to "m3" when its title names an M3 capability, or starts with "M3" (the M3 rows of qa/CAPABILITIES.md; the tech lead keeps this
 # list in step with that table); everything else, including every M2 PR, goes to "m2".
+# Records never block code (B119, P-376 (1), founder 6 Nov; one route, Lead 21's ruling on #1147, 6 Nov): a third queue
+# "records", listed last (lowest priority), takes a PR labelled "records". CI applies that label to a records-only PR
+# (tools/records-only.sh, P-371 (4), #1139: every file is a record under product/, not product/tools/, and not code),
+# so there is one definition of a record. m2 and m3 skip the label. A records PR is checked only when no product
+# PR waits ahead of it, and a product PR that arrives goes ahead of it, so a records merge never restarts a product batch;
+# records also never share a batch with code. Records merge only through this queue, never outside it.
+# product/screens/B119/check-queue-rules.py reads this file and fails when the queues stop routing that way. The daily
+# records PR (P-336) stays.
 queue_rules:
   - name: m2
     batch_size: 6
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - check-success = ci
       - -title~=(?i)(^M3\b|\bC1\.3\b|\bC3\.16\b|\bC6\.(4|5|9|11|12)\b|\bC7\.[3567]\b|\bC8\.[12]\b|\bC9\.2\b|\bC10\.2\b|\bC11\.[56]\b)
+      - -label=records
     merge_conditions:
       - check-success = ci
     merge_method: merge
@@ -30,12 +40,30 @@ queue_rules:
     batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
+      - -draft
       - "label = review: approved"
       - check-success = ci
       - title~=(?i)(^M3\b|\bC1\.3\b|\bC3\.16\b|\bC6\.(4|5|9|11|12)\b|\bC7\.[3567]\b|\bC8\.[12]\b|\bC9\.2\b|\bC10\.2\b|\bC11\.[56]\b)
+      - -label=records
     merge_conditions:
       - check-success = ci
     merge_method: merge
+  - name: records
+    batch_size: 6
+    batch_max_wait_time: 2 min
+    queue_conditions:
+      - base = main
+      - -draft
+      - "label = review: approved"
+      - check-success = ci
+      - label = records
+    merge_conditions:
+      - check-success = ci
+    merge_method: merge
+
+# -draft (P-371 (1), founder 6 Nov): a draft never joins a batch; a draft runs only the push guard. Records PRs carry the
+# label "records", set by ci.yml from tools/records-only.sh; the "records" queue that selects it, and the "-label=records"
+# that keeps it out of m2 and m3, are B119's (#1147, Lead 21's ruling, 6 Nov; see above).
 
 # Approved PRs join the queue by themselves (the queue_conditions above decide which); no "@mergifyio queue" needed.
 merge_protections_settings:

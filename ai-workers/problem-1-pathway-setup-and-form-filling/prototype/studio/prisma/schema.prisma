@@ -618,6 +618,9 @@ model FormFieldMap {
   canonicalFieldKey String?          @map("canonical_field_key")
   transform         String?
   condition         String?
+  /// B86 (QA-237): the question's own condition, in the condition language, once a person has said this form field's
+  /// words say the same and a second person approved. Null = not confirmed. `condition` (the AI's words) is never read as one.
+  conditionRule     Json?            @map("condition_rule")
   confidence        String?
   evidenceQuote     String?          @map("evidence_quote")
   reason            String?

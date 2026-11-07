@@ -5,6 +5,9 @@
 // A release 2 mixed) … the thin family case on release 1 with IMM 5257 filled") and stays red after #113 until the
 // rows it waits on are built. No live AI (US$0): AI in a checkpoint is saved answers replayed (DEMO.md).
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/acceptance/C10.1.test.ts 4448 xr_studio_accept
+import { createHash } from "node:crypto";
+import { request } from "node:http";
+import { localValidatedFile, savedReadBacks, VALIDATED_DIR_ENV, validatedDir } from "../api/src/sample-validated.ts";
 import { client, recorder } from "../tests/runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_accept";
@@ -13,7 +16,12 @@ const { ok, summary } = recorder();
 const n = (q: string) => Number(sql(q) || 0);
 type Row = { row: string; title: string; status: string; shows: string; why: string | null };
 const GATE = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "17"];
-const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
+const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B", OFFICER = "user-O";
+/** A download's status, bytes and file name (the API's JSON client reads text). */
+const bytes = (path: string, actor: string) => new Promise<{ status: number; body: Buffer; name: string }>((resolve, reject) => {
+  const req = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, headers: { "x-actor": actor }, agent: false }, (res) => { const c: Buffer[] = []; res.on("data", (x: Buffer) => c.push(x)); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(c), name: /filename="([^"]+)"/.exec(String(res.headers["content-disposition"] ?? ""))?.[1] ?? "" })); });
+  req.on("error", reject); req.end();
+});
 
 (async () => {
   // ── Part A: what PR #113 promises ──
@@ -49,28 +57,67 @@ const AUTHOR = "user-A", SME = "user-C", APPROVER = "user-B";
   const formsOf = (rel: string | undefined) => { try { return JSON.parse(rel!.slice(rel!.indexOf("§") + 1)).forms as { form_number: string; channel?: string; signature?: string }[]; } catch { return []; } };
   const r2 = formsOf(vvRel[1]), f2 = (code: string) => r2.find((f) => f.form_number === code);
   // Tech lead on #798 (IRCC-P2-04a): filed online, the family information form is IMM 5645, not IMM 5707.
-  ok("C10.1 part B (DEMO.md row 9, P-143): Visitor visa release 2: IMM 5257 Online, so IMM 5645 (not IMM 5707), IMM 5476 PDF upload signed by hand and scanned", f2("IMM 5257")?.channel === "ONLINE" && !!f2("IMM 5645") && !f2("IMM 5707") && (f2("IMM 5476")?.channel ?? "PDF_UPLOAD") === "PDF_UPLOAD" && f2("IMM 5476")?.signature === "HAND_SCANNED", r2.map((f) => `${f.form_number}:${f.channel ?? "PDF_UPLOAD"}:${f.signature ?? "NONE"}`));
+  ok("C10.1 R9 part B (DEMO.md row 9, P-143): Visitor visa release 2: IMM 5257 Online, so IMM 5645 (not IMM 5707), IMM 5476 PDF upload signed by hand and scanned", f2("IMM 5257")?.channel === "ONLINE" && !!f2("IMM 5645") && !f2("IMM 5707") && (f2("IMM 5476")?.channel ?? "PDF_UPLOAD") === "PDF_UPLOAD" && f2("IMM 5476")?.signature === "HAND_SCANNED", r2.map((f) => `${f.form_number}:${f.channel ?? "PDF_UPLOAD"}:${f.signature ?? "NONE"}`));
   // Labelled B10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps B10)"; QA-144 slice 2).
   ok("C10.1 B10 part B (DEMO.md checkpoint 2, row 10): With an LMIA (B) is released too (its reuse of A's facts, row 18, is C10.2's checkpoint 3)", releasesOf(lmia).length >= 1, releasesOf(lmia).length);
+  // Labelled F10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps F10)"; QA-144 slice 5, B79b):
+  // Family sponsorship › Spouse or common-law partner set up from its forms and released by the checkpoint through the
+  // product's own duties (on main 86b721eac Submit refused it: "Fix 93 problems before submitting").
+  const fsp = sql(`select id from combination where combination_key = 'fs.spouse' and retired_at is null limit 1`);
+  ok("C10.1 F10 row 10: Family sponsorship › Spouse or common-law partner has release 1, submitted by the author and approved by the Approver after the SME's sign-off", releasesOf(fsp).length >= 1
+    && n(`select count(*) from config_release where combination_id = '${fsp}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1
+    && n(`select count(*) from review_signoff s join review_submission b on b.id = s.submission_id where b.combination_id = '${fsp}' and s.actor_id = '${SME}'`) >= 1, (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Family sponsorship")).join(" · ").slice(0, 300));
   // Labelled S10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps S10)"; QA-144 slice 3): the study
   // permit (outside Canada) is set up from its forms and released by the checkpoint through the product's own duties.
   const sp = sql(`select id from combination where combination_key = 'sp.outside' and retired_at is null limit 1`);
   ok("C10.1 S10 row 10: the Study permit (outside Canada) has release 1, submitted by the author and approved by the Approver after the SME's sign-off", releasesOf(sp).length >= 1
     && n(`select count(*) from config_release where combination_id = '${sp}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1, releasesOf(sp).length);
+  // Labelled E10 so a PR can name this step alone to gate B ("Capabilities: C10.1 (steps E10)"; QA-144 slice 4, B79a):
+  // Express Entry set up from its forms; Submit refuses it for no form field without a decision and no fact nobody is
+  // asked (219 on main 86b721eac). E10b is its release: IMM 0008 DEP prints no "Unknown" marital status, marked Not on this
+  // form through B81's door (tech lead on #1050).
+  const ee = sql(`select id from combination where combination_key = 'pnp.express_entry' and retired_at is null limit 1`);
+  const eeWhy = (r("10")?.why ?? "").split(" · ").filter((x) => x.startsWith("Provincial nominees › Express Entry stream: ")).join(" · ");
+  // Review m1 and r2-m2 (#1050): the whole list of the draft's blocking problems, not row 10's first three, read from the
+  // combination's own read (GET, writes nothing; Submit refuses on these, after first running the draft's answer keys,
+  // which can only add refusals). A released combination is not read.
+  const eeErrors = ee && !releasesOf(ee).length ? ((((await call("GET", `/combinations/${ee}`)).body?.draft?.problems ?? []) as { level: string; message: string }[]).filter((p) => p.level === "error")) : [];
+  const undecided = eeErrors.filter((e) => /form fields? ha(s|ve) no decision|nobody is asked for it/.test(e.message));
+  ok("C10.1 E10 row 7 and 10: Express Entry is set up from its forms, and Submit refuses it for no form field without a decision and no fact nobody is asked", !!ee && /Provincial nominees › Express Entry stream/.test(r("7")?.shows ?? "")
+    && (releasesOf(ee).length >= 1 || (eeErrors.length > 0 && undecided.length === 0)), { refusals: eeErrors.length, undecided: undecided.length, first: (undecided[0] ?? eeErrors[0])?.message?.slice(0, 200) });
+  ok("C10.1 E10b row 10: Express Entry has release 1, submitted by the author and approved by the Approver", releasesOf(ee).length >= 1 && n(`select count(*) from config_release where combination_id = '${ee}' and submitter_id = '${AUTHOR}' and approver_id = '${APPROVER}'`) >= 1, eeWhy.slice(0, 300));
   ok("C10.1 part B (DEMO.md row 10): each release is approved by the Approver after the SME's sign-off, never by the author", n(`select count(*) from config_release where approver_id <> '${APPROVER}'`) === 0 && n(`select count(*) from config_release`) >= 3 && n(`select count(*) from review_signoff where actor_id = '${SME}'`) >= 1 && n(`select count(*) from review_submission where submitted_by = '${AUTHOR}' and status = 'APPROVED'`) >= 3);
   // Row 11: the thin family case, one Sample family of four (DEMO.md "The story").
   const vvCase = vv ? sql(`select id from runtime_case where combination_id = '${vv}' order by created_at limit 1`) : "";
-  const roles = vvCase ? sql(`select p.role || '§' || coalesce((select a.value_json #>> '{}' from client_canonical_answer a where a.subject_id = p.subject_id and a.canonical_field_key = 'person.date_of_birth' and a.superseded_by_id is null limit 1), '') from case_participant p where p.case_id = '${vvCase}' and p.applies order by p."order"`).split("\n").filter(Boolean).map((x) => x.split("§")) : [];
+  const roles = vvCase ? sql(`select p.role || '§' || coalesce((select a.value_json #>> '{}' from client_canonical_answer a where a.subject_id = p.subject_id and a.canonical_field_key = 'person.date_of_birth' and a.superseded_by_id is null limit 1), '') from case_participant p where p.case_id = '${vvCase}' and p.applies and p.role <> 'case' order by p."order"`).split("\n").filter(Boolean).map((x) => x.split("§")) : [];
   const ageAt = (dob: string) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob); if (!m) return null; const t = new Date("2026-11-01"); let a = t.getUTCFullYear() - Number(m[1]); if (t.getUTCMonth() + 1 < Number(m[2]) || (t.getUTCMonth() + 1 === Number(m[2]) && t.getUTCDate() < Number(m[3]))) a--; return a; };
   const kids = roles.filter(([r]) => r === "child").map(([, d]) => ageAt(d));
-  ok("C10.1 part B (DEMO.md row 11): a family case on Visitor visa release 1: principal applicant, travelling spouse, a child under 18 and a child 18 or over", roles.length === 4 && roles.filter(([r]) => r === "principal").length === 1 && roles.filter(([r]) => r === "spouse_or_partner").length === 1 && kids.length === 2 && kids.some((a) => a !== null && a < 18) && kids.some((a) => a !== null && a >= 18), roles);
-  ok("C10.1 part B (DEMO.md row 11): the case's answers come from the one Sample family and every name is labelled Sample", vvCase !== "" && n(`select count(*) from client_canonical_answer where workspace_id = (select workspace_id from runtime_case where id = '${vvCase}')`) > 0 && n(`select count(*) from answer_subject s join case_participant p on p.subject_id = s.id where p.case_id = '${vvCase}' and s.label !~* 'sample|client a'`) === 0);
+  ok("C10.1 R11a part B (DEMO.md row 11): a family case on Visitor visa release 1: principal applicant, travelling spouse, a child under 18 and a child 18 or over", roles.length === 4 && roles.filter(([r]) => r === "principal").length === 1 && roles.filter(([r]) => r === "spouse_or_partner").length === 1 && kids.length === 2 && kids.some((a) => a !== null && a < 18) && kids.some((a) => a !== null && a >= 18), roles);
+  ok("C10.1 R11b part B (DEMO.md row 11): the case's answers come from the one Sample family and every name is labelled Sample", vvCase !== "" && n(`select count(*) from client_canonical_answer where workspace_id = (select workspace_id from runtime_case where id = '${vvCase}')`) > 0 && n(`select count(*) from answer_subject s join case_participant p on p.subject_id = s.id where p.case_id = '${vvCase}' and p.role <> 'case' and s.label !~* 'sample|client a'`) === 0);
   // Row 12: IMM 5257 filled for the case on release 1, with its barcodes read back (C7.1, C7.2).
   const applicants = vvCase ? n(`select count(*) from case_participant where case_id = '${vvCase}' and applies and role in ('principal', 'spouse_or_partner', 'child')`) : 0;
   const filled = vvCase ? n(`select count(distinct i.subject_id) from form_instance i join config_release r on r.id = i.config_release_id where i.case_id = '${vvCase}' and i.form_number = 'IMM 5257' and i.status = 'GENERATED' and r.version = 1`) : 0;
   const readBack = vvCase ? n(`select count(*) from validated_copy v join form_instance i on i.id = v.form_instance_id where i.case_id = '${vvCase}' and i.form_number = 'IMM 5257' and v.read_back is not null`) : 0;
-  ok("C10.1 part B (DEMO.md row 12, C7.1): IMM 5257 is generated for each applicant of the case, on release 1", applicants === 4 && filled === applicants, { applicants, filled });
-  ok("C10.1 part B (DEMO.md row 12, C7.2): each IMM 5257 copy has a validated copy read back (Validate, P-171)", filled > 0 && readBack >= filled, { filled, readBack });
+  ok("C10.1 R12a part B (DEMO.md row 12, C7.1): IMM 5257 is generated for each applicant of the case, on release 1", applicants === 4 && filled === applicants, { applicants, filled });
+  // QA-285 (founder ~10:05 IST 6 Nov: "Files stay on the Mac"): the four validated PDFs are read from the local folder
+  // STUDIO_VALIDATED_DIR (api/src/sample-validated.ts) where it holds them, the same folder this copy's server reads. With
+  // them (the Mac), each is read back through the upload door; without them (GitHub, a fresh machine), no validated copy is
+  // recorded and each copy says in words that its validated file is kept on the Mac (Sample), never "validate again".
+  const saved = savedReadBacks()?.copies ?? [], dir = validatedDir();
+  const here = saved.length > 0 && saved.every((x) => localValidatedFile(dir, x).kind === "found");
+  const copies5257 = vvCase ? sql(`select i.id || '§' || s.label from form_instance i join answer_subject s on s.id = i.subject_id where i.case_id = '${vvCase}' and i.form_number = 'IMM 5257' and i.status = 'GENERATED' order by s.label`).split("\n").filter(Boolean).map((x) => x.split("§")) : [];
+  const views = await Promise.all(copies5257.map(async ([id, who]) => ({ id, who, v: (await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body as { validated?: { current?: boolean; words?: string } | null; validated_elsewhere?: string | null } })));
+  ok(`C10.1 R12b part B (DEMO.md row 12, C7.2): each IMM 5257 copy has its Validate read back (P-171): ${here ? "with the validated files here, a validated copy read back through the upload door for each" : "without the validated files (kept on the Mac), no validated copy recorded and each copy says so in words, Sample"}`, filled > 0 && views.length === filled && (here
+    ? readBack === filled && views.every((x) => x.v?.validated?.current === true && x.v.validated.words === "Validated copy read back" && !x.v.validated_elsewhere)
+    : readBack === 0 && views.every((x) => !x.v?.validated && /kept on the Mac/.test(x.v?.validated_elsewhere ?? "") && /Sample/.test(x.v?.validated_elsewhere ?? "")) && /kept on the Mac/.test(r("12")?.shows ?? "")) && !/validate (the|this) copy again|validate again/i.test(`${r("12")?.shows} ${r("12")?.why ?? ""}`), { here, filled, readBack, copies: views.map((x) => `${x.who}: ${x.v?.validated?.words ?? x.v?.validated_elsewhere ?? "none"}`) });
+  // R12c: Download gives the validated file itself, the one validated in Adobe (its checksum the saved read-back's). Held on
+  // GitHub only (QA-285; the PR names it): there the files are not, so it prints HELD with what the copy says instead.
+  const got = await Promise.all(views.map(async (x) => ({ ...x, d: await bytes(`/runtime/form-copies/${x.id}/file`, OFFICER), want: saved.find((s) => s.person === x.who)?.validated_sha256 })));
+  if (here) ok("C10.1 R12c part B (QA-285): Download of each IMM 5257 copy gives 200 and the validated file, its sha256 the saved read-back's", got.length === filled && filled > 0 && got.every((x) => x.d.status === 200 && !!x.want && createHash("sha256").update(x.d.body).digest("hex") === x.want && /-validated-/.test(x.d.name)), got.map((x) => `${x.who}: ${x.d.status} ${x.d.name}`));
+  else {
+    ok("C10.1 R12d part B (QA-285, files absent): without the validated files, Download of each copy says in words that its validated file is kept on the Mac (Sample), and never hands over the unvalidated copy or a 404 \"validate the copy again\"", got.length === filled && filled > 0 && got.every((x) => x.d.status === 409 && /kept on the Mac/.test(x.d.body.toString()) && !/validate the copy again/.test(x.d.body.toString()) && x.d.body.subarray(0, 5).toString() !== "%PDF-"), got.map((x) => `${x.who}: ${x.d.status} ${x.d.body.toString().slice(0, 120)}`));
+    console.log(`HELD  C10.1 R12c part B (QA-285): red, held: the validated PDFs are kept on the Mac (founder ~10:05 IST 6 Nov), not on this machine (${VALIDATED_DIR_ENV} has no checked file for ${saved.filter((x) => localValidatedFile(dir, x).kind !== "found").map((x) => x.person).join(", ") || "any copy"}); this step runs on the Mac with ${VALIDATED_DIR_ENV} set, and its run and exit code are named in the PR.`);
+  }
   ok("C10.1 part B (rows 7, 9, 11, 12, 17): every row of the gate except the Parked row 2 (P-102) is done", rows.length === GATE.length && rows.filter((x) => x.row !== "2").every((x) => x.status === "done") && (r("2")?.status === "out" || /parked/i.test(`${r("2")?.status} ${r("2")?.shows}`)), rows.filter((x) => x.status !== "done").map((x) => `${x.row} ${x.status}`));
 
   // Who may load and reset: the author only (demo.ts need(actor, "author")); case people and clients are refused.

@@ -13,14 +13,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
-import type { EmployerLink } from "./employer";
+import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
-export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
+/** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
+export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean };
+/** B115 (P-319): a role a person may add to this case, from its pinned release; has = how many the case has now. */
+export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
 export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
-export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; team?: CaseTeamLine; employer_link?: EmployerLink };
+export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
 export type View = QuestionnaireView & { case: CaseInfo };
 type Section = ViewSection;
 type Question = ViewQuestion;
@@ -28,7 +31,7 @@ type Answer = ViewAnswer;
 type SaveResult = { answer: { id: string; problems: string[] }; fills: Question["fills"]; message: string };
 type Mode = "sqr" | "agent";
 
-const ROLE_WORDS: Record<CasePerson["role"], string> = { case: "the whole application", principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
+const ROLE_WORDS: Record<string, string> = { case: "the whole application", principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
 const keyOf = (q: Question, row?: string) => `${q.subjectId}|${q.fact}${row ? `|${row}` : ""}`;
 const cellAnswer = (q: Question, row?: string) => (row ? q.rows.find((r) => r.row === row)?.answer ?? null : q.answer);
 
@@ -529,7 +532,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role]})` : " (you)"}.</>}
+        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
 
@@ -624,7 +627,9 @@ function ConfirmPill({ a }: { a: Answer }) {
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+/** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
+const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -638,6 +643,21 @@ function AgentView({ view }: { view: View }) {
   const people = [...new Map(view.sections.map((s) => [s.subjectId, s.about_label])).entries()];
   // One person at a time (one row of tabs): a household's answers are long; each person's sections stay together.
   const [who, setWho] = React.useState(() => people[0]?.[0] ?? "");
+  // C6.4 (a): a link to a person's question (#a-<subject>-<fact>, the Documents panel's "Answer first") opens that person's
+  // tab, then brings the question into view and focuses it; otherwise the question is not on the page and the link leads nowhere.
+  const ids = people.map(([id]) => id).join(" ");
+  React.useEffect(() => {
+    const go = () => {
+      const target = window.location.hash.slice(1), m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
+      if (!m || !ids.split(" ").includes(m[1])) return;
+      setWho(m[1]);
+      // Break m5: the address is cleared once used, so a later render (a person added) does not jump back to this tab.
+      requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.getElementById(target); el?.scrollIntoView({ block: "center" }); el?.focus(); window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); }));
+    };
+    go();
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
+  }, [ids]);
   const mine = view.sections.filter((s) => s.subjectId === who);
   return (
     <div className="space-y-4">
@@ -670,7 +690,7 @@ function AgentView({ view }: { view: View }) {
 }
 
 /** The id of one answer's line in the officer's section, the target of its error summary link. */
-const lineId = (subjectId: string, fact: string, row?: string) => `a-${subjectId}-${fact.replace(/[^a-z0-9_]/gi, "-")}${row ? `-${row}` : ""}`;
+export const lineId = (subjectId: string, fact: string, row?: string) => `a-${subjectId}-${fact.replace(/[^a-z0-9_]/gi, "-")}${row ? `-${row}` : ""}`;
 
 function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Question, row?: string) => void }) {
   const qc = useQueryClient(), toast = useToast();
@@ -710,7 +730,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
@@ -718,7 +738,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">Change it in the firm record</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">{q.fact === "case.uses_representative" ? "Set by the case team (the representative of record)" : "Change it in the firm record"}</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };
