@@ -8,7 +8,7 @@ import { Prisma, type LibraryChange } from "@prisma/client";
 import { z } from "zod";
 import type { FormFieldRow, FormFieldState, FormFieldsOfCombination, FormFieldsOfQuestion } from "../../contracts/form-field-conditions.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { askedStep, blockFacts, decidingYes, isWorkedOutYesNo, plainWords, showCondition, whenWords, yesNoStep } from "../../engine/form-field-condition.ts";
+import { askedStep, blockFacts, boxGate, decidingYes, isWorkedOutYesNo, plainWords, showCondition, whenWords, yesNoStep } from "../../engine/form-field-condition.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { factWords } from "../../engine/sources.ts";
 import { bareCond } from "../../engine/validate.ts";
@@ -69,7 +69,7 @@ export function formFieldView(c: Pick<LibraryChange, "matches" | "reason"> & { a
  *  approved. Without it, Undo of an approved change answered 409 "Already exists". */
 const REPLACED = "Replaced by a later change of this form field.";
 type Replaced = { id: string; note: string | null };
-async function closeReplaced(tx: Pick<Db, "libraryChange">, workspaceId: string, key: string): Promise<Replaced[]> {
+export async function closeReplaced(tx: Pick<Db, "libraryChange">, workspaceId: string, key: string): Promise<Replaced[]> {
   const open = await tx.libraryChange.findMany({ where: { workspaceId, kind: FORM_FIELD_KIND, key, status: "APPROVED" }, select: { id: true, decisionNote: true } });
   if (open.length) await tx.libraryChange.updateMany({ where: { id: { in: open.map((o) => o.id) } }, data: { status: "WITHDRAWN", decisionNote: REPLACED } });
   return open.map((o) => ({ id: o.id, note: o.decisionNote }));
@@ -201,7 +201,8 @@ export class FormFieldConditions {
       const c = asked.get(keyOf(edOf(m)?.id ?? "", e.data_path), m.form_number, e.data_path), x = c?.matches as { fact?: string; clear?: boolean; after?: Step } | undefined;
       return !!x && !x.clear && x.fact === fact && e.outcome === "mapped" && e.fact === x.after?.fact && (e.transform ?? null) === (x.after?.transform ?? null);
     };
-    const reads = (m: (typeof all)[number], e: Entry) => (e.fact === fact && e.outcome === "mapped") || askedHere(m, e);
+    // B107: a form field holding a gate (which box takes the answer, api/src/form-field-gates.ts) is not this door's.
+    const reads = (m: (typeof all)[number], e: Entry) => (e.fact === fact && e.outcome === "mapped" && !boxGate(e.condition_rule)) || askedHere(m, e);
     const maps = all.filter((m) => m.entries.some((e) => reads(m, e)));
     const open = await this.db.libraryChange.findMany({ where: { workspaceId, kind: FORM_FIELD_KIND, status: { in: BLOCKING } }, select: { id: true, key: true, status: true } });
     const decider = (tree as { field?: unknown } | null)?.field;
@@ -248,7 +249,7 @@ export class FormFieldConditions {
     // whose only reader was asked as its deciding question is still listed, so its Undo stays reachable.
     const hides = new Set((s.placements as { fact: string; condition?: unknown; condition_effect?: string | null }[]).filter((p) => p.condition && p.condition_effect === "HIDE").map((p) => p.fact));
     const asked = (s.placements as { fact: string }[]).filter((p) => showCondition(s.placements as never, p.fact)).map((p) => p.fact);
-    const facts = [...new Set([...entries.filter((e) => e.condition_rule || hides.has(e.fact!) || showCondition(s.placements as never, e.fact!)).map((e) => e.fact!), ...asked])].sort();
+    const facts = [...new Set([...entries.filter((e) => (e.condition_rule && !boxGate(e.condition_rule)) || hides.has(e.fact!) || showCondition(s.placements as never, e.fact!)).map((e) => e.fact!), ...asked])].sort();
     const questions: FormFieldsOfQuestion[] = [];
     for (const fact of facts) {
       const cond = await this.conditionOf(workspaceId, combinationId, fact, s);

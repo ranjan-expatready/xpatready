@@ -25,11 +25,26 @@ export function ruleInForce(placements: Placement[], fact: string | null | undef
   return !!own && bareCond(own) === bareCond(rule);
 }
 
-/** The rules in force on one form edition, by form field. */
+/** The rules in force on one form edition, by form field: B86's (its question's own condition) and B107's gates. */
 export function rulesInForce(s: Snapshot, form: string, edition: string | null | undefined): Map<string, unknown> {
   const map = (s.field_maps as FieldMap[]).find((m) => m.form_number === form && m.form_edition === edition);
   const placements = s.placements as Placement[];
-  return new Map((map?.entries ?? []).filter((e) => e.outcome === "mapped" && ruleInForce(placements, e.fact, e.condition_rule)).map((e) => [e.data_path, e.condition_rule]));
+  return new Map((map?.entries ?? []).filter((e) => e.outcome === "mapped").flatMap((e): [string, unknown][] => {
+    const gate = boxGate(e.condition_rule);
+    return gate ? [[e.data_path, gate]] : ruleInForce(placements, e.fact, e.condition_rule) ? [[e.data_path, e.condition_rule]] : [];
+  }));
+}
+
+/** B107 (QA-299, QA-300; C6.11, C7.7): a form field's gate, from the form's own words: the form field is written only while
+ *  the gate holds, whatever the question's own condition. It is how a form says which of its boxes takes an answer: IMM 5476
+ *  prints one membership number box per regulatory body and per paid or unpaid representative, and its own script clears the
+ *  others ("protected") once one is ticked. Stored on the form field as `{ gate, words, cite }` (condition_rule), set by a
+ *  person and approved by a second (api/src/form-field-gates.ts), from cited data (samples/form-field-gates.json, P-319);
+ *  never parsed from the AI's words. B86's door never reads or clears a gate. Every gate is Sample, Unconfirmed: expert. */
+export type BoxGate = { gate: unknown; words: string; cite: string };
+export function boxGate(rule: unknown): unknown {
+  const g = rule && typeof rule === "object" && !Array.isArray(rule) ? (rule as Partial<BoxGate>) : null;
+  return g && g.gate && typeof g.gate === "object" && typeof g.words === "string" ? g.gate : null;
 }
 
 /** A Yes/No form field worked out from other answers: it must write No when the answer is No, so it can never be filled

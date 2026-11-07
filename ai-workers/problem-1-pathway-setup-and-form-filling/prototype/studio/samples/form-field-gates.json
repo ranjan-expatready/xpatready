@@ -1,0 +1,102 @@
+{
+  "about": "B107 (QA-296, QA-299, QA-300; C6.11, C7.7; P-319: data, never code): which box of a form takes an answer, and which part of a form a person writes by hand, each from the form's own printed words and scripts, cited (P-170). The configured checkpoint proposes each one as the author and a second person approves it (api/src/features/checkpoint/combination/410-form-field-gates.ts, api/src/form-field-gates.ts); a release then carries it. A gate is a condition in the rules' own language on facts the shared library holds: the form field is written only while it holds, so a question whose every form field on a form is gated off is not asked for that form. The official files are the local copies under official-sources/ircc/ (manifest.json). Every entry is Sample, Unconfirmed: expert (AGENTS rule 4). Legal points: Unconfirmed: no counsel.",
+  "editions": [
+    {
+      "form": "IMM 5476",
+      "edition": "IMM 5476 (11-2021)",
+      "file": "official-sources/ircc/previous-editions/imm5476e-2021.pdf (the edition the configured checkpoint's library reads; manifest: file dated 19 Nov 2021, downloaded 2026-10-19)",
+      "gates": [
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].ICCRCMember[0]",
+          "gate": { "op": "eq", "field": "representative.licensing_body", "value": "cicc" },
+          "words": "the representative is, or will be, compensated and is a member in good standing of the College of Immigration and Citizenship Consultants (CICC)",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (ii): \"(ii) is, or will be, COMPENSATED and is a member in good standing of the College of Immigration and Citizenship Consultants (CICC)\" then \"Membership ID number\"; the form's own script on that tick: \"ICCRCMember.access = \\\"open\\\"; province.rawValue = null; … membership.rawValue = null; … quebecLaw.rawValue = null\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].membership[0]",
+          "gate": { "op": "eq", "field": "representative.licensing_body", "value": "law_society" },
+          "words": "the representative is, or will be, compensated and is a member in good standing of a Canadian provincial or territorial law society",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (ii): \"a Canadian provincial or territorial law society\" then \"Which province or territory?\" and \"Membership ID number\"; the form's own script on that tick: \"ICCRCMember.rawValue = null; … province.access = \\\"open\\\"; membership.access = \\\"open\\\"; quebecLaw.rawValue = null\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]",
+          "gate": { "op": "eq", "field": "representative.licensing_body", "value": "law_society" },
+          "words": "the representative is, or will be, compensated and is a member in good standing of a Canadian provincial or territorial law society",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (ii): \"a Canadian provincial or territorial law society\" then \"Which province or territory?\"; the form's own script clears it on the other two ticks: \"province.rawValue = null; province.access = \\\"protected\\\"\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].quebecLaw[0]",
+          "gate": { "op": "eq", "field": "representative.licensing_body", "value": "chambre_notaires_quebec" },
+          "words": "the representative is, or will be, compensated and is a member in good standing of the Chambre des notaires du Québec",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (ii): \"the Chambre des notaires du Québec\" then \"Membership ID number\"; the form's own script on that tick: \"ICCRCMember.rawValue = null; … province.rawValue = null; … membership.rawValue = null; … quebecLaw.access = \\\"open\\\"\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].compensated[0]",
+          "gate": { "op": "not", "arg": { "op": "exists", "field": "representative.uncompensated_category" } },
+          "words": "the representative is not an uncompensated one (question 6 (i) is not ticked)",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6: \"(i) is UNCOMPENSATED and is a\" … \"OR\" … \"(ii) is, or will be, COMPENSATED\"; the form's own script on a tick in (i): \"questionII.compensated.rawValue = null\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].uncompensated[0]",
+          "gate": { "op": "not", "arg": { "op": "exists", "field": "representative.licensing_body" } },
+          "words": "the representative is not a compensated one (no regulatory body is ticked in question 6 (ii))",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6: \"(i) is UNCOMPENSATED and is a\" … \"OR\" … \"(ii) is, or will be, COMPENSATED and is a member in good standing of\"; the form's own script on a tick in (ii): \"questionI.uncompensated.rawValue = null\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[0]",
+          "gate": { "op": "and", "args": [ { "op": "eq", "field": "representative.uncompensated_category", "value": "licensed_member" }, { "op": "not", "arg": { "op": "exists", "field": "representative.licensing_body" } } ] },
+          "words": "the representative is uncompensated and is a member of the CICC, a Canadian provincial or territorial law society, or the Chambre des notaires du Québec",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (i): \"member of the College of Immigration and Citizenship Consultants (CICC), a Canadian provincial or territorial law society, or the Chambre des notaires du Québec\" then \"Membership ID number\"; the form's own script opens it on that tick only (\"membership.access = \\\"open\\\"\") and clears it on a tick in (ii) (\"questionI.membership.rawValue = null\"). Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].province[0]",
+          "gate": { "op": "and", "args": [ { "op": "eq", "field": "representative.uncompensated_category", "value": "licensed_member" }, { "op": "not", "arg": { "op": "exists", "field": "representative.licensing_body" } } ] },
+          "words": "the representative is uncompensated and is a member of the CICC, a Canadian provincial or territorial law society, or the Chambre des notaires du Québec",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (i): the licensed member's line, then \"Which province or territory?\"; the form's own script opens it on that tick only (\"province.access = \\\"open\\\"\") and clears it on a tick in (ii) (\"questionI.province.rawValue = null\"). Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].otherRep[0]",
+          "gate": { "op": "and", "args": [ { "op": "eq", "field": "representative.uncompensated_category", "value": "other" }, { "op": "not", "arg": { "op": "exists", "field": "representative.licensing_body" } } ] },
+          "words": "the representative is uncompensated and is \"other (please specify)\"",
+          "cite": "IMM 5476 (11-2021) p. 1, question 6 (i): \"other (please specify)\"; the form's own script opens it on that tick only (\"otherRep.access = \\\"open\\\"\") and clears it on a tick in (ii) (\"questionI.otherRep.rawValue = null\"). Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question7[0].lawyer[0]",
+          "gate": { "op": "eq", "field": "representative.licensing_body", "value": "law_society" },
+          "words": "the representative is a student-at-law (a member of a Canadian provincial or territorial law society)",
+          "cite": "IMM 5476 (11-2021) p. 1, question 7: \"If student-at-law, write the name of the supervising lawyer\"; a student-at-law is ticked under \"a Canadian provincial or territorial law society\" in question 6 (the form names no other body for one). Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question7[0].membershipID[0]",
+          "gate": { "op": "eq", "field": "representative.licensing_body", "value": "law_society" },
+          "words": "the representative is a student-at-law (a member of a Canadian provincial or territorial law society)",
+          "cite": "IMM 5476 (11-2021) p. 1, question 7: \"If student-at-law, write the name of the supervising lawyer\" then \"Supervising lawyer membership ID\". Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxCountryCode[0]",
+          "gate": { "op": "exists", "field": "person.fax_number" },
+          "words": "the representative's office has a fax number",
+          "cite": "IMM 5476 (11-2021) p. 1, question 7 \"Your representative's contact information\": \"Fax number\" then \"Country Code\" and \"Area Code and Telephone number\"; the form marks no box of question 7 as required and its own scripts never ask for a fax. Read 7 Nov 2026."
+        },
+        {
+          "box": "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]",
+          "gate": { "op": "exists", "field": "person.fax_number" },
+          "words": "the representative's office has a fax number",
+          "cite": "IMM 5476 (11-2021) p. 1, question 7 \"Your representative's contact information\": \"Fax number\" then \"Area Code and Telephone number\". Read 7 Nov 2026."
+        }
+      ]
+    },
+    {
+      "form": "IMM 5475",
+      "edition": "IMM 5475 (05-2021)",
+      "file": "official-sources/ircc/forms/imm5475e.pdf (the edition the configured checkpoint's library reads) and its canada.ca page official-sources/ircc/web-pages/page-imm5475.html (downloaded 2026-10-19)",
+      "byHand": [
+        {
+          "under": "IMM_5475[0].Page1[0].Five[0].",
+          "words": "the designated individual is someone who will not act as your representative, so the case holds no such person: the applicant writes their name and contact details in parts 5 and 6 by hand",
+          "cite": "canada.ca \"Authority to Release Personal Information to a Designated Individual (IMM 5475)\" (page-imm5475.html, downloaded 2026-10-19): \"Use this form if you want to allow us to give your personal information, such as the status of your application, to someone who will not act as your representative.\" The form itself, p. 1: \"However, they will not be a representative who can conduct business with CIC and CBSA on your behalf. If you wish to be represented, you must complete and submit form Use of a Representative (IMM 5476).\" Read 7 Nov 2026."
+        }
+      ]
+    }
+  ]
+}
