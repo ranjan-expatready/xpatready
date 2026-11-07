@@ -84,6 +84,7 @@ await main("C6.6", "Declared answers fill the forms at once, marked by who gave 
       await p.getByRole("tab", { name: /^Sample Client A/ }).click(); await w.settle(p, "the principal's tab");
       const principal = await w.text(p);
       ok(`C6.6-16 pass (QA-301) ${width} px: the principal's own answer reads "Declared", and no answer reads "Counts as confirmed"`, /\bDeclared\b/.test(principal) && !/Counts as confirmed/.test(`${principal}\n${spouse}`));
+      ok(`C6.6-16b pass (QA-301) ${width} px: each part's header counts what is still to confirm, never declared answers as "confirmed"`, /\d+ answered · \d+ to confirm/.test(principal) && !/\d+ answered · \d+ confirmed/.test(`${principal}\n${spouse}`));
       ok(`C6.6-17 ${width} px: no sideways scroll on the Agent view`, !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
       await p.context().close();
     }

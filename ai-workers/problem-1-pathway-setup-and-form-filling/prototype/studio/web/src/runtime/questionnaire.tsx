@@ -532,7 +532,9 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
         {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
-      {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
+      {/* B150 (P-411): who gave this part's answers, each kind once (the principal's for an adult, staff's), so a mixed part still says it. */}
+      {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted" data-answer-words>{confirmWords[0]}.</p>
+        : confirmWords.length > 1 ? <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-text-muted" data-answer-words>{confirmWords.map((w) => <li key={w}>{w}.</li>)}</ul> : null}
 
       <form className="mt-4 space-y-5" onSubmit={(e) => { e.preventDefault(); void saveAndContinue(); }} noValidate>
         {single.map((q) => field(q))}
@@ -750,7 +752,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <h2 id={`h-${s.subjectId}-${s.section}`} className="text-base font-semibold">{s.title}</h2>
         <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>
         <span className="flex flex-wrap gap-1.5">
-          <Pill title="Answers given, and how many of them the officer has confirmed">{s.answered} answered · {s.confirmed} confirmed</Pill>
+          {/* QA-301 (B150): a declared answer is never counted as "confirmed"; the pill says what is still on the Confirm list. */}
+          <Pill title="Answers given (each fills the forms at once), and how many still wait for the officer's Confirm section">{s.answered} answered · {s.answered - s.confirmed} to confirm</Pill>
           {s.missing.length ? <Pill tone="warn" title={`Required and not answered: ${s.missing.join("; ")}`}>{s.missing.length} missing</Pill> : null}
           {s.invalid ? <Pill tone="danger" title="Answers that do not pass their checks">{s.invalid} to fix</Pill> : null}
           {checks.length ? <Pill tone="warn" title={checks.map((c) => c.message).join(" ")}>{checks.length} to check</Pill> : null}
