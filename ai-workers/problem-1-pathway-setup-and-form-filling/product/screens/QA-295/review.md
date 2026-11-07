@@ -97,3 +97,58 @@ PASS: no new errors (api 15 known, web 0).
 
 ## Verdict
 **Request changes:** M1 (the same "Representative · Self-reviewed" record on path B, where the review warning is passed, and when no officer was on the team at the review time). m1 and m2 can go with it or to a follow-up row as the tech lead decides; the nits are optional.
+
+---
+
+# Round 2
+
+* **Commit reviewed:** `536cbecbc` (`origin/claude/b126-qa295-prepared-by`; the worktree is at that head). Diff since round 1: `git diff 09cbd4250 536cbecbc -- '*.ts' '*.tsx'`.
+* **Ran:**
+  * pure check `tests/check_qa295_recorded_people.ts`: 10/10 PASS;
+  * `node product/tools/typecheck.mjs`: PASS, no new type errors (api 15 known, web 0).
+  * No isolated copy started.
+
+## Round 1 findings
+* **M1: resolved.**
+  * `api/src/submission.ts:114` reads `view.readiness[].reviewed` per filing. That is the review that readiness counts: by the representative of record, for today's facts (`api/src/readiness-inputs.ts:98-99`, `:103`).
+  * With no counting review, `engine/runtime/submission-record.ts` (`recordedPeople`) gives `reviewedBy: null`, never the representative who did not review.
+  * The preparer falls back in this order:
+    1. an officer active at the review time;
+    2. an officer active now;
+    3. the officer who left last;
+    4. the person recording, only when the case never had an officer.
+  * My round 1 probe paths now give: no review → officer, no reviewer; the only officer left before the review → that officer; an officer assigned after the review → that officer. None of them is Self-reviewed any more.
+* **m1: resolved.** A stale review is never counted by readiness, so it cannot be named.
+* **m2: resolved.** The stand-in is now written in the doc comment.
+* **m3: resolved.** The pure check covers no review, the officer gone, the officer assigned after the review, and no officer ever.
+* **n1, n2: resolved.** The review now comes from readiness, so the tie order no longer matters. The steps are renumbered C8.2-15/-16/-17.
+
+## The points asked
+1. **Is `view.readiness` the shape used, and is it read for every filing in the group? Yes.**
+   * `ReadinessView` is `{ filing; …; reviewed: { by; kind; licence_number; at } | null }` (`api/src/readiness-inputs.ts:43-47`).
+   * The cast at `api/src/submission.ts:114` reads only `filing` and `reviewed.{by, kind, at}`, which match.
+   * The view computes readiness for every filing of the case (`api/src/case-prepare.ts:366`, `filings: filings.map((f) => f.id)`).
+   * Every filing of the group is Ready to file before the transaction (`submission.ts:103-104`) and is in `view.filings`. So every `l.filing` has its entry.
+2. **Do the "Not reviewed" words fit? Yes.**
+   * The contract already allows `reviewed_by: … | null` (`contracts/submission-record.ts:47`).
+   * The record view gives `null` when `reviewedBy` is empty (`api/src/submission-record.ts:61`).
+   * The words "Not reviewed (the review was passed with a reason)" (`web/src/runtime/submission.tsx:116`) are true for every null row. A filing is Ready to file with no counting review only when the `representative_review` warning ("The representative's review", `engine/runtime/readiness.ts:222`) was passed with a reason. That also covers older rows stored with no representative of record.
+3. **Does anything else read a null reviewer as "no representative"? No.**
+   * "no representative of record" no longer appears anywhere in `prototype/studio` (searched web, api, tests, acceptance).
+   * `tests/check_c82_record_api.ts:93-96` and `tests/check_c82_record_browser.ts:107` reach Ready to file through the representative's real review (`fixtureReady` → `readyToFile(caseId, rep)`), so they still get `officer|rep`.
+   * qa's `tests/qa/check_qa295_prepared_by.ts` asserts the reviewed path only (`:15-27`).
+4. **Do the tests assert what they say? Yes.**
+   * C8.2-16 (`acceptance/C8.2.test.ts:68-72`) calls `readyToFile(c3.id, null)`: the review call has no user, so it is refused. The officer then passes every warning, `representative_review` included (`acceptance/lib/m3.ts:384-386`).
+   * It asserts `officer|-|rep`. At `09cbd4250` this gives `rep|rep|rep`, and on main the same, so it fails there for the right reason.
+   * C8.2-17 (`:73-75`) asserts the view's `reviewed_by === null` and the officer as preparer.
+   * The pure cases' labels match their assertions.
+
+## New findings
+* **Blocker / Major:** none.
+* **Minor:** none.
+* **Nit r2-n1.** No check reads the new screen words: no test reads `data-prepared-reviewed` (searched tests, acceptance). A one-line browser assertion in `tests/check_c82_record_browser.ts` would pin them.
+* **Nit r2-n2.** The review is read from the view, before the transaction (`submission.ts:114`), not under the lock. A representative change in the window between the two would leave a review that no longer counts. That window is the same one the existing "still Ready to file" guard has (status is taken back only by a view read, `api/src/case-prepare.ts:381-383`). It is older than this change and acceptable.
+* **Nit r2-n3.** Wording. "the review warning was passed with a reason" would be a little more exact than "the review was passed". The current words do match the app's warning name ("The representative's review"), so this is optional.
+
+## Verdict (round 2)
+**Approve.**
