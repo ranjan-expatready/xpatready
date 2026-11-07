@@ -130,3 +130,42 @@ A reviewer that did not build or review this item before. Scope: `git diff f583c
 Score: task 1 · next step 1 · plain words ½ (f5; the refused box says "Nothing was changed" twice) · feedback 1 · correct data 1 · recovery 1 · accessibility and sizes ½ (200 % zoom and the J3 refusal state not axe-scanned this round) · speed 1 (readiness 315 ms) · visual 1 · trust 1 (Demo release pill) → **9/10, pass**. D1-D20 stay as in round 2. D5 Stability holds at 4: the review race is closed. Not checked: a real screen reader, an intended user's walk (D17/D20), and the full CI suite.
 
 **Verdict: Approve** on `468ea98e57472d5fe7b9d4751996a9b01ed4bcc8`: no open Blocker or Major. Minors f1-f5 can follow, or the tech lead can accept them.
+
+## Merge and pack-fix review (133f3251d)
+A fresh, narrow review of what changed since `0c56c6f6a`, the approved code; that commit only added review files on top of `468ea98e5`. Two changes: the merge of origin/main (`053de235b`) and the pack fix (`133f3251d`). **Exact head: `133f3251da79c688c5cd72e1fa1716bb89a0e75d`.** Copy `rev3_c95` on :4443 only, started and stopped in one command (trap), never :4400. AI off, US$0.
+
+**1. Merge `053de235b`: clean**
+* **The conflict (`engine/runtime/readiness.ts:171-176`):** main's B149 words and comment are kept for the never-reviewed case. B145's moved-case branch (`x.reviewWithdrawn && before`) still comes first, and B145's `release_update` warn line follows. `git diff 0c56c6f6a 053de235b -- '*readiness.ts'` shows only B149's line, its comment and B149's two test lines (`check_c76_readiness.ts:118-121`). No B145 test expects the old "Nothing reaches IRCC unreviewed".
+* **Auto-merged files:** nine files were changed on both sides: case-prepare, fill-case, readiness-inputs, api `runtime.ts`, `contracts/runtime.ts`, `readiness.ts`, `schema.prisma`, `web/src/runtime/forms.tsx` and `questionnaire.tsx`. For each, I compared the sorted changed lines of B145's side (merge-base → `0c56c6f6a`) with the merge against main (`093c073b0` → `053de235b`), and the same for main's side. They are identical on both sides for all nine, so nothing was dropped or doubled.
+* **B145-only files:** these did not change at all from `0c56c6f6a` to HEAD: release-update (api, engine, web), release-context, where-used, form-library, `check_c95_release_update.ts`, `sample-release.ts` and both C9.5 migrations.
+* **Migrations:** main adds `20261105100000_c316_field_scope` (two enum values) and `20261107170000_b149_fee_receipt_file` (one new table). Neither mentions `pack_work_pin` or `readiness_pass`. Both sort before B145's `20261107180000_c95_pin_revisions` and `20261107220000_c95_pin_guards`, so the order holds.
+  * `c95_pin_guards` rewrites `readiness_pass_known_code_check`, and no main migration touched that check since `c76_readiness`.
+  * The engine's one code missing from the list is `barcode_not_validated`. It is a block, not a passable warning (`readiness.ts:35-39`), and it predates B145. The list is complete.
+
+**2. Pack fix `133f3251d` (`acceptance/C9.5.test.ts:134-161`, `:191`, `:225-228`): correct**
+* **The reasoning holds on the merged code.** My probe after the run: none of the four Visitor visa release snapshots contains the text `"organisation.name"`, and the workspace has 0 `client_canonical_answer` rows for it. The old regex `/organi[sz]ation/` passed 48/48 at `468ea98e5`, so the field was there before the merge.
+  * The data files that mention it are the same set at the merge-base and at main, so the cause is code.
+  * The cause fits B107 steps 2-3: `21d304ef3` proposes gates (045) before sections are drafted, and `5e5cdd86b` makes IMM 5476 question 7 come from the firm record and asks nothing for a gated-off box (`engine/runtime/case.ts`).
+  * It also fits C3.16 and QA-152: the firm name is the representative's and is never asked of an applicant.
+  * A field enters the snapshot only when something uses it (`engine/snapshot.ts:198-210`). I did not trace it to one line.
+* **The assertion is stronger than before.** C9.5-11 still requires all of: 409, `type_mismatch`, a person's `"<label>'s answer"`, and pins unchanged. The loose `/organi[sz]ation/i` is now an exact quoted match on the field's label from the release snapshot.
+  * The engine words use the target snapshot's `meaning || id` (`engine/runtime/release-update.ts:64`), and the Sample PATCH changes only `valueType`, so the two labels agree.
+  * People are named first (`api/src/release-update.ts:128-130`), so the first refusal is the picked person field.
+  * Run: `"Partner (Sample)'s answer to "Alternate telephone number including country code"…"`.
+* **Picking cannot silently pick nothing.** With no candidate, `typeField` stays `""` and the setup step FAILs. That cascades: the Sample release's PATCH on `""` fails, and -11 cannot match a person's answer. If a person's PUT fails on the last candidate, `typeSet` holds a status of 300 or more and the step FAILs. No path skips.
+* **Candidates are read from release 2 at run time (P-319).** The pick reads release 2's agent questionnaire: visible, ungrouped `person.*` text questions asked of Client A and the spouse, unanswered for both. The young child must not be asked, or must have no answer. The answers are set after stage 1's assertions and before stage 2's work and reviews, so no earlier step sees them.
+* **The follow-on step is consistent.** The fix-up reuses `putPerson` with `2015-01-01` (fits both text and date), with `expectedId` read fresh. -11b (the application's answer) then the child's re-review run before the move to revision 3: `fixed [200,200]`, move 200.
+
+**Runs on HEAD (merged code)**
+* Pack `C9.5.test.ts 4443 xr_studio_rev3_c95` on a fresh copy: **49/49, exit 0**, one run. The 49th step is the new setup step. Picked `person.alternate_telephone_number`, `typeSet [200,200]`.
+* `check_c95_release_update.ts` **34/34**; `check_c76_readiness.ts` **77/77**.
+* The copy stopped, and no copy was left running.
+
+**Findings**
+* Blockers: none. Majors: none.
+* **n1 (Minor, Should):** when a candidate is answered for Client A but the spouse's PUT fails, the loop moves on and leaves Client A's Sample answer on a field that is not type-changed (`C9.5.test.ts:157-159`). This has no effect on -11, but it is extra state. This run picked the first candidate.
+* **n2 (Minor, Should):** the commit title says "none for the young child". The filter also accepts a field asked of the child but unanswered (`:155`), which the comment states correctly.
+
+**Journey (reviewer role):** not walked again this round. No B145 screen or route file changed since `0c56c6f6a`. Main's B149 words change only the never-reviewed readiness line. Per the caller's scope, no other file was written. The score stays **9/10, pass**, from the walk on `468ea98e5`, and D1-D20 are unchanged. Not checked: browser walks on the merged build, and the full CI suite.
+
+**Verdict: Approve** on `133f3251da79c688c5cd72e1fa1716bb89a0e75d`: no open Blocker or Major. Minors n1-n2 and the earlier f1-f5 can follow.
