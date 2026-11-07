@@ -33,7 +33,7 @@ async function asPaper(caseId: string, subject: string, form: string | undefined
   if (!form || channel !== "ONLINE") return;
   const q = (await prepare(caseId, actor)).p, it = itemsOf(q, subject, form)[0];
   const r = await call("PATCH", `/runtime/items/${it?.id}/channel`, { channel: "PAPER", reason: "Cannot apply online: accommodation (Sample)", version: q?.version }, actor);
-  console.log(`NOTE  ${form} is Online on the release: switched to Paper for this person with an accommodation reason (founder Q3; ${r.status})`);
+  console.log(`NOTE  ${form} is Online on the release: ${r.status === 200 ? "switched to Paper for this person with an accommodation reason (founder Q3)" : "the switch to Paper was refused"} (${r.status})`);
 }
 
 await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", async () => {
@@ -42,13 +42,14 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   const officer = f.officer ?? "user-O";
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [officer] });
   const P = c.subjects["Sample Client A"];
-  const L = await linesOf(c.id, "Sample Client A"), BC = L.barcode?.form, HS = L.handSigned, FAM = L.family, BCC = L.barcode?.channel === "ONLINE" ? "PAPER" : L.barcode?.channel;
+  const L = await linesOf(c.id, "Sample Client A"), BC = L.barcode?.form, HS = L.handSigned, FAM = L.family;
   await asPaper(c.id, P, BC, L.barcode?.channel, officer);
   let p = (await prepare(c.id, officer)).p;
+  const BCC = BC ? itemsOf(p, P, BC)[0]?.channel : undefined; // the item's channel after the switch (review m2)
   const fid = filingOf(p, P)?.id;
   let rd = readinessOf(p, fid);
   ok("C7.6-1 pass: readiness is per filing with blocks and warnings, each saying who owes it and what it unblocks; no percentage", !!rd && Array.isArray(rd.blocks) && Array.isArray(rd.warns) && rd.blocks.every((b) => !!b.words) && !/%/.test(JSON.stringify(rd)), rd);
-  ok(`C7.6-2 fail (P-238): with facts unanswered, ${BC} has a CRITICAL \"missing facts\" warning (never a block)`, rd?.ready === false && critical(rd?.warns).includes("missing_facts") && !codes(rd?.blocks).includes("missing_facts"), { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
+  ok(`C7.6-2 fail (P-238): with facts unanswered, ${BC} has a CRITICAL \"missing facts\" warning (never a block)`, !!BC && rd?.ready === false && critical(rd?.warns).includes("missing_facts") && !codes(rd?.blocks).includes("missing_facts"), { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
   let r = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
   ok("C7.6-3 fail: \"Ready to file\" is refused by the server (409) and lists the blocks", r.status === 409 && Array.isArray(r.body?.blocks) && r.body.blocks.length > 0, r.status);
 
@@ -133,5 +134,5 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   for (const w of [...new Set(codes(srd?.warns))]) passedAll && (await call("POST", `/runtime/filings/${sf}/warnings/${w}/pass`, { reason: "Client confirms the answers by phone today (Sample)" }, f.soloRep ?? ""));
   srd = readinessOf((await prepare(solo.id, f.soloRep ?? "")).p, sf);
   r = await call("POST", `/runtime/filings/${sf}/ready`, {}, f.soloRep ?? "");
-  ok(`C7.6-22 fail (P-315): missing facts passed as a CRITICAL warning with a reason, Ready to file is still refused by ${SL.barcode?.form}'s missing Validate alone (409)`, passedAll && !srd?.warns.length && (srd?.passed ?? []).some((x) => x.code === "missing_facts") && r.status === 409 && codes(r.body?.blocks).join() === "barcode_not_validated" && !codes(r.body?.warns).length, { status: r.status, blocks: codes(r.body?.blocks), warns: codes(r.body?.warns) });
+  ok(`C7.6-22 fail (P-315): missing facts passed as a CRITICAL warning with a reason, Ready to file is still refused by ${SL.barcode?.form}'s missing Validate alone (409)`, !!SL.barcode?.form && passedAll && !srd?.warns.length && (srd?.passed ?? []).some((x) => x.code === "missing_facts") && r.status === 409 && codes(r.body?.blocks).join() === "barcode_not_validated" && !codes(r.body?.warns).length, { status: r.status, blocks: codes(r.body?.blocks), warns: codes(r.body?.warns) });
 });
