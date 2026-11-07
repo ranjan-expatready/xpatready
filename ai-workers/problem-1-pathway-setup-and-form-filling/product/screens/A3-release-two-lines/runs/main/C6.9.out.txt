@@ -1,0 +1,20 @@
+C6.9 — Staff eligibility page (Visitor visa gates, stand-in SI-1)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.9-1 fail: a client cannot run or read an assessment (403); the client never sees a verdict
+PASS  C6.9-2 pass: a run returns AG-03's shape: pack id and version (our release pin), rules as at, disclaimer, who and when, source stand-in — {"id":"b5dab005-a225-4f55-ac80-fad71547c794","caseId":"da9251fd-a527-490b-a10b-797c83b20c22","releaseId":"aac8f7ba-4f9b-478c-8dc6-68d1aa65af91","packId":"b58c8da3-c1b3-43fe-a877-2592a33d7372","packVersion":2,"rulesAsOfByProgram":{"vv.single":"2026-11-07"},"dis
+PASS  C6.9-3 pass: with passport and convictions unanswered: Possibly eligible, needs those facts (missing inputs named) — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"POSSIBLY_ELIGIBLE","failedGates":[],"missingInputs":["person.passport_number","person.passport_expiry_date","person.criminal_history"],"reviewGates":[],"score":null,"maxScore":null,"passMark":n
+PASS  C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads — [{"key":"vv.travel_document","label":"Passport number and expiry date answered (Sample)","state":"not_answered","facts":["person.passport_number","person.passport_expiry_date"],"values":{"person.passport_number":null,"person.passport_expiry_date":null},"missin
+PASS  C6.9-5 pass: the officer's judgement items (money for the stay, good health, ties, leaving at the end) are listed, never gates (FQ-5) — ["Has enough money for the stay","Is in good health","Ties that will take the person back home","Will leave Canada at the end of the visit"]
+PASS  C6.9-6 pass (SI-1 adapter): never below the cut-off, no score, no breakdown, no recommendations
+PASS  C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Possibly eligible, never Not eligible (P-230 (1)) — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"POSSIBLY_ELIGIBLE","failedGates":[],"missingInputs":[],"reviewGates":["vv.no_convictions"],"score":null,"maxScore":null,"passMark":null,"selectionModel":null,"competitivenessBand":null,"gapToPa
+PASS  C6.9-8 pass: every gate met gives Likely eligible — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"LIKELY_ELIGIBLE","failedGates":[],"missingInputs":[],"reviewGates":[],"score":null,"maxScore":null,"passMark":null,"selectionModel":null,"competitivenessBand":null,"gapToPass":null,"breakdown":
+PASS  C6.9-9 pass (AG-3-1): an earlier run is a frozen snapshot; it is unchanged and marked out of date after the facts changed
+PASS  C6.9-10 fail (AG-3-28): running again after a change without a reason is refused (400) — 400
+PASS  C6.9-11 fail: an override without a reason is refused on the field (400) — 400
+PASS  C6.9-12 pass: an override with a reason is kept beside the result (AssessmentOverride), the result itself unchanged
+PASS  C6.9-13 pass: Mark reviewed records reviewer, time and note — {"reviewedBy":"user-O","reviewedAt":"2026-11-07T03:29:21.595Z","reviewNote":"Seen (Sample)","name":"Case officer (Sample)","duty":"Case officer","licence":null,"stamp":"Seen","outOfDate":true}
+PASS  C6.9-14 pass: the page is rules only: no model call in any run
+PASS  C6.9-15 pass: the list says which stand-in fills it (SI-1, a row in STAND-INS.md)
+
+15/15 passed
