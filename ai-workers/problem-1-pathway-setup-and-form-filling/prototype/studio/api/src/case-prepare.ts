@@ -31,6 +31,7 @@ import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { lineCondition, render, type Role } from "../../engine/render.ts";
+import { conditionSubjects } from "../../engine/resolver.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
@@ -64,6 +65,9 @@ type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
 /** C9.2: one changed fact on an out-of-date item, as the screen reads it (Undo: what it restores, the answer seen). */
 type ChangeRow = { subject: string; fact: string; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null; undo: boolean; expected_id: string | null; restores: unknown };
 
+/** C9 (review M1): an item of the view by id, whether it is a form to fill or one not yet known (`waiting`): the item
+ *  routes (channel, PDF copy) act on both. */
+const itemIn = (v: { items: unknown[]; waiting?: unknown[] }, id: string) => [...v.items, ...(v.waiting ?? [])].find((i) => (i as { id: string }).id === id);
 type RenderedForm = { form: string; title?: string; form_kind?: string; person: string; applies: boolean | "cannot_tell" };
 /** An answer in words: Yes or No, or a choice's own label from the release (never its key). */
 const answerWords = (s: Parameters<typeof optionsOf>[0], fact: string, v: unknown) => (v === true ? "Yes" : v === false ? "No" : typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label ?? v : JSON.stringify(v));
@@ -78,7 +82,7 @@ const conditionFacts = (c: unknown, seen: string[] = []): string[] => {
 /** C9 (QA-246): each filer's conditional form that an answer says does not apply, with that answer as its reason. A
  *  line the person never reaches by its minimum age is not listed (it was never one of their forms, answered or not);
  *  the age gates a dependent child only on a "principal, partner and adult children" line (QA-221). */
-function notNeededForms(s: Parameters<typeof lineCondition>[0], people: Parameters<typeof lineCondition>[2], known: Parameters<typeof lineCondition>[1], forms: RenderedForm[], lines: Map<string, FormLine>,
+export function notNeededForms(s: Parameters<typeof lineCondition>[0], people: Parameters<typeof lineCondition>[2], known: Parameters<typeof lineCondition>[1], forms: RenderedForm[], lines: Map<string, FormLine>,
   filers: Set<string>, ages: Map<string, number | null>, caseSubject: string | null, answers: { subjectId: string; field: string; value: unknown; rowKey?: unknown }[], question: (fact: string) => string, label: Map<string, string>) {
   return forms.filter((f) => f.applies === false && filers.has(f.person) && (f.form_kind ?? "data_form") === "data_form").flatMap((f) => {
     const line = lines.get(f.form) as (FormLine & { condition?: { subjectKind?: string } | null; min_age?: number | null; who?: string }) | undefined;
@@ -86,9 +90,13 @@ function notNeededForms(s: Parameters<typeof lineCondition>[0], people: Paramete
     const role = people.find((p) => p.id === f.person)?.role, age = ages.get(f.person) ?? null;
     const gated = !!line.min_age && !(line.who === "principal_partner_adult_children" && role !== "child");
     if (gated && age !== null && age < line.min_age!) return [];
-    if (lineCondition(s, known, people, f.person, line.condition).applies !== false) return [];
-    const said = conditionFacts(line.condition).map((fact) => {
-      const a = answers.find((x) => x.field === fact && !x.rowKey && x.subjectId === f.person) ?? answers.find((x) => x.field === fact && !x.rowKey && x.subjectId === caseSubject);
+    const rule = lineCondition(s, known, people, f.person, line.condition);
+    if (rule.applies !== false) return [];
+    // Review m3: the answer read is the one the condition is decided on (the holder, another person by role, or the
+    // case); with nobody in that role, that is the reason.
+    const on = conditionSubjects(people, f.person, line.condition.subjectKind), deciders = Array.isArray(on) ? on.filter((x) => people.some((p) => p.id === x)) : [];
+    const said = rule.nobody ? [`there is no ${rule.nobody} on this case`] : conditionFacts(line.condition).map((fact) => {
+      const a = deciders.map((d) => answers.find((x) => x.field === fact && !x.rowKey && x.subjectId === d)).find(Boolean) ?? answers.find((x) => x.field === fact && !x.rowKey && x.subjectId === caseSubject);
       return a ? `"${question(fact)}" is answered ${answerWords(s, fact, a.value)}` : `the answer to "${question(fact)}" says it does not apply`;
     });
     return [{ kind: "form" as const, form: f.form, title: f.title ?? null, subject: f.person, person: label.get(f.person) ?? "", state: "not_needed" as const,
@@ -122,7 +130,7 @@ export class CasePrepare {
     // uses the default. One reading of the release's modes for this view and GET …/filings (releaseModes).
     const modes = releaseModes(s.combination.participants ?? []);
     const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label });
-    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], fees: [], readiness: [], stage1: [], version: "0" };
+    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], stage1: [], version: "0" };
 
     // Items the release and the case give each filer (forms by who and minimum age, the checklist's documents, biometrics).
     const { known } = knownOf(s, people, clean, rows, today);
@@ -497,7 +505,7 @@ export class CasePrepare {
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, item!.caseId, "officer");
     if (item!.kind !== "form" || !item!.active) refuse(422, "item", "Only a form on this application has a PDF copy.");
-    const now = (await this.build(actor, c)).items.find((i) => i.id === item!.id) as { channel?: string } | undefined;
+    const now = itemIn(await this.build(actor, c), item!.id) as { channel?: string } | undefined;
     if (now?.channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[(now?.channel ?? "PDF_UPLOAD") as keyof typeof CHANNEL_WORDS]}: its own PDF is what is filed, so there is no separate copy. Make its copy from the form.`);
     const b = (body ?? {}) as { idempotencyKey?: unknown };
     return this.forms.generate(actor, c.id, item!.itemKey, item!.subjectId, typeof b.idempotencyKey === "string" ? { idempotencyKey: b.idempotencyKey } : {});
@@ -568,7 +576,7 @@ export class CasePrepare {
     const ok = channelChange(item!.itemKey, b.channel, b.reason, accepts.get(item!.itemKey), portal);
     if (!ok.ok) refuse(ok.status, ok.field, ok.detail);
     const now = await this.build(actor, c);
-    const before = (now.items.find((i) => i.id === item!.id) as { channel?: keyof typeof CHANNEL_WORDS } | undefined)?.channel ?? "PDF_UPLOAD";
+    const before = (itemIn(now, item!.id) as { channel?: keyof typeof CHANNEL_WORDS } | undefined)?.channel ?? "PDF_UPLOAD";
     const to = (ok as { channel: keyof typeof CHANNEL_WORDS }).channel;
     const result = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
@@ -589,7 +597,7 @@ export class CasePrepare {
       await this.audit.log(c.workspaceId, actor.id, "changed", "item", item!.id, `${actor.name} changed how ${item!.itemKey} is filed for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}: from ${CHANNEL_WORDS[before]} to ${CHANNEL_WORDS[to]}${b.reason ? " (reason given)" : ""}`, { from: before, to, reason_given: !!b.reason });
     }
     const after = result === "same" ? now : await this.build(actor, await this.r.reach(actor, c.id, "officer"));
-    return { item: after.items.find((i) => i.id === item!.id), version: after.version, changed: result === "changed" };
+    return { item: itemIn(after, item!.id), version: after.version, changed: result === "changed" };
   }
 }
 
