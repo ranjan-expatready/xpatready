@@ -11,6 +11,7 @@
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
 // C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
 // ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
+import { unverifiedOf } from "../../engine/runtime/must-verify.ts";
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
@@ -423,7 +424,9 @@ export class CasePrepare {
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
-      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
+      factsOf: (form, subject) => formReadiness(view, form, subject),
+      // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
+      unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? []), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
