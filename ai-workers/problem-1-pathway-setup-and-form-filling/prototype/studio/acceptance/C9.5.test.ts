@@ -131,6 +131,35 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   ok("C9.5-8 pass (BR-6, challenge M5): the representative's review of Client A's filing is withdrawn by the move (the C7.6 line is back, naming the move), with the facts unchanged", !rdP?.reviewed && (rdP?.warns ?? []).some((w) => w.code === "representative_review" && /moved to/i.test(w.words)), rdP?.warns.filter((w) => w.code === "representative_review").map((w) => w.words));
   ok("C9.5-7 pass (part 1): the IMM 5257 copy made on release 1 is never changed by the move (same checksum, still on release 1)", !!vSha && sql(`select sha256 || '|' || config_release_id from form_instance where id='${draft5257}'`) === `${vSha}|${r1}`);
 
+  // A person's answer for C9.5-11, picked by state at run time (P-319): a text question release 2 asks of Client A and the
+  // spouse, unanswered so far, that the young child has no answer to (so the child's filing stays untouched), answered here
+  // with Sample text for both;
+  // the later Sample release makes that field a date.
+  const secs = ((await call("GET", `/runtime/cases/${fam}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []) as { subjectId: string; questions: { fact: string; value_type: string; hidden: boolean; group?: unknown }[] }[];
+  const askedText = (who: { subject_id: string }) => new Set(secs.filter((x) => x.subjectId === who.subject_id).flatMap((x) => x.questions).filter((x) => !x.hidden && !x.group && x.value_type === "text" && x.fact.startsWith("person.")).map((x) => x.fact));
+  const [tP, tS, tC1] = [askedText(P), askedText(S), askedText(C1)];
+  let typeField = "";
+  const typeLabelOf = () => sql(`select f->>'meaning' from config_release r, jsonb_array_elements(r.snapshot->'canonical_fields') f where r.combination_id='${vv}' and r.version=${body.target_version} and f->>'id'='${typeField}'`) || typeField;
+  const putPerson = async (who: { subject_id: string }, value: string) => {
+    const put = (actor: string, extra: Record<string, unknown> = {}) => call("PUT", `/runtime/cases/${fam}/answers/${who.subject_id}/${typeField}`, { value, expectedId: sql(`select id from client_canonical_answer where subject_id='${who.subject_id}' and canonical_field_key='${typeField}' and row_key is null and superseded_by_id is null`) || null, ...extra }, actor);
+    let a = await put(who === P ? CLIENT : OFFICER, who === P ? {} : { onBehalfOf: who.subject_id, reason: "Entered from the person's signed form (Sample)" });
+    if (a.status >= 300) a = await put(OFFICER);
+    return a.status;
+  };
+  // The first such question (by fact, sorted) that takes a plain answer for both people (a question that waits on another
+  // answer refuses one, 422) is the one.
+  let typeSet: number[] = [];
+  const noAnswer = (who: { subject_id: string }, fact: string) => n(`select count(*) from client_canonical_answer where subject_id='${who.subject_id}' and canonical_field_key='${fact}' and superseded_by_id is null`) === 0;
+  // Not asked of the young child, or asked and left unanswered (the pack never answers it for the child): either way the
+  // child's filing holds no answer of that field, so the type change does not touch it.
+  for (const cand of [...tP].filter((x) => tS.has(x) && (!tC1.has(x) || noAnswer(C1, x)) && noAnswer(P, x) && noAnswer(S, x)).sort()) {
+    typeField = cand;
+    typeSet = [await putPerson(P, "SAMPLE TEXT")];
+    if (typeSet[0] < 300) { typeSet.push(await putPerson(S, "SAMPLE TEXT")); if (typeSet[1] < 300) break; }
+  }
+  const typeLabel = typeLabelOf();
+  ok("setup (stage 2): a text question release 2 asks of Client A and the spouse (none answered for the young child) is answered for both with Sample text", !!typeField && typeSet.every((x) => x < 300), { typeField, typeSet });
+
   // ---------------------------------------------------------------- stage 2: work on release 2, then a later Sample release
   const i5476 = itemsOf(p, P.subject_id, "IMM 5476")[0];
   const scanStatus = await signByHand(fam, i5476?.id, "IMM 5476", P.subject_id); // C8.1, on release 2 (signed by hand and scanned)
@@ -159,8 +188,8 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const yReady = await readyToFile(y.id, f.rep);
   const q = await openCase(vv, [{ role: "principal", name: "Sample Client Q", dob: yearsAgo(33) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
   ok("setup (stage 2): a case on release 2 Ready to file (Y) and one never prepared (Q)", yReady.length === 1 && !!q.id, { yReady });
-  const three = await sampleRelease(vv, { map: ["IMM 5476", "IMM 5257 SCH1"], removeLine: "marriage_certificate_copy:couple_once", typeOf: [{ field: "organisation.name", to: "date" }, { field: "case.visit_contact_relationship", to: "date" }] });
-  ok("setup (stage 2): a later Sample release made through the author's routes: IMM 5476's and IMM 5257 SCH1's form fields filled differently, the marriage certificate line removed, the organisation's name now a date", !!three.version, three.steps);
+  const three = await sampleRelease(vv, { map: ["IMM 5476", "IMM 5257 SCH1"], removeLine: "marriage_certificate_copy:couple_once", typeOf: [{ field: typeField, to: "date" }, { field: "case.visit_contact_relationship", to: "date" }] });
+  ok("setup (stage 2): a later Sample release made through the author's routes: IMM 5476's and IMM 5257 SCH1's form fields filled differently, the marriage certificate line removed, the picked person field (and one of the application's) now a date", !!three.version, { typeField, steps: three.steps });
   if (!three.version) return;
 
   // ---------------------------------------------------------------- C9.5-2 (to fill again), -8, -10, -11 on the later release
@@ -193,15 +222,10 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const xr = await move(x.id, { target_version: three.version, from_revision: 1, reason: "Adopting the current release" });
   ok("C9.5-10 fail: a case with a filing recorded as submitted cannot move: 409 naming the person and the release it stays on; nothing changed", xv?.refused?.code === "recorded" && xr.status === 409 && /recorded as submitted/.test(words(xr)) && /Sample Client R/.test(words(xr)) && pins(x.id) === xPins && xPins === 1, words(xr));
   const tm = await move(fam, { target_version: three.version, from_revision: 2, reason: "Adopting the current release" });
-  ok("C9.5-11 fail: an answer that no longer fits its field's type refuses the move (409), naming the answer and the person; nothing changed", tm.status === 409 && tm.body?.code === "type_mismatch" && /organi[sz]ation/i.test(words(tm)) && [P, S].some((w) => words(tm).includes(`${w.label}'s answer`)) && pins(fam) === 2, words(tm));
+  ok("C9.5-11 fail: an answer that no longer fits its field's type refuses the move (409), naming the answer and the person; nothing changed", tm.status === 409 && tm.body?.code === "type_mismatch" && words(tm).includes(`"${typeLabel}"`) && [P, S].some((w) => words(tm).includes(`${w.label}'s answer`)) && pins(fam) === 2, { words: words(tm), typeField, typeLabel });
   // The officer changes the two answers to a value that fits both releases (Sample), then moves.
   const fixed: number[] = [];
-  for (const who of [P, S]) {
-    const put = (actor: string, extra: Record<string, unknown> = {}) => call("PUT", `/runtime/cases/${fam}/answers/${who.subject_id}/organisation.name`, { value: "2015-01-01", expectedId: sql(`select id from client_canonical_answer where subject_id='${who.subject_id}' and canonical_field_key='organisation.name' and row_key is null and superseded_by_id is null`) || null, ...extra }, actor);
-    let a = await put(who === P ? CLIENT : OFFICER, who === P ? {} : { onBehalfOf: who.subject_id, reason: "Entered from the person's signed form (Sample)" });
-    if (a.status >= 300) a = await put(OFFICER);
-    fixed.push(a.status);
-  }
+  for (const who of [P, S]) fixed.push(await putPerson(who, "2015-01-01"));
   // Devin on #1252 (finding 1): a once-per-case answer whose field's type changed, still asked by the new release, also
   // refuses the move, naming it as the application's answer; nothing changed.
   const caseMis = await move(fam, { target_version: three.version, from_revision: 2, reason: "Adopting the current release" });
