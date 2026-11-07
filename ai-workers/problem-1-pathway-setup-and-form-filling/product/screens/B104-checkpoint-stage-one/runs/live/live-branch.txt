@@ -1,0 +1,12 @@
+PASS  B104-L1 pass: the load says Visitor visa's Stage 1 parts were set, refusing none
+PASS  B104-L2 pass: the log is in plain words, no engine keys (review m1)
+PASS  B104-L3 pass: release 1 names who signs IMM 5257 (a parent for a minor), IMM 5707 (the person), IMM 5476 (the person and the representative)
+PASS  B104-L4 fail: the forms the data leaves unset (IMM 5257 SCH1, IMM 5409, IMM 5475, IRM 0002) have no signer in release 1
+PASS  B104-L5 pass: release 1 carries the 2 eligibility gates and the 4 officer's judgement lines, saved by the author
+PASS  B104-L6 pass: Visitor visa files through the APR Portal (the Forms tab's account)
+PASS  B104-L7 fail: no other combination gets eligibility gates from the checkpoint (P-319: only what the data names)
+PASS  B104-L8 pass: a case opened on release 1 is filed through the APR Portal
+PASS  B104-L9 pass: its eligibility check runs (not refused 409 for a release with no rules)
+
+all passed
+exit 0
