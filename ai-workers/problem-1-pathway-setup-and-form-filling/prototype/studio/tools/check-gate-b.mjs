@@ -181,7 +181,7 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
 // Each command case starts from a clean CI environment: the job's own QUEUE, KIND, RANGE, PR_* and GITHUB_* values
 // (a merge-queue batch sets QUEUE=true, a records PR KIND=records) would otherwise change what the gate does (#826).
-const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "" };
+const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "", GITHUB_EVENT_NAME: "", GATE_B_DATA: "six" };
 const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, ...CLEAN, ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13"]);
 const r3a = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13"]), r3b = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192"]);
@@ -206,6 +206,37 @@ r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--titl
 ok("command: off CI, packs need GATE_B_PORT (exit 2, nothing started)", r.status === 2 && /GATE_B_PORT/.test(r.stdout + r.stderr), r.stdout + r.stderr);
 r = run(["--title", "runtime: C11.12"], { GATE_B_SKIP_PACKS: "C11.12-runtime.test.ts" });
 ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the regression set's held packs)", r.code === 0 && /packs: C11\.12\.test\.ts$/m.test(r.out) && /held, not run: C11\.12-runtime\.test\.ts/.test(r.out), r);
+// B131 (founder 7 Nov ~15:20 IST, P-405; re-test 42357755876 on main 9dc77d1ac, data=checkpoint): C3.16 and C11.5 printed
+// "packs: none for the named capabilities" then "Gate B: passed.", and C6.5 "on no demo data (its run uses no server):
+// exit 0", three green jobs that tested nothing on the checkpoint. A capability that ran no test on the data asked for is
+// "NOT TESTED": on a pull request a warning (exit 0, never blocked); in a re-test run (nightly.yml: workflow_dispatch or
+// schedule) exit 3 with "NOT TESTED: …" as the first line. A pack that runs on the asked data is unchanged.
+{ const PR = { GITHUB_EVENT_NAME: "pull_request" }, RETEST = { GITHUB_EVENT_NAME: "workflow_dispatch" }, CP = { GATE_B_DATA: "checkpoint" };
+  const first = (o) => o.out.split("\n")[0];
+  r = run(["--title", "C3.16"], { ...PR, ...CP });
+  ok("B131: no pack on a pull request: exit 0, \"NOT TESTED: C3.16 has no acceptance pack\" and a ::warning:: annotation, never \"Gate B: passed.\" alone", r.code === 0 && /^NOT TESTED: C3\.16 has no acceptance pack$/m.test(r.out) && /^::warning title=Gate B NOT TESTED::C3\.16 has no acceptance pack$/m.test(r.out) && !/^Gate B: passed\.$/m.test(r.out), r);
+  r = run(["--title", "C3.16"], { ...PR, ...CP, GITHUB_EVENT_NAME: "merge_group" });
+  ok("B131: no pack in a merge-queue run: exit 0 with the warning (a merge-queue run is a PR check)", r.code === 0 && /^::warning title=Gate B NOT TESTED::C3\.16/m.test(r.out), r);
+  { const sf = join(T, "summary.md"); writeFileSync(sf, ""); r = run(["--title", "C3.16"], { ...PR, ...CP, GITHUB_STEP_SUMMARY: sf });
+    ok("B131: the NOT TESTED line is in the step summary", /^NOT TESTED: C3\.16 has no acceptance pack$/m.test(readFileSync(sf, "utf8")), readFileSync(sf, "utf8")); }
+  for (const ev of ["workflow_dispatch", "schedule"]) {
+    r = run(["--title", "C3.16"], { ...CP, GITHUB_EVENT_NAME: ev });
+    ok(`B131: no pack in a re-test run (${ev}): exit 3 (not 0, 1 or 2), first line "NOT TESTED: C3.16 has no acceptance pack"`, r.code === 3 && first(r) === "NOT TESTED: C3.16 has no acceptance pack" && !/^Gate B: passed\.$/m.test(r.out), r);
+  }
+  r = run(["--title", "C6.5"], { ...RETEST, ...CP });
+  ok("B131: a no-server pack (C6.5 --engine) in a re-test on the checkpoint: exit 3, \"NOT TESTED on the checkpoint: C6.5 …no demo data…\" first", r.code === 3 && /^NOT TESTED on the checkpoint: C6\.5 C6\.5\.test\.ts runs on no demo data \(its run uses no server\)$/.test(first(r)), r);
+  r = run(["--title", "C7.5"], { ...RETEST, GATE_B_DATA: "six" });
+  ok("B131: a fixture-only pack (C7.5 on the six) in a re-test: exit 3, \"NOT TESTED on the six: C7.5 … fixture only\" first", r.code === 3 && /^NOT TESTED on the six: C7\.5 C7\.5\.test\.ts runs fixture only\b/.test(first(r)), r);
+  r = run(["--title", "C6.5"], { ...PR, ...CP });
+  ok("B131: the same no-server pack on a pull request: exit 0 with the NOT TESTED line and the warning", r.code === 0 && /^NOT TESTED on the checkpoint: C6\.5 /m.test(r.out) && /^::warning title=Gate B NOT TESTED::/m.test(r.out), r);
+  const a = run(["--title", "C6.9"], { ...RETEST, ...CP }), b = run(["--title", "C6.9"], CP);
+  ok("B131: a normal pack on the checkpoint in a re-test is unchanged: exit 0, \"Gate B: passed.\", no NOT TESTED line, the same output as before", a.code === 0 && /^Gate B: passed\.$/m.test(a.out) && !/NOT TESTED|::warning/.test(a.out) && a.out === b.out, [a, b]);
+  r = run(["--title", "C6.9 C3.16"], { ...RETEST, ...CP });
+  ok("B131: one capability tested and one not, in a re-test: exit 3, first line names the untested one", r.code === 3 && first(r) === "NOT TESTED: C3.16 has no acceptance pack" && /packs: C6\.9\.test\.ts$/m.test(r.out), r);
+  r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C3.16, C11.13"], { ...RETEST, ...CP });
+  ok("B131: a refusal still exits 1 when a capability is also NOT TESTED (exits 1 and 2 keep their meaning)", r.code === 1 && /QA-192/.test(r.out) && /^NOT TESTED: C3\.16/m.test(r.out), r);
+  r = run(["--title", "infra: faster suites"], RETEST);
+  ok("B131: naming no capability is still a skip, exit 0, in a re-test run too", r.code === 0 && /names no capability/.test(r.out), r); }
 r = run(["--title", "x", "--bogus"]);
 ok("command: an unknown option exits 2", r.code === 2, r);
 rmSync(T, { recursive: true, force: true });
