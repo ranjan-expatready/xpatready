@@ -27,6 +27,12 @@ const SCANS = () => VAR(WORKSPACE_KEY);
 const short = (id: string) => id.slice(0, 8);
 /** The case's row lock, taken first in every write transaction here (review M2), as case-prepare.ts's writes take it. */
 const lockCase = (q: Db, caseId: string) => q.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+/** B130: the printed copy a step names ("copy" in its body or form), or undefined when it names none (a scripted
+ *  set-up's call keeps today's behaviour; the screen always names it). Anything else named is a copy that is not printed. */
+const namedCopy = (body: unknown): string | undefined => {
+  const v = (body ?? {}) as { copy?: unknown };
+  return v.copy === undefined || v.copy === null || v.copy === "" ? undefined : String(v.copy);
+};
 /** The words of any recorded step (hand-signed and scanned, or signed in pen on Paper, B132). */
 const stepWords = (k: SignStepKey | PenStepKey) => (isSignStep(k) ? SIGN_STEP_WORDS[k] : PEN_STEP_WORDS[k as PenStepKey]);
 
@@ -122,6 +128,9 @@ export class SignSteps {
       if (barcode && copy!.id !== validated?.copy) fail(`Print the validated copy of ${item.itemKey}: the copy read back after Validate in Adobe, which holds its barcode page, not another copy. Nothing was recorded.`, HttpStatus.CONFLICT);
       copyId = copy!.id;
     }
+    // B130 (B3 challenge m5): a step after Printed may name the printed copy it signs; when it does, it must be the copy
+    // printed now (checked again under the case lock in save), so a page read before a new print never signs the new one.
+    const signs = key === "print" ? undefined : namedCopy(body);
     if (restart) {
       await this.db.$transaction(async (tx) => {
         await lockCase(tx as unknown as Db, c.id); // review M2: the case row first, as case-prepare.ts's writes take it
@@ -129,7 +138,7 @@ export class SignSteps {
         await this.save(c, item, key, actor, copyId, tx as unknown as Db);
       });
       await this.audit.log(c.workspaceId, actor.id, "signed", "sign step", item.id, `${actor.name} printed a new copy of ${item.itemKey} on case ${short(c.id)}: the signed one was out of date, so its signing starts again (the earlier signed scan is kept)`);
-    } else await this.save(c, item, key, actor, copyId);
+    } else await this.save(c, item, key, actor, copyId, undefined, signs);
     return this.read(actor, itemId);
   }
 
@@ -144,12 +153,16 @@ export class SignSteps {
     return [...changedFacts(stored.facts ?? [], cov?.facts ?? []), ...changedGroups(stored.groups, groupFacts(view, item.itemKey, item.subjectId))];
   }
 
-  private async save(c: { id: string; workspaceId: string }, item: { id: string; itemKey: string; filingId: string }, key: SignStepKey | PenStepKey, actor: Actor, copyId: string | null = null, tx?: Db) {
+  private async save(c: { id: string; workspaceId: string }, item: { id: string; itemKey: string; filingId: string }, key: SignStepKey | PenStepKey, actor: Actor, copyId: string | null = null, tx?: Db, signs?: string) {
     // B129 review Minor: the read-only lock is checked again under the case's row lock, as case-prepare.ts's writes do, so
     // a step never lands just after the submission is recorded.
     const write = async (q: Db) => {
       await lockCase(q, c.id);
       await refuseIfRecorded(q, [item.filingId], `the signing of ${item.itemKey}`);
+      if (signs !== undefined) {
+        const now = await q.signStep.findFirst({ where: { itemId: item.id, key: "print", supersededAt: null }, select: { copyId: true } });
+        if (now?.copyId !== signs) fail(`${stepWords(key)} names a printed copy of ${item.itemKey} that is not the one printed now: it was printed again since this page was read. Read the item again and sign the copy printed now. Nothing was recorded.`, HttpStatus.CONFLICT);
+      }
       try { await q.signStep.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, key, copyId, doneBy: actor.id } }); }
       catch (e) { if ((e as { code?: string }).code === "P2002") fail(`${stepWords(key)} was just done for ${item.itemKey} by someone else: read the item again.`, HttpStatus.CONFLICT); throw e; }
     };
@@ -160,7 +173,7 @@ export class SignSteps {
 
   /** POST /runtime/items/:id/signed-scan: the signed scan (one PDF, JPEG or PNG, judged by its bytes), stored with its
    *  checksum, never changed in place; it marks "Signed scan received". */
-  async scan(actor: Actor, itemId: string, files: Upload[] | undefined) {
+  async scan(actor: Actor, itemId: string, files: Upload[] | undefined, body?: unknown) {
     const { c, item, handScanned } = await this.item(actor, itemId);
     await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`); // B129: before the file is stored
     if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it takes no signed scan. Nothing was stored.`, HttpStatus.CONFLICT);
@@ -181,7 +194,7 @@ export class SignSteps {
       await this.db.$transaction(async (tx) => {
         await lockCase(tx as unknown as Db, c.id); // review M2: before the insert (whose share lock on the case row deadlocked a second upload)
         await tx.signedScan.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, fileName: cleanName(utf8Name(f[0].originalname)), mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id } });
-        await this.save(c, item, "scan_received", actor, null, tx as unknown as Db);
+        await this.save(c, item, "scan_received", actor, null, tx as unknown as Db, namedCopy(body)); // B130: the printed copy it scans
       });
     } catch (e) { rmSync(abs, { force: true }); throw e; } // a refused upload leaves no file behind
     await this.audit.log(c.workspaceId, actor.id, "uploaded", "signed scan", id, `${actor.name} uploaded the signed scan of ${item.itemKey} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
@@ -197,5 +210,5 @@ export class SignStepsController {
   @Post("items/:id/sign-steps/:key") @HttpCode(200) step(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") key: string, @Body() b: unknown) { return this.s.step(actorOf(a), id, key, b); }
   // One byte over 20 MB so a file of exactly 20 MB is taken (as C6.4); the route's own check refuses more.
   @Post("items/:id/signed-scan") @UseGuards(CaseActorGuard) @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_DOCUMENT_BYTES + 1, files: 1 } }))
-  scan(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.s.scan(actorOf(a), id, files); }
+  scan(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[], @Body() b: unknown) { return this.s.scan(actorOf(a), id, files, b); }
 }

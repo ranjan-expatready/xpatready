@@ -120,6 +120,8 @@ ok("C8.1 BR-4 (review m5): Printed is offered with a warning exactly when the fo
 ok("keyboard: after Printed the focus is on the next step's button (Signed by hand)", await p.evaluate(() => document.activeElement?.getAttribute("data-step-action")) === "signed");
 await state("printed");
 
+// B130: a second tab, opened now (it holds the first printed copy), presses Signed by hand after this tab printed again.
+const pOld = await ctx.newPage(); watch(pOld); await open(pOld);
 // Challenge M1 (C9.2): a fact IMM 5476 reads changes after Printed: the printed copy is out of date, so Signed by hand
 // is not offered; a new copy is generated and printed; the server starts the signing again (earlier steps superseded).
 type Q = { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; fills: { form: string }[] };
@@ -144,6 +146,10 @@ await press(block().locator("[data-sign-again]").getByRole("button", { name: /^P
 await block().locator('[data-step-action="signed"]').waitFor({ timeout: 15_000 }).catch(() => null);
 ok("C8.1 BR-8 / challenge M1 pass: the new copy is printed: the server starts the signing again (the earlier Printed superseded) and Signed by hand is the next step",
   copy2 !== copyId && steps().join() === `print|${copy2}` && Number(sql(`select count(*) from sign_step where item_id = '${it?.id}' and superseded_at is not null`) ?? 0) >= 1 && (await block().locator("[data-sign-again]").count()) === 0, { steps: steps(), copy2, copyId });
+await press(blockOn(pOld).locator('[data-step-action="signed"]'), pOld);
+const oldTab = (await blockOn(pOld).locator("[data-sign-refusal]").innerText().catch(() => "")).trim();
+ok("B130 fail (two tabs): a tab read before the new print presses Signed by hand: refused in words, nothing recorded (the new print stays the only step)", /Not recorded/.test(oldTab) && /out of date|not the one printed now/.test(oldTab) && steps().join() === `print|${copy2}`, { oldTab, steps: steps() });
+await pOld.close();
 
 // A second tab, opened before the step: it still offers "Signed by hand" after the first tab recorded it.
 const p2 = await ctx.newPage(); watch(p2); await open(p2);

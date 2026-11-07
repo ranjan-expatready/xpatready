@@ -124,6 +124,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
     try {
       if (await printedCopyStale()) return;
       const fd = new FormData(); fd.append("file", f, f.name);
+      if (done.print?.copy) fd.append("copy", done.print.copy); // B130: the printed copy this scan is of
       await api(`/runtime/items/${item.id}/signed-scan`, { method: "POST", body: fd });
       toast.push({ tone: "ok", text: `${form}: signed scan received` }); await after();
     } catch (e) {
@@ -163,7 +164,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
 
   function action(key: SignStepKey) {
     if (key === "print") return <div className="space-y-1">{current ? <p className="text-[13px] text-text-muted">Download the copy above, print it, then record it here.</p> : null}{printAction("Printed: the copy of")}</div>;
-    if (key === "signed") return <Button size="sm" busy={busy} onClick={() => void run("signed", {}, `${form}: Signed by hand`)} data-step-action="signed">Signed by hand</Button>;
+    if (key === "signed") return <Button size="sm" busy={busy} onClick={() => void run("signed", { copy: done.print?.copy ?? undefined }, `${form}: Signed by hand`)} data-step-action="signed">Signed by hand</Button>;
     if (key === "scan_received") return (
       <div className="space-y-1">
         <input ref={file} type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" className="sr-only" tabIndex={-1} aria-hidden aria-label={`Signed scan of ${form}`} data-scan-input
@@ -174,7 +175,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
       </div>
     );
     // BR-7: "Uploaded to IRCC" only once the filing is Ready to file (the server reads it again and refuses otherwise).
-    return ready ? <Button size="sm" busy={busy} onClick={() => void run("uploaded_to_ircc", {}, `${form}: Uploaded to IRCC`)} data-step-action="uploaded_to_ircc">Uploaded to IRCC</Button>
+    return ready ? <Button size="sm" busy={busy} onClick={() => void run("uploaded_to_ircc", { copy: done.print?.copy ?? undefined }, `${form}: Uploaded to IRCC`)} data-step-action="uploaded_to_ircc">Uploaded to IRCC</Button>
       : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {stepRefusal("uploaded_to_ircc", done, form, { viaUpload: true, filingReady: false })}{" "}
           <button type="button" className="text-text-link underline underline-offset-2" onClick={() => focusLater(() => document.getElementById("readiness-h"))}>Go to Ready to file</button></p>;
   }

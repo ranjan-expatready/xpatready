@@ -203,5 +203,34 @@ else {
   const codes = both.map((x) => x.status).sort();
   ok("B132 M2 pass: two uploads of the signed scan at once give one 201 and one 409 in words, never a 500; one scan stored", JSON.stringify(codes) === JSON.stringify([201, 409]) && both.some((x) => x.status === 409 && /already done|just done/.test(x.body?.detail ?? "")) && sql(`select count(*) from signed_scan where item_id='${i76?.id}'`) === "1", { codes, details: both.map((x) => x.body?.detail) });
 }
+// (8) B130 (B3 challenge m5): Signed by hand and the scan name the printed copy; a page read before a new print (here
+// "tab A", which still holds the first printed copy) is refused in words when it signs after "tab B" printed again.
+{
+  const officer = f.officer ?? OFFICER;
+  const c8 = await openCase(vv, [{ role: "principal", name: "Sample Client T", dob: yearsAgo(42) }], { representative: f.rep, caseOfficers: [officer] });
+  const T = c8.subjects["Sample Client T"];
+  await fillEverything(c8.id);
+  const i76 = itemsOf((await prepare(c8.id, officer)).p, T, "IMM 5476")[0];
+  const post = (key: string, body: unknown = {}) => call("POST", `/runtime/items/${i76?.id}/sign-steps/${key}`, body, officer);
+  const live = () => sql(`select string_agg(key, ',' order by done_at) from sign_step where item_id='${i76?.id}' and superseded_at is null`) ?? "";
+  const scanWith = async (copy: string | null, name: string) => {
+    const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(signedScan("IMM 5476"))]), name); if (copy) fd.append("copy", copy);
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/items/${i76?.id}/signed-scan`, { method: "POST", headers: { "x-actor": officer }, body: fd }).catch(() => null);
+    return { status: res?.status ?? 0, body: await res?.json().catch(() => null) };
+  };
+  const copy1 = await generateCopy(c8.id, "IMM 5476", T);
+  await post("print", { copy: copy1 });                                    // tab A reads the item: printed copy1
+  await answer(c8.id, T, "person.family_name", "SAMPLETWOTABS", officer); await confirmAll(c8.id, T);
+  const copy2 = await generateCopy(c8.id, "IMM 5476", T);
+  const re = await post("print", { copy: copy2 });                          // tab B prints again: copy2, the steps restart
+  let r = await post("signed", { copy: copy1 });                            // tab A presses Signed by hand
+  ok("B130 fail: Signed by hand naming the copy printed before (a page read before a new print) is refused in the server's words (409), nothing recorded", re.status === 200 && r.status === 409 && /not the one printed now/.test(r.body?.detail ?? "") && live() === "print", [re.status, r.status, r.body?.detail, live()]);
+  r = await post("signed", { copy: copy2 });
+  ok("B130 pass: Signed by hand naming the copy printed now is recorded", r.status === 200 && live() === "print,signed", [r.status, r.body?.detail, live()]);
+  let sc = await scanWith(copy1, "imm5476-old-copy.pdf");
+  ok("B130 fail: a signed scan naming the copy printed before is refused (409, the server's words), no scan stored", sc.status === 409 && /not the one printed now/.test(sc.body?.detail ?? "") && sql(`select count(*) from signed_scan where item_id='${i76?.id}'`) === "0", [sc.status, sc.body?.detail]);
+  sc = await scanWith(copy2, "imm5476-this-copy.pdf");
+  ok("B130 pass: the signed scan naming the copy printed now is stored; the item is Ready", sc.status === 201 && live() === "print,signed,scan_received", [sc.status, sc.body?.detail, live()]);
+}
 // B129: a red line fails the suite (run-suites.sh judges the exit code; before, this suite always exited 0).
 process.exit(summary() ? 1 : 0);
