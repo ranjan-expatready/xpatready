@@ -218,3 +218,45 @@ A diff-only check of the merge of origin/main (P-318 (1)). **Exact head: `da111d
 **Not checked:** browser walks on the merged build, the full CI suite, B128's and B152's own packs, and r1 run live.
 
 **Verdict: Approve** on `da111d0457db619a71dca5177006df6e47b0fd6f`: no open Blocker or Major. r1 and r2 can follow as rows, or the tech lead can accept them.
+
+## Main merge check 2 (5392a7019)
+A diff-only check of the second merge of origin/main (P-318 (1)). **Exact head: `5392a70194643bc575a14b7b108457841d3e1b9f`.** Its parents are `8e7de3d7c` (B145, approved) and `283f4d151` (origin/main); the merge-base is `f647a467d`. Copy `rev5_c95` on :4443 only, started and stopped in one command (trap), never :4400. Live AI off, US$0. Nothing committed or pushed.
+
+**1. Conflict (`api/src/case-checklist.ts`, the orphan "no longer required" line, `:119-120`): right**
+* B145's reason is kept word for word: `` `No longer required: ${d.release_label ?? "the case's release"} no longer asks this person for it; its uploads are kept and listed.` `` (`:119`).
+* Main's `set: null` is on the orphan `PersonLine` literal, between `rule: null` and `who: ""` (`:120`), once.
+* Everything else main changed in that file is kept: the `engine/document-sets.ts` import, `StoredLine.set_status`, `memberOf`, `memberNames`/`typeName`, `docsOf` over a list of keys with `member`, `filesOf`/`currentKeys`, `set_status` on every line, `acted` reading `filesOf`, the member pick and set-met state on upload, the member-keyed supersede and create, `recount`, and the member wording in the upload audit line.
+* B145's other two changes there are kept too: the `releaseLabel` import (`:24`) and `release_label` on the derived checklist (`:80`).
+
+**2. Files both sides changed: nothing dropped, doubled or broken**
+* There are three: `api/src/case-checklist.ts`, `api/src/where-used.ts` and `prisma/schema.prisma`.
+* For each, main's changed lines (`f647a467d` → `283f4d151`) equal the merge against B145 (`8e7de3d7c` → `5392a7019`). B145's changed lines (`f647a467d` → `8e7de3d7c`) equal the merge against main (`283f4d151` → `5392a7019`). Over the whole tree both comparisons are also identical: 57 files, +2450 −59. There are no conflict markers, and the working tree is clean.
+* **where-used.ts:** the two sides' hunks do not overlap. Main's C6.15 hunk is in `documentTypeUses` (`:47-63`, set members counted as "alternative" uses). B145's hunk is in `openCasesByRelease` (`:239-252`). The pin read still orders by `[{ caseId: "asc" }, { revision: "asc" }]` (`:246`), so `releaseOf` keeps each case's newest revision, and a moved case counts once, on its newest release.
+* **schema.prisma:** main adds `DocumentType.sets` and `DocumentRequirement.setName`. B145's `PackWorkPin.reason` and `@@unique([caseId, combinationId, revision])` are unchanged.
+* `PersonLine.set` is now required (`engine/runtime/case-checklist.ts:57`). Every B145 literal compiles with it: the typecheck below shows no new error.
+
+**3. Pins: main adds no read that ignores the revision**
+* Main's added lines in product code (all but `.md` and `.png` files) contain no `pins`, `packWorkPin`, `PackWorkPin` or `pack_work_pin`. They contain no `readiness_pass` either.
+* Main's new set code reads its release through `this.r.snapshotOf(c)` and `stored()`/`moved()`. Those go through `reach()`, which reads the newest pin revision (B145). So after a move, a case reads the target release's sets. This fits main's C6.15-19 rule: a case pinned to the earlier release keeps its set.
+* In the merged tree, every `packWorkPin` or `pack_work_pin` read in `api/src` is either revision-aware (`where-used.ts:246`, `form-library.ts:494`, `readiness.ts:87`, `fill-case.ts:246`, `case-prepare.ts:744`, `release-update.ts:157`) or an insert (`runtime.ts:170`, `release-update.ts:164`).
+
+**4. Migrations**
+* Main adds one migration, `20261107230000_c615_document_sets`. It adds two nullable columns: `document_type.sets` (JSONB) and `document_requirement.set_name` (TEXT). It touches neither `pack_work_pin` nor `readiness_pass`, and its rollback is recorded.
+* It sorts after B145's `20261107180000_c95_pin_revisions` and `20261107220000_c95_pin_guards`. Its tables do not overlap with theirs, so the order does not matter. `migrate deploy` ran clean on the fresh copy. Main's `b152`/`b132` migrations were in the merge-base; the first merge check covered them.
+
+**5. Runs on the merged code**
+* Pack `tsx acceptance/C9.5.test.ts 4443 xr_studio_rev5_c95` on a fresh copy: **49/49, exit 0** (3 min 14 s, 0 FAIL). It picked `person.alternate_telephone_number`, `typeSet [200,200]`. "(US$0): no model call at any step" passed.
+* `tests/check_c95_release_update.ts`: **34/34, exit 0**.
+* `tests/check_c76_readiness.ts`: **77/77, exit 0**.
+* `product/tools/typecheck.mjs`: **PASS**. api has 15 known errors, 0 new and 0 fixed. web has 0.
+* The copy stopped: no listener on :4443, and no `xr_studio_rev5*` database is left.
+
+**Findings**
+* Blockers: none. Majors: none. This merge adds no new findings.
+* Earlier r1, r2, n1-n2 and f1-f5 are unchanged.
+
+**Journey (reviewer role):** not walked again. No B145 screen or route changed in this merge. Main's C6.15 changes only add set fields to the checklist lines that B145's screens show. The score stays **9/10, pass**, from the walk on `468ea98e5`. D1-D20 are unchanged.
+
+**Not checked:** browser walks on the merged build, the full CI suite, and main's C6.15 pack. Also not checked: whether B145's "What changes" summary should name a line whose set differs between the two releases. That needs both items together and is not a merge defect.
+
+**Verdict: Approve** on `5392a70194643bc575a14b7b108457841d3e1b9f`: no open Blocker or Major.
