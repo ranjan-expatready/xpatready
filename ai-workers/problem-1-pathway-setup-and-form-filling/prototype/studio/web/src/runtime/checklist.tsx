@@ -18,7 +18,10 @@ import { lineId, noRetryOnRefusal } from "./questionnaire";
  *  in engine/runtime/case-checklist.ts). Declared here, not imported: the engine file reads Node modules the web build has not. */
 type Missing = { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null };
 export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; who_words: string; quote: string | null; missing: Missing[];
-  state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean };
+  state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean;
+  /** C6.15: the substitute set the line uses (any one of / all of), and whether the person's files meet it. */
+  set?: { name: string; mode: "any_one" | "all_together"; words: string; members: { key: string; name: string; standard: boolean; when_staff: string | null }[] } | null;
+  set_status?: { met: boolean; words: string } | null };
 type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[] };
 export type ChecklistView =
   | { derived: true; stand_in: "SI-14"; people: Person[]; basis: string; empty_release: boolean; ages_on_why: string }
@@ -105,6 +108,7 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
   const [na, setNa] = React.useState(false);
   const [history, setHistory] = React.useState(false);
   const file = React.useRef<HTMLInputElement>(null);
+  const member = React.useRef<string | null>(null); // C6.15: which member of the line's set the chosen file is
   // Review and break M1 (WCAG 2.4.3): after every action and when a dialog closes, focus goes back to this line's ⋯ button,
   // which stays focusable while its request runs (aria-busy, not disabled), so the next Tab continues from the line.
   const trigger = React.useRef<HTMLButtonElement>(null);
@@ -119,8 +123,8 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
     finally { setBusy(false); back(); }
   };
   const request = () => run(() => api(`/runtime/checklist-lines/${l.id}/request`, { method: "POST", json: { version: l.version } }));
-  const upload = (f: File) => run(() => { const fd = new FormData(); fd.append("version", String(l.version)); fd.append("file", f, f.name); return api(`/runtime/checklist-lines/${l.id}/documents`, { method: "POST", body: fd }); });
-  const current = l.documents.find((d) => d.current), earlier = l.documents.length - (current ? 1 : 0);
+  const upload = (f: File) => run(() => { const fd = new FormData(); fd.append("version", String(l.version)); if (member.current) fd.append("member", member.current); fd.append("file", f, f.name); return api(`/runtime/checklist-lines/${l.id}/documents`, { method: "POST", body: fd }); });
+  const currents = l.documents.filter((d) => d.current), current = currents[0], earlier = l.documents.length - currents.length;
   const item = "flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface";
   const label = `${l.label} for ${p.label}`;
   return (
@@ -132,7 +136,10 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
         {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted [overflow-wrap:anywhere]">{l.state_reason}</p> : null}</div>
       <div className="min-w-0 text-[13px] [overflow-wrap:anywhere]"><p data-reason>{l.reason}</p>
         {l.quote ? <details className="mt-0.5"><summary className="cursor-pointer text-xs text-text-link">Source</summary><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></details> : null}
-        <p className="mt-0.5 text-xs text-text-muted">{current ? <>File: <span className="[overflow-wrap:anywhere]">{current.file_name}</span>{earlier ? ` · ${earlier} earlier` : ""}</> : "No file yet"}{l.state_at ? ` · Last change ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}</p>
+        {l.set ? <div className="mt-1 text-xs" data-line-set={l.set.mode}><p>{l.set.words}</p>
+          {l.set.members.filter((m) => m.when_staff).map((m) => <p key={m.key} className="text-text-muted">{m.name} is acceptable when: {m.when_staff}</p>)}
+          {l.set_status ? <p className={l.set_status.met ? "text-text-muted" : "font-medium"} data-set-status={l.set_status.met ? "met" : "open"}>{l.set_status.words}</p> : null}</div> : null}
+        <p className="mt-0.5 text-xs text-text-muted">{current ? <>{currents.length > 1 || current.member ? "Files" : "File"}: <span className="[overflow-wrap:anywhere]">{currents.map((d) => `${d.file_name}${d.member ? ` (${d.member.name})` : ""}`).join(", ")}</span>{earlier ? ` · ${earlier} earlier` : ""}</> : "No file yet"}{l.state_at ? ` · Last change ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}</p>
         {error ? <p role="alert" className="mt-1 text-xs text-text-danger" data-line-error>{error}</p> : null}</div>
       <div className="flex items-start justify-end">
         <input ref={file} type="file" className="sr-only" tabIndex={-1} aria-hidden accept="application/pdf,image/jpeg,image/png" data-upload-input
@@ -144,7 +151,8 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
           <DropdownMenu.Portal>
             <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[220px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
               {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
-              {UPLOAD_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => file.current?.click()} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
+              {UPLOAD_FROM.includes(l.state) && !l.set ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => { member.current = null; file.current?.click(); }} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
+              {UPLOAD_FROM.includes(l.state) && l.set ? l.set.members.map((m) => <DropdownMenu.Item key={m.key} className={item} disabled={busy} onSelect={() => { member.current = m.key; file.current?.click(); }} data-action="upload" data-member={m.key}>Upload {m.name}…</DropdownMenu.Item>) : null}
               {NOT_APPLICABLE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa(true)} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
               <DropdownMenu.Item className={item} onSelect={() => setHistory(true)} data-action="history">History</DropdownMenu.Item>
             </DropdownMenu.Content>
@@ -155,7 +163,7 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
       {history ? <Dialog open onOpenChange={(o) => { if (!o) { setHistory(false); back(); } }} title={`History: ${label}`}>
         <div className="min-w-0 space-y-2 text-sm [overflow-wrap:anywhere]" data-history>
           <p>State: {l.state_words}{l.state_at ? `, since ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}{l.state_reason ? `. Reason: ${l.state_reason}` : ""}.</p>
-          {l.documents.length ? <ul className="space-y-1">{[...l.documents].reverse().map((d) => <li key={d.id}>{d.file_name} · {Math.max(1, Math.round(d.size_bytes / 1024))} KB · {when(d.uploaded_at)} by {nameOf(d.uploaded_by)}{d.current ? " · current" : ` · replaced ${d.superseded_at ? when(d.superseded_at) : ""}`}</li>)}</ul> : <p className="text-text-muted">No file yet.</p>}
+          {l.documents.length ? <ul className="space-y-1">{[...l.documents].reverse().map((d) => <li key={d.id}>{d.file_name}{d.member ? ` (${d.member.name})` : ""} · {Math.max(1, Math.round(d.size_bytes / 1024))} KB · {when(d.uploaded_at)} by {nameOf(d.uploaded_by)}{d.current ? " · current" : ` · replaced ${d.superseded_at ? when(d.superseded_at) : ""}`}</li>)}</ul> : <p className="text-text-muted">No file yet.</p>}
           <p className="text-xs text-text-muted">Opening a file comes with Fill from documents. A full history of every state change is not built yet.</p>
         </div>
       </Dialog> : null}
