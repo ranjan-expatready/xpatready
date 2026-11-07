@@ -641,6 +641,21 @@ function AgentView({ view }: { view: View }) {
   const people = [...new Map(view.sections.map((s) => [s.subjectId, s.about_label])).entries()];
   // One person at a time (one row of tabs): a household's answers are long; each person's sections stay together.
   const [who, setWho] = React.useState(() => people[0]?.[0] ?? "");
+  // C6.4 (a): a link to a person's question (#a-<subject>-<fact>, the Documents panel's "Answer first") opens that person's
+  // tab, then brings the question into view and focuses it; otherwise the question is not on the page and the link leads nowhere.
+  const ids = people.map(([id]) => id).join(" ");
+  React.useEffect(() => {
+    const go = () => {
+      const target = window.location.hash.slice(1), m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
+      if (!m || !ids.split(" ").includes(m[1])) return;
+      setWho(m[1]);
+      // Break m5: the address is cleared once used, so a later render (a person added) does not jump back to this tab.
+      requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.getElementById(target); el?.scrollIntoView({ block: "center" }); el?.focus(); window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); }));
+    };
+    go();
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
+  }, [ids]);
   const mine = view.sections.filter((s) => s.subjectId === who);
   return (
     <div className="space-y-4">
@@ -672,7 +687,7 @@ function AgentView({ view }: { view: View }) {
 }
 
 /** The id of one answer's line in the officer's section, the target of its error summary link. */
-const lineId = (subjectId: string, fact: string, row?: string) => `a-${subjectId}-${fact.replace(/[^a-z0-9_]/gi, "-")}${row ? `-${row}` : ""}`;
+export const lineId = (subjectId: string, fact: string, row?: string) => `a-${subjectId}-${fact.replace(/[^a-z0-9_]/gi, "-")}${row ? `-${row}` : ""}`;
 
 function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Question, row?: string) => void }) {
   const qc = useQueryClient(), toast = useToast();
@@ -720,7 +735,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">Change it in the firm record</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">{q.fact === "case.uses_representative" ? "Set by the case team (the representative of record)" : "Change it in the firm record"}</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };

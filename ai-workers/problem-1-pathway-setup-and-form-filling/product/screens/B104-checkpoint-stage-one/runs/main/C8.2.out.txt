@@ -1,0 +1,17 @@
+C8.2 — Record the submission per group (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C8.2-1 fail (BR-11, P-168): recording is refused while the filings are not Ready to file (409, names the blocks) — 409
+PASS  C8.2-2 pass: both filings reach Ready to file (setup for the record) — ["0d27d2b5-b3d5-4d55-a10c-455cbe00ee08","85c5ad69-6804-49f6-baac-29da17de38d8"]
+PASS  C8.2-3 fail: a missing application number is refused on its field (400, Problem Details) — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":400,"detail":"Give the application number IRCC gave this filing: it is required to record the submission.","message":"Give the application number IRCC gave this 
+PASS  C8.2-4 fail: a submission date after today is refused on its field (400) — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":400,"detail":"The submission date is after today: give the date IRCC acknowledged it (not a future date).","message":"The submission date is after today: give th
+PASS  C8.2-5 fail: a client cannot record the submission (403) — 403
+PASS  C8.2-6 pass: one action records the whole group: each filing has its own number, status submitted — [{"id":"0d27d2b5-b3d5-4d55-a10c-455cbe00ee08","combination":"vv.single","label":"Visitor visa: Sample Client A","mode":"files_own","owner":{"subject":"bcda070d-2676-4ab5-bdb7-3ee61d6036ec","label":"Sample Client A","role":"principal"},"applicants":[{"subject":
+FAIL  C8.2-7 pass (data): the record keeps the portal, our reference, date, receipt, the UCI per person, Prepared by and Reviewed by
+PASS  C8.2-8 fail (BR-15): a second recording is refused (409) — 409
+PASS  C8.2-9 fail: after recording the filing is read-only: even an accepted channel change is refused (409) — 409
+PASS  C8.2-10 fail: correcting a number without a reason is refused (400) — 400
+PASS  C8.2-11 pass: "Correct a number" changes it and keeps the old one in the history with the reason
+PASS  C8.2-12 pass (BR-12, P-142 D7): a fact changed after filing marks the filed items "Filed with an earlier value" and opens a task to re-sign or tell IRCC (Unconfirmed: no counsel)
+
+11/12 passed

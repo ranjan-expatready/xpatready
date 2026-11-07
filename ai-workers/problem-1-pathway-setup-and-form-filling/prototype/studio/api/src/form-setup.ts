@@ -26,8 +26,11 @@ export const VV_FORM_RULES: FormRule[] = [
     cite: "IMM 5257 SCH1 (09-2023) p. 1: \"The principal applicant, his or her spouse or common-law partner, if applicable, and all dependent children aged 18 years or older listed in the application for temporary residence must complete their own copy of this form.\"" },
   { form: "IMM 5409", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.marital_status", value: "common_law" },
     cite: "Guide 5256, Question 10: \"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\"" },
-  { form: "IMM 5476", condition: REPRESENTED,
-    cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"" },
+  // C6.11 (VV-R10): who fills it, in the form page's own words (canada.ca "Use of a Representative Form (IMM 5476)",
+  // official-sources/ircc/web-pages/page-imm5476.html, modified 2025-12-12): the principal applicant and a spouse or
+  // partner always, a dependent child from 18 (contracts/resolver.ts principal_partner_adult_children).
+  { form: "IMM 5476", condition: REPRESENTED, who: "principal_partner_adult_children", minAge: 18,
+    cite: "IMM 5484 p. 1: \"Complete this form only if you used the services of a representative, or if you are appointing or cancelling a representative.\"; canada.ca IMM 5476 page (modified 2025-12-12): \"If you have dependent children aged 18 years or older, they are required to complete their own copy of this form if a representative is also conducting business on their behalf.\", \"By signing, you authorize IRCC to complete your request for yourself and your dependent children under 18 years of age.\" and \"Separate authorization forms are required for a spouse or common-law partner even if they are included in the same application.\"" },
   { form: "IMM 5475", condition: RELEASES,
     cite: "IMM 5484 p. 1: \"Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself.\"" },
   // Guide 5256, Question 3 note: the form for a person whose gender identifier differs from their documents.
@@ -140,7 +143,8 @@ const fromData = (): Record<string, FormSetup> => {
 /** QA-144 (P-319): the one per-combination table of what the checkpoint sets from IRCC's words: the application form
  *  whose channel picks the family information form (FAMILY_FORM_BY_CHANNEL), the form rules, why each person 18 or older
  *  fills the family information form there, and a fact only a rule reads (C3.6). No other form number is in the steps.
- *  The configured checkpoint sets up from its forms exactly the combinations this table holds (api/src/demo.ts). */
+ *  The configured checkpoint sets up from its forms exactly the combinations this table holds
+ *  (features/checkpoint/060-sections-from-forms.ts). */
 export const FORM_SETUP: Record<string, FormSetup> = {
   "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
   "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true,

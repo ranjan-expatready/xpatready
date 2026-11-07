@@ -175,7 +175,9 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   const READERS: Reader[] = [
     { id: "a rule", on: (k) => drop("predicate", insert("predicate", { ...rowCols, predicate_key: lit(`b83_rule_${randomUUID().slice(0, 6)}`), predicate_json: `${cond(k)}::jsonb`, then_plain: "'B83 rule words'", for_whom: "'applicant'" })), named: /the rule "B83 rule words" on /, submit: /B83 rule words/ },
     { id: "a section check", on: (k) => drop("check_def", insert("check_def", { ...rowCols, check_key: lit(`b83_check_${randomUUID().slice(0, 6)}`), check_group: "'cross_form'", predicate_json: `${cond(k)}::jsonb`, severity: "'warning'", message: "'B83 check words'" })), named: /the check "B83 check words" on /, submit: /B83 check words/ },
-    { id: "a form's condition", on: (k) => setJson("combination_form", form, k), named: /the condition of IMM [0-9]+ on /, submit: /The condition of IMM [0-9]+/ },
+    // The form row is the first one the query returns (no order), so any of the Visitor visa's codes may come back: IMM 5257
+    // SCH1 or IRM 0002 as well as IMM 5645 (row A1 on #1084: B104's line saves change which row comes first).
+    { id: "a form's condition", on: (k) => setJson("combination_form", form, k), named: /the condition of (?:IMM|IRM) [0-9]+(?: [A-Z0-9]+)? on /, submit: /The condition of (?:IMM|IRM) [0-9]+(?: [A-Z0-9]+)?/ },
     { id: "a document line's condition", on: (k) => setJson("document_requirement", docLine, k), named: /the condition of the document line "/, submit: /The condition of the document line "/ },
     { id: "a question's condition", on: (k) => setJson("section_question", question, k), named: /the condition of the question "/, submit: /The condition of the question "/ },
     { id: "a fact source", on: (k) => drop("fact_source", insert("fact_source", { ...rowCols, lineage_key: lit(`applicant|${k}`), role: "'applicant'", canonical_field_key: lit(k), prequalification: "true" })), named: /where this answer comes from on /, submit: /Where this answer comes from/ },

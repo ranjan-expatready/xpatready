@@ -1,0 +1,18 @@
+C7.3 — Answer sheet for an Online line (IMM 5707)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FAIL  C7.3-1 pass: an Online form item has an answer sheet for the officer — 409
+PASS  C7.3-2 fail: a client cannot read the answer sheet (403)
+FAIL  C7.3-3 pass: the sheet follows the PDF twin's sections in order (Section A, B, C) until W6
+FAIL  C7.3-4 pass: before confirmation the sheet shows no values, only what it waits for (only confirmed facts fill, P-72)
+FAIL  C7.3-5 pass: Section A lists the applicant's confirmed answers with their source and the text to copy
+FAIL  C7.3-6 pass: Section A also carries the spouse's answers (IMM 5707 includes the spouse, VV-R07), labelled by person
+FAIL  C7.3-7 pass: a date is offered to copy as the portal takes it (YYYY-MM-DD)
+PASS  C7.3-8 fail: a client cannot tick "Entered in the portal" (403) — 403
+FAIL  C7.3-9 pass: "Entered in the portal" ticks Section A with who and when — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":409,"detail":"IMM 5707 is filed as PDF upload: its PDF is the deliverable, so it has no answer sheet.","message":"IMM 5707 is filed as PDF upload: its PDF is the
+FAIL  C7.3-10 pass (data): the tick freezes the answers it showed (an answer snapshot)
+FAIL  C7.3-11 pass: ticking again changes nothing (one tick, 200 not 201)
+FAIL  C7.3-12 pass (P-65): a changed fact marks the entered section out of date, the frozen answers unchanged, the new value shown
+FAIL  C7.3-13 pass: the IMM 5707 item reads Out of date; it warns only (an entered Online section, BR-9 and P-168; P-136 also said "entered": FQ-6)
+
+2/13 passed

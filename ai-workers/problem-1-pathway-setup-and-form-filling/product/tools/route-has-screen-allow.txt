@@ -6,16 +6,12 @@
 # The set-up read: acceptance/lib/ and the set-up scripts a pack names under tests/ (tests/runtime/setup_visitor_visa.ts).
 
 # Dead ends a person meets today (the gap is logged; the line goes with the fix):
-POST /runtime/filings/:id/review  # QA-229 (Major), C7.6 Partial: the representative's review of a filing has no screen; the case page's Prepare panel does not show /prepare's readiness
-POST /runtime/filings/:id/warnings/:code/pass  # QA-229 (Major), C7.6 Partial: passing a CRITICAL warning with a reason (P-238) has no screen
-POST /runtime/filings/:id/ready  # QA-229 (Major), C7.6 Partial (L-SA3): "Ready to file" has no screen; the panel shows its own pill instead
 POST /runtime/items/:id/sign-steps/:key  # C8.1 Partial (L-SA3): the print and signed steps (sign-steps/print, sign-steps/signed) have no screen yet; no QA number yet
 POST /runtime/items/:id/signed-scan  # C8.1 Partial: uploading the signed scan (after print and signed) has no screen yet; no QA number yet
 POST /library/fields/:key/answer-list  # C3.4: linking a shared field to an answer list is done by release 1's set-up (setup_visitor_visa.ts 4.5); no screen links one yet; no QA number yet
 DELETE /library/fields/:key/answer-list  # C3.4: unlinking a field's answer list, the same set-up step; no screen yet; no QA number yet
 POST /editions/:id/option-maps/draft  # C3.8: drafting a form edition's option maps (each choice to its code) has no screen; release 1's set-up does it; no QA number yet
 PATCH /editions/:id/option-maps  # C3.8: matching a choice list's values to the form's codes by hand (setup_visitor_visa.ts 4.5) has no screen; no QA number yet
-PUT /combinations/:id/eligibility-gates  # QA-244, C6.9 Partial: gates have no authoring screen (C6.9 concept, Not built); row B106 builds it. Written by the Visitor visa set-up (setup_vv_m3.ts S7) and by the configured checkpoint (api/src/checkpoint-stage-one.ts, B104; tech lead's ruling on #1084). C6.9 is not Works on this route alone
 
 # Set-up shortcuts with a person's own way on a screen (not a dead end):
 POST /combinations/:id/attachments/sample  # P-103 (lead, 31 Oct): adds a file from the official library for the demo seed; a person uploads the same file through POST /intake (web/src/components/forms.tsx)

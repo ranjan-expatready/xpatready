@@ -9,6 +9,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sampleFamilyFacts } from "../../engine/import.ts";
+import { FIRM_RECORD } from "../../engine/runtime/team.ts";
 import { RUNTIME_ACTORS, STUDIO, type Db } from "./core.ts";
 import type { CaseForms } from "./fill-case.ts";
 import type { Runtime } from "./runtime.ts";
@@ -88,7 +89,7 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
 }
 
 type View = { sections: { subjectId: string; section: string; group?: { rows: number; none_apply: { id: string } | null } | null;
-  questions: { fact: string; answer?: { id?: string; value?: unknown } | null; rows?: { answer?: { id?: string } | null }[] }[] }[] };
+  questions: { fact: string; answer?: { id?: string; value?: unknown; channel?: string } | null; rows?: { answer?: { id?: string } | null }[] }[] }[] };
 const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** B99 (C10.1 row 12b; #1123 part 1: the copies were blank, 46 of 46 mandatory fields empty, because nothing was confirmed):
@@ -131,10 +132,12 @@ async function answerFromFile(runtime: Runtime, officer: (typeof RUNTIME_ACTORS)
     try { await runtime.noneApply(officer, caseId, s.subjectId, s.section, { noneApply: true, expectedId: null }); out.noneApply++; }
     catch (e) { out.answerRefused.push(`${s.section} none apply: ${said(e)}`); }
   }
-  // Each section confirmed with the answers the officer's view shows (QA-164: the confirm covers exactly those).
+  // Each section confirmed with the answers the officer's view shows (QA-164: the confirm covers exactly those). As the
+  // screen does (questionnaire.tsx, `seen`), never an answer the firm record gives (C6.11: "Uses a representative" from the
+  // case team; its id is not an answer's, so confirm refuses it and the section's other answers would stay unconfirmed).
   v = await view();
   for (const s of v.sections) {
-    const seen = [...s.questions.flatMap((q) => [q.answer?.id, ...(q.rows ?? []).map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter((x): x is string => !!x);
+    const seen = [...s.questions.flatMap((q) => [q.answer?.channel === FIRM_RECORD ? undefined : q.answer?.id, ...(q.rows ?? []).map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter((x): x is string => !!x);
     if (!seen.length) continue;
     try { await runtime.confirmSection(officer, caseId, s.section, { subjectId: s.subjectId, seen }); out.confirmed++; }
     catch (e) { out.answerRefused.push(`confirm ${s.section}: ${said(e)}`); }

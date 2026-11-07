@@ -2,7 +2,7 @@
 // person from a small synthetic release and the case's answers. Each rule has a passing and a failing case. No database,
 // no server, no model call (US$0). Requirements and values are Sample until the immigration expert confirms (P-171).
 //   tsx studio/tests/check_vv_checklist.ts
-import { caseChecklist, duplicateValidity, issuedWithin, validityProblems, validityRules, type CaseChecklist } from "../engine/runtime/case-checklist.ts";
+import { caseChecklist, duplicateValidity, inReason, issuedWithin, validityProblems, validityRules, whoWords, type CaseChecklist } from "../engine/runtime/case-checklist.ts";
 import { checkValue } from "../engine/runtime/case.ts";
 import { validate } from "../engine/validate.ts";
 import type { Known } from "../engine/render.ts";
@@ -43,6 +43,10 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
 // One list per person on the case (never the case row); each line only for the people it concerns.
 {
   const r = run(known(adults));
+  // C6.4 (a), review minor 2: a condition reads inside a reason; only a common opening word is lower-cased.
+  ok("C6.4 (a) words pass: \"The applicant is married.\" reads \"the applicant is married\" (no doubled full stop)", inReason("The applicant is married.") === "the applicant is married" && inReason("A child under 18 travelling alone") === "a child under 18 travelling alone");
+  ok("C6.4 (a) words fail: a name, a nationality or a form number keeps its capital; empty is none", inReason("Venezuelan citizens only.") === "Venezuelan citizens only" && inReason("IMM 5257 is filed on paper") === "IMM 5257 is filed on paper" && inReason("  ") === null && inReason(null) === null);
+  ok("C6.4 (a) whose words: each applicant, once for the couple; an unknown holder is named, never hidden", whoWords("each_applicant") === "For each applicant" && whoWords("couple_once") === "Once for the couple" && whoWords("mystery_role") === "For: mystery_role");
   ok("C6.4 per person: one checklist for each person on the case, none for the case row", r.people.length === 3 && !r.people.some((p) => p.role === "case"), r.people.map((p) => p.label));
   ok("C6.4 per person: every applicant gets their own passport line", ["A", "B", "C"].every((w) => line(r, w, "passport")?.need === "needed"));
   ok("C6.4 per person (fail): a child's line is never on an adult's list", !!line(r, "C", "birth_certificate") && !line(r, "A", "birth_certificate") && !line(r, "B", "birth_certificate"));
@@ -125,6 +129,11 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   const working = caseChecklist(S3, "vv.single", people, known({ ...adults, "B|person.employed": true }), TODAY) as D;
   ok("C6.4 R3 (fail): the spouse employed → the principal's employment letter is not needed", ALL(of(working, "A")).find((l) => l.document.key === "employment_letter")?.need === "not_needed");
   ok("C6.4 R3: a child's line decided by the principal's answer is on the child's list only", has("C", "consent")?.need === "needed" && !has("A", "consent"));
+  // Devin on #1073: a line waiting on another person's answer names that person, so the panel's link reaches the question.
+  const unanswered = caseChecklist(S3, "vv.single", people, known(adults), TODAY) as D;
+  const wait = of(unanswered, "A").waiting.find((l) => l.document.key === "employment_letter");
+  ok("C6.4 (a) link: the principal's line that waits on the spouse's answer names the spouse as the one to answer (on: person, subject B)", !!wait && wait.missing.some((m) => m.key === "person.employed" && m.on === "person" && m.subject === "B"), wait?.missing);
+  ok("C6.4 (a) link (fail): it does not name the principal, the line's holder, nor the case", !!wait && !wait.missing.some((m) => m.subject === "A" || m.on === "case"), wait?.missing);
   const noSpouse = caseChecklist(S3, "vv.single", [P("case", "case"), P("A", "principal")], known(adults), TODAY) as D;
   ok("C6.4 R3 (fail): with no spouse on the case, a line about the spouse is not needed and says so", /no.*spouse|none on the case/.test(ALL(of(noSpouse, "A")).find((l) => l.document.key === "employment_letter")?.reason ?? ""));
 }
