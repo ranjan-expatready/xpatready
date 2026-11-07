@@ -397,12 +397,12 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
         <h1 className="text-2xl font-semibold">Client questionnaire</h1>
         <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.</p>
       </div>
+      <RecordedForYou view={view} open={open} />
       <div className="rounded-xl border border-border bg-surface-raised p-4">
         <p className="text-sm font-medium">{done} of {parts.length} parts done</p>
         <div className="mt-2 h-2 rounded-full bg-text/10" role="progressbar" aria-valuemin={0} aria-valuemax={parts.length} aria-valuenow={done} aria-label="Parts done"><div className="h-2 rounded-full bg-primary" style={{ width: `${(100 * done) / Math.max(parts.length, 1)}%` }} /></div>
         {next >= 0 ? <Button className="mt-4 h-11 w-full text-base" onClick={() => open(next)}>{done ? "Continue where you left off" : "Start"} <ChevronRight /></Button> : <Notice tone="ok" className="mt-4" title="Every part is answered">Your officer reviews your answers and may ask you about some of them.</Notice>}
       </div>
-      <RecordedForYou view={view} open={open} />
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
           <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{`About ${inSentence(label)}`}</h2>
@@ -605,7 +605,7 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
   return (
     <section aria-labelledby="recorded-for-you" className="rounded-xl border-2 border-warn bg-surface-raised p-4" data-recorded-for-you>
       <h2 id="recorded-for-you" className="text-base font-semibold">Check what your case officer recorded ({items.length})</h2>
-      <p className="mt-1 text-sm text-text-muted">Your case officer wrote down {items.length === 1 ? "this answer" : "these answers"} for you. Check each one before you sign: {items.length === 1 ? "it goes" : "they go"} on your forms only once you say {items.length === 1 ? "it is" : "they are"} right.</p>
+      <p className="mt-1 text-sm text-text-muted">{items.length === 1 ? "Your case officer wrote down this answer for you. Check it before you sign: it goes on your forms only once you say it is right." : "Your case officer wrote down these answers for you. Check each one before you sign: each goes on your forms only once you say it is right."}</p>
       <ul className="mt-3 divide-y divide-border">
         {items.map(({ q, a, i, s }) => (
           <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
@@ -778,8 +778,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   async function confirm() {
     setBusy(true);
     try {
-      const r = await api<{ confirmed: number; missing: string[] }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      const r = await api<{ confirmed: number; missing: string[]; awaiting_client?: number }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
+      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
