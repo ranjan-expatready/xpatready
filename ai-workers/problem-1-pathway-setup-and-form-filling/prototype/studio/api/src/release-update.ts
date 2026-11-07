@@ -126,7 +126,8 @@ export class ReleaseUpdates {
     const running = await tx.formInstance.findMany({ where: { caseId: c.id, status: { in: ["QUEUED", "RUNNING"] } }, select: { formNumber: true, subjectId: true } });
     const today = new Date();
     const mismatches = st.answers.filter((a) => diff.types.has(a.field) && asked.has(`${a.subjectId}|${a.field}`) && checkValue(to, a.field, a.value, today).length > 0)
-      .map((a) => ({ label: diff.types.get(a.field)!.label, person: names.get(a.subjectId) ?? "The application", expects: typeWords(diff.types.get(a.field)!.after) }));
+      .map((a) => ({ label: diff.types.get(a.field)!.label, person: names.get(a.subjectId) ?? "The application", expects: typeWords(diff.types.get(a.field)!.after) }))
+      .sort((p, q) => Number(p.person === "The application") - Number(q.person === "The application")); // the people's answers are named first
     return moveRefusal({ recorded: owners.map((o) => names.get(o.subjectId) ?? "A person"), running: running.map((x) => ({ form: x.formNumber, person: names.get(x.subjectId) ?? "a person" })), mismatches, current: currentLabel });
   }
 

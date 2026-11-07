@@ -113,7 +113,8 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const reads = await Promise.all(["", "/prepare", "/checklist", "/filings", "/forms", "/assessments", "/employer-cases", "/team", "/questionnaire?mode=agent", "/release-update"].map(async (path) => [path, await call("GET", `/runtime/cases/${fam}${path}`, undefined, OFFICER)] as const));
   const rv = (path: string) => (reads.find(([x]) => x === path)?.[1].body ?? {}) as { release_version?: number; pin?: { revision: number; release_version: number }; current?: { revision: number; version: number } };
   ok("C9.5-6 pass (Lead 32): every case route reads the newest pin revision after the move (case, prepare, checklist, filings and the list name release 2; forms, assessments, employer cases, team and questionnaire answer)",
-    reads.every(([, x]) => x.status === 200) && rv("").pin?.revision === 2 && rv("").pin?.release_version === body.target_version && [rv("/prepare"), rv("/checklist"), rv("/filings")].every((x) => x.release_version === body.target_version)
+    // The employer-cases route answers from the newest release too: Visitor visa offers no employer link (409, not offered).
+    reads.every(([path, x]) => x.status === 200 || (path === "/employer-cases" && x.status === 409 && /not offered|no employer/i.test(words(x)))) && rv("").pin?.revision === 2 && rv("").pin?.release_version === body.target_version && [rv("/prepare"), rv("/checklist"), rv("/filings")].every((x) => x.release_version === body.target_version)
     && rv("/release-update").current?.revision === 2 && rv("/release-update").current?.version === body.target_version, reads.map(([x, y]) => `${x || "/"}:${y.status}:${(y.body as { release_version?: number })?.release_version ?? ""}`));
   ok("C9.5-6 pass (where-used, challenge M1): on the database the moved case is counted once, on release 2, and no case is counted on release 1", JSON.stringify(byRelease) === JSON.stringify([{ combinationId: vv, release: body.target_version, cases: openVv }]), byRelease);
   p = (await prepare(fam)).p;
@@ -209,6 +210,11 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const caseSubj = caseView.people.find((x) => x.role === "case")?.subject_id ?? "";
   const putCase = (actor: string) => call("PUT", `/runtime/cases/${fam}/answers/${caseSubj}/case.visit_contact_relationship`, { value: "2015-01-01", expectedId: sql(`select id from client_canonical_answer where subject_id='${caseSubj}' and canonical_field_key='case.visit_contact_relationship' and row_key is null and superseded_by_id is null`) || null }, actor);
   if ((await putCase(CLIENT)).status >= 300) await putCase(OFFICER);
+  // The application's answer is read by every applicant's forms, so the young child's facts changed with it: the
+  // representative reviews that filing again, still before the move (C9.5-8 below is about the move, not the answer).
+  const rC1x = readinessOf((await prepare(fam)).p, fC1) as { facts_hash?: string; pin_revision?: number } | null;
+  const reC1 = await call("POST", `/runtime/filings/${fC1}/review`, { note: "Reviewed again after the answer changed (Sample)", facts_hash: rC1x?.facts_hash, pin_revision: rC1x?.pin_revision }, f.rep ?? "");
+  ok("setup (stage 2): the young child's filing reviewed again after the application's answer changed, before the move", reC1.status < 300, { status: reC1.status, words: words(reC1) });
   const third = await move(fam, { target_version: three.version, from_revision: 2, reason: "Adopting the current release" });
   ok("setup (stage 2): with the answers changed, the case moves to the later release (revision 3)", third.status === 200 && third.body?.revision === 3, { status: third.status, fixed, words: words(third) || third.body?.words });
 

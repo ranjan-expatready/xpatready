@@ -706,15 +706,8 @@ export async function storedVersion(tx: Tx | Db, caseId: string) {
 }
 /** C9.5: a case never moved keeps the version it had (revision 1); after a move the revision is part of it. */
 const withRevision = (v: string, revision: number) => (revision > 1 ? `${v}~r${revision}` : v);
-/** C9.5 (break m7): a transaction that waited too long for the case's row lock answers a worded 503, never a 500. */
-export async function busyWords<T>(f: () => Promise<T>): Promise<T> {
-  try { return await f(); } catch (e) {
-    const code = (e as { code?: string }).code, msg = String((e as Error).message ?? "");
-    if (code === "P2028" || code === "P2034" || /expired transaction|Transaction already closed|Unable to start a transaction/i.test(msg))
-      throw new HttpException({ type: "https://expatready.local/problems/busy", title: "Busy", status: 503, detail: "This case is being changed by someone else right now: nothing was changed. Try again in a moment." }, HttpStatus.SERVICE_UNAVAILABLE);
-    throw e;
-  }
-}
+export { busyWords } from "./busy.ts";
+import { busyWords } from "./busy.ts";
 /** The version of a set of current filings and items (the same rule for the view and for a write's check). */
 function versionOf(filings: { id: string; submissionGroupId: string }[], items: { id: string; channel?: string | null; version: number }[]) {
   const groups = [...new Set(filings.map((f) => f.submissionGroupId))].map((id) => ({ id, filings: filings.filter((f) => f.submissionGroupId === id).map((f) => f.id) }));

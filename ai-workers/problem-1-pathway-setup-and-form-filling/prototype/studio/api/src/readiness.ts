@@ -15,6 +15,7 @@ import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
 import { firmOfActor } from "./firms.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts";
+import { busyWords } from "./busy.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,6 +53,8 @@ export class FilingReadinessRoutes {
     const b = (body ?? {}) as { note?: unknown; self?: unknown; facts_hash?: unknown; pin_revision?: unknown };
     // C9.5 (break m10): a review sent from a screen read before the case moved to another release is refused (the screen
     // sends the pin revision it read); the representative reviews what the case files now.
+    // Breaker R2-m4 (round 2): once the case has moved, the screen always sends the revision it read; a review without it is refused.
+    if (c.pins[0].revision > 1 && b.pin_revision === undefined) problem(400, "Some details need fixing", "Send pin_revision: the pin revision of the case you reviewed (this case moved to another release; Reload).", { errors: [{ field: "pin_revision", message: "The pin revision you read (Reload)." }] });
     if (b.pin_revision !== undefined && b.pin_revision !== c.pins[0].revision) fail("This case moved to another release after you opened the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
     // Break N1 (#861 round 2): the review is of the facts the representative read: the view's `facts_hash` is sent back
     // and a filing changed since is refused (409, Reload), never stamped as reviewed for facts nobody saw.
@@ -75,8 +78,18 @@ export class FilingReadinessRoutes {
     // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
     const rd = await this.now(actor, c.id, f.id);
     if (rd.facts_hash !== b.facts_hash) fail("This filing changed after you read it. Reload and review it again.", HttpStatus.CONFLICT);
-    const row = await this.db.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
-    await this.audit.log(f.workspaceId, actor.id, kind, "filing", f.id, `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`, { case: c.id, note });
+    // Devin on #1252 (C9.5): the review and its audit line are written under the case's row lock that a move takes, with
+    // the pin revision read again under it: a move that committed after this review was read refuses it (409), so no
+    // review of the release the case left is ever stamped after the new pin. (The facts are not re-read under the lock:
+    // answer writes do not take it; a later fact change reopens the review as before, break B2.)
+    const row = await busyWords(() => this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
+      if (newest?.revision !== c.pins[0].revision) fail("This case moved to another release while you reviewed the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
+      const made = await tx.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
+      await tx.auditEvent.create({ data: { workspaceId: f.workspaceId, actor: actor.id, action: kind, entity: "filing", entityKey: f.id, summary: `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`.slice(0, 600), detail: { case: c.id, note } } });
+      return made;
+    }, { timeout: 15_000, maxWait: 10_000 }));
     const name = firm ? userIn(firm, actor.id)?.name ?? actor.name : actor.name;
     return { id: row.id, filing: f.id, reviewed_by: actor.id, name, kind, licence_number: licence!.number, at: row.reviewedAt.toISOString(),
       words: kind === "self_reviewed" ? `Self-reviewed by ${name} (licence ${licence!.number})` : `Reviewed by ${name} (licence ${licence!.number})` };

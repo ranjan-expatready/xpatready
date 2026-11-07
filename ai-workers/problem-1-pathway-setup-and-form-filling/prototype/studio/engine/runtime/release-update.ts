@@ -82,7 +82,7 @@ export type ChangeLine = { what: string; kind: string; who: string[]; before: st
 export type Changes = { forms: ChangeLine[]; documents: ChangeLine[]; questions: ChangeLine[]; eligibility: ChangeLine[] };
 
 const KIND_WORDS: Record<FormKind, string> = { added: "New", removed: "Removed", channel: "Filed another way", signing: "Signed another way", map: "Filled differently", edition: "New edition", rule: "Who needs it changed" };
-const names = (people: Person[], ids: Iterable<string>) => [...new Set(ids)].map((id) => people.find((p) => p.id === id)?.label ?? "Someone on the case");
+const names = (people: Person[], ids: Iterable<string>) => [...new Set(ids)].map((id) => people.find((p) => p.id === id)?.label ?? "The application");
 const holders = (side: CaseSide, form: string) => [...side.forms].filter(([, fs]) => fs.has(form)).map(([p]) => p);
 
 /** BR-3: the lines of "What changes for this case", each naming the people it touches and old against new. A form or
@@ -180,7 +180,15 @@ export function touchedFilings(diff: ReleaseDiff, x: CaseInputs, filings: { id: 
   for (const f of filings) {
     const words: string[] = [];
     for (const d of diff.forms.values()) {
-      if (d.kinds.every((k) => k === "rule")) continue;
+      // Devin on #1252: a change of who needs the form (who, minimum age, condition) touches the filing only where it changes
+      // whether the form applies to one of its people, read under each release.
+      if (d.kinds.every((k) => k === "rule")) {
+        for (const p of f.people) {
+          const had = !!x.from.forms.get(p)?.has(d.form), has = !!x.to.forms.get(p)?.has(d.form);
+          if (had !== has) words.push(has ? `${labels.to} now asks for ${d.form}` : `${labels.to} no longer asks for ${d.form}`);
+        }
+        continue;
+      }
       const on = f.people.some((p) => x.from.forms.get(p)?.has(d.form) || x.to.forms.get(p)?.has(d.form));
       if (!on) continue;
       words.push(d.kinds.includes("added") ? `${labels.to} adds ${d.form}` : d.kinds.includes("removed") ? `${labels.to} no longer asks for ${d.form}`
