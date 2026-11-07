@@ -35,7 +35,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, formPassed } from "./fill-case.ts";
+import { CaseForms, copyNotForFiling, formPassed } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -201,9 +201,11 @@ export class CasePrepare {
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
     // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
-    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true } } } });
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } } } });
     const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
-    for (const v of reads) { const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
+    // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
+    // counts, by the same rule as Validate and `lock` (copyNotForFiling): such rows were kept before Validate refused them.
+    for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
       return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;

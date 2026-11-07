@@ -5,7 +5,7 @@
 // immigration expert confirms. Each rule here with a passing and a failing case. Sample data, US$0, no model call.
 //   zsh studio/tools/isolated.sh rtc3 4431 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
 //   tsx studio/tests/runtime/check_c3_paper_validate.ts 4431 xr_studio_rtc3
-import { CLIENT, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, copyBytes, sendFile, asValidated, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, yearsAgo } from "../../acceptance/lib/m3.ts";
+import { CLIENT, answer, call, sql, confirmAll, fillEverything, filingOf, firms, generateCopy, copyBytes, sendFile, asValidated, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, yearsAgo } from "../../acceptance/lib/m3.ts";
 
 const REASON = "The client cannot use the IRCC account: an accommodation (Sample)";
 const codes = (x: { code: string }[] | undefined) => (x ?? []).map((b) => b.code);
@@ -72,9 +72,27 @@ await main("C3", "A person's channel choice decides \"for filing\" — checkpoin
   r = await call("PATCH", `/runtime/items/${itemsOf(q, B, "IMM 5257")[0]?.id}/channel`, { channel: "PAPER", reason: REASON, version: q?.version }, officer);
   r = await sendValidated(early, officer);
   ok("C3 fail: a copy stamped \"Copy, not for filing\" (made while Online) is not validated after the switch (409, names a new copy)", r.status === 409 && /new copy/i.test(r.body?.detail ?? ""), [r.status, r.body?.detail]);
+  // Review m1: a passing read-back kept for that stamped copy before Validate refused it (main's 201; one SQL write stands
+  // for it, as no route can write it any more) never counts for readiness either.
+  const kept = sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by) select gen_random_uuid(), f.workspace_id, f.id, 'var/sample-kept-before-c3.pdf', repeat('0', 64), a.input_hash, '{"ok":true,"validation":{"passed":true}}'::jsonb, '${officer}' from form_instance f join answer_snapshot a on a.id = f.snapshot_id where f.id = '${early}' returning id`);
   q = (await prepare(d.id, officer)).p;
+  const bl = itemsOf(q, B, "IMM 5257")[0];
+  ok("C3 fail (review m1): a kept read-back of the stamped copy does not count: the Paper line names no validated copy", !!kept && bl?.state === "to_do" && bl?.validated === null, { kept, state: bl?.state, validated: bl?.validated });
   ok("C3 fail: that refused read-back leaves the Validate block in place", codes(readinessOf(q, filingOf(q, B)?.id)?.blocks).includes("barcode_not_validated"), codes(readinessOf(q, filingOf(q, B)?.id)?.blocks));
   const fresh = await generateCopy(d.id, "IMM 5257", B);
   r = await sendValidated(fresh, officer);
   ok("C3 pass: a new copy made after the switch is validated and read back (201)", (await copyOf(fresh, officer))?.copy_not_for_filing === false && r.status === 201, [r.status, r.body?.detail]);
+
+  // Row C3 names PDF upload too (inside what IRCC accepts on the account; no reason needed): the same round trip.
+  const u = await openCase(vv, [{ role: "principal", name: "Sample Client U", dob: yearsAgo(33) }], { representative: f.rep, caseOfficers: [officer] });
+  const U = u.subjects["Sample Client U"];
+  await fillEverything(u.id);
+  let w = (await prepare(u.id, officer)).p;
+  r = await call("PATCH", `/runtime/items/${itemsOf(w, U, "IMM 5257")[0]?.id}/channel`, { channel: "PDF_UPLOAD", version: w?.version }, officer);
+  w = (await prepare(u.id, officer)).p;
+  ok("C3 fail (PDF upload): moved to PDF upload, IMM 5257 with no validated copy is the Validate block", r.status === 200 && codes(readinessOf(w, filingOf(w, U)?.id)?.blocks).includes("barcode_not_validated"), [r.status, codes(readinessOf(w, filingOf(w, U)?.id)?.blocks)]);
+  const up = await generateCopy(u.id, "IMM 5257", U);
+  r = await sendValidated(up, officer);
+  w = (await prepare(u.id, officer)).p;
+  ok("C3 pass (PDF upload): its copy is for filing, its validated copy reads back (201) and the block is gone", (await copyOf(up, officer))?.copy_not_for_filing === false && r.status === 201 && !codes(readinessOf(w, filingOf(w, U)?.id)?.blocks).includes("barcode_not_validated"), [r.status, codes(readinessOf(w, filingOf(w, U)?.id)?.blocks)]);
 });

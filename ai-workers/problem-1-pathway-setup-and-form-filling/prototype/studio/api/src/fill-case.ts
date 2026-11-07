@@ -62,7 +62,7 @@ const chosen = (s: Snap, items: ItemChannels, form: string, subject: string): Ch
  *  was made (its stamp, `result_json.not_for_filing`; else the channel frozen with its facts), never the release line's
  *  alone: a person moved to Paper gets a filing copy on a line released Online. Only a copy made before either was
  *  recorded falls back to its release line. */
-const copyNotForFiling = (s: Snap, x: { formNumber: string; resultJson: unknown; snapshot: { factsJson: unknown } }): boolean =>
+export const copyNotForFiling = (s: Snap, x: { formNumber: string; resultJson: unknown; snapshot: { factsJson: unknown } }): boolean =>
   (x.resultJson as { not_for_filing?: boolean } | null)?.not_for_filing ?? ((x.snapshot.factsJson as { channel?: Channel } | null)?.channel ?? channelIn(s, x.formNumber)) === "ONLINE";
 /** QA-127: the values that differ after a read-back, by the form's own words for each field (its caption or the fact's
  *  meaning, never a field path) with what the copy wrote and what the file holds, so the person can put them back.

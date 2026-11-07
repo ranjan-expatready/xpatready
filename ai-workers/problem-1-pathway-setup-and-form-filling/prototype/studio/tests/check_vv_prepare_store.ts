@@ -102,8 +102,10 @@ const has = (n: ReturnType<typeof formItems>, form: string, who: string) => n.fi
   // is for filing whatever the release line says; the engine no longer takes the release line's channel at all.
   ok("C7.7 Paper (pass, row C3): a barcode form on Paper gives its Validate step and words, never \"Ask the Lead\" or \"not for filing\"",
     bar().state === "to_do" && bar().steps[0].key === "validate" && /Validate in Adobe/.test(bar().reason) && !/Ask the Lead|not for filing|released as an Online line/.test(bar().reason));
-  ok("C7.7 Paper (fail, row C3): paperLine takes no release-line option (the stop that blocked a Paper line released Online is gone)",
-    !/lineOnline/.test(paperLine.toString()) && !/released as an Online line/.test(plain().reason));
+  // Review m3: by behaviour, not source text: an older caller still sending the removed option gets the same line.
+  const legacy = paperLine("IMM 5257", { barcode: true, missing: 0, validated: null, signers: ["person"], lineOnline: true } as Parameters<typeof paperLine>[1]);
+  ok("C7.7 Paper (fail, row C3): the release line's channel no longer stops a Paper line (\"released Online\" gives the same To do and steps, never \"Ask the Lead\")",
+    JSON.stringify(legacy) === JSON.stringify(bar()) && !/Ask the Lead|released as an Online line/.test(legacy.reason + plain().reason));
 }
 
 process.exitCode = summary() ? 1 : 0;
