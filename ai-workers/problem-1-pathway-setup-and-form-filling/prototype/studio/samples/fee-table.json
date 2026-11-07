@@ -1,5 +1,5 @@
 {
- "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
+ "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). C6.12-22: a combination whose table modes co-file the sponsor says where that filing's fees are charged (co_filed_fees, in words); the table's co_files never files a sponsorship by itself (only a release does). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
  "as_of": "2026-09-21",
  "read": "2026-11-02",
  "status": "Researched (source, date): may change",
@@ -222,6 +222,21 @@
     "child": "files_own"
    },
    "group_why": "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16)."
+  },
+  "fs.spouse": {
+   "label": "Spouse or common-law partner sponsorship",
+   "lines": [
+    "spouse_sponsorship",
+    "spouse_dependent_child"
+   ],
+   "modes": {
+    "principal": "files_own",
+    "sponsor": "co_files"
+   },
+   "co_filed_fees": {
+    "on": "principal",
+    "why": "Spouse sponsorship: the sponsorship and the sponsored person's permanent residence application are two filings in one submission (P-171 (4)); IRCC's \"Sponsor your spouse or partner $1,260.00\" bundles the sponsorship, processing and right of permanent residence fees, so it is one line on the sponsored person's application and the sponsorship filing carries no fee of its own (Sample: who pays is the immigration expert's to confirm)."
+   }
   }
  }
 }
