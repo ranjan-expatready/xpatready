@@ -41,3 +41,31 @@ export function setMet(set: LineSet | null, ownKey: string, have: Set<string>): 
   const got = set.members.filter((m) => have.has(m.key)).map((m) => m.key), missing = set.members.filter((m) => !have.has(m.key)).map((m) => m.key);
   return { met: set.mode === "any_one" ? got.length > 0 : missing.length === 0, got, missing };
 }
+
+/** The document types whose files count on a line: its set's members, and its own type (a file sent before the type had
+ *  sets is kept and shown, never dropped). */
+export const lineKeys = (l: { document: { key: string }; set: LineSet | null }) => [...new Set([l.document.key, ...(l.set?.members.map((m) => m.key) ?? [])])];
+/** C6.15 (SA-1B-19 rule 1): any one of: one member's file meets the line; all of: every member's. */
+export type SetStatus = { met: boolean; got: { key: string; name: string }[]; missing: { key: string; name: string }[]; words: string };
+/** Whether the files of these types meet the line's set, in words ("1 of 2 received; still to come: Bank statements"). */
+export function setStatus(l: { document: { key: string }; set: LineSet | null }, have: Set<string>): SetStatus | null {
+  if (!l.set) return null;
+  const r = setMet(l.set, l.document.key, have), name = (k: string) => l.set!.members.find((m) => m.key === k)?.name ?? k;
+  const got = r.got.map((k) => ({ key: k, name: name(k) })), missing = r.missing.map((k) => ({ key: k, name: name(k) }));
+  const words = l.set.mode === "any_one"
+    ? (r.met ? `Met by ${got.map((x) => x.name).join(" and ")} (any one of the set counts).` : `Any one of the set meets it: ${l.set.members.map((m) => m.name).join(", ")}.`)
+    : (r.met ? `All ${l.set.members.length} received.` : `${got.length} of ${l.set.members.length} received; still to come: ${missing.map((x) => x.name).join(", ")}.`);
+  return { met: r.met, got, missing, words };
+}
+/** Which member of the line's set a file is: "member" names its document type key; left out, it is the line's own type
+ *  when that is a member. A line with no set takes only its own type. A refusal says it in words. */
+export function pickMember(line: { document: { key: string; name: string }; set: LineSet | null; label: string }, raw: unknown): { key: string; name: string } | { problem: string } {
+  const want = typeof raw === "string" ? raw.trim() : raw === undefined || raw === null ? "" : null;
+  if (want === null) return { problem: "Say which document this file is as text (\"member\"), or leave it out. Nothing was stored." };
+  if (!line.set) return want && want !== line.document.key ? { problem: `${line.label} has no substitute set: a file on it is ${line.label}. Nothing was stored.` } : { key: line.document.key, name: line.document.name };
+  const names = line.set.members.map((m) => m.name).join(", ");
+  const key = want || (line.set.members.some((m) => m.key === line.document.key) ? line.document.key : "");
+  if (!key) return { problem: `Say which of the set's documents this file is: ${names}. Nothing was stored.` };
+  const m = line.set.members.find((x) => x.key === key);
+  return m ? { key: m.key, name: m.name } : { problem: `That document is not in the set this line uses (${line.set.name}): send one of ${names}. Nothing was stored.` };
+}
