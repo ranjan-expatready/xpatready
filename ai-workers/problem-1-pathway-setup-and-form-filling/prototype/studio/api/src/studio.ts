@@ -1200,7 +1200,8 @@ export class Studio {
       fields: await publish(tx.canonicalField, { workspaceId: ws, canonicalFieldKey: { in: snapshot.canonical_fields.map((f) => f.id) } }),
       placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: snapshot.placements.map((p) => p.lineage) } }),
       sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: [...snapshot.sections, ...(snapshot.section_titles ?? [])].map((x) => x.id) } }), // C4.2: pulled sections' titles too
-      documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: snapshot.document_requirements.map((d) => d.document_type_key) } }),
+      // C6.15: a type's substitute-set members are published with it (the release names them).
+      documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: [...snapshot.document_requirements.map((d) => d.document_type_key), ...(snapshot.document_types ?? []).flatMap((t: { sets?: { members: { key: string }[] }[] }) => (t.sets ?? []).flatMap((x) => x.members.map((m) => m.key)))] } }),
       requirements: await publish(tx.documentRequirement, { combinationId: id }), rules: await publish(tx.predicate, { combinationId: id }), forms: await publish(tx.combinationForm, { combinationId: id }), checks: await publish(tx.check, { combinationId: id }),
       factSources: await publish(tx.factSource, { combinationId: id }), // W1-15 slice 1
       boxes: await publish(tx.formFieldMap, { workspaceId: ws, edition: { form: { usedBy: { some: { combinationId: id } } } } }),

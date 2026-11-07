@@ -146,8 +146,9 @@ export async function decideChange(db: Pick<Db, "libraryChange" | "changeSet"> |
 export type Unapproved = { kind: "field" | "section" | "document_type"; key: string; label: string | null; status: "WAITING" | "RETURNED" | "NOT_PROPOSED" };
 /** The shared library items a combination's draft uses, by kind (its snapshot's fields, sections and document types). */
 export type LibraryItems = { field: string[]; section: string[]; document_type: string[] };
-export const itemsOf = (s: { canonical_fields: { id: string }[]; sections: { id: string }[]; document_types: { key: string }[] }): LibraryItems =>
-  ({ field: s.canonical_fields.map((f) => f.id), section: s.sections.map((x) => x.id), document_type: s.document_types.map((t) => t.key) });
+// C6.15: a type's substitute-set members are library items the release uses too (published and approved with it).
+export const itemsOf = (s: { canonical_fields: { id: string }[]; sections: { id: string }[]; document_types: { key: string; sets?: { members: { key: string }[] }[] }[] }): LibraryItems =>
+  ({ field: s.canonical_fields.map((f) => f.id), section: s.sections.map((x) => x.id), document_type: [...new Set(s.document_types.flatMap((t) => [t.key, ...(t.sets ?? []).flatMap((x) => x.members.map((m) => m.key))]))] });
 export const mergeItems = (all: LibraryItems[]): LibraryItems => ({ field: all.flatMap((x) => x.field), section: all.flatMap((x) => x.section), document_type: all.flatMap((x) => x.document_type) });
 /** The library items a combination's draft uses that a second person has not approved: an ADD still waiting or returned,
  *  and (break M3, Lead re-check 25 Oct) a brand-new item (draft rows only, never published) with no approved ADD at all,
