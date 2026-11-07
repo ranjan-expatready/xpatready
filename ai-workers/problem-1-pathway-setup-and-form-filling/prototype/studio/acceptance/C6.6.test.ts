@@ -84,10 +84,10 @@ await main("C6.6", "Declared answers fill the forms at once, marked by who gave 
       const page = await w.text(p);
       ok(`C6.6-13 pass (QA-301) ${width} px: Prepare application reads "filled from declared and confirmed answers", never "confirmed answers only"`, /filled from declared and confirmed answers/.test(page) && !/confirmed answers only/.test(page));
       ok(`C6.6-14 pass (QA-301) ${width} px: each form says "Declared or confirmed answers for N of M form fields"`, /Declared or confirmed answers for \d+ of \d+ form fields/.test(page) && !/\bConfirmed answers for \d+/.test(page));
-      await p.getByRole("tab", { name: /^Sample Spouse A/ }).click(); await w.settle(p, "the spouse's tab");
+      await p.getByRole("tab", { name: /^Sample Spouse A(?!'s )/ }).click(); await w.settle(p, "the spouse's tab");
       const spouse = await w.text(p);
       ok(`C6.6-15 pass (P-411) ${width} px: the spouse's answers read "Answered by the principal for Sample Spouse A" and "Entered by staff · to confirm"`, /Answered by the principal for Sample Spouse A/.test(spouse) && /Entered by staff · to confirm/.test(spouse));
-      await p.getByRole("tab", { name: /^Sample Client A/ }).click(); await w.settle(p, "the principal's tab");
+      await p.getByRole("tab", { name: /^Sample Client A(?!'s )/ }).click(); await w.settle(p, "the principal's tab");
       const principal = await w.text(p);
       ok(`C6.6-16 pass (QA-301) ${width} px: the principal's own answer reads "Declared", and no answer reads "Counts as confirmed"`, /\bDeclared\b/.test(principal) && !/Counts as confirmed/.test(`${principal}\n${spouse}`));
       ok(`C6.6-16b pass (QA-301) ${width} px: each part's header counts what is still to confirm, never declared answers as "confirmed"`, /\d+ answered · \d+ to confirm/.test(principal) && !/\d+ answered · \d+ confirmed/.test(`${principal}\n${spouse}`));

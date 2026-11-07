@@ -3,7 +3,8 @@
 // with who and when (its channel and source), it never counts as confirmed, and the officer's "Confirm section" does
 // not confirm it: before signing, the client sees and re-confirms each one (or changes it, which makes it their own).
 // Declarations stay client-only (P-97, P-130; refused in api/src/runtime.ts). A blank is never defaulted: nothing here
-// makes an answer; an unconfirmed answer is never written on a form (P-72, engine/runtime/forms.ts).
+// makes an answer. With P-411 (B150; Lead 31, 16:18 IST on #1246) an officer-recorded background answer is on the draft
+// forms at once, marked as staff's, while readiness, Ready to file and signing wait for the client's re-confirmation.
 //
 // Which facts are background answers comes from data, never from a list of keys here (P-319):
 //   1. a placement in a section the library marks client-only (P-97: background and declarations, `client_only`);

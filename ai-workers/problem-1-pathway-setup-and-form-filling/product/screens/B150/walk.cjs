@@ -32,12 +32,12 @@ const log = (s, ok, d) => console.log(`${ok ? "PASS" : "FAIL"}  ${s}${d ? ` — 
   // 2-3. The officer's case page: Agent view rows and the Prepare application card.
   const o = await page("user-O", 1440);
   await o.goto(`${BASE}/cases/${id}`); await idle(o);
-  await o.getByRole("tab", { name: /^Sample Walk A/ }).click();
+  await o.getByRole("tab", { name: /^Sample Walk A(?!'s )/ }).click();
   const row = o.locator("[id^='a-']").filter({ hasText: "WALKFAM" }).first();
   const rowText = await row.innerText();
   log("3. Agent view: the client's own family name reads \"WALKFAM · Declared · questionnaire · Client A\", never \"Counts as confirmed\"", /Declared/.test(rowText) && !/Counts as confirmed/.test(rowText) && /questionnaire · Client A/.test(rowText), rowText.replace(/\n/g, " · "));
   await row.scrollIntoViewIfNeeded(); await shot(o, "3-agent-view-declared-1440");
-  await o.getByRole("tab", { name: /^Sample Walk Spouse/ }).click();
+  await o.getByRole("tab", { name: /^Sample Walk Spouse(?!'s )/ }).click();
   const srow = o.locator("[id^='a-']").filter({ hasText: "WALKSPOUSE" }).first();
   log("3b. Agent view: the spouse's family name reads \"Answered by the principal for Sample Walk Spouse\"", /Answered by the principal for Sample Walk Spouse/.test(await srow.innerText()), (await srow.innerText()).replace(/\n/g, " · "));
   await srow.scrollIntoViewIfNeeded(); await shot(o, "3b-agent-view-by-principal-1440");
@@ -55,7 +55,7 @@ const log = (s, ok, d) => console.log(`${ok ? "PASS" : "FAIL"}  ${s}${d ? ` — 
   log("5. Generate a copy of IMM 5257 SCH1: generated, written count as the card said", list.copies[0].status === "GENERATED" && list.copies[0].counts.written >= n0, { card: n0, counts: list.copies[0].counts });
   await shot(o, "5-sch1-generated-1440");
   // 8. The officer corrects the client's family name by screen.
-  await o.getByRole("tab", { name: /^Sample Walk A/ }).click();
+  await o.getByRole("tab", { name: /^Sample Walk A(?!'s )/ }).click();
   await o.getByRole("button", { name: /^Edit .*family name/i }).first().click();
   const dlg = o.getByRole("dialog");
   log("8a. the edit dialog shows \"Now: WALKFAM (Declared: the client's own answer; it fills the forms now)\"", /Now: WALKFAM \(Declared: the client's own answer; it fills the forms now\)/.test(await dlg.innerText()), (await dlg.innerText()).split("\n").find((l) => /^Now:/.test(l)));
@@ -77,7 +77,7 @@ const log = (s, ok, d) => console.log(`${ok ? "PASS" : "FAIL"}  ${s}${d ? ` — 
   // The words at 1024.
   const o2 = await page("user-O", 1024);
   await o2.goto(`${BASE}/cases/${id}`); await idle(o2);
-  await o2.getByRole("tab", { name: /^Sample Walk Spouse/ }).click();
+  await o2.getByRole("tab", { name: /^Sample Walk Spouse(?!'s )/ }).click();
   const txt = await o2.locator("main").innerText();
   log("1024 px: the spouse's rows read \"Answered by the principal for Sample Walk Spouse\"; the card reads \"filled from declared and confirmed answers\"; no sideways scroll", /Answered by the principal for Sample Walk Spouse/.test(txt) && /filled from declared and confirmed answers/.test(txt) && !(await o2.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
   await o2.locator("[id^='a-']").filter({ hasText: "WALKSPOUSE" }).first().scrollIntoViewIfNeeded(); await shot(o2, "10-agent-view-spouse-1024");

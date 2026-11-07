@@ -324,7 +324,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     step(`B150 pass (P-411 (2), QA-302): an officer-typed answer (${typed}) is marked "entered by staff" and fills the spouse's IMM 5257 at once`, q?.answer?.mark === "by_staff" && /entered by staff/.test(q.answer.why) && ng > 0 && (await writes("Sample Spouse C")).draft.written_now === w0 + ng, { answer: q?.answer, before: w0, boxes: ng, now: (await writes("Sample Spouse C")).draft });
     step("B150 fail (P-411 (2)): it stays on the Confirm list (not confirmed)", q?.answer?.confirmed === false);
     await o.reload(); await idle(o);
-    await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();
+    await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click();
     step("B150 (P-411 (2)): the Agent view marks the officer's passport number \"Entered by staff · to confirm\"", await shows(travel.getByText("Entered by staff · to confirm").first()));
     // (4) The officer corrects the principal's own answer (P-411 (2)): a correction never empties a filled box.
     q = own ? await agentQ("Sample Applicant C", own) : null;

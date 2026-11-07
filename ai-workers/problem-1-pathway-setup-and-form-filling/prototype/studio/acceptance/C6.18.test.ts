@@ -1,8 +1,8 @@
 // C6.18 Officer entry for background answers (row B140 = L-SA10; P-244 amends P-97 and C4.9; P-406). Staff may record
 // a client's background answer taken by phone or in person: it is marked "Officer" with who and when; declarations
 // refuse staff entry; no blank is ever defaulted; before signing, the client sees and re-confirms every background
-// answer an officer recorded (until then it is not confirmed, so no form writes it and the form is not ready to sign
-// or file, P-71, P-72). Visitor visa on the configured checkpoint: which answers are background ones comes from data,
+// answer an officer recorded (until then it is not confirmed and the form is not ready to sign or file, P-71; with P-411,
+// B150, it is on the draft forms at once, marked as staff's, and printing and signing wait for the client). Visitor visa on the configured checkpoint: which answers are background ones comes from data,
 // IMM 5257's own "BACKGROUND INFORMATION" block as its reading lists it (IRCC-F08, compliance-trace.md) or a section the
 // library marks client-only (P-97). Sample people and values only; no AI (US$0).
 // Needs first, on a fresh copy, in this order (else it stops with exit 2, "Setup missing"):

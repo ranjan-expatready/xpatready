@@ -615,7 +615,7 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
   return (
     <section aria-labelledby="recorded-for-you" className="rounded-xl border-2 border-warn bg-surface-raised p-4" data-recorded-for-you>
       <h2 id="recorded-for-you" className="text-base font-semibold">Check what your case officer recorded ({items.length})</h2>
-      <p className="mt-1 text-sm text-text-muted">{items.length === 1 ? "Your case officer wrote down this answer for you. Check it before you sign: it goes on your forms only once you say it is right." : "Your case officer wrote down these answers for you. Check each one before you sign: each goes on your forms only once you say it is right."}</p>
+      <p className="mt-1 text-sm text-text-muted">{items.length === 1 ? "Your case officer wrote down this answer for you. It is on your draft forms now; check it: nothing is printed or signed until you say it is right." : "Your case officer wrote down these answers for you. They are on your draft forms now; check each one: nothing is printed or signed until you say each is right."}</p>
       <ul className="mt-3 divide-y divide-border">
         {items.map(({ q, a, i, s }) => (
           <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
@@ -709,7 +709,7 @@ function ConfirmPill({ a, about, value }: { a: Answer; about: string; value?: st
 function OfficerPill({ a }: { a: Answer }) {
   if (!a.officer) return null;
   const again = a.channel === "client_reconfirm" ? a.at : a.answered?.channel === "client_reconfirm" ? a.answered.at : null;
-  const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it goes on a form only once the client re-confirms it, before signing." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
+  const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it is on the draft forms now, and nothing is printed or signed until the client re-confirms it." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
   return <Pill tone="info" title={title}>Officer</Pill>;
 }
 const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
@@ -902,7 +902,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />
         {a ? <p className="mt-3 text-xs text-text-muted">Now: {shown(q, a.value)} ({a.why}).</p> : null}
-        {q.background ? <Notice tone="info" className="mt-3" title="The client's background answer">Record only what the client told you (by phone or in person). It is marked Officer with your name and the time, and goes on a form only once the client re-confirms it, before signing.</Notice> : null}
+        {q.background ? <Notice tone="info" className="mt-3" title="The client's background answer">Record only what the client told you (by phone or in person). It is marked Officer with your name and the time. It is on the draft forms at once, and nothing is printed or signed until the client re-confirms it.</Notice> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>

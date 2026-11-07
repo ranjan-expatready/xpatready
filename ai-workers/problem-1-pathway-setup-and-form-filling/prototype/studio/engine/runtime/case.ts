@@ -373,7 +373,8 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
     const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!, ...officerMark(a),
       // Review m6 (#1256): a parent has no link of their own, so their answer waits for the officer, in those words.
-      ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed ? { why: `${CONFIRM_WORDS.waits} (a parent has no link of their own)` } : {}) } : null;
+      // B150 (P-411): it is on the forms at once, so the words say so; an answer waiting for the client keeps its own words.
+      ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed && !a.awaitsClient ? { why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (a parent has no link of their own)` } : {}) } : null;
     const options = optionsOf(s, q.fact);
     return {
       subjectId, about_label: labelOf(q), fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,

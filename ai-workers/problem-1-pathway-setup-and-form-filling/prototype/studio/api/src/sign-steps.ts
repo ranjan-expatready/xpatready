@@ -12,7 +12,7 @@ import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf } from "../../contracts/documents.ts";
 import { isPenStep, isSignStep, minorFromAnswers, PEN_STEP_WORDS, PEN_STEPS, penRefusal, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
 import { channelOf, type FormLine } from "../../engine/runtime/prepare.ts";
-import { changedFacts, changedGroups, formCoverage, groupFacts, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, formCoverage, groupFacts, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { caseView } from "../../engine/runtime/case.ts";
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
@@ -115,6 +115,13 @@ export class SignSteps {
     const notValidated = barcode && key === "print" && !paper.validated ? penRefusal("print", {}, item.itemKey, paper) : null;
     const refusal = notValidated ?? (restart ? null : pen ? penRefusal(key as PenStepKey, done, item.itemKey, paper) : stepRefusal(key as SignStepKey, done, item.itemKey, { filingReady }));
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
+    // P-244 with P-411 (B150 merge check M1; Lead 31, 16:18 IST on #1246): an officer-recorded background answer is on the
+    // draft at once, but nothing is printed or signed until the client re-confirms it, so a signed copy never carries
+    // an answer the client has not seen.
+    if (key === "print" || key === "signed" || key === "sign_in_pen") {
+      const waiting = await this.awaitingClient(c, item);
+      if (waiting.length) fail(`${item.itemKey} is printed and signed only once the client re-confirms what the case officer recorded: ${waiting.join(", ")}. The client checks it on their questionnaire ("This is right" or Change). Nothing was recorded.`, HttpStatus.CONFLICT);
+    }
     // Devin on #1278 (red): Signed in pen signs the validated copy printed now, never an earlier print once a newer
     // validated copy was read back (the Paper line and readiness count only steps done on the current validated copy).
     if (barcode && key === "sign_in_pen" && (!validated?.current || done.print?.copy !== validated.copy))
@@ -149,6 +156,14 @@ export class SignSteps {
   }
 
   /** The facts and repeating groups a copy of the item's form read that differ from the case now (C-10, C9.2). */
+  /** P-244 (B150 merge check M1): the facts this form reads for this person that wait for the client to re-confirm what an
+   *  officer recorded, by their question (readiness, C6.18's reason). */
+  private async awaitingClient(c: Awaited<ReturnType<Runtime["reach"]>>, item: { itemKey: string; subjectId: string }): Promise<string[]> {
+    const { answers, rows, groups } = await this.r.state(c);
+    const view = caseView(this.r.snapshotOf(c), this.r.peopleOf(c), answers, rows, "agent", new Date(), groups);
+    return [...new Set(readiness(view, item.itemKey, item.subjectId).missing.filter((m) => m.reason === "waits for the client to re-confirm").map((m) => m.label))];
+  }
+
   private async changedSince(c: Awaited<ReturnType<Runtime["reach"]>>, item: { itemKey: string; subjectId: string }, copyId: string, factsJson?: unknown): Promise<string[]> {
     const json = factsJson ?? (await this.db.formInstance.findUnique({ where: { id: copyId }, select: { snapshot: { select: { factsJson: true } } } }))?.snapshot?.factsJson;
     const { answers, rows, groups } = await this.r.state(c);
