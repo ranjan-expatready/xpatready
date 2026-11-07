@@ -361,3 +361,58 @@ Everything else in the range is right: the run-line split, the merge (empty reme
 last and add-only), the "box" words, and the household and organisation holders.
 
 Reviewer: Block 149cc58d38fed7c39faa75ce153df45e3bd881e6 (Major 1: Preview now asks an unmarked application fact that a document held by the application supplies, a regression against main; fix preview.ts:100 to include FILING in the holders and add a fail-first line)
+
+## Diff-only check 3 (7 Nov, head 714f5d77a)
+
+Independent reviewer, P-303 and P-318 (1), the last round allowed. `git rev-parse HEAD` = 714f5d77a80c806b0558ca078f23d32089de3b39.
+Range: `git show 714f5d77a` only. Paths are relative to `prototype/studio/`. My copies were `rv_a5` on 4485 and `rv_a5b` on
+4486; both are stopped, with their databases dropped. Live AI off, US$0, no priced button, never :4400.
+
+### What I checked
+
+* **The fix (`engine/runtime/preview.ts`).** The new pure function `documentLineHolders(s, people, subjectId, fact, abouts,
+  partnerOf)` holds the rule.
+  * For a fact on the case it starts from `[FILING, ...caseSuppliers(…)]`; a person's fact keeps `[subjectId]`.
+  * The holder and `holder.spouse` mapping is the old one, moved as it was. `partnerOf("case")` is null, so the application
+    adds no partner.
+  * `fromDocument` passes the same `renderPeople` as before.
+  * This is the fix I asked for in check 2, and it only adds holders.
+  * Keeping it in `preview.ts`, not `sources.ts`, is right: SH3 R11 refuses partner readings in `sources.ts`.
+    `check_sh3_resolver` 85/85.
+* **Fail-first.** In a scratch worktree at 714f5d77a, I put the one line back to the 149cc58d3 rule (`from = subjectId ===
+  FILING ? caseSuppliers(…) : [subjectId]`).
+  * `check_c316_field_scope` then gives **37/40**, with exactly the first three new lines red (unmarked application fact,
+    household, employer).
+  * With the commit it gives **40/40**.
+  * The fourth line, a person's fact including `holder.spouse` → partner, is green both ways, as a guard should be.
+* **My repro, end to end.** I used a fresh six plus `setup_visitor_visa.ts` on 4486, and Visitor visa's draft snapshot with
+  one Sample type that supplies `case.funds_available_cad` on a `who: "case"` base line. `previewFamily(…, "principal")` gave:
+  * main 9dc77d1ac: not asked; `from_documents` lists the document on the case;
+  * 714f5d77a: **the same**, not asked and listed on the case.
+  * The regression is gone.
+* **The packs at 714f5d77a, my runs:**
+  * six part 37/37, exit 0 (4485), so round 3's M1 household lines still pass;
+  * `check_c316_field_scope` 40/40;
+  * `check_sh3_resolver` 85/85;
+  * `check_line_holders` 19/19.
+* **Records.** build-notes has one entry recording the change. My check-2 section above is committed as I wrote it.
+
+### Findings
+
+* No Blocker, no Major.
+* The check-2 nits still stand, and neither blocks:
+  * n1: the household suppliers include the representative and sponsor;
+  * n2: the C3.16-2 test name says "box".
+* The breaker's Minors 2 and 3 are graded in check 2. Minor 3 is recommended as a backlog item for the tech lead.
+
+### Journey score
+
+Unchanged: no screen or shown words changed in this commit. The reviewer's score stays **8 / 10**
+(`journey-test-reviewer-2026-11-05.md`). With Major 1 fixed, nothing in this range lowers "Correct data" further.
+
+### Verdict (714f5d77a)
+
+**Approve.** Check 2's Major 1 is fixed with the suggested rule. The fix is proven fail-first (37/40 → 40/40), and the
+end-to-end repro matches main again.
+
+Reviewer: Approve 714f5d77a80c806b0558ca078f23d32089de3b39
