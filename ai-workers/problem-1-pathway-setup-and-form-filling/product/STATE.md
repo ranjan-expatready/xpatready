@@ -2,7 +2,7 @@
 
 current_lead: local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023 Lead 29 · 7 Nov 12:35 IST (new account after the switch, P-398)
 
-updated: 2026-11-07 13:40 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-400 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
+updated: 2026-11-07 13:52 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-401 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
 * **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
@@ -34,15 +34,14 @@ updated: 2026-11-07 13:40 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 6. **Records PR** from this branch, once a day (P-336): label after reading the diff, founder names it if the classifier refuses.
 
 ## Where we are (13:11 IST)
-* **M3 rows merged (13):** B120, B2 (night); A2 #1072, B1 #1073, A4 #1172, A1 #1084 (08:41-08:43); B117 #1148, B122 #1145, B121 #1149 (09:18-09:19); C1 #1180, B125 #1202 (10:31); QA-293 #1204 (11:34), A7 #1201 (11:42). Also merged: F6 #1188, records #1199, #1208 (11:51). Queued: A3 #1198.
+* **M3 rows merged (13):** B120, B2 (night); A2 #1072, B1 #1073, A4 #1172, A1 #1084 (08:41-08:43); B117 #1148, B122 #1145, B121 #1149 (09:18-09:19); C1 #1180, B125 #1202 (10:31); QA-293 #1204 (11:34), A7 #1201 (11:42). Also merged: F6 #1188, records #1199, #1208 (11:51). A3 #1198 landed 13:49 IST (main 9dc77d1ac).
 * **qa (#1216, main 7bf128b33):** C6.11 Partial, ready for Works except P-339 (Mac C6.11 25/25, C8.1 14/14). Closed QA-152, QA-245, QA-283, QA-293. QA-289 narrowed to Minor. New: QA-296 Major (representative's names fill IMM 5475, holds C7.7), QA-297, QA-298 Minor.
 * **C8.2** waits for B126 (QA-295); **C6.9** waits for B124 (P-393). Spend today US$0.
 
 ## In flight
-**qa's lane:** `local_0868d426-…`; QA-235 retest, QA-153 re-sort and the "entered" tick ruling sent. C6.9 and C8.2 go to it when they land.
+**qa's lane:** `local_0868d426-…`; #1226 (head c237fef9f, QA-235 closed, QA-153 rewritten) gets the P-401 wording, then the Lead reads and labels. QA-228's retest goes with C8.2 and C6.9. C6.9 and C8.2 go to it when they land.
 | Lane | Where | Row → next |
 |---|---|---|
-| A3 #1198 | Mergify, label on 4b3b343e1 | merges by itself; no lane |
 | B124 #1197 (cloud) | task_88bb8ba2, requested 13:09 IST | leave draft, full CI, Approve line |
 | B126 #1212 (cloud) | task_03fa773f, requested 13:09 IST | confirm 5/5 + C8.2 pack, Approve line |
 | C9 QA-246 (cloud) | task_d8efc678, requested ~13:32 IST | C7.7 forms waiting on an answer |
