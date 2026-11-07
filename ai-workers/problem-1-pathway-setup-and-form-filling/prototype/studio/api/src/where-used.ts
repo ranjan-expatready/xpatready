@@ -45,14 +45,19 @@ export async function itemCombinations(db: Client, workspaceId: string, kind: Us
 
 /** Every use of every document type: [type, combination, how] (a line lists it, a line's alternative, a fact's source). */
 async function documentTypeUses(db: Client, workspaceId: string): Promise<[string, string, "line" | "alternative" | "fact"][]> {
-  const [reqs, facts] = await Promise.all([
+  const [reqs, facts, types] = await Promise.all([
     db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true, alternatives: true } }),
     db.factSource.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
+    // C6.15 (break F3): a member of a type's substitute set is used by every line naming that type.
+    db.documentType.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, orderBy: { version: "desc" }, select: { documentTypeKey: true, sets: true } }),
   ]);
+  const membersOf = new Map<string, string[]>();
+  for (const t of types) if (!membersOf.has(t.documentTypeKey)) membersOf.set(t.documentTypeKey, (Array.isArray(t.sets) ? (t.sets as { members?: { key?: unknown }[] }[]) : []).flatMap((s) => (s.members ?? []).map((m) => m.key)).filter((k): k is string => typeof k === "string" && k !== t.documentTypeKey));
   const lines = current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`);
   return [
     ...lines.map((r) => [r.documentTypeKey, r.combinationId, "line"] as [string, string, "line"]),
     ...lines.flatMap((r) => (Array.isArray(r.alternatives) ? (r.alternatives as unknown[]) : []).filter((k): k is string => typeof k === "string").map((k) => [k, r.combinationId, "alternative"] as [string, string, "alternative"])),
+    ...lines.flatMap((r) => [...new Set(membersOf.get(r.documentTypeKey) ?? [])].map((k) => [k, r.combinationId, "alternative"] as [string, string, "alternative"])),
     ...current(facts, (f) => `${f.combinationId}|${f.lineageKey}`).filter((f) => f.documentTypeKey).map((f) => [f.documentTypeKey!, f.combinationId, "fact"] as [string, string, "fact"]),
   ];
 }

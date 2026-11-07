@@ -16,6 +16,7 @@ import { FILING } from "../../contracts/resolver.ts";
 import { WHO_WORDS } from "../../contracts/lines-bulk.ts";
 import type { Participant } from "./case.ts";
 import { FEE_TABLE } from "./filings.ts";
+import { lineSet, type LineSet, type SnapSet } from "../document-sets.ts";
 
 /** R2 (P-230 (7)): the combinations whose checklist is worked out are data (samples/fee-table.json "checklist": true),
  *  so another combination is a data edit once its requirements are checked, never code. */
@@ -25,9 +26,9 @@ export const APPLICATION_DATE = "case.application_date";
 
 /** A requirement row as the snapshot carries it (engine/snapshot.ts document_requirements). */
 type Req = { lineage: string; document_type: string; document_type_key?: string; who: string; base_or_conditional: string; provided_by: string;
-  condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null };
+  condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null; set_name?: string | null };
 type Cond = { subjectKind?: string; [k: string]: unknown };
-type DocType = { key: string; name: string };
+type DocType = { key: string; name: string; sets?: SnapSet[] };
 type Derived = { id: string; inputs?: string[]; reference?: string };
 
 /** A document validity rule from the release: a `document_validity` check whose condition is
@@ -51,6 +52,9 @@ export type Missing = { key: string; question: string; answered: boolean;
 export type PersonLine = { id: string; document_type: string; label: string; state: "not_requested"; reason: string; required: boolean; documents: never[];
   need: Need; lineage: string; also_from: string[]; document: { key: string; name: string }; missing: Missing[]; base: boolean;
   provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null;
+  /** C6.15 (SA-1B-19, SA-1B-20): the substitute set the line uses, from its type in the release and the set the line
+   *  picks; null when the type has none (its own only member). */
+  set: LineSet | null;
   /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
   who: string; who_words: string };
 export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number };
@@ -180,7 +184,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const line: PersonLine = { id: `${h}:${r.lineage}`, document_type: document.key, label: document.name, state: "not_requested", reason: why, required: state === "needed", documents: [],
         need: state, lineage: r.lineage, also_from: [], document, missing, base: r.base_or_conditional === "base", provided_by: r.provided_by,
         alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null,
-        who: r.who, who_words: whoWords(r.who) };
+        set: lineSet(t, r.set_name, document.name).set, who: r.who, who_words: whoWords(r.who) };
       // Minor: two requirements for the same document on one person (e.g. a case line and the principal's own) are one
       // line: the strongest state wins and the other requirement is named in also_from.
       // Break m7: the merged line is "always" when either requirement is.

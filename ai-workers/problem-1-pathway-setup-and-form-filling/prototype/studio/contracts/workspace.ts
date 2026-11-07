@@ -325,6 +325,8 @@ export type ChecklistLineRow = {
   lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
   providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFactRow[]; aboutOthers: number;
   quote: string | null; status: string; origin: string; position: number | null; rank: number; by: string | null;
+  /** C6.15 (SA-1B-20): the substitute set the line picks (null: "Standard"). */
+  setName?: string | null;
   /** C3.11: worked out from a form line filed as Signed PDF upload (never stored), with why; changed on that line only. */
   automatic?: { form: string; reason: string };
 };
