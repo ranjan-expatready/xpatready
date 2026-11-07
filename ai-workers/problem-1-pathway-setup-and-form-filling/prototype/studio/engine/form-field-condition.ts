@@ -3,7 +3,8 @@
 // The words themselves are never parsed into a condition. Every condition stays Sample until the immigration expert confirms it.
 // Pure: no database, no AI.
 import type { Snapshot } from "./snapshot.ts";
-import { bareCond } from "./validate.ts";
+import { bareCond, isNode } from "./validate.ts";
+import { validatePredicate } from "../../contracts/rules.ts";
 import { recordedDerivation } from "../../p5/transforms.ts";
 
 type Placement = { fact: string; condition?: unknown; condition_effect?: string | null };
@@ -45,6 +46,26 @@ export type BoxGate = { gate: unknown; words: string; cite: string };
 export function boxGate(rule: unknown): unknown {
   const g = rule && typeof rule === "object" && !Array.isArray(rule) ? (rule as Partial<BoxGate>) : null;
   return g && g.gate && typeof g.gate === "object" && typeof g.words === "string" ? g.gate : null;
+}
+
+/** The fields a gate reads (its `field`s, nested ones included), once each. */
+export const gateFields = (tree: unknown) => [...new Set([...JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))];
+
+/** Why a proposal cannot be made, in words (empty: it can). Pure, so the cited data is checked before anything is written
+ *  (api/src/features/checkpoint/085-form-field-gates.ts) and by tests/check_b107_form_field_gates.ts. */
+export function gateProblems(p: { words?: unknown; cite?: unknown; gate?: unknown; byHand?: boolean }, known: (fact: string) => boolean): string[] {
+  const out: string[] = [];
+  if (typeof p.words !== "string" || p.words.trim().length < 8) out.push("the form's own words are missing (at least 8 characters)");
+  if (typeof p.cite !== "string" || p.cite.trim().length < 20) out.push("no source is quoted (P-170: the form, its page and its words)");
+  if (!!p.byHand === !!p.gate) out.push("say either a gate or filled by hand, not both");
+  if (p.gate) {
+    // A gate is always read about its own form field's person (the box's own subject), so it names no subject itself.
+    const own = p.gate && typeof p.gate === "object" && "subjectKind" in p.gate;
+    const errs = own ? ["a gate is read about its own form field's person, so it carries no subjectKind"] : validatePredicate({ subjectKind: "PERSON", ...(p.gate as object) }, isNode);
+    if (errs.length) out.push(`the gate is not a condition the rules can run: ${errs.join("; ")}`);
+    for (const f of gateFields(p.gate)) if (!known(f)) out.push(`the gate reads "${f}", which is not in the shared library`);
+  }
+  return out;
 }
 
 /** A Yes/No form field worked out from other answers: it must write No when the answer is No, so it can never be filled

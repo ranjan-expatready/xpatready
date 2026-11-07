@@ -9,10 +9,9 @@
 // every decision is Sample, Unconfirmed: expert (AGENTS rule 4).
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { Prisma, type LibraryChange } from "@prisma/client";
-import { canonical as canonicalOf, validatePredicate } from "../../../contracts/rules.ts";
-import { boxGate, type BoxGate } from "../../engine/form-field-condition.ts";
+import { canonical as canonicalOf } from "../../../contracts/rules.ts";
+import { boxGate, gateProblems, type BoxGate } from "../../engine/form-field-condition.ts";
 import { effective } from "../../engine/snapshot.ts";
-import { isNode } from "../../engine/validate.ts";
 import { Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { closeReplaced, FORM_FIELD_KIND } from "./form-field-condition.ts";
 import { APPROVAL_HOOKS } from "./lifecycle.ts";
@@ -24,6 +23,7 @@ const problem = (status: number, title: string, detail: string) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const CHANGED = "This form field changed after this was proposed, so nothing was changed. Return it; it can be proposed again.";
 
+export { gateFields, gateProblems } from "../../engine/form-field-condition.ts";
 /** What a proposal asks for: a gate on a mapped form field, or that the form field is filled by hand. `words` are the form's
  *  own printed words the decision reads (at least 8 characters); `cite` names the form, its page and the quote (P-170). */
 export type GateProposal = { formEditionId: string; dataPath: string; words: string; cite: string } & ({ gate: unknown; byHand?: never } | { byHand: true; gate?: never });
@@ -33,26 +33,6 @@ type Matches = { formEditionId: string; dataPath: string; form: string; edition:
 const seenOf = (r: { outcome: string; canonicalFieldKey: string | null; person: string | null; transform: string | null; conditionRule: unknown }): Seen =>
   ({ outcome: r.outcome, fact: r.canonicalFieldKey, person: r.person, transform: r.transform, rule: r.conditionRule ?? null });
 const same = (a: Seen, b: Seen) => a.outcome === b.outcome && a.fact === b.fact && a.person === b.person && (a.transform ?? null) === (b.transform ?? null) && canonical(a.rule ?? null) === canonical(b.rule ?? null);
-
-/** The fields a gate reads (its `field`s, nested ones included), once each. */
-export const gateFields = (tree: unknown) => [...new Set([...JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))];
-
-/** Why a proposal cannot be made, in words (empty: it can). Pure, so the cited data is checked before anything is written
- *  (the checkpoint step) and by tests/forms/check_b107_form_field_gates.ts. */
-export function gateProblems(p: Pick<GateProposal, "words" | "cite" | "gate" | "byHand">, known: (fact: string) => boolean): string[] {
-  const out: string[] = [];
-  if (typeof p.words !== "string" || p.words.trim().length < 8) out.push("the form's own words are missing (at least 8 characters)");
-  if (typeof p.cite !== "string" || p.cite.trim().length < 20) out.push("no source is quoted (P-170: the form, its page and its words)");
-  if (!!p.byHand === !!p.gate) out.push("say either a gate or filled by hand, not both");
-  if (p.gate) {
-    // A gate is always read about its own form field's person (the box's own subject), so it names no subject itself.
-    const own = p.gate && typeof p.gate === "object" && "subjectKind" in p.gate;
-    const errs = own ? ["a gate is read about its own form field's person, so it carries no subjectKind"] : validatePredicate({ subjectKind: "PERSON", ...(p.gate as object) }, isNode);
-    if (errs.length) out.push(`the gate is not a condition the rules can run: ${errs.join("; ")}`);
-    for (const f of gateFields(p.gate)) if (!known(f)) out.push(`the gate reads "${f}", which is not in the shared library`);
-  }
-  return out;
-}
 
 @Injectable()
 export class FormFieldGates implements OnModuleInit {
