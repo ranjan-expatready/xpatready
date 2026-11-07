@@ -12,15 +12,16 @@ import { Button, Field, Input, Notice, Panel, Pill, Textarea } from "@/component
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import { cn } from "@/lib/utils";
-import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
+import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { useFirm } from "./team";
+import { restingOn, restingWords } from "./eligibility-unconfirmed";
 
-type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[] };
+type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[]; restsOn?: string[] };
 type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
 type Override = { id: string; programKey: string; fromOutcome: string; label: string; reason: string; by: string; name?: string; duty?: string; at: string; outOfDate?: boolean };
 export type Assessment = {
   id: string; person: string; releaseId: string; packVersion: number; rulesAsOfByProgram: Record<string, string>; disclaimerText: string;
-  createdBy: string; createdAt: string; runType: "MANUAL" | "RERUN"; reason: string | null; results: Result[];
+  createdBy: string; createdAt: string; runType: "MANUAL" | "RERUN"; reason: string | null; results: Result[]; inputs?: { fact: string; about: string }[];
   out_of_date: boolean; changed: { fact: string; about: string; was: unknown; now: unknown }[]; release_changed: boolean; not_travelling?: boolean;
   overrides: Override[]; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; reviewStamp?: { name?: string; stamp?: "Reviewed" | "Seen"; duty?: string };
 };
@@ -41,13 +42,15 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" | "warn" | "danger" | "neutral"; short: string } {
   if (!r) return { text: "Not run", tone: "neutral", short: "Not run" };
-  if (r.outcome === "LIKELY_ELIGIBLE") return { text: "Likely eligible", tone: "ok", short: "Likely" };
+  // B124 (P-393): while a deciding fact is unconfirmed, the outcome says so, with the count; the line naming them is below.
+  const n = restingOn(r).length, few = n ? ` · ${n} not yet confirmed` : "";
+  if (r.outcome === "LIKELY_ELIGIBLE") return { text: `Likely eligible${restingWords(n)}`, tone: "ok", short: `Likely${few}` };
   if (r.outcome === "POSSIBLY_ELIGIBLE") {
     // P-230 (1): a rule whose "when not met" is needs review asks for the representative, never a hard Not eligible.
     const parts = [r.missingInputs.length ? `needs ${plural(r.missingInputs.length, "fact")}` : "", r.reviewGates?.length ? "the representative reviews this" : ""].filter(Boolean);
     return { text: `Possibly eligible — ${parts.join("; ")}`, tone: "warn", short: "Possibly" };
   }
-  if (r.outcome === "NOT_ELIGIBLE") return { text: "Not eligible on this application's rules as written", tone: "danger", short: "Not eligible" };
+  if (r.outcome === "NOT_ELIGIBLE") return { text: `Not eligible on this application's rules as written${restingWords(n)}`, tone: "danger", short: `Not eligible${few}` };
   return { text: r.outcome, tone: "neutral", short: r.outcome };
 }
 
@@ -159,7 +162,7 @@ export function EligibilityPage() {
               {runError ? <Notice tone="danger" title="Nothing was run">{runError}</Notice> : null}
               {q.data?.has_rules === false && !latest ? <Notice title="No eligibility rules yet">This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.</Notice>
                 : !latest ? <p className="text-sm">No eligibility check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
-                : <Result caseId={c.id} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
+                : <Result caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
             </div>
           </section>
         </div>
@@ -178,8 +181,8 @@ function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string
   return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run eligibility check</Button>;
 }
 
-function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
-  const o = outcomeWords(r), labels = new Map(r.gates.map((g) => [g.key, g.label]));
+function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; caseSubject: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
+  const o = outcomeWords(r), labels = new Map(r.gates.map((g) => [g.key, g.label])), resting = restingOn(r);
   const stamp = a.reviewStamp?.stamp === "Seen" ? "Seen by" : "Reviewed by";
   return (
     <>
@@ -193,6 +196,13 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
         <Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill>
         <span className="text-xs text-text-muted" title="Programs with a points score show it here when the team's Qualifier is connected">Score: none (this application has no points score)</span>
       </div>
+      {resting.length ? (
+        <p className="text-sm" data-resting-on={resting.join(" ")}>
+          {r.outcome === "LIKELY_ELIGIBLE" ? "Likely eligible" : "Not eligible"} rests on {resting.length === 1 ? "an answer" : "answers"} not yet confirmed:{" "}
+          {resting.map((f, i) => <React.Fragment key={f}>{i ? ", " : ""}<Link to={`/cases/${caseId}#${lineId((a.inputs ?? []).find((i) => i.fact === f)?.about === "case" ? caseSubject : a.person, f)}`} className="text-text-link underline" title={`Open ${factWords(f)} in the Agent view, where its section is confirmed`}>{factWords(f)}</Link></React.Fragment>)}.
+          {" "}Confirm {resting.length === 1 ? "it" : "them"} in the Agent view; this line goes once every deciding answer is confirmed.
+        </p>
+      ) : null}
       {r.outcome === "NOT_ELIGIBLE" ? <p className="text-sm">Fails: {r.failedGates.map((k) => labels.get(k) ?? k).join("; ")}{r.missingInputs.length ? `; also needs: ${r.missingInputs.map(factWords).join(", ")}` : ""}. The representative reviews this, and IRCC decides.</p> : null}
       {r.reviewGates?.length ? <p className="text-sm">For the representative's review, a rule not met: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this never gives “Not eligible” on its own; the representative reviews it, and IRCC decides.</p> : null}
       {a.overrides.map((x) => <p key={x.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm [overflow-wrap:anywhere]"><span className="font-medium">Officer's override: {x.label}</span> — {x.reason} <span className="text-xs text-text-muted">({x.name ?? nameOf(x.by)}, {when(x.at)}; the result above is the rules' own)</span></p>)}
