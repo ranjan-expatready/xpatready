@@ -34,7 +34,7 @@ const strip = (x: unknown): unknown => Array.isArray(x) ? x.map(strip) : x && ty
 const same = (a: unknown, b: unknown) => JSON.stringify(strip(a)) === JSON.stringify(strip(b));
 const entriesKey = (m: MapIn | undefined) => JSON.stringify(((m?.entries ?? []) as { data_path?: string }[]).map(strip).sort((x, y) => String((x as { data_path?: string }).data_path).localeCompare(String((y as { data_path?: string }).data_path))));
 const way = (l: FormLineIn) => { const { channel, signature } = lineOf(l); return { channel, signature }; };
-export const wayWords = (channel: Channel, signature: Signature) => `${CHANNEL_WORDS[channel] ?? channel}${signature === "NONE" ? "" : `, ${SIGNATURE_WORDS[signature]?.toLowerCase() ?? signature}`}`;
+export const wayWords = (channel: Channel, signature: Signature) => `${CHANNEL_WORDS[channel] ?? channel}, ${signature === "NONE" ? "how it is signed not set" : SIGNATURE_WORDS[signature]?.toLowerCase() ?? signature}`;
 
 /** BR-3: the difference of two released snapshots of one combination, per form line, field type, eligibility gate and
  *  document line. Pure; the same two snapshots always give the same answer. */
@@ -228,4 +228,13 @@ export function pinChain<P extends { revision: number; version: number }>(pins: 
  *  only, SA-1B-254 rule 8); null when the case is on the newest. */
 export function targetOf<R extends { version: number }>(releases: readonly R[], current: number): R | null {
   return [...releases].filter((r) => r.version > current).sort((a, b) => b.version - a.version)[0] ?? null;
+}
+
+/** BR-4, BR-6 (challenge B1): the mark on a form whose newest copy is a draft made on the release the case left, which
+ *  the move changed: made on the earlier release; the officer presses Fill (never filled again by the move itself). */
+export function draftNote(d: FormDiff | undefined, labels: { from: string; to: string }): string | null {
+  if (!d || d.kinds.every((k) => k === "rule" || k === "added" || k === "removed")) return null;
+  if (d.kinds.includes("channel") && d.after.startsWith("Online")) return `Filed another way now: the draft copy was made on ${labels.from}; ${labels.to} files ${d.form} Online, typed into the IRCC account from the answer sheet. The copy is kept and is not filed.`;
+  if (d.kinds.includes("channel") || d.kinds.includes("signing")) return `Filed another way now: the draft copy was made on ${labels.from}; ${labels.to} files ${d.form} as ${d.after}. Press Fill to make it on ${labels.to}; the old copy stays in the history.`;
+  return `To fill again: the draft copy was made on ${labels.from} and ${labels.to} ${d.kinds.includes("edition") ? `files ${d.form} on ${d.after}` : `fills ${d.form}'s form fields differently`}. Press Fill to make it on ${labels.to}; the old copy stays in the history.`;
 }

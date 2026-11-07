@@ -42,6 +42,9 @@ import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/s
 import { signStepsOf } from "./sign-steps.ts";
 import { readinessOfCase, type PreparedForm } from "./readiness-inputs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
+import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
+import { releaseLabel } from "../../contracts/runtime.ts";
+import { caseInputs, diffCache, pinReleases, targetRelease } from "./release-context.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -242,21 +245,30 @@ export class CasePrepare {
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
     // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
-    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } } } });
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } } } });
+    // C9.5 (BR-6, challenge M4): a copy made on an earlier release of the case (before a move) whose form the move
+    // changed is out of date because of the release: words that name both releases and what changed, never fact lines
+    // (so never an Undo), and it never counts as current. Only after a move (more than one pin revision).
+    const pins = pinReleases(c), diffOf = diffCache(), curLabel = releaseLabel(pin.release);
+    const releaseOfCopy = new Map<string, string>(reads.map((v) => [v.copy.id, v.copy.configReleaseId]));
+    const releaseWords = (copy: string | null | undefined, form: string, what: string): string | null => {
+      const rel = copy ? releaseOfCopy.get(copy) : undefined, old = rel && rel !== pin.configReleaseId ? pins.find((p) => p.id === rel) : undefined;
+      return old ? releaseOutOfDate(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(form), { from: old.label, to: curLabel }, what) : null;
+    };
     const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
     // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
     // counts, by the same rule as Validate and `lock` (copyNotForFiling): such rows were kept before Validate refused them.
     for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
-      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;
+      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) && !releaseWords(v.copy, form, "validated copy") } : null;
     };
     // C9.2 (BR-12): what each finished item read when it was finished (its copy's stored facts, or its entered section's
     // answers), to name each fact that changed since, with its old and new value and the date of the change.
     const printedCopy = (id: string) => stepsOf.get(id)?.print?.copy ?? null;
     const copyIds = [...new Set([...reads.map((v) => v.copy.id), ...stored.items.map((i) => printedCopy(i.id)).filter((x): x is string => !!x)])];
-    const copyFacts = new Map((copyIds.length ? await this.db.formInstance.findMany({ where: { id: { in: copyIds } }, select: { id: true, snapshot: { select: { factsJson: true } } } }) : [])
-      .map((x) => [x.id, (x.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] }]));
+    const copyFacts = new Map((copyIds.length ? await this.db.formInstance.findMany({ where: { id: { in: copyIds } }, select: { id: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } }) : [])
+      .map((x) => { releaseOfCopy.set(x.id, x.configReleaseId); return [x.id, (x.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] }]; }));
     const scans = await this.db.signedScan.findMany({ where: { caseId: c.id }, orderBy: [{ uploadedAt: "desc" }, { id: "asc" }], select: { id: true, itemId: true, uploadedAt: true } });
     const questionWords = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const placementWords = new Map<string, string>();
@@ -321,6 +333,16 @@ export class CasePrepare {
         // C8.1: a form signed by hand and scanned is Ready once its signed scan is in, Done once uploaded to IRCC.
         const signed = !waits && ch.signature === "HAND_SCANNED" ? signedState(stepsOf.get(i.id) ?? {}, i.itemKey) : null;
         if (signed) {
+          // C9.5 (BR-6, challenge M4): signed on a copy made on the release the case left, whose form the move changed: out
+          // of date because of the release (no fact lines, no Undo); a new signed copy is asked for on this release.
+          const relSigned = releaseWords(printedCopy(i.id), i.itemKey, "signed form");
+          if (relSigned) {
+            const scan = scans.find((x) => x.itemId === i.id) ?? null;
+            const old = { ...fb, signers, ...signed, state: "out_of_date", reason: relSigned, release_out_of_date: true as const };
+            if (signed.state === "done") return old;
+            return [{ ...old, id: scan?.id ?? i.id, item: i.id, record: "signed_scan" as const },
+              { ...fb, signers, state: "to_do", replaces: scan?.id ?? null, reason: `A new signed ${i.itemKey} is needed: the signed one was made on an earlier release that ${curLabel} changes. Print the new copy, have it signed and upload the scan.` }];
+          }
           // C9.2 (BR-12, BR-20): the signed form is never changed; when a fact on the copy that was printed and signed
           // changed since (the representative of record among them), it is Out of date and a new signed one is asked for.
           const { changes, groups: groupsChanged } = changesSince(printedCopy(i.id), i.itemKey, i.subjectId);
@@ -338,6 +360,9 @@ export class CasePrepare {
         // C7.7 part 2 (r5c BR-8, P-144): a Paper line with its barcode page and its steps, in order.
         // C9.2: a validated copy read back that no longer matches the case is Out of date, naming what changed.
         const validated = !waits && ch.channel !== "ONLINE" ? paperValidated(i.itemKey, i.subjectId) : null;
+        // C9.5 (BR-6, challenge M4): a validated copy made on the release the case left, whose form the move changed.
+        const relValidated = validated ? releaseWords(validated.copy, i.itemKey, "validated copy") : null;
+        if (relValidated) return { ...fb, signers, validated, state: "out_of_date", reason: relValidated, release_out_of_date: true as const };
         const since = validated && !validated.current ? changesSince(validated.copy, i.itemKey, i.subjectId) : null;
         // Only a change it can name marks it (C8.2 break M4: the same value typed again is no change); a Paper line keeps
         // its own Validate-again rule (C7.7, paperLine).
@@ -406,6 +431,9 @@ export class CasePrepare {
     const records = new Map(items.flatMap((i) => ("record" in i && i.record === "signed_scan" && "item" in i ? [[i.item as string, i]] : [])));
     const markOf = (i: (typeof items)[number] | undefined) => {
       if (!i || i.state !== "out_of_date" || ("channel" in i && i.channel === "ONLINE")) return null;
+      // C9.5 (BR-6): out of date because of the release: the release's words, keyed by the pin revision (a pass covers it
+      // until the next move), never a fact.
+      if ("release_out_of_date" in i && i.release_out_of_date) return { fact: "the release", since: pin.pinnedAt.toISOString(), key: `release|${pin.revision}`, words: "reason" in i ? String(i.reason) : undefined };
       const cs = (i as { changes?: ChangeRow[] }).changes ?? [];
       // bot review on #926: the warning's identity is every change with its value now (a pass never covers a later change);
       // its date is the latest change's.
@@ -419,7 +447,37 @@ export class CasePrepare {
       channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
       steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined, outOfDate: markOf(i) ?? markOf(records.get(i.id)) }] : []);
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
-    const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
+    // C9.5 (BR-6, challenge M5): after a move, a review with the same facts counts only if made after the move or the
+    // move touched nothing on its filing. (BR-8, challenge M6): while a newer release is out, only the filings it would
+    // change warn, naming what it changes (passable with a reason, never a block).
+    const st = { people, answers, rows, groups: groupAnswers }, forTouch = filings.map((f) => ({ id: f.id, people: f.applicants.map((a) => a.subject) }));
+    const prev = pins[1];
+    let movedTouch: Map<string, string[]> | null = null;
+    const touchedByMove = () => (movedTouch ??= touchedFilings(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s), caseInputs(prev.snapshot, s, own!.combinationKey, st, today, false), forTouch, { to: curLabel }));
+    const reviewAfterMove = prev ? (filing: string, reviewedAt: Date) => {
+      const t = reviewedAt.getTime() > pin.pinnedAt.getTime() ? [] : touchedByMove().get(filing) ?? [];
+      return reviewCounts({ hashEqual: true, reviewedAt, pinnedAt: pin.pinnedAt, revision: pin.revision, touched: t.length > 0 }) ? null : `The case moved to ${curLabel}, which changes this filing (${t.slice(0, 2).join("; ")}${t.length > 2 ? ` and ${t.length - 2} more` : ""})`;
+    } : undefined;
+    const target = await targetRelease(this.db, c);
+    const pending = target ? touchedFilings(diffOf(pin.configReleaseId, s, target.id, target.snapshot), caseInputs(s, target.snapshot, own!.combinationKey, st, today, false), forTouch, { to: target.label }) : null;
+    const releaseUpdate = pending ? (filing: string) => {
+      const w = pending.get(filing) ?? [];
+      return w.length ? { key: String(target!.version), words: `${target!.label} of ${s.combination.label} is out and changes this filing: ${w.slice(0, 2).join("; ")}${w.length > 2 ? ` and ${w.length - 2} more` : ""}. This filing is on ${curLabel}. Move the case from the notice under its header, or pass this warning with a reason.` } : null;
+    } : undefined;
+    // C9.5 (BR-4, BR-6): a form whose newest copy was made on the release the case left, and which the move changed,
+    // says so on its item (to fill again, or filed another way now), until the officer makes a copy on this release.
+    if (prev) {
+      const newest = new Map<string, { id: string; configReleaseId: string }>();
+      for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, configReleaseId: true } }))
+        if (!newest.has(`${x.formNumber}|${x.subjectId}`)) newest.set(`${x.formNumber}|${x.subjectId}`, x);
+      for (const i of items) {
+        if (i.kind !== "form" || !("form" in i) || !i.form || i.state === "out_of_date") continue;
+        const x = newest.get(`${i.form}|${i.subject}`), old = x && x.configReleaseId !== pin.configReleaseId ? pins.find((p) => p.id === x.configReleaseId) : undefined;
+        const note = old ? draftNote(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: old.label, to: curLabel }) : null;
+        if (note) Object.assign(i, { release_note: note });
+      }
+    }
+    const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
       factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,

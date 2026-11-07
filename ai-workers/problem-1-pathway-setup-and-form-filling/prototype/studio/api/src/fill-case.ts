@@ -238,6 +238,10 @@ export class CaseForms implements OnModuleInit {
       copy = await this.db.$transaction(async (tx) => {
         // The cap is counted under a lock on the case row, so simultaneous requests are counted one after another (PR #12 review 3).
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+        // C9.5 (BR-7, challenge M2): the pin was read before this lock; a move to another release made meanwhile (it takes
+        // the same lock) is seen here, so no copy is ever made on the release the case just left.
+        const newest = await tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } });
+        if (newest?.revision !== c.pins[0].revision) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Changed by someone else", status: 409, detail: "This case moved to another release while you pressed Fill: nothing was made. Press Fill again to make the copy on the case's release now." }, HttpStatus.CONFLICT);
         const active = await tx.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
         // C11.6: the person's channel read under the same lock the channel change takes, and frozen with the facts.

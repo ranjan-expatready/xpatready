@@ -17,7 +17,7 @@ const SIGNER: Record<string, string> = { person: "the person", parent: "a parent
 export type PreparedForm = { id: string; filing: string; subject: string; person: string; form: string; channel: Channel; signature: Signature; signed_by: string | null; signers?: string[]; state: string;
   reason?: string; steps?: { key: string; done: boolean | null }[];
   /** C9.2 (BR-12, P-136): a validated, signed or uploaded copy of it is out of date: the first fact changed and when. */
-  outOfDate?: { fact: string; since: string; key?: string } | null };
+  outOfDate?: { fact: string; since: string; key?: string; words?: string } | null };
 // Review B1 on #861: `signers` may be missing on a line (`signers?` in its type), so readiness never assumes it.
 export type ReadinessInputs = {
   workspaceId: string; caseId: string; filings: string[];
@@ -38,6 +38,11 @@ export type ReadinessInputs = {
   barcode: (form: string) => boolean;
   /** The fingerprint of the facts one form reads for one person (engine/runtime/forms.ts inputHash of its coverage). */
   factsHash: (form: string, subject: string) => string;
+  /** C9.5 (BR-6, challenge M5): whether a review with equal facts still counts after the case's newest move (made after
+   *  it, or the move touched nothing on the filing); null words: it stands. Left out: every such review stands. */
+  reviewAfterMove?: (filing: string, reviewedAt: Date) => string | null;
+  /** C9.5 (BR-8, challenge M6): a newer release touches this filing: the warning's words and key (only touched filings). */
+  releaseUpdate?: (filing: string) => { words: string; key: string } | null;
   today: Date;
 };
 export type ReadinessView = { filing: string; ready: boolean; status_rule: string;
@@ -96,9 +101,11 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.quote }));
     // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.
     const latest = reviews.find((r) => r.filingId === filing) ?? null;
-    const review = latest && latest.reviewedBy === rep && latest.factsHash === factsHash ? latest : null;
+    const sameFacts = !!latest && latest.reviewedBy === rep && latest.factsHash === factsHash;
+    const withdrawn = sameFacts ? x.reviewAfterMove?.(filing, latest!.reviewedAt) ?? null : null;
+    const review = sameFacts && !withdrawn ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
-    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), passes: mine, today });
+    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });
     return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });

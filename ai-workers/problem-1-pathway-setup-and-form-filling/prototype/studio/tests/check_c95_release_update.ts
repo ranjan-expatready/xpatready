@@ -2,7 +2,7 @@
 // synthetic releases (no database, no server). Each business rule of the concept has a passing and a failing case, labelled
 // "C9.5 BR-n pass/fail". The API, readers and screens are proved by acceptance/C9.5.test.ts on the checkpoint.
 //   tsx studio/tests/check_c95_release_update.ts
-import { effectsOf, moveRefusal, pinChain, releaseDiff, releaseOutOfDate, reviewCounts, targetOf, touchedFilings, typeWords, whatChanges, type CaseInputs, type CaseSide, type SnapshotIn, type Work } from "../engine/runtime/release-update.ts";
+import { draftNote, effectsOf, moveRefusal, pinChain, releaseDiff, releaseOutOfDate, reviewCounts, targetOf, touchedFilings, typeWords, whatChanges, type CaseInputs, type CaseSide, type SnapshotIn, type Work } from "../engine/runtime/release-update.ts";
 import { ReleaseMove } from "../contracts/runtime.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -75,6 +75,9 @@ const words = releaseOutOfDate(d.forms.get("IMM A"), { from: "Release 1", to: "R
 ok("C9.5 BR-6 pass: a copy made on an earlier release whose form changed is out of date because of the release, naming both releases and what changed",
   !!words && /because of the release/.test(words) && /Release 1/.test(words) && /Release 2 files IMM A as Online/.test(words) && !/changed from/.test(words), words);
 ok("C9.5 BR-6 fail: a copy of a form the release does not touch (or only adds) is not out of date because of it", releaseOutOfDate(undefined, { from: "Release 1", to: "Release 2" }, "copy") === null && releaseOutOfDate(d.forms.get("IMM E"), { from: "Release 1", to: "Release 2" }, "copy") === null);
+ok("C9.5 BR-6 pass (challenge B1): a draft made on the earlier release is marked to fill again or filed another way, and the officer presses Fill (the move fills nothing)",
+  /^To fill again: the draft copy was made on Release 1/.test(draftNote(d.forms.get("IMM C"), { from: "Release 1", to: "Release 2" }) ?? "") && /^Filed another way now: .*Online.*is not filed/.test(draftNote(d.forms.get("IMM A"), { from: "Release 1", to: "Release 2" }) ?? ""));
+ok("C9.5 BR-6 fail: no mark on a draft of a form the release does not change, or one it removes (that is No longer required)", draftNote(undefined, { from: "Release 1", to: "Release 2" }) === null && draftNote(d.forms.get("IMM B"), { from: "Release 1", to: "Release 2" }) === null);
 
 const rf = (o: Partial<Parameters<typeof moveRefusal>[0]>) => moveRefusal({ recorded: [], running: [], mismatches: [], current: "Release 1", ...o });
 ok("C9.5 BR-7 pass: nothing in the way → the move may go ahead", rf({}) === null);
