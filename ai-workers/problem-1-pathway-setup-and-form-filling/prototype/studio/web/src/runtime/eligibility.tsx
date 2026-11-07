@@ -16,12 +16,12 @@ import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questi
 import { useFirm } from "./team";
 import { restingOn, restingWords } from "./eligibility-unconfirmed";
 
-type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[] };
+type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[]; restsOn?: string[] };
 type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
 type Override = { id: string; programKey: string; fromOutcome: string; label: string; reason: string; by: string; name?: string; duty?: string; at: string; outOfDate?: boolean };
 export type Assessment = {
   id: string; person: string; releaseId: string; packVersion: number; rulesAsOfByProgram: Record<string, string>; disclaimerText: string;
-  createdBy: string; createdAt: string; runType: "MANUAL" | "RERUN"; reason: string | null; results: Result[];
+  createdBy: string; createdAt: string; runType: "MANUAL" | "RERUN"; reason: string | null; results: Result[]; inputs?: { fact: string; about: string }[];
   out_of_date: boolean; changed: { fact: string; about: string; was: unknown; now: unknown }[]; release_changed: boolean; not_travelling?: boolean;
   overrides: Override[]; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; reviewStamp?: { name?: string; stamp?: "Reviewed" | "Seen"; duty?: string };
 };
@@ -43,7 +43,7 @@ const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" | "warn" | "danger" | "neutral"; short: string } {
   if (!r) return { text: "Not run", tone: "neutral", short: "Not run" };
   // B124 (P-393): while a deciding fact is unconfirmed, the outcome says so, with the count; the line naming them is below.
-  const n = restingOn(r).length, few = n ? ` · ${n} not confirmed` : "";
+  const n = restingOn(r).length, few = n ? ` · ${n} not yet confirmed` : "";
   if (r.outcome === "LIKELY_ELIGIBLE") return { text: `Likely eligible${restingWords(n)}`, tone: "ok", short: `Likely${few}` };
   if (r.outcome === "POSSIBLY_ELIGIBLE") {
     // P-230 (1): a rule whose "when not met" is needs review asks for the representative, never a hard Not eligible.
@@ -162,7 +162,7 @@ export function EligibilityPage() {
               {runError ? <Notice tone="danger" title="Nothing was run">{runError}</Notice> : null}
               {q.data?.has_rules === false && !latest ? <Notice title="No eligibility rules yet">This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.</Notice>
                 : !latest ? <p className="text-sm">No eligibility check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
-                : <Result caseId={c.id} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
+                : <Result caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
             </div>
           </section>
         </div>
@@ -181,7 +181,7 @@ function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string
   return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run eligibility check</Button>;
 }
 
-function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
+function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; caseSubject: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
   const o = outcomeWords(r), labels = new Map(r.gates.map((g) => [g.key, g.label])), resting = restingOn(r);
   const stamp = a.reviewStamp?.stamp === "Seen" ? "Seen by" : "Reviewed by";
   return (
@@ -199,7 +199,7 @@ function Result({ caseId, a, r, runs, open }: { caseId: string; a: Assessment; r
       {resting.length ? (
         <p className="text-sm" data-resting-on={resting.join(" ")}>
           {r.outcome === "LIKELY_ELIGIBLE" ? "Likely eligible" : "Not eligible"} rests on {resting.length === 1 ? "an answer" : "answers"} not yet confirmed:{" "}
-          {resting.map((f, i) => <React.Fragment key={f}>{i ? ", " : ""}<Link to={`/cases/${caseId}#${lineId(a.person, f)}`} className="text-text-link underline" title={`Open ${factWords(f)} in the Agent view, where its section is confirmed`}>{factWords(f)}</Link></React.Fragment>)}.
+          {resting.map((f, i) => <React.Fragment key={f}>{i ? ", " : ""}<Link to={`/cases/${caseId}#${lineId((a.inputs ?? []).find((i) => i.fact === f)?.about === "case" ? caseSubject : a.person, f)}`} className="text-text-link underline" title={`Open ${factWords(f)} in the Agent view, where its section is confirmed`}>{factWords(f)}</Link></React.Fragment>)}.
           {" "}Confirm {resting.length === 1 ? "it" : "them"} in the Agent view; this line goes once every deciding answer is confirmed.
         </p>
       ) : null}

@@ -7,7 +7,7 @@
 
 /** What the page reads of a result: the outcome and, per gate, its state, what "not met" means and the facts it read
  *  that are answered but not confirmed now (engine/runtime/eligibility.ts withUnconfirmedNow, worked out when read). */
-export type ResultLite = { outcome: string; gates: { state: string; whenNotMet?: string; facts: string[]; unconfirmed?: string[] }[] };
+export type ResultLite = { outcome: string; gates: { state: string; whenNotMet?: string; facts: string[]; unconfirmed?: string[]; restsOn?: string[] }[] };
 
 /** The deciding facts not confirmed yet, in gate order, each once. Likely eligible rests on every gate (all are met);
  *  Not eligible rests on the gates it fails (a "the representative reviews it" gate never gives Not eligible, so it
@@ -17,7 +17,9 @@ export function restingOn(r: ResultLite | undefined): string[] {
   const deciding = r.outcome === "LIKELY_ELIGIBLE" ? r.gates
     : r.outcome === "NOT_ELIGIBLE" ? r.gates.filter((g) => g.state === "not_met" && g.whenNotMet !== "needs_review")
     : [];
-  return [...new Set(deciding.flatMap((g) => (g.unconfirmed ?? []).filter((f) => g.facts.includes(f))))];
+  // `restsOn` (the server, review Major 1): only the answers the gate's state rests on; an "or" branch met on a
+  // confirmed answer leaves the other branch's answer out. Without it (an older server), every unconfirmed answer.
+  return [...new Set(deciding.flatMap((g) => (g.restsOn ?? g.unconfirmed ?? []).filter((f) => g.facts.includes(f))))];
 }
 
 /** ", on 3 answers not yet confirmed" (empty when nothing rests on an unconfirmed answer). */
