@@ -156,6 +156,15 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   }
   ok("B102 review R3-M1 (b) fail: asked on one combination and worked out on another at the same moment, exactly one is accepted (six rounds)", !!combo2 && twice2 === 0 && one2 === 6, { combo2, twice2, one2 });
 
+  // ─────────────────── review R3-M1 (a): a by-name proposal renamed at accept to a worked-out key does not land as it
+  rule("r_b102_rn_a", `{"field":"person.b102_rn_years","op":"lt","value":18}`, "renamed"); rule("r_b102_rn_b", `{"field":"person.b102_rn_other","op":"lt","value":18}`, "renamed other");
+  const named = await call("POST", `/combinations/${combo}/rules/r_b102_rn_b/fact`, { label: "B102 rn other", meaning: "A fact proposed by name, renamed at accept, for the B102 check.", valueType: "number", subject: "person" });
+  const wo = await call("POST", url("person.b102_rn_years"), good);
+  const edited = { ...JSON.parse(sql(`select payload from proposal_item where id='${named.body?.proposalId}'`)), label: "B102 rn years" };
+  r = await call("POST", "/review/proposals/decide", { ids: [named.body?.proposalId], action: "edit", payload: edited, reason: "renamed at accept (B102 check)" }, "user-C");
+  const asField = sql(`select count(*) from canonical_field where canonical_field_key='person.b102_rn_years'`);
+  ok("B102 review R3-M1 (a) fail: a by-name proposal renamed at accept to a worked-out key does not land as that key", named.status === 201 && wo.status === 201 && asField === "0", { named: named.status, wo: wo.status, decide: r.status, landed: JSON.stringify(r.body?.items?.[0] ?? r.body).slice(0, 160), asField });
+
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
