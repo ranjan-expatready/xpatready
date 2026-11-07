@@ -63,6 +63,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const card = p.locator("section[aria-labelledby=eligibility]");
   await card.locator("li").first().waitFor({ timeout: 15000 }); // the card reads its own list after the case page
   step("C6.9 page pass: the case page shows the card \"Case check from confirmed facts (staff only)\" with one line per traveller and the SI-1 chip", (await card.count()) === 1 && /Case check from confirmed facts \(staff only\)/.test(await card.innerText()) && /Sample Client A[\s\S]*Not run[\s\S]*Sample Spouse A/.test(await card.innerText()) && (await card.locator('[data-stand-in="SI-1"]').count()) === 1);
+  // A tall window, so focus does not scroll the pill (the shared Tip closes on scroll: a cross-screen follow-up row).
+  await p.setViewportSize({ width: 1440, height: 2400 }); const cardHelp = card.locator("[data-help]").first(); await cardHelp.focus(); await p.waitForTimeout(400);
+  step("C6.9 page pass (P-407 BIC-14): the case card's outcome help opens on keyboard focus", /^No case check has run for this person yet\./.test(await p.locator("[role=tooltip]").first().innerText().catch(() => "")));
+  // Reload, so the keyboard walk below starts from the top of the page again (Chrome keeps the Tab start at the pill).
+  await p.keyboard.press("Escape"); await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/cases/${c.id}`); await settle(); await card.locator("li").first().waitFor({ timeout: 15000 });
   await tabTo(/^Open case check/); await p.keyboard.press("Enter"); await settle();
   step("C6.9 page pass: Open case check (keyboard) opens /cases/:id/eligibility with the trail Cases › reference › Case check from confirmed facts", p.url().endsWith(`/cases/${c.id}/eligibility`) && /Cases\s*›\s*C69P-[\s\S]*›\s*Case check from confirmed facts/.test(await p.locator("nav[aria-label=Path]").innerText()));
   step("C6.9 page pass: empty state in words: \"No case check yet … nothing is sent anywhere\"", /No case check yet for Sample Client A\. It reads the answers on file against this application's rules; nothing is sent anywhere\./.test(await text()));
@@ -72,6 +77,23 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page pass (review M1, WCAG 2.4.3): after Run case check, focus is on the result's heading (the button became Run again)", await focusIs() === "#result", await focusIs());
   step("C6.9 page pass: Run case check gives \"Can't tell yet — needs 3 facts\", each rule Not answered with the facts it reads", /Can't tell yet — needs 3 facts/.test(await text()) && (await p.getByText("Not answered", { exact: true }).count()) === 2 && /Passport number: not answered/.test(await text()));
   step("C6.9 page pass: the officer's judgement lines, the disclaimer and \"Run by Case officer\" are shown", /Officer's judgement, not checked by rules[\s\S]*Has enough money for the stay/.test(await text()) && /Disclaimer\s*Indicative only/.test(await text()) && /Run by Case officer/.test(await text()));
+  // P-407 (screens/C6.9/concept-ux-2026-11-07.md): the scorecard revision.
+  const how = p.locator("[data-how]");
+  step("C6.9 page pass (P-407 BIC-10): \"How this result is worked out\" holds the combining rule and the score's place", (await how.count()) === 1 && /When a rule that disqualifies is not met, the result is “Does not qualify”, even if facts are still missing/.test(await how.evaluate((e) => e.textContent)) && /No points score on this application/.test(await how.evaluate((e) => e.textContent)));
+  step("C6.9 page fail (P-407 BIC-19): no always-on \"Score: none\" line beside the outcome", !/Score: none/.test(await text()));
+  await p.locator("[data-outcome] [data-help]").first().focus(); await p.waitForTimeout(400);
+  const tipText = await p.locator("[role=tooltip]").first().innerText().catch(() => "");
+  step("C6.9 page pass (P-407 BIC-14): the outcome's help opens on keyboard focus and says what it means", /Can't tell yet: no rule that disqualifies failed, but 3 facts not answered yet/.test(tipText), tipText);
+  await p.keyboard.press("Escape");
+  step("C6.9 page fail (P-407 BIC-20): the people list keeps one tab stop (no focusable help inside its options)", (await p.locator("[role=listbox] [tabindex='0'], [role=listbox] a, [role=listbox] button").count()) === 1);
+  const desc = await p.locator("[role=option][aria-selected=true]").evaluate((e) => document.getElementById(e.getAttribute("aria-describedby") ?? "")?.textContent ?? "");
+  step("C6.9 page pass (P-407 BIC-14): the selected person's option describes its outcome (aria-describedby), not in its name", /^Can't tell yet: no rule that disqualifies failed/.test(desc) && !/no rule that disqualifies/.test(await p.locator("[role=option][aria-selected=true]").innerText()), desc);
+  step("C6.9 page pass (P-407 BIC-14): the officer's judgement help is visible text under its heading", /Officer's judgement, not checked by rules\s*IRCC's officer decides these; they never change the result\./.test(await text()));
+  const roles = await p.locator("[role=option] [data-role]").allInnerTexts();
+  step("C6.9 page pass (P-407 BIC-08): each traveller shows the case page's role words", roles.includes("Principal applicant") && roles.includes("Spouse or partner"), roles.join(", "));
+  const misses = await p.locator("[data-missing-link=line]").evaluateAll((es) => es.map((e) => e.getAttribute("href")));
+  step("C6.9 page pass (P-407 BIC-02): each missing fact links to its own question in the Agent view (one link per fact)", misses.length === 3 && new Set(misses).size === 3 && misses.every((h) => /#a-[^#]+$/.test(h)), misses.join(" "));
+  step("C6.9 page fail (P-407 BIC-02): no missing-fact link points at a question the Agent view does not ask", (await p.locator("[data-missing-link=agent-view]").count()) === 0 || /not asked in the Agent view yet/.test(await text()));
   await state("cant-tell-yet");
 
   // The people listbox: ↑↓ moves between travellers.
@@ -83,6 +105,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await put(A, "person.passport_number", "SAMPLEP12"); await put(A, "person.passport_expiry_date", new Date(Date.now() + 3 * 365 * 864e5).toISOString().slice(0, 10)); await put(A, "person.criminal_history", true);
   await p.reload(); await settle();
   step("C6.9 page pass: after the facts change the result says Out of date, naming the change, and stays readable", /Out of date: Passport number changed from not answered to SAMPLEP12/.test(await text()) && /^Can't tell yet — /.test(await p.locator("[data-outcome]").innerText()));
+  step("C6.9 page fail (P-407 BIC-19): no value or band shows a date in ISO form", !/\b\d{4}-\d{2}-\d{2}\b/.test(await text()), (await text()).match(/\d{4}-\d{2}-\d{2}/)?.[0]);
   await state("out-of-date");
 
   await tabTo(/^Run again$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
@@ -115,6 +138,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("review-drawer");
   await tabTo(/^Mark reviewed$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
   step("C6.9 page pass (review M1): after Mark reviewed (now off), focus is on the result's heading", await focusIs() === "#result", await focusIs());
+  step("C6.9 page pass (P-407 BIC-14): once marked, \"Already marked reviewed\" shows as text beside the switched-off button", /Already marked reviewed/.test(await text()));
   step("C6.9 page pass (BR-16): marked: \"Seen by Case officer\" on the result; Mark reviewed is then off", /Seen by Case officer/.test(await text()) && await p.getByRole("button", { name: /^Mark reviewed/ }).isDisabled());
   const latest = (await api(`/runtime/cases/${c.id}/assessments?person=${A}`)).body.assessments[0];
   const again = await api(`/runtime/assessments/${latest.id}/review`, { method: "POST", data: {}, actor: "user-R" });
