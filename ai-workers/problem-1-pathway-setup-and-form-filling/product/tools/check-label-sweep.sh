@@ -88,6 +88,14 @@ reset; pr 18 | evs > "$T/fx/issues.json"; ev labeled records github-actions[bot]
 sweep
 ok "B134: no labeled event for the label: kept, and the run is red" "$([ $r = 2 ] && [ -z "$log" ] && echo 1)" "exit $r: $out / $log"
 
+# 9b. More than PAGES_MAX full pages of events: the newest, which decide, would be cut off, and only a PR's own job pads a
+# list that long (#1270 breaker M2): the label comes off.
+reset; pr 19 | evs > "$T/fx/issues.json"
+for i in $(seq 1 100); do ev labeled "review: approved" the-owner User; done | evs > "$T/fx/events-19-p1.json"; cp "$T/fx/events-19-p1.json" "$T/fx/events-19-p2.json"
+ev labeled "review: approved" github-actions[bot] Bot | evs > "$T/fx/events-19-p3.json"
+: > "$T/fx/log"; out=$(PATH="$T/bin:$PATH" FX="$T/fx" PAGES_MAX=2 GH_TOKEN=x REPO=o/r API=https://api.test bash "$S" 2>&1); r=$?; log=$(cat "$T/fx/log")
+ok "B134 (review m1, breaker M2): an event list longer than the page cap counts as padded: the label comes off" "$([ $r = 0 ] && grep -qx 'DELETE 19' <<< "$log" && grep -q 'more than 2 pages' <<< "$out" && echo 1)" "exit $r: $out / $log"
+
 # 10. Wiring: label-guard.yml's job sweep runs on a schedule and after ci, from main, checks out no PR, holds the token.
 W="$(cd "$TOOLS/../../../.." && pwd)/.github/workflows/label-guard.yml"
 wire=$(python3 -I - "$W" <<'PY' 2>&1
@@ -99,17 +107,19 @@ if "ci" not in (wr.get("workflows") or []) or "completed" not in (wr.get("types"
 j = d["jobs"].get("sweep")
 if not j: out.append("no job sweep")
 else:
-    if "schedule" not in j.get("if", "") or "workflow_run" not in j.get("if", ""): out.append("sweep's if: " + j.get("if", ""))
+    if "schedule" not in j.get("if", "") or "workflow_run" not in j.get("if", "") or "github.event.label.name == 'queued'" not in j.get("if", ""): out.append("sweep's if: " + j.get("if", ""))
+    if "labeled" not in (on.get("pull_request_target") or {}).get("types", []): out.append("no labeled trigger for Mergify's queued")
     co = [s for s in j["steps"] if str(s.get("uses", "")).startswith("actions/checkout")]
     if not co or co[0].get("with", {}).get("ref") != "main" or co[0]["with"].get("persist-credentials") is not False: out.append("sweep does not check out main without a kept token")
     runs = " ".join(str(s.get("run", "")) for s in j["steps"])
     if "label-sweep.sh" not in runs or "pr/" in runs or "head" in runs: out.append("sweep's run: " + runs)
 g = d["jobs"]["guard"].get("if", "")
 if "github.event.pull_request" not in g: out.append("the guard job's if changed: " + g)
+if "github.event.label.name == 'queued'" not in g: out.append("the guard does not run when Mergify puts queued on: " + g)
 print("; ".join(out) or "ok")
 PY
 )
-ok "B134: label-guard.yml runs the sweep every 10 min and after each ci run, main's copy, no PR checked out" "$([ "$wire" = ok ] && echo 1)" "$wire"
+ok "B134: label-guard.yml runs the guard and the sweep when Mergify puts queued on (it merges 6+ min later), the sweep also every 10 min and after ci; main's copy, no PR checked out" "$([ "$wire" = ok ] && echo 1)" "$wire"
 cron=$(python3 -I -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])); print(d[True]["schedule"][0]["cron"])' "$W" 2>&1)
-ok "B134: the schedule is every 10 minutes (a batch takes 30+ min, so the sweep comes before the merge)" "$([ "$cron" = "*/10 * * * *" ] && echo 1)" "$cron"
+ok "B134: the sweep's schedule is every 10 minutes (the backstop when no queued run comes)" "$([ "$cron" = "*/10 * * * *" ] && echo 1)" "$cron"
 finish

@@ -11,7 +11,7 @@ for t in $TESTS; do bash "$TOOLS/$t" > "${TMPDIR:-/tmp}/guard-$$.log" 2>&1; r=$?
   [ $r = 0 ] || { bad=1; grep '^FAIL' "${TMPDIR:-/tmp}/guard-$$.log" | sed 's/^/      /'; }; done
 rm -f "${TMPDIR:-/tmp}/guard-$$.log"
 [ "${1:-}" = --mutate ] || exit $bad
-# guard | file the edit goes in | sed edit that switches the guard off | the test that must then fail
+# guard | file the edit goes in | sed edit that switches the guard off (no | in it: .. stands for ||) | the test that must then fail
 MUT='1|product/tools/check-docs.sh|/CURRENT LEAD: STATE.md has/d|check-current-lead.sh
 2|product/tools/label-guard.sh|s/^# No review for the head.*/exit 0/|check-label-guard.sh
 2 walk|product/tools/label-guard.sh|s/^  c=\$next; merges=.*/  exit 0/|check-label-guard.sh
@@ -26,7 +26,10 @@ MUT='1|product/tools/check-docs.sh|/CURRENT LEAD: STATE.md has/d|check-current-l
 7|product/tools/check-docs.sh|s/if m > 30:/if False:/|check-state-page.sh
 8|product/tools/lead-check-guard.sh|s/^\[ -z "\$why" \] \&\& exit 0/exit 0/|check-lead-cron.sh
 9|product/tools/label-sweep.sh|s/^  if \[ "\$who" != "\$BOT" \]; then/  if true; then/|check-label-sweep.sh
-9 sched|../../.github/workflows/label-guard.yml|/cron: "\*\/10 \* \* \* \*"/d|check-label-sweep.sh'
+9 sched|../../.github/workflows/label-guard.yml|/cron: "\*\/10 \* \* \* \*"/d|check-label-sweep.sh
+9 queued|../../.github/workflows/label-guard.yml|/event_name == 'schedule'/s/ .. (github.event.action == 'labeled' \&\& github.event.label.name == 'queued')//|check-label-sweep.sh
+9 guardq|../../.github/workflows/label-guard.yml|/review: approved' /s/ .. github.event.label.name == 'queued')"/)"/|check-label-guard.sh
+9 ci|../../.github/workflows/label-guard.yml|/    workflows: \[ci\]/d|check-label-sweep.sh'
 echo "--- each test without its guard (must FAIL)"
 while IFS='|' read -r g f edit t; do
   M=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$M" ] || { echo "no temp dir: nothing was checked"; exit 2; }; mkdir -p "$M/$P/product" "$M/$P/prototype/studio" "$M/.claude" "$M/.github/workflows" "$M/$P/product/qa"
