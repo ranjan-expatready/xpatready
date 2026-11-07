@@ -7,7 +7,7 @@
 set -u
 . "$(dirname "$0")/guard-test-lib.sh"
 command -v jq >/dev/null && command -v python3 >/dev/null || { echo "jq or python3 is missing; nothing was checked"; exit 2; }
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT; mkdir "$T/bin"
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; trap 'rm -rf "$T"' EXIT; mkdir "$T/bin"
 cat > "$T/bin/gh" <<'EOF'
 #!/bin/bash
 echo "gh $*" >> "$FX/gh.log"

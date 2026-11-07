@@ -5,7 +5,7 @@
 set -u
 . "$(dirname "$0")/guard-test-lib.sh"
 command -v jq >/dev/null || { echo "jq is missing; nothing was checked"; exit 2; }
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d "${TMPDIR:-/tmp}/lc.XXXXXXXX"); trap 'rm -rf "$T"' EXIT
 git init -q "$T/copy" && mkdir -p "$T/copy/$PRODREL/tools" && printf '#!/bin/bash\necho "$FAKE_LANE"\n' > "$T/copy/$PRODREL/tools/lane.sh"
 G="$TOOLS/lead-check-guard.sh"
 guard() {  # $1 lane, $2 recurring (true|false), $3 prompt → allow | deny
@@ -18,6 +18,8 @@ r=$(guard lead true 'run lead-watch; read STATE Start here'); ok "the one line i
 r=$(guard lead true '  Run lead-watch;  read STATE Start here.'); ok "case, spacing and a final full stop do not matter" "$([ "$r" = allow ] && echo 1)" "got $r"
 r=$(guard lead true 'Check the queue and lanes every 30 minutes; #1125 queued'); ok "another recurring prompt in the Lead's copy is refused" "$([ "$r" = deny ] && echo 1)" "got $r"
 r=$(guard lead false 'At 04:00 IST: ask the founder about the Acrobat grant'); ok "a one-shot reminder in the Lead's copy passes" "$([ "$r" = allow ] && echo 1)" "got $r"
+r=$(guard lead true 'run lead-heartbeat; notify the founder if stale'); ok "the standby's watchdog line is allowed in the Lead's copy (P-389)" "$([ "$r" = allow ] && echo 1)" "got $r"
+r=$(guard lead true 'run lead-heartbeat; also label #1128'); ok "... but not with anything added" "$([ "$r" = deny ] && echo 1)" "got $r"
 r=$(guard qa true 'every hour: re-run my walk'); ok "a lane's own recurring job not naming lead-watch passes" "$([ "$r" = allow ] && echo 1)" "got $r"
 out=$(jq -n --arg d "$T/copy" '{tool_input:{prompt:"run lead-watch and check #1052"}, cwd:$d}' | FAKE_LANE=lead bash "$G")
 ok "the refusal gives the one line to use" "$(echo "$out" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("run lead-watch; read STATE Start here")' >/dev/null && echo 1)" "$out"
