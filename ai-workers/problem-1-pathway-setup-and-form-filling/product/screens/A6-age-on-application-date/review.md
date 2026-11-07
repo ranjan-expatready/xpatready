@@ -67,3 +67,33 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 * **M1, fixed:** `api/src/worked-out.ts` `notNumberTests`: a fact a rule compares with words is refused (400) and the form reads "Not offered: …" with no save button (`GET …/worked-out?fact=`). Tests: `check_b102_worked_out.ts` "review M1 fail", "review M1 pass and fail"; walk J-A6a step 4.
 * **M2, fixed:** `tests/walk_b102_author.ts` loads axe with `createRequire` and types its callback; `tsc -p api/tsconfig.json` shows no error in the B102 files.
 * **m1, fixed:** a status line ("Worked out: … It reaches cases with the next approved release.") takes the focus (walk J-A6a step 2). **m3, m4, fixed** with tests. **m6, fixed** ("Choose a date…" stays chosen). **m2:** see break-report mi7 (not changed, named). **m5:** your walk of Review stands as the evidence. **m7:** for the tech lead (follow-up row proposed on the PR).
+
+## Round 2 (diff-only re-review, `78a874439..dfc87cef1`, 7 Nov 2026, about 14:40 IST)
+Scope: my M1 and M2 checked against the diff, plus the code that fixes the breaker's MA1–MA3 (`engine/runtime/case-checklist.ts`, `api/src/proposals.ts` LANDERS.field, `api/src/rule-facts.ts`). Copies :4471, :4472, :4473, all stopped afterwards. US$0.
+
+| Check at `dfc87cef1` | Result |
+|---|---|
+| `node product/tools/typecheck.mjs` | **PASS**, no new type errors (15 known; web 0) |
+| `tests/check_b102_worked_out.ts`, fresh copy | **38/38** |
+| `tests/check_vv_checklist.ts` | **76/76** |
+| `tests/check_forms_c36_rule_facts.ts`, fresh copy (LANDERS.field is shared with C3.6) | **42/42** |
+| `acceptance/C6.4.test.ts`, fresh copy, configured checkpoint | **30/30** |
+| `tests/walk_b102_author.ts` (J-A6a) at 1440 and 1024 | **7/7** each; "Not offered" screenshot checked |
+
+* **M1: closed.**
+  * `notNumberTests` (`api/src/worked-out.ts:36-50`) walks `args`/`arg` exactly as `factsRead` and the engine's `PREDICATE_OPS` do. The route refuses at `:110-112`, after BR-1. The form reads "Not offered: …" with no save button.
+  * My probes on the checkpoint: `eq "alone"` gives 400; `and[lt 18, not(eq true)]` gives 400; a fact read `lt 18` by one rule and `in ["a","b"]` by another gives 400, with `fits.ok=false` on the GET; `or[gte 16, exists]` gives 201.
+  * The test "review M1 fail" would fail if the refusal were removed (the POST would then answer 201).
+* **M2: closed.** `tests/walk_b102_author.ts` uses `createRequire` and types its callback; the typecheck passes.
+* **Breaker MA1–MA3 (read and run; scoring them is the breaker's job):**
+  * MA1: the age line now uses only a worked-out age that a document line reads (`case-checklist.ts:151-153`), with a pass and a fail test.
+  * MA2: the lander refuses a `ruleFact` that is already worked out, inside its transaction.
+  * MA3: an add by name counts worked-out keys as taken, both in the preview (`rule-facts.ts:247-248`) and in the lander.
+  * C3.6 stays 42/42.
+* **m1, m3, m4, m6: closed** (status line with focus, J-A6a step 2; tests at `check_vv_checklist.ts` "review m3" and `check_b102_worked_out.ts` "review m4"; the empty option stays chosen). **m2** is named in break-report mi7 and not changed: it stays Minor. **m7** stays with the tech lead (follow-up row on the PR).
+* **New Minors (Should; none blocks):**
+  * r2-m1. `WorkedOut.add` is not in one transaction with the lander. If an ask lands between the route's library read (`worked-out.ts:96-100`) and its `derivedField.create`, a fact can still end up both asked and worked out. The window is tens of milliseconds; the common order is refused both ways. Fix: do the read and the create in one `$transaction` that re-reads `canonicalField` before the create.
+  * r2-m2. A rule written *after* a value is worked out can still compare it with words: `engine/validate.ts:47` skips derived keys. This is outside this row's diff; it belongs with m7's follow-up. Nit: "compares … with words (eq true)" calls a yes/no "words".
+* **No Blocker or Major remains open.**
+
+Verdict: Approve
