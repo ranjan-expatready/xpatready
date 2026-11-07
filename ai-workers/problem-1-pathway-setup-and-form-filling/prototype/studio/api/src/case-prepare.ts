@@ -356,7 +356,11 @@ export class CasePrepare {
         const staleCopy = since && (since.changes.length || since.groups.length || ch.channel === "PAPER") ? since : null;
         const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
         if (ch.channel === "PAPER" && !waits) {
-          const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers, done: stepsOf.get(i.id) }); // B132
+          // B132: the recorded Printed and Signed in pen; on a barcode form only those done on its current validated copy
+          // (Devin on #1278: a newer read-back is not signed by an earlier print), so readiness never counts an old signature.
+          const pen = stepsOf.get(i.id), barcodeForm = isBarcodeForm(i.itemKey);
+          const penDone = !barcodeForm || (validated?.current && pen?.print?.copy === validated.copy) ? pen : undefined;
+          const line = paperLine(i.itemKey, { barcode: barcodeForm, missing: rd.missing.length, validated, signers, done: penDone });
           // C7.7 (P-144): a Paper line keeps its own next step (a new barcode page), after the words of what changed.
           return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords("Make a new copy, press Validate again (a new barcode page) and read it back before you print, or undo the change.") : {}) };
         }

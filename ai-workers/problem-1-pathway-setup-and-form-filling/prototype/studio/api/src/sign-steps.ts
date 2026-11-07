@@ -87,8 +87,6 @@ export class SignSteps {
     // C9.2 (BR-12, BR-20): a form printed from a copy whose facts changed since (the representative of record among them)
     // is signed again: a new print starts its steps again (the earlier steps superseded, the signed scan kept). Once it is
     // uploaded to IRCC it is not (after filing is C8.2's record).
-    // B132: the same for a form signed in pen (a signed copy whose facts changed is signed again).
-    const restart = key === "print" && !!done.print && !done.uploaded_to_ircc && !!done.print.copy && (await this.changedSince(c, item, done.print.copy!)).length > 0;
     // Ready to file is C7.6's (L-SA3, P-315). Break B1 on #861: it is read now, from the prepare view (which takes a
     // filing that is no longer ready back to Not started), never from the stored status alone.
     const filingReady = key === "uploaded_to_ircc"
@@ -99,14 +97,22 @@ export class SignSteps {
     // first print and on a re-print after a fact changed alike (review M1).
     const barcode = pen && isBarcodeForm(item.itemKey);
     let validated: { copy: string; current: boolean } | null = null;
-    if (barcode && key === "print") {
+    if (barcode && (key === "print" || key === "sign_in_pen")) {
       const v = (await this.prepare.view(actor, c.id)) as { items: { id: string; record?: string; validated?: { copy: string; current: boolean } | null }[] };
       validated = v.items.find((x) => x.id === item.id && !x.record)?.validated ?? null;
     }
     const paper = { barcode, validated: !!validated?.current };
+    // B132: the same for a form signed in pen (a signed copy whose facts changed is signed again); and (Devin on #1278) a
+    // barcode form whose printed copy is no longer its current validated copy (a newer one was read back) is printed again.
+    const restart = key === "print" && !!done.print && !done.uploaded_to_ircc && !!done.print.copy
+      && ((barcode && done.print.copy !== validated?.copy) || (await this.changedSince(c, item, done.print.copy!)).length > 0);
     const notValidated = barcode && key === "print" && !paper.validated ? penRefusal("print", {}, item.itemKey, paper) : null;
     const refusal = notValidated ?? (restart ? null : pen ? penRefusal(key as PenStepKey, done, item.itemKey, paper) : stepRefusal(key as SignStepKey, done, item.itemKey, { filingReady }));
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
+    // Devin on #1278 (red): Signed in pen signs the validated copy printed now, never an earlier print once a newer
+    // validated copy was read back (the Paper line and readiness count only steps done on the current validated copy).
+    if (barcode && key === "sign_in_pen" && (!validated?.current || done.print?.copy !== validated.copy))
+      fail(`Signed in pen is for the validated copy of ${item.itemKey} printed now: a newer validated copy was read back since it was printed. Print the validated copy, then have it signed in pen. Nothing was recorded.`, HttpStatus.CONFLICT);
     let copyId: string | null = null;
     if (key === "print") {
       const b = (body ?? {}) as { copy?: unknown };

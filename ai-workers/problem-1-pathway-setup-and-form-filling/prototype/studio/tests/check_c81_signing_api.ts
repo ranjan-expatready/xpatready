@@ -193,6 +193,26 @@ else {
   const v2 = await validateRoundTrip(c7.id, "IMM 5257", V);
   r = await post(i57?.id, "print", { copy: v2 });
   ok("B132 M1 pass (re-print): the newly validated copy is printed and its signing starts again (the earlier steps superseded)", !!v2 && r.status === 200 && printed() === v2 && sql(`select count(*) from sign_step where item_id='${i57?.id}' and superseded_at is null`) === "1", [r.status, r.body?.detail, printed()]);
+  // Devin on #1278 (red): a newer validated copy read back after a fact changed is not signed by the earlier print: Signed
+  // in pen is refused until that copy is printed, and the Paper line and readiness never count steps done on another copy.
+  const stepDone = async (k: string) => ((itemsOf((await prepare(c7.id, officer)).p, V, "IMM 5257").find((x) => !(x as { record?: string }).record) as unknown as { steps?: { key: string; done: boolean | null }[] })?.steps ?? []).find((x) => x.key === k)?.done;
+  const penWarn = async () => {
+    const pp = (await prepare(c7.id, officer)).p;
+    return ((readinessOf(pp, filingOf(pp, V)?.id) as { warns?: { code: string; item?: string }[] } | null)?.warns ?? []).some((w) => w.code === "missing_signature" && w.item === i57?.id);
+  };
+  await answer(c7.id, V, "person.family_name", "SAMPLETHIRD", officer); await confirmAll(c7.id, V);
+  const v3 = await validateRoundTrip(c7.id, "IMM 5257", V);                // read back, not printed
+  r = await post(i57?.id, "sign_in_pen");
+  ok("B132 (Devin, red) fail: Signed in pen on the print of an earlier copy, after a newer validated copy is read back, is refused (409 in words), nothing recorded", !!v3 && r.status === 409 && /validated copy/.test(r.body?.detail ?? "") && sql(`select count(*) from sign_step where item_id='${i57?.id}' and key='sign_in_pen' and superseded_at is null`) === "0", [r.status, r.body?.detail]);
+  ok("B132 (Devin, red) fail: the Paper line does not count the earlier copy's print as this copy's (Printed not done)", (await stepDone("print")) === false, await stepDone("print"));
+  r = await post(i57?.id, "print", { copy: v3 });
+  const pen3 = await post(i57?.id, "sign_in_pen");
+  ok("B132 (Devin, red) pass: the newer validated copy is printed (its signing starts again) and Signed in pen is recorded on it; readiness counts it", r.status === 200 && pen3.status === 200 && printed() === v3 && (await stepDone("sign_in_pen")) === true && !(await penWarn()), [r.status, r.body?.detail, pen3.status, pen3.body?.detail]);
+  await answer(c7.id, V, "person.family_name", "SAMPLEFOURTH", officer); await confirmAll(c7.id, V);
+  const v4 = await validateRoundTrip(c7.id, "IMM 5257", V);                // a signed print, then a newer read-back
+  ok("B132 (Devin, red) fail: once a newer validated copy is read back, the earlier copy's pen signature no longer counts: the line shows it not done and readiness warns \"missing signature\" again", !!v4 && (await stepDone("sign_in_pen")) === false && (await penWarn()), [await stepDone("sign_in_pen"), await penWarn()]);
+  r = await post(i57?.id, "print", { copy: v4 });
+  ok("B132 (Devin, red) pass: the newer validated copy is printed: its signing starts again", r.status === 200 && printed() === v4 && sql(`select count(*) from sign_step where item_id='${i57?.id}' and superseded_at is null`) === "1", [r.status, r.body?.detail]);
   // m2: a hand-signed form refuses the pen step.
   r = await post(i76?.id, "sign_in_pen");
   ok("B132 m2 fail: a form signed by hand and scanned refuses \"Signed in pen\", naming its own steps (409), nothing recorded", r.status === 409 && /signed by hand and scanned: its steps are Printed, Signed by hand/.test(r.body?.detail ?? "") && sql(`select count(*) from sign_step where item_id='${i76?.id}' and key='sign_in_pen'`) === "0", [r.status, r.body?.detail]);
