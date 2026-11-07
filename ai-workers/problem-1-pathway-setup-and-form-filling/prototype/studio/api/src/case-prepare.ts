@@ -223,10 +223,20 @@ export class CasePrepare {
     const fid = (x: string) => idOfFiling.get(x) ?? x;
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
     const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
-    const groups = done.groups.map((g) => ({ ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }));
+    // B152 (FQ-7): a recorded group reads its fees as they were recorded (submission_group.recorded_fees, written once by
+    // "Record the submission"), never worked out again: a birthday, a corrected date of birth or a new fee table later
+    // changes nothing that was filed. A group recorded before B152 has none and is worked out today, as before.
+    type Frozen = { at: string; totals: (typeof done.groups)[number]["totals"]; total_cents: number | null; fees: unknown[] };
+    const frozen = new Map(stored.groups.filter((x) => x.recordedFees).map((x) => [x.id, x.recordedFees as unknown as Frozen]));
+    const groups = done.groups.map((g) => {
+      const base = { ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }, f = frozen.get(g.id);
+      return f ? { ...base, totals: f.totals, total_cents: f.total_cents, fees_recorded: { at: f.at } } : base;
+    });
+    const frozenFilings = new Set(groups.filter((g) => frozen.has(g.id)).flatMap((g) => g.filings));
     // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
-    const fees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
+    const derivedFees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
       source: (f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source)?.url ?? "Sample", source_detail: f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source ?? null }));
+    const fees = [...derivedFees.filter((l) => !frozenFilings.has(l.filing)), ...groups.filter((g) => frozen.has(g.id)).flatMap((g) => frozen.get(g.id)!.fees as typeof derivedFees)];
 
     // Items in the view: each with one state; a form with its channel, what IRCC accepts and the signature that follows.
     const view = caseView(s, people, answers, rows, "agent", today, groupAnswers);
@@ -346,7 +356,11 @@ export class CasePrepare {
         const staleCopy = since && (since.changes.length || since.groups.length || ch.channel === "PAPER") ? since : null;
         const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
         if (ch.channel === "PAPER" && !waits) {
-          const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers, done: stepsOf.get(i.id) }); // B132
+          // B132: the recorded Printed and Signed in pen; on a barcode form only those done on its current validated copy
+          // (Devin on #1278: a newer read-back is not signed by an earlier print), so readiness never counts an old signature.
+          const pen = stepsOf.get(i.id), barcodeForm = isBarcodeForm(i.itemKey);
+          const penDone = !barcodeForm || (validated?.current && pen?.print?.copy === validated.copy) ? pen : undefined;
+          const line = paperLine(i.itemKey, { barcode: barcodeForm, missing: rd.missing.length, validated, signers, done: penDone });
           // C7.7 (P-144): a Paper line keeps its own next step (a new barcode page), after the words of what changed.
           return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords("Make a new copy, press Validate again (a new barcode page) and read it back before you print, or undo the change.") : {}) };
         }
@@ -423,7 +437,7 @@ export class CasePrepare {
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
-      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
+      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its

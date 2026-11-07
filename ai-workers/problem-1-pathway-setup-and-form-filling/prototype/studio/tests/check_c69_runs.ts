@@ -86,7 +86,7 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
     const snapped = snapshotEligibility({ gates: saved.gates, judgement: [], disclaimer: null });
     ok("C6.9 R4 pass: the release carries it (snapshot.eligibility), and a gate without it carries nothing", snapped?.gates[1].whenNotMet === "needs_review" && !("whenNotMet" in (snapped?.gates[0] ?? {})));
     const lines = eligibilityChanges(snapshotEligibility({ gates: [GATES[1]], judgement: [], disclaimer: null }), snapshotEligibility({ gates: [REVIEW[1]], judgement: [], disclaimer: null }));
-    ok("C6.9 R4 pass: changing it is a change-summary line for the expert, in words", lines.length === 1 && lines[0].change === "changed" && /when not met: the representative reviews it; was: not eligible/.test(lines[0].label), lines);
+    ok("C6.9 R4 pass: changing it is a change-summary line for the expert, in words", lines.length === 1 && lines[0].change === "changed" && /when not met: the representative reviews it; was: does not qualify/.test(lines[0].label), lines);
     const r = (gates: typeof REVIEW, f: Record<string, unknown>) => assess(snap(gates as never), knownOf(f), P)!;
     const rv = r(REVIEW, { ...ALL, "person.criminal_history": true });
     ok("C6.9 R4 pass: a needs_review gate not met → Possibly eligible, listed in reviewGates (not failedGates), the gate still Not met", rv.outcome === "POSSIBLY_ELIGIBLE" && rv.reviewGates.join() === "vv.no_convictions" && !rv.failedGates.length && rv.gates[1].state === "not_met" && rv.gates[1].whenNotMet === "needs_review", rv);
