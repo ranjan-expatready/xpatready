@@ -18,6 +18,8 @@ import { aiLive } from "./sources.ts";
 import { FIRM_RECORD, openingTeam, REPRESENTATIVE, representativeAnswers, USES_REPRESENTATIVE, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { linkedOf } from "./employer-cases.ts";
+import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "../../engine/runtime/background.ts";
+import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
 
 type H = string | undefined;
@@ -74,6 +76,16 @@ export class Runtime {
   }
 
   snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
+
+  /** C6.18 (P-244): the facts of a case's release that are background answers (engine/runtime/background.ts), read once
+   *  per release (a release never changes). */
+  private readonly background = new Map<string, Set<string>>();
+  backgroundOf(c: Reached): Set<string> {
+    const id = c.pins[0].release.id;
+    let got = this.background.get(id);
+    if (!got) { got = backgroundFacts(this.snapshotOf(c), backgroundBlockOf); this.background.set(id, got); }
+    return got;
+  }
   peopleOf(c: Reached): Participant[] {
     return c.participants.map((p) => ({ subjectId: p.subjectId, role: p.role as Participant["role"], label: p.subject.label, applies: p.applies }));
   }
@@ -276,7 +288,10 @@ export class Runtime {
     // A confirmation version names the answer it confirmed (sourceJson.from): who first answered stays visible (review M4).
     const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
     const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
-    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? firsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
+    const bg = this.backgroundOf(c);
+    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? firsts.get(src.from) : undefined; const one: Answer = { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null };
+      // C6.18 (P-244): a background answer, and whether an officer recorded it and the client has not re-confirmed it.
+      return bg.has(one.field) ? { ...one, background: true, awaitsClient: awaitsClient(one, bg) } : one; });
     const r: Row[] = rows.map((x) => ({ rowKey: x.rowKey, subjectId: x.subjectId, group: x.groupKey, order: x.order }));
     const gFrom = groupRows.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
     const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
@@ -349,7 +364,10 @@ export class Runtime {
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });
     if (!def) fail(`The library has no version ${field!.item_version} of ${fieldKey}.`, HttpStatus.CONFLICT);
     const rowKey = b.row ?? null;
-    const source = { channel: officer ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() };
+    const source = { channel: officer ? OFFICER_ENTRY : "questionnaire", actor: actor.id, at: new Date().toISOString() };
+    // C6.18 (P-244): staff may record a background answer (by phone or in person): it is marked "Officer" (its channel,
+    // who and when) and waits for the client to re-confirm it before signing. A blank is never saved (PutAnswer).
+    const recordedForClient = officer && this.backgroundOf(c).has(fieldKey);
     const newId = randomUUID();
     try {
       await this.db.$transaction(async (tx) => {
@@ -364,13 +382,42 @@ export class Runtime {
       if (unique(e)) { const now = await this.db.clientCanonicalAnswer.findFirst({ where: { subjectId, canonicalFieldKey: fieldKey, rowKey, supersededById: null } }); conflict("Someone answered this at the same moment; their answer is shown. Check it and save again.", { current: now ? { id: now.id, value: now.valueJson } : null }); }
       throw e;
     }
-    await this.audit.log(c.workspaceId, actor.id, "answered", "case fact", fieldKey, `${actor.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : "Client questionnaire"})`);
+    await this.audit.log(c.workspaceId, actor.id, "answered", "case fact", fieldKey, `${actor.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : "Client questionnaire"}${recordedForClient ? "; a background answer recorded by staff, marked Officer: the client re-confirms it before signing" : ""})`);
     const after = await this.view(actor, caseId, officer ? "agent" : "sqr");
     const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
-      message: fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved." };
+      message: `${fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved."}${recordedForClient ? " Marked Officer: the client re-confirms it before signing." : ""}` };
+  }
+
+  /** C6.18 (P-244): the client re-confirms one background answer their case officer recorded (by phone or in person),
+   *  the version they were shown: a new version of the same value, the client's own from now on, that still names the
+   *  officer's answer (who recorded it and when stays visible). Only the client does this; staff never do it for them.
+   *  To change the value instead, the client answers the question again (their own answer replaces the officer's). */
+  async reconfirm(actor: Actor, caseId: string, answerId: string) {
+    if (isOfficer(actor)) fail("Only the client re-confirms an answer their case officer recorded; staff cannot do it for them.", HttpStatus.FORBIDDEN);
+    const c = await this.reach(actor, caseId, "answer");
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const row = UUID.test(answerId) ? await this.db.clientCanonicalAnswer.findUnique({ where: { id: answerId } }) : null;
+    if (!row || !c.participants.some((p) => p.subjectId === row.subjectId)) fail("No such answer on this case.", HttpStatus.NOT_FOUND);
+    const newer = () => this.db.clientCanonicalAnswer.findFirst({ where: { subjectId: row!.subjectId, canonicalFieldKey: row!.canonicalFieldKey, rowKey: row!.rowKey, supersededById: null } });
+    if (row!.supersededById) { const now = await newer(); conflict("This answer changed after you opened it; nothing was re-confirmed. Check the newer answer shown, then re-confirm that one.", { current: now ? { id: now.id, value: now.valueJson } : null }); }
+    const a: Answer | undefined = (await this.state(c)).answers.find((x) => x.id === answerId);
+    if (!a?.awaitsClient) refused("Nothing to re-confirm: your case officer did not record this answer for you, or you have already re-confirmed it.");
+    if (!isClientField(this.snapshotOf(c), row!.canonicalFieldKey)) fail("The officer enters this fact from a document or record.", HttpStatus.FORBIDDEN);
+    // The officer's own answer stays the one named (a "Confirm section" version names it in its turn).
+    const officerAnswer = (row!.sourceJson as { channel: string; from?: string }).channel === OFFICER_ENTRY ? row!.id : (row!.sourceJson as { from?: string }).from ?? row!.id;
+    const id = randomUUID(), at = new Date().toISOString();
+    await this.db.$transaction(async (tx) => {
+      const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: row!.id, supersededById: null }, data: { supersededById: id } });
+      if (n.count !== 1) conflict("This answer changed at the same moment; nothing was re-confirmed. Check the newer answer shown, then re-confirm that one.");
+      await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: row!.workspaceId, partyId: row!.partyId, subjectId: row!.subjectId, canonicalFieldId: row!.canonicalFieldId, canonicalFieldKey: row!.canonicalFieldKey, rowKey: row!.rowKey, valueJson: row!.valueJson as object, status: "DECLARED", sourceJson: { channel: CLIENT_RECONFIRM, actor: actor.id, at, from: officerAnswer } } });
+    });
+    await this.audit.log(c.workspaceId, actor.id, "re-confirmed", "case fact", row!.canonicalFieldKey, `${actor.name} re-confirmed ${row!.canonicalFieldKey} on case ${short(caseId)}: a background answer the case officer ${a!.origin?.actor ?? a!.actor} recorded (Officer)`);
+    const after = await this.view(actor, caseId, "sqr");
+    const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === row!.subjectId && x.fact === row!.canonicalFieldKey);
+    return { answer: (row!.rowKey ? q?.rows.find((x) => x.row === row!.rowKey)?.answer : q?.answer) ?? null, message: "Re-confirmed: it is your own answer now." };
   }
 
   /** Adds a row to a person's repeating group (or the application's, for a case-level group). Rows of one group are
@@ -466,6 +513,8 @@ export class Runtime {
     const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
     const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
       .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
+    const bg = this.backgroundOf(c);
+    let waiting = 0;
     const confirmed = await this.db.$transaction(async (tx) => {
       // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
@@ -489,7 +538,11 @@ export class Runtime {
         const groupGone = gone.length && await tx.clientGroupAnswer.count({ where: { id: { in: gone }, subjectId: b.subjectId, groupKey: section } });
         conflict("Some answers in this section changed or arrived after you reviewed it; nothing was confirmed. Review them and confirm again.", { changed: [...new Set([...changed, ...unseen].map((a) => a.canonicalFieldKey)), ...(gaUnseen || groupGone ? [`group:${section}`] : [])] });
       }
-      const open = current.filter((a) => a.status === "DECLARED");
+      // C6.18 (P-244): a background answer the officer recorded is the client's to re-confirm; the officer's confirm leaves
+      // it waiting for the client (it was seen, so it never blocks the section) and says how many.
+      const forClient = current.filter((a) => a.status === "DECLARED" && awaitsClient({ field: a.canonicalFieldKey, channel: (a.sourceJson as { channel: string }).channel }, bg));
+      const open = current.filter((a) => a.status === "DECLARED" && !forClient.includes(a));
+      waiting = forClient.length;
       for (const a of open) {
         const id = randomUUID();
         const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: a.id, supersededById: null }, data: { supersededById: id } });
@@ -504,10 +557,10 @@ export class Runtime {
       }
       return open.length + (ga?.status === "DECLARED" ? 1 : 0);
     });
-    await this.audit.log(c.workspaceId, actor.id, "confirmed", "section", section, `${actor.name} confirmed ${confirmed} answer${confirmed === 1 ? "" : "s"} in ${section} on case ${short(caseId)}`);
+    await this.audit.log(c.workspaceId, actor.id, "confirmed", "section", section, `${actor.name} confirmed ${confirmed} answer${confirmed === 1 ? "" : "s"} in ${section} on case ${short(caseId)}${waiting ? `; ${waiting} background answer${waiting === 1 ? "" : "s"} recorded by staff still wait${waiting === 1 ? "s" : ""} for the client to re-confirm` : ""}`);
     const v = await this.view(actor, caseId, "agent");
     const sec = v.sections.find((x) => x.subjectId === b.subjectId && x.section === section);
-    return { confirmed, section, missing: sec?.missing ?? [], invalid: sec?.invalid ?? 0 };
+    return { confirmed, section, missing: sec?.missing ?? [], invalid: sec?.invalid ?? 0, awaiting_client: waiting };
   }
 
   /** The workspace's cases, newest first, a page at a time (cursor: the last case id of the previous page). */
@@ -537,5 +590,6 @@ export class RuntimeController {
   @Put("cases/:id/groups/:subject/:group/none-apply") noneApply(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("group") g: string, @Body() b: unknown) { return this.r.noneApply(actorOf(a), id, s, g, b); }
   @Post("cases/:id/groups/:subject/rows") addRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.addRow(actorOf(a), id, s, b); }
   @Delete("cases/:id/groups/:subject/rows/:row") removeRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("row") r: string) { return this.r.removeRow(actorOf(a), id, s, r); }
+  @Post("cases/:id/answers/:answer/reconfirm") reconfirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("answer") x: string) { return this.r.reconfirm(actorOf(a), id, x); }
   @Post("cases/:id/sections/:section/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("section") s: string, @Body() b: unknown) { return this.r.confirmSection(actorOf(a), id, s, b); }
 }

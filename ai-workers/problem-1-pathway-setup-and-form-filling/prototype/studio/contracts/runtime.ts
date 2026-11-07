@@ -104,12 +104,17 @@ export const CONFIRM_WORDS = {
   client_own: "Counts as confirmed: the client's own answer",
   waits: "Waits for the officer's \"Confirm section\"",
   by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  // C6.18 (P-244): a background answer staff recorded (by phone or in person) waits for the client, never for the officer.
+  awaits_client: "Recorded by the case officer: waits for the client to re-confirm it before signing",
 } as const;
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
-export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string };
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** C6.18 (P-244), background answers only: the staff member who recorded it and when ("Officer"), or null when the
+   *  client gave it; awaits_client while the client has not re-confirmed it. */
+  officer?: { by: string; at: string } | null; awaits_client?: boolean };
 export type ViewQuestion = {
   subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
   shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
