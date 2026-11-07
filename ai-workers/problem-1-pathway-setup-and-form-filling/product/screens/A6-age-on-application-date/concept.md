@@ -19,9 +19,9 @@ Row: M3 sprint plan, "Row A6" (`product/design/m3-sprint-plan-2026-11-06.md`). C
 * **BR-1 Worked out only for a rule that reads it.** The fact must be read by a condition, rule or check of this combination and be neither a library field nor already worked out (same list as C3.6, `missingRuleFacts`). Else 404 "no rule here reads …" / 409 "already in the library" / 409 "already worked out".
 * **BR-2 Only a calculation the engine has a tested helper for**, offered in words: "Age in whole years" (`age_in_years`). Else 400 naming the choices.
 * **BR-3 Worked out from a date about the same subject:** for `person.*`, a library date field about the person (`person.date_of_birth`). Else 400.
-* **BR-4 Worked out on a date asked once per case** (`case.*`, type date, in the library). None yet → 400 "add the date about the case first (Add a fact a rule needs: Application date)".
+* **BR-4 Worked out on a date asked once per case** (`case.*`, type date, in the library). None yet → 400 "add the date about the case first (Add a fact a rule needs: Application date)". **Both dates must be asked in this combination's questionnaire** (challenge M1) → else 400 "place it first". The checkpoint asks the application date once per case in the staff working view, beside the intended stay dates (challenge m5).
 * **BR-5 Never both asked and worked out:** a waiting proposal to ask that fact → 409 "decide it on To review first".
-* **BR-6 The configuration author only** (403 for others); plain words 10–300 characters; the key is the one the rule reads (never typed). Written with an audit line; it reaches cases only in a release an Approver approves (the release check already refuses a worked-out value whose dates are not asked).
+* **BR-6 The configuration author only** (403 for others); the key is the one the rule reads (never typed); **the words are built by the server from the choices and name both dates** ("Age in whole years from Date Of Birth, on Application Date."; challenge M2), so the Approver's Review line says what it is. Written with an audit line; it reaches cases only in a release an Approver approves.
 * **BR-7 How age counts (engine, exists):** whole years on the reference date; one less while the birthday is not yet reached; born 29 February: the birthday counts on 1 March in a year without one; a birth after the reference date gives no age ("check the date of birth and the application date"). **Sample**; "Unconfirmed: no counsel" for the 29 February and reference-date choices.
 * **BR-8 Shown on the person:** Documents shows each person's age "15 on 2026-11-07 (the application date)", or "Age: answer Date of birth first" / "answer the application date first"; it changes when either date changes, and the minor's lines with it.
 * **BR-9 Under 18 is data, not code:** the threshold stays in each line's condition (`samples/conditional-documents.json`, `lt 18`), never in the engine (P-319).
@@ -34,7 +34,7 @@ Facts a rule needs that no form asks · 1
 ┌ Document condition letter_of_authorization…: a child under 18 travelling alone …   [Add the fact this rule needs] [Work it out instead]
 │ person.age_years
 │ Worked out as [Age in whole years ▾]  From [Date of birth ▾]  On [Application date ▾]
-│ In words [The person's age in whole years on the application date.]
+│ It will read: Age in whole years from Date Of Birth, on Application Date.
 │ [Work it out · US$0]     (no date about the case yet → "Add the date first: Add a fact a rule needs › Application date")
 └
 Case page › Documents
@@ -51,12 +51,12 @@ From the vendors' own public pages read for V4 (`reports/verify-2026-11-03/V4-be
 Saves effort: nothing typed twice (age is never asked), one next step ("answer the application date first"), the error caught where it happens.
 
 ## 5. Copy
-"Work it out instead" · "Worked out as" · "From" · "On" · "In words" · "Work it out · US$0" · done: "Worked out: {fact} is now {words}" · Documents: "{n} on {date} (the application date)", "{n} on {date} (today: the application date is not answered yet)" never used for an age the lines read (they ask the date first).
+"Work it out instead" · "Worked out as" · "From" · "On" · "It will read: …" · "Work it out · US$0" · done: the row leaves the list · Documents: "Age {n} on {date} (the application date)"; when the release works out an age and its date is missing: "Age: answer "Date the application is submitted" first."; only a release with no worked-out age shows "Age {n} on {today} (today: the application date is not answered yet)", the date the 18-or-older lines use (challenge m6).
 
 ## 6. Contract and tests
 * `GET …/rule-facts/worked-out` → `{ calculations: [{ key, words }], from: [{ key, label, subject }], on: [{ key, label }] }`.
-* `POST …/rule-facts/:fact/worked-out` `{ calculation, from, on, plain }` → `{ fact, calculation, from, on, plain }` (201).
-* Checklist person: `age: { years: number | null, on: string | null, why: string }`.
+* `POST …/rule-facts/:fact/worked-out` `{ calculation, from, on }` → `{ fact, calculation, calculation_words, from, on, plain, rule }` (201); `plain` is built by the server.
+* Checklist person: `age: { years: number | null, on: string | null, why: string, worked_out: boolean }`.
 * Tests: `tests/check_b102_worked_out.ts` (isolated copy, sample inputs): a pass and a fail per BR-1…BR-6; BR-7 on the engine (birthday eve, birthday, 29 February, birth after the date). Acceptance: `acceptance/C6.4.test.ts` on the checkpoint 30/30; `C6.4-screen` stays 17/17; the fixture run stays 30/30.
 
 ## 6b. Capability or scaffolding (P-33)
@@ -69,6 +69,8 @@ The route, the panel row, the age line and the checkpoint data are capability. T
 
 ## J-A6 (journey by screens, P-352)
 Starts where J-B1 ends: case officer, family case, Documents. Child A1 (10) reads "10 on {date} (the application date)" with the minor's lines once "travels with" is answered. Change the child's date of birth to 18 years and one day before the application date: the age reads 18 and the five lines leave with "Not needed" reasons. Set it back one day short of 18: 17, the lines return. Clear the application date: the child's age line asks for it first and the lines wait. Ends at C6.5's first step: the passport section offers "Fill this from documents".
+
+**J-A6a (the author by screens, challenge m4).** Configuration author, a combination whose rule reads a fact the library lacks: Questionnaires › Facts a rule needs › "Work it out instead": Age in whole years, From Date of birth, On Application date; "It will read" names both dates; Work it out: the row leaves the list. Choosing a date the questionnaire does not ask: refused in the server's words under the form, focus on them. Ends at the combination's Review, where the worked-out value's line names both dates.
 
 ## Definition of ready
 Acceptance: `acceptance/C6.4.test.ts` on the checkpoint. Row text: the sprint plan's Row A6. Decisions: none open that block; Questions 1–3 carried on the PR.
