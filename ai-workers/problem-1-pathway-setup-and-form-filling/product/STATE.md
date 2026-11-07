@@ -2,7 +2,7 @@
 
 current_lead: local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023 Lead 29 · 7 Nov 12:35 IST (new account after the switch, P-398)
 
-updated: 2026-11-07 14:30 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-402 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
+updated: 2026-11-07 14:46 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-403 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
 * **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
@@ -18,7 +18,7 @@ updated: 2026-11-07 14:30 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 | F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open: qa's walk screenshots landed with #1199 |
 | F3 | C6.9 counts unconfirmed facts | keep, outcome names them | B124 | 7 Nov 08:48 | **answered** (P-393, B124 = #1197) |
 | F4 | Delete every session on the old account at the switch | as planned | the switch | 7 Nov 11:20 | **done per the founder's resume note** (P-396) |
-| F5 | Release the rows held at 45% (A5, B5, C2, the kind-job write-token fix, the b78 hang row) now the plan is at 0% | release them, critical path first | M3 pace | 7 Nov 13:11 | open |
+| F5 | Release the rows held at 45% | release them, critical path first | M3 pace | 7 Nov 13:11 | **answered "Yes, release them"** (P-403) |
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
@@ -31,7 +31,7 @@ updated: 2026-11-07 14:30 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 3. **qa:** #1220 (head 8f1d6193e, main ecbd68301): C6.11 and C8.1 Partial, P-339 met; QA-296 confirmed, new QA-299, QA-300. Label after reading the diff and CI, once the founder gives the OK. **B107 needs a lane at his next typed turn (P-400).** Then: dispatch C8.2 C6.9 on the checkpoint after B126 and B124 land.
 4. **P-388 measurement:** 2 failed of the first 10 batches after 09:19 IST (23113b92e5 the C1 and A3 clash; 0f532b98fc not read yet): 20%, over the 10% bar. `flow-measure.py` hit a rate limit today: read `actions/workflows/ci.yml/runs` directly. Trip-wire: P-399.
 5. **Hourly report** against `design/next-12-hours-2026-11-07.md` section 7 (P-399); halfway review 20:00 IST, block review 02:00 IST.
-6. **Records PR** from this branch, once a day (P-336): label after reading the diff, founder names it if the classifier refuses.
+6. **Records:** #1229 labelled 14:32 IST (records queue). **Do not push to `lead/2026-11-07-lead29` while #1229 is queued** (a push drops the label); later commits go on a new lead branch after it merges.
 
 ## Where we are (13:11 IST)
 * **M3 rows merged (13):** B120, B2 (night); A2 #1072, B1 #1073, A4 #1172, A1 #1084 (08:41-08:43); B117 #1148, B122 #1145, B121 #1149 (09:18-09:19); C1 #1180, B125 #1202 (10:31); QA-293 #1204 (11:34), A7 #1201 (11:42). Also merged: F6 #1188, records #1199, #1208 (11:51). A3 #1198 landed 13:49 IST (main 9dc77d1ac).
@@ -56,7 +56,7 @@ updated: 2026-11-07 14:30 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 | Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | standby + watchdog |
 | Lead 31 (Mac) | `local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e` | standby |
 
-**Held, wait for the founder's OK (P-394, founder's resume note 7 Nov):** A5 (#1054), B5, C2 (#1075), the kind-job write-token fix, the b78 hang row. Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
+**Released 14:34 IST (P-403), cloud lanes:** A5 #1054 (task_91f8e1f6), C2 #1075 (task_142d777f, after #1223 and #1225), B5 (task_909c403b), CI fixes kind token then b78 (task_11a034e6). Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
 
 ## Leads, in order (highest = current)
 **Lead 29** `local_ef20bc85-…` (from 12:35 IST 7 Nov) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 30 (watchdog), Lead 31, Lead 32.
