@@ -34,7 +34,7 @@ const strip = (x: unknown): unknown => Array.isArray(x) ? x.map(strip) : x && ty
 const same = (a: unknown, b: unknown) => JSON.stringify(strip(a)) === JSON.stringify(strip(b));
 const entriesKey = (m: MapIn | undefined) => JSON.stringify(((m?.entries ?? []) as { data_path?: string }[]).map(strip).sort((x, y) => String((x as { data_path?: string }).data_path).localeCompare(String((y as { data_path?: string }).data_path))));
 const way = (l: FormLineIn) => { const { channel, signature } = lineOf(l); return { channel, signature }; };
-export const wayWords = (channel: Channel, signature: Signature) => `${CHANNEL_WORDS[channel] ?? channel}, ${signature === "NONE" ? "how it is signed not set" : SIGNATURE_WORDS[signature]?.toLowerCase() ?? signature}`;
+export const wayWords = (channel: Channel, signature: Signature, signing = false) => `${CHANNEL_WORDS[channel] ?? channel}${signature === "NONE" ? signing ? ", how it is signed not set" : "" : `, ${SIGNATURE_WORDS[signature]?.toLowerCase() ?? signature}`}`;
 
 /** BR-3: the difference of two released snapshots of one combination, per form line, field type, eligibility gate and
  *  document line. Pure; the same two snapshots always give the same answer. */
@@ -54,8 +54,9 @@ export function releaseDiff(from: SnapshotIn, to: SnapshotIn): ReleaseDiff {
     else if (entriesKey(ea) !== entriesKey(eb)) kinds.push("map");
     if ((l.who ?? null) !== (n.who ?? null) || (l.min_age ?? null) !== (n.min_age ?? null) || !same(l.condition ?? null, n.condition ?? null)) kinds.push("rule");
     if (!kinds.length) continue;
-    const before = kinds.includes("edition") ? ea?.form_edition ?? "no edition" : wayWords(wa.channel, wa.signature);
-    const after = kinds.includes("edition") ? eb?.form_edition ?? "no edition" : kinds.includes("map") && !kinds.includes("channel") && !kinds.includes("signing") ? "its form fields are filled differently" : wayWords(wb.channel, wb.signature);
+    const signing = kinds.includes("signing"), wayChanged = kinds.includes("channel") || signing;
+    const before = kinds.includes("edition") ? ea?.form_edition ?? "no edition" : wayChanged ? wayWords(wa.channel, wa.signature, signing) : kinds.includes("map") ? "Its form fields as released before" : wayWords(wa.channel, wa.signature);
+    const after = kinds.includes("edition") ? eb?.form_edition ?? "no edition" : wayChanged ? wayWords(wb.channel, wb.signature, signing) : kinds.includes("map") ? "Some form fields filled differently" : wayWords(wb.channel, wb.signature);
     forms.set(form, { form, title: n.title ?? form, kinds, before, after });
   }
   const types = new Map<string, { label: string; before: string; after: string }>();
@@ -114,7 +115,7 @@ export function whatChanges(diff: ReleaseDiff, x: CaseInputs): Changes {
   for (const [f, who] of goneQ) questions.push({ what: qLabel.get(f) ?? f, kind: "No longer asked", who: names(x.people, who), before: "Asked", after: "Not asked (the answer is kept, hidden)" });
   for (const [f, t] of diff.types) {
     const who = x.answered.filter((a) => a.fact === f).map((a) => a.subject);
-    if (who.length) questions.push({ what: qLabel.get(f) ?? t.label, kind: "Answer type changed", who: names(x.people, who), before: t.before, after: t.after });
+    if (who.length) questions.push({ what: qLabel.get(f) ?? t.label, kind: "Answer type changed", who: names(x.people, who), before: `Expects ${typeWords(t.before)}`, after: `Expects ${typeWords(t.after)} (the answer given may need changing)` });
   }
   const eligibility = diff.eligibility.map((g) => ({ what: g.label, kind: g.kind === "added" ? "New rule" : g.kind === "removed" ? "Rule removed" : "Rule changed", who: [] as string[], before: g.kind === "added" ? "Not checked" : "Checked", after: g.kind === "removed" ? "Not checked" : "Checked as released" }));
   return { forms, documents, questions, eligibility };
@@ -180,7 +181,7 @@ export function touchedFilings(diff: ReleaseDiff, x: CaseInputs, filings: { id: 
       for (const [k, l] of a) if (!b.has(k)) words.push(`${labels.to} no longer asks for ${l}`);
       for (const [k, l] of b) if (!a.has(k)) words.push(`${labels.to} asks for ${l}`);
     }
-    for (const [fact, t] of diff.types) if (x.answered.some((a) => a.fact === fact && f.people.includes(a.subject))) words.push(`${labels.to} expects "${t.label}" as ${t.after}`);
+    for (const [fact, t] of diff.types) if (x.answered.some((a) => a.fact === fact && f.people.includes(a.subject))) words.push(`${labels.to} expects "${t.label}" as ${typeWords(t.after)}`);
     out.set(f.id, [...new Set(words)]);
   }
   return out;

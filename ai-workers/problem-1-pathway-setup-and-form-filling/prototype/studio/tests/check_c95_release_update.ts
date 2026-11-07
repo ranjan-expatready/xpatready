@@ -5,6 +5,7 @@
 import { draftNote, effectsOf, moveRefusal, pinChain, releaseDiff, releaseOutOfDate, reviewCounts, targetOf, touchedFilings, typeWords, whatChanges, type CaseInputs, type CaseSide, type SnapshotIn, type Work } from "../engine/runtime/release-update.ts";
 import { ReleaseMove } from "../contracts/runtime.ts";
 import { recorder } from "./runtime/api.ts";
+import { openCasesByRelease } from "../api/src/where-used.ts";
 
 const { ok, summary } = recorder();
 const entry = (path: string, fact: string | null, extra: Record<string, unknown> = {}) => ({ data_path: path, fact, outcome: fact ? "mapped" : "not_a_fact", item_version: 1, status: "PUBLISHED", ...extra });
@@ -90,6 +91,17 @@ ok("C9.5 BR-7 pass: the first reason is named (recorded before a running fill)",
 const chain = pinChain([{ revision: 1, version: 1, id: "old" }, { revision: 2, version: 6, id: "new" }]), reversed = pinChain([{ revision: 2, version: 6, id: "new" }, { revision: 1, version: 1, id: "old" }]);
 ok("C9.5 BR-1 pass: revisions read in either order give the newest (revision 2), and the chain holds", chain.current?.id === "new" && reversed.current?.id === "new" && chain.ok && reversed.ok);
 ok("C9.5 BR-1 fail: a gap in the revisions or a move backwards breaks the chain (refused, never read)", !pinChain([{ revision: 3, version: 6 }, { revision: 1, version: 1 }]).ok && !pinChain([{ revision: 2, version: 1 }, { revision: 1, version: 6 }]).ok && !pinChain([]).ok);
+// Challenge M1: where-used keeps one row per case, its newest revision. A stand-in for the database answers the query as
+// asked (its orderBy honoured), with the pins stored in reverse order of revision.
+const pinsStored = [{ caseId: "k1", configReleaseId: "rel6", revision: 2 }, { caseId: "k1", configReleaseId: "rel1", revision: 1 }, { caseId: "k2", configReleaseId: "rel1", revision: 1 }];
+const fakeDb = {
+  case: { findMany: async () => [{ id: "k1", combinationId: "vv" }, { id: "k2", combinationId: "vv" }] },
+  packWorkPin: { findMany: async (q: { orderBy?: { caseId?: string; revision?: string }[] }) => [...pinsStored].sort((a, b) => (q.orderBy?.length ? a.caseId.localeCompare(b.caseId) || a.revision - b.revision : 0)) },
+  configRelease: { findMany: async () => [{ id: "rel1", version: 1 }, { id: "rel6", version: 2 }] },
+};
+const byRelease = await openCasesByRelease(fakeDb as never, ["vv"]);
+ok("C9.5 BR-1 pass (where-used, challenge M1): a moved case is counted once, on its newest release, whatever order its pins are stored in", JSON.stringify(byRelease) === JSON.stringify([{ combinationId: "vv", release: 1, cases: 1 }, { combinationId: "vv", release: 2, cases: 1 }]), byRelease);
+ok("C9.5 BR-1 fail (where-used): an unmoved case stays counted on its release (never on the newer one)", byRelease.find((r) => r.release === 1)?.cases === 1);
 ok("C9.5 BR-2 pass: the target is the newest release with a higher version", targetOf([{ version: 1 }, { version: 3 }, { version: 2 }], 1)?.version === 3);
 ok("C9.5 BR-2 fail: on the newest release there is no target (forward only)", targetOf([{ version: 1 }, { version: 2 }], 2) === null && targetOf([{ version: 1 }], 3) === null);
 
