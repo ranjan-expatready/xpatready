@@ -67,6 +67,23 @@ const STATUS_WORDS: Record<string, string> = { not_started: "not started", ready
 type View = Awaited<ReturnType<CasePrepare["view"]>>;
 type ViewFiling = View["filings"][number] & { label?: string };
 
+/** B152 (break M3, review M2): every answer of the case's people, as a row count per answer table. The three are
+ *  append-only (a trigger refuses any other change), so any answer given after a read adds a row and changes the key. */
+type AnswerTables = Pick<Db, "clientCanonicalAnswer" | "clientFactRecord" | "clientGroupAnswer">;
+export async function answersKey(q: AnswerTables, subjects: string[]) {
+  const where = { where: { subjectId: { in: subjects } } };
+  const [a, f, g] = await Promise.all([q.clientCanonicalAnswer.count(where), q.clientFactRecord.count(where), q.clientGroupAnswer.count(where)]);
+  return `${a}|${f}|${g}`;
+}
+
+/** B152 (FQ-7): what a group is recorded with, from the prepare view the record read: its line totals, its total, the
+ *  fee lines of its filings, whether fees were worked out, and when. Read back by api/src/case-prepare.ts and
+ *  api/src/case-filings.ts. */
+export function recordedFeesOf(view: { groups: { id: string; totals?: unknown[]; total_cents?: number | null }[]; fees?: { filing: string }[]; fees_worked_out?: boolean; fees_why?: string | null }, groupId: string, filings: string[]) {
+  const group = view.groups.find((x) => x.id === groupId);
+  return { at: new Date().toISOString(), totals: group?.totals ?? [], total_cents: group?.total_cents ?? null, fees: (view.fees ?? []).filter((f) => filings.includes(f.filing)), fees_worked_out: view.fees_worked_out ?? true, fees_why: view.fees_why ?? null };
+}
+
 @Injectable()
 export class Submission {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(CasePrepare) private readonly prepare: CasePrepare) {}
@@ -76,6 +93,9 @@ export class Submission {
     if (!g) fail("No such submission group.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, g!.caseId, "officer"); // a client or configuration person: 403
     const b = parse(RecordSubmission, body);
+    // B152 (break M3): the answers as read before the view; checked again under the lock, so the fees frozen and the
+    // facts filed are read from the same answers (a date of birth given meanwhile: stale, nothing recorded).
+    const subjects = c.participants.map((p) => p.subjectId), answersRead = await answersKey(this.db, subjects);
     const view = await this.prepare.view(actor, c.id);
     const group = view.groups.find((x) => x.id === g!.id);
     if (!group) fail("This submission group has no filing on the application now: Reload.", HttpStatus.CONFLICT);
@@ -110,6 +130,10 @@ export class Submission {
     const label = new Map(this.r.peopleOf(c).map((p) => [p.subjectId, p.label]));
     const notReady = filings.filter((f) => (f.status as string) !== "ready_to_file"); // the view says "ready_to_file" from the stored status (C7.6)
     if (notReady.length) refuse("filings", `Record the submission once every filing of this group is Ready to file: ${notReady.map((f) => `${label.get(f.applicants[0]?.subject ?? "") ?? "a person"}'s filing is ${STATUS_WORDS[String(f.status).toLowerCase()] ?? String(f.status).toLowerCase().replace(/_/g, " ")}`).join("; ")}. Nothing was recorded.`, HttpStatus.CONFLICT);
+    // B152 (break M2, review M1): a fee still waiting for a fact (a date of birth) would be frozen as waiting for good:
+    // the record waits until every fee of the group is worked out.
+    const waits = (view.fees ?? []).filter((x) => want.includes(x.filing) && (x as { waiting?: string }).waiting);
+    if (waits.length) refuse("filings", `Record the submission once every fee of this group is worked out: ${waits.map((x) => x.reason).join(" ")}`, HttpStatus.CONFLICT);
 
     // The facts each form is filed with (BR-12), read as the view reads them.
     const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
@@ -127,6 +151,7 @@ export class Submission {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) stale();
       if (peopleKey(await tx.caseParticipant.findMany({ where: { caseId: c.id }, select: { subjectId: true, role: true, applies: true } })) !== peopleRead) stale();
+      if (await answersKey(tx as unknown as AnswerTables, subjects) !== answersRead) stale(); // B152 (break M3)
       if (await tx.filingRecord.count({ where: { filingId: { in: want } } })) refuse("filings", "This submission is already recorded: it is read-only.", HttpStatus.CONFLICT);
       // Only while still Ready to file: a filing changed meanwhile leaves nothing recorded.
       const n = await tx.filing.updateMany({ where: { id: { in: want }, status: "READY_TO_FILE", active: true }, data: { status: "SUBMITTED" } });
@@ -140,6 +165,8 @@ export class Submission {
         await tx.filingRecord.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: l.filing, submissionGroupId: g!.id, portal, ourReference: l.our_reference, submittedOn: new Date(`${l.submitted_on}T00:00:00Z`),
           applicationNumber: l.application_number, feeReceipt: l.fee_receipt, preparedBy: who.preparedBy, reviewedBy: who.reviewedBy, recordedBy: actor.id, filedFacts: formsOf(l.filing) as object } });
       }
+      // B152 (FQ-7): the group's fees as this view showed them, frozen with the record; /prepare reads them back.
+      await tx.submissionGroup.update({ where: { id: g!.id }, data: { recordedFees: recordedFeesOf(view, g!.id, want) as object } });
       if (b.ucis.length) await tx.filingPersonRecord.createMany({ data: b.ucis.map((u) => ({ workspaceId: c.workspaceId, filingId: filingOfSubject.get(u.subject)!, subjectId: u.subject, uci: u.uci, recordedBy: actor.id })) });
       // AG-7-95 safety: no application number or UCI in the summary; the detail says which filings.
       await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, "recorded", "submission group", g!.id,
