@@ -17,72 +17,73 @@
 
 **The board is intent, not pixels (P-44).** C6.9 has no board. Its concept (`concept.md` §4, P-223 (4)) is the intent kept here: Workspace pattern, people on the left, the result on the right, drawers, never modals.
 
-## Score (Met · Partly · Not met · N/A)
+## Score (Met · Partly · Not met · N/A), revised after the challenge
+The study's applicability table lists BIC-02, 04, 08, 10 and 12 for C6.9, plus the six that apply to every screen.
+
 | Id | Score | Evidence |
 |---|---|---|
 | BIC-01 Ask once | N/A | The page asks nothing; it reads facts on file |
-| BIC-02 Asked for a reason | **Partly** | Each rule shows the facts it read and their values (shot 1). A missing fact on a rule links to the top of the Agent view (`eligibility.tsx:223`), while the "rests on" line links to the exact question (`:202`). The person must find the question themselves |
-| BIC-03 No stale answers | Met | "Out of date: X changed from A to B … Run again" (`:191`); pack C6.9 out-of-date lines pass |
-| BIC-04 Incomplete is normal | Met | Not answered gives "Possibly eligible — needs N facts", never Not eligible (P-229 (3)); pack passes |
-| BIC-05 Source and confirm on every value | **Partly** | Values show "(not confirmed yet)" when unconfirmed (`:221`). They never show where the value came from (Document, Client, Case officer), although the engine already keeps it (`engine/runtime/case.ts:240`, `source`) |
-| BIC-06 Honest confidence | N/A | No AI on this page (C6.9-14) |
-| BIC-07 Conflicts | N/A | The page writes no facts |
-| BIC-08 Case structure at a glance | **Partly** | The people list shows each name and outcome, but not the role: "Partner (Sample)" never says "Spouse or partner", although the case carries `role_label` |
-| BIC-09 Principal change | N/A | Not on this page |
-| BIC-10 How the outcome is reached | **Not met** | Nothing on the page says how the rules combine into one outcome. The C6.9 study (`reports/best-in-class-C6.9-A4-2026-11-07.md`, improvement 4) and DMN's visible hit policy both call for it |
-| BIC-11 One primary action, named | Met | One primary per area: "Run eligibility check" / "Run again" in the header; Override, Mark reviewed and History are secondary (shot 1) |
-| BIC-12 Check before it leaves | N/A | No signing or filing here |
-| BIC-13 Errors | Met | Drawer errors on the field ("Give a reason for running again …"); "Nothing was run" with the cause (`:162`) |
-| BIC-14 Help in place | **Not met** | Three help texts are `title` attributes on elements that cannot take focus: the Score line `<span>` (`:197`), the "Officer's judgement" `<h3>` (`:231`) and the case-card "Out of date" pill (`:90`). Keyboard and touch users never reach them (USWDS tooltip [27]). The outcome pills ("Likely", "Possibly", "Not eligible") have no help at all. The Stand-in tooltip names internal terms ("AG-03 Qualifier"; `EXPERIENCE.md` §5) |
-| BIC-15 / BIC-16 | N/A | Not filing screens |
-| BIC-17 Review | Met | "Mark reviewed" once per check, with a stamp naming duty and licence; the History drawer lists each run |
-| BIC-18 States | Met | Empty state teaches the first action (shot 3); "No eligibility rules yet"; out of date; read-only after filing (concept §5) |
-| BIC-19 Low cognitive load by layout | **Partly** | One heading and one primary per panel; red only for Not met. Three faults: (1) "Score: none (this application has no points score)" is a line about something that does not exist, always shown beside the outcome; (2) dates in values are ISO ("2029-05-09") on a page that otherwise says "7 Nov 2026"; (3) the trail and the card link use 13 px, off the team scale (`:84`, `:134`; `EXPERIENCE.md` §1 [M] 12/14/16/18/24) |
-| BIC-20 Accessible | Met, except BIC-14 | Keyboard path, focus ring, listbox and 1024 px all work (probe); headings h1 › h2 › h3 in order |
+| BIC-02 Asked for a reason | **Partly** | Each rule shows the facts it read and their values (shot 1). A missing fact on a rule links to the top of the Agent view (`eligibility.tsx:223`), while the "rests on" line links to the exact question (`:202`) |
+| BIC-03 No stale answers | Met | "Out of date: X changed from A to B … Run again" (`:191`); the pack's out-of-date lines pass |
+| BIC-04 Incomplete is normal | Met | A fact not answered never gives Not eligible on its own (P-229 (3)); the pack passes |
+| BIC-05 Source on every value | N/A | Not in the applicability table for C6.9. BIC-05's bar is a document's name and page with Accept / Edit / Reject, which belong to the Agent view and C6.4; values here link to the Agent view, where each fact's source and status show (`PRODUCT.md` §4). The first draft scored it and proposed a source label; the challenge showed the label would read the wrong field (`case.ts:240` keeps the latest row's channel, `confirm_section`). Dropped |
+| BIC-06, 07, 09 | N/A | No AI, no fact writing, no role change on this page |
+| BIC-08 Case structure at a glance | **Partly** | The people list shows name and outcome but no role ("Partner (Sample)" never says Spouse or partner) |
+| BIC-10 How the outcome is reached | **Partly** | The outcome lines say "needs N facts", "fails …; also needs …", "the representative reviews this". No line says how the rules combine into one outcome (C6.9 study, improvement 4) |
+| BIC-11 One primary action, named | Met | One primary per area: "Run eligibility check" / "Run again"; the rest are secondary (shot 1) |
+| BIC-12 Check before it leaves | N/A | **Departs from the applicability table:** this page has no signing or filing step, so there is nothing to check before it leaves |
+| BIC-13 Errors | **Partly** | The drawers show field errors ("Give a reason for running again …") but no summary at the top. Each drawer has one field, so the inline error is the only one. No change proposed; listed as a Should |
+| BIC-14 Help in place | **Not met** | Help that keyboard and touch users never reach: the `title` on the Score `<span>` (`:197`), on the "Officer's judgement" `<h3>` (`:231`) and on the disabled "Mark reviewed" (`:239`). The outcome pills have no help at all. Breaks `EXPERIENCE.md` §2.10 and §2.12 [M]: a **Must** |
+| BIC-15, 16 | N/A | Not filing screens |
+| BIC-17 Review | N/A | Not in the applicability table. "Mark reviewed" works: once per check, with a stamp |
+| BIC-18 States | **Partly** | Empty state (shot 3), "No eligibility rules yet" and out of date are built. The read-only state after filing (concept §5) is not: `review.md` says "not built yet". It waits on C8.2's filing record, which now exists: a follow-up row, not this revision |
+| BIC-19 Low cognitive load by layout | **Partly** | One heading and one primary per panel; red only for Not met. Values show ISO dates ("2029-05-09") on a page that otherwise says "7 Nov 2026". "Score: none (…)" is always shown beside the outcome |
+| BIC-20 Accessible | **Partly** | The keyboard path, focus ring, listbox (↑ ↓) and 1024 px all work (probe). BIC-14's unreachable help is the gap; 200 % zoom was not tested |
 
-**Totals:** Met 8; Partly 4; Not met 2; N/A 6. The two Not met are BIC-10 and BIC-14. BIC-14 is a Must, because it also breaks `EXPERIENCE.md` §2.10 [M] (tooltips on every status) and §2.12 [M] (keyboard path for every task). The others are Shoulds.
+**Totals:** Met 3 · Partly 7 · Not met 1 · N/A 9. The one Not met (BIC-14) is a Must. The Partly scores are Shoulds: they are fixed below, or listed (BIC-13, BIC-18).
 
 ## Concept revision (what changes; nothing else does)
-All changes are in `web/src/runtime/eligibility.tsx`, plus a source label read from data the API already returns or can add read-only.
+All changes are in `web/src/runtime/eligibility.tsx`. No schema, API shape, money or permission change, so no breaker. No rule changes; all 20 pack lines keep their meaning. All new outcome words go through the existing `outcomeWords`, so the held P-236 rename ("Qualifies · Can't tell yet · Does not qualify", held for the product owner, P-251) stays a single edit.
 
-The revision changes no schema, money or permissions, so no breaker is needed. No rule changes, and every C6.9 pack line keeps its meaning.
+1. **How this result is worked out (BIC-10, BIC-19).** A Details under the outcome, titled "How this result is worked out". The Score line moves into it, so the score keeps its place (P-164 (1), BR-11) without being always on. It contains:
+   * "Every rule must be met. When a rule is not met, the result is Not eligible, even if facts are still missing."
+   * "A fact not answered gives Possibly eligible. A rule the representative reviews never gives Not eligible."
+   * "When the result rests on answers not yet confirmed, it says so" (P-393).
+   * "The lines under Officer's judgement never change the result." The judgement lines themselves still come from the release (BR-1); nothing about a program is written into the page.
+   * The score, or "No points score on this application".
+2. **Help that a keyboard reaches (BIC-14, Must).**
+   * The result's outcome pill and the case card's pills use the existing focusable `Tip` (`components/status.tsx:15`, as `StandIn` does). The text is built from the same parts as `outcomeWords`, so a Possibly that comes from a review rule says so.
+   * In the people list, each option's meaning is carried in its accessible name (`aria-describedby`), so the list keeps one tab stop and its ↑ ↓ pattern.
+   * The judgement help becomes one visible line under its heading.
+   * The disabled "Mark reviewed" shows "Already marked reviewed" as visible text.
+   * The Stand-in tooltip is left as it is: it is demo chrome, and the same pattern is used on every screen.
+3. **Roles in the people list (BIC-08).** Each name shows the case page's own role words, from `cases.tsx` `roleOf`: "Principal applicant", "Spouse or partner", "Child". The live `role_label` ("Spouse or partner (travelling)") is not used. **Question 1** covers the conflict between `PRODUCT.md` §4 "Dependent child" and the case page's "Child".
+4. **A missing fact links to its question (BIC-02).** The link uses the same `lineId` anchor as the "rests on" line, and falls back to `#agent-view` when the line is not found.
+5. **Dates (BIC-19).** Date values show as "9 May 2029", both in the rules and in the out-of-date band.
 
-1. **How this result is worked out (BIC-10, BIC-19).**
-   * **What:** replace the always-on Score line with a Details under the outcome, titled "How this result is worked out". It says: "Every rule must be met. A rule not met gives Not eligible. A fact not answered gives Possibly eligible, never Not eligible. A rule the representative reviews never gives Not eligible. Money, health, ties and leaving are the officer's judgement and never change the result." Then, only when the program has a points score: "Score: …".
-   * **Why:** the user sees the combining rule where they read the result, and the line about a score that does not exist goes away.
-2. **Outcome help that a keyboard reaches (BIC-14, Must).**
-   * **What:**
-     * Each outcome pill (list and result) gets a tooltip on a focusable trigger, giving the outcome's meaning in one line. Example for Possibly eligible: "Possibly eligible: no rule failed, but N facts are not answered yet."
-     * The "Out of date" pill gets the same treatment.
-     * The judgement help moves from the `<h3>` `title` into one visible line under the heading: "IRCC's officer decides these; they never change the result."
-     * The Stand-in tooltip says "Later, the team's eligibility engine fills this page and adds scores, cut-offs and advice." It no longer says "AG-03 Qualifier".
-   * **Why:** `EXPERIENCE.md` §2.10 and §2.12; USWDS: use tooltips "only on elements that appear interactive" [27]; the help needed to act is shown on the page.
-3. **Each person's role in the people list (BIC-08).** The role goes under the name: "Principal applicant", "Spouse or partner", "Dependent child". It uses the case's own `role_label`.
-4. **Where each value came from (BIC-05).**
-   * **What:** each value read reads, for example, "Passport number: Z7000001 · from Document · confirmed", or "… · from Client · not confirmed yet".
-   * **How:** the source words come from the engine's `source` channel, mapped to the three words in `PRODUCT.md` §4 (Document, Client, Case officer). The run already freezes each input's value. The builder adds the source to the frozen input on new runs only, so older runs show the value without a source.
-   * **Open question:** if adding the source would change the stored result shape, that is a shared-contract change: Question 1.
-5. **A missing fact links to its question (BIC-02).** "Passport number → Answer in the Agent view" opens that person's exact question, using the same anchor as the "rests on" line (`:202`), not the top of the Agent view.
-6. **Dates and sizes on the team scale (BIC-19).**
-   * Date values show as "9 May 2029", in the same form as the rest of the page.
-   * The 13 px trail and card link move to 12 px.
-   * The shared Pill's 11 px is not this screen's to change. It is listed for the tech lead, not changed here.
+**Tests added, one pass and one fail each, labelled C6.9 (in `tests/check_c69_page_browser.cjs` and the pack):**
+* The Details holds the combining rule and the score place, and there is no always-on Score line.
+* The result pill's help opens on keyboard focus.
+* The people list keeps one tab stop.
+* A role shows under each name.
+* The missing-fact link carries the person's line anchor.
+* No value or band shows an ISO date.
 
-**Tests added (one pass and one fail each, labelled C6.9):**
-* the Details holds the combining rule, and no Score line shows for Visitor visa;
-* each pill's help opens on keyboard focus;
-* a role shows under each name;
-* a value shows its source word, and an older run shows none;
-* the missing-fact link carries the person's question anchor;
-* a date value never shows in ISO form.
+The 20 existing lines must still pass, exit 0, on the configured checkpoint.
 
-The 20 existing lines must still pass, with exit 0, on the configured checkpoint.
+**Not changed:**
+* the layout, the drawers, the outcomes and their words, the rules, the API, and who may see what;
+* the Stand-in chip;
+* the shared Pill's 11 px and the 13 px runtime trails (`cases.tsx:182` too). These are cross-screen: **Question 2**.
 
-**Not changed:** the layout, the drawers, the outcomes, the rules, the API routes, who may see what, and the client view (none).
+**Listed, not in this revision:**
+* BIC-13: an error summary in one-field drawers.
+* BIC-18: the read-only state after filing. This is a follow-up row now that C8.2 exists.
+* BIC-20: a 200 % zoom check, at the build's review.
 
 ## Questions for the tech lead (recommendation first)
-1. **Source on frozen inputs (revision 4).** Adding `source` to each input frozen in a new run's `result_json` is additive. It makes no schema migration, because `result_json` is already JSON. **Recommended:** allow it as an additive field, named in the PR's first line as a changed shared shape. The alternative is to show the source from today's facts, which can disagree with a frozen run.
-2. **The shared Pill's 11 px.** **Recommended:** a separate screens row, because it touches every screen.
+1. **"Child" or "Dependent child".** The case page says "Child", and `PRODUCT.md` §4 says "Dependent child". **Recommended:** use the case page's words here, so the two pages agree, and ask the founder on his list which word stays.
+2. **Cross-screen type sizes.** The shared Pill uses 11 px, and the runtime trails use 13 px (in 13 files). **Recommended:** one screens row that moves both onto the team scale.
 
 ## Challenge
-A fresh Opus agent challenged this concept, and its verdict and answers are on the PR. The build starts only after the tech lead's approval comment.
+A fresh Opus challenge returned "Build after these changes", with 5 Majors and 9 Minors. Its findings and the answers are in `challenge-ux-2026-11-07.md`. The build starts only after the tech lead's approval comment.
