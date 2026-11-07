@@ -587,7 +587,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     // B102 (A6, break MA2, MA3, review R3-M1 (a)): a worked-out value's key is taken: a fact is asked or worked out, never
     // both, whichever was written first (the add for a rule is refused here; an add by name, renamed or not, gets another key).
     const worked = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
-    if (typeof ruleFact === "string" && worked.has(ruleFact)) fail(`${ruleFact} is worked out (Questionnaires › Facts a rule needs › Work it out instead), so it is not asked: reject this one.`, HttpStatus.CONFLICT);
+    if (typeof ruleFact === "string" && worked.has(ruleFact)) fail(`${ruleFact} is worked out (Smart questionnaire (SQR) › Facts a rule needs › Work it out instead), so it is not asked: reject this one.`, HttpStatus.CONFLICT);
     for (const k of worked) used.add(k);
     const rule = (r.source as { rule?: { key: string; sentence: string } | null } | null)?.rule;
     if (typeof ruleFact === "string" && used.has(ruleFact)) {
