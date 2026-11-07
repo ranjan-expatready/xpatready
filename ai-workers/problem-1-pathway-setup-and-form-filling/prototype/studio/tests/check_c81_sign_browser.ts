@@ -48,10 +48,11 @@ ok("setup: the Sample firm has a representative of record and a separate case of
 const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: rep, caseOfficers: [officer] });
 const P = c.subjects["Sample Client A"];
 console.log(`NOTE  set-up: facts filled by the pack's helper: ${(await fillEverything(c.id)) ? "all confirmed" : "some left open (passed with a reason on B2's panel below)"}`);
-type Item = { id: string; kind: string; form?: string; signature?: string; signers?: string[]; state: string; reason?: string };
+type Item = { id: string; kind: string; form?: string; subject: string; person: string; signature?: string; signed_by?: string | null; signers?: string[]; state: string; reason?: string; record?: string };
 const read = async () => (await prepare(c.id, officer)).p;
 let pv = await read();
-const it = itemsOf(pv, P, "IMM 5476")[0] as Item | undefined, i5257 = itemsOf(pv, P, "IMM 5257")[0] as Item | undefined;
+// The view's items as this check reads them (the API's own type is lib/m3.ts's, without `person` and `record`).
+const it = itemsOf(pv, P, "IMM 5476")[0] as unknown as Item | undefined, i5257 = itemsOf(pv, P, "IMM 5257")[0] as unknown as Item | undefined;
 const fid = filingOf(pv, P)?.id ?? "";
 ok("setup (QA-228 closed on the checkpoint): IMM 5476 is signed by hand and scanned, by the person and the representative; IMM 5257 is not", it?.signature === "HAND_SCANNED" && JSON.stringify(it?.signers) === JSON.stringify(["person", "representative"]) && i5257?.signature !== "HAND_SCANNED", { it, i5257: i5257?.signature });
 const steps = () => (sql(`select key || '|' || coalesce(copy_id::text, '') from sign_step where item_id = '${it?.id}' and superseded_at is null order by done_at`) ?? "").split("\n").filter(Boolean);
@@ -94,7 +95,7 @@ const row5476 = rowOf(p, "IMM 5476", "Sample Client A"), row5257 = rowOf(p, "IMM
 const who = (await row5476.locator("[data-who-signs]").innerText().catch(() => "")).trim();
 ok("C8.1 BR-1 pass (VV-R10): IMM 5476's row says who signs: the person by name and the representative of record by name, signed by hand and scanned", /Who signs: Sample Client A and the representative of record/.test(who) && who.includes(nameOf(rep)) && /Signed by hand and scanned/.test(who), who);
 ok("C8.1 BR-2 fail-guard: IMM 5257 (not signed by hand) has no signing steps; IMM 5476 has one block", (await row5257.locator("[data-sign-block]").count()) === 0 && (await block().count()) === 1, { b5257: await row5257.locator("[data-sign-block]").count() });
-const unsigned = ((pv?.items ?? []) as (Item & { person: string; signed_by?: string | null })[]).filter((x) => x.kind === "form" && x.signature === "NONE");
+const unsigned = ((pv?.items ?? []) as unknown as Item[]).filter((x) => x.kind === "form" && x.signature === "NONE");
 const unsignedWords = await Promise.all(unsigned.map(async (x) => (await rowOf(p, x.form!, x.person).locator("[data-who-signs]").innerText().catch(() => "")).trim()));
 ok("C8.1 BR-1 fail-guard: a form with no signature never contradicts itself: \"nobody\" when the release says none, else its signers and \"how it is signed is not set\"", unsignedWords.every((w, i) => w === "" || (unsigned[i].signed_by === "none" ? /^Who signs: nobody · No signature$/.test(w) : / · how it is signed is not set on the release's line yet$/.test(w) && !/No signature/.test(w))), unsigned.map((x, i) => `${x.form}: ${unsignedWords[i]}`));
 ok("C8.1-3 pass: the steps in order: Printed, Signed by hand, Signed scan received, Uploaded to IRCC", (await block().locator("[data-step]").evaluateAll((els) => els.map((e) => e.getAttribute("data-step")))).join() === "print,signed,scan_received,uploaded_to_ircc");
@@ -186,7 +187,7 @@ const filing = (pg: Page = p) => pg.locator(`[data-readiness-filing="${fid}"]`);
 type Line = { code: string; key: string };
 const lineOf = (l: Line) => filing().locator(`[data-line="${l.key.replace(/"/g, '\\"')}"][data-code="${l.code}"]`);
 let k = 0;
-for (const w of (readinessOf(await read(), fid)?.warns ?? []).filter((x: Line) => x.code !== "representative_review") as Line[]) {
+for (const w of ((readinessOf(await read(), fid)?.warns ?? []) as unknown as Line[]).filter((x) => x.code !== "representative_review")) {
   k++;
   await press(lineOf(w).getByRole("button", { name: /^Pass with a reason/ }));
   await p.keyboard.type(`Sample: checked with the client by phone (${k})`);
@@ -240,10 +241,10 @@ ok("C8.1-1 / BR-1 pass (VV-R09): Child A1's IMM 5257 names a parent as signer; C
 await state("family-who-signs", "[data-who-signs]");
 // Challenge m7: each adult's IMM 5476 has its own block; a step on one leaves the other as it was.
 const fp = (await prepare(fam.id, officer)).p;
-const hand = (fp?.items ?? []).filter((x) => x.kind === "form" && x.signature === "HAND_SCANNED" && !(x as { record?: string }).record) as Item[];
+const hand = ((fp?.items ?? []) as unknown as Item[]).filter((x) => x.kind === "form" && x.signature === "HAND_SCANNED" && !x.record);
 ok("challenge m7 pass: every hand-signed item of the family case has its own signing block", hand.length >= 2 && (await p.locator("[data-sign-block]").count()) === hand.length && (await Promise.all(hand.map((x) => p.locator(`[data-sign-block="${x.id}"]`).count()))).every((k) => k === 1), { hand: hand.map((x) => `${x.form}|${x.person}`), blocks: await p.locator("[data-sign-block]").count() });
 const [h1, h2] = hand;
-const fc = h1 ? await generateCopy(fam.id, h1.form!, (h1 as unknown as { subject: string }).subject) : null;
+const fc = h1 ? await generateCopy(fam.id, h1.form!, h1.subject) : null;
 const pr = await call("POST", `/runtime/items/${h1?.id}/sign-steps/print`, { copy: fc }, officer);
 await open(p, fam.id);
 const doneOf = async (id: string | undefined) => p.locator(`[data-sign-block="${id}"] [data-step="print"]`).getAttribute("data-done");
