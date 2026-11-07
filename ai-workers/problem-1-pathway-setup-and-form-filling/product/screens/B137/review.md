@@ -83,13 +83,7 @@ Correction to round 1: the working-tree changes at 13:50 UTC were the builder's 
 * **M3 fixed.** The drawer sends the line's `requirement:<lineage>` revision. Two tabs: A picks Sponsor-funded, then Standard again; stale tab B picking Sponsor-funded is refused with "Changed by Configuration author while you were editing. Nothing was saved…", and the message takes focus.
 * **M4 fixed.** The migration records its rollback and what a rollback loses.
 * **S1 / F3 fixed.** Retiring Host's bank statements (only a set member) is now refused with 409 "Visitor visa still uses it". Validate refuses a line whose set has a retired member, by name (pure "break F3" steps).
-* **S2 (first half), S3, S4, S5 / F2, S7, S8 fixed.** In order:
-  * The sign-off line adds "; substitute sets: Standard (Any one of: …); Sponsor-funded (All of: …)".
-  * The drawer warns when a line picks a set its type no longer has.
-  * An editor refusal scrolls into view and takes focus (checked: focused, in view).
-  * Staff's words have their own optional input, are kept on edit, and appear on the compare page.
-  * The pack calls the routes by literal path.
-  * The reason now shows once.
+* **S2 (first half), S3, S4, S5 / F2, S7, S8 fixed:** the sign-off names the type's sets in words; the drawer warns about a pick of a set the type no longer has; an editor refusal scrolls into view and takes focus; staff's words have their own input, are kept on edit and are shown on the compare page; the pack calls the routes by literal path; the reason shows once.
 * **S6 and the pick half of S2** are recorded as limits in the README. I accept them: no released line changes meaning, and the type's sets are named on the sign-off.
 
 **Left open (Minor, not blocking):** (1) an upload through the set line still replaces the other line's current file, with no line on that line when it was already Received (the file is kept as "1 earlier"); (2) the retire refusal calls a set member "a checklist line takes it as an alternative"; (3) the compare page prints ".; staff's words" (double punctuation).
@@ -97,3 +91,8 @@ Correction to round 1: the working-tree changes at 13:50 UTC were the builder's 
 Journey score at 394641c80: **9/10**, a pass. Plain words, feedback and state, and next step obvious are each up to 1. Correct data (the open file-replacement point above) and visual quality stay at ½.
 
 **Verdict: Approve** (commit 394641c80c654b38c1aa238b3c13cb7fe85b667d: no open Blocker or Major).
+
+## Merge check (P-318 (1)): merge commit c9839dd39 (parents fe82fff3d and origin/main 3470dc992)
+* **Resolution.** The only conflict was the `@Module` line in api/src/main.ts. Comparing its tokens against both parents: nothing is missing from either side and nothing is added (main's FieldScopeController / FieldScopes plus this PR's DocumentSetsController / DocumentSets). The only other main.ts difference from main is this PR's `import { DocumentSets, DocumentSetsController }`.
+* **Main's incoming changes (#1054, C3.16 field scope) do not interact with document sets:** studio.ts adds a placement refusal on question placements; snapshot.ts adds a scope mark on placements; sources.ts adds case suppliers for household and organisation facts, reading `document_types` supplies only, never `sets`; schema.prisma adds two `FieldScope` enum values, and its migration 20261105100000 only adds those and is ordered before ours (20261107230000). No incoming change touches document_type, document_requirement, case-checklist, where-used, validate or the C6.15 files.
+* **Not re-run:** nothing incoming reaches this PR's code paths. I rely on the coordinator's run on c9839dd39 (pack 28/28 exit 0, pure 34/34, typecheck no new errors). **Verdict: Approve** (commit c9839dd398621ee2884d5035af801e695c0521b1).
