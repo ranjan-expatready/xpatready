@@ -72,3 +72,25 @@ N/A: a configuration screen whose row does not choose the §6 scorecard (EXPERIE
 A real screen reader; a true 200 % browser zoom (approximated by a 720 px viewport); an intended user's unaided walk (D17/D20, the founder's).
 
 **Verdict: Block.** Fix M1, M2 and M3, each with a fail test, then a diff-only re-review.
+
+## Round 2 (diff only, P-293 (3)): `git diff 591b5110a..c5626c620`
+I used a scratch worktree of c5626c620 on :4433 and did not touch the shared tree. B140 (#1246) was merged there without a commit and aborted afterwards. The worktree and its database are removed and the copy is stopped. The later 92d2e4a41 changes only walk PNGs.
+- **Suite** `check_b154_section_background.ts`: **56/56** on a fresh configured checkpoint. The new fail tests cover review M1 (both orders, plus the re-check at approval), M2, M3 and m2, and the breaker's M1–M5, m1 and m2.
+- **Schedule 1 pack** with B140 merged: **16/16**.
+- **Browser** at 1024 px, keyboard only: focus returns to "Background answers… Previous travel" after Escape and lands on the row's "To review" link after send. axe: no violations; 0 page errors.
+
+**Round 1 findings:**
+- **M1: fixed.** `checkMark` (`section-background.ts`) refuses marking when a question is officer-filled (`AGENT_FROM`), is the officer's or representative's own details, or has an open who-fills change. It runs at propose and again in `applyBackground`. Who-fills refuses CASE_OFFICER while a mark is open, and `applyFills` checks again. Moving a question across the mark is refused (`studio.ts`).
+- **M2: fixed.** The declaration and "asks nothing" checks run again at approval, through the shared `checkMark`.
+- **M3: fixed.** `resubmitChange` refuses `section_background` ("Propose it again").
+- **m2: fixed.** Focus returns to the button, and the pill's meaning is now in screen-reader text.
+- **Breaker m1: sound.** Withdrawing an approved mark before release is proposer-only. It runs in one transaction, and its `status: "APPROVED"` guard rolls back if a release lands at the same moment.
+
+**Still open, Minor (Should), not blocking:**
+- **m1 can still arise in the unmark direction.** Found by reading the code, not run. Approve an unmark: the draft section becomes `client_only=f`. Then propose who fills → case officer: `who-fills.ts` reads the draft section and `db_openMark` looks only at `after: true`, so it passes. Approve it and both changes reach one release, where `engine/validate.ts:264-271` still adds a "Question placement" line labelled with the raw key. Fix: null both fields in that comparison.
+- **m3 stays open.** P-412 F11 is on the Lead's branch (lead31 DECISIONS.md line 6), not yet on main. It is the Lead's to merge.
+
+Round 2 scores: D1 4, D2 4, D4 4, D5 4, D16 5; the others as in round 1. Journey re-score: correct data 1, error recovery 1, accessibility 1, so **9.5/10**; plain words stays at ½ (m1).
+
+**Verdict: Approve** (no open Blocker or Major).
+Reviewer: Approve c5626c620b1c2e8d205d4bda246252f78f197bbd
