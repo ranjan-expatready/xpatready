@@ -11,6 +11,7 @@ import { Button, Dialog, Field, Input, Notice, Pill } from "@/components/ui/cont
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CaseTaskView, FilingRecordView } from "../../../contracts/submission-record";
 import { noRetryOnRefusal } from "./questionnaire";
+import { CaseFees, FeeBlock } from "./fees"; // C6.12 (B5): each submission's fees, from this same read
 
 type Applicant = { subject: string; label: string; role: string; mode: string };
 type Filing = { id: string; label: string; status: string; number: string | null; applicants: Applicant[]; group: string; record?: FilingRecordView; read_only?: boolean };
@@ -69,7 +70,7 @@ export function SubmissionPanel({ caseId }: { caseId: string }) {
             {open.length ? <div className="px-4 pt-3" data-after-filing-tasks><Notice tone="warn" title={`${open.length} task${open.length === 1 ? "" : "s"} after filing`}>
                 <ul className="list-disc space-y-1 pl-5">{open.map((t) => <li key={t.id} className="[overflow-wrap:anywhere]" data-task={t.kind}>{t.words}</li>)}</ul>
               </Notice></div> : null}
-            {v!.groups.map((g) => {
+            {v!.groups.map((g, gi) => {
               const fs = g.filings.map((id) => v!.filings.find((f) => f.id === id)).filter((f): f is Filing => !!f);
               const recorded = fs.some((f) => f.record);
               const notReady = fs.filter((f) => f.status !== "ready_to_file");
@@ -83,9 +84,11 @@ export function SubmissionPanel({ caseId }: { caseId: string }) {
                   </div>
                   {!recorded && notReady.length ? <p id={`sub-why-${g.id}`} className="mt-1 text-[13px] text-text-muted">Opens once every filing is Ready to file: {notReady.map((f) => `${whoOf(f)} (${statusOf(f.status).words})`).join(", ")}.</p> : null}
                   <ul className="mt-2 space-y-3">{fs.map((f) => <FilingLine key={f.id} f={f} onCorrect={(from, uci) => { back.current = from; setCorrecting({ f, uci }); }} />)}</ul>
+                  <FeeBlock view={v!} group={g} first={gi === 0} />
                 </section>
               );
             })}
+            <CaseFees view={v!} />
           </>}
       {recording && v ? <RecordDialog caseId={caseId} view={v} group={recording} close={() => done()} recorded={() => done(true)} /> : null}
       {correcting ? <CorrectDialog caseId={caseId} filing={correcting.f} uci={correcting.uci} close={() => done()} /> : null}
@@ -113,7 +116,7 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
           <dd><ul className="space-y-0.5" data-ucis>{r.ucis.map((u) => <li key={u.subject} className="flex flex-wrap items-center gap-2 [overflow-wrap:anywhere]" data-uci={u.subject}>
             <span>{u.person}: {u.uci ? <span className="font-mono">{u.uci}</span> : <span className="text-text-muted">none given</span>}</span>
             <Button size="sm" variant="ghost" aria-label={`${u.uci ? "Correct" : "Add"} ${u.person}’s UCI`} onClick={(e) => onCorrect(e.currentTarget, u as UciLine)}>{u.uci ? "Correct…" : "Add…"}</Button></li>)}</ul></dd>
-          <dt className="text-text-muted">Prepared by · Reviewed by</dt><dd data-prepared-reviewed>{r.prepared_by.name} · {r.reviewed_by ? (r.reviewed_by.self ? "Self-reviewed" : r.reviewed_by.name) : "no representative of record"}</dd>
+          <dt className="text-text-muted">Prepared by · Reviewed by</dt><dd data-prepared-reviewed>{r.prepared_by.name} · {r.reviewed_by ? (r.reviewed_by.self ? "Self-reviewed" : r.reviewed_by.name) : "Not reviewed (the review was passed with a reason)"}</dd>
         </dl>
         {r.corrections.length ? <div className="mt-2" data-corrections>
           <p className="text-[12px] font-medium text-text-muted">Corrections</p>
