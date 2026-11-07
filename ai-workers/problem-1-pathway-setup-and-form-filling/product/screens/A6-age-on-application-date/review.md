@@ -62,3 +62,8 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 * Note: `product/qa/built/C6.4.md` (untracked, 08:31 UTC) appeared in the shared working tree during this review. I did not write it, and I left it alone.
 
 **Verdict: Block** — fix M1 (refuse a fact no rule reads as a number; pass and fail test) and M2 (the two type errors in `tests/walk_b102_author.ts:33-35`); m7 needs the tech lead's ruling.
+
+## Builder response (at the fix commit after 78a874439)
+* **M1, fixed:** `api/src/worked-out.ts` `notNumberTests`: a fact a rule compares with words is refused (400) and the form reads "Not offered: …" with no save button (`GET …/worked-out?fact=`). Tests: `check_b102_worked_out.ts` "review M1 fail", "review M1 pass and fail"; walk J-A6a step 4.
+* **M2, fixed:** `tests/walk_b102_author.ts` loads axe with `createRequire` and types its callback; `tsc -p api/tsconfig.json` shows no error in the B102 files.
+* **m1, fixed:** a status line ("Worked out: … It reaches cases with the next approved release.") takes the focus (walk J-A6a step 2). **m3, m4, fixed** with tests. **m6, fixed** ("Choose a date…" stays chosen). **m2:** see break-report mi7 (not changed, named). **m5:** your walk of Review stands as the evidence. **m7:** for the tech lead (follow-up row proposed on the PR).

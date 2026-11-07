@@ -85,3 +85,13 @@ Breaker: a fresh agent that did not build the row. 7 Nov 2026, commit `78a874439
 * Layout: no horizontal overflow at 1024 px or 512 css px. Tab order runs Work it out instead → Worked out as → From → On → Work it out.
 * Budgets: GET choices 7-8 ms; refused POST 55-70 ms; GET checklist 32-37 ms.
 * Uploads and planted-instruction PDFs: not in this row's scope (nothing is uploaded).
+
+## Builder response (at the fix commit after 78a874439)
+* **MA1, fixed:** the age line uses the worked-out age the release's document lines read (`engine/runtime/case-checklist.ts`); a worked-out age no line reads is not used. Tests: `check_vv_checklist.ts` "break MA1 pass and fail", "break MA1 fail".
+* **MA2, fixed at the one landing door:** `api/src/proposals.ts` LANDERS.field refuses a field whose rule fact is worked out (409, "it is not asked: reject this one"), whichever request won the race. Test: `check_b102_worked_out.ts` "break MA2 fail".
+* **MA3, fixed:** a worked-out value's key counts as taken in the lander and in C3.6's key preview (`rule-facts.ts`), so an add by name gets another key. Test: "break MA3 pass and fail".
+* **mi1, mi2, mi3, mi4, mi5, fixed** with tests (retired key 409; from = on refused; two-dot key refused; a status line takes the focus; a stale refusal clears on change). mi2's other half (any date about the person may be the "From"): not changed; the words name the date chosen, and the Approver reads them on Review.
+* **mi6:** not changed on the screen; the server refuses (BR-5 by name, test "review m4").
+* **mi7:** not changed: the engine receives only answers without problems (B-M2), so an answer with a problem reads as not answered; the question itself shows the problem. Named, not hidden.
+* **mi8, fixed in the concept:** J-A6 no longer clears the date; it opens a case without it (step 1).
+* **mi9:** not changed: the application date's 5-year bound is the existing Sample guard (`case.ts`); a date 4.5 years ahead is accepted and ages are measured on it, as the officer entered.
