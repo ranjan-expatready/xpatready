@@ -104,7 +104,7 @@ async function main() {
   const gc = (await sqrGroups()).find((x) => groupsP.includes(x.section) && x.group!.client)!.section;
   const put = (g: string, noneApply: boolean, expectedId: string | null, actor = CLIENT, subject = P) => call("PUT", `/runtime/cases/${caseId}/groups/${subject}/${g}/none-apply`, { noneApply, expectedId }, actor);
   r = await put(gc, true, null);
-  ok("M3 pass (P-72): the principal says none apply on their own questionnaire; it counts as confirmed", r.status === 200 && r.body.saved === true && r.body.group?.none_apply?.value === true && r.body.group.none_apply.confirmed === true, r.body);
+  ok("M3 pass (P-72, P-242): the principal says none apply on their own questionnaire; it is Declared and needs no officer confirmation", r.status === 200 && r.body.saved === true && r.body.group?.none_apply?.value === true && r.body.group.none_apply.confirmed === true, r.body);
   const naId: string = r.body.group?.none_apply?.id;
   r = await put(gc, true, naId);
   ok("M3 pass: the same answer again saves nothing new", r.status === 200 && r.body.saved === false && sql(`select count(*) from client_group_answer where subject_id='${P}' and group_key='${gc}'`) === "1", r.body);
