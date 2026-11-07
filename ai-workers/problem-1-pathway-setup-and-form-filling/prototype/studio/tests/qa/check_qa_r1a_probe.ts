@@ -281,7 +281,7 @@ async function main() {
   await answer(A.id, A.principal, "person.passport_number", "SAMPLE-P-9001", OFFICER);
   await answer(A.id, child, "person.date_of_birth", "2016-07-14", OFFICER);
   await answer(A.id, child2, "person.date_of_birth", "2015-02-30", OFFICER); // D2 again, on the second child
-  const snap = JSON.parse(sql(`select r.snapshot from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id='${A.id}'`)) as Snapshot;
+  const snap = JSON.parse(sql(`select r.snapshot from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id='${A.id}' and p.revision = (select max(z.revision) from pack_work_pin z where z.case_id = p.case_id)`)) as Snapshot;
   const parts = JSON.parse(sql(`select json_agg(json_build_object('subjectId', p.subject_id, 'role', p.role, 'label', s.label, 'applies', p.applies)) from case_participant p join answer_subject s on s.id=p.subject_id where p.case_id='${A.id}'`)) as Participant[];
   const subj = parts.map((p) => `'${p.subjectId}'`).join(",");
   const ans = JSON.parse(sql(`select coalesce(json_agg(json_build_object('id', id, 'subjectId', subject_id, 'field', canonical_field_key, 'rowKey', row_key, 'value', value_json, 'status', status, 'channel', source_json->>'channel', 'actor', source_json->>'actor', 'at', source_json->>'at')), '[]') from client_canonical_answer where subject_id in (${subj}) and superseded_by_id is null`)) as Answer[];

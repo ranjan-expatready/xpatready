@@ -122,4 +122,16 @@ const ans = [{ field: "person.name", subjectId: "pA", rowKey: null, value: "A" }
 ok("C9.5 D1 pass: the same answers read in another order give the same waiting-facts key", waitingFactsKey(miss, ans) === waitingFactsKey(miss, [...ans].reverse()));
 ok("C9.5 D1 fail: a changed answer gives another key", waitingFactsKey(miss, ans) !== waitingFactsKey(miss, [ans[0], { ...ans[1], value: "C" }]));
 
+// Devin on #1252 (finding 3): a form whose only change is who needs it (who, minimum age, condition) touches a filing whose
+// person it newly applies to, or no longer applies to; never one whose applicability stays the same.
+const ruleFrom: SnapshotIn = { forms: [{ form_number: "IMM R", title: "Form R", who: "each_applicant", min_age: 18 }, { form_number: "IMM S", title: "Form S", who: "each_applicant" }, { form_number: "IMM T", title: "Form T", who: "each_applicant", min_age: 18 }] };
+const ruleTo: SnapshotIn = { forms: [{ form_number: "IMM R", title: "Form R", who: "each_applicant" }, { form_number: "IMM S", title: "Form S", who: "each_applicant", min_age: 18 }, { form_number: "IMM T", title: "Form T", who: "each_applicant", min_age: 16 }] };
+const rd = releaseDiff(ruleFrom, ruleTo);
+const ruleCase: CaseInputs = { people: [{ id: "adult", label: "Client A" }, { id: "kid", label: "Client C" }],
+  from: side({ adult: ["IMM R", "IMM S", "IMM T"], kid: ["IMM S"] }, {}, {}), to: side({ adult: ["IMM R", "IMM S", "IMM T"], kid: ["IMM R"] }, {}, {}), answered: [] };
+const rt = touchedFilings(rd, ruleCase, [{ id: "fAdult", people: ["adult"] }, { id: "fKid", people: ["kid"] }], { to: "Release 2" });
+ok("C9.5 BR-8 pass (Devin finding 3): a rule-only change touches the filing of the person a form now applies to, and of the one it no longer applies to, naming both",
+  (rt.get("fKid") ?? []).some((w) => /Release 2 now asks for IMM R/.test(w)) && (rt.get("fKid") ?? []).some((w) => /Release 2 no longer asks for IMM S/.test(w)), Object.fromEntries(rt));
+ok("C9.5 BR-8 fail (Devin finding 3): a rule-only change that leaves who needs the form as it was touches nothing (IMM T for both; the adult's filing)", (rt.get("fAdult") ?? []).length === 0 && !(rt.get("fKid") ?? []).some((w) => /IMM T/.test(w)), Object.fromEntries(rt));
+
 process.exit(summary() ? 1 : 0);

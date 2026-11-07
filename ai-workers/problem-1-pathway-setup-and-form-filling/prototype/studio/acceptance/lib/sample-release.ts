@@ -9,11 +9,11 @@ const said = (r: { status: number; body: any }) => String(r.body?.detail ?? r.bo
 
 /** `map`: a form whose first form field decided "not a fact" is decided "filled by hand" instead; `removeLine`: a document
  *  line's lineage removed; `typeOf`: a shared field whose answer type changes. Returns the new release's version. */
-export async function sampleRelease(vv: string, o: { map?: string | string[]; removeLine?: string; typeOf?: { field: string; to: string } }): Promise<SampleRelease> {
+export async function sampleRelease(vv: string, o: { map?: string | string[]; removeLine?: string; typeOf?: { field: string; to: string } | { field: string; to: string }[] }): Promise<SampleRelease> {
   const steps: SampleRelease["steps"] = [];
   const step = (s: string, r: { status: number; body: any }) => { steps.push({ step: s, status: r.status, ...(r.status >= 300 ? { detail: said(r).slice(0, 300) } : {}) }); return r; }; // eslint-disable-line @typescript-eslint/no-explicit-any
   const before = Number(sql(`select coalesce(max(version), 0) from config_release where combination_id='${vv}'`) ?? 0);
-  if (o.typeOf) step(`type ${o.typeOf.field} → ${o.typeOf.to}`, await call("PATCH", `/library/fields/${o.typeOf.field}`, { valueType: o.typeOf.to }, AUTHOR));
+  for (const t of Array.isArray(o.typeOf) ? o.typeOf : o.typeOf ? [o.typeOf] : []) step(`type ${t.field} → ${t.to}`, await call("PATCH", `/library/fields/${t.field}`, { valueType: t.to }, AUTHOR));
   for (const map of typeof o.map === "string" ? [o.map] : o.map ?? []) {
     const snap = (await call("GET", `/combinations/${vv}/config?mode=draft`, undefined, AUTHOR)).body?.snapshot;
     const label: string | undefined = (snap?.field_maps ?? []).find((m: { form_number: string; channel?: string }) => m.form_number === map && m.channel !== "ONLINE")?.form_edition;

@@ -38,7 +38,7 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const load = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
   const vv = sql("select id from combination where combination_key='vv.single'") ?? "";
   const r1 = sql(`select id from config_release where combination_id='${vv}' and version=1`) ?? "", r2v = n(`select coalesce(max(version), 0) from config_release where combination_id='${vv}'`);
-  const fam = sql(`select k.id from runtime_case k join pack_work_pin w on w.case_id=k.id where w.config_release_id='${r1}' order by k.created_at limit 1`) ?? "";
+  const fam = sql(`select k.id from runtime_case k join pack_work_pin w on w.case_id=k.id where w.config_release_id='${r1}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id) order by k.created_at limit 1`) ?? "";
   ok("setup: the configured checkpoint loads the family case on Visitor visa release 1 while release 2 is out (fails, never skips, when either is missing)", load.status < 300 && !!fam && r2v >= 2, { load: load.status, fam, newest: r2v });
   if (!fam || r2v < 2) return;
   const f = await firms();
@@ -109,6 +109,12 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: `postgresql://xr_studio@127.0.0.1:54329/${DB}` }) } as never);
   const byRelease = await openCasesByRelease(prisma as never, [vv]).catch((err: Error) => [{ error: err.message }] as never[]);
   const openVv = n(`select count(*) from runtime_case where combination_id='${vv}' and status='OPEN'`);
+  // Lead 32 (migration condition): every route that reads the case's pin reads the newest revision (release 2 here).
+  const reads = await Promise.all(["", "/prepare", "/checklist", "/filings", "/forms", "/assessments", "/employer-cases", "/team", "/questionnaire?mode=agent", "/release-update"].map(async (path) => [path, await call("GET", `/runtime/cases/${fam}${path}`, undefined, OFFICER)] as const));
+  const rv = (path: string) => (reads.find(([x]) => x === path)?.[1].body ?? {}) as { release_version?: number; pin?: { revision: number; release_version: number }; current?: { revision: number; version: number } };
+  ok("C9.5-6 pass (Lead 32): every case route reads the newest pin revision after the move (case, prepare, checklist, filings and the list name release 2; forms, assessments, employer cases, team and questionnaire answer)",
+    reads.every(([, x]) => x.status === 200) && rv("").pin?.revision === 2 && rv("").pin?.release_version === body.target_version && [rv("/prepare"), rv("/checklist"), rv("/filings")].every((x) => x.release_version === body.target_version)
+    && rv("/release-update").current?.revision === 2 && rv("/release-update").current?.version === body.target_version, reads.map(([x, y]) => `${x || "/"}:${y.status}:${(y.body as { release_version?: number })?.release_version ?? ""}`));
   ok("C9.5-6 pass (where-used, challenge M1): on the database the moved case is counted once, on release 2, and no case is counted on release 1", JSON.stringify(byRelease) === JSON.stringify([{ combinationId: vv, release: body.target_version, cases: openVv }]), byRelease);
   p = (await prepare(fam)).p;
   const i5257 = itemsOf(p, P.subject_id, "IMM 5257")[0] as { channel?: string; release_note?: string } | undefined;
@@ -137,7 +143,7 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const filingOf = (who: { subject_id: string }) => p?.filings.find((x) => x.applicants.some((a) => a.subject === who.subject_id))?.id ?? "";
   const [fS, fC1] = [filingOf(S), filingOf(C1)];
   const reviews = [];
-  for (const fl of [fS, fC1]) reviews.push((await call("POST", `/runtime/filings/${fl}/review`, { note: "Reviewed (Sample)", facts_hash: readinessOf((await prepare(fam)).p, fl)?.facts_hash }, f.rep ?? "")).status);
+  for (const fl of [fS, fC1]) { const rdx = readinessOf((await prepare(fam)).p, fl) as { facts_hash?: string; pin_revision?: number } | null; reviews.push((await call("POST", `/runtime/filings/${fl}/review`, { note: "Reviewed (Sample)", facts_hash: rdx?.facts_hash, pin_revision: rdx?.pin_revision }, f.rep ?? "")).status); }
   ok("setup (stage 2): on release 2, Client A's IMM 5476 signed by hand and scanned (C8.1), the spouse's IMM 5476 filled again (a copy on release 2), the spouse's marriage certificate uploaded (C6.4), the spouse's and the young child's filings reviewed (C7.6)",
     scanStatus === 201 && !!scanSha && !!fillS && sql(`select config_release_id from form_instance where id='${fillS}'`) === r2 && up.status === 201 && !!upSha && reviews.every((s) => s < 300), { scanStatus, fillS, upload: up.status, reviews });
   // A one-person case on release 2 recorded as submitted (C8.2), for C9.5-10.
@@ -152,7 +158,7 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const yReady = await readyToFile(y.id, f.rep);
   const q = await openCase(vv, [{ role: "principal", name: "Sample Client Q", dob: yearsAgo(33) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
   ok("setup (stage 2): a case on release 2 Ready to file (Y) and one never prepared (Q)", yReady.length === 1 && !!q.id, { yReady });
-  const three = await sampleRelease(vv, { map: ["IMM 5476", "IMM 5257 SCH1"], removeLine: "marriage_certificate_copy:couple_once", typeOf: { field: "organisation.name", to: "date" } });
+  const three = await sampleRelease(vv, { map: ["IMM 5476", "IMM 5257 SCH1"], removeLine: "marriage_certificate_copy:couple_once", typeOf: [{ field: "organisation.name", to: "date" }, { field: "case.visit_contact_relationship", to: "date" }] });
   ok("setup (stage 2): a later Sample release made through the author's routes: IMM 5476's and IMM 5257 SCH1's form fields filled differently, the marriage certificate line removed, the organisation's name now a date", !!three.version, three.steps);
   if (!three.version) return;
 
@@ -195,6 +201,14 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
     if (a.status >= 300) a = await put(OFFICER);
     fixed.push(a.status);
   }
+  // Devin on #1252 (finding 1): a once-per-case answer whose field's type changed, still asked by the new release, also
+  // refuses the move, naming it as the application's answer; nothing changed.
+  const caseMis = await move(fam, { target_version: three.version, from_revision: 2, reason: "Adopting the current release" });
+  ok("C9.5-11b fail (Devin finding 1): a case-level answer that no longer fits its field's type refuses the move (409), naming the application's answer; nothing changed",
+    caseMis.status === 409 && caseMis.body?.code === "type_mismatch" && /The application's answer to/.test(words(caseMis)) && pins(fam) === 2, { status: caseMis.status, words: words(caseMis) || caseMis.body?.words, fixed });
+  const caseSubj = caseView.people.find((x) => x.role === "case")?.subject_id ?? "";
+  const putCase = (actor: string) => call("PUT", `/runtime/cases/${fam}/answers/${caseSubj}/case.visit_contact_relationship`, { value: "2015-01-01", expectedId: sql(`select id from client_canonical_answer where subject_id='${caseSubj}' and canonical_field_key='case.visit_contact_relationship' and row_key is null and superseded_by_id is null`) || null }, actor);
+  if ((await putCase(CLIENT)).status >= 300) await putCase(OFFICER);
   const third = await move(fam, { target_version: three.version, from_revision: 2, reason: "Adopting the current release" });
   ok("setup (stage 2): with the answers changed, the case moves to the later release (revision 3)", third.status === 200 && third.body?.revision === 3, { status: third.status, fixed, words: words(third) || third.body?.words });
 
@@ -252,6 +266,19 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   // Break m10 (round 1): a review sent from a screen read before the move is refused.
   const wRev = await call("POST", `/runtime/filings/${wp?.filings[0]?.id}/review`, { note: "Reviewed (Sample)", facts_hash: wRd?.facts_hash, pin_revision: 1 }, f.rep ?? "");
   ok("C9.5-8c fail (break m10): a review sent from a screen read before the move (pin revision 1) is refused 409, nothing recorded", wRev.status === 409 && /moved to another release/i.test(words(wRev)), { status: wRev.status, words: words(wRev) });
+  // Devin on #1252 (finding 2): a review racing a move. The move goes first and holds the case's row lock; the review,
+  // read before it (pin revision 1, facts unchanged), must wait for the lock and be refused once the move commits, never
+  // stamped after the new pin as if made on the new release.
+  const yRead = readinessOf((await prepare(y.id)).p, yf) as { facts_hash?: string; pin_revision?: number } | null;
+  const yReviews = n(`select count(*) from filing_review where filing_id='${yf}'`);
+  const yHold = sqlAsync(`begin; select id from runtime_case where id='${y.id}' for update; ${insertPin({ caseId: y.id, release: r4id, hash: r4sha, reason: "'Sample: moved by the pack, lock held'" })}; select pg_sleep(1.5); commit;`);
+  await wait(400);
+  const yRev = await call("POST", `/runtime/filings/${yf}/review`, { note: "Reviewed (Sample)", facts_hash: yRead?.facts_hash, pin_revision: yRead?.pin_revision }, f.rep ?? "");
+  const yHoldExit = await yHold;
+  ok("C9.5-8d fail (Devin finding 2): a review sent while a move holds the case's lock is refused once the move commits (409), nothing recorded",
+    yHoldExit === 0 && pins(y.id) === 2 && yRev.status === 409 && n(`select count(*) from filing_review where filing_id='${yf}'`) === yReviews, { yHoldExit, status: yRev.status, words: words(yRev), read: yRead?.pin_revision });
+  const yNoRev = await call("POST", `/runtime/filings/${yf}/review`, { note: "Reviewed (Sample)", facts_hash: readinessOf((await prepare(y.id)).p, yf)?.facts_hash }, f.rep ?? "");
+  ok("C9.5-8e fail (breaker R2-m4): once the case has moved, a review that does not say which pin revision it read is refused, nothing recorded", yNoRev.status >= 400 && yNoRev.status < 500 && /pin revision|pin_revision/i.test(JSON.stringify(yNoRev.body)) && n(`select count(*) from filing_review where filing_id='${yf}'`) === yReviews, { status: yNoRev.status, words: words(yNoRev) });
   // Break m7 (round 1): a move that waits too long for the case's row lock answers a worded 503, never a 500; nothing changed.
   const famNow = pins(fam), famTarget = (await view(fam))?.target?.version;
   const hold = sqlAsync(`begin; select id from runtime_case where id='${fam}' for update; select pg_sleep(17); commit;`);

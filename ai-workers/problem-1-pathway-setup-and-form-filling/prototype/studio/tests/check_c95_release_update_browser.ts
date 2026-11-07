@@ -32,7 +32,7 @@ const reset = await post("/demo/reset", { confirm: "RESET" });
 const load = reset.status < 300 ? await post("/demo/load", { sample: "configured" }) : reset;
 const vv = sql("select id from combination where combination_key='vv.single'") ?? "";
 const r1 = sql(`select id from config_release where combination_id='${vv}' and version=1`) ?? "";
-const fam = sql(`select case_id from pack_work_pin where config_release_id='${r1}' limit 1`) ?? "";
+const fam = sql(`select case_id from pack_work_pin p where p.config_release_id='${r1}' and p.revision = (select max(z.revision) from pack_work_pin z where z.case_id = p.case_id) limit 1`) ?? "";
 const later = load.status < 300 && fam ? await sampleRelease(vv, { map: "IMM 5475" }) : { version: null, steps: [] };
 ok("setup: the configured checkpoint (the family case on release 1) and a later Sample release that fills IMM 5475 differently", load.status < 300 && !!fam && !!later.version, { load: load.status, fam, steps: later.steps });
 if (!fam || !later.version) process.exit(1);
