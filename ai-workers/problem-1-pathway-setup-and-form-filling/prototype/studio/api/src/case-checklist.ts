@@ -17,6 +17,7 @@ import { HttpException } from "@nestjs/common";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
 import { caseChecklist, type PersonLine } from "../../engine/runtime/case-checklist.ts";
+import { setMet } from "../../engine/document-sets.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -27,7 +28,24 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const short = (id: string) => id.slice(0, 8);
 /** A checklist line as the API answers it: the derived line with its stored id, state and documents (M3-CONTRACT C6.4). */
 export type StoredLine = Omit<PersonLine, "state" | "documents"> & { state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null;
-  version: number; documents: StoredDocument[]; kept: boolean; derived_id: string };
+  version: number; documents: StoredDocument[]; kept: boolean; derived_id: string;
+  /** C6.15: on a line with a substitute set, whether the person's current files meet it, by member, in words. */
+  set_status: SetStatus | null };
+/** C6.15 (SA-1B-19 rule 1): any one of: one member's file meets the line; all of: every member's. */
+export type SetStatus = { met: boolean; got: { key: string; name: string }[]; missing: { key: string; name: string }[]; words: string };
+/** The document types whose files count on a line: its set's members, and its own type (a file sent before the type had
+ *  sets is kept and shown, never dropped). */
+export const lineKeys = (l: Pick<PersonLine, "document" | "set">) => [...new Set([l.document.key, ...(l.set?.members.map((m) => m.key) ?? [])])];
+/** Whether the files of these types meet the line's set, in words ("1 of 2 received; still to come: Bank statements"). */
+export function setStatusOf(l: Pick<PersonLine, "document" | "set">, have: Set<string>): SetStatus | null {
+  if (!l.set) return null;
+  const r = setMet(l.set, l.document.key, have), name = (k: string) => l.set!.members.find((m) => m.key === k)?.name ?? k;
+  const got = r.got.map((k) => ({ key: k, name: name(k) })), missing = r.missing.map((k) => ({ key: k, name: name(k) }));
+  const words = l.set.mode === "any_one"
+    ? (r.met ? `Met by ${got.map((x) => x.name).join(" and ")} (any one of the set counts).` : `Any one of the set meets it: ${l.set.members.map((m) => m.name).join(", ")}.`)
+    : (r.met ? `All ${l.set.members.length} received.` : `${got.length} of ${l.set.members.length} received; still to come: ${missing.map((x) => x.name).join(", ")}.`);
+  return { met: r.met, got, missing, words };
+}
 
 /** Multipart file names arrive read as latin1 (busboy's default): a UTF-8 name is read back as UTF-8 when its bytes are
  *  valid UTF-8, so "Паспорт.pdf" is kept as typed (break M2); a real latin1 name stays as it is. */
@@ -42,6 +60,22 @@ const parse = <T,>(schema: { safeParse: (x: unknown) => { success: true; data: T
   if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
   return r.data;
 };
+
+/** C6.15: which member of the line's set a file is. A line with no set takes only its own type. */
+export function memberOf(line: Pick<StoredLine, "document" | "set" | "label">, raw: unknown): { key: string; name: string } {
+  const want = typeof raw === "string" ? raw.trim() : raw === undefined || raw === null ? "" : null;
+  if (want === null) fail("Say which document this file is as text (\"member\"), or leave it out. Nothing was stored.");
+  if (!line.set) {
+    if (want && want !== line.document.key) fail(`${line.label} has no substitute set: a file on it is ${line.label}. Nothing was stored.`);
+    return { key: line.document.key, name: line.document.name };
+  }
+  const names = line.set.members.map((m) => m.name).join(", ");
+  const key = want || (line.set.members.some((m) => m.key === line.document.key) ? line.document.key : "");
+  if (!key) fail(`Say which of the set's documents this file is: ${names}. Nothing was stored.`);
+  const m = line.set.members.find((x) => x.key === key);
+  if (!m) fail(`That document is not in the set this line uses (${line.set.name}): send one of ${names}. Nothing was stored.`);
+  return { key: m!.key, name: m!.name };
+}
 
 /** The working files' folder for documents (the person's own, by the row id). */
 const DOCS = () => VAR(WORKSPACE_KEY);
@@ -78,28 +112,34 @@ export class CaseChecklists {
     const subjects = d.people.map((p) => p.subject);
     const docs = await this.db.caseDocument.findMany({ where: { subjectId: { in: subjects } }, orderBy: [{ uploadedAt: "asc" }, { id: "asc" }] });
     const types = ((this.r.snapshotOf(c).document_types ?? []) as { key: string; name: string }[]);
-    const typeName = (k: string) => types.find((t) => t.key === k)?.name ?? k;
+    // C6.15: a set's members are named in the release with the set (they need not be lines of their own).
+    const memberNames = new Map(d.people.flatMap((p) => [...p.lines, ...p.waiting, ...p.not_needed]).flatMap((l) => l.set?.members ?? []).map((m) => [m.key, m.name]));
+    const typeName = (k: string) => types.find((t) => t.key === k)?.name ?? memberNames.get(k) ?? k;
     const rowOf = new Map(rows.map((x) => [`${x.subjectId}|${x.documentType}`, x]));
-    const docsOf = (subject: string, type: string): StoredDocument[] => docs.filter((x) => x.subjectId === subject && x.documentType === type).map((x) => ({
+    const docsOf = (subject: string, type: string | string[]): StoredDocument[] => docs.filter((x) => x.subjectId === subject && (Array.isArray(type) ? type.includes(x.documentType) : x.documentType === type)).map((x) => ({
       id: x.id, current: x.current, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, sha256: x.sha256, uploaded_by: x.uploadedBy,
-      uploaded_at: x.uploadedAt.toISOString(), superseded_at: x.supersededAt?.toISOString() ?? null }));
+      uploaded_at: x.uploadedAt.toISOString(), superseded_at: x.supersededAt?.toISOString() ?? null,
+      // C6.15: on a line with a set, which member the file is.
+      ...(Array.isArray(type) && type.length > 1 ? { member: { key: x.documentType, name: typeName(x.documentType) } } : {}) }));
+    const filesOf = (subject: string, l: PersonLine) => (l.set ? docsOf(subject, lineKeys(l)) : docsOf(subject, l.document.key));
+    const currentKeys = (subject: string, l: PersonLine) => new Set(docs.filter((x) => x.subjectId === subject && x.current && lineKeys(l).includes(x.documentType)).map((x) => x.documentType));
     const people = d.people.map((p) => {
       const out = (l: PersonLine, kept: boolean): StoredLine => {
-        const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = docsOf(p.subject, l.document.key);
+        const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = filesOf(p.subject, l);
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
         return { ...l, id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
-          state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept };
+          state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)) };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
-      const acted = (l: PersonLine) => { const row = rowOf.get(`${p.subject}|${l.document.key}`); return !!row && (row.state !== "not_requested" || docsOf(p.subject, l.document.key).length > 0); };
+      const acted = (l: PersonLine) => { const row = rowOf.get(`${p.subject}|${l.document.key}`); return !!row && (row.state !== "not_requested" || filesOf(p.subject, l).length > 0); };
       const keptWaiting = p.waiting.filter(acted), keptNot = p.not_needed.filter(acted);
       // Break M1: a person marked not travelling has no derived lines at all; a line acted on for them is kept as it was.
       const listed = new Set([...p.lines, ...p.waiting, ...p.not_needed].map((l) => l.document.key));
       const orphans = rows.filter((x) => x.subjectId === p.subject && !listed.has(x.documentType) && (x.state !== "not_requested" || docsOf(p.subject, x.documentType).length > 0))
         .map((x): PersonLine => ({ id: `${p.subject}:${x.lineage}`, document_type: x.documentType, label: typeName(x.documentType), state: "not_requested", required: false, documents: [],
           reason: p.applies ? "The case's release no longer asks this person for it." : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
-          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, who: "", who_words: "" }));
+          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, who: "", who_words: "" }));
       const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true)), ...orphans.map((l) => out(l, true))];
       return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };
     });
@@ -165,6 +205,9 @@ export class CaseChecklists {
     const media = mediaOf(bytes);
     if (!media) fail("Send a PDF, JPEG or PNG file (judged by the file itself, not its name). Nothing was stored.", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is Not applicable: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
+    // C6.15 (SA-1B-19 rule 1): on a line with a substitute set, the file is one member of it ("member": its document type
+    // key); left out, it is the line's own type when that is a member. Any member of the set the line uses counts.
+    const member = memberOf(shown, (body as { member?: unknown } | null)?.member);
     const docId = randomUUID(), sha256 = createHash("sha256").update(bytes).digest("hex");
     const rel = join("people", row.subjectId, "documents", `${docId}.${MEDIA[media!]}`), abs = join(DOCS(), rel);
     try {
@@ -172,15 +215,20 @@ export class CaseChecklists {
       mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, bytes);
       await this.db.$transaction(async (tx) => {
         // One upload at a time per line: the row's version is the lock (a second upload in the same moment is refused).
-        const n = await tx.checklistLine.updateMany({ where: { id, version: row.version }, data: { state: "received", stateReason: null, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
+        // C6.15: a line with a set is Received once its files meet the set (any one of: this file; all of: every member's
+        // current file); until then it is Requested, with what is still to come in its words.
+        const have = new Set((await tx.caseDocument.findMany({ where: { subjectId: row.subjectId, current: true, documentType: { in: lineKeys(shown) } }, select: { documentType: true } })).map((x) => x.documentType));
+        have.add(member.key);
+        const met = shown.set ? setMet(shown.set, shown.document.key, have).met : true;
+        const n = await tx.checklistLine.updateMany({ where: { id, version: row.version }, data: { state: met ? "received" : "requested", stateReason: null, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
         if (n.count !== 1) fail("Someone changed this line after you opened it: read the checklist again to see its state now, then try again. Nothing was stored.", HttpStatus.CONFLICT);
         const now = new Date();
-        await tx.caseDocument.updateMany({ where: { subjectId: row.subjectId, documentType: row.documentType, current: true }, data: { current: false, supersededAt: now } });
-        await tx.caseDocument.create({ data: { id: docId, workspaceId: c.workspaceId, subjectId: row.subjectId, documentType: row.documentType, checklistLineId: id, fileName: cleanName(utf8Name(f[0].originalname)),
+        await tx.caseDocument.updateMany({ where: { subjectId: row.subjectId, documentType: member.key, current: true }, data: { current: false, supersededAt: now } });
+        await tx.caseDocument.create({ data: { id: docId, workspaceId: c.workspaceId, subjectId: row.subjectId, documentType: member.key, checklistLineId: id, fileName: cleanName(utf8Name(f[0].originalname)),
           mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id, uploadedAt: now } });
       });
     } catch (e) { rmSync(abs, { force: true }); throw e; } // a refused upload leaves no file behind
-    await this.audit.log(c.workspaceId, actor.id, "uploaded", "case document", docId, `${actor.name} uploaded ${shown.label} for the ${person.role} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
+    await this.audit.log(c.workspaceId, actor.id, "uploaded", "case document", docId, `${actor.name} uploaded ${shown.set && member.key !== shown.document.key ? `${member.name} (in the set for ${shown.label})` : shown.label} for the ${person.role} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
     const line = await this.moved(c, id);
     return { ...line, document: line?.documents.find((x) => x.id === docId) ?? null };
   }

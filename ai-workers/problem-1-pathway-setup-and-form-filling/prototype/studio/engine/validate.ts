@@ -1,6 +1,7 @@
 // Draft validation and release differences. Problems are stated in plain words with where they are; errors block
 // submission, warnings are shown and recorded. Conditions are checked against the portable copy of the team's
 // closed predicate contract (contracts/predicate.v0.schema.json) and against the library's field types.
+import { lineSet } from "./document-sets.ts";
 import { Ajv } from "ajv";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -149,6 +150,9 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   for (const d of s.document_requirements) {
     for (const e of checkCondition(d.condition, types, derived)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Condition ${e}.` });
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });
+    // C6.15 (SA-1B-20 rule 3): a line naming a set its document type does not have is unresolved: not startable.
+    const picked = lineSet((s.document_types ?? []).find((t: { key: string }) => t.key === d.document_type_key), d.set_name, d.document_type).problem;
+    if (picked) out.push({ level: "error", where: "Documents", item: d.document_type, message: picked });
   }
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
   for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object" && x.group !== "document_validity")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });

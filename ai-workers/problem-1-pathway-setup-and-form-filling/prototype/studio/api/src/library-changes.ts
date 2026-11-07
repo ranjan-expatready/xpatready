@@ -22,10 +22,12 @@ import { ASK_ACTION, FORM_FIELD_KIND, formFieldView, releaseFormFieldCondition, 
 import { dropFieldList, releaseFieldList } from "./answer-values.ts";
 import { dropFactFromChanges, releaseSupplies, suppliesView, withdrawApprovedSupplies } from "./document-supplies.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
+import { releaseSets, setsView, withdrawApprovedSets } from "./document-sets.ts";
+import { SETS_KIND } from "../../contracts/document-sets.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", form_role: "form", placement_fills: "a question", placement_condition: "when a question is asked", form_field_condition: "when a form field is filled", document_supplies: "the facts a document supplies", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", form_role: "form", placement_fills: "a question", placement_condition: "when a question is asked", form_field_condition: "when a form field is filled", document_supplies: "the facts a document supplies", document_sets: "a document's substitute sets", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").
@@ -34,7 +36,7 @@ export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action
 /** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
 export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
 /** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
-const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "form_role" ? "change of a form's role" : kind === "placement_fills" ? "change of who fills a question" : kind === "placement_condition" ? "change of when a question is asked" : kind === "form_field_condition" ? "change of when a form field is filled" : kind === SUPPLIES_KIND ? "change of the facts a document supplies" : KIND_NOUN[kind] ?? "change");
+const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "form_role" ? "change of a form's role" : kind === "placement_fills" ? "change of who fills a question" : kind === "placement_condition" ? "change of when a question is asked" : kind === "form_field_condition" ? "change of when a form field is filled" : kind === SUPPLIES_KIND ? "change of the facts a document supplies" : kind === SETS_KIND ? "change of a document's substitute sets" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 
@@ -72,7 +74,7 @@ export function changeView(c: LibraryChange) {
   return { id: c.id, kind: c.kind, kind_word: c.action === ASK_ACTION ? "the question a form field asks" : KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
     decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId, batch_id: c.batchId ?? null, // QA-193
-    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}), ...(c.kind === FORM_FIELD_KIND ? { form_field: formFieldView(c) } : {}), ...(c.kind === SUPPLIES_KIND ? { supplies: suppliesView(c) } : {}),
+    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}), ...(c.kind === COND_KIND ? { condition: conditionView(c) } : {}), ...(c.kind === FORM_FIELD_KIND ? { form_field: formFieldView(c) } : {}), ...(c.kind === SUPPLIES_KIND ? { supplies: suppliesView(c) } : {}), ...(c.kind === SETS_KIND ? { sets: setsView(c) } : {}),
     ...(c.action === "RENAME" ? { rename: renameView(c) } : {}) }; // C4.9 (runtime lane); G-CORE B2 rename
 }
 /** C11.13 (P-120: "a near duplicate needs a one-line reason, shown to the second person at release"): for each change
@@ -190,6 +192,7 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
   if (c.kind === "form_role") throw problem(409, "Propose it again", "A returned role change is not sent again: withdraw it, then propose the form's role again on its form.");
   // C4.5: likewise the facts a document supplies: withdrawn, then proposed again with their official words.
   if (c.kind === SUPPLIES_KIND) throw problem(409, "Propose it again", "A returned change of the facts a document supplies is not sent again: withdraw it, then propose the facts again on its document type.");
+  if (c.kind === SETS_KIND) throw problem(409, "Propose it again", "A returned change of a document's substitute sets is not sent again: withdraw it, then propose the sets again on its document type."); // C6.15
   // B86 BR-7: likewise a form field's condition: proposing again runs its checks again.
   if (c.kind === FORM_FIELD_KIND) throw problem(409, "Propose it again", c.action === ASK_ACTION ? "A returned change of a form field is not sent again: withdraw it, then ask the Yes/No as its deciding question again." : "A returned change of a form field is not sent again: withdraw it, then confirm the form field again.");
   // G-CORE B2: a rename is sent again through its door (the check runs again), never corrected here.
@@ -284,8 +287,13 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
     return db.$transaction(async (tx) => { await withdrawApprovedSupplies(tx, actor, c, why); return changeView((await tx.libraryChange.findUnique({ where: { id } }))!); });
   }
+  if (c.kind === SETS_KIND && c.status === "APPROVED") { // C6.15: as the facts a document supplies
+    const why = (note ?? "").trim();
+    if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
+    return db.$transaction(async (tx) => { await withdrawApprovedSets(tx, actor, c, why); return changeView((await tx.libraryChange.findUnique({ where: { id } }))!); });
+  }
   // P-319 (review of #833, M2): a waiting or returned role change is withdrawn like a rename: nothing was applied.
-  const renaming = (c.action === "RENAME" || c.kind === "form_role" || c.kind === SUPPLIES_KIND || c.kind === FORM_FIELD_KIND) && ["WAITING", "RETURNED"].includes(c.status); // C4.5: nothing applied before approval
+  const renaming = (c.action === "RENAME" || c.kind === "form_role" || c.kind === SUPPLIES_KIND || c.kind === SETS_KIND || c.kind === FORM_FIELD_KIND) && ["WAITING", "RETURNED"].includes(c.status); // C4.5: nothing applied before approval
   if (!renaming && (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status))) throw problem(409, "Cannot withdraw", "Only a new shared field, a rename or a form's role change that is waiting or returned, or a change of the facts a document supplies that is not released yet, is withdrawn.");
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
@@ -370,6 +378,7 @@ export async function publishLibraryChanges(tx: Prisma.TransactionClient, worksp
   out.push(...(await releaseCondition(tx, workspaceId, pack))); // C4.11 part 3 (forms lane)
   out.push(...(await releaseFormFieldCondition(tx, workspaceId, pack))); // B86
   out.push(...(await releaseSupplies(tx, workspaceId, pack))); // C4.5
+  out.push(...(await releaseSets(tx, workspaceId, pack))); // C6.15
   return out;
 }
 type Status = "DRAFT" | "PUBLISHED" | "SUPERSEDED" | "RETIRED";
