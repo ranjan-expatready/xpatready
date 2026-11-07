@@ -5,13 +5,15 @@
 // done for the old channel never make it Ready. (4) #924: the sign and scan lines reach the firm's own staff only, never
 // another firm's (user-S). (5) B129 (B3 challenge M2, break M3): once the submission is recorded the application is
 // read-only, so no signing step and no signed scan is recorded on it, even a new print after a fact changed (409 in the
-// server's words, nothing stored). Sample data, no model call (US$0).
+// server's words, nothing stored). (6) B132 (P-380 Q3): a form signed in pen on Paper takes Printed, then Signed in pen,
+// in order (a barcode form printed only once its validated copy is read back); the prepare view's Paper line and the
+// readiness read them. Sample data, no model call (US$0).
 // It runs the pack's own setup on its copy first when the copy has no release 2 of Visitor visa yet
 // (tests/runtime/setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts), so the suites runner can run it alone (CI on #617).
 //   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { AUTHOR, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, inDays, itemsOf, needVisitorVisa, openCase, prepare, readyToFile, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, inDays, itemsOf, needVisitorVisa, openCase, prepare, readinessOf, readyToFile, sendFile, signedScan, sql, validateRoundTrip, yearsAgo } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -124,6 +126,45 @@ else {
   ok("B129 pass: the signing steps are as they were when the submission was recorded (none added, none superseded)", steps() === s0, [steps(), s0]);
   pr = (await prepare(r5.id, officer)).p;
   ok("B129 pass: the recorded filing still reads submitted", String(filingOf(pr, R)?.status).toLowerCase() === "submitted", filingOf(pr, R)?.status);
+}
+// (6) B132: a barcode form (IMM 5257) moved to Paper is signed in pen: Printed (after its validated copy is read back),
+// then Signed in pen, recorded and read by the Paper line and by readiness (no "missing signature" once signed).
+{
+  const officer = f.officer ?? OFFICER;
+  const c6 = await openCase(vv, [{ role: "principal", name: "Sample Client P", dob: yearsAgo(39) }], { representative: f.rep, caseOfficers: [officer] });
+  const Q = c6.subjects["Sample Client P"];
+  await fillEverything(c6.id);
+  let pv = (await prepare(c6.id, officer)).p;
+  const i57 = itemsOf(pv, Q, "IMM 5257")[0];
+  const moved = await call("PATCH", `/runtime/items/${i57?.id}/channel`, { channel: "PAPER", reason: "Sample: on paper as an accommodation (B132)", version: (pv as unknown as { version: string }).version }, officer);
+  pv = (await prepare(c6.id, officer)).p;
+  type PaperItem = { id: string; signature?: string; steps?: { key: string; done: boolean | null }[] };
+  const it6 = () => itemsOf(pv, Q, "IMM 5257").find((x) => !(x as { record?: string }).record) as unknown as PaperItem | undefined;
+  ok("setup (B132): IMM 5257 moved to Paper is signed in pen, with its Validate step first", moved.status === 200 && it6()?.signature === "PEN" && it6()?.steps?.[0]?.key === "validate", { status: moved.status, detail: moved.body?.detail, item: it6() });
+  const post = (key: string, body: unknown = {}) => call("POST", `/runtime/items/${i57?.id}/sign-steps/${key}`, body, officer);
+  const rows = () => (sql(`select string_agg(key, ',' order by done_at) from sign_step where item_id='${i57?.id}' and superseded_at is null`) ?? "");
+  let r = await post("sign_in_pen");
+  ok("B132 fail: Signed in pen before Printed is refused in the server's words (409), nothing recorded", r.status === 409 && /Signed in pen comes after "Printed": print IMM 5257 first/.test(r.body?.detail ?? "") && rows() === "", [r.status, r.body?.detail]);
+  r = await post("signed");
+  ok("B132 fail: a hand-signed step on a form signed in pen is refused, naming its own steps (409)", r.status === 409 && /signed in pen on Paper: its steps are Printed, Signed in pen/.test(r.body?.detail ?? ""), [r.status, r.body?.detail]);
+  const plainCopy = await generateCopy(c6.id, "IMM 5257", Q);
+  r = await post("print", { copy: plainCopy });
+  ok("B132 fail: a barcode form on Paper is not printed before its validated copy is read back (409, the server's words), nothing recorded", r.status === 409 && /Printed comes after the validated copy of IMM 5257 is read back/.test(r.body?.detail ?? "") && rows() === "", [r.status, r.body?.detail]);
+  const vcopy = await validateRoundTrip(c6.id, "IMM 5257", Q);
+  r = await post("print", { copy: vcopy });
+  ok("B132 pass: once the validated copy is read back, Printed is recorded with the copy printed", !!vcopy && r.status === 200 && rows() === "print" && sql(`select copy_id from sign_step where item_id='${i57?.id}' and key='print' and superseded_at is null`) === vcopy, [r.status, r.body?.detail, rows()]);
+  r = await post("sign_in_pen");
+  const again = await post("sign_in_pen");
+  ok("B132 pass: Signed in pen is recorded after Printed; a second press is refused (409, already done)", r.status === 200 && rows() === "print,sign_in_pen" && again.status === 409 && /Signed in pen is already done for IMM 5257/.test(again.body?.detail ?? ""), [r.status, r.body?.detail, again.status, rows()]);
+  const scan = await sendFile(`/runtime/items/${i57?.id}/signed-scan`, signedScan("IMM 5257"), "imm5257-pen.pdf", officer);
+  ok("B132 fail: a form signed in pen takes no signed scan (409), nothing stored", scan.status === 409 && sql(`select count(*) from signed_scan where item_id='${i57?.id}'`) === "0", [scan.status, scan.body?.detail]);
+  pv = (await prepare(c6.id, officer)).p;
+  const st = (k: string) => it6()?.steps?.find((x) => x.key === k)?.done;
+  ok("B132 pass: the prepare view's Paper line reads Printed and Signed in pen as done (Mail not yet recorded)", st("validate") === true && st("print") === true && st("sign_in_pen") === true && st("mail") === null, it6()?.steps);
+  const warns = (readinessOf(pv, filingOf(pv, Q)?.id) as { warns?: { code: string; item?: string }[] } | null)?.warns ?? [];
+  ok("B132 pass: readiness no longer warns \"missing signature\" for IMM 5257 once it is signed in pen", !warns.some((w) => w.code === "missing_signature" && w.item === i57?.id), warns.map((w) => `${w.code}:${w.item === i57?.id ? "IMM 5257" : "other"}`));
+  const read6 = await call("GET", `/runtime/items/${i57?.id}`, undefined, officer);
+  ok("B132 pass: the item read lists a pen form's own steps, Printed then Signed in pen, both done", JSON.stringify((read6.body?.sign_steps ?? []).map((x: { key: string; done: unknown }) => `${x.key}:${!!x.done}`)) === JSON.stringify(["print:true", "sign_in_pen:true"]), read6.body?.sign_steps);
 }
 // B129: a red line fails the suite (run-suites.sh judges the exit code; before, this suite always exited 0).
 process.exit(summary() ? 1 : 0);

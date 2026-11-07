@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { Body, Controller, forwardRef, Get, Headers, HttpCode, HttpStatus, Inject, Injectable, Param, Post, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf } from "../../contracts/documents.ts";
-import { isSignStep, minorFromAnswers, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
+import { isPenStep, isSignStep, minorFromAnswers, PEN_STEP_WORDS, PEN_STEPS, penRefusal, SIGN_STEP_WORDS, SIGN_STEPS, signersOf, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone } from "../../engine/runtime/signing.ts";
 import { channelOf, type FormLine } from "../../engine/runtime/prepare.ts";
 import { changedFacts, changedGroups, formCoverage, groupFacts, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { caseView } from "../../engine/runtime/case.ts";
@@ -24,12 +24,14 @@ type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
 const SCANS = () => VAR(WORKSPACE_KEY);
 const short = (id: string) => id.slice(0, 8);
+/** The words of any recorded step (hand-signed and scanned, or signed in pen on Paper, B132). */
+const stepWords = (k: SignStepKey | PenStepKey) => (isSignStep(k) ? SIGN_STEP_WORDS[k] : PEN_STEP_WORDS[k as PenStepKey]);
 
 /** The current steps of each item on a case (C8.1), for the prepare view and the item read. */
 export async function signStepsOf(db: Db, caseId: string): Promise<Map<string, StepsDone>> {
   const rows = await db.signStep.findMany({ where: { caseId, supersededAt: null }, orderBy: { doneAt: "asc" } });
   const out = new Map<string, StepsDone>();
-  for (const r of rows) if (isSignStep(r.key)) out.set(r.itemId, { ...(out.get(r.itemId) ?? {}), [r.key]: { at: r.doneAt.toISOString(), by: r.doneBy, copy: r.copyId } });
+  for (const r of rows) if (isSignStep(r.key) || isPenStep(r.key)) out.set(r.itemId, { ...(out.get(r.itemId) ?? {}), [r.key]: { at: r.doneAt.toISOString(), by: r.doneBy, copy: r.copyId } });
   return out;
 }
 
@@ -47,44 +49,57 @@ export class SignSteps {
     const line = (this.r.snapshotOf(c).forms as FormLine[]).find((l) => l.form_number === item!.itemKey);
     // Devin on #617: signing steps belong to a form signed by hand and scanned on this application (its channel today,
     // the officer's choice, else the line's), as the prepare view decides it; any other form has none to do.
-    const handScanned = channelOf(line, undefined, null, item!.channel).signature === "HAND_SCANNED";
-    return { c, item: item!, line, handScanned };
+    // B132: a form signed in pen on Paper (P-380 Q3) has its own steps, Printed then Signed in pen.
+    const signature = channelOf(line, undefined, null, item!.channel).signature;
+    return { c, item: item!, line, handScanned: signature === "HAND_SCANNED", pen: signature === "PEN" };
   }
 
   /** GET /runtime/items/:id: the item with who signs and its steps (each done with who and when, or not yet). */
   async read(actor: Actor, itemId: string) {
-    const { c, item, line } = await this.item(actor, itemId);
+    const { c, item, line, pen } = await this.item(actor, itemId);
     const people = this.r.peopleOf(c).filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
     const scans = await this.db.signedScan.findMany({ where: { itemId: item.id }, orderBy: { uploadedAt: "asc" }, select: { id: true, fileName: true, mediaType: true, sizeBytes: true, sha256: true, uploadedBy: true, uploadedAt: true } });
     return {
       id: item.id, kind: item.kind, form: item.itemKey, filing: item.filingId, subject: item.subjectId, version: item.version,
       signers: signersOf(people, item.subjectId, line?.who ?? "each_applicant", line?.signed_by, minorFromAnswers((await this.r.state(c)).answers, new Date())),
-      sign_steps: SIGN_STEPS.map((key) => ({ key, words: SIGN_STEP_WORDS[key], done: done[key] ? { at: done[key]!.at, by: done[key]!.by, ...(key === "print" ? { copy: done[key]!.copy ?? null } : {}) } : null })),
+      sign_steps: (pen ? PEN_STEPS : SIGN_STEPS).map((key: SignStepKey | PenStepKey) => ({ key, words: stepWords(key), done: done[key] ? { at: done[key]!.at, by: done[key]!.by, ...(key === "print" ? { copy: done[key]!.copy ?? null } : {}) } : null })),
       signed_scans: scans.map((x) => ({ id: x.id, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, sha256: x.sha256, uploaded_by: x.uploadedBy, uploaded_at: x.uploadedAt.toISOString() })),
     };
   }
 
   /** POST /runtime/items/:id/sign-steps/:key: one step, in order; "print" names the generated copy printed. */
   async step(actor: Actor, itemId: string, keyIn: string, body: unknown) {
-    if (!isSignStep(keyIn)) fail(`No such step: the steps are ${SIGN_STEPS.map((k) => SIGN_STEP_WORDS[k]).join(", ")}.`, HttpStatus.NOT_FOUND);
-    const key = keyIn as SignStepKey;
-    const { c, item, handScanned } = await this.item(actor, itemId);
+    if (!isSignStep(keyIn) && !isPenStep(keyIn)) fail(`No such step: a form signed by hand and scanned takes ${SIGN_STEPS.map((k) => SIGN_STEP_WORDS[k]).join(", ")}; a form signed in pen on Paper takes ${PEN_STEPS.map((k) => PEN_STEP_WORDS[k]).join(", ")}.`, HttpStatus.NOT_FOUND);
+    const { c, item, handScanned, pen } = await this.item(actor, itemId);
     // B129 (B3 challenge M2, break M3 on #1221): once the submission is recorded nothing on it is signed again, not even a
     // new print after a fact changed (the restart below); the read-only words come first, as for the channel and "entered".
     await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`);
-    if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it has no signing steps. Nothing was recorded.`, HttpStatus.CONFLICT);
+    if (!handScanned && !pen) fail(`${item.itemKey} is not signed by hand and scanned, nor signed in pen on Paper, on this application, so it has no signing steps. Nothing was recorded.`, HttpStatus.CONFLICT);
+    // B132: each way of signing takes its own steps; the other's are refused in words.
+    if (handScanned && !isSignStep(keyIn)) fail(`${item.itemKey} is signed by hand and scanned: its steps are ${SIGN_STEPS.map((k) => SIGN_STEP_WORDS[k]).join(", ")}. Nothing was recorded.`, HttpStatus.CONFLICT);
+    if (pen && !isPenStep(keyIn)) fail(`${item.itemKey} is signed in pen on Paper: its steps are ${PEN_STEPS.map((k) => PEN_STEP_WORDS[k]).join(", ")}. Nothing was recorded.`, HttpStatus.CONFLICT);
+    const key = keyIn as SignStepKey | PenStepKey;
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
     // C9.2 (BR-12, BR-20): a form printed from a copy whose facts changed since (the representative of record among them)
     // is signed again: a new print starts its steps again (the earlier steps superseded, the signed scan kept). Once it is
     // uploaded to IRCC it is not (after filing is C8.2's record).
+    // B132: the same for a form signed in pen (a signed copy whose facts changed is signed again).
     const restart = key === "print" && !!done.print && !done.uploaded_to_ircc && !!done.print.copy && (await this.changedSince(c, item, done.print.copy!)).length > 0;
     // Ready to file is C7.6's (L-SA3, P-315). Break B1 on #861: it is read now, from the prepare view (which takes a
     // filing that is no longer ready back to Not started), never from the stored status alone.
     const filingReady = key === "uploaded_to_ircc"
       ? ((await this.prepare.view(actor, c.id)) as { filings: { id: string; status: string }[] }).filings.find((x) => x.id === item.filingId)?.status === "ready_to_file"
       : item.filing.status.toLowerCase() === "ready_to_file";
-    const refusal = restart ? null : stepRefusal(key, done, item.itemKey, { filingReady });
+    // B132: on Paper a barcode form is printed only once its validated copy is read back for today's facts: the prepare
+    // view's own Validate step (paperLine), read now, never worked out again here.
+    let paper = { barcode: false, validated: false };
+    if (pen && key === "print") {
+      const v = (await this.prepare.view(actor, c.id)) as { items: { id: string; record?: string; steps?: { key: string; done: boolean | null }[] }[] };
+      const validate = v.items.find((x) => x.id === item.id && !x.record)?.steps?.find((x) => x.key === "validate");
+      paper = { barcode: !!validate, validated: validate?.done === true };
+    }
+    const refusal = restart ? null : pen ? penRefusal(key as PenStepKey, done, item.itemKey, paper) : stepRefusal(key as SignStepKey, done, item.itemKey, { filingReady });
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
     let copyId: string | null = null;
     if (key === "print") {
@@ -120,10 +135,18 @@ export class SignSteps {
     return [...changedFacts(stored.facts ?? [], cov?.facts ?? []), ...changedGroups(stored.groups, groupFacts(view, item.itemKey, item.subjectId))];
   }
 
-  private async save(c: { id: string; workspaceId: string }, item: { id: string; itemKey: string }, key: (typeof SIGN_STEPS)[number], actor: Actor, copyId: string | null = null, tx: Db = this.db) {
-    try { await tx.signStep.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, key, copyId, doneBy: actor.id } }); }
-    catch (e) { if ((e as { code?: string }).code === "P2002") fail(`${SIGN_STEP_WORDS[key]} was just done for ${item.itemKey} by someone else: read the item again.`, HttpStatus.CONFLICT); throw e; }
-    if (tx === this.db) await this.audit.log(c.workspaceId, actor.id, "signed", "sign step", item.id, `${actor.name} marked ${item.itemKey} "${SIGN_STEP_WORDS[key]}" on case ${short(c.id)}`);
+  private async save(c: { id: string; workspaceId: string }, item: { id: string; itemKey: string; filingId: string }, key: SignStepKey | PenStepKey, actor: Actor, copyId: string | null = null, tx?: Db) {
+    // B129 review Minor: the read-only lock is checked again under the case's row lock, as case-prepare.ts's writes do, so
+    // a step never lands just after the submission is recorded.
+    const write = async (q: Db) => {
+      await q.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await refuseIfRecorded(q, [item.filingId], `the signing of ${item.itemKey}`);
+      try { await q.signStep.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, key, copyId, doneBy: actor.id } }); }
+      catch (e) { if ((e as { code?: string }).code === "P2002") fail(`${stepWords(key)} was just done for ${item.itemKey} by someone else: read the item again.`, HttpStatus.CONFLICT); throw e; }
+    };
+    if (tx) return write(tx);
+    await this.db.$transaction(async (t) => write(t as unknown as Db));
+    await this.audit.log(c.workspaceId, actor.id, "signed", "sign step", item.id, `${actor.name} marked ${item.itemKey} "${stepWords(key)}" on case ${short(c.id)}`);
   }
 
   /** POST /runtime/items/:id/signed-scan: the signed scan (one PDF, JPEG or PNG, judged by its bytes), stored with its
