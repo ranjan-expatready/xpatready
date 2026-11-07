@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C8.3 Representative review: draft board</title>
+<style>
+:root{--primary:#0862c5;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--line:#ececec;--danger:#dc2626;--danger-t:#991b1b;--danger-tint:#fbe5e5;--warn-t:#663200;--warn-tint:#fff1e0;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--bg:#e9ecef}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 60px}.frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:22px 0;padding:16px}
+.frame>h2{font-size:15px}.note{color:var(--muted);font-size:12.5px;margin:2px 0 12px}.muted{color:var(--muted);font-size:12.5px}
+.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.ok{background:var(--ok-tint);color:var(--ok-t);border-color:transparent}.warn{background:var(--warn-tint);color:var(--warn-t);border-color:transparent}.bad{background:var(--danger-tint);color:var(--danger-t);border-color:transparent}
+.btn{display:inline-flex;gap:4px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 12px;font:inherit;font-size:13px}.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.split{display:grid;grid-template-columns:340px 1fr;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}@media(max-width:900px){.split{grid-template-columns:1fr}}
+.left{border-right:1px solid var(--border)}.left h3{font-size:13px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.item{display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line)}.item.sel{background:#eef5fd;box-shadow:inset 3px 0 0 var(--primary)}.item span:first-child{flex:1}
+.right{padding:14px 18px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--muted);font-weight:500}
+del{color:var(--danger-t)}ins{color:var(--ok-t);text-decoration:none;font-weight:600}
+.foot{display:flex;gap:8px;align-items:center;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface)}
+.dialog{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:560px;padding:16px 20px}label{display:block;margin:6px 0}
+textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px;font:inherit;min-height:50px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>C8.3 · Representative review (draft board, B144)</h1>
+<p class="muted">Intent, not pixels (P-44). From the founder's board P-164 row "Representative's review · 3 filings". Change set pattern (EXPERIENCE §3). Sample names and values; the Visitor visa program items are Sample, Unconfirmed: expert. Unconfirmed: no counsel.</p>
+
+<div class="frame"><h2>1 · Officer: Send for review</h2><p class="note">At the head of the readiness panel. Filings with no open block are ticked by default.</p>
+<div class="dialog"><h3 style="font-size:17px">Send for review</h3><p class="muted">The representative of record checks each form and approves it or sends it back with reasons.</p>
+<label><input type="checkbox" checked> Sample Client A's filing <span class="pill warn">1 open warning</span></label>
+<label><input type="checkbox" checked> Sample Client B's filing</label>
+<label><input type="checkbox"> Sample Child A2's filing <span class="pill bad">Blocked: IMM 5257 not validated</span></label>
+<div style="text-align:right;margin-top:8px"><button class="btn">Cancel</button> <button class="btn primary">Send 2 filings for review</button></div></div></div>
+
+<div class="frame"><h2>2 · Representative: the review (round 2)</h2><p class="note">Left: filings → forms, each with its state, then the checklist under the filing's name. Right: the selected form's facts as filled; round 2 shows before → after and who changed it.</p>
+<div class="split"><div class="left">
+<h3>Sample Client A's filing · Round 2 <span class="pill">Under review · opened by the representative 8 Nov</span></h3>
+<div class="item sel"><span>IMM 5257 · Application for visitor visa</span><span class="pill warn">Changed since review</span></div>
+<div class="item"><span>IMM 5707 · Family information</span><span class="pill ok">Approved round 1, still current</span></div>
+<div class="item"><span>IMM 5476 · Use of a representative</span><span class="pill ok">Approved round 1, still current</span></div>
+<h3>Checklist · Sample Client A's filing</h3>
+<div class="item"><span><input type="checkbox" checked> No open critical warnings <span class="muted">(live: 0)</span></span></div>
+<div class="item"><span><input type="checkbox" checked> All required documents verified <span class="muted">(live: 5 of 5)</span></span></div>
+<div class="item"><span><input type="checkbox"> Purpose of travel matches the invitation and itinerary <span class="pill">Visitor visa · Sample</span></span></div>
+<div class="item"><span><input type="checkbox" checked> Values checked against documents: 4, by the case officer</span></div>
+<h3>Sample Client B's filing · Round 1 <span class="pill">Approved 7 Nov</span></h3>
+</div>
+<div class="right"><h3 style="font-size:15px">IMM 5257 · Sample Client A <span class="pill warn">Approval withdrawn: Date of birth changed by the case officer, 8 Nov</span></h3>
+<p class="muted">Round 1 sent back: "Date of birth does not match the passport." Filled copy 8 Nov (fingerprint shown in Details).</p>
+<table><thead><tr><th>Box</th><th>Value</th><th>Source</th></tr></thead><tbody>
+<tr><td>Date of birth</td><td><del>1986-04-12</del> → <ins>1986-04-21</ins></td><td>Passport, confirmed · changed by the case officer 8 Nov</td></tr>
+<tr><td>Family name</td><td>SAMPLE</td><td>Passport, checked against document by the case officer</td></tr>
+<tr><td>Purpose of visit</td><td>Family visit</td><td>Client questionnaire</td></tr></tbody></table>
+<p class="muted">Compare: Round 2 ▾ with Round 1 ▾ · only changed facts ☑</p></div></div>
+<div class="foot"><span class="muted" style="flex:1">1 checklist item not ticked · 1 form changed since review</span><button class="btn">Send back…</button><button class="btn primary">Approve</button></div></div>
+
+<div class="frame"><h2>3 · Decisions</h2><div class="grid2">
+<div class="dialog"><h3 style="font-size:16px">Approve with 1 item not ticked?</h3><p>"Purpose of travel matches the invitation and itinerary" is not ticked. This is recorded. Each form is stamped with its filled copy and the facts it read.</p><div style="text-align:right"><button class="btn">Go back</button> <button class="btn primary">Approve</button></div></div>
+<div class="dialog"><h3 style="font-size:16px">Send back Sample Client A's filing</h3><label>What should change, and on which form?<textarea>IMM 5257: date of birth does not match the passport.</textarea></label><p class="muted">Pin to: IMM 5257 ▾ · checklist item ▾</p><div style="text-align:right"><button class="btn">Cancel</button> <button class="btn primary">Send back</button></div></div>
+</div><p class="muted" style="margin-top:10px">Not the representative of record: the page reads, no buttons, "Only the representative of record approves or sends back. You can read this review." A forged request: 403 in the same words.</p></div>
+</div></body></html>
