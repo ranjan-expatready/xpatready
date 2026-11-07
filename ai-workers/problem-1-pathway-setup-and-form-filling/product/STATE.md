@@ -1,8 +1,14 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_ce906423-84b3-46f2-a257-38e947992c20 Lead 24 · 6 Nov ~21:50 IST (took over from Lead 23 at ~360k context, P-314)
+current_lead: local_efdbee17-934f-4f7e-9b28-dff5e035313c Lead 25 · 7 Nov ~07:35 IST (took over from Lead 24 at ~385k context, P-314)
 
-updated: 2026-11-06 23:57 IST by **Lead 24** · milestone: **M2 60/60 holds; M3 clock started 23:17 IST (B120 on main): 2 M3 rows merged, 2 of 17 Works** · rules: **`RULES.md`** + DECISIONS P-354 to P-386 · earlier page: `history/STATE-2026-11-06-2358-lead24.md`
+updated: 2026-11-07 07:35 IST by **Lead 24** (hand-over to Lead 25) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 2 M3 rows merged, 2 of 17 Works; 8 more PRs labelled 07:29-07:31 and in the queue** · rules: **`RULES.md`** + DECISIONS P-354 to P-386 · earlier page: `history/STATE-2026-11-06-2358-lead24.md`
+
+## Morning 7 Nov (Lead 24, 07:35 IST): read first
+* **Lead 24 stalled ~00:04-07:28 IST** on one Terminal-tab call that waited on an approval prompt; no check fired; nothing merged after 00:00. Never make a call that can prompt while the founder is away (memory rule).
+* Labelled 07:29-07:31 (all labels held): #1072 A2, #1084 A1, #1148 B117, #1149 B121, #1073 B1, #1180 C1 (its question ruled: keep "uses a representative" No), #1172 A4, #1145 B122. Batch running: #1072 + #1073 + #1172 + #1084 + #1180 + #1148 on main 0f9cb40.
+* **Waiting on the founder (asked 07:31):** #1128 carries `.claude/settings.json` changes from earlier Leads (allow `Bash(*)`, terminal tools, sandbox `allowLocalBinding`); Lead 24 recommended stripping them, keeping only records. Do not label #1128 until he answers.
+* Next: qa gate-A goes as rows merge (C6.9 needs A1 + A4; C8.2 needs A1; C6.11 needs A2 + B117 + A7; C6.4 needs B1); #1084's question (A3: wait for the merge, then stack); #1075 C2 is dirty and has a question; new PR #1188 (F6, B119 lane). Weekly 40% at 07:32: the 45% soft stop and the morning account switch are next (P-383).
 
 ## Start here (next Lead)
 **Branch** `lead/2026-11-05-lead14b`, records PR **#1128** (the Lead labels records PRs itself, P-385; merge `origin/main` into it first from a Terminal tab). GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Working notes, every id and ruling: the file lead24-pending in Lead 19's side-session notes folder (`.../side-session-notes/local_8acced9f-…`); CURRENT-LEAD.md there names the current Lead.
