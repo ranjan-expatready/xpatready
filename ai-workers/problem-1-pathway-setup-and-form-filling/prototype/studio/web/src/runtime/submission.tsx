@@ -87,7 +87,7 @@ export function SubmissionPanel({ caseId }: { caseId: string }) {
         : <>
             {missed.length ? <div className="px-4 pt-3" data-receipt-missed><Notice tone="danger" title="Recorded, but a fee receipt page was not stored">
                 <ul className="list-disc space-y-1 pl-5">{missed.map((m) => <li key={m} className="[overflow-wrap:anywhere]">{m}</li>)}</ul>
-                <Button size="sm" variant="ghost" className="mt-1" onClick={() => setMissed([])}>Dismiss</Button>
+                <Button size="sm" variant="ghost" className="mt-1" onClick={() => { setMissed([]); requestAnimationFrame(() => document.getElementById("submission-h")?.focus()); }}>Dismiss</Button>
               </Notice></div> : null}
             {open.length ? <div className="px-4 pt-3" data-after-filing-tasks><Notice tone="warn" title={`${open.length} task${open.length === 1 ? "" : "s"} after filing`}>
                 <ul className="list-disc space-y-1 pl-5">{open.map((t) => <li key={t.id} className="[overflow-wrap:anywhere]" data-task={t.kind}>{t.words}</li>)}</ul>

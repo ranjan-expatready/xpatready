@@ -126,7 +126,9 @@ try {
   await panel().locator(`[data-submission-filing="${fS}"] [data-receipt-file]`).waitFor({ timeout: 15_000 });
   await p.waitForTimeout(300);
   ok("B149 C8.2 pass (screen, review M1): after an upload from the filing, the page is listed and focus is on its upload button", sql(`select count(*) from fee_receipt_file where filing_id='${fS}'`) === "1" && await p.evaluate((id) => !!document.activeElement?.closest(`[data-submission-filing="${id}"]`) && !!document.activeElement?.matches("[data-receipt-upload]"), fS));
-  await panel().getByRole("button", { name: "Dismiss" }).click();
+  await press(panel().getByRole("button", { name: "Dismiss" }));
+  await p.waitForTimeout(200);
+  ok("B149 C8.2 (screen, WCAG 2.4.3): Dismiss removes the notice and puts focus on the panel's heading", (await panel().locator("[data-receipt-missed]").count()) === 0 && await p.evaluate(() => document.activeElement?.id === "submission-h"));
   ok("C8.2-8 (screen): the button is gone once recorded (one record per group)", (await panel().getByRole("button", { name: "Record the submission…" }).count()) === 0);
   ok("a11y: focus is back on the panel after the dialog closes", await p.evaluate(() => !!document.activeElement?.closest("[data-submission]")));
   ok("data: the records under the screen: two filing rows, one UCI, Prepared by the officer, Reviewed by the representative",
