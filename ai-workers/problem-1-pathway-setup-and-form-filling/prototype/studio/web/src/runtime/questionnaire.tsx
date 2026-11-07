@@ -720,7 +720,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">Change it in the firm record</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">{q.fact === "case.uses_representative" ? "Set by the case team (the representative of record)" : "Change it in the firm record"}</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };
