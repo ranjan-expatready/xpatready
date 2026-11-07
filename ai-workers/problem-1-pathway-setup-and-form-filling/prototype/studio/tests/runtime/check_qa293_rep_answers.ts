@@ -14,7 +14,10 @@ await main("QA-293", "The representative's tab — details from the firm record 
   const view = (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, officer)).body;
   const repQs = (view?.sections ?? []).filter((s: { subjectId: string }) => s.subjectId === "representative").flatMap((s: { questions: { fact: string; answer: { channel: string } | null }[] }) => s.questions);
   const missing = repQs.filter((q: { answer: unknown }) => !q.answer).map((q: { fact: string }) => q.fact);
-  ok("QA-293 setup: the representative's tab holds details the firm record does not give (the ones that offered Add)", missing.includes("person.address_city") && missing.includes("representative.licensing_province"), missing);
+  // B107 (QA-300): since the firm record fills IMM 5476's question 7 and the form's own gates leave the other bodies' boxes
+  // unasked, the tab holds no detail nobody can answer; the saves below are still refused for a detail it fills
+  // (the office's city) and for one it never asks of a CICC representative (the law society's province).
+  ok("QA-293 setup (B107): the representative's tab holds no detail the firm record does not give, so nothing offers Add", missing.length === 0 && repQs.some((q: { fact: string; answer: { channel: string } | null }) => q.fact === "person.address_city" && q.answer?.channel === "firm_record"), missing);
   ok("QA-293 pass: the firm record still gives the representative's membership ID", repQs.some((q: { fact: string; answer: { channel: string } | null }) => q.fact === "representative.membership_id" && q.answer?.channel === "firm_record"));
 
   // Review m4: every answer row of the workspace (not only the case's people), so a row written anywhere would show.
