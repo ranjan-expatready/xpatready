@@ -70,3 +70,6 @@ check_vv_prepare_store 27/27, check_engine 44/44, check_contract_seams 98/98, ch
 **Hand-over m2 (screens):** `web/src/runtime/forms.tsx:133` still offers "Read back the validated copy" on a stamped
 latest copy of a Paper line; the server refuses it in words (409, "Make a new copy"), but the button leads nowhere. Fix
 row: hide it (or say "Make a new copy first") when `latest.copy_not_for_filing`.
+Also for that row (the reviewer, round 2, from the code, not tested): `api/src/fill-case.ts` `copyOf` still says
+"Validated copy read back" on a stamped copy that holds a read-back kept before this row, though readiness no longer
+counts it; the words should follow `copyNotForFiling` there too.
