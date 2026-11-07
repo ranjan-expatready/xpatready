@@ -10,6 +10,7 @@ import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { isAskedRelative } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
@@ -274,7 +275,10 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
   const r = render(s, renderPeople, known, { today });
-  const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : about.split("/")[0]);
+  // B128 (QA-153): a parent a form describes is asked on their own key (`<person>/parent_1`), so their answers never land
+  // on the person whose parent they are; any other relative (a sibling, a list) is not asked yet (engine/runtime/relatives.ts).
+  const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : isAskedRelative(about) ? about : about.split("/")[0]);
+  const asked = (about: string) => !about.includes("/") || isAskedRelative(about);
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
   const namingRep = formsNamingRepresentative(s.field_maps);
@@ -294,9 +298,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const derivedYes = hasChildrenOf(people);
-  const needed = r.questions.filter((q) => !q.about.includes("/") && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const needed = r.questions.filter((q) => asked(q.about) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
-  const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
+  const notAsked = r.questions.filter((q) => asked(q.about)).length - needed.length;
   const fromDocuments = new Map<string, { subjectId: string; document: string; facts: string[] }>();
   const skipped = (q: (typeof needed)[number]) => {
     const doc = opts.skipDocumentFacts?.(subjectOf(q.about), q.fact);
@@ -310,7 +314,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const questions = needed.filter((q) => (mode === "agent" || (isClientField(s, q.fact) && q.about !== "representative")) && !skipped(q)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
-    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }
+    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId.split("/")[0]); required = c.applies === true; }
     if (!p?.condition && p?.condition_effect === "OPTIONAL") required = false; // optional for everyone (no condition)
     const group = p?.repeats === "per_row" ? q.section : null;
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);

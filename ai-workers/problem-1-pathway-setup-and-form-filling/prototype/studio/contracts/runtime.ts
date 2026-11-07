@@ -91,7 +91,8 @@ export const NewRow = z.object({ group: z.string({ message: "Name the repeating 
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
 export const ConfirmSection = z.object({
-  subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
+  // B128 (QA-153): a person on the case, or a parent a form describes (`<person>/parent_1`, engine/runtime/relatives.ts).
+  subjectId: z.string({ message: "Choose whose section to confirm." }).regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/parent_[12])?$/i, "Choose whose section to confirm."),
   seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500, "Send at most 500 reviewed answer ids; confirm a long section in parts."),
 });
 
