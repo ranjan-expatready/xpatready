@@ -5,7 +5,7 @@ current_lead: local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3 Lead 32 · 7 Nov 18:55 
 updated: 2026-11-07 19:05 IST by **Lead 32** (Lead 31's hand-over below) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-413 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1855-lead31.md` · this branch: `lead/2026-11-07-lead31`
 
 ## Lead 32 (from 18:56 IST): first check done 19:05 IST
-* Check cron f50193b6 (:13/:43). Lead 33 told "start the watchdog" 18:57 IST. Standbys: Lead 33 only; top up to two at the founder's next typed turn.
+* Check cron f50193b6 (:13/:43). Lead 33 told "start the watchdog" 18:57 IST. Standbys: Lead 33 (watchdog) and Lead 34 `local_309261d2-81b3-4957-93dd-bbcc0ef30be1` (started by Lead 31 at the founder's yes, ~19:50 IST).
 * Answered on the PR and in the session's prompt box: #1268 (B137's third migration: yes, own stamp, schema breaker), #1251 (B150: finish #1246's check fix first, then after #1246 lands merge main once, diff-only merge check P-318 (1), label).
 * Prompt box only (the PR answers were already there from Lead 31): A6 #1222 (fix the two code-cause reds, then round 3), B107 #1231 (round 3 diff-only, ready, label).
 * Warm rows sent (P-413 (2)): the B3 lane takes B129 → B132 → B130; the B5 lane takes B133 → B152 → B151.
@@ -71,4 +71,4 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 **Released 14:34 IST (P-403):** A5 #1054, C2 #1075, B5 (#1233), kind token then b78 (#1232); the old PRs off the critical path are listed in `history/STATE-2026-11-07-1545-lead30.md`.
 
 ## Leads, in order (highest = current)
-**Lead 32** `local_e0d03eb0-…` (from 18:55 IST 7 Nov) · Lead 31 `local_f02fdadd-…` (15:45-18:55 IST, ended) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 33 (watchdog).
+**Lead 32** `local_e0d03eb0-…` (from 18:55 IST 7 Nov) · Lead 31 `local_f02fdadd-…` (15:45-18:55 IST, ended) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 33 (watchdog), Lead 34 `local_309261d2-…` (from ~19:50 IST).
