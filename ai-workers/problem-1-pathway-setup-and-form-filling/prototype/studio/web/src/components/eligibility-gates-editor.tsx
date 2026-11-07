@@ -8,6 +8,7 @@
 import * as React from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { CombinationView, ProblemLine } from "../../../contracts/programs";
+import { OUTCOME_WORDS } from "../../../contracts/case-check-words";
 import { api, ApiError, useApi, useSessionView, useToast } from "@/lib/api";
 import { ConditionBuilder, plainCondition, type Tree } from "@/components/conditions";
 import { Button, Dialog, Field, Input, Notice, Pill, Textarea } from "@/components/ui/controls";
@@ -24,9 +25,9 @@ type Change = { kind: string; key: string; change: "added" | "changed" | "remove
 type Combo = CombinationView & { draft: CombinationView["draft"] & { changes?: Change[] } };
 type Errors = Record<string, string>;
 
-export const TIP = "Checked per person against the answers on file when a case officer runs Eligibility: Met, Not met or Not answered. Never a guarantee: an IRCC officer decides.";
+export const TIP = "Checked per person against the answers on file when a case officer runs the case check from confirmed facts: Met, Not met or Not answered. Never a guarantee: an IRCC officer decides.";
 const WAITING = "A submission is waiting for review: saving changes the draft, so it must be submitted again.";
-const NOT_MET: Record<"not_eligible" | "needs_review", string> = { not_eligible: "Not eligible", needs_review: "The representative reviews it (Possibly eligible)" };
+const NOT_MET: Record<"not_eligible" | "needs_review", string> = { not_eligible: OUTCOME_WORDS.NOT_ELIGIBLE, needs_review: `The representative reviews it (${OUTCOME_WORDS.POSSIBLY_ELIGIBLE})` };
 const MARK: Record<Change["change"] | "released", [string, string, string]> = {
   added: ["info", "New in draft", "Added in the draft: cases read it once the draft is reviewed and released."],
   changed: ["warn", "Changed in draft", "Changed in the draft: cases keep the released version until the draft is reviewed and released."],

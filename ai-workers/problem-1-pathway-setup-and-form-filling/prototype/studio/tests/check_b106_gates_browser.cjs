@@ -116,7 +116,7 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   await row(page, 2).locator("input").first().fill("Passport number answered");
   await setRule(page, 2, "Passport number");
   await row(page, 2).getByLabel(/The representative reviews it/).check();
-  await row(page, 2).getByLabel(/^Not eligible$/).check();
+  await row(page, 2).getByLabel(/^Does not qualify$/).check();
   await page.screenshot({ path: path.join(OUT, "2-dialog-new-gate-1440.png") });
   await save(page); await saved(page);
   const g1 = await gates();
@@ -124,7 +124,7 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   ok("BR-1 pass: the gate is saved to the draft by screen, at the next version", !!added && g1.version === before.version + 1, g1);
   ok("BR-3 pass: stored as a rule per person (subjectKind PERSON): Passport number is answered", added?.condition?.subjectKind === "PERSON" && added?.condition?.op === "exists" && added?.condition?.field === "person.passport_number", added);
   ok("BR-4 pass (Q3): its key is made from the label", added?.key === "gate.passport_number_answered", added?.key);
-  ok("BR-3: 'If not met: Not eligible' (the default) is stored as no whenNotMet", added && added.whenNotMet === undefined, added);
+  ok("BR-3: 'If not met: Does not qualify' (the default, P-236) is stored as no whenNotMet", added && added.whenNotMet === undefined, added);
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   ok("BR-8a (m5): the save lost nothing: the two gates as they were, 'needs_review' kept, the 4 lines and the disclaimer", same(g1.gates.slice(0, 2), before.gates) && g1.gates[1].whenNotMet === "needs_review" && same(g1.judgement, before.judgement) && g1.disclaimer === before.disclaimer, { was: before.gates, now: g1.gates.slice(0, 2) });
   await section(page).locator('[data-gate="gate.passport_number_answered"]').waitFor();
@@ -234,7 +234,7 @@ const setup = (file) => { try { return { code: 0, out: execFileSync(TSX, [file, 
   const off = await as(OFFICER); off.on("pageerror", (e) => errors.push(String(e)));
   const run = async (caseId, shot) => {
     await off.goto(`${BASE}/cases/${caseId}/eligibility`, { waitUntil: "networkidle" });
-    await off.getByRole("button", { name: /Run eligibility check|Run again/ }).first().click();
+    await off.getByRole("button", { name: /Run case check|Run again/ }).first().click();
     await off.getByText(/Rules checked/).first().waitFor({ timeout: 60_000 });
     if (shot) await off.screenshot({ path: path.join(OUT, shot) });
     return off.locator("main, body").first().innerText();
