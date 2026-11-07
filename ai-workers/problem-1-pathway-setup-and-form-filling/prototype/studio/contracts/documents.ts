@@ -44,4 +44,6 @@ export function cleanName(name: string | undefined): string {
   const n = String(name ?? "").split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f<>"]/g, "").replace(INVISIBLE, "").trim().slice(0, 200);
   return n && !/^\.+$/.test(n) ? n : "document";
 }
-export type StoredDocument = { id: string; current: boolean; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string; superseded_at: string | null };
+export type StoredDocument = { id: string; current: boolean; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string; superseded_at: string | null;
+  /** C6.15: on a line with a substitute set, the member of the set this file is. */
+  member?: { key: string; name: string } };

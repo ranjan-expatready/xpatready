@@ -1,6 +1,7 @@
 // Draft validation and release differences. Problems are stated in plain words with where they are; errors block
 // submission, warnings are shown and recorded. Conditions are checked against the portable copy of the team's
 // closed predicate contract (contracts/predicate.v0.schema.json) and against the library's field types.
+import { lineSet, setWords, type SnapSet } from "./document-sets.ts";
 import { Ajv } from "ajv";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -149,6 +150,12 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   for (const d of s.document_requirements) {
     for (const e of checkCondition(d.condition, types, derived)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Condition ${e}.` });
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });
+    // C6.15 (SA-1B-20 rule 3): a line naming a set its document type does not have is unresolved: not startable.
+    const picked = lineSet((s.document_types ?? []).find((t: { key: string }) => t.key === d.document_type_key), d.set_name, d.document_type).problem;
+    if (picked) out.push({ level: "error", where: "Documents", item: d.document_type, message: picked });
+    // Break F3 (SA-1B-19 rule 6): a retired member of the set the line uses refuses the release, named.
+    const used = lineSet((s.document_types ?? []).find((t: { key: string }) => t.key === d.document_type_key), d.set_name, d.document_type).set;
+    for (const m of (used?.members ?? []).filter((x: { retired?: true }) => x.retired)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Line "${d.document_type}" uses the set "${used!.name}", whose member ${m.name} is retired. Change the set on the document type first.` });
   }
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
   for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object" && x.group !== "document_validity")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
@@ -332,7 +339,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   for (const [k, id, label, behaviour] of [["document_types", (x: any) => x.key, "Document type", true], ["derived_fields", (x: any) => x.id, "Derived definition", true]] as const) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
-      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
+      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}${x.sets?.length ? `; substitute sets: ${(x.sets as SnapSet[]).map((s) => `${s.name} (${setWords({ mode: s.mode, members: s.members })})`).join("; ")}` : ""}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
   }
   // W1-15 slice 1 (challenge M5): each choice over the rules' source and each Pre-qualification tick is named on Review,
