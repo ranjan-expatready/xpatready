@@ -104,8 +104,8 @@ ok("C8.2-7 pass (view): the Prepare view reads Prepared by · Reviewed by with n
 ok("data: the filing's own application number follows the record (slice 1's filing record reads it)", sql(`select application_number from filing where id='${fS}'`) === "V300000102");
 ok("data: the audit line names no application number or UCI", sql(`select count(*) from audit_event where entity='submission group' and entity_key='${g?.id}' and summary not like '%V3000001%' and summary not like '%1111-1111%'`) === "1");
 r = await record(body({ version: p?.version }));
-// B149 (P-408; board agent-view frame 7): IRCC's "Transaction Approved" page is the fee receipt's evidence; the typed
-// number stays optional (the spouse's line above has none).
+// B149 (P-408; board agent-view frame 7): IRCC's "Transaction Approved" page is the fee receipt's evidence, apart from
+// the typed number (optional: the browser walk records a filing with none).
 u = await upload(fP, receipt("client C"), "Transaction Approved.pdf");
 p = (await prepare(c.id, officer)).p;
 let files = filingsOf(p).find((x) => x.id === fP)?.record?.fee_receipt_files ?? [];
@@ -127,7 +127,9 @@ ok("B149 fail (permissions): the case's client cannot upload a fee receipt (403)
 u = await upload(fP, receipt("author"), "x.pdf", AUTHOR);
 ok("B149 fail (permissions): a configuration person is refused before the file is read (403)", u.status === 403, u.status);
 u = await upload(fP, receipt("other firm"), "x.pdf", "user-S");
-ok("B149 fail (permissions): another firm's staff cannot reach this case's filing (404)", u.status === 404, u.status);
+ok("B149 fail (permissions, break m2): another firm's staff cannot reach this case's filing: 404 \"No such filing.\", as for one that does not exist", u.status === 404 && /No such filing\./.test(JSON.stringify(u.body)), u);
+u = await upload(fP, Buffer.concat([Buffer.from("%PDF-1.4\n", "latin1"), Buffer.alloc(20 * 1024 * 1024 + 1 - 9)]), "big.pdf");
+ok("B149 fail (review M2, break m1): a page over 20 MB is refused (413) in its own words, naming 20 MB (not the intake's 25 MB)", u.status === 413 && /larger than 20 MB/.test(JSON.stringify(u.body)) && !/25 MB/.test(JSON.stringify(u.body)), u);
 u = await upload(fP, Buffer.from("MZ\x90\x00 not a receipt", "latin1"), "receipt.pdf");
 ok("B149 fail: a file that is not a PDF, JPEG or PNG by its bytes is refused (422), whatever its name", u.status === 422 && /PDF, JPEG or PNG/.test(JSON.stringify(u.body)), u);
 u = await upload(fP, Buffer.alloc(0), "empty.pdf");

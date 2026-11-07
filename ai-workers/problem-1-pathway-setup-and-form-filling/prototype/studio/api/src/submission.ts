@@ -187,7 +187,8 @@ export class Submission {
   async feeReceipt(actor: Actor, filingId: string, files: Upload[] | undefined) {
     const f = UUID.test(filingId) ? await this.db.filing.findUnique({ where: { id: filingId }, include: { record: true } }) : null;
     if (!f) fail("No such filing.", HttpStatus.NOT_FOUND);
-    const c = await this.r.reach(actor, f!.caseId, "officer"); // a client: 403; another firm's case: 404
+    // A client: 403. Another firm: the same 404 as a filing that does not exist (break m2: never "No such case." for a real one).
+    const c = await this.r.reach(actor, f!.caseId, "officer").catch((e: unknown) => { if (e instanceof HttpException && e.getStatus() === HttpStatus.NOT_FOUND) fail("No such filing.", HttpStatus.NOT_FOUND); throw e; });
     if (!f!.record) refuse("filing", "Record the submission first: the fee receipt is kept on the filing's record. Nothing was stored.", HttpStatus.CONFLICT);
     const x = (files ?? []).filter((u) => u.buffer);
     if (x.length !== 1 || x[0].fieldname !== "file") refuse("file", 'Send one file, in the field "file". Nothing was stored.');
