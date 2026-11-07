@@ -77,3 +77,23 @@ Not tested: a real screen reader, 200 % zoom, and an intended user's unaided wal
 * Whether IMM 5645's accepts record for Online carries an IRCC quote (immigration value; rule 4). The pack asserts nothing about it.
 
 **Verdict: Approve** (61897c92d826acdc8f97aad9b10fc7188f715cc7). Blockers: none. Majors: none. Minors: m1, m2, m3.
+
+## Round 2 (diff only, 7 Nov)
+Diff `61897c92d..5de88dc3c372bd51ab33db8151345dda333ebabe`. The only code change is in `acceptance/C9.2.test.ts` (+7/−7). The rest is `C9.2.md` (one line), this file committed as I wrote it (byte-identical), and the two run logs refreshed. `lib/m3.ts` is still untouched.
+* **m1, fixed.** Each step that reads a form now needs that form's name first:
+  * `!!BC && !!HS` on -2 (line 54) and -8 (line 75);
+  * `!!BC` on -3 (line 59);
+  * `!!HS` on -6 (line 71) and -10 (line 91);
+  * `!!FAM` on -9 (line 83).
+
+  An empty form name now fails the step instead of evaluating over every item the person has. Each guard is an added conjunct on a name that is set on both data sets, so neither data set changes meaning.
+* **m2, fixed.** The NOTE (line 34) says "filed on Paper … (founder Q3)" or "filed Online" only on a 200. Otherwise it says "switch was refused", with the status.
+* **m3, fixed.** `C9.2.md:4` now reads "added by C7.6's PR #1249, on `main` once it merges".
+* **Run logs:** the refreshed logs differ only in hashes and in the order of the warnings and items. -5 uses `some` and -7 selects by form, so the order does not matter.
+* **Nothing else moved.** No step was weakened, dropped or added. The step ids are unchanged. No form number or channel was added to a check.
+* **My runs on this head** (fresh copies `rv_c92b` on :4471 and `rv_c92bfx` on :4472, both stopped; live AI off; US$0):
+  * checkpoint: **11/11, exit 0**, both NOTE lines with status 200;
+  * fixture: **11/11, exit 0**, no NOTE line. `setup_vv_m3.ts` had only S2w and S7a red, as before.
+* **Journey score:** 8.5/10. Feedback rises to 1 with m2; the rest is unchanged.
+
+**Verdict: Approve (5de88dc3c372bd51ab33db8151345dda333ebabe).** Blockers: none. Majors: none. Minors: none open.
