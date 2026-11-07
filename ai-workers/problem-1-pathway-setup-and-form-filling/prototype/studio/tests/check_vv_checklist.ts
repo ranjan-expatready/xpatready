@@ -212,4 +212,23 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   ok("C7.7 (c) fail: unanswered anywhere, the once-per-case input is still asked", none.some((m) => m.key === "person.date_of_birth" && !m.answered), none);
 }
 
+// B102 (A6, BR-8): each person's age as the lines read it, on the release's worked-out reference date (the application
+// date), or what to answer first. Sample (how age counts: Unconfirmed: no counsel).
+{
+  const age = (k: Known, who: string) => of(run(k), who).age;
+  const a = age(known({ "C|person.date_of_birth": "2016-11-01", "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 pass: a child born 2016-11-01 is 10 on the application date 2026-11-01, worked out from the release's value", a.years === 10 && a.on === "2026-11-01" && a.worked_out && a.why === "Age 10 on 2026-11-01 (the application date)", a);
+  const eve = age(known({ "C|person.date_of_birth": "2008-11-02", "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 pass and fail: one day short of the 18th birthday on the application date, the age is 17, not 18", eve.years === 17, eve);
+  const noDate = age(known({ "C|person.date_of_birth": "2016-11-01" }), "C");
+  ok("C6.4 B102 BR-8 fail: with no application date the age is not guessed from today; it asks for the date first", noDate.years === null && /^Age: answer "Date the application is submitted" first\.$/.test(noDate.why), noDate);
+  const noBirth = age(known({ "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 fail: with no date of birth the age asks for it first", noBirth.years === null && /^Age: answer "Date of birth" first\.$/.test(noBirth.why), noBirth);
+  const after = age(known({ "C|person.date_of_birth": "2027-01-01", "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 fail: a birth after the application date gives no age and says to check both dates", after.years === null && /^Age: check .* together they give no age/.test(after.why), after);
+  const plain = { ...S, derived_fields: [] } as unknown as Snapshot;
+  const t = (caseChecklist(plain, "vv.single", people, known({ "C|person.date_of_birth": "2016-11-01" }), TODAY) as D).people.find((p) => p.subject === "C")!.age;
+  ok("C6.4 B102 BR-8 pass: a release that works out no age shows the age the 18-or-older lines use, naming today", t.years === 10 && !t.worked_out && /today: the application date is not answered yet/.test(t.why), t);
+}
+
 process.exitCode = summary() ? 1 : 0;
