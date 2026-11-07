@@ -120,3 +120,24 @@ Verdict: Approve
 **Journey score, round 3:** 9/10, unchanged (no screen change).
 
 Verdict: Approve
+
+## Round 4 (diff only, `5e63f632b..329b777`; asked for by Lead 32 after merge batch #1280 failed C4.1)
+**The fix:** `engine/runtime/preview.ts:101-106` builds the Preview's client questionnaire from the same `caseView`, then drops relatives' sections and checks (`isAskedRelative`). Nothing else changed: no case route, no engine rule, no `acceptance/` file.
+
+**Why it is right:**
+* C4.1's rule is "a fact the passport supplies is not asked of the principal". `acceptance/C4.1.test.ts:152-162` is unchanged in this PR (the only `acceptance/` change in the whole PR is round 1's `lib/m3.ts`). So the protected assertion is not weakened.
+* The failure came from the test gathering every label of the Preview's questionnaire, which since B128 included the Sample parents' "Family name as shown on passport…" question. That is correctly asked of a parent, who holds no passport on the checklist, but the Preview's parts, chips (`questionsFor`) and document skips are all per person of its Sample family.
+* Dropping relatives there brings the questionnaire data into line with what the Preview already showed and counted. That is the round-1 m4 gap stated plainly rather than hidden, and it is still a listed follow-up.
+* A case still asks the parents: the check's control case shows `principal/parent_1` and `/parent_2` in a case view of the same family.
+* `questionnaire.summary` comes from the unfiltered view. Its only use on the Preview (`web/src/pages/workspace/preview.tsx:177`, `not_asked`) counts placed questions that no form reads, and a parent question that *is* asked is never in it, so the notice does not change.
+
+**Ran:**
+* `tests/runtime/check_b128_relatives.ts` passed **13/13**.
+* Against round 3's `preview.ts` (scratch copy, test unchanged) it is **12/13**: "the Preview's client questionnaire has … no relative's section" fails with `principal/parent_1`, `/parent_2`. So it fails first.
+* The checks-filter assertion cannot fail on this synthetic release, which has no checks. That is a weak control (Minor), not wrong.
+
+**Not run by me:** C4.1 on the six, the Preview suites, the protected regression set, and the checkpoint checks. `isolated.sh` refused a fifth test copy ("4 test copies already run (ports 4450-4453), cap 4"). The coordinator reports C4.1 at 25/25 (24/25 before the fix), `check_b128_parents` 23/23, qa's check 3/3, and C7.7 on the checkpoint with the same 33 verdicts as main. The Preview suites and the regression set were still running when I wrote this; they need to be green before merge.
+
+**Journey score:** 9/10, unchanged (no runtime screen changed; the Preview shows what it showed before B128).
+
+Verdict: Approve
