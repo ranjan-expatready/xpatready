@@ -19,16 +19,16 @@ table{width:100%;border-collapse:collapse;background:#fff}td,th{padding:8px 10px
 <h1>C6.16 · Adult privacy and "Send to …" (draft board, B138)</h1>
 <p class="muted">Intent, not pixels (P-44). Sample names: Client A (principal), Partner (adult), Child 18 or over (adult), Child (minor). Consent wording: <b>Unconfirmed: no counsel</b>. The email is a demo stand-in ("Sent messages", demo workspace only).</p>
 
-<div class="frame"><h2>1 · Principal's family link (390 px): Send to Partner → sent → progress only</h2>
-<p class="note">A minor's tab has no Send (AG07-D23). After Partner checks the code, Client A sees progress only, never answers.</p>
+<div class="frame"><h2>1 · Principal's family link (390 px), under "About Partner" in the C6.2 overview: Send to Partner → sent → progress only</h2>
+<p class="note">A minor has no Send (AG07-D23); no date of birth: no Send, with why. After Partner's first right code, privacy is stored on and Client A sees progress only (server-counted), never answers, follow-ups or documents, also after Take back.</p>
 <div class="phones">
  <div class="phone"><h3>Your family's questions</h3>
-  <div class="tabs"><span class="tab">Client A</span><span class="tab on">Partner</span><span class="tab">Child 18 or over</span><span class="tab">Child</span></div>
+  <p class="muted">About your family: Client A · <b>About Partner</b> · Child 18 or over · Child</p>
   <div class="card"><b>Partner</b> · 2 of 7 parts done<br><button class="btn" style="margin-top:6px">Send to Partner…</button> <span class="muted">ⓘ Partner answers their own questions</span></div>
   <div class="card"><b>Send to Partner</b><label>Partner's email</label><input value="partner@example.com"><p class="muted">Partner gets a link and a code by email. Once they open it, you will see how far they have got, not their answers.</p><button class="btn primary">Send to Partner</button> <button class="btn">Cancel</button></div>
  </div>
  <div class="phone"><h3>Your family's questions</h3>
-  <div class="tabs"><span class="tab">Client A</span><span class="tab on">Partner</span><span class="tab">Child 18 or over</span><span class="tab">Child</span></div>
+  <p class="muted">About your family: Client A · <b>About Partner</b> · Child 18 or over · Child</p>
   <div class="card"><span class="pill info">Sent</span> to p•••@example.com on 9 Nov. Partner has not opened it yet; you can still answer.<br><button class="btn" style="margin-top:6px">Resend</button> <button class="btn">Take back</button></div>
   <div class="card"><span class="pill ok">With Partner</span> Partner is answering on their own link<div class="bar" style="margin:8px 0"><i></i></div>4 of 7 parts done · last saved 9 Nov 14:10<p class="muted">Their answers are private to them and the firm.</p><button class="btn">Take back</button></div>
  </div>
@@ -36,9 +36,9 @@ table{width:100%;border-collapse:collapse;background:#fff}td,th{padding:8px 10px
 
 <div class="frame"><h2>2 · Partner's own link (390 px): code → consent → their sections</h2>
 <div class="phones">
- <div class="phone"><h3>Check it's you</h3><p>We sent a 6-digit code to p•••@example.com.</p><label>Code</label><input value="482 913"><p class="muted">The code works for 15 minutes. <a>Send a new code</a></p><button class="btn primary">Continue</button>
-  <div class="card" style="background:var(--crit-tint);color:var(--crit-t)">Too many wrong codes. This link no longer works. Ask Client A or the firm to send a new one.</div></div>
- <div class="phone"><h3>Before you start</h3><div class="card">Your answers go to the firm handling this application. Client A will see how far you have got, not your answers. <span class="pill warn">Unconfirmed: no counsel</span></div><button class="btn primary">Continue to my questions</button>
+ <div class="phone"><h3>Check it's you</h3><p><button class="btn">Send me a code</button></p><p>We sent a 6-digit code to p•••@example.com.</p><label>Code</label><input value="482 913"><p class="muted">The code works for 15 minutes. <a>Send a new code</a></p><button class="btn primary">Continue</button>
+  <div class="card" style="background:var(--crit-tint);color:var(--crit-t)">Too many wrong codes. This link no longer works. Ask whoever sent it for a new one.</div></div>
+ <div class="phone"><h3>Before you start</h3><div class="card">Your answers go to the firm handling this application. The person who started it will see how far you have got, not your answers. The firm can change this. <span class="pill warn">Unconfirmed: no counsel</span></div><button class="btn primary">Continue to my questions</button>
   <div class="card"><b>About you</b> · Partner<br><span class="muted">Date of birth</span> 1987-02-11 <span class="pill">answered by Client A</span> <button class="btn">Confirm</button> <button class="btn">Change</button><br><span class="muted">Date of marriage</span> shared, read-only</div></div>
 </div></div>
 
@@ -46,10 +46,10 @@ table{width:100%;border-collapse:collapse;background:#fff}td,th{padding:8px 10px
 <p class="note">Staff always see and edit every answer. Each adult's link state in words, with its actions.</p>
 <table><tr><th>Person</th><th>Role</th><th>Answers</th><th></th></tr>
 <tr><td>Client A</td><td>Principal</td><td>Their own family link</td><td></td></tr>
-<tr><td>Partner</td><td>Spouse or partner</td><td><span class="pill ok">With Partner since 9 Nov · private from Client A</span></td><td><button class="btn">Resend</button> <button class="btn">Take back…</button></td></tr>
-<tr><td>Child 18 or over</td><td>Child, 19</td><td><span class="pill">Answers by Client A</span></td><td><button class="btn">Send…</button></td></tr>
+<tr><td>Partner</td><td>Spouse or partner</td><td><span class="pill ok">With Partner since 9 Nov · private from Client A</span><br><span class="muted">Answered on the link sent to p•••@example.com (address given by Client A)</span></td><td><button class="btn">Resend</button> <button class="btn">Send to a new address…</button> <button class="btn">Take back…</button></td></tr>
+<tr><td>Child 18 or over</td><td>Child, 19</td><td><span class="pill">Answers by Client A</span></td><td><button class="btn">Send…</button> <button class="btn">Keep private…</button></td></tr>
 <tr><td>Child</td><td>Child, 10</td><td><span class="muted">Answered by Client A (under 18: no own link)</span></td><td></td></tr>
 </table>
-<p class="muted" style="margin-top:8px">Dead link page: a real link that died says why ("This link was replaced by a newer one sent on 9 Nov. Use the newest email." · "Client A took this link back on 10 Nov." · "This link expired on 23 Nov."); an unknown link shows only "This link does not work. Ask whoever sent it for a new one.", naming no case or person.</p>
+<p class="muted" style="margin-top:8px">Dead link page: a real link that died says why, naming no person ("This link was replaced by a newer one sent on 9 Nov. Use the newest email." · "This link was taken back on 10 Nov. Ask whoever sent it for a new one." · "This link expired on 23 Nov."); an unknown link: "This link does not work. Ask whoever sent it for a new one." The email is a demo inbox by address (demo workspace only), never shown on the case.</p>
 </div>
 </div></body></html>
