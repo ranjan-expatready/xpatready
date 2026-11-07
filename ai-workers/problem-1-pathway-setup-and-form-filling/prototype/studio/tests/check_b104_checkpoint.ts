@@ -68,7 +68,8 @@ const ok = (label: string, cond: boolean, detail: unknown = "") => { if (!cond) 
   const prep = (await call("GET", `/runtime/cases/${c.id}/prepare`, undefined, c.officer)).body;
   ok("B104-L8 pass: a case opened on the newest release is filed through the APR Portal", prep?.portal === "APR_PORTAL", { case: c.id, portal: prep?.portal });
   const run = await call("POST", `/runtime/cases/${c.id}/assessments`, { person: c.subjects["Sample Client A"] }, c.officer ?? OFFICER);
-  const fam = ((prep?.items ?? []) as { kind: string; form?: string; signature?: string; signers?: string[] }[]).filter((i) => i.kind === "form" && i.form === "IMM 5645");
+  // Row C9 (QA-246): with no date of birth IMM 5645 (from 18) is not yet known, so /prepare lists it in `waiting`, apart.
+  const fam = ([...(prep?.items ?? []), ...(prep?.waiting ?? [])] as { kind: string; form?: string; signature?: string; signers?: string[] }[]).filter((i) => i.kind === "form" && i.form === "IMM 5645");
   ok("A3-L4 pass: on that case IMM 5645 is a typed name, signed by the person (not waiting for how it is signed)", fam.length >= 1 && fam.every((i) => i.signature === "TYPED_NAME" && JSON.stringify(i.signers) === '["person"]'), fam.map((i) => ({ signature: i.signature, signers: i.signers })));
   ok("B104-L9 pass: its eligibility check runs (not refused 409 for a release with no rules)", run.status < 300 && /POSSIBLY_ELIGIBLE/.test(JSON.stringify(run.body)), { status: run.status, detail: run.body?.detail });
 

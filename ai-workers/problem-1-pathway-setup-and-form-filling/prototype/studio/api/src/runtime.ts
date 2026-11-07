@@ -17,6 +17,8 @@ import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
 import { FIRM_RECORD, openingTeam, REPRESENTATIVE, representativeAnswers, USES_REPRESENTATIVE, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
+import { isFilingFact } from "../../engine/resolver.ts";
+import { ONCE_WORDS } from "../../engine/field-scope.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "../../engine/runtime/background.ts";
 import { backgroundBlockOf } from "./background-questions.ts";
@@ -358,13 +360,14 @@ export class Runtime {
       fail("Uses a representative comes from the case team: this case has a representative of record. Change the team (Case team), not the answer.", HttpStatus.UNPROCESSABLE_ENTITY);
     }
     const field = (s.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === fieldKey);
-    const place = (s.placements as { fact: string; repeats: string; section_id: string; collected_from: string }[]).find((p) => p.fact === fieldKey);
+    const place = (s.placements as { fact: string; repeats: string; section_id: string; collected_from: string; scope?: string }[]).find((p) => p.fact === fieldKey);
     if (!field || !place) fail(`The release this case works from does not ask for ${fieldKey}.`, HttpStatus.NOT_FOUND);
     if (!officer && !isClientField(s, fieldKey)) fail("The officer enters this fact from a document or record.", HttpStatus.FORBIDDEN);
     // P-97, P-130: a declaration is always the client's own; the officer never makes it for them (C4.4 review M1).
     if (officer && (field as { value_type?: string }).value_type === "declaration") fail("Only the client makes this declaration, in their own questionnaire; the officer cannot tick it for them.", HttpStatus.FORBIDDEN);
-    const caseLevel = place!.repeats === "once_per_case" || fieldKey.startsWith("case.");
-    if (caseLevel !== (who!.role === "case")) fail(caseLevel ? "This is asked once for the application, not for a person." : "This is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
+    // R5 and C3.16 BR-4: a filing fact, or a household or employer fact (the release's mark), is saved once on the case.
+    const caseLevel = isFilingFact(fieldKey, place);
+    if (caseLevel !== (who!.role === "case")) fail(caseLevel ? ONCE_WORDS[place!.scope === "household" || place!.scope === "organisation" ? place!.scope : "filing"] : "This is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
     if (place!.repeats !== "per_row" && b.row) fail("This question has one answer, not rows.", HttpStatus.UNPROCESSABLE_ENTITY);
     if (place!.repeats === "per_row" && !b.row) fail("Name the row this answer belongs to (add a row first).", HttpStatus.UNPROCESSABLE_ENTITY);
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });

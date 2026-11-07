@@ -140,9 +140,14 @@ export function ageCheck(rule: FeeRule, age: number | null | undefined): { pays:
   return { pays: true };
 }
 
+/** A submission's line total with its basis (B133, P-247: "Every fee line carries a basis"), so a reader names the basis
+ *  from the table's own word, never from these words or the maximum. Additive to the contract's total (studio/contracts/
+ *  is M2-hot: the field rides in the JSON and in this engine type until the contract can take it). */
+export type FeeTotal = SubmissionGroup["totals"][number] & { basis: FeeBasis };
+
 /** A fee line over the people applying together: the per-person amount each, capped at the family maximum once the group
  *  has at least `familyFrom` people (IRCC: "applying at the same time and place", so within one submission group only). */
-export function familyFee(rule: FeeRule, people: number): SubmissionGroup["totals"][number] {
+export function familyFee(rule: FeeRule, people: number): FeeTotal {
   const listCents = rule.perPersonCents * people;
   const capApplied = people >= rule.familyFrom && listCents > rule.familyMaxCents;
   const totalCents = capApplied ? rule.familyMaxCents : listCents;
@@ -155,7 +160,8 @@ export function familyFee(rule: FeeRule, people: number): SubmissionGroup["total
     : people >= rule.familyFrom
       ? `${people} × ${cad(rule.perPersonCents)} = ${cad(listCents)}, not above the family maximum ${cad(rule.familyMaxCents)}.`
       : `${people} × ${cad(rule.perPersonCents)} = ${cad(listCents)}; the family maximum ${cad(rule.familyMaxCents)} starts at ${rule.familyFrom} people applying together.`;
-  return { line: rule.key, label: rule.label, people, per_person_cents: rule.perPersonCents, list_cents: listCents, family_max_cents: rule.familyMaxCents, family_from: rule.familyFrom, total_cents: totalCents, cap_applied: capApplied, why, source: rule.source };
+  // A rule with no basis is capped as a family maximum (above), so it says so; every table line has one (soundLine).
+  return { line: rule.key, label: rule.label, basis: rule.basis ?? "family_maximum", people, per_person_cents: rule.perPersonCents, list_cents: listCents, family_max_cents: rule.familyMaxCents, family_from: rule.familyFrom, total_cents: totalCents, cap_applied: capApplied, why, source: rule.source };
 }
 
 /** The age exemptions of a combination's lines in words, from the table (no age is written in code). */
@@ -214,7 +220,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
     const payers = mine.flatMap((f) => f.applicants.filter((a) => a.mode === "applying").map((a) => ({ filing: f.id, who: a, covers: 1 })));
-    const totals: SubmissionGroup["totals"] = [];
+    const totals: FeeTotal[] = [];
     for (const rule of priced) {
       const ofRole = (role: string) => !rule.roles || rule.roles.includes(role);
       // per_application: one unit per application filed (its owner, who applies), covering everyone applying on it.
