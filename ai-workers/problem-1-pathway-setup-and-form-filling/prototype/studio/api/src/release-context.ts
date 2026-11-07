@@ -35,9 +35,12 @@ export function sideOf(s: Snapshot, combinationKey: string, st: CaseState, today
 /** Both releases' reading of the case, with the people's names and the answers given (for the type check). */
 export function caseInputs(from: Snapshot, to: Snapshot, combinationKey: string, st: CaseState, today: Date, questions: boolean): CaseInputs {
   const caseSubject = st.people.find((p) => p.role === "case")?.subjectId;
+  const to2 = sideOf(to, combinationKey, st, today, questions);
   return { people: st.people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, label: p.label })),
-    from: sideOf(from, combinationKey, st, today, questions), to: sideOf(to, combinationKey, st, today, questions),
-    answered: st.answers.filter((a) => !a.rowKey && a.subjectId !== caseSubject).map((a) => ({ subject: a.subjectId, fact: a.field })) };
+    from: sideOf(from, combinationKey, st, today, questions), to: to2,
+    // An answer counts for a type change only where the new release still asks it of that person (a hidden answer is kept,
+    // never read, so it never blocks a move); without the questions worked out, every answer counts.
+    answered: st.answers.filter((a) => !a.rowKey && a.subjectId !== caseSubject && (!questions || !!to2.questions.get(a.subjectId)?.has(a.field))).map((a) => ({ subject: a.subjectId, fact: a.field })) };
 }
 
 /** BR-2: the release this case may move to (the newest of its own combination with a higher version), or null. */

@@ -453,13 +453,13 @@ export class CasePrepare {
     const st = { people, answers, rows, groups: groupAnswers }, forTouch = filings.map((f) => ({ id: f.id, people: f.applicants.map((a) => a.subject) }));
     const prev = pins[1];
     let movedTouch: Map<string, string[]> | null = null;
-    const touchedByMove = () => (movedTouch ??= touchedFilings(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s), caseInputs(prev.snapshot, s, own!.combinationKey, st, today, false), forTouch, { to: curLabel }));
+    const touchedByMove = () => (movedTouch ??= touchedFilings(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s), caseInputs(prev.snapshot, s, own!.combinationKey, st, today, true), forTouch, { to: curLabel }));
     const reviewAfterMove = prev ? (filing: string, reviewedAt: Date) => {
       const t = reviewedAt.getTime() > pin.pinnedAt.getTime() ? [] : touchedByMove().get(filing) ?? [];
       return reviewCounts({ hashEqual: true, reviewedAt, pinnedAt: pin.pinnedAt, revision: pin.revision, touched: t.length > 0 }) ? null : `The case moved to ${curLabel}, which changes this filing (${t.slice(0, 2).join("; ")}${t.length > 2 ? ` and ${t.length - 2} more` : ""})`;
     } : undefined;
     const target = await targetRelease(this.db, c);
-    const pending = target ? touchedFilings(diffOf(pin.configReleaseId, s, target.id, target.snapshot), caseInputs(s, target.snapshot, own!.combinationKey, st, today, false), forTouch, { to: target.label }) : null;
+    const pending = target ? touchedFilings(diffOf(pin.configReleaseId, s, target.id, target.snapshot), caseInputs(s, target.snapshot, own!.combinationKey, st, today, true), forTouch, { to: target.label }) : null;
     const releaseUpdate = pending ? (filing: string) => {
       const w = pending.get(filing) ?? [];
       return w.length ? { key: String(target!.version), words: `${target!.label} of ${s.combination.label} is out and changes this filing: ${w.slice(0, 2).join("; ")}${w.length > 2 ? ` and ${w.length - 2} more` : ""}. This filing is on ${curLabel}. Move the case from the notice under its header, or pass this warning with a reason.` } : null;
@@ -484,7 +484,9 @@ export class CasePrepare {
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
         // answer as given now (an unconfirmed change is a change the representative did not review).
-        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value])]);
+        // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
+        // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
+        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))]);
         return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${JSON.stringify(waiting)}`).digest("hex");
       }, today });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on

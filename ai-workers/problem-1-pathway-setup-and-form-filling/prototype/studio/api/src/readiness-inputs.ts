@@ -102,7 +102,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.
     const latest = reviews.find((r) => r.filingId === filing) ?? null;
     const sameFacts = !!latest && latest.reviewedBy === rep && latest.factsHash === factsHash;
-    const withdrawn = sameFacts ? x.reviewAfterMove?.(filing, latest!.reviewedAt) ?? null : null;
+    // C9.5: a review made before a move that changed this filing is withdrawn by the move, and says so, whether or not
+    // the move also changed the facts' fingerprint (a channel or signing change leaves it equal; a new form does not).
+    const withdrawn = latest && latest.reviewedBy === rep ? x.reviewAfterMove?.(filing, latest.reviewedAt) ?? null : null;
     const review = sameFacts && !withdrawn ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
     const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });

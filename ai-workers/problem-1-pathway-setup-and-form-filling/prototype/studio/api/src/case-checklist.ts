@@ -20,6 +20,7 @@ import { caseChecklist, type PersonLine } from "../../engine/runtime/case-checkl
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
+import { releaseLabel } from "../../contracts/runtime.ts";
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -65,7 +66,7 @@ export class CaseChecklists {
     // B-M2: an answer its own checks reject (a date that is not real, 1900 or 2200 as the application date) never decides
     // a line: only answers without problems are read, so the line asks for the answer again instead.
     const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, release_label: releaseLabel(pin.release), today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
   }
 
   /** The derived checklist with its stored lines: every needed line gets its row (created once, then kept). */
@@ -98,7 +99,7 @@ export class CaseChecklists {
       const listed = new Set([...p.lines, ...p.waiting, ...p.not_needed].map((l) => l.document.key));
       const orphans = rows.filter((x) => x.subjectId === p.subject && !listed.has(x.documentType) && (x.state !== "not_requested" || docsOf(p.subject, x.documentType).length > 0))
         .map((x): PersonLine => ({ id: `${p.subject}:${x.lineage}`, document_type: x.documentType, label: typeName(x.documentType), state: "not_requested", required: false, documents: [],
-          reason: p.applies ? "The case's release no longer asks this person for it." : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
+          reason: p.applies ? `No longer required: ${d.release_label ?? "the case's release"} no longer asks this person for it; its uploads are kept and listed.` : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
           need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, who: "", who_words: "" }));
       const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true)), ...orphans.map((l) => out(l, true))];
       return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };

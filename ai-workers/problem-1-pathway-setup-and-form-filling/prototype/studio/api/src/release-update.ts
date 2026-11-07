@@ -89,7 +89,7 @@ export class ReleaseUpdates {
     const touched = touchedFilings(diff, inputs, filings, labels);
     const work = await this.work(c, names);
     const effects = effectsOf(diff, inputs, work, filings.map((f) => ({ filing: f.id, label: f.label, counts: reviewed.has(f.id) })), touched, labels);
-    const refused = await this.refusal(c, st, diff, target.snapshot, cur.label, names);
+    const refused = await this.refusal(c, st, diff, target.snapshot, cur.label, names, askedOf(inputs));
     return { ...base, target: { version: target.version, label: target.label, released_at: target.releasedAt.toISOString(), demo: target.demo },
       changes: whatChanges(diff, inputs), effects, touched: filings.filter((f) => (touched.get(f.id) ?? []).length).map((f) => ({ filing: f.id, label: f.label, words: touched.get(f.id)! })), refused, last_move: last };
   }
@@ -112,12 +112,12 @@ export class ReleaseUpdates {
   }
 
   /** BR-7: why the move is refused now (null: it may go ahead), read from the database as it is. */
-  private async refusal(c: Reached | { id: string }, st: CaseState, diff: ReleaseDiff, to: Snapshot, currentLabel: string, names: Map<string, string>, tx: Pick<Db, "filingRecord" | "formInstance" | "filing"> = this.db) {
+  private async refusal(c: Reached | { id: string }, st: CaseState, diff: ReleaseDiff, to: Snapshot, currentLabel: string, names: Map<string, string>, asked: Set<string>, tx: Pick<Db, "filingRecord" | "formInstance" | "filing"> = this.db) {
     const recorded = await tx.filingRecord.findMany({ where: { caseId: c.id }, select: { filingId: true } });
     const owners = recorded.length ? await tx.filing.findMany({ where: { id: { in: recorded.map((x) => x.filingId) } }, select: { subjectId: true } }) : [];
     const running = await tx.formInstance.findMany({ where: { caseId: c.id, status: { in: ["QUEUED", "RUNNING"] } }, select: { formNumber: true, subjectId: true } });
     const today = new Date();
-    const mismatches = st.answers.filter((a) => diff.types.has(a.field) && checkValue(to, a.field, a.value, today).length > 0)
+    const mismatches = st.answers.filter((a) => diff.types.has(a.field) && asked.has(`${a.subjectId}|${a.field}`) && checkValue(to, a.field, a.value, today).length > 0)
       .map((a) => ({ label: diff.types.get(a.field)!.label, person: names.get(a.subjectId) ?? "The application", expects: typeWords(diff.types.get(a.field)!.after) }));
     return moveRefusal({ recorded: owners.map((o) => names.get(o.subjectId) ?? "A person"), running: running.map((x) => ({ form: x.formNumber, person: names.get(x.subjectId) ?? "a person" })), mismatches, current: currentLabel });
   }
@@ -138,12 +138,15 @@ export class ReleaseUpdates {
     const st = await this.state(c), names = new Map(st.people.filter((p) => p.role !== "case").map((p) => [p.subjectId, p.label]));
     const pin = c.pins[0];
     const diff = diffCache()(pin.configReleaseId, this.r.snapshotOf(c), target.id, target.snapshot);
+    const combo = await this.combination(c), asked = askedOf(caseInputs(this.r.snapshotOf(c), target.snapshot, combo.combinationKey, st, new Date(), true));
     const made = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
       const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
       const latest = await tx.configRelease.findFirst({ where: { combinationId: c.combinationId }, orderBy: { version: "desc" }, select: { id: true, version: true } });
       if (newest?.revision !== b.from_revision || latest?.id !== target.id) return "stale" as const;
-      const why = await this.refusal(c, st, diff, target.snapshot, before.current.label, names, tx);
+      // The answers read again under the lock (a change made since the list was read is judged as it is now).
+      const now = { ...st, answers: (await this.r.state(c)).answers };
+      const why = await this.refusal(c, now, diff, target.snapshot, before.current.label, names, asked, tx);
       if (why) return why;
       return tx.packWorkPin.create({ data: { workspaceId: c.workspaceId, caseId: c.id, combinationId: c.combinationId, partyId: pin.partyId, packVersionId: target.packVersionId ?? null, configReleaseId: target.id, contentHash: target.sha256, revision: b.from_revision + 1, actorId: actor.id, reason: b.reason } });
     }, { timeout: 15_000, maxWait: 10_000 });
@@ -156,6 +159,9 @@ export class ReleaseUpdates {
     return { case_id: c.id, revision: pinRow.revision, version: target.version, label: target.label, from: { version: before.current.version, label: before.current.label, revision: before.current.revision }, counts, words: movedWords(target.label, counts) };
   }
 }
+
+/** The answers the new release asks of each person ("subject|fact"): only these can refuse a move by their type. */
+const askedOf = (x: { answered: { subject: string; fact: string }[] }) => new Set(x.answered.map((a) => `${a.subject}|${a.fact}`));
 
 type LastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: Effects };
 
