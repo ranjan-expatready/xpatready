@@ -590,7 +590,7 @@ function ReconfirmLine({ caseId, q, a }: { caseId: string; q: Question; a: Answe
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warn/50 bg-warn/5 px-3 py-2 text-sm" data-reconfirm={q.fact}>
       <span className="min-w-0 flex-1">Your case officer recorded <b>{shown(q, a.value)}</b> on {a.officer ? when(a.officer.at) : "your behalf"}. Is it right? If not, change it below and save.</span>
-      <Button type="button" size="sm" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}`}><Check aria-hidden />This is right</Button>
+      <Button type="button" size="sm" variant="secondary" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}`}><Check aria-hidden />This is right</Button>
     </div>
   );
 }
@@ -615,8 +615,8 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
               <p className="text-xs text-text-muted">{s.about_label === "The application" ? "For the application" : `About ${inSentence(s.about_label)}`} · recorded by your case officer{a.officer ? ` on ${when(a.officer.at)}` : ""}</p>
             </div>
             <span className="flex gap-2">
-              <Button size="sm" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Check aria-hidden />This is right</Button>
-              <Button size="sm" variant="secondary" onClick={() => open(i)} aria-label={`Change: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Pencil aria-hidden />Change</Button>
+              <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Check aria-hidden />This is right</Button>
+              <Button size="sm" variant="ghost" onClick={() => open(i)} aria-label={`Change: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Pencil aria-hidden />Change</Button>
             </span>
           </li>
         ))}
