@@ -42,7 +42,7 @@ const T = { timeout: 20000 };
     const city = line("City or town");
     await city.first().waitFor(T);
     const ct = (await city.first().innerText()).replace(/\s+/g, " ");
-    ok("QA-293 fail: the representative's city (not in the firm record) offers no Add", (await city.first().getByRole("button", { name: /^(Add|Edit)/ }).count()) === 0, ct.slice(0, 200));
+    ok("QA-293 fail: the representative's city (not filled from the firm record on this release) offers no Add", (await city.first().getByRole("button", { name: /^(Add|Edit)/ }).count()) === 0, ct.slice(0, 200));
     ok("QA-293 pass: it says only the firm record fills it (true whether or not the firm record holds it)", /Only the firm record fills this/i.test(ct) && /not filled from the firm record/i.test(ct), ct.slice(0, 200));
     const repAdds = await r.locator("#agent-view section").filter({ hasText: /for the representative/i }).getByRole("button", { name: /^Add\b/ }).count();
     ok("QA-293 fail: no Add button anywhere on the representative's tab", repAdds === 0, repAdds);

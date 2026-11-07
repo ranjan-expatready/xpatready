@@ -123,3 +123,36 @@ This worktree has uncommitted changes to 14 `product/screens/C11.6/screenshots/*
 
 ## Verdict
 **Request changes**: M1 only. Make the words true for every line, both on the screen and in the API message. Then this can be approved. Refusing is the right fix under the stated rulings. m1 and m2 are follow-up rows, and m3, m4 and the nits are optional.
+
+## Round 2 (the last)
+
+* **Range reviewed:** `1230da890..e42914579`, one commit: "review round 1 (Request changes) answered".
+* **How I checked:** I made a fresh `git archive` of `e42914579` and ran it as an isolated copy on port 4478, with Demo › Reset and then Demo › Load the configured checkpoint. That copy is now stopped and its database dropped. Typecheck ran on the same archive. Live AI was off, so this cost US$0.
+
+| Check | Result on `e42914579` |
+|---|---|
+| `check_qa293_rep_answers.ts 4478 xr_studio_rv2932` | **10/10**. The workspace count was 430 before and 430 after every refused call. |
+| `check_qa293_rep_tab_browser.cjs 4478` | **8/8**: 0 Add buttons on the representative's tab, 87 on the principal's, axe clean, no page errors. |
+| `node product/tools/typecheck.mjs` | **PASS**: no new type errors (api: 15 known; web: 0). |
+
+### Round 1 findings
+* **M1: fixed.** Every line on the tab is now true.
+  * Left column (`web/src/runtime/questionnaire.tsx:738`): "Not answered · not filled from the firm record". This is true for all 17 lines on the configured checkpoint. That holds for the lines whose value the firm record lacks: the licence details, and fax. It also holds for the lines whose value it holds under other keys but does not use here: the office address, phone and e-mail (`team.ts:88-91`, the ruling on #1072).
+  * Right column (`:741`): "Only the firm record fills this; it is not added on a case". This states the source as designed (C7.7, C6.11), and it is true whether or not the firm record holds the value.
+  * Lines the firm record does fill still show "From the firm record" and "Change it in the firm record". The membership ID shows R000000.
+  * The API words (`api/src/runtime.ts:48`): "… come only from the firm record of the representative of record, so they are not saved on a case." I saw this 422 for a fact the firm record does not fill (`person.address_city`, `representative.licensing_province`) and for one it does (`representative.membership_id`). The words promise nothing, so they are true in both cases.
+* **m3: fixed.** `groupFor` refuses `representative` with the same 422 before it looks up the person (`runtime.ts:379`). That covers `addRow` and `noneApply`: both returned 422 with those words, and nothing was written.
+* **m4: fixed.**
+  * The no-write check now counts every answer, row and group answer in the workspace.
+  * New lines cover the membership ID, a client's save (422 here), and the row and none-apply routes.
+  * The membership-ID line fails on `1230da890` for the right reason: there the words said "not in the firm record yet".
+* **n1: fixed.** `offeredRoles` (`runtime.ts:52`) has its own doc comment again. The constant and its doc comment now sit above it (`:45-48`).
+* **m1, m2: not changed, and that is accepted.** They predate this PR and the builder will propose them as follow-up rows: who owes these facts in "What blocks filing" (`case-prepare.ts:368`), and the permanent "17 missing" with no conditions on the Section B facts.
+* **n2, n3: not changed, and that is accepted.** These are optional nits.
+
+### New in this range
+* **Nit (not blocking):** the first line's name in `tests/runtime/check_qa293_rep_tab_browser.cjs:45` still reads "the representative's city (not in the firm record)". For the city that is the very claim M1 found untrue, since the firm record holds Toronto. It is only a label: the line itself checks the button count. It could read "(not filled from the firm record)".
+* Nothing else is wrong in the range. The new refusal comes after `parse(NewRow)` and `parse(NoneApply)`, so a malformed body still gets its own 400 first. The 404 for a person not on the case is unchanged (verified).
+
+### Verdict (round 2)
+**Approve.**
