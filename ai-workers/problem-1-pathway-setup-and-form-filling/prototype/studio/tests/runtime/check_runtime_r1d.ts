@@ -28,7 +28,7 @@ const bytes = (path: string, actor: string) => new Promise<{ status: number; bod
 });
 type Copy = { id: string; status: string; locked: { kind: string } | null; validated?: { current: boolean; words: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
 type Q = { subjectId: string; fact: string; value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string }[]; answer: { confirmed: boolean } | null };
-type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string; reason: string }[] }; copies: Copy[] };
+type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; to_fix: number }; readiness: { ready: boolean; missing: { fact: string; reason: string }[] }; copies: Copy[] };
 
 async function main() {
   const vv = sql("select id from combination where combination_key='vv.single'");
@@ -47,7 +47,7 @@ async function main() {
   for (const [s, f, v] of [[P, "person.family_name", "SAMPLED"], [P, "person.given_names", "APPLICANT"], [P, "person.date_of_birth", "1990-04-13"], [P, "person.passport_number", "SAMPLEP123"], [spouse, "person.family_name", "SAMPLES"], [spouse, "person.date_of_birth", "1991-05-14"]] as const) await answer(s, f, v);
   await confirmAll(P); await confirmAll(spouse);
   await answer(P, "person.other_family_name", "SAMPLE-UNCONFIRMED", CLIENT); // a client field the client answered: counts as confirmed (principal)
-  await answer(spouse, "person.marital_status", "married", CLIENT);          // the principal for an adult spouse: not confirmed (P-78)
+  await answer(spouse, "person.marital_status", "married", CLIENT);          // the principal for an adult spouse: not confirmed (P-78), fills at once (P-411)
   const forms = async (actor = OFFICER) => call("GET", `/runtime/cases/${caseId}/forms`, undefined, actor);
   const formOf = async (form: string, subject: string): Promise<Form> => (await forms()).body.forms.find((f: Form) => f.form === form && f.subject_id === subject);
 
@@ -74,7 +74,11 @@ async function main() {
   const req = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "..", "..", "..", row.path.replace(/\.pdf$/, ".request.json")), "utf8")).values as Record<string, string>;
   const fromNone = noneBoxes.every((b) => req[b.box] === "N" && !readFacts.has(b.box)) ? noneBoxes.length : -1;
   ok("RT-13 pass: exactly the confirmed facts were written (principal's names, birth date, passport; the application's facts), plus any Yes/No from a confirmed \"none apply\"", ["person.family_name", "person.given_names", "person.date_of_birth", "person.passport_number"].every((x) => written.includes(x)) && row.facts.facts.length === row.result.counts.written - fromNone + row.result.counts.by_hand + row.result.counts.blank, { written: written.length, fromNone, facts: row.facts.facts.length });
-  ok("RT-13 fail (P-72): the spouse's marital status answered by the principal is not confirmed, so the spouse's copy would not write it", (await formOf("IMM 5257", spouse)).draft.unconfirmed >= 1);
+  { // P-411 (1), row B150 (before: P-72 kept it out of the copy until confirmed).
+    const sf = await formOf("IMM 5257", spouse);
+    ok("RT-13 pass (P-411 (1)): the spouse's marital status answered by the principal fills the spouse's copy at once (nothing answered is left blank to confirm)", sf.draft.to_fix === 0 && sf.draft.written_now > 0, sf.draft);
+    ok("RT-13 fail (P-411 (1)): it is still not confirmed: the spouse's IMM 5257 lists it \"not confirmed\" before filing", sf.readiness.missing.some((m: { fact: string; reason: string }) => m.fact === "person.marital_status" && m.reason === "not confirmed"), sf.readiness.missing);
+  }
   ok("RT-13 pass: the file on disk is the one recorded (sha256), and only the officer downloads it", await (async () => { const d = await bytes(`/runtime/form-copies/${first}/file`, OFFICER); return d.status === 200 && sha(d.body) === row.sha && sha(readFileSync(join(ROOT, row.path))) === row.sha && d.body.subarray(0, 5).toString() === "%PDF-"; })() && (await bytes(`/runtime/form-copies/${first}/file`, CLIENT)).status === 403);
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-1` }, OFFICER);
   ok("RT-13 pass: the same key again answers with the same copy (nothing new)", r.body.id === first && r.body.created === false && sql(`select count(*) from form_instance where case_id='${caseId}'`) === "1");
