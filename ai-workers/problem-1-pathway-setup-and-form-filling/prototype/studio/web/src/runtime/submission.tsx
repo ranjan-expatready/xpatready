@@ -32,7 +32,7 @@ const PORTAL: Record<string, string> = { APR_PORTAL: "APR Portal" };
 type Problem = Record<string, string>;
 /** A save from a dialog: its refusals show on the dialog's own fields, never also as a toast over its buttons (break m on
  *  #924); a 409 re-reads the case, so the next try carries the version now (it failed again until a reload). */
-function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R) => string; tone?: (r: R) => "ok" | "warn"; onDone: () => void; onProblem: (p: Problem) => void }) {
+function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R) => string; tone?: (r: R) => "ok" | "danger"; onDone: () => void; onProblem: (p: Problem) => void }) {
   const qc = useQueryClient(), toast = useToast();
   return useMutation<R, Error>({
     mutationFn: fn,
@@ -178,7 +178,7 @@ function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string
     for (const f of fs) { const x = receipts[f.id]; if (x) await sendReceipt(f.id, x).catch((e: Error) => { missed.push(`${whoOf(f)}’s fee receipt was not stored (${e.message}); upload it on the filing`); }); }
     return { ...r, missed };
   },
-    { success: (r) => `Submission recorded: these filings are now read-only.${r.warning ? ` ${r.warning}` : ""}${r.missed.length ? ` ${r.missed.join(". ")}.` : ""}`, tone: (r) => (r.missed.length || r.warning ? "warn" : "ok"), onDone: recorded,
+    { success: (r) => `Submission recorded: these filings are now read-only.${r.warning ? ` ${r.warning}` : ""}${r.missed.length ? ` ${r.missed.join(". ")}.` : ""}`, tone: (r) => (r.missed.length ? "danger" : "ok"), onDone: recorded,
       // filings.<i>.<field> → the filing's own field; ucis.<i>.* → that person's UCI.
       onProblem: (p) => { setErrors(Object.fromEntries(Object.entries(p).map(([k, v]) => { const m = /^(filings|ucis)\.(\d+)\.(\w+)$/.exec(k); if (!m) return [k, v];
         return m[1] === "filings" ? [`${fs[Number(m[2])]?.id}.${m[3]}`, v] : [`uci.${sent[Number(m[2])]?.subject}`, v]; }))); focusFirstError(formRef.current); } });
