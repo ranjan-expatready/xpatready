@@ -10,6 +10,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { client, recorder } from "./runtime/api.ts";
+import { FEE_TABLE } from "../engine/runtime/filings.ts";
 import * as m3 from "../acceptance/lib/m3.ts"; // pack 4's helpers (answer, confirm), on this same copy (argv port, db)
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_prep";
@@ -46,6 +47,10 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C6.12 (fail): a person with no date of birth yet: their biometrics line waits for it, and the view's total does not count it", p.fees.filter((f: { key: string; waiting?: string }) => f.key === "biometrics").every((f: { waiting?: string }) => f.waiting === "person.date_of_birth"));
   ok("C6.12 (fail): configuration people cannot read the prepare view (403)", (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, AUTHOR)).status === 403);
   ok("C6.12 (fail): a case id that is not an id is not found (404), never a server error", (await call("GET", "/runtime/cases/not-a-case/prepare", undefined, OFFICER)).status === 404);
+  // B133 (P-247): each submission total carries its fee table line's basis, so the case page reads the field.
+  type Tot = { line: string; basis?: string };
+  const tableBasis = (k: string) => FEE_TABLE.lines.find((l) => l.key === k)?.basis;
+  ok("B133 pass: GET /prepare gives each submission total its fee table line's basis (family_maximum for visitor visa and biometrics)", p.groups[0]?.totals?.length > 0 && p.groups[0].totals.every((t: Tot) => !!t.basis && t.basis === tableBasis(t.line)), p.groups[0]?.totals?.map((t: Tot) => [t.line, t.basis]));
   const g = p.groups[0]?.id, f2 = p.filings.find((f: { applicants: { subject: string }[] }) => f.applicants[0].subject === spouse)?.id;
   let r = await call("POST", `/runtime/groups/${g}/split`, { filing: f2, reason: "Sample", version: p.version }, CLIENT);
   ok("C6.12 (fail): a client cannot split a submission group (403)", r.status === 403, r.status);
@@ -55,6 +60,7 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C6.12 (fail): a split from an older read is refused (409, Reload), nothing moved", r.status === 409 && sql(`select count(*) from submission_group where case_id='${caseId}'`) === "1", r.status);
   r = await call("POST", `/runtime/groups/${g}/split`, { filing: f2, reason: "Sample: travels later", version: p.version }, OFFICER);
   ok("C6.12: a split with a reason makes a separate group that keeps the reason, and is audited without client values", r.status === 200 && r.body.groups.length === 2 && r.body.groups.some((x: { kind: string; reason: string | null }) => x.kind === "separate" && x.reason === "Sample: travels later") && /split the spouse or partner's filing out/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='submission group' and entity_key='${g}'`) ?? ""), r.body?.groups);
+  ok("B133 fail: a split never drops the basis: both groups' totals still carry it", r.status === 200 && r.body.groups.every((x: { totals: Tot[] }) => x.totals.length > 0 && x.totals.every((t) => t.basis === tableBasis(t.line))), r.body.groups?.map((x: { totals: Tot[] }) => x.totals.map((t) => t.basis)));
   r = await call("POST", `/runtime/groups/${r.body.groups.find((x: { kind: string }) => x.kind === "separate").id}/split`, { filing: f2, reason: "again", version: r.body.version }, OFFICER);
   ok("C6.12 (fail): a group of one has nothing to split (409)", r.status === 409, r.status);
   const q = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
