@@ -356,7 +356,8 @@ export function Questionnaire({ caseId, mode }: { caseId: string; mode: Mode }) 
 /** Parts person by person, in the case's order (the application, the principal, then the family), each person's
  *  sections in the release's order: the client finishes one person before "answering for" the next. */
 function byPerson(v: View): View {
-  const at = (id: string) => v.case.people.findIndex((p) => p.subject_id === id);
+  // B128 (QA-153): a parent a form describes (`<person>/parent_1`) comes right after the person whose parent they are.
+  const at = (id: string) => { const [own, relative] = id.split("/"); return v.case.people.findIndex((p) => p.subject_id === own) + (relative ? 0.5 : 0); };
   return { ...v, sections: [...v.sections].sort((a, b) => at(a.subjectId) - at(b.subjectId)) };
 }
 
@@ -396,7 +397,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
     <div className="mx-auto max-w-xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Client questionnaire</h1>
-        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.</p>
+        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application{view.sections.some((x) => x.subjectId.includes("/")) ? ", and for the parents its forms ask about" : ""}. Each answer is saved when you press Save; you can stop and come back at any time.</p>
       </div>
       <RecordedForYou view={view} open={open} />
       <div className="rounded-xl border border-border bg-surface-raised p-4">
@@ -538,7 +539,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
+        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{part.subjectId.includes("/") ? " (a parent, not on this application)" : person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
 

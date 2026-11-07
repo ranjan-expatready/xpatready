@@ -249,5 +249,5 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const later = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
   ok("C7.2 cause 3 fail (review r1 M2): \"none apply\" taken back and an education entry added after the copy (unconfirmed) make the copy that says \"N\" out of date",
     undo.status < 300 && !!row && failed.length === 0 && fresh?.out_of_date === false && later?.out_of_date === true, { undo: undo.status, row, failed, before: fresh?.out_of_date, after: later?.out_of_date, changed: later?.changed });
-  summary();
+  process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
 })().catch((e) => { console.error(e); process.exit(2); });
