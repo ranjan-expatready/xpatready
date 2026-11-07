@@ -75,3 +75,25 @@ SA-1B-19 §3 names `DocumentRequirement.primacy`, `alternativeGroupId` and `alte
 A real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); CI on the PR; typecheck and count-any (builder's word only); a member's own validity rule (README limit).
 
 **Verdict: Block** — fix M1, M2, M3, M4 (each above with its failing scenario), then re-review this row on the new commit.
+
+## Round 2 (last round, P-293 (3)): diff-only, 79cde660c → 394641c80
+Correction to round 1: the working-tree changes at 13:50 UTC were the builder's fixes, not another session. Re-run on a fresh copy `rev615b` (:4436), configured checkpoint loaded (73 s), copy stopped after. **Pack** `acceptance/C6.15.test.ts`: **28/28, exit 0** (new 5b, 25, 26 pass). Pure check 34/34. **axe** 0 violations on the editor and the compare page.
+* **M1 fixed.** `recount` (case-checklist.ts:208, after the upload) works out again every other line of the person that the uploaded type counts on, using the version-guarded update and adding an audit line. My round 1 repro: a passport uploaded on the Passport line now makes Proof of financial support **Received**, with "Met by Passport information page copy" and the history line "… also meets Proof of financial support … (Requested to Received)". Ready to file no longer says not received.
+* **M2 fixed.** The approver's H1 reads "Change a document's substitute sets: …". The approve audit line no longer contains `SET_SETS`.
+* **M3 fixed.** The drawer sends the line's `requirement:<lineage>` revision. Two tabs: A picks Sponsor-funded, then Standard again; stale tab B picking Sponsor-funded is refused with "Changed by Configuration author while you were editing. Nothing was saved…", and the message takes focus.
+* **M4 fixed.** The migration records its rollback and what a rollback loses.
+* **S1 / F3 fixed.** Retiring Host's bank statements (only a set member) is now refused with 409 "Visitor visa still uses it". Validate refuses a line whose set has a retired member, by name (pure "break F3" steps).
+* **S2 (first half), S3, S4, S5 / F2, S7, S8 fixed.** In order:
+  * The sign-off line adds "; substitute sets: Standard (Any one of: …); Sponsor-funded (All of: …)".
+  * The drawer warns when a line picks a set its type no longer has.
+  * An editor refusal scrolls into view and takes focus (checked: focused, in view).
+  * Staff's words have their own optional input, are kept on edit, and appear on the compare page.
+  * The pack calls the routes by literal path.
+  * The reason now shows once.
+* **S6 and the pick half of S2** are recorded as limits in the README. I accept them: no released line changes meaning, and the type's sets are named on the sign-off.
+
+**Left open (Minor, not blocking):** (1) an upload through the set line still replaces the other line's current file, with no line on that line when it was already Received (the file is kept as "1 earlier"); (2) the retire refusal calls a set member "a checklist line takes it as an alternative"; (3) the compare page prints ".; staff's words" (double punctuation).
+
+Journey score at 394641c80: **9/10**, a pass. Plain words, feedback and state, and next step obvious are each up to 1. Correct data (the open file-replacement point above) and visual quality stay at ½.
+
+**Verdict: Approve** (commit 394641c80c654b38c1aa238b3c13cb7fe85b667d: no open Blocker or Major).
