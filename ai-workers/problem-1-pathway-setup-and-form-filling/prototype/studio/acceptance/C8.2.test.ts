@@ -3,10 +3,11 @@
 // submitted on (not after today), the application number (required) and the fee receipt; a UCI per person; refused
 // while a filing in the group is not Ready to file; recording makes the filings read-only; a second recording is
 // refused; "Correct a number" keeps the history; the record reads "Prepared by · Reviewed by" as the review saw them,
-// whoever records (QA-295: also when the representative of record records).
+// whoever records (QA-295: also when the representative of record records). B149 (P-408; board agent-view frame 7): the
+// fee receipt's evidence is IRCC's "Transaction Approved" page, uploaded on the recorded filing; the typed number is optional.
 // Breadth, after Visitor visa: the sponsorship + PR pair (two numbers, one group, no split), citizenship envelopes.
 //   tsx studio/acceptance/C8.2.test.ts 4440 xr_studio_accept
-import { CLIENT, OFFICER, call, firms, inDays, main, needVisitorVisa, ok, openCase, prepare, readyToFile, sql, yearsAgo, answer, itemsOf } from "./lib/m3.ts";
+import { CLIENT, OFFICER, call, firms, sendFile, inDays, main, needVisitorVisa, ok, openCase, prepare, readyToFile, sql, yearsAgo, answer, itemsOf } from "./lib/m3.ts";
 
 await main("C8.2", "Record the submission per group (Visitor visa)", async () => {
   const vv = needVisitorVisa();
@@ -73,4 +74,12 @@ await main("C8.2", "Record the submission per group (Visitor visa)", async () =>
   p3 = (await prepare(c3.id, officer)).p;
   const v3 = (p3?.filings ?? []).map((x) => (x as { record?: { prepared_by?: { id: string }; reviewed_by?: unknown } }).record);
   ok("C8.2-17 pass (QA-295): its view names the officer as preparer and gives no reviewer", v3.length === 1 && v3[0]?.prepared_by?.id === officer && v3[0]?.reviewed_by === null, v3);
+
+  // B149 (P-408): the fee receipt's evidence on the first case's recorded filing.
+  const page = Buffer.from("%PDF-1.4\n% SYNTHETIC SPECIMEN: IRCC Transaction Approved page (Sample)\n%%EOF\n", "latin1");
+  let u = await sendFile(`/runtime/filings/${fP}/record/fee-receipt`, page, "transaction-approved.pdf", CLIENT);
+  ok("C8.2-18 fail (B149): a client cannot upload the fee receipt (403); nothing is stored", u.status === 403 && sql(`select count(*) from fee_receipt_file where filing_id='${fP}'`) === "0", u.status);
+  u = await sendFile(`/runtime/filings/${fP}/record/fee-receipt`, page, "transaction-approved.pdf", officer);
+  const files = ((await prepare(c.id, officer)).p?.filings.find((x) => x.id === fP) as { record?: { fee_receipt_files?: { file_name: string }[] } } | undefined)?.record?.fee_receipt_files ?? [];
+  ok("C8.2-19 pass (B149): the officer uploads IRCC's Transaction Approved page as the fee receipt's evidence; the record lists it", u.status === 200 && files.length === 1 && files[0].file_name === "transaction-approved.pdf", { status: u.status, files });
 });
