@@ -109,6 +109,9 @@ await p.waitForTimeout(1500); await settle();
 ok("C9.5 BR-6 (challenge B1): Fill on a form to fill again makes its copy on the new release (the move filled nothing), and the group shrinks", !!made && made === sql(`select config_release_id from pack_work_pin where case_id='${fam}' and revision=2`) && (await count("fill_again").catch(() => 0)) < before, { made, before });
 await state("after-fill", "[data-release-moved]", [1440]);
 
+const rev = Number(sql(`select max(revision) from pack_work_pin where case_id='${fam}'`) ?? 0), newestV = Number(sql(`select max(version) from config_release where combination_id='${vv}'`) ?? 0);
+const again = await call("POST", `/runtime/cases/${fam}/release-update`, { target_version: newestV, from_revision: rev, reason: "Adopting the current release" }, OFFICER);
+ok("C9.5 BR-2 fail (POST): on the newest release a move is refused 409 \"newest\", nothing changed", again.status === 409 && again.body?.code === "newest" && pins() === rev, { status: again.status, code: again.body?.code });
 await p.reload(); await p.locator("h1").waitFor(); await p.waitForTimeout(1500);
 ok("C9.5 BR-2: on the newest release there is no notice", (await notice().count()) === 0);
 await as(CLIENT); await p.goto(`${BASE}/cases/${fam}`); await p.waitForTimeout(1200);
