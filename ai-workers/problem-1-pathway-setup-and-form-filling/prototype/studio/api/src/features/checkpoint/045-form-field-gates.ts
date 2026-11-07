@@ -1,5 +1,6 @@
-// B107 (QA-296, QA-299, QA-300; C6.11, C7.7): after the form setup (080), before release 1 (110): each form field the forms'
-// own words gate (IMM 5476's membership boxes by regulatory body, its uncompensated part, the student-at-law and fax
+// B107 (QA-296, QA-299, QA-300; C6.11, C7.7): right after the field-map drafts are applied (040), before sections are drafted
+// from the forms' parts (060), so a part written by hand names no section of questions: each form field the forms' own
+// words gate (IMM 5476's membership boxes by regulatory body, its uncompensated part, the student-at-law and fax
 // boxes), and IMM 5475's designated individual filled by hand, from cited data (samples/form-field-gates.json, P-319),
 // proposed by the author and approved by the approver, a second person, through the door's own service
 // (api/src/form-field-gates.ts). The data is checked whole before anything is proposed, so a bad file proposes nothing.

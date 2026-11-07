@@ -48,6 +48,13 @@ export function boxGate(rule: unknown): unknown {
   return g && g.gate && typeof g.gate === "object" && typeof g.words === "string" ? g.gate : null;
 }
 
+/** B107: the gates on one form edition, by form field (only gates: a B86 rule is its question's own condition, which already
+ *  decides whether that question is asked). */
+export function gatesInForce(s: Snapshot, form: string, edition: string | null | undefined): Map<string, unknown> {
+  const map = (s.field_maps as FieldMap[]).find((m) => m.form_number === form && m.form_edition === edition);
+  return new Map((map?.entries ?? []).filter((e) => e.outcome === "mapped" && boxGate(e.condition_rule)).map((e) => [e.data_path, boxGate(e.condition_rule)]));
+}
+
 /** The fields a gate reads (its `field`s, nested ones included), once each. */
 export const gateFields = (tree: unknown) => [...new Set([...JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))];
 
