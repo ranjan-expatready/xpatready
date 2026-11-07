@@ -304,6 +304,9 @@ export function SectionsPage() {
   const shown = (s.data ?? []).filter((x) => reuse.keep(x.key));
   const [editing, setEditing] = React.useState<{ key: string; title: string } | null>(null);
   const [marking, setMarking] = React.useState<SectionMark | null>(null);
+  // Review m2: focus goes back to the row's button when the dialog closes.
+  const opener = React.useRef<HTMLElement | null>(null);
+  const closeMark = () => { setMarking(null); const el = opener.current; window.setTimeout(() => el?.isConnected ? el.focus() : document.querySelector<HTMLElement>(`[data-item="${marking?.key}"] [data-background-change] a`)?.focus(), 0); };
   // C11.9: delete, retire and restore through the one guard; a retired section is listed only under "Retired".
   const canAuthor = useCanAuthor();
   const life = useItemLifecycle("sections", () => s.refetch(), canAuthor);
@@ -313,9 +316,9 @@ export function SectionsPage() {
     <TipProvider><div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Smart questionnaire (SQR) tab.</Origin></div>
       <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="section" /><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current sections</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{shownRows.length} of {s.data?.length ?? 0}</span></div>
-      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><BackgroundMark s={x} /><div className="mt-1.5 flex flex-wrap items-center justify-end gap-1"><BackgroundButton s={x} canAuthor={canAuthor} onOpen={() => setMarking(x)} />{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
+      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><BackgroundMark s={x} /><div className="mt-1.5 flex flex-wrap items-center justify-end gap-1"><BackgroundButton s={x} canAuthor={canAuthor} onOpen={(el) => { opener.current = el; setMarking(x); }} />{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
       {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
-      {marking ? <BackgroundDialog s={marking} onClose={() => setMarking(null)} onSent={() => { setMarking(null); void s.refetch(); }} /> : null}
+      {marking ? <BackgroundDialog s={marking} onClose={closeMark} onSent={() => { void s.refetch().then(closeMark); }} /> : null}
       {life.node}
     </div></TipProvider>
   );
@@ -330,21 +333,21 @@ function BackgroundMark({ s }: { s: SectionMark }) {
   if (!s.client_only && !ch) return null;
   return (
     <div className="mt-1.5 space-y-1 text-xs" data-background={s.client_only ? "on" : "off"}>
-      {s.client_only ? <Pill title={BACKGROUND_MEANS}>Background answers</Pill> : null}
+      {s.client_only ? <Pill title={BACKGROUND_MEANS}>Background answers<span className="sr-only">: {BACKGROUND_MEANS}</span></Pill> : null}
       {ch ? (
         <p className="text-text-muted" data-background-change={ch.status}>
           {ch.status === "WAITING" ? <>Waiting for a second person on <Link className="text-text-link underline" to={`/review/change/${ch.id}`}>To review</Link>: {ch.on ? "background answers" : "no longer background answers"}.</>
             : ch.status === "RETURNED" ? <>Returned on <Link className="text-text-link underline" to={`/review/change/${ch.id}`}>To review</Link>: correct or withdraw it there.</>
-            : <>Approved: {ch.on ? "background answers" : "no longer background answers"} from the next release.</>}
+            : <>Approved: {ch.on ? "background answers" : "no longer background answers"} from the next release (<Link className="text-text-link underline" to={`/review/change/${ch.id}`}>its change</Link>).</>}
         </p>
       ) : null}
     </div>
   );
 }
-function BackgroundButton({ s, canAuthor, onOpen }: { s: SectionMark; canAuthor: boolean; onOpen: () => void }) {
+function BackgroundButton({ s, canAuthor, onOpen }: { s: SectionMark; canAuthor: boolean; onOpen: (el: HTMLElement) => void }) {
   if (!canAuthor || s.retired || s.background_change || !(s.questions > 0 || s.client_only)) return null;
   const text = s.client_only ? "Not background answers…" : "Background answers…";
-  return <Button size="sm" variant="ghost" onClick={onOpen} data-background-open aria-label={`${text} ${s.title}`} title={BACKGROUND_MEANS}>{text}</Button>;
+  return <Button size="sm" variant="ghost" onClick={(e) => onOpen(e.currentTarget)} data-background-open aria-label={`${text} ${s.title}`}>{text}</Button>;
 }
 function BackgroundDialog({ s, onClose, onSent }: { s: SectionMark; onClose: () => void; onSent: () => void }) {
   const on = !s.client_only;

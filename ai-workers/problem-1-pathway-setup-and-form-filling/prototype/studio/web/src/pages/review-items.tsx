@@ -87,6 +87,7 @@ export function LibraryChangePage() {
           <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.background.after}</dd>
           <dt className="text-text-muted">Reach</dt><dd>{x.background.questions} question{x.background.questions === 1 ? "" : "s"} · used by {x.background.uses} combination{x.background.uses === 1 ? "" : "s"} · goes out with the next release that carries them</dd>
           <dt className="text-text-muted">Background answers</dt><dd className="text-text-muted">{x.background.means} Unconfirmed: expert, no counsel.</dd>
+          {x.background.documents.length ? <><dt className="text-text-muted">From documents today</dt><dd data-change-background-documents>A document supplies {x.background.documents.length === 1 ? "one of its questions" : `${x.background.documents.length} of its questions`} today ({x.background.documents.slice(0, 3).join(", ")}{x.background.documents.length > 3 ? ` and ${x.background.documents.length - 3} more` : ""}): once marked, the client answers {x.background.documents.length === 1 ? "it" : "them"}.</dd></> : null}
           {x.background.sourced.length ? <><dt className="text-text-muted">Other sources</dt><dd data-change-background-sourced>{x.background.sourced.join(", ")} {x.background.sourced.length === 1 ? "chooses" : "choose"} a document or the case officer for one of its questions: {x.background.sourced.length === 1 ? "its" : "their"} next release asks to set it back to the client.</dd></> : null}
         </dl>
       ) : null}
@@ -149,6 +150,7 @@ export function LibraryChangePage() {
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
           <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
         </>}
+      {x.status === "APPROVED" && mine && me.has("author") && x.background ? <Withdraw id={x.id} label="Withdraw it before the release" /> : null}
       {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field || x.background) ? <Withdraw id={x.id} label={x.form_field || x.background ? "Withdraw it" : undefined} /> : null}
     </div>
   );

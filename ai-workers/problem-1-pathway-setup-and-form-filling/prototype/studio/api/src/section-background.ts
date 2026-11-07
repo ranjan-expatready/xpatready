@@ -13,6 +13,7 @@ import type { LibraryChange, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { factName } from "../../engine/fact-name.ts";
+import { AGENT_FROM, isAgentFact } from "../../engine/sources.ts";
 import { actorOf, Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
 
 type H = string | undefined;
@@ -27,7 +28,8 @@ const OPEN = ["WAITING", "RETURNED", "APPROVED"];
 
 export const ProposeBackground = z.object({
   on: z.boolean({ error: "Say whether the section holds background answers (true) or not (false)." }),
-  reason: z.string({ error: "Say why it changes for every combination." }).trim().min(REASON_MIN, `Write at least ${REASON_MIN} characters: why it changes for every combination.`).max(300, "Keep the reason under 300 characters."),
+  // Break m2: invisible characters (zero-width spaces and other format marks) are not a reason.
+  reason: z.string({ error: "Say why it changes for every combination." }).transform((x) => x.normalize("NFKC").replace(/[\p{Cf}]/gu, "")).pipe(z.string().trim().min(REASON_MIN, `Write at least ${REASON_MIN} characters: why it changes for every combination.`).max(300, "Keep the reason under 300 characters.")),
 }).strict();
 
 /** The section's versions, newest first, and the one that counts now (a draft, else the newest published). */
@@ -36,12 +38,45 @@ async function sectionOf(db: Pick<Db, "logicalSection">, workspaceId: string, ke
   return { rows, current: rows.find((r) => r.status === "DRAFT") ?? rows.find((r) => r.status === "PUBLISHED") ?? null };
 }
 
-/** The facts the section asks now: each placement's newest version that still counts (a draft, else published). */
+/** The questions the section asks now: each placement's newest version that still counts (a draft, else published). */
 async function questionsOf(db: Pick<Db, "sectionQuestion">, workspaceId: string, key: string) {
   const rows = await db.sectionQuestion.findMany({ where: { workspaceId, sectionKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" } });
-  const seen = new Set<string>(), facts: string[] = [];
-  for (const r of rows) if (!seen.has(r.lineageKey) && seen.add(r.lineageKey)) facts.push(r.canonicalFieldKey);
-  return [...new Set(facts)];
+  const seen = new Set<string>(), out: typeof rows = [];
+  for (const r of rows) if (!seen.has(r.lineageKey) && seen.add(r.lineageKey)) out.push(r);
+  // A question moved to another section since (its newest version is elsewhere) is not asked here any more.
+  const moved = new Set((await db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: { in: out.map((r) => r.lineageKey) }, status: { in: ["DRAFT", "PUBLISHED"] }, NOT: { sectionKey: key } }, select: { lineageKey: true, version: true } }))
+    .filter((o) => o.version > (out.find((r) => r.lineageKey === o.lineageKey)?.version ?? 0)).map((o) => o.lineageKey));
+  return out.filter((r) => !moved.has(r.lineageKey));
+}
+
+const quoted = (xs: string[]) => `${xs.slice(0, 2).map((x) => `"${x}"`).join(", ")}${xs.length > 2 ? ` and ${xs.length - 2} more` : ""}`;
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+/** Whether the section may take this mark now, checked when it is proposed and again at approval (review M1, M2; break
+ *  M2, M3, M4): a section that asks nothing is not marked; a marked section's questions are the client's own, so none
+ *  may be filled by the case officer, be the case officer's or representative's own details, or have a change of who
+ *  fills it open; a section that asks a declaration keeps its mark (P-244). Returns what the second person reads. */
+async function checkMark(db: Db, workspaceId: string, key: string, title: string, on: boolean) {
+  const questions = await questionsOf(db, workspaceId, key);
+  const facts = [...new Set(questions.map((q) => q.canonicalFieldKey))];
+  const fields = new Map((await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, label: true, meaning: true, valueType: true } }))
+    .reverse().map((f) => [f.canonicalFieldKey, f]));
+  const name = (k: string) => (fields.get(k)?.label ?? fields.get(k)?.meaning ?? factName(k)).trim().replace(/\.$/, "");
+  if (!on) {
+    const decl = facts.filter((k) => fields.get(k)?.valueType === "declaration");
+    if (decl.length) throw problem(409, "Declarations stay with the client", `"${title}" asks ${plural(decl.length, "a declaration", `${decl.length} declarations`)} (${quoted(decl.map(name))}): a declaration is always the client's own, so the section keeps its mark.`);
+    return { facts, documents: [] as string[] };
+  }
+  if (!facts.length) throw problem(409, "Asks nothing yet", `"${title}" asks no question yet, so there is nothing to mark. Place its questions first.`);
+  const own = facts.filter(isAgentFact);
+  if (own.length) throw problem(409, "Not the client's to give", `"${title}" asks the case officer's or representative's own details (${quoted(own.map(name))}): background answers are the client's own, so this section is not marked.`);
+  const staff = questions.filter((q) => AGENT_FROM.has(q.collectedFrom)).map((q) => q.canonicalFieldKey);
+  if (staff.length) throw problem(409, "Filled by the case officer", `In the shared library the case officer fills ${plural(staff.length, "one of its questions", `${staff.length} of its questions`)} (${quoted(staff.map(name))}). Background answers are the client's own: change who fills ${plural(staff.length, "it", "them")} to the client first (Change who fills), then mark the section.`);
+  const fills = await db.libraryChange.findMany({ where: { workspaceId, kind: "placement_fills", key: { in: facts }, status: { in: OPEN } }, select: { key: true } });
+  if (fills.length) throw problem(409, "Who fills it is changing", `A change of who fills ${quoted(fills.map((f) => name(f.key)))} is open on To review or waits for the next release. Decide or withdraw it first, then mark the section.`);
+  // P-97: a marked question never comes from a document; the second person sees which ones a document supplies today.
+  const supplied = new Set((await db.documentType.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, suppliesFacts: { hasSome: facts } }, select: { suppliesFacts: true } })).flatMap((d) => d.suppliesFacts));
+  return { facts, documents: facts.filter((k) => supplied.has(k)).map(name) };
 }
 
 /** The waiting, returned or approved (not yet released) change of this section's mark, if any. */
@@ -74,13 +109,7 @@ export class SectionBackground {
     const title = current.title;
     await refuseRetired(this.db, workspaceId, "section", [key]);
     if (current.clientOnly === on) throw problem(409, "Nothing changes", `"${title}" already holds ${marked(on)} in the library.`);
-    const facts = await questionsOf(this.db, workspaceId, key);
-    if (on && !facts.length) throw problem(409, "Asks nothing yet", `"${title}" asks no question yet, so there is nothing to mark. Place its questions first.`);
-    if (!on) {
-      // P-244: declarations stay the client's own, so a section that asks one keeps the mark.
-      const decl = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts }, valueType: "declaration" }, select: { canonicalFieldKey: true, label: true } });
-      if (decl.length) throw problem(409, "Declarations stay with the client", `"${title}" asks ${decl.length === 1 ? "a declaration" : `${decl.length} declarations`} (${decl.slice(0, 2).map((d) => `"${d.label ?? factName(d.canonicalFieldKey)}"`).join(", ")}): a declaration is always the client's own, so the section keeps its mark.`);
-    }
+    const { facts, documents } = await checkMark(this.db, workspaceId, key, title, on);
     if (await openBackgroundChange(this.db, workspaceId, key)) throw problem(409, "Already waiting", `A change of whether "${title}" holds background answers already waits on To review or for the next release.`);
     const uses = facts.length ? await this.db.combination.count({ where: { workspaceId, retiredAt: null, forms: { some: { status: { not: "RETIRED" }, form: { editions: { some: { maps: { some: { canonicalFieldKey: { in: facts } } } } } } } } } }) : 0;
     // A combination that chose a document or the case officer as the source of one of its questions (Comes from, C4.10):
@@ -89,26 +118,26 @@ export class SectionBackground {
     const others = on && facts.length ? await this.db.factSource.findMany({ where: { workspaceId, canonicalFieldKey: { in: facts }, source: { not: "CLIENT" }, status: { in: ["DRAFT", "PUBLISHED"] }, combination: { retiredAt: null } }, select: { combinationId: true, canonicalFieldKey: true, combination: { select: { label: true } } } }) : [];
     const sourced = [...new Map(others.map((o) => [o.combinationId, o.combination.label])).values()].sort();
     const label = `${title} · ${on ? "background answers" : "no longer background answers"}, for every combination`;
-    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: KIND, key, label, action: ACTION, reason, status: "WAITING", proposedBy: actor.id, matches: { before: current.clientOnly, after: on, title, questions: facts.length, uses, sourced } } });
+    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: KIND, key, label, action: ACTION, reason, status: "WAITING", proposedBy: actor.id, matches: { before: current.clientOnly, after: on, title, questions: facts.length, uses, sourced, documents } } });
     // Two people proposing at once both pass the check above: the earlier stays, the later is refused (who-fills pattern).
     const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: KIND, key, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
     if (first && first.id !== c.id) { await this.db.libraryChange.delete({ where: { id: c.id } }); throw problem(409, "Already waiting", `A change of whether "${title}" holds background answers already waits on To review.`); }
     await this.audit.log(workspaceId, actor.id, "proposed", "section", key, `${actor.name} proposed that "${title}" ${on ? "holds background answers" : "no longer holds background answers"} for every combination (${facts.length} question${facts.length === 1 ? "" : "s"}, used by ${uses}); waits for a second person. Why: ${reason}`);
-    return { id: c.id, status: c.status, label, before: current.clientOnly, after: on, questions: facts.length, uses, sourced };
+    return { id: c.id, status: c.status, label, before: current.clientOnly, after: on, questions: facts.length, uses, sourced, documents };
   }
 }
 
 /** What the second person compares on To review: before → after, what it means, the reason, the reach. */
 export function backgroundView(c: Pick<LibraryChange, "matches" | "reason">) {
-  const m = (c.matches ?? {}) as { before?: boolean; after?: boolean; title?: string; questions?: number; uses?: number; sourced?: string[] };
+  const m = (c.matches ?? {}) as { before?: boolean; after?: boolean; title?: string; questions?: number; uses?: number; sourced?: string[]; documents?: string[] };
   const w = (x?: boolean) => (x ? "Background answers" : "Ordinary questions");
-  return { section: m.title ?? "", before: w(m.before), after: w(m.after), on: !!m.after, questions: m.questions ?? 0, uses: m.uses ?? 0, sourced: m.sourced ?? [], means: BACKGROUND_MEANS, reason: c.reason ?? "" };
+  return { section: m.title ?? "", before: w(m.before), after: w(m.after), on: !!m.after, questions: m.questions ?? 0, uses: m.uses ?? 0, sourced: m.sourced ?? [], documents: m.documents ?? [], means: BACKGROUND_MEANS, reason: c.reason ?? "" };
 }
 
 /** One line for To review's list. */
 export function backgroundWhat(c: Pick<LibraryChange, "matches" | "reason">) {
   const v = backgroundView(c);
-  return `Background answers, for every combination: ${v.before} → ${v.after} · ${v.questions} question${v.questions === 1 ? "" : "s"} · used by ${v.uses} combination${v.uses === 1 ? "" : "s"}${v.sourced.length ? ` · ${v.sourced.length} choose${v.sourced.length === 1 ? "s" : ""} another source for one of them: its next release asks to set it back to the client` : ""} · Reason: ${v.reason}`;
+  return `Background answers, for every combination: ${v.before} → ${v.after} · ${v.questions} question${v.questions === 1 ? "" : "s"} · used by ${v.uses} combination${v.uses === 1 ? "" : "s"}${v.sourced.length ? ` · ${v.sourced.length} choose${v.sourced.length === 1 ? "s" : ""} another source for one of them: its next release asks to set it back to the client` : ""}${v.documents.length ? ` · a document supplies ${v.documents.length} of them today: once marked, the client answers ${v.documents.length === 1 ? "it" : "them"}` : ""} · Reason: ${v.reason}`;
 }
 
 /** At approval (lifecycle afterApprove): the section gets a draft version with the new mark, checked again first; it is
@@ -119,8 +148,25 @@ export async function applyBackground(db: Db, audit: Audit, actor: Actor, c: Lib
   if (!current || typeof m.after !== "boolean") throw problem(409, "Not in the library", "The section is no longer in the shared library, so nothing was changed. Return the change.");
   await refuseRetired(db, c.workspaceId, "section", [c.key]);
   if (current.clientOnly !== m.before) throw problem(409, "Changed since", "Whether this section holds background answers changed after it was proposed, so nothing was changed. Return it; the author proposes it again.");
+  await checkMark(db, c.workspaceId, c.key, current.title, m.after); // review M2, break M2: checked again; nothing changes if it no longer holds
   await revise(db.logicalSection, rows, { clientOnly: m.after, origin: "HUMAN" }, actor.id, strip);
   await audit.log(c.workspaceId, actor.id, "approved", "section", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the section goes out with the next release that carries its questions.`);
+}
+
+/** Break m1: an approved mark not released yet is withdrawn by its proposer: the section's draft goes back to the mark it
+ *  had, and a draft that then differs from the released section in nothing is removed. */
+export async function withdrawApprovedBackground(tx: Prisma.TransactionClient, actor: Actor, c: LibraryChange, why: string) {
+  const m = c.matches as { before?: boolean };
+  const rows = await tx.logicalSection.findMany({ where: { workspaceId: c.workspaceId, sectionKey: c.key }, orderBy: { version: "desc" } });
+  const draft = rows.find((r) => r.status === "DRAFT"), live = rows.find((r) => r.status === "PUBLISHED");
+  if (draft) {
+    const back = { clientOnly: !!m.before };
+    if (live && live.title === draft.title && (live.meaning ?? null) === (draft.meaning ?? null) && live.displayOrder === draft.displayOrder && live.clientOnly === back.clientOnly) await tx.logicalSection.delete({ where: { id: draft.id } });
+    else await tx.logicalSection.update({ where: { id: draft.id }, data: { ...back, updatedBy: actor.id } });
+  }
+  const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "APPROVED" }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
+  if (!done.count) throw problem(409, "Changed meanwhile", "This change was released or decided at the same moment. Refresh to see it.");
+  await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: "section", entityKey: c.key, summary: `${actor.name} withdrew the approved change "${c.label ?? c.key}" before its release: the section keeps the mark it had. Why: ${why}`.slice(0, 600) } });
 }
 
 /** At a release (publishLibraryChanges): an approved change whose section draft this release published is released. */

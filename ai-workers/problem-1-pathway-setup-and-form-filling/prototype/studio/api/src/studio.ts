@@ -672,6 +672,13 @@ export class Studio {
     // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
     const now = [...rows].sort((a, b) => b.version - a.version).find((r) => r.status === "DRAFT" || r.status === "PUBLISHED");
     if (now && now.collectedFrom !== b.collectedFrom) fail(FILLS_LOCK, HttpStatus.CONFLICT);
+    // B154 (break M5, P-97): whether a question is a background answer changes only with a second person, so a question
+    // is not moved between a section that holds background answers and one that does not, and a background section's
+    // new question is the client's to answer.
+    const markOf = async (k: string) => !!(await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: k }, orderBy: { version: "desc" } }))?.clientOnly;
+    const into = await markOf(b.sectionKey);
+    if (now && now.sectionKey !== b.sectionKey && (await markOf(now.sectionKey)) !== into) fail(`Moving this question ${into ? "into" : "out of"} a section that holds background answers would change whether it is the client's own answer for every combination. Mark the section on Shared library › Sections instead: a second person approves that.`, HttpStatus.CONFLICT);
+    if (!now && into && b.collectedFrom !== "client_questionnaire") fail("This section holds background answers, the client's own: a new question in it is filled by the client.", HttpStatus.CONFLICT);
     // C11.9 break round 2 (Major 2): checked again and written under the field's lock (a retire approved at once waits).
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);

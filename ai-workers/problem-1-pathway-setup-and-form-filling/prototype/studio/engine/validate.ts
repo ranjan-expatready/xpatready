@@ -265,7 +265,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
           if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
         }
-        if (k === "placements" && !!was.client_only !== !!x.client_only) {
+        if (k === "placements" && !!was.client_only !== !!x.client_only && was.section_id === x.section_id) { // its own section's mark (a moved question is a placement change)
           const m = marks.get(x.section_id) ?? { on: !!x.client_only, n: 0 }; m.n++; marks.set(x.section_id, m);
           if (bare({ ...was, client_only: null }) === bare({ ...x, client_only: null })) continue;
         }

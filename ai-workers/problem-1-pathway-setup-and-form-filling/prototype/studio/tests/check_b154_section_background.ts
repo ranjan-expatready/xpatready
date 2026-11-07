@@ -127,6 +127,87 @@ const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
   r = await propose(declKey!, { on: false, reason: "Sample: try to unmark declarations" });
   ok("B154 P-244 fail: a section that asks a declaration keeps its mark (409, declarations stay with the client), in words", r.status === 409 && /declaration is always the client's own/.test(words(r)) && !KEYS.test(words(r)), `${r.status} ${words(r)}`);
 
+  // ---------------------------------------------------------------- review and break round 1: each with its fail test
+  const field = (key: string, label: string, type = "text") => sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, label, meaning, value_type, data_type, scope, subject_kind, group_key, origin, updated_by, updated_at) select gen_random_uuid(), ${lit(ws)}, ${lit(key)}, 1, 'PUBLISHED', ${lit(label)}, 'Test only (B154).', ${lit(type)}, 'STRING', f.scope, f.subject_kind, 'person', 'HUMAN', 'user-A', now() from (select scope, subject_kind from canonical_field where canonical_field_key='person.family_name' limit 1) f`);
+  const sampleSection = (key: string, title: string, on: boolean, fact: string) => {
+    sql(`insert into logical_section (id, workspace_id, section_key, version, status, title, meaning, display_order, client_only, origin, updated_by, updated_at) values (gen_random_uuid(), ${lit(ws)}, ${lit(key)}, 1, 'PUBLISHED', ${lit(title)}, 'Test only (B154).', 997, ${on}, 'HUMAN', 'user-A', now())`);
+    sql(`insert into section_question (id, workspace_id, lineage_key, section_key, canonical_field_key, display_order, repeats, tier, collected_from, version, status, origin, updated_by, updated_at) values (gen_random_uuid(), ${lit(ws)}, ${lit(fact)}, ${lit(key)}, ${lit(fact)}, 1, 'per_person', 'case', 'client_questionnaire', 1, 'PUBLISHED', 'HUMAN', 'user-A', now())`);
+  };
+  const withdraw = (id: string, actor = AUTHOR) => call("POST", `/library/changes/${id}/withdraw`, { note: "Sample: test clean-up" }, actor);
+  // Review M2, break M2: approval checks declarations again (P-244).
+  field("person.b154_sample_text", "Sample text (B154 test)"); sampleSection("b154_marked", "Sample: marked", true, "person.b154_sample_text");
+  r = await propose("b154_marked", { on: false, reason: "Sample: unmark it" });
+  const unmarkId = r.body?.id;
+  sql(`update canonical_field set value_type='declaration' where canonical_field_key='person.b154_sample_text'`);
+  r = await call("POST", `/library/changes/${unmarkId}/approve`, {}, APPROVER);
+  ok("B154 review M2 fail: a declaration placed in the section after the unmark was proposed stops its approval (409); it waits and nothing changes", r.status === 409 && /declaration is always the client's own/.test(words(r)) && sql(`select status from library_change where id=${lit(unmarkId)}`) === "WAITING" && section("b154_marked") === "PUBLISHED|t|v1", `${r.status} ${words(r)} ${section("b154_marked")}`);
+  await withdraw(unmarkId);
+  // Review M1, break M4: a background section's questions are the client's to fill.
+  const pt = sql(`select section_key from logical_section where title ~* '^previous travel$' and status='PUBLISHED' limit 1`)!;
+  const ptFact = sql(`select canonical_field_key from section_question where section_key=${lit(pt)} and status='PUBLISHED' and collected_from='client_questionnaire' order by display_order limit 1`)!;
+  const ptRow = () => sql(`select id from section_question where lineage_key=${lit(ptFact)} order by version desc limit 1`);
+  sql(`update section_question set collected_from='staff_working_view' where id=${lit(ptRow()!)}`);
+  r = await propose(pt, { on: true, reason: "Sample: previous travel" });
+  ok("B154 review M1 fail: a section whose question the case officer fills is not marked (409, change who fills first), in words", r.status === 409 && /case officer fills/.test(words(r)) && /Change who fills/.test(words(r)) && !KEYS.test(words(r)), `${r.status} ${words(r)}`);
+  sql(`update section_question set collected_from='client_questionnaire' where id=${lit(ptRow()!)}`);
+  r = await call("POST", `/library/fields/${encodeURIComponent(ptFact)}/fills`, { to: "CASE_OFFICER", reason: "Sample: the office holds it" }, AUTHOR);
+  const fillsId = r.body?.id;
+  r = await propose(pt, { on: true, reason: "Sample: previous travel" });
+  ok("B154 break M4 fail: while a change of who fills one of its questions is open, the section is not marked (409)", r.status === 409 && /who fills/.test(words(r)), `${r.status} ${words(r)}`);
+  sql(`update library_change set status='WITHDRAWN' where id=${lit(fillsId)}`);
+  r = await propose(pt, { on: true, reason: "Sample: previous travel" });
+  const ptId = r.body?.id;
+  ok("B154 pass: with no open change of who fills, the section can be proposed", r.status === 201, `${r.status} ${words(r)}`);
+  r = await call("POST", `/library/fields/${encodeURIComponent(ptFact)}/fills`, { to: "CASE_OFFICER", reason: "Sample: the office holds it" }, AUTHOR);
+  ok("B154 review M1 fail: while the section waits to be marked, the case officer is not proposed to fill its question (409)", r.status === 409 && /background answers/.test(words(r)), `${r.status} ${words(r)}`);
+  sql(`update section_question set collected_from='staff_working_view' where id=${lit(ptRow()!)}`);
+  r = await call("POST", `/library/changes/${ptId}/approve`, {}, APPROVER);
+  ok("B154 review M1 fail: approval checks again: a question filled by the case officer meanwhile stops it (409); it waits and nothing changes", r.status === 409 && /case officer fills/.test(words(r)) && sql(`select status from library_change where id=${lit(ptId)}`) === "WAITING" && section(pt) === "PUBLISHED|f|v1", `${r.status} ${words(r)}`);
+  sql(`update section_question set collected_from='client_questionnaire' where id=${lit(ptRow()!)}`);
+  r = await withdraw(ptId);
+  ok("B154 pass: the proposer withdraws the waiting change (clean-up)", r.status < 300, r.status);
+  // Break M3: the case officer's or representative's own details are never background answers.
+  const repSection = sql(`select q.section_key from section_question q join logical_section s on s.section_key=q.section_key where q.canonical_field_key like 'representative.%' and s.status='PUBLISHED' and not s.client_only limit 1`);
+  r = repSection ? await propose(repSection, { on: true, reason: "Sample: the representative's section" }) : { status: 0, body: null };
+  ok("B154 break M3 fail: a section that asks the representative's own details is not marked (409, in words)", r.status === 409 && /representative's own details/.test(words(r)) && !KEYS.test(words(r)), `${repSection} ${r.status} ${words(r)}`);
+  // Break M5: a question does not move between a background section and another without a second person.
+  const movedFact = sql(`select canonical_field_key from section_question where section_key=${lit(mil.key)} and status='PUBLISHED' order by display_order limit 1`)!;
+  const pl = sql(`select collected_from || '|' || repeats from section_question where lineage_key=${lit(movedFact)} order by version desc limit 1`)!.split("|");
+  r = await call("POST", `/library/fields/${encodeURIComponent(movedFact)}/placement`, { sectionKey: pt, collectedFrom: pl[0], repeats: pl[1] }, AUTHOR);
+  ok("B154 break M5 fail: moving a question out of a section that holds background answers is refused (409, mark the section instead)", r.status === 409 && /out of a section that holds background answers/.test(JSON.stringify(r.body)) && sql(`select section_key from section_question where lineage_key=${lit(movedFact)} order by version desc limit 1`) === mil.key, `${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
+  // Break m1: an approved mark not released yet can be withdrawn by its proposer; the section goes back.
+  field("person.b154_sample_text2", "Sample text two (B154 test)"); sampleSection("b154_plain", "Sample: plain", false, "person.b154_sample_text2");
+  r = await propose("b154_plain", { on: true, reason: "Sample: mark it" });
+  const plainId = r.body?.id;
+  await call("POST", `/library/changes/${plainId}/approve`, {}, APPROVER);
+  const approvedDraft = section("b154_plain");
+  r = await withdraw(plainId, APPROVER);
+  ok("B154 break m1 fail: someone else cannot withdraw an approved change (403)", r.status === 403, r.status);
+  r = await withdraw(plainId);
+  ok("B154 break m1 pass: the proposer withdraws an approved mark before its release: the draft goes and the section is as released", approvedDraft === "DRAFT|t|v2" && r.status < 300 && sql(`select status from library_change where id=${lit(plainId)}`) === "WITHDRAWN" && section("b154_plain") === "PUBLISHED|f|v1", `${approvedDraft} ${r.status} ${words(r)} ${section("b154_plain")}`);
+  // Review M3, break M1: a returned change is not sent again with other words.
+  r = await propose("b154_plain", { on: true, reason: "Sample: mark it again" });
+  const againId = r.body?.id;
+  await call("POST", `/library/changes/${againId}/return`, { note: "Sample: not yet" }, APPROVER);
+  r = await call("POST", `/library/changes/${againId}/resubmit`, { reason: "Sample: corrected the words", label: "Sample: plain · no longer background answers" }, AUTHOR);
+  ok("B154 review M3 fail: a returned change is not sent again with another heading (409, propose it again)", r.status === 409 && /Propose it again|not sent again/.test(words(r) + JSON.stringify(r.body)) && sql(`select status || '|' || label from library_change where id=${lit(againId)}`) === "RETURNED|Sample: plain · background answers, for every combination", `${r.status} ${words(r)}`);
+  await withdraw(againId);
+  // Break m2: an invisible reason is no reason.
+  r = await propose("b154_plain", { on: true, reason: "​​​​​​​" });
+  ok("B154 break m2 fail: a reason of invisible characters only is refused (400)", r.status === 400, r.status);
+  // P-97: the second person sees which questions a document supplies today.
+  // The checkpoint's document types supply no question's facts yet: one supplies the Sample field, for this test only.
+  const docType = sql(`select document_type_key from document_type where status='PUBLISHED' order by document_type_key limit 1`);
+  if (docType) sql(`update document_type set supplies_facts = array_append(supplies_facts, 'person.b154_sample_text2') where document_type_key=${lit(docType)} and status='PUBLISHED'`);
+  const docSection = docType ? "b154_plain" : null;
+  r = docSection ? await propose(docSection, { on: true, reason: "Sample: from documents" }) : { status: 0, body: null };
+  ok("B154 break M3 pass: marking a section a document supplies answers for tells the second person which ones (the client answers them once marked)", r.status === 201 && (r.body?.documents ?? []).length >= 1 && !KEYS.test((r.body?.documents ?? []).join(" ")), `${docSection} ${r.status} ${JSON.stringify(r.body?.documents ?? words(r))}`);
+  if (r.body?.id) {
+    const w = (await call("GET", "/review-queue?filter=all&kind=library_change", undefined, APPROVER)).body.items.find((x: any) => x.id === `change:${r.body.id}`)?.what ?? "";
+    ok("B154 break M3: To review says it in words", /a document supplies \d+ of them today/.test(w), w);
+    await withdraw(r.body.id);
+  }
+
   // ---------------------------------------------------------------- Review names it once per section; the release publishes it
   const c = (await call("GET", `/combinations/${vv}`, undefined, AUTHOR)).body;
   const lines = ((c?.draft?.changes ?? []) as any[]).filter((x) => x.kind === "Background answers");

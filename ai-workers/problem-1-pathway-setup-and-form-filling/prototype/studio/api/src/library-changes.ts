@@ -17,7 +17,7 @@ import { isItemLifecycle, lockItem } from "./library-items.ts";
 import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 import { fillsView, releaseFills } from "./who-fills.ts";
-import { backgroundView, KIND as BACKGROUND_KIND, releaseBackground } from "./section-background.ts";
+import { backgroundView, KIND as BACKGROUND_KIND, releaseBackground, withdrawApprovedBackground } from "./section-background.ts";
 import { conditionView, COND_KIND, releaseCondition } from "./question-condition.ts";
 import { ASK_ACTION, FORM_FIELD_KIND, formFieldView, releaseFormFieldCondition, restoreReplaced } from "./form-field-condition.ts";
 import { dropFieldList, releaseFieldList } from "./answer-values.ts";
@@ -193,6 +193,8 @@ export async function resubmitChange(db: Db, actor: Actor, id: string, b: { labe
   if (c.kind === SUPPLIES_KIND) throw problem(409, "Propose it again", "A returned change of the facts a document supplies is not sent again: withdraw it, then propose the facts again on its document type.");
   // B86 BR-7: likewise a form field's condition: proposing again runs its checks again.
   if (c.kind === FORM_FIELD_KIND) throw problem(409, "Propose it again", c.action === ASK_ACTION ? "A returned change of a form field is not sent again: withdraw it, then ask the Yes/No as its deciding question again." : "A returned change of a form field is not sent again: withdraw it, then confirm the form field again.");
+  // B154 (review M3, break M1): likewise a section's background mark: proposing again runs its checks again.
+  if (c.kind === BACKGROUND_KIND) throw problem(409, "Propose it again", "A returned change of whether a section holds background answers is not sent again: withdraw it, then propose it again on Shared library › Sections.");
   // G-CORE B2: a rename is sent again through its door (the check runs again), never corrected here.
   if (c.action === "RENAME") throw problem(409, "Rename it again", "A returned rename is not sent again from here: rename it again on its page, where the check runs again.");
   if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can correct it and send it again. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to correct or withdraw it.`);
@@ -284,6 +286,12 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
     const why = (note ?? "").trim();
     if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
     return db.$transaction(async (tx) => { await withdrawApprovedSupplies(tx, actor, c, why); return changeView((await tx.libraryChange.findUnique({ where: { id } }))!); });
+  }
+  // B154 (break m1): an approved section mark not released yet is withdrawn by its proposer; its draft goes back.
+  if (c.kind === BACKGROUND_KIND && c.status === "APPROVED") {
+    const why = (note ?? "").normalize("NFKC").replace(/[\p{Cf}]/gu, "").trim();
+    if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
+    return db.$transaction(async (tx) => { await withdrawApprovedBackground(tx, actor, c, why); return changeView((await tx.libraryChange.findUnique({ where: { id } }))!); });
   }
   // P-319 (review of #833, M2): a waiting or returned role change is withdrawn like a rename: nothing was applied.
   const renaming = (c.action === "RENAME" || c.kind === "form_role" || c.kind === SUPPLIES_KIND || c.kind === FORM_FIELD_KIND || c.kind === BACKGROUND_KIND) && ["WAITING", "RETURNED"].includes(c.status); // C4.5: nothing applied before approval
