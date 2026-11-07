@@ -152,7 +152,7 @@ const byFilingOrder = (order: unknown) => {
 };
 /** C6.15 (SA-1B-19): a type's substitute sets travel with the release, each member named, only when it has some (so a
  *  type without sets keeps its fingerprint). */
-function docSets(t: any, effTypes: any[]) {
+function docSets(t: { sets?: unknown }, effTypes: { documentTypeKey: string; name: string }[]) {
   const sets = snapSets(t.sets, (k) => effTypes.find((x) => x.documentTypeKey === k)?.name);
   return sets ? { sets } : {};
 }
