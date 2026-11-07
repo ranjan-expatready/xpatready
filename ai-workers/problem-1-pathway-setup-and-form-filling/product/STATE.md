@@ -2,7 +2,7 @@
 
 current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1555-lead31.md` · this branch: `lead/2026-11-07-lead30`
+updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1630-lead31.md` · this branch: `lead/2026-11-07-lead30`
 
 ## Lead 31 progress (15:55 IST)
 * Check cron **4b7708bc** (:13/:43, prompt exactly `run lead-watch; read STATE Start here`). Weekly **10% at 15:53 IST**; Lead 31 context 142k.
@@ -14,12 +14,12 @@ updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone:
 
 ## Hand-over to Lead 31 (15:45 IST): do first
 **The founder is away until about 18:45 IST** (P-407): ask only if urgent; no call that can wait on a prompt (no writes under `.claude/`, no settings). He reads from his phone: report hourly in plain words against `design/next-12-hours-2026-11-07.md` §7, and say proactively what you need from him.
-1. **#1238 (qa: C6.9 and C8.2 Works)**: Lead 30 posted `Reviewer: Approve 6221a4f54…`; **label when its CI is green** (records, P-385; the founder's auto-mode rule allows it, P-405: #1226 labelled 15:24 IST with no refusal). Then M3 Works = 4 of 28 (P-406).
+1. **#1238**: labelled 15:46 IST (done).
 2. **Drift audit (Lead 30's read-only subagent):** result file m3-screens-vs-boards (7 Nov) in the notes folder `~/Library/Application Support/Claude/side-session-notes/local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023/`. Lead 30 forwards its summary when it lands. Post it on the UX lane's PR 1 and tell the founder in one line (verdict, and only real drifts).
 3. **New lanes (P-407), cloud; read their PRs each check:** UX lane task_f4b1c488 (study → scorecard in EXPERIENCE.md and the screen-concept/screen-review skills → each M3 screen revised; **you approve each UX revision on its PR**, P-316 (3)); concepts lane task_9975ca96 (B135 → B144 → B141; **you approve each concept**); build lane task_404185d0 (B140 → B137 → B142). Also C4 task_3a2d7beb (**you approve each pack's changed lines**, P-400) and B131 task_32589e77 (may merge ahead, P-214).
 4. **B3 #1221:** its lane takes B129 then B132 after its label (comment posted 15:43 IST). **C2 #1075** restarts only in a new session after #1223 and #1225 merge: at the founder's next typed turn.
 5. **Burn:** weekly 9% at 15:42 IST, about 4%/h, up to about 5%/h with the new lanes; trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. At about 4-5%/h the week's plan lasts about a day (resets 13 Nov 04:29 IST): tell the founder at his return, with options.
-6. **Records PR #1240 (Lead 30, head b88aad693):** the Approve line on its own records PR was **refused as Self-Approval at 15:43 IST even under P-405**: the rule covers labels and dispatches, not self-approval. Do not approve or label it for Lead 30 (that would route a refused write); the founder names it ("label 1240") at his return. Until then add records on this same branch (it is not labelled), or start `lead/2026-11-07-lead31` from `origin/main` after it merges.
+6. **#1240**: the founder named it (P-410, 16:15 IST); Approve posted; label on green at the final head.
 7. **Standbys:** Lead 32 (watchdog, first standby), Lead 33 (spare). Two standbys, so no new one is needed until the next hand-over.
 
 ## Account switch, lessons of 7 Nov
@@ -57,12 +57,10 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 |---|---|---|
 | C9 QA-246 (cloud) | #1223 | C7.7 forms waiting on an answer |
 | C4 (cloud) | task_3a2d7beb, requested 15:04 IST (P-404) | C7.6 → C9.2 → C11.6 → C7.7, the Lead approves pack lines before each label |
-| B3 → B129 | #1221 (Lead pushed 642d02d61) | after its label, B129 as warm row (P-341) |
+| B3 → B129 | #1221 labelled 15:48 IST | B129 → B132 → B130 |
 | B131 (cloud) | task_32589e77, requested ~15:16 IST (P-405) | gate B NOT TESTED; may merge ahead (P-214) |
 | Lead 33 (Mac) | `local_b49efef4-ce4b-4e6d-b821-507aac4b653b` | standby |
-| B3 (cloud) | #1221 | sign and scan by screens, QA-251 |
 | A6 B102 (cloud) | #1222; concept approved 14:17 IST | calculated age, C6.4, QA-226 |
-| B127 QA-296 (cloud) | #1224 |
 | B107 (cloud) | task_fb1531a2, started ~14:28 IST | QA-296, QA-299, QA-300: C6.11's path |
 | Lead 32 (Mac) | `local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3` | standby + watchdog (after Lead 30 messages it) | representative's names on IMM 5475 |
 | qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
@@ -70,6 +68,8 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 | UX lane (cloud) | task_f4b1c488 (P-407) | study → scorecard → M3 screens |
 | New-rows concepts (cloud) | task_9975ca96 | B135 → B144 → B141 |
 | New-rows build (cloud) | task_404185d0 | B140 → B137 → B142 |
+| Started 16:28 IST (cloud, P-410) | task_f622c350 B150 · task_1c1f5c6c B128 · task_cf52df0f B148 → B149 · task_7b81aa78 C2 on #1075 · task_d0f2097f concepts 2: B145 → B138 → B139 | count only after a push |
+| Warm rows by PR comment 16:30 IST | #1221 lane: B129 → B132 → B130 · #1054 (A5): B136 · #1233 (B5): B133 after #1223 | |
 
 **Released 14:34 IST (P-403):** A5 #1054, C2 #1075, B5 (#1233), kind token then b78 (#1232); the old PRs off the critical path are listed in `history/STATE-2026-11-07-1545-lead30.md`.
 

@@ -24,7 +24,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | qa-1 | after-merge | re-scores the rows each merged PR names |
 | qa-2 | Visitor visa | baseline walk, then journey walks |
 | UX lane (cloud, P-407) | M3 screens | study → scorecard → B147 (Prepare application tab) first, then each M3 screen (P-408) |
-| Next free lane (P-408) | M3 fixes | B148 (C6.9 P-236 words), B149 (C7.6 words, C8.2 receipt upload) |
+| Cloud lanes, 16:28 IST (P-410) | M3 | B150 · B128 · B148 → B149 · C2 (#1075) · concepts 2: B145 → B138 → B139 · warm: B130 (B3 lane), B136 (A5 lane), B133 (B5 lane) |
 
 ## Ready rows from P-230 (2 Nov; owners in the session table of `STATE.md`)
 | # | Area | Item | Done when (beyond the standard) | Source |
