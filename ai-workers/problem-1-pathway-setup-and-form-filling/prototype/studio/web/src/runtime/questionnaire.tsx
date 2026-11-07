@@ -619,6 +619,9 @@ function GroupIntro({ questions }: { questions: Question[] }) {
  *  read-only, with its source; it is changed in the firm record, never on the case. */
 const FIRM_RECORD = "firm_record";
 const fromFirm = (a: Answer | null | undefined) => a?.channel === FIRM_RECORD;
+/** QA-293: the representative's tab (the view's "representative" subject): their details come only from the firm record,
+ *  so a missing one says so and offers no Add (the route refuses it, 422). */
+const aboutRepresentative = (q: Question) => q.subjectId === "representative";
 function ConfirmPill({ a }: { a: Answer }) {
   if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
@@ -732,10 +735,10 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
-          ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
+          ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{aboutRepresentative(q) ? " · not in the firm record yet" : q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">{q.fact === "case.uses_representative" ? "Set by the case team (the representative of record)" : "Change it in the firm record"}</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">{q.fact === "case.uses_representative" ? "Set by the case team (the representative of record)" : "Change it in the firm record"}</p> : aboutRepresentative(q) ? <p className="max-w-40 text-xs text-text-muted">Comes only from the firm record; it can't be added on a case</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${inSentence(s.about_label)}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };

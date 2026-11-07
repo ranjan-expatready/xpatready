@@ -45,6 +45,8 @@ export const addableRoles = (s: Snapshot) => linesOf(s).filter((p) => p.role !==
 /** B115 review M1 (C7.7): the case page's Add buttons. The representative is the case team's representative of record,
  *  read from the firm record (engine/runtime/team.ts: "A case has no representative participant"), so the screen never
  *  offers to add one as a person; every other role comes from the release (P-319). */
+/** QA-293: why a representative's detail cannot be added on a case (the firm record is its only source). */
+export const REPRESENTATIVE_NOT_TYPED = "The representative's details come only from the firm record of the representative of record, so they are not added on a case. This one is not in the firm record yet.";
 export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
@@ -319,6 +321,9 @@ export class Runtime {
     const c = await this.reach(actor, caseId, "answer");
     const b = parse(PutAnswer, body);
     const s = this.snapshotOf(c), officer = isOfficer(actor);
+    // QA-293: the representative is no person on the case; their details come only from the firm record of the
+    // representative of record (C7.7, C6.11), so a save about them is refused in words (never "not on this case").
+    if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY);
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed; a client is
