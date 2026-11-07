@@ -16,7 +16,7 @@
 import { APPROVER, AUTHOR, CLIENT, call, firms, main, needVisitorVisa, ok, openCase, OFFICER, REVIEWER, sql, yearsAgo } from "./lib/m3.ts";
 
 type A = { id: string; value: unknown; status: string; confirmed: boolean; officer?: { by: string; at: string } | null; awaits_client?: boolean };
-type Q = { subjectId: string; fact: string; label: string; value_type: string; section: string; hidden: boolean; background?: boolean; answer: A | null };
+type Q = { subjectId: string; fact: string; label: string; value_type: string; section: string; group: string | null; hidden: boolean; background?: boolean; answer: A | null; rows: { row: string; answer: A | null }[] };
 type View = { sections: { subjectId: string; section: string; questions: Q[] }[] };
 const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
@@ -77,18 +77,21 @@ await main("C6.18-schedule1", "IMM 5257 Schedule 1's parts are background answer
   ok("C6.18-S1-8 setup: a Schedule 1 detail question the officer can answer on this case", !!q, qs.map((x) => `${x.label.slice(0, 30)}:${x.value_type}:${x.hidden}`).slice(0, 6));
   if (!q) return;
   const value = q.value_type === "country" ? "IND" : q.value_type === "date" ? "2005-06-01" : "Sample: answer taken by phone";
-  let r = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/${q.fact}`, { value, expectedId: null }, officer);
-  let a = sch1(await view(c.id, officer, "agent"), P).find((x) => x.fact === q.fact)?.answer;
+  // Schedule 1's parts repeat (one row per position, service or organisation): the officer adds the row the client named.
+  const row = q.group ? (await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: q.group }, officer)).body?.row as string | undefined : undefined;
+  const answerOf = (v: View) => { const x = sch1(v, P).find((y) => y.fact === q.fact); return row ? x?.rows.find((y) => y.row === row)?.answer ?? null : x?.answer ?? null; };
+  let r = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/${q.fact}`, { value, expectedId: null, ...(row ? { row } : {}) }, officer);
+  let a = answerOf(await view(c.id, officer, "agent"));
   ok("C6.18-S1-9 pass: the officer records it, taken by phone: marked Officer with who and when, waiting for the client, not confirmed", r.status === 200 && a?.officer?.by === officer && !!a?.officer?.at && a?.awaits_client === true && a?.confirmed === false, { status: r.status, detail: r.body?.detail, a });
   const sec = (await view(c.id, officer, "agent")).sections.find((s) => s.subjectId === P && s.section === q.section)!;
-  r = await call("POST", `/runtime/cases/${c.id}/sections/${q.section}/confirm`, { subjectId: P, seen: sec.questions.map((x) => x.answer?.id).filter(Boolean) }, officer);
-  a = sch1(await view(c.id, officer, "agent"), P).find((x) => x.fact === q.fact)?.answer;
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${q.section}/confirm`, { subjectId: P, seen: sec.questions.flatMap((x) => [x.answer?.id, ...(x.rows ?? []).map((y) => y.answer?.id)]).filter(Boolean) }, officer);
+  a = answerOf(await view(c.id, officer, "agent"));
   ok("C6.18-S1-10 fail: the officer's Confirm section leaves it waiting for the client", r.status < 300 && a?.awaits_client === true && a?.confirmed === false, { status: r.status, a });
-  const mine = sch1(await view(c.id, CLIENT, "sqr"), P).find((x) => x.fact === q.fact)?.answer;
+  const mine = answerOf(await view(c.id, CLIENT, "sqr"));
   r = await call("POST", `/runtime/cases/${c.id}/answers/${mine?.id}/reconfirm`, { value: mine?.value }, officer);
   ok("C6.18-S1-11 fail: staff cannot re-confirm it for the client (403)", r.status === 403, r.status);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${mine?.id}/reconfirm`, { value: mine?.value }, CLIENT);
-  a = sch1(await view(c.id, officer, "agent"), P).find((x) => x.fact === q.fact)?.answer;
+  a = answerOf(await view(c.id, officer, "agent"));
   ok("C6.18-S1-12 pass: the client sees it with who recorded it and re-confirms it: it counts as their own, still showing the officer", mine?.officer?.by === officer && r.status < 300 && a?.confirmed === true && a?.awaits_client === false && a?.officer?.by === officer, { status: r.status, detail: r.body?.detail, a });
-  ok("C6.18-S1-13 (data): stored as the client's re-confirmation of the officer's answer", sql(`select source_json->>'channel' from client_canonical_answer where subject_id=${lit(P)} and canonical_field_key=${lit(q.fact)} and superseded_by_id is null`) === "client_reconfirm");
+  ok("C6.18-S1-13 (data): stored as the client's re-confirmation of the officer's answer", sql(`select source_json->>'channel' from client_canonical_answer where subject_id=${lit(P)} and canonical_field_key=${lit(q.fact)} and superseded_by_id is null${row ? ` and row_key=${lit(row)}` : ""}`) === "client_reconfirm");
 });
