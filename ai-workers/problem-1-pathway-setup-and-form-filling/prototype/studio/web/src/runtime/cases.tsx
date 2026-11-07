@@ -17,6 +17,7 @@ import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
+import { ReleaseNotice } from "./release-update"; // C9.5
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -182,7 +183,7 @@ function CasePage() {
       <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><span className="text-text">{c.reference}</span></nav>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={c.pin.revision > 1 ? `Moved to this release on ${new Date(c.pin.pinned_at).toLocaleString("en-CA")}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case until someone moves it`}>{c.release?.label ?? `Release ${c.pin.release_version}`}</Pill></h1>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
@@ -193,6 +194,7 @@ function CasePage() {
           <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
         </div>
       </div>
+      <ReleaseNotice caseId={c.id} />
       <section aria-labelledby="people" className="rounded-xl border border-border bg-surface-raised">
         <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
           <h2 id="people" className="text-base font-semibold">People on this case</h2>

@@ -124,7 +124,7 @@ export function whatChanges(diff: ReleaseDiff, x: CaseInputs): Changes {
  *  portal or locked (filed); otherwise a draft copy. */
 export type Work = { id: string; kind: "copy" | "signed_scan" | "entered" | "upload"; form?: string; document?: string; label: string; subject: string; finished: boolean; release?: string };
 export type Review = { filing: string; label: string; counts: boolean };
-export type EffectLine = { id: string; what: string; who: string; why: string };
+export type EffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string };
 export type Effects = { fill_again: EffectLine[]; filed_another_way: EffectLine[]; no_longer_required: EffectLine[]; withdrawn: EffectLine[]; kept_out_of_date: EffectLine[]; unchanged: { count: number; words: string } };
 export const EFFECT_KEYS = ["fill_again", "filed_another_way", "no_longer_required", "withdrawn", "kept_out_of_date"] as const;
 
@@ -133,7 +133,7 @@ export function effectsOf(diff: ReleaseDiff, x: CaseInputs, work: Work[], review
   const e: Effects = { fill_again: [], filed_another_way: [], no_longer_required: [], withdrawn: [], kept_out_of_date: [], unchanged: { count: 0, words: "" } };
   const person = (id: string) => x.people.find((p) => p.id === id)?.label ?? "Someone on the case";
   for (const w of work) {
-    const line = (why: string): EffectLine => ({ id: w.id, what: w.label, who: person(w.subject), why });
+    const line = (why: string): EffectLine => ({ id: w.id, what: w.label, who: person(w.subject), why, ...(w.form ? { form: w.form, subject: w.subject } : {}) });
     if (w.kind === "upload") {
       if (w.document && x.from.documents.get(w.subject)?.has(w.document) && !x.to.documents.get(w.subject)?.has(w.document)) e.no_longer_required.push(line(`${labels.to} no longer asks for it: the upload is kept and listed.`));
       else e.unchanged.count++;

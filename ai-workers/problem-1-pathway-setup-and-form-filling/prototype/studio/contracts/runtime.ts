@@ -279,7 +279,7 @@ export const ReleaseMove = z.object({
   reason: text("Say why this case moves to the new release (at least 3 characters).", 3, 500).refine((x) => /[\p{L}\p{N}]/u.test(x), "Say why this case moves to the new release, in words."),
 });
 export type ReleaseChangeLine = { what: string; kind: string; who: string[]; before: string; after: string };
-export type ReleaseEffectLine = { id: string; what: string; who: string; why: string };
+export type ReleaseEffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string };
 /** GET /runtime/cases/:id/release-update (computed, writes nothing). `target` null: the case is on the newest release. */
 export type ReleaseUpdate = {
   case_id: string;
