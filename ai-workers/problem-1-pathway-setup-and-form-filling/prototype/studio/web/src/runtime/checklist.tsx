@@ -19,7 +19,9 @@ import { lineId, noRetryOnRefusal } from "./questionnaire";
 type Missing = { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null };
 export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; who_words: string; quote: string | null; missing: Missing[];
   state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean };
-type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[] };
+/** B102 (A6, BR-8): the person's age as the lines read it (engine/runtime/case-checklist.ts PersonAge). */
+type Age = { years: number | null; on: string | null; why: string; worked_out: boolean };
+type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[]; age?: Age };
 export type ChecklistView =
   | { derived: true; stand_in: "SI-14"; people: Person[]; basis: string; empty_release: boolean; ages_on_why: string }
   | { derived: false; why: string };
@@ -72,6 +74,7 @@ function PersonDocuments({ caseId, caseSubject, p, nameOf }: { caseId: string; c
     <section aria-labelledby={id} className="px-4 py-3" data-documents-person={p.subject}>
       <h3 id={id} className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold"><span className="[overflow-wrap:anywhere]">{p.label}</span>
         <span className="text-xs font-normal text-text-muted">{ROLE[p.role] ?? p.role}</span>
+        {p.age ? <span className={`text-xs font-normal ${p.age.years === null ? "text-text-warn" : "text-text-muted"}`} data-age={p.age.years ?? ""}>{p.age.why}</span> : null}
         {m ? <span className="text-xs font-normal text-text-muted" data-received>{n} of {m} received</span> : null}</h3>
       {!p.applies && !p.lines.length ? <p className="mt-1 text-sm text-text-muted" data-not-travelling>Not travelling with this application: nothing is asked of them.</p> : null}
       {p.applies && !p.lines.length && !p.waiting.length ? <p className="mt-1 text-sm text-text-muted">Nothing is needed from this person now.</p> : null}

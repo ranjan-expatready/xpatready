@@ -36,6 +36,10 @@ ok("pass (#553, spoof-proof marker): the first case marker wins, so a typed name
 ok("pass: a case line keyed by the case id is the firm's own", firmMayRead(line("case", "x opened a case", `${OURS}-aaaa-bbbb`), own) && !firmMayRead(line("case", "x opened a case", `${THEIRS}-aaaa`), own));
 ok("pass: a configuration line (no case named, a known entity) is read by every firm", firmMayRead(line("form", "Author changed IMM 5257"), own) && firmMayRead(line("library document_type", "Approver approved \"Passport\""), own) && firmMayRead(line("release", "Approver released Visitor visa"), own));
 ok("pass: \"case\" in other words (\"in case\", \"case officer\") is not a case id", caseOf(line("form", "in case the case officer asks")) === null);
+// B102 (A6): "Work it out instead" writes a configuration line (a worked-out value of the shared library, like "rule
+// fact"): its words name no case, so every firm's staff read it, as any configuration line.
+ok("pass (B102): a worked-out value is a configuration line, read by every firm", isConfigEntity("worked-out value") && !CASE_ENTITIES.has("worked-out value") && firmMayRead(line("worked-out value", "Configuration author worked out person.age_years as \"Age in whole years from Date Of Birth, on Application date.\" (Sample)"), own));
+ok("fail (B102): a worked-out value line that named another firm's case would still not be read", !firmMayRead(line("worked-out value", `x on case ${THEIRS}`), own));
 ok("the two lists do not overlap", [...CASE_ENTITIES].every((x) => !CONFIG_ENTITIES.has(x)));
 
 // The sweep: every audit write in api/src (any `.log(` call with five or more arguments, auditEvent.create and
