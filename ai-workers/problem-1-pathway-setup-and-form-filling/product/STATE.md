@@ -2,7 +2,15 @@
 
 current_lead: local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3 Lead 32 · 7 Nov 18:55 IST (took over from Lead 31 at ~385k context, P-314)
 
-updated: 2026-11-07 18:55 IST by **Lead 31, at the hand-over to Lead 32** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-413 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1855-lead31.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-07 19:05 IST by **Lead 32** (Lead 31's hand-over below) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-413 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1855-lead31.md` · this branch: `lead/2026-11-07-lead31`
+
+## Lead 32 (from 18:56 IST): first check done 19:05 IST
+* Check cron f50193b6 (:13/:43). Lead 33 told "start the watchdog" 18:57 IST. Standbys: Lead 33 only; top up to two at the founder's next typed turn.
+* Answered on the PR and in the session's prompt box: #1268 (B137's third migration: yes, own stamp, schema breaker), #1251 (B150: finish #1246's check fix first, then after #1246 lands merge main once, diff-only merge check P-318 (1), label).
+* Prompt box only (the PR answers were already there from Lead 31): A6 #1222 (fix the two code-cause reds, then round 3), B107 #1231 (round 3 diff-only, ready, label).
+* Warm rows sent (P-413 (2)): the B3 lane takes B129 → B132 → B130; the B5 lane takes B133 → B152 → B151.
+* Waiting on a merge, to message then: UX lane builds C6.9 once #1250 merges; the forms lane B155 → B157 once #1256 merges; A5 takes B136 once #1054 merges (its own check-in reads Lead 31's ruling).
+* Queued: #1054, #1249, #1250; labelled not queued: #1246 (red, B150 lane fixing), #1251 (conflict), #1256 (B128, labelled itself ~18:59 IST).
 
 ## Hand-over to Lead 32 (18:55 IST): do first
 Lead 31's standing items are word for word in `history/STATE-2026-11-07-1855-lead31.md`. Weekly 21% at 18:47 IST (~4%/h). No founder question is open (F9-F13 answered, P-412). Rules of the evening: P-410 (the Lead labels approved green PRs), **P-413 (no new lane until one ends; warm rows first; Works before new rows)**.
@@ -25,7 +33,7 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
 **Founder, 18:41 IST (P-413): no new lane until one ends; warm rows first; Works before new rows (C4's pack port is the critical path); concept lanes write no new concepts until builds catch up.** **Founder, ~15:50 IST (P-410):** the Lead labels all approved green PRs, its own records too; no token cap, quality guards stay; the 50%-by-22:00 trip-wire is lifted. **Auto-mode rule (P-405, ~15:15 IST):** `~/.claude/settings.json` `autoMode` now allows the Lead's labels on Approve + green CI, its own records-only PR approval and label, and nightly.yml dispatch on main. First use is the test: on a refusal, ask the founder in one line as before and note it in DECISIONS. **Standing OK (P-402, 14:30 IST):** the Lead labels approved green PRs and dispatches re-tests on main without naming each. **Was refused before P-405:** the Lead's Approve and label on its own records PR (Self-Approval); try under P-405 first, then the founder names it ("label <n>"). **Permission check (7 Nov):** never route a refused write through a lane. Never route a refused write through a lane, and never split a refused command to retry it (12:39 IST: refused as a bypass).
-**Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 32).
+**Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 33, told 18:57 IST).
 **Hand-over (P-409):** no hand-over with an in-process subagent running; its result goes to a file named in the hand-over block; briefs say report to the current Lead. Skill edit at the founder's next typed turn.
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
 **To-do, in order:**
