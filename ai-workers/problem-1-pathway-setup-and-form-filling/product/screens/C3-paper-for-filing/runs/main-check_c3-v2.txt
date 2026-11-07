@@ -1,0 +1,23 @@
+PASS  C3 setup: on the checkpoint's release IMM 5257 is an Online line for both people — ["ONLINE","ONLINE"]
+PASS  C3 pass: a line left Online has no Validate block (nothing to validate) — []
+PASS  C3 fail (Q3): Paper without a reason is refused (400, the reason field) — [400,"reason","Paper is for a person who cannot apply online (an accommodation, IRCC: \"You must apply online\"). Give the reason for IMM 5257 on paper."]
+PASS  C3 fail: a client cannot switch it (403) — 403
+PASS  C3 pass (Q3): with the accommodation reason the case officer's switch to Paper is saved — [200,null]
+PASS  C3 pass: only that person's IMM 5257 moved; the spouse's stays Online — ["PAPER","ONLINE"]
+FAIL  C3 pass (row C3): the Paper line shows its steps, Validate first, and never "Ask the Lead" — "IMM 5257 is released as an Online line, so its copy here is \"Copy, not for filing\" and cannot be validated and read back yet. Ask the Lead before filing it on paper."
+PASS  C3 fail (C7.6-6, P-144): with no validated copy read back, IMM 5257 on Paper is the one block on Ready to file — ["barcode_not_validated"]
+PASS  C3 pass: the Paper copy is made for filing (not stamped "Copy, not for filing") — ["GENERATED",false,null]
+PASS  C3 pass (C7.6-10): its validated copy is read back (201) — [201,null]
+FAIL  C3 pass (C7.6-12): the Validate block is gone; the line is In progress, naming the validated copy — {"blocks":[],"state":"to_do","validated":{"copy":"7322bcd5-a343-44a1-b61a-f827b087c9cc","at":"2026-11-07T08:51:35.934Z","current":true}}
+PASS  C3 pass: the spouse's IMM 5257, left Online, is still stamped "Copy, not for filing"
+PASS  C3 fail: a copy of a line left Online cannot be validated (409) — [409,"IMM 5257 is filed Online: its PDF is a copy, not for filing, so there is nothing to validate."]
+PASS  C3 pass (C9.2): after a change of family name the validated copy reads Out of date, naming the fact — "The validated copy of IMM 5257 read back 7 Nov 2026 is out of date: family name (surname) as shown on the person's passport or travel document of Sample Client A changed from \"SAMPLE\" to \"SAMPLEDZ\" on 7 Nov 2026. Make a new copy, press Validate again (a n
+PASS  C3 fail (C9.2): the out-of-date validated copy blocks Ready to file again — ["barcode_not_validated"]
+FAIL  C3 fail: a copy stamped "Copy, not for filing" (made while Online) is not validated after the switch (409, names a new copy) — [201,null]
+FAIL  C3 fail (review m1): a kept read-back of the stamped copy does not count: the Paper line names no validated copy — {"kept":"78e2f8d6-73a0-4bb1-8d68-e8ab7ce88a1e\nINSERT 0 1","state":"to_do","validated":{"copy":"bb52ef6f-9750-4ee5-9210-ccd5029d5a94","at":"2026-11-07T08:51:56.246Z","current":true}}
+FAIL  C3 fail: that refused read-back leaves the Validate block in place — []
+PASS  C3 pass: a new copy made after the switch is validated and read back (201) — [201,null]
+PASS  C3 fail (PDF upload): moved to PDF upload, IMM 5257 with no validated copy is the Validate block — [200,["barcode_not_validated"]]
+PASS  C3 pass (PDF upload): its copy is for filing, its validated copy reads back (201) and the block is gone — [201,[]]
+16/21 passed
+exit 1

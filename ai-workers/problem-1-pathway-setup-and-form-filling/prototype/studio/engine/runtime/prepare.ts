@@ -63,7 +63,10 @@ export function readBackOf<R extends { copy: string; at: Date }>(reads: R[], pas
 export type PaperStep = { key: "validate" | "print" | "sign_in_pen" | "mail"; words: string; done: boolean | null; neededBefore?: "filing" | "after_ready" };
 export type PaperLine = { state: "to_do" | "in_progress" | "out_of_date"; reason: string; barcode_page: boolean; validated: PaperValidated; steps: PaperStep[] };
 const SIGNER_WORDS: Record<string, string> = { person: "the person", parent: "a parent (for a child under 18)", principal: "the principal applicant", representative: "the representative" };
-export function paperLine(form: string, opts: { barcode: boolean; missing: number; validated: PaperValidated; signers: string[]; lineOnline?: boolean }): PaperLine {
+/** Row C3 (founder Q3, 6 Nov; P-144, P-237): the line is the person's own Paper choice, so its copy is for filing even
+ *  when the release's line is Online (IMM 5257 on release 2): it shows its steps and its read-back, never "Ask the Lead".
+ *  Who may move a line to Paper, and only with a written accommodation reason, stays `channelChange`'s. */
+export function paperLine(form: string, opts: { barcode: boolean; missing: number; validated: PaperValidated; signers: string[] }): PaperLine {
   const { barcode, missing, validated } = opts;
   const who = opts.signers.map((x) => SIGNER_WORDS[x] ?? x);
   const signedBy = who.length ? who.join(" and ") : "each person who signs it";
@@ -76,10 +79,6 @@ export function paperLine(form: string, opts: { barcode: boolean; missing: numbe
   // A form with no barcode page needs no read-back, so none is shown for it.
   const line = (state: PaperLine["state"], reason: string): PaperLine => ({ state, reason, barcode_page: barcode, validated: barcode ? validated : null, steps });
   if (barcode && validated && !validated.current) return line("out_of_date", `Out of date: a fact on ${form} changed after its validated copy was read back. Make a new copy, press Validate again (a new barcode page) and read it back before you print.`);
-  // Review M2 (part 2): the copies follow the release line's channel (api/src/fill-case.ts channelIn): on a line released
-  // as Online a copy is "not for filing" and its read-back is refused, so the case cannot hold a validated copy yet. Said,
-  // never left as a To do that cannot be done (question for the tech lead in the PR).
-  if (barcode && opts.lineOnline) return line("to_do", `${form} is released as an Online line, so its copy here is "Copy, not for filing" and cannot be validated and read back yet. Ask the Lead before filing it on paper.`);
   if (missing > 0) return line("to_do", `Waiting for ${missing} fact${missing === 1 ? "" : "s"} to answer or confirm.`);
   if (!barcode) return line("to_do", `Every fact it reads is confirmed. Make the copy, print it, have it signed in pen and mail it once the filing is Ready to file. ${form} makes no barcode page.`);
   if (!validated) return line("to_do", `Every fact it reads is confirmed. Make the copy, press Validate in Adobe (this adds the barcode page), save it and read the validated copy back here: IRCC returns a barcode form unprocessed without it.`);
