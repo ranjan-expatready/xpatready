@@ -5,12 +5,16 @@
 # GITHUB_TOKEN starts no label-guard run). Here pull_request_target runs main's copy of this file and of
 # product/tools/records-label.sh; the PR's commits are fetched as data and only their file names are read (GitHub's
 # guidance: never check out or build a PR's code in a pull_request_target workflow). Only PRs into main: a PR into
-# another branch would run that branch's copy. Test: product/tools/check-write-token.sh.
+# another branch would run that branch's copy. Not covered here: a PR that edits a pull_request workflow (ci.yml) can
+# still give its own new job a write token; write-token.py fails such a job in the PR's own check (W0), and the
+# question of a boundary the PR cannot edit is on #1232. Test: product/tools/check-write-token.sh.
 name: records-label
 on:
   pull_request_target:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    # edited: a PR moved back onto main is judged again; labeled: a records label put on by hand is judged again (a label
+    # this job sets with GITHUB_TOKEN starts no run). #1232 breaker, minor 5.
+    types: [opened, synchronize, reopened, ready_for_review, edited, labeled]
 permissions: {}
 concurrency:
   # The newest push decides; an older run still going is replaced (it would judge an older head).

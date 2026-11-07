@@ -2,21 +2,26 @@
 """No PR-controlled code runs with a write token (P-214 fix, 7 Nov; #1145 round 1 Major 1, #1202).
 
 Reads every .github/workflows/*.yml (from the working tree, or from a git revision with --rev) and fails when a job
-that can hold pull-requests: write or issues: write (its own permissions, else the workflow's, else GitHub's default,
-counted as write) could run code from the pull request:
+that can hold a write token (any `write` scope or write-all in its own permissions, else the workflow's, else GitHub's
+default, counted as write) could run code from a pull request or a branch:
 
-  pull_request workflows (the jobs run the PR's merge commit):
-    W1  a write job checks out the PR: every actions/checkout in it must name the base commit
-        (ref: github.event.pull_request.base.sha) and a path of its own;
-    W2  ... with persist-credentials: false (else the token sits in .git/config for any later step);
-    W3  ... and every run: line naming the product's files names them inside that checkout's path
-        (e.g. node base/ai-workers/...), never the workspace the PR would fill;
-    W4  a write job uses a local action (uses: ./...), which is the PR's code;
-    W5  a write job runs a file from a downloaded artifact (the PR's jobs made it: data to read, never to run).
-  pull_request_target / workflow_run workflows (main's copy runs, with the token):
-    T1  a checkout names the PR's code (head.sha, head.ref, refs/pull/, merge_commit_sha, workflow_run.head_*);
-    T2  a run: line checks out, switches to or builds the PR's fetched commits (git checkout/switch/worktree/
-        reset/restore/archive/stash on pr/ or FETCH_HEAD, npm/npx/node/bash/sh/python on a pr/ path).
+  PR-controlled workflows (pull_request, or push to any branch but main: the branch's own copy of the file runs):
+    W0  a write job that is not on ALLOW below: a new one is a reviewed change to this file, never silent;
+    W1  a write job checks out anything but the base commit (exactly ref: ${{ github.event.pull_request.base.sha }})
+        into a path of its own;
+    W2  ... or keeps the token in .git/config (persist-credentials must be false);
+    W3  a run: line names the product's files (ai-workers/, "$P/", "$S/", "$T/") outside that checkout's path;
+    W4  a write job uses a local action or workflow (uses: ./...), the PR's code;
+    W5  a write job downloads an artifact into the workspace (no path:) or runs a file from one.
+  Main's-code workflows that hold PR data (pull_request_target, workflow_run, issue_comment, pull_request_review,
+  pull_request_review_comment: main's copy runs, with the token):
+    T1  a checkout names the PR's code (head.sha/ref, refs/pull/, merge_commit_sha, workflow_run.head_*, another
+        repository);
+    T2  a run: line checks out, switches to, pipes or builds the PR's fetched commits (pr/, FETCH_HEAD, gh pr checkout);
+    T3  a run: line pastes PR-written text (title, body, branch name, comment, review) into the script (GitHub's
+        script-injection guidance: pass it through env: instead).
+A guard, not the boundary: a PR can edit this file too. The boundary is that main's copy decides (records-label.yml,
+label-guard.yml), and a new write job fails here in the PR's own check (W0) where the reviewer sees it.
 
   python3 write-token.py [--rev REV] [--dir DIR]   exit 0 clean, 1 a finding, 2 could not check
 """
@@ -27,29 +32,45 @@ try:
 except ImportError:
     print("PyYAML is missing: nothing was checked"); sys.exit(2)
 
-WRITE_SCOPES = ("pull-requests", "issues")
-PR_CODE_REF = re.compile(r"head\.sha|head\.ref|head_sha|head_branch|refs/pull/|merge_commit_sha|github\.head_ref")
-SWITCH = re.compile(r"\bgit\s+(checkout|switch|worktree|reset|restore|archive|stash)\b[^\n]*(pr/|FETCH_HEAD|refs/pull/)")
-RUN_PR = re.compile(r"\b(npm|npx|node|bash|sh|python3?|tsx|make)\b[^\n]*\bpr/")
-PRODUCT = re.compile(r"(?<![\w/.-])(\./)?ai-workers/")
+# (workflow file, job): the write jobs of PR-controlled workflows that were reviewed. retry-comment: base commit's
+# flaky.mjs only, artifacts read as data (B122 F5, #1145).
+ALLOW = {("ci.yml", "retry-comment")}
+TRUSTED = {"pull_request_target", "workflow_run", "issue_comment", "pull_request_review", "pull_request_review_comment"}
+BASE_REF = "${{ github.event.pull_request.base.sha }}"
+PR_CODE_REF = re.compile(r"head\.sha|head\.ref|head_sha|head_branch|refs/pull/|merge_commit_sha|github\.head_ref|pull/\d|\bpr/")
+SWITCH = re.compile(r"\bgit\b[^\n]*\b(checkout|switch|worktree|reset|restore|archive|stash|show|cat-file\s+-p|read-tree)\b[^\n]*(\bpr/|FETCH_HEAD|refs/pull/|head\.sha)"
+                    r"|--work-tree[^\n]*\b(pr/|FETCH_HEAD)|\bgh\s+pr\s+(checkout|diff)\b|\bgh\s+repo\s+clone\b")
+RUN_PR = re.compile(r"\b(npm|npx|node|bash|sh|zsh|python3?|tsx|make|source)\b[^\n]*(\s|^|[\"'])pr/")
+INJECT = re.compile(r"\$\{\{\s*github\.(event\.(pull_request\.(title|body|head\.ref|head\.label)|issue\.(title|body)"
+                    r"|comment\.body|review\.body|review_comment\.body|workflow_run\.(head_branch|display_title|head_commit\.message))|head_ref)\s*\}\}")
+PRODUCT = re.compile(r"(?<![\w/.-])(\./)?ai-workers/|\"?\$\{?[PST]\}?/")
 
 
 def triggers(doc):
     on = doc.get("on", doc.get(True))  # PyYAML reads a bare `on:` key as True
     if isinstance(on, str):
-        return {on}
+        return {on: None}
     if isinstance(on, list):
-        return set(on)
-    return set((on or {}).keys())
+        return {t: None for t in on}
+    return dict(on or {})
+
+
+def pr_controlled(trig):
+    if "pull_request" in trig:
+        return True
+    if "push" in trig:
+        b = (trig["push"] or {}).get("branches") if isinstance(trig["push"], dict) else None
+        return b != ["main"]
+    return False
 
 
 def writes(perm):
-    """True when this permissions value can give pull-requests or issues write (None: GitHub's default, counted)."""
+    """True when this permissions value can give any write scope (None: GitHub's default, counted)."""
     if perm is None:
         return True
     if isinstance(perm, str):
         return perm == "write-all"
-    return any(str(perm.get(k, "")) == "write" for k in WRITE_SCOPES)
+    return any(str(v) == "write" for v in perm.values())
 
 
 def check(name, text):
@@ -59,52 +80,58 @@ def check(name, text):
     except yaml.YAMLError as e:
         return [f"{name}: not YAML ({e})"]
     trig = triggers(doc)
-    pr = "pull_request" in trig
-    trusted = bool(trig & {"pull_request_target", "workflow_run"})
+    pr = pr_controlled(trig)
+    trusted = bool(set(trig) & TRUSTED)
     for jid, job in (doc.get("jobs") or {}).items():
         job = job or {}
         perm = job["permissions"] if "permissions" in job else doc.get("permissions")
         if not writes(perm):
             continue
         where = f"{name} job {jid}"
-        if "uses" in job and str(job["uses"]).startswith("./") and pr:
+        if pr and (name, jid) not in ALLOW:
+            out.append(f"W0 {where}: a write token in a workflow the PR or branch controls, and not a reviewed job (ALLOW)")
+        if pr and str(job.get("uses", "")).startswith("./"):
             out.append(f"W4 {where}: calls the local workflow {job['uses']} (the PR's copy) with a write token")
-        steps = job.get("steps") or []
         paths, arts = [], []
-        for st in steps:
+        for st in job.get("steps") or []:
             uses = str(st.get("uses", ""))
             w = st.get("with") or {}
             if pr and uses.startswith("./"):
                 out.append(f"W4 {where}: uses the local action {uses} (the PR's code) with a write token")
-            if uses.startswith("actions/download-artifact") and w.get("path"):
-                arts.append(str(w["path"]).rstrip("/"))
+            if pr and uses.startswith("actions/download-artifact"):
+                if not w.get("path"):
+                    out.append(f"W5 {where}: downloads an artifact into the workspace (give it a path of its own)")
+                else:
+                    arts.append(str(w["path"]).rstrip("/"))
             if uses.startswith("actions/checkout"):
-                ref = str(w.get("ref", ""))
+                ref = str(w.get("ref", "")).strip()
                 if pr:
-                    if "pull_request.base.sha" not in ref or not w.get("path"):
-                        out.append(f"W1 {where}: checks out {'the PR (no ref)' if not ref else ref} with "
-                                   "pull-requests/issues write; check out the base commit into a path of its own")
+                    if ref != BASE_REF or not w.get("path") or w.get("repository"):
+                        out.append(f"W1 {where}: checks out {ref or 'the PR (no ref)'} with a write token; "
+                                   "check out exactly the base commit into a path of its own")
                     elif w.get("persist-credentials") is not False:
                         out.append(f"W2 {where}: checkout keeps the write token in .git/config (persist-credentials: false)")
                     else:
                         paths.append(str(w["path"]).rstrip("/") + "/")
-                if trusted and PR_CODE_REF.search(ref):
-                    out.append(f"T1 {where}: checks out the PR's code ({ref}) in a {'/'.join(sorted(trig))} workflow")
+                if trusted and (PR_CODE_REF.search(ref) or (w.get("repository") and "github.repository" not in str(w["repository"]))):
+                    out.append(f"T1 {where}: checks out the PR's code ({ref or w.get('repository')}) in a {'/'.join(sorted(set(trig) & TRUSTED))} workflow")
             run = st.get("run")
             if not run:
                 continue
             for line in str(run).splitlines():
                 if pr:
                     for m in PRODUCT.finditer(line):
-                        head = line[:m.start()]
-                        if not any(head.endswith(p) or head.endswith("/" + p) for p in paths) and "${{" not in line[max(0, m.start() - 3):m.start()]:
-                            out.append(f"W3 {where}: runs the product's files from the PR's workspace: {line.strip()[:120]}")
+                        head = line[:m.start()].rstrip('"')
+                        if not any(head.endswith(p.rstrip("/")) or head.endswith(p) for p in paths):
+                            out.append(f"W3 {where}: runs the product's files from the workspace: {line.strip()[:120]}")
                             break
-                for d in arts:
-                    if re.search(r"(^|[;&|(]\s*|\s)(bash|sh|zsh|node|npx|tsx|python3?|source|\.|chmod)\s+[\"']?(\./)?" + re.escape(d) + "/", line):
-                        out.append(f"W5 {where}: runs a downloaded artifact's file: {line.strip()[:120]}")
+                    for d in arts:
+                        if re.search(r"(^|[;&|(]\s*|\s)(bash|sh|zsh|node|npx|tsx|python3?|source|\.|chmod|cd)\s+[\"']?(\./)?" + re.escape(d) + r"(/|\s|$)", line):
+                            out.append(f"W5 {where}: runs a downloaded artifact's file: {line.strip()[:120]}")
                 if trusted and (SWITCH.search(line) or RUN_PR.search(line)):
                     out.append(f"T2 {where}: runs or checks out the PR's fetched commits: {line.strip()[:120]}")
+                if trusted and INJECT.search(line):
+                    out.append(f"T3 {where}: pastes PR-written text into the script: {line.strip()[:120]}")
     return out
 
 

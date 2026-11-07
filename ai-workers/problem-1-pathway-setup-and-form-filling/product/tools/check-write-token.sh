@@ -15,8 +15,8 @@ W=$(mktemp -d "${TMPDIR:-/tmp}/wtok.XXXXXXXX") && [ -d "$W" ] || { echo "no temp
 out=$(python3 "$PY" 2>&1); rc=$?
 ok "this tree's workflows: no PR-controlled code with a write token" "$([ $rc = 0 ] && echo 1 || echo 0)" "$out"
 
-# case <want: fail|pass> <rule or -> <name>   (the workflow on stdin)
-case_() { local want="$1" rule="$2" name="$3" d="$W/c$RANDOM$RANDOM"; mkdir -p "$d"; cat > "$d/w.yml"
+# case <want: fail|pass> <rule or -> <name>   (the workflow on stdin; FILE=ci.yml names it like the real one)
+case_() { local want="$1" rule="$2" name="$3" d="$W/c$RANDOM$RANDOM"; mkdir -p "$d"; cat > "$d/${FILE:-w.yml}"
   local o r; o=$(python3 "$PY" --dir "$d" 2>&1); r=$?
   if [ "$want" = fail ]; then ok "fails: $name" "$([ $r = 1 ] && printf '%s' "$o" | grep -q "^FAIL  $rule " && echo 1 || echo 0)" "rc $r: $o"
   else ok "passes: $name" "$([ $r = 0 ] && echo 1 || echo 0)" "rc $r: $o"; fi; }
@@ -90,7 +90,7 @@ jobs:
         with: { pattern: "suite-retries-*", path: retries }
       - run: bash retries/suite-retries-1/post.sh
 EOF
-case_ pass - "retry-comment's shape (base commit, own path, no kept token, artifacts only read)" <<'EOF'
+FILE=ci.yml case_ pass - "retry-comment's shape (base commit, own path, no kept token, artifacts only read)" <<'EOF'
 on: pull_request
 jobs:
   retry-comment:
@@ -103,6 +103,77 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: "${{ github.event.pull_request.base.sha }}", path: base, persist-credentials: false }
       - run: node base/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/flaky.mjs comment --body retry-bugs.md
+EOF
+# #1232 breaker round 1: each of these gave 0 findings before W0 and the wider rules.
+FILE=ci.yml case_ fail W0 "a new job in ci.yml that labels its own PR review: approved (breaker Blocker 1)" <<'EOF'
+on: { pull_request: { types: [opened] } }
+jobs:
+  approve-myself:
+    runs-on: ubuntu-latest
+    permissions: { pull-requests: write }
+    steps:
+      - env: { GH_TOKEN: "${{ github.token }}", L: "review: approved" }
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=$L"
+EOF
+case_ fail W0 "a branch's own on: push workflow with a write token" <<'EOF'
+on: push
+jobs:
+  j: { runs-on: x, permissions: { contents: write }, steps: [ { uses: actions/checkout@v4 }, { run: make } ] }
+EOF
+case_ fail W0 "statuses: write (could fake the ci check)" <<'EOF'
+on: pull_request
+jobs:
+  j: { runs-on: x, permissions: { statuses: write }, steps: [ { run: echo } ] }
+EOF
+case_ pass - "on: push to main only (main's own code)" <<'EOF'
+on: { push: { branches: [main] } }
+jobs:
+  j: { runs-on: x, permissions: { contents: write }, steps: [ { uses: actions/checkout@v4 } ] }
+EOF
+FILE=ci.yml case_ fail W1 "a ref that only mentions base.sha (base.sha && head.sha)" <<'EOF'
+on: pull_request
+jobs:
+  retry-comment: { runs-on: x, permissions: { pull-requests: write }, steps: [ { uses: actions/checkout@v4, with: { ref: "${{ github.event.pull_request.base.sha && github.event.pull_request.head.sha }}", path: base, persist-credentials: false } } ] }
+EOF
+FILE=ci.yml case_ fail W3 "a reviewed job running \$P/tools/ from the workspace" <<'EOF'
+on: pull_request
+jobs:
+  retry-comment:
+    runs-on: x
+    permissions: { pull-requests: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.pull_request.base.sha }}", path: base, persist-credentials: false }
+      - run: node "$P/tools/flaky.mjs" comment
+EOF
+FILE=ci.yml case_ fail W5 "an artifact downloaded into the workspace (no path)" <<'EOF'
+on: pull_request
+jobs:
+  retry-comment: { runs-on: x, permissions: { pull-requests: write }, steps: [ { uses: actions/download-artifact@v4 }, { run: bash post.sh } ] }
+EOF
+case_ fail T1 "issue_comment checking out refs/pull/N/head" <<'EOF'
+on: issue_comment
+jobs:
+  j: { runs-on: x, permissions: { pull-requests: write }, steps: [ { uses: actions/checkout@v4, with: { ref: "refs/pull/${{ github.event.issue.number }}/head" } } ] }
+EOF
+case_ fail T2 "pull_request_target piping a fetched PR file into bash" <<'EOF'
+on: pull_request_target
+jobs:
+  j: { runs-on: x, permissions: { pull-requests: write }, steps: [ { run: "git show pr/head:x.sh | bash" } ] }
+EOF
+case_ fail T2 "pull_request_target checking the PR out with --work-tree" <<'EOF'
+on: pull_request_target
+jobs:
+  j: { runs-on: x, permissions: { pull-requests: write }, steps: [ { run: "git --work-tree=w checkout pr/head -- . && npm test" } ] }
+EOF
+case_ fail T3 "pull_request_target pasting the PR title into the script" <<'EOF'
+on: pull_request_target
+jobs:
+  j:
+    runs-on: x
+    permissions: { pull-requests: write }
+    steps:
+      - run: echo "${{ github.event.pull_request.title }}"
 EOF
 case_ fail T1 "pull_request_target checking out the PR's head" <<'EOF'
 on: { pull_request_target: { branches: [main] } }
@@ -157,4 +228,6 @@ r=$(lab "$CODE" 500); ok "GitHub refuses the removal: the step goes red" "$([ "$
 r=$(lab "$REC" 200 403); ok "GitHub refuses the label: the step goes red" "$([ "$r" = 1 ] && echo 1 || echo 0)" "rc $r: $(cat "$W/out")"
 : > "$W/log"; PATH="$W/bin:$PATH" GH_LOG="$W/log" REPO=o/r PR=7 BASE="$REC^1" HEAD_SHA=0123456789abcdef0123456789abcdef01234567 bash "$TOOLS/records-label.sh" > "$W/out" 2>&1; r=$?
 ok "a head not fetched: no label judged, the step goes red" "$([ "$r" = 1 ] && [ ! -s "$W/log" ] && echo 1 || echo 0)" "rc $r: $(cat "$W/out")"
+: > "$W/log"; PATH="$W/bin:$PATH" GH_LOG="$W/log" REPO=o/r PR=7 BASE=1111111111111111111111111111111111111111 HEAD_SHA="$(git rev-parse "$REC^2")" bash "$TOOLS/records-label.sh" > "$W/out" 2>&1; r=$?
+ok "a base not in history: no label judged, the step goes red (breaker minor 6)" "$([ "$r" = 1 ] && [ ! -s "$W/log" ] && echo 1 || echo 0)" "rc $r: $(cat "$W/out" "$W/log")"
 finish

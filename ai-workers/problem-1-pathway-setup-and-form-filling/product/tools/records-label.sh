@@ -11,6 +11,8 @@ set -uo pipefail
 T="$(cd "$(dirname "$0")" && pwd)"
 : "${REPO:?}" "${PR:?}" "${BASE:?}" "${HEAD_SHA:?}"
 git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null || { echo "::error::head $HEAD_SHA is not fetched: label not judged"; exit 1; }
+# A base that is not here, or no common history, would read as "no files changed": never judged silently (#1232 breaker, minor 6).
+git cat-file -e "$BASE^{commit}" 2>/dev/null && git merge-base "$BASE" "$HEAD_SHA" >/dev/null 2>&1 || { echo "::error::base $BASE is not in this clone's history with $HEAD_SHA: label not judged"; exit 1; }
 L=$(bash "$T/records-only.sh" label)
 records=$(bash "$T/records-only.sh" is-records "$BASE..$HEAD_SHA") || records=no
 [ "$records" = yes ] || records=no
