@@ -3,13 +3,15 @@
 // of birth on the case. (2) Signing steps and the signed scan are refused on a form that is not signed by hand and
 // scanned on this application. (3) Changing a form's channel sets its signing steps aside (kept as history), so steps
 // done for the old channel never make it Ready. (4) #924: the sign and scan lines reach the firm's own staff only, never
-// another firm's (user-S). Sample data, no model call (US$0).
+// another firm's (user-S). (5) B129 (B3 challenge M2, break M3): once the submission is recorded the application is
+// read-only, so no signing step and no signed scan is recorded on it, even a new print after a fact changed (409 in the
+// server's words, nothing stored). Sample data, no model call (US$0).
 // It runs the pack's own setup on its copy first when the copy has no release 2 of Visitor visa yet
 // (tests/runtime/setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts), so the suites runner can run it alone (CI on #617).
 //   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { AUTHOR, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, inDays, itemsOf, needVisitorVisa, openCase, prepare, readyToFile, sendFile, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -93,4 +95,35 @@ else {
   ok(`fail (review N4 on #617): printing ${it.form} from a copy made before its repeating group changed ("none apply" taken back) is refused (409, out of date), nothing recorded`,
     undo.status < 300 && g.status === 409 && /out of date/.test(g.body?.detail ?? "") && sql(`select count(*) from sign_step where item_id='${it.id}' and superseded_at is null`) === "0", [undo.status, g.status, g.body?.detail]);
 }
-summary();
+// (5) B129: a recorded application is read-only for its signing too (C8.2-9's lock, as the channel and "entered" are).
+{
+  const officer = f.officer ?? OFFICER;
+  const r5 = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(41) }], { representative: f.rep, caseOfficers: [officer] });
+  const R = r5.subjects["Sample Client R"];
+  const ready = await readyToFile(r5.id, f.rep); // facts, IMM 5476 printed, signed and scanned, the review, warnings passed
+  let pr = (await prepare(r5.id, officer)).p;
+  const fl = filingOf(pr, R), hand = itemsOf(pr, R).find((i) => i.signature === "HAND_SCANNED");
+  const g = pr?.groups.find((x) => x.filings.includes(fl?.id ?? ""));
+  const rec = await call("PATCH", `/runtime/groups/${g?.id}/record`, { filings: [{ filing: fl?.id, our_reference: "SAMPLE-REF-B129", submitted_on: inDays(0), application_number: "V300000129", fee_receipt: "SAMPLE-RECEIPT" }], ucis: [{ subject: R, uci: "1290-1290" }], version: pr?.version }, officer);
+  ok("setup (B129): the filing is Ready to file and its submission is recorded; its IMM 5476 is signed by hand and scanned", ready.includes(fl?.id ?? "-") && rec.status < 300 && !!hand, { ready, rec: rec.status, detail: rec.body?.detail, hand: hand?.form });
+  const steps = () => sql(`select count(*) || '/' || count(superseded_at) from sign_step where item_id='${hand?.id}'`), scans = () => sql(`select count(*) from signed_scan where item_id='${hand?.id}'`);
+  const [s0, n0] = [steps(), scans()];
+  // A fact the printed copy reads changes (answers stay open after recording), and a new copy is made: before B129 the
+  // server took a new print as a restart, then Signed and a new scan (break M3 on #1221).
+  await answer(r5.id, R, "person.family_name", "SAMPLERECORDED", officer); await confirmAll(r5.id, R);
+  const copy = (await generateCopy(r5.id, hand?.form ?? "IMM 5476", R)) ?? sql(`select copy_id from sign_step where item_id='${hand?.id}' and key='print' and superseded_at is null`);
+  const recorded = (x: { status: number; body: { detail?: string } | null }) => x.status === 409 && /recorded as submitted to IRCC, so it is read-only/.test(x.body?.detail ?? "") && /signing of IMM 5476/.test(x.body?.detail ?? "");
+  const print = await call("POST", `/runtime/items/${hand?.id}/sign-steps/print`, { copy }, officer);
+  const signed = await call("POST", `/runtime/items/${hand?.id}/sign-steps/signed`, {}, officer);
+  const scan = await sendFile(`/runtime/items/${hand?.id}/signed-scan`, signedScan("IMM 5476"), "imm5476-after-recording.pdf", officer);
+  const up = await call("POST", `/runtime/items/${hand?.id}/sign-steps/uploaded_to_ircc`, {}, officer);
+  ok("B129 fail: on a recorded application a new Printed is refused (409, the server's read-only words), nothing recorded", recorded(print), [print.status, print.body?.detail]);
+  ok("B129 fail: Signed by hand is refused the same way", recorded(signed), [signed.status, signed.body?.detail]);
+  ok("B129 fail: a signed scan is refused the same way, and no file or row is stored", recorded(scan) && scans() === n0, [scan.status, scan.body?.detail, scans(), n0]);
+  ok("B129 fail: \"Uploaded to IRCC\" is refused the same way (the filing was Ready, now recorded)", recorded(up), [up.status, up.body?.detail]);
+  ok("B129 pass: the signing steps are as they were when the submission was recorded (none added, none superseded)", steps() === s0, [steps(), s0]);
+  pr = (await prepare(r5.id, officer)).p;
+  ok("B129 pass: the recorded filing still reads submitted", String(filingOf(pr, R)?.status).toLowerCase() === "submitted", filingOf(pr, R)?.status);
+}
+// B129: a red line fails the suite (run-suites.sh judges the exit code; before, this suite always exited 0).
+process.exit(summary() ? 1 : 0);
