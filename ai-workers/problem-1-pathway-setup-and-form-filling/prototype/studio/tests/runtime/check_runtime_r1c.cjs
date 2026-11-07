@@ -340,6 +340,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     if (!todo.length && !groups.length) break;
     for (const q of todo) await call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { value: sample(q), expectedId: q.answer?.id ?? null }, "user-O");
     for (const g of groups) await call("PUT", `/runtime/cases/${caseId}/groups/${g.subjectId}/${g.section}/none-apply`, { noneApply: true, expectedId: g.group.none_apply?.id ?? null }, "user-O");
+    // P-244 (B140): a background answer the officer recorded waits for the client; the client re-confirms it (as on their questionnaire, "This is right") before the officer confirms the section.
+    for (const s of (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections) for (const q of s.questions) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}, "user-P");
     const fresh = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
     for (const sec of fresh.sections.filter((x) => todo.some((q) => q.subjectId === x.subjectId) || groups.some((g) => g.subjectId === x.subjectId))) {
       const seen = [...sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), sec.group?.none_apply?.id].filter(Boolean);

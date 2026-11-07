@@ -82,6 +82,8 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   await small.screenshot({ path: path.join(OUT, "3-some-confirmed-1024.png") });
 
   // All confirmed: every section confirmed by screen; the line goes and the outcome is plain.
+  // P-244 (B140): a background answer the officer recorded waits for the client; the client re-confirms it (as on their questionnaire, "This is right") before the officer confirms the section: Criminal history is one.
+  for (const s of (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`)).body?.sections ?? []) for (const q of s.questions) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${c.id}/answers/${a.id}/reconfirm`, {}, "user-P");
   await page.goto(`${BASE}/cases/${c.id}#a-${c.p}-person-criminal_history`, { waitUntil: "networkidle" });
   const bg = page.locator(`section[id^="s-${c.p}-"]`, { has: page.locator(`[id="a-${c.p}-person-criminal_history"]`) }).first();
   await bg.waitFor({ timeout: 60_000 });

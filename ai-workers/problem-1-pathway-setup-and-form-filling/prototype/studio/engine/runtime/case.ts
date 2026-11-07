@@ -10,11 +10,17 @@ import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { CLIENT_RECONFIRM } from "./background.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
-export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
+export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null /** C6.18 (P-244): a background answer (engine/runtime/background.ts), and one an officer recorded that the client has
+ *  not re-confirmed yet; set by the case's reader (api/src/runtime.ts state). */
+  background?: boolean; awaitsClient?: boolean;
+  /** C6.18: the staff member who recorded this background answer and when ("Officer"), through any later re-confirmation
+   *  or confirmation of it; absent when the client gave it. */
+  officerRecorded?: { by: string; at: string } | null };
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
 /** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
 export type GroupAnswer = { id: string; subjectId: string; group: string; noneApply: boolean; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
@@ -56,8 +62,12 @@ export function ageOn(birth: unknown, today: Date): number | null {
  *  for the principal, the application and a minor child; for an adult it is "answered by the principal" until that
  *  adult or the officer confirms; everything else waits for "Confirm section". */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
+  // C6.18 (P-244): a background answer the officer recorded never counts as confirmed until the client re-confirms it,
+  // even after the officer's "Confirm section": it is the client's answer, so it is never written on a form before.
+  if (a.awaitsClient) return { confirmed: false, why: CONFIRM_WORDS.awaits_client };
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
-  if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
+  // The client's re-confirmation of an officer's answer counts as the client's own answer (C6.18).
+  if (a.channel !== "questionnaire" && a.channel !== CLIENT_RECONFIRM) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
   if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
   if (who?.role === "child") {
@@ -66,6 +76,13 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
     return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
   }
   return { confirmed: false, why: CONFIRM_WORDS.by_principal };
+}
+
+/** C6.18 (P-244): on a background answer, who on the staff recorded it and when ("Officer"), whether they recorded this
+ *  version or the one the client re-confirmed or the officer confirmed, and whether it still waits for the client. */
+function officerMark(a: Answer): { officer?: { by: string; at: string } | null; awaits_client?: boolean } {
+  if (!a.background) return {};
+  return { officer: a.officerRecorded ?? null, awaits_client: !!a.awaitsClient };
 }
 
 /** How the forms that read a field write it (from the release's field maps): the precision and limits a value needs. */
@@ -269,7 +286,7 @@ export type Mode = "sqr" | "agent";
  *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
  *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
  *  What it skips is listed per person and document in `from_documents`. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null } = {}): QuestionnaireView {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string> } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -315,7 +332,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const group = p?.repeats === "per_row" ? q.section : null;
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
-    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)! } : null;
+    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!, ...officerMark(a) } : null;
     const options = optionsOf(s, q.fact);
     return {
       subjectId, about_label: q.about_label, fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,
@@ -325,6 +342,8 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       options,
       note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No fixed list for this answer yet: check it before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
+      // C6.18 (P-244): a background question (the client's; staff may record it, marked Officer, the client re-confirms).
+      ...(opts.background?.has(q.fact) ? { background: true } : {}),
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
   });

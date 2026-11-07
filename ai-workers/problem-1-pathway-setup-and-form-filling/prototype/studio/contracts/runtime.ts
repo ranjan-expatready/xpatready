@@ -90,6 +90,9 @@ export const NoneApply = z.object({
 export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
+/** C6.18 (P-244): the client re-confirms an answer their case officer recorded; `value` is what the client has on screen
+ *  (break M1 on #1246: a changed answer is saved, never re-confirmed as the officer's). */
+export const Reconfirm = z.object({ value: z.unknown().optional() }).strict();
 export const ConfirmSection = z.object({
   subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
   seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500, "Send at most 500 reviewed answer ids; confirm a long section in parts."),
@@ -104,12 +107,17 @@ export const CONFIRM_WORDS = {
   client_own: "Counts as confirmed: the client's own answer",
   waits: "Waits for the officer's \"Confirm section\"",
   by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  // C6.18 (P-244): a background answer staff recorded (by phone or in person) waits for the client, never for the officer.
+  awaits_client: "Recorded by the case officer: waits for the client to re-confirm it before signing",
 } as const;
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
-export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string };
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** C6.18 (P-244), background answers only: the staff member who recorded it and when ("Officer"), or null when the
+   *  client gave it; awaits_client while the client has not re-confirmed it. */
+  officer?: { by: string; at: string } | null; awaits_client?: boolean };
 export type ViewQuestion = {
   subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
   shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
@@ -123,6 +131,8 @@ export type ViewQuestion = {
   countries: string[] | null;
   /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
   fills: { form: string; person: string; subject: string; boxes: number }[];
+  /** C6.18 (P-244): a background question (engine/runtime/background.ts); only on the case's own views. */
+  background?: boolean;
 };
 /** A repeating group's own answer: "none apply" (value true) or "entries apply" (false), confirmed like an answer. */
 export type ViewGroup = { required: boolean; client: boolean; rows: number; none_apply: (ViewAnswer & { value: boolean }) | null };
@@ -219,7 +229,7 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or a section check that fired on a fact it reads (fact "check:<id>", label the check's words, P-47 tier 2);
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "waits for the client to re-confirm" | "needs a fix" | "a check fired" }[] };
 /** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
  *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
  *  even one starting with "The", is kept as it is. */
