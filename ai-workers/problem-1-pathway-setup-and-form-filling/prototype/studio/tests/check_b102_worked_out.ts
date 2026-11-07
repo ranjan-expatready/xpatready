@@ -128,14 +128,19 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   ok("B102 review m4 / BR-5 fail: a fact proposed by name and waiting is not also worked out (409)", r.status === 409 && /decide it there first/.test(msg(r)), [r.status, msg(r)]);
   // ─────────────────── break MA3: an add by name never builds a worked-out value's key
   r = await call("POST", `/combinations/${combo}/rules/r_b102_age/fact`, { label: "B102 years", meaning: "A fact named like a worked-out value, for the B102 check.", valueType: "number", subject: "person" });
-  ok("B102 break MA3 pass and fail: a name that would build person.b102_years (worked out) gets another key", r.status === 201 && r.body?.key && r.body.key !== "person.b102_years", [r.status, r.body?.key]);
-  // ─────────────────── break MA2: asked and worked out at once: the landing refuses the ask
-  rule("r_b102_race", `{"field":"person.b102_race","op":"lt","value":18}`, "race");
-  const ask = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.b102_race", rule: "r_b102_race", label: "B102 race", meaning: "A fact asked and worked out at once, for the B102 check.", valueType: "number" });
-  sql(`insert into derived_field (id, workspace_id, derived_key, calculation, inputs, reference, plain, executable) values (gen_random_uuid(), ${ws}, 'person.b102_race', 'age_in_years', '{person.date_of_birth}', '${caseDate}', 'Worked out in the race (B102 check).', true)`); // the other request won the race
-  r = await call("POST", "/review/proposals/decide", { ids: [ask.body?.proposalId], action: "accept" }, "user-C");
-  const asField = sql(`select count(*) from canonical_field where canonical_field_key='person.b102_race'`);
-  ok("B102 break MA2 fail: accepting the ask of a fact worked out since is refused, so it is never both asked and worked out", ask.status === 201 && (r.status === 409 || r.body?.items?.[0]?.error) && asField === "0", [ask.status, r.status, JSON.stringify(r.body).slice(0, 200), asField]);
+  ok("B102 break MA3 fail: a name that would be added as person.b102_years (worked out) is refused (409)", r.status === 409 && /which is worked out/.test(msg(r)), [r.status, msg(r)]);
+  r = await call("POST", `/combinations/${combo}/rules/r_b102_age/fact`, { label: "B102 years at school", meaning: "Another name, for the B102 check.", valueType: "number", subject: "person" });
+  ok("B102 break MA3 pass: another name is proposed as usual", r.status === 201 && r.body?.key === "person.b102_years_at_school", [r.status, r.body?.key]);
+  // ─────────────────── break MA2: asked and worked out at the same moment: exactly one wins, five times
+  let twice = 0, one = 0;
+  for (let i = 0; i < 5; i++) {
+    const f = `person.b102_race_${i}`;
+    rule(`r_b102_race_${i}`, `{"field":"${f}","op":"lt","value":18}`, "race");
+    const [ask, work] = await Promise.all([call("POST", `/combinations/${combo}/rule-facts`, { fact: f, rule: `r_b102_race_${i}`, label: `B102 race ${i}`, meaning: "A fact asked and worked out at once, for the B102 check.", valueType: "number" }), call("POST", url(f), good)]);
+    const wins = [ask, work].filter((x) => x.status === 201).length;
+    if (wins === 2) twice++; if (wins === 1) one++;
+  }
+  ok("B102 break MA2 fail: asked and worked out at the same moment, exactly one of the two is accepted (five rounds)", twice === 0 && one === 5, { twice, one });
 
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

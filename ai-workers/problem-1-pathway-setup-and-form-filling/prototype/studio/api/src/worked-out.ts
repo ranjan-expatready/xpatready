@@ -134,7 +134,15 @@ export class WorkedOut {
     // Challenge M2: the words are built from the choices and name both dates.
     const words = `${calc!.words} from ${from!.label}, on ${on!.label}.`;
     try {
-      await this.db.derivedField.create({ data: { workspaceId: c.workspaceId, derivedKey: fact, calculation: b.calculation, inputs: [from!.key], reference: on!.key, plain: words, executable: true } });
+      // Break MA2: under C3.6's lock for this fact (rule-facts.ts add), with the ask and the library checked again inside.
+      await this.db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${fact}`}))`;
+        if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", OR: [{ work: { path: ["ruleFact"], equals: fact } }, { work: { path: ["keyPreview"], equals: fact } }] }, select: { id: true } }))
+          fail(`A proposal to ask ${fact} is waiting on To review › Proposals: decide it there first (a fact is asked or worked out, not both).`, HttpStatus.CONFLICT);
+        if (await tx.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fact }, select: { id: true } }))
+          fail(`${fact} is already in the library: it is asked, so it is not worked out.`, HttpStatus.CONFLICT);
+        await tx.derivedField.create({ data: { workspaceId: c.workspaceId, derivedKey: fact, calculation: b.calculation, inputs: [from!.key], reference: on!.key, plain: words, executable: true } });
+      }, { timeout: 30_000, maxWait: 10_000 });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") fail(`${fact} is already worked out: the rules read it as it is.`, HttpStatus.CONFLICT);
       throw e;

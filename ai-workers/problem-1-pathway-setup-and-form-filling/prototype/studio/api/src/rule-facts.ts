@@ -197,6 +197,9 @@ export class RuleFacts {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${b.fact}`}))`;
     if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
       fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
+    // B102 (A6, break MA2): "Work it out instead" takes the same lock (api/src/worked-out.ts), so a fact is never both.
+    if (await tx.derivedField.findFirst({ where: { workspaceId: c.workspaceId, derivedKey: b.fact }, select: { id: true } }))
+      fail(`${b.fact} is worked out (Work it out instead), so it is not asked.`, HttpStatus.CONFLICT);
     const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });
     const [proposalId] = await insertProposals(tx, c.workspaceId, [{
@@ -243,9 +246,11 @@ export class RuleFacts {
     // MA1 (review c36 r2): the key shown here is a preview against every key, retired ones included; the lander builds
     // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
     const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
-    // B102 (A6, break MA3): a worked-out value's key is taken too, as the lander counts it (proposals.ts LANDERS.field).
-    const worked = (await this.db.derivedField.findMany({ where: { workspaceId: c.workspaceId }, select: { derivedKey: true } })).map((d) => d.derivedKey);
-    const key = keyFor(b.subject, b.label, new Set([...all.map((f) => f.canonicalFieldKey), ...worked]));
+    const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
+    // B102 (A6, break MA3): a name whose key is a worked-out value is refused, since the lander builds the key from the
+    // name again (it would land as the worked-out key: asked and worked out at once).
+    if (await this.db.derivedField.findFirst({ where: { workspaceId: c.workspaceId, derivedKey: key }, select: { id: true } }))
+      fail(`"${b.label}" would be added as ${key}, which is worked out (Work it out instead): the rule reads it as it is, or choose another name.`, HttpStatus.CONFLICT);
     const ruleValues = ruleValuesKnown(namedRules(snapshot).filter((r) => factsRead(r.tree).includes(key)), key, values); // break R2-M2: rules that already read the built key
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
