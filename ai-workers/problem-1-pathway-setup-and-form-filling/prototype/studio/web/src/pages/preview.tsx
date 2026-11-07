@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronDown, ChevronRight, Download, FileCheck2, RotateCcw } from "lucide-react";
-import { api, useAction, useApi } from "@/lib/api";
+import { api, getActor, useAction, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Select, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -144,12 +144,26 @@ function Forms({ v, id, mode, profile }: { v: any; id: string; mode: string; pro
 function FillResult({ r, onClose }: { r: any; onClose: () => void }) {
   const rep = r.report;
   const ok = rep.intact;
+  const toast = useToast();
+  const [saving, setSaving] = React.useState(false);
+  // QA-270 (file half): the filled PDF is a configuration read, so the download sends the person, as a case's copy does
+  // (runtime/forms.tsx); a plain link carries no person and is refused.
+  async function download() {
+    if (saving) return; // review m1: one download per press
+    setSaving(true);
+    try {
+      const f = await fetch(`/api/artifacts/${r.artifact_id}/file`, { headers: { "x-actor": getActor() } });
+      if (!f.ok) throw new Error((await f.json().catch(() => null))?.detail ?? `${f.status} ${f.statusText}`);
+      const url = URL.createObjectURL(await f.blob()), a = document.createElement("a");
+      a.href = url; a.download = /filename="?([^";]+)/.exec(f.headers.get("content-disposition") ?? "")?.[1] ?? `${r.form}.pdf`; a.click(); URL.revokeObjectURL(url);
+    } catch (e) { toast.push({ tone: "danger", text: `The checked PDF could not be downloaded: ${(e as Error).message}` }); } finally { setSaving(false); }
+  }
   return (
-    <Dialog wide open onOpenChange={(o) => !o && onClose()} title={`${r.form} for ${r.person_label}: filled and checked`} description={`${r.label} · configuration ${r.configuration_sha256.slice(0, 12)} · only confirmed facts are written`} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button asChild><a href={`/api/artifacts/${r.artifact_id}/file`}><Download /> Download the checked PDF</a></Button></>}>
+    <Dialog wide open onOpenChange={(o) => !o && onClose()} title={`${r.form} for ${r.person_label}: filled and checked`} description={`${r.label} · configuration ${r.configuration_sha256.slice(0, 12)} · only confirmed facts are written`} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button onClick={() => void download()} busy={saving}><Download aria-hidden /> Download the checked PDF</Button></>}>
       <div className="space-y-3">
         <Notice tone={ok ? "ok" : "danger"} title={ok ? "The file is intact and every written value reads back" : "The file did not pass every check"}>Written {rep.written} values; read back equal {rep.read_back_equal}; other form data changed: {rep.other_data_leaves_changed ? "yes" : "none"}; original bytes kept: {rep.original_bytes_kept ? "yes" : "no"}; IRCC signatures: {Object.entries(rep.signatures ?? {}).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}; PDF syntax errors: {rep.poppler_syntax_errors}.</Notice>
         <div className="grid grid-cols-4 gap-3"><Stat label="Written" value={r.counts.written} tone="ok" /><Stat label="By hand" value={r.counts.by_hand} sub="format not executable" tone={r.counts.by_hand ? "warn" : undefined} /><Stat label="Blank" value={r.counts.blank} /><Stat label="Not written" value={r.counts.not_written} sub="no confirmed fact yet" /></div>
-        <Table dense head={["Form field", "Field", "Result", "Value or reason"]}>{r.boxes.filter((b: any) => b.result !== "not written").slice(0, 120).map((b: any) => <tr key={b.box + (b.row ?? "")}><td className="max-w-56 text-xs">{b.caption || b.box.split(".").slice(-2).join(".")}</td><td className="mono text-xs">{b.fact}</td><td><Pill tone={b.result === "written" ? "ok" : b.result === "by hand" ? "warn" : "neutral"}>{b.result}</Pill></td><td className="text-xs">{b.written ?? b.why}</td></tr>)}</Table>
+        <Table dense head={["Form field", "Field", "Result", "Value or reason"]}>{r.boxes.filter((b: any) => b.result !== "not written").slice(0, 120).map((b: any) => <tr key={b.box + (b.row ?? "")}><td className="max-w-56 text-xs">{b.caption || b.box.split(".").slice(-2).join(".")}</td><td className="mono text-xs">{b.fact}</td><td><Pill tone={b.result === "written" ? "ok" : b.result === "by hand" || b.result === "not on this form" ? "warn" : "neutral"}>{b.result}</Pill></td><td className="text-xs">{b.written ?? b.why}</td></tr>)}</Table>
         <p className="text-xs text-text-muted">Government acceptance is never proven by this check; validation in Adobe and barcode behaviour were shown separately in P1 for IMM 1295.</p>
       </div>
     </Dialog>

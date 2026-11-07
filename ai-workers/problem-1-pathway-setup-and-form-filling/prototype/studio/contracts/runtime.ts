@@ -156,17 +156,22 @@ export const LockCopy = z.object({ kind: z.enum(["validated_copy_uploaded", "fil
 export type FormCopy = {
   id: string; status: "QUEUED" | "RUNNING" | "GENERATED" | "FAILED"; created_at: string; created_by: string; finished_at: string | null; error: string | null;
   locked: { kind: keyof typeof LOCK_KINDS; at: string; by: string } | null; out_of_date: boolean; stale: boolean; changed: string[];
-  counts: { written: number; by_hand: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
+  counts: { written: number; by_hand: number; not_on_form?: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
   /** P-145 (C7.7): a copy of a form the case's release files Online: IRCC's own PDF ("ircc_pdf") filled from the same
    *  confirmed facts, marked "Copy, not for filing", never locked, filed or counted. */
   copy_not_for_filing: boolean; source: "ircc_pdf";
   /** Form fields the officer writes by hand in Adobe, each with its question and why (review M3). */
   by_hand: { label: string; why: string }[];
+  /** B81: answers the form prints no choice for (a person marked them on the form's choices step): nothing is written. */
+  not_on_form?: { label: string; person: string | null; why: string }[];
   /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
   file_ok: boolean;
   /** C-9, C-10 (P-144, P-171 (1)): the newest validated copy read back for this copy; current: the form's facts are
    *  unchanged since; otherwise "Out of date: validate again" (kept as history, never deleted). */
   validated: { at: string; by: string; current: boolean; words: string; read_back: { written: number; equal: number } } | null;
+  /** QA-285: with no current validated copy here, the words saying its validated file is kept elsewhere (the checkpoint's
+   *  Sample, validated and read back on the Mac) while the form's facts are the ones validated; never counted as validated. */
+  validated_elsewhere?: string | null;
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */

@@ -9,7 +9,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
-import { OWN_YES_NO } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
+import { OWN_YES_NO, OWN_YES_NO_NEAR } from "../../api/src/own-yes-no.ts"; // B52: the application form's Yes/No form fields, in its words
 import { sourceEveryNumber } from "../../tests/fixtures/source-every-number.cjs"; // G1 (C5.4, P-279): a release needs every number sourced
 import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../../api/src/form-setup.ts"; // B71: the one table of IRCC's words per combination (P-319)
 
@@ -67,7 +67,7 @@ export function pack2(id: string) {
    *  form's own parts (rules) and accepts them one at a time on To review (a section the library holds already is
    *  rejected and reused, as its card says); the approver approves them; then the Smart questionnaire tab's "Ask them
    *  in their form's sections". Test setup only, labelled as the sample loader's words; the product never calls it. */
-  async function questionsBySteps(comboId: string, o: { place?: boolean } = {}) {
+  async function questionsBySteps(comboId: string, o: { place?: boolean; applyOnly?: boolean } = {}) {
     const out = { accepted: 0, applied: 0, ownYesNo: 0, byHand: 0, sections: 0, reused: 0, held: 0, approved: 0, placed: 0, refused: [] as string[], retried: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
@@ -81,8 +81,9 @@ export function pack2(id: string) {
     const newest = `f.version = (select max(v.version) from combination_form v where v.combination_id = f.combination_id and v.lineage_key = f.lineage_key)`;
     const lineForms = () => new Set(ids(`select g.form_key from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and ${newest} and f.status <> 'RETIRED'`));
     const filed = setup ? sql(`select f.channel from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${comboId}' and g.form_key = '${setup.application}' and ${newest} limit 1`) : "";
-    const family = FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"];
-    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), family.form].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
+    // QA-144 slice 4: no family form by channel when the setup names its own among its rules (Express Entry's IMM 5406).
+    const family = setup?.family ? FAMILY_FORM_BY_CHANNEL[filed === "ONLINE" ? "online" : "paper"] : null;
+    if (setup) { const has = lineForms(); for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f))) say(`add ${form}`, await call("POST", `/combinations/${comboId}/forms`, { formKey: form }, AUTHOR)); }
     // B71: a form line of this combination whose form has no field map and no file here (IRM 0002 on Visitor visa of the six)
     // gets its official file through the form intake's sample door (the same intake an upload takes, as the configured
     // checkpoint does; no screen calls this door) and its saved field-map answer replayed (US$0); never a live run: with
@@ -113,16 +114,18 @@ export function pack2(id: string) {
       if (applied.status >= 500) { out.retried.push(j); applied = await call("POST", `/jobs/${j}/apply`, {}, AUTHOR); }
       if (say("apply", applied)) out.applied++;
     }
+    if (o.applyOnly) { await approveAll(); return out; } // B83: a walk asks the Yes/No form fields on the screen next, then calls this again
     // B52: on To review › Form fields the author asks the application form's Yes/No form fields worked out from other
     // answers as their own questions, in the form's words (api/src/own-yes-no.ts), the library's field of the same
     // name when it has one.
     const own = OWN_YES_NO[sql(`select combination_key from combination where id='${comboId}'`)];
     const ed = own?.boxes.length ? sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${own.application}' and e.channel='PDF' order by e.edition_label desc limit 1`) : "";
     const asked = new Set<string>(ed ? ((await call("GET", `/editions/${ed}/form-fields/own-questions`, undefined, AUTHOR)).body?.fields ?? []).filter((f: { asked: boolean }) => f.asked).map((f: { dataPath: string }) => f.dataPath) : []);
-    for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath))) {
+    // B116 (#1123, option (a)): a box the table asks on the configured checkpoint only is not asked on the six.
+    for (const y of (own?.boxes ?? []).filter((x) => ed && !asked.has(x.dataPath) && !x.checkpointOnly)) {
       const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
       const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
-      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning }) }, AUTHOR))) out.ownYesNo++;
+      if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }) }, AUTHOR))) out.ownYesNo++;
     }
     // B71 (P-319, AGENTS rule 4): with the maps applied, the author sets each form line as IRCC's own words set it, on the
     // Forms tab's own routes: a rule in words becomes its rule; the family information form follows how the application
@@ -130,10 +133,14 @@ export function pack2(id: string) {
     // second person. Sample, "Unconfirmed: expert".
     if (setup) {
       const set = async (form: string, body: object) => say(`set ${form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(form)}`, body, AUTHOR));
-      for (const r of setup.rules)
-        await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) });
-      await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 });
-      if (lineForms().has(family.other)) await set(family.other, { retire: true });
+      for (const r of setup.rules) {
+        if (!(await set(r.form, r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL", condition: r.condition, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY", minAge: r.minAge, ...(r.who ? { who: r.who } : {}) }))) continue;
+        // C6.11 (review round 3 m1): a conditional line keeps its minimum age too, as the checkpoint loader does (IMM 5476: a
+        // child from 18, VV-R10).
+        // B79b: a form IRCC's words say is filled in its portal is set Online on the Forms tab's channel route.
+        if (r.channel) say(`channel ${r.form}`, await call("PATCH", `/combinations/${comboId}/forms/${encodeURIComponent(r.form)}/channel`, { channel: r.channel }, AUTHOR));
+      }
+      if (family) { await set(family.form, { attachMode: "COMBINATION_MANDATORY", minAge: 18 }); if (lineForms().has(family.other)) await set(family.other, { retire: true }); }
       // QA-227: each fact only a rule reads (IRM 0002's, IMM 5476's, …); one another combination added already is read as it is.
       for (const rf of setup.ruleFacts ?? []) {
         if (sql(`select count(*) from canonical_field where canonical_field_key = '${rf.fact}' and status in ('DRAFT', 'PUBLISHED')`) !== "0") continue;
@@ -184,14 +191,16 @@ export function pack2(id: string) {
   /** C4.5 (P-322): a combination of the six gets its document lines the way people give them, US$0: on the Documents
    *  tab the author drafts each document checklist from its saved reading (Saved, never Live), accepts its Ready lines
    *  and new document types on To review, and a second person approves the new library items. Lines for a person to
-   *  decide (visa office words) stay waiting. Test setup only; the product never calls it. */
+   *  decide (visa office words) stay waiting, and the facts only they read (B82). Then the Smart questionnaire tab's step
+   *  asks the facts the kept lines' conditions read, so those lines can reach a person. Test setup only; the product never calls it. */
   async function documentsBySteps(comboId: string) {
     const out = { drafted: 0, accepted: 0, approved: 0, refused: [] as string[] };
     const ids = (q: string) => sql(q).split("\n").filter(Boolean);
     const say = (what: string, r: Res) => { if (r.status >= 300) out.refused.push(`${what}: ${r.status} ${words(r).slice(0, 160)}`); return r.status < 300; };
     for (const a of ids(`select id from source_attachment where combination_id='${comboId}' and kind='Document checklist' order by created_at`)) if (say("draft the checklist", await call("POST", `/attachments/${a}/draft-checklist`, { mode: "replay" }, AUTHOR))) out.drafted++;
-    // The library's new document types first (a line lands only on a type the library holds), then the lines.
-    for (const kind of ["document_type", "requirement_line"]) {
+    // The library's new document types first (a line lands only on a type the library holds), the facts the lines'
+    // conditions read (B82, QA-233: release refuses a line whose fact the library lacks), then the lines.
+    for (const kind of ["document_type", "field", "requirement_line"]) {
       const ready = ids(`select p.id from proposal_item p join drafting_job j on j.id=p.run_id where j.combination_id='${comboId}' and j.kind='checklist_draft' and p.kind='${kind}' and p.status='waiting' order by p.created_at, p.identity_key`);
       const v = await queued(comboId), lib = (await call("GET", "/review/proposals")).body?.groups ?? [];
       const bands = new Map<string, string>(v.map((x: any) => [x.id, x.band]));
@@ -199,6 +208,7 @@ export function pack2(id: string) {
       for (const p of ready.filter((x) => bands.get(x) !== "decide")) if (say(`accept a ${kind}`, await call("POST", "/review/proposals/decide", { ids: [p], action: "accept", reason: "Accepted by a test as the saved reading proposed it (C4.5 setup)." }, AUTHOR))) out.accepted++;
     }
     for (const c of ids(`select id from library_change where status='WAITING' and proposed_by='${AUTHOR}' order by proposed_at`)) if (say("approve", await call("POST", `/library/changes/${c}/approve`, { note: "Approved by a test as the second person (C4.5 setup)." }, APPROVER))) out.approved++;
+    say("ask the facts the lines' conditions read", await call("POST", `/combinations/${comboId}/place-from-form-parts`, {}, AUTHOR));
     return out;
   }
   /** C4.5 (P-322, P-319): the facts each document type of a combination's checklist supplies, as a person sets them in

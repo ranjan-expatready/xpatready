@@ -9,14 +9,15 @@ import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { ConfirmSection, fillsText, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, pqrView, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
-import { openingTeam, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
+import { FIRM_RECORD, openingTeam, REPRESENTATIVE, representativeAnswers, USES_REPRESENTATIVE, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
+import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
 
 type H = string | undefined;
@@ -35,6 +36,20 @@ const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const short = (id: string) => id.slice(0, 8);
 const nameIn = (f: { users: { id: string; name: string }[] }, id: string) => f.users.find((u) => u.id === id)?.name ?? id;
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
+type PeopleLine = { role: string; max?: number; label?: string; filingMode?: string };
+const linesOf = (s: Snapshot) => (s.combination.participants ?? []) as PeopleLine[];
+const roleWords = (p: Pick<PeopleLine, "role" | "label">) => p.label ?? p.role.replace(/_/g, " ");
+/** B115 (P-319): who a person may add to a case: every role the pinned release lists with a maximum above 0, never the
+ *  principal applicant or the application itself. One list for the case page's Add buttons and addPerson's check. */
+export const addableRoles = (s: Snapshot) => linesOf(s).filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0);
+/** QA-293: why no detail of the representative is saved on a case: the firm record of the representative of record is
+ *  their only source (C7.7, C6.11), and IMM 5475's designated individual, read by some of these keys, is not the
+ *  representative (tech lead's ruling on #1072). True for a detail the firm record fills and for one it does not. */
+export const REPRESENTATIVE_NOT_TYPED = "The representative's details come only from the firm record of the representative of record, so they are not saved on a case.";
+/** B115 review M1 (C7.7): the case page's Add buttons. The representative is the case team's representative of record,
+ *  read from the firm record (engine/runtime/team.ts: "A case has no representative participant"), so the screen never
+ *  offers to add one as a person; every other role comes from the release (P-319). */
+export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
@@ -109,7 +124,7 @@ export class Runtime {
         await tx.caseTeamMember.createMany({ data: [{ workspaceId, caseId: c.id, userId: representative, role: "LEAD_REPRESENTATIVE", assignedBy: actor.id }, ...officers.map((u) => ({ workspaceId, caseId: c.id, userId: u, role: "OFFICER", assignedBy: actor.id }))] });
         await tx.packWorkPin.create({ data: { workspaceId, caseId: c.id, combinationId: b.combinationId, partyId: party.id, packVersionId: release!.packVersionId, configReleaseId: release!.id, contentHash: release!.sha256, actorId: actor.id } });
         return c.id;
-      });
+      }, { timeout: 15_000, maxWait: 10_000 }); // With the connections busy Prisma's default 2 s and 5 s answered a 500 (P2028)
     } catch (e) {
       if (!unique(e)) throw e;
       const same = await replay(); // a simultaneous create with the same key won: answer with its case
@@ -125,13 +140,20 @@ export class Runtime {
     const pin = c.pins[0];
     // C6.11: staff see the case team in the header (the client's screens come after M3, P-129).
     const team = isOfficer(actor) ? await this.teamLine(c.id) : undefined;
+    const snapshot = this.snapshotOf(c), roleOfRelease = new Map(linesOf(snapshot).map((p) => [p.role, roleWords(p)]));
+    const coFiling = new Set(linesOf(snapshot).filter((p) => p.filingMode === "co_files").map((p) => p.role));
     return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
       // G13 (QA-140): the release in the studio's own words.
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
-      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })),
+      // B115: each person's role in the release's own words (the sponsor has no fixed word on the screen).
+      // B115 review m1: co_files marks the person whose application is always sent with the principal's (the sponsor).
+      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role) })),
+      // B115 (P-319): the roles the case page offers to add, from its pinned release, with how many the case has.
+      can_add: offeredRoles(snapshot).map((p) => ({ role: p.role, label: roleWords(p), max: p.max!, has: c.participants.filter((x) => x.role === p.role).length })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
-      ...(team ? { employer_link: employerLinkOffer(this.snapshotOf(c)) } : {}) };
+      // C1.3: and, once picked, the employer case it relies on (its facts copied then, never updated later).
+      ...(team ? { employer_link: { ...employerLinkOffer(snapshot), linked: await linkedOf(this.db, c.workspaceId, c.id) } } : {}) };
   }
 
   /** V3 B1 (runtime side, P-297 (3)): what the "Open a case" dialog may offer. Each not retired combination's newest
@@ -171,12 +193,12 @@ export class Runtime {
     return { firm: f ? { key: f.key, name: f.name, solo: f.solo } : null, stand_in: STAND_IN, representative: rep ? { id: rep.userId, name: name(rep.userId), licence: f?.users.find((u) => u.id === rep.userId)?.licence ?? null } : null, officers: rows.filter((r) => r.role === "OFFICER").map((r) => ({ id: r.userId, name: name(r.userId) })) };
   }
 
-  /** Adds a spouse or child within the pinned release's limits. The case row is locked while counting, so simultaneous
+  /** Adds a person in any role the pinned release lists (addableRoles), within its limits. The case row is locked while counting, so simultaneous
    *  adds are counted one after the other (each lawful one succeeds; the one over the limit is refused). */
   async addPerson(actor: Actor, caseId: string, body: unknown) {
     const c = await this.reach(actor, caseId, "officer");
     const b = parse(NewPerson, body);
-    const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string; filingMode?: string }[];
+    const limits = linesOf(this.snapshotOf(c));
     const limit = limits.find((p) => p.role === b.role);
     // C11.12 BR-6: a role released as Declared only starts as not travelling when the request does not say.
     if (limit?.filingMode === "declared_only" && (body as { applies?: unknown } | null)?.applies === undefined) b.applies = false;
@@ -185,9 +207,14 @@ export class Runtime {
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
     // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
     // Review m3: the examples are the roles this release really lets a person add (never a fixed list).
-    const addable = limits.filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0).map((p) => (p.label ?? p.role.replace(/_/g, " ")).toLowerCase());
-    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add."}`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // B117 (P-373, C7.7): the representative of record comes from the case team, never from this list (see below).
+    const addable = offeredRoles(this.snapshotOf(c)).map((p) => roleWords(p).toLowerCase());
+    const canAdd = addable.length ? `This application can add: ${addable.join(", ")}.` : "This application lists no one else to add.";
+    if (b.role === "case") fail(`The application itself is not a person, so it cannot be added. ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // B117: a representative added here would be a person on the case whose answers displace the firm record's (C7.7),
+    // though no screen offers it. The representative of record is chosen in the case team ("Case team" on the case page).
+    if (b.role === REPRESENTATIVE) fail(`The ${(limit!.label ?? "representative").toLowerCase()} cannot be added as a person: the case's representative of record comes from its case team ("Case team" on the case page). ${canAdd}`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;
@@ -227,7 +254,7 @@ export class Runtime {
     const p = c.participants.find((x) => x.subjectId === subjectId && x.role !== "case" && x.role !== "principal");
     if (!p) fail("Only a spouse, partner or child on this case can be marked travelling or not.", HttpStatus.NOT_FOUND);
     // C11.12 BR-6: a co-filing role (the sponsor) is not travelling or not: its application always goes with the principal's.
-    const line = ((this.snapshotOf(c).combination.participants ?? []) as { role: string; filingMode?: string; label?: string }[]).find((x) => x.role === p!.role);
+    const line = linesOf(this.snapshotOf(c)).find((x) => x.role === p!.role);
     if (line?.filingMode === "co_files") fail(`The ${(line.label ?? "sponsor").toLowerCase()}'s application is always sent with the principal's.`, HttpStatus.UNPROCESSABLE_ENTITY);
     // C8.2 review M1: under the case's row lock, so a record and this change never pass each other.
     await this.db.$transaction(async (tx) => {
@@ -255,9 +282,14 @@ export class Runtime {
     const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
     const groups: GroupAnswer[] = groupRows.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? gFirsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, group: x.groupKey, noneApply: x.noneApply, status: x.status as GroupAnswer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     // C7.7 (G25): IMM 5476's representative block reads the representative of record from the firm record (never asked).
-    const f = firmByKey(c.firmKey);
-    if (f) a.push(...representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] }))));
-    return { answers: a, rows: r, groups };
+    // C6.11: so do its licence part and firm name, and "Uses a representative" for the application (the case has a
+    // representative of record), which replaces any answer typed before.
+    const f = firmByKey(c.firmKey), caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
+    // QA-289: the office phone in the shape this release's question reads it (parts where a form writes it part by part).
+    const phoneParts = shapeOf(this.snapshotOf(c), "person.telephone_number").phone;
+    const fromFirm = f ? representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] })), caseSubject, phoneParts) : [];
+    const firmGives = new Set(fromFirm.map((x) => `${x.subjectId}|${x.field}`));
+    return { answers: [...a.filter((x) => !firmGives.has(`${x.subjectId}|${x.field}`)), ...fromFirm], rows: r, groups };
   }
 
   async view(actor: Actor, caseId: string, mode: Mode) {
@@ -293,8 +325,17 @@ export class Runtime {
     const c = await this.reach(actor, caseId, "answer");
     const b = parse(PutAnswer, body);
     const s = this.snapshotOf(c), officer = isOfficer(actor);
+    // QA-293: the representative is no person on the case; their details come only from the firm record of the
+    // representative of record (C7.7, C6.11), so a save about them is refused in words (never "not on this case").
+    if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY);
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
+    // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed; a client is
+    // told the case team sets it (403), staff that the team changes it (422). Only while the case has a representative.
+    if (fieldKey === USES_REPRESENTATIVE && who!.role === "case" && await this.db.caseTeamMember.count({ where: { caseId, role: "LEAD_REPRESENTATIVE", endedAt: null } })) {
+      if (!officer) fail("Your case team sets whether a representative is used; you don't need to answer it.", HttpStatus.FORBIDDEN);
+      fail("Uses a representative comes from the case team: this case has a representative of record. Change the team (Case team), not the answer.", HttpStatus.UNPROCESSABLE_ENTITY);
+    }
     const field = (s.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === fieldKey);
     const place = (s.placements as { fact: string; repeats: string; section_id: string; collected_from: string }[]).find((p) => p.fact === fieldKey);
     if (!field || !place) fail(`The release this case works from does not ask for ${fieldKey}.`, HttpStatus.NOT_FOUND);
@@ -337,6 +378,7 @@ export class Runtime {
   /** Who may write a repeating group of a person on this case: the group exists, belongs to that kind of subject, and
    *  the client writes it only when it holds a client field. */
   private groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string) {
+    if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY); // QA-293 review m3
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     const s = this.snapshotOf(c);
@@ -421,6 +463,7 @@ export class Runtime {
     // section. A fact the view leaves out (a worked-out "has any children" once a child is on the case, C7.7 and D4) can
     // never be seen on screen, so its stored answer is neither asked as seen nor confirmed: it never blocks the section.
     const { answers: now, rows: nowRows, groups: nowGroups } = await this.state(c);
+    const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
     const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
       .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
     const confirmed = await this.db.$transaction(async (tx) => {
@@ -428,7 +471,9 @@ export class Runtime {
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
-      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey));
+      // C6.11 (review M1): a fact the firm record gives (the representative's part, "Uses a representative") shows the
+      // firm's answer, never a stored one, so a stored one can never be seen: it neither blocks nor is confirmed.
+      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey) && !firmGives.has(a.canonicalFieldKey));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
       // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
       const entries = await tx.clientFactRecord.count({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null, tombstone: false } });

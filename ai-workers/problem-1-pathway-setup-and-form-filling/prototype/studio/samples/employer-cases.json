@@ -1,0 +1,26 @@
+{
+  "_note": "C1.3 + C11.5 (P-106, stand-in SI-10; concept product/screens/C1.3-employer-link r2, tech lead's ruling on PR #1051): one Sample employer case per Sample firm (samples/firms.json), which a worker's employer-specific work-permit case may rely on. Picking it copies, once, the facts below that the worker's pinned release reads (SA-1B-283 r4: copies, not live links); a later change here never reaches a case already linked. Facts are keyed by the shared library's fact keys; a key the release does not read stays here. Every value is Sample: no real employer, address, LMIA or offer number (AGENTS.md rule 4). The address is in the library's address parts (contracts/runtime.ts Address). No status is carried: the copies arrive as Declared and are confirmed in Confirm section (BR-5; the tech lead accepted this departure from r4 because this file has no status). Row L-SA5 (M4) replaces this file with a Sample employer combination and shareable marks; the team's AG-17 Corporate cases replace both.",
+  "employerCases": [
+    {
+      "key": "sample-employer-1",
+      "firm": "sample-firm",
+      "label": "Sample employer case: Sample Employer Ltd (Sample)",
+      "facts": {
+        "organisation.employer_name": "Sample Employer Ltd (Sample)",
+        "organisation.employer_address": { "street_number": "1", "street_name": "Example Street", "city": "Hamilton", "province": "ON", "postal_code": "L8P 0A1", "country": "canada" },
+        "case.lmia_or_offer_number": "SAMPLE-0000000",
+        "organisation.business_number": "SAMPLE-BN-000000000"
+      }
+    },
+    {
+      "key": "sample-solo-employer-1",
+      "firm": "sample-solo",
+      "label": "Sample employer case: Solo Sample Employer Inc. (Sample)",
+      "facts": {
+        "organisation.employer_name": "Solo Sample Employer Inc. (Sample)",
+        "organisation.employer_address": { "street_number": "2", "street_name": "Sample Road", "city": "Ottawa", "province": "ON", "postal_code": "K1A 0A2", "country": "canada" },
+        "case.lmia_or_offer_number": "SAMPLE-0000001"
+      }
+    }
+  ]
+}

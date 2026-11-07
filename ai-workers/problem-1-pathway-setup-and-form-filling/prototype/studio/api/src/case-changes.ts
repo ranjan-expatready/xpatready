@@ -9,6 +9,7 @@ import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject,
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { restoredFromOf, undoTarget } from "../../engine/runtime/out-of-date.ts";
+import { USES_REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
@@ -37,6 +38,10 @@ export class CaseChanges {
     const b = parsed.data;
     const who = c.participants.find((p) => p.subjectId === b.subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
+    // C6.11 (breaker n1): "Uses a representative" comes from the case team while the case has a representative of record,
+    // so undo refuses it as saving it does (runtime.ts putAnswer); an undo would only write a hidden row.
+    if (b.fact === USES_REPRESENTATIVE && who!.role === "case" && await this.db.caseTeamMember.count({ where: { caseId, role: "LEAD_REPRESENTATIVE", endedAt: null } }))
+      fail("Uses a representative comes from the case team: this case has a representative of record. Change the team (Case team), not the answer.", HttpStatus.UNPROCESSABLE_ENTITY);
     const s = this.r.snapshotOf(c);
     const field = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === b.fact);
     const place = (s.placements as { fact: string; repeats: string; question_text?: string | null }[]).find((p) => p.fact === b.fact);

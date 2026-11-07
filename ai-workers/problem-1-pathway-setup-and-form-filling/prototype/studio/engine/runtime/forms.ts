@@ -3,12 +3,14 @@
 // writes the copy (api/src/fill-case.ts) through the shared filler. Only confirmed facts are ever written (P-72).
 import { answerSheetOnly } from "../../contracts/forms.ts";
 import { createHash } from "node:crypto";
-import { kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
+import { evalCondition, kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
+import { notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -21,7 +23,9 @@ export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
 /** `edition`: read that PDF edition of the form (an answer key's own, break B1); otherwise the edition in use (P-32). */
 export function formCoverage(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, today = new Date(), edition?: string | null) {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
-  const { known } = knownOf(s, people, answers, rows, today);
+  const { known: all } = knownOf(s, people, answers, rows, today);
+  // QA-296: the firm record's facts about the representative fill only a form that names the representative of record.
+  const known = formsNamingRepresentative(s.field_maps).has(form) ? all : new Map([...all].filter(([k, v]) => !firmRecordFact(k, v.source)));
   const cov = render(s, renderPeople, known, { today, ...(edition ? { editions: new Map([[form, edition]]) } : {}) }).coverage.find((c) => c.form === form && c.person === subjectId);
   if (!cov) return null;
   // QA-122 (P-71, P-72): a confirmed answer that fails its checks is never written; its form field is "not written"
@@ -33,13 +37,26 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   const gatesOf = (b: BoxRow) => { const d = recordedDerivation(b.transform); return d && b.fact ? [...new Set([...(d.facts.length && !d.facts.includes(b.fact) ? [b.fact] : []), ...[b.fact, ...d.facts].map((f) => gateOf(placements, f)).filter((x): x is string => !!x)])] : []; };
   const confirmedAt = (about: string, fact: string) => { const v = known.get(kkey(about.split("/")[0], fact)); return v?.status === "confirmed" ? v : undefined; };
   const words = (fact: string) => placements.find((p) => p.fact === fact)?.question_text || (s.canonical_fields as { id: string; meaning?: string }[]).find((f) => f.id === fact)?.meaning || fact;
+  // B86 BR-5 (here, not in render: the preview, the question list and "fills" read render and must not move): a form field
+  // that holds its question's condition is written only while that condition is true, whatever answer is stored.
+  const rules = rulesInForce(s, form, cov.edition);
+  const subjectOf = (about: string) => (about === "case" ? "case" : about.split("/")[0]);
+  // BR-5b: an answer whose question a SHOW condition now hides is "kept and not used" (the screen's own words), so it does
+  // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165, and so does a box reading the hidden answer
+  // itself (it would write Y from it).
+  const hiddenNow = (about: string, fact: string) => { const own = showCondition(placements, fact); return !!own && evalCondition(s, known, own, subjectOf(about)).applies !== true; };
   const boxes = cov.boxes.map((b) => {
+    const rule = b.about ? rules.get(b.box) : undefined;
+    if (rule) {
+      const c = evalCondition(s, known, rule, subjectOf(b.about!));
+      if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: notNeededWords(c, rule, words) }; }
+    }
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
     const problems = checkValue(s, b.fact, b.value, today);
     if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` };
     // A confirmed No to the gate with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
     // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
-    const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && present(confirmedAt(b.about!, f)?.value));
+    const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && (f === b.fact || !hiddenNow(b.about!, f)) && present(confirmedAt(b.about!, f)?.value));
     const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false && recorded(g)) : undefined;
     return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them, then confirm, before this is written` } : b;
   });
@@ -99,6 +116,12 @@ export function pdfForms(s: Snapshot): Set<string> {
 export function copyOnlyForms(s: Snapshot): Set<string> {
   const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" && !answerSheetOnly(f.form_number, s.combination.portal)).map((f) => f.form_number));
   return new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file && online.has(m.form_number)).map((m) => m.form_number));
+}
+
+/** QA-235: every form number the release writes, as it writes it: its form lines and its field maps, schedules and
+ *  dependants included ("IMM 5257 SCH1", "IMM 0008 DEP"). */
+export function releaseForms(s: Pick<Snapshot, "forms" | "field_maps">): Set<string> {
+  return new Set([...(s.forms as { form_number: string }[]), ...(s.field_maps as { form_number: string }[])].map((f) => f.form_number));
 }
 
 /** The confirmed facts among a form's boxes, in form-field order. */

@@ -2,6 +2,8 @@
 # Factory board (founder, 5 Nov, A137): every open row's station, how long since its last push, and a red flag.
 # Read-only, from GitHub only. Station is worked out from the PR's state, so a Mac lane with no PR yet does not show:
 # read STATE "In flight" for those. The milestone comes from the title's first capability in qa/CAPABILITIES.md. Usage: bash product/tools/factory-board.sh
+# gh through gh.sh: on a TLS failure the same reads go through curl with gh auth token (P-363; founder, 6 Nov).
+TOOLS="$(cd "$(dirname "$0")" && pwd)"; gh() { bash "$TOOLS/gh.sh" "$@"; }
 now=$(date -u +%s)
 repo=$(gh repo view --json owner,name -q '.owner.login+" "+.name'); dates=$(gh api graphql -F o="${repo% *}" -F r="${repo#* }" -f query='query($o:String!,$r:String!){repository(owner:$o,name:$r){pullRequests(states:OPEN,first:60){nodes{number commits(last:1){nodes{commit{committedDate}}}}}}}' \
   --jq '.data.repository.pullRequests.nodes[]|"\(.number) \(.commits.nodes[0].commit.committedDate)"')
@@ -20,9 +22,9 @@ gh pr list --state open --limit 60 --json number,title,isDraft,labels,statusChec
     ]|@tsv' |
 while IFS=$'\t' read -r n title draft label red running q design; do
   cap=$(printf '%s' "$title" | grep -oE 'C[0-9]+\.[0-9]+' | head -1)
-  ms=$(awk -F'|' -v c="$cap" '$2 ~ "^ *"c" *$" {gsub(/ /,"",$5); print $5; exit}' "$(dirname "$0")/../qa/CAPABILITIES.md")
+  ms=$(awk -F'|' -v c="$cap" '$2 ~ "^ *"c" *$" {gsub(/ /,"",$5); print $5; exit}' "$TOOLS/../qa/CAPABILITIES.md")
   pushed=$(printf '%s\n' "$dates" | awk -v n="$n" '$1==n{print $2}')
-  mins=$(( (now - $(date -ju -f '%Y-%m-%dT%H:%M:%SZ' "$pushed" +%s)) / 60 ))
+  mins=$(( (now - $(date -ju -f '%Y-%m-%dT%H:%M:%SZ' "$pushed" +%s 2>/dev/null || date -u -d "$pushed" +%s)) / 60 ))
   if   [ "$label" = true ];  then st="Merge queue"
   elif [ "$q" = open ];      then st="Question to Lead"
   elif [ "$design" = true ]; then st="Concept"

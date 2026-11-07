@@ -83,7 +83,7 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     return other;
   };
   for (const b of boxes) {
-    if (!b.fact) continue;
+    if (!b.fact || b.coverage === "not needed") continue; // B86 BR-5: nothing to enter, nothing to wait for
     const sec = sectionOf(b.box);
     if (!sec) continue;
     // Review N1: keyed by the whole "about" (a person, or a person's relation such as "<id>/parent_1"), so a parent's

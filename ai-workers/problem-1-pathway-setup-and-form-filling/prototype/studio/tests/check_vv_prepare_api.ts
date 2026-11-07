@@ -96,7 +96,8 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   // line names the section and the form, never a value.
   const i5257p = q.items.find((i: { form?: string; channel?: string }) => i.form === "IMM 5257");
   ok("C7.3 (fail): a PDF upload form item has no answer sheet (409, in words)", (await call("GET", `/runtime/items/${i5257p?.id}/answer-sheet`, undefined, OFFICER)).status === 409);
-  const i5707p = q.items.find((i: { form?: string; subject: string }) => i.form === "IMM 5707" && i.subject === principal);
+  // Row C9 (QA-246): with no date of birth the principal's IMM 5707 (from 18) is not yet known, so it is in `waiting`.
+  const i5707p = [...q.items, ...(q.waiting ?? [])].find((i: { form?: string; subject: string }) => i.form === "IMM 5707" && i.subject === principal);
   ok("C7.3 (fail): a section that is not on the sheet is not found (404)", (await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionZ/entered`, {}, OFFICER)).status === 404);
   const sheetA = async () => (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections?.[0];
   r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, {}, OFFICER);
@@ -106,7 +107,8 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   // Review M2: ticking every section while facts still wait never makes the item Done.
   for (const k of ["SectionB", "SectionC"]) { const v = (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections?.find((x: { key: string }) => x.key === k)?.version; await call("POST", `/runtime/items/${i5707p?.id}/screens/${k}/entered`, { version: v }, OFFICER); }
   const allTicked = (await call("GET", `/runtime/items/${i5707p?.id}/answer-sheet`, undefined, OFFICER)).body?.sections ?? [];
-  const itemNow = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body?.items?.find((i: { id: string }) => i.id === i5707p?.id);
+  const pNow = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
+  const itemNow = [...(pNow?.items ?? []), ...(pNow?.waiting ?? [])].find((i: { id: string }) => i.id === i5707p?.id);
   ok("C7.3 (review M2, fail): every section ticked but facts still waiting: the item is not Done", allTicked.length === 3 && allTicked.every((x: { entered: unknown }) => !!x.entered) && allTicked.some((x: { waiting: unknown[] }) => x.waiting.length > 0) && itemNow?.state !== "done", itemNow?.state);
   // Review M1: an out-of-date section ticked again freezes the new answers; the old tick stays as history.
   await m3.answer(caseId, principal, "person.family_name", "SAMPLEFN", OFFICER); await m3.confirmAll(caseId, principal);

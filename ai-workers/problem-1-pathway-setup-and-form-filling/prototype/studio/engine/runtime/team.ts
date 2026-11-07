@@ -7,7 +7,7 @@
 export type Duty = "case" | "represent" | "firm_admin";
 export type Licence = { body: string; category: string; number: string };
 export type FirmUser = { id: string; name: string; duties: Duty[]; licence: Licence | null; family_name?: string; given_names?: string; email?: string };
-export type Office = { unit?: string | null; street_number?: string | null; street_name?: string | null; city?: string | null; province_state?: string | null; postal_code?: string | null; country?: string | null; phone?: { country_code: string; number: string } | null };
+export type Office = { unit?: string | null; street_number?: string | null; street_name?: string | null; city?: string | null; province_state?: string | null; postal_code?: string | null; country?: string | null; phone?: { country_code: string; number: string; extension?: string } | null };
 export type Firm = { key: string; name: string; solo: boolean; defaultRepresentative?: string; office?: Office; users: FirmUser[] };
 export type TeamRole = "LEAD_REPRESENTATIVE" | "OFFICER";
 export type Member = { userId: string; role: TeamRole; assignedBy: string; assignedAt: Date; endedAt: Date | null; endedBy: string | null; endReason: string | null };
@@ -76,7 +76,21 @@ export function representativeFacts(firm: Firm, members: Member[]): Record<strin
  *  facts are about "representative" (the renderer's own key for that role) and count as confirmed, because the firm
  *  record, not the client, is their source. A missing value is left out (asked as before). Sample values. */
 export const REPRESENTATIVE = "representative", FIRM_RECORD = "firm_record";
-export function representativeContact(firm: Firm, members: Member[]): Record<string, unknown> | null {
+/** QA-289: the firm's office phone as a person reads it ("+1 4165550100"), for a release whose questions read the telephone
+ *  as text; a value that is not the firm record's phone object is left as it is. */
+export function phoneText(phone: unknown): unknown {
+  if (!phone || typeof phone !== "object") return phone;
+  const p = phone as { country_code?: unknown; number?: unknown; extension?: unknown };
+  const number = String(p.number ?? "").trim();
+  if (!number) return null;
+  const cc = String(p.country_code ?? "").replace(/^\+/, "").trim(), ext = String(p.extension ?? "").trim();
+  return `${cc ? `+${cc} ` : ""}${number}${ext ? ` ext. ${ext}` : ""}`;
+}
+
+/** IMM 5476's representative block from the firm record. QA-289: the office phone goes on in the shape the release's
+ *  question reads: its parts (country code, number) where a form writes the phone part by part (`phoneParts`, the
+ *  questionnaire's phone kind, case.ts shapeOf); required, so no caller can forget it (review m1); else as text a person can read, never the parts object shown as "[object Object]". */
+export function representativeContact(firm: Firm, members: Member[], phoneParts: boolean): Record<string, unknown> | null {
   const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
   if (!u) return null;
   const o = firm.office ?? {};
@@ -84,10 +98,63 @@ export function representativeContact(firm: Firm, members: Member[]): Record<str
     "person.family_name": u.family_name, "person.given_names": u.given_names, "person.email_address": u.email,
     "person.mailing_address_unit": o.unit, "person.mailing_address_street_number": o.street_number, "person.mailing_address_street_name": o.street_name,
     "person.mailing_address_city": o.city, "person.mailing_address_province_state": o.province_state, "person.mailing_address_postal_code": o.postal_code,
-    "person.mailing_address_country": o.country, "person.telephone_number": o.phone,
+    "person.mailing_address_country": o.country, "person.telephone_number": phoneParts ? o.phone : phoneText(o.phone),
   };
+  // C6.11 (tech lead's ruling on #1072, AGENTS rule 4): never also under the keys the configured checkpoint's maps read
+  // (person.address_*, person.email, person.phone_*): its IMM 5475 map puts its designated individual on those, and IRCC
+  // says that form is for "someone who will not act as your representative". Its IMM 5476 office block waits for a
+  // reviewed map change that gives IMM 5475's designated individual its own person. The names are the same keys on both
+  // forms, so they are kept off IMM 5475 by the form instead (QA-296, namesRepresentative below).
   return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== undefined && v !== null && v !== ""));
 }
+
+/** QA-296 (C6.11, C7.7): whether a form names the representative of record: one of its form fields reads one of the
+ *  library's representative.* facts (the licence part) about the person "representative", as IMM 5476 does. The firm
+ *  record fills only such a form. A form that reads only a name or contact about "representative" names someone else
+ *  (on the configured checkpoint, IMM 5475's designated individual: IRCC's "someone who will not act as your
+ *  representative"), so the firm record's facts never reach it and the tab never says they fill it. Read from the
+ *  form's map, never its number (P-319); the Prepare item's tag (api/src/case-prepare.ts, break M3) asks the same of the
+ *  form's confirmed facts instead (review nit). */
+export function namesRepresentative(entries: { outcome?: string; fact?: string | null; person?: string | null }[]): boolean {
+  return entries.some((e) => e.outcome === "mapped" && e.person === REPRESENTATIVE && !!e.fact?.startsWith("representative."));
+}
+/** The forms of a release that name the representative of record (namesRepresentative), by form number. */
+export function formsNamingRepresentative(fieldMaps: unknown): Set<string> {
+  const maps = (fieldMaps ?? []) as { form_number: string; entries?: Parameters<typeof namesRepresentative>[0] }[];
+  return new Set(maps.filter((m) => namesRepresentative(m.entries ?? [])).map((m) => m.form_number));
+}
+/** A known fact the firm record gives about the representative (runtime.ts state: channel "firm_record"); `key` is the
+ *  renderer's "about|fact[|row]". */
+export const firmRecordFact = (key: string, source: string | undefined) => key.startsWith(`${REPRESENTATIVE}|`) && !!source?.startsWith(`${FIRM_RECORD} `);
+
+/** The library's option key for a licence body (IMM 5476 Section B: CICC, a provincial or territorial law society, the
+ *  Chambre des notaires du Québec); a body it does not know gives none, so the question stays asked (break m6). */
+export function licensingBodyKey(body: string): string | null {
+  const b = body.trim().toLowerCase();
+  if (/^cicc\b|college of immigration and citizenship consultants/.test(b)) return "cicc";
+  if (/law society|barreau/.test(b)) return "law_society";
+  if (/notaires|notaries/.test(b)) return "chambre_notaires_quebec";
+  return null;
+}
+
+/** C6.11 (VV-R10, QA-152): IMM 5476's licence part and firm name from the representative of record, keyed by the
+ *  library's representative facts: the category, the membership ID, the licensing body (the library's option key, "cicc"
+ *  for CICC) and the name of the firm. Never typed per case or per applicant. A value the record lacks is left out
+ *  (asked as before). Sample values. */
+export function representativeLicence(firm: Firm, members: Member[]): Record<string, string> | null {
+  const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
+  if (!u) return null;
+  const all: Record<string, string | undefined> = {
+    "representative.representative_category": u.licence?.category, "representative.membership_id": u.licence?.number,
+    "representative.licensing_body": u.licence?.body ? licensingBodyKey(u.licence.body) ?? undefined : undefined,
+    "representative.organization_name": firm.name,
+  };
+  return Object.fromEntries(Object.entries(all).filter((e): e is [string, string] => !!e[1]));
+}
+
+/** C6.11 (QA-227's question on its PR): the case has a representative of record, so "Uses a representative" (the
+ *  fact IMM 5476's rule reads, case-level) is Yes from the firm record, never left unanswered. */
+export const USES_REPRESENTATIVE = "case.uses_representative";
 
 /** A value with its object keys in the order PostgreSQL's jsonb returns them (shorter keys first, then by bytes), so a
  *  firm-record value compares equal to the same value read back from a stored copy (review B1: the phone object). */
@@ -100,10 +167,14 @@ export function inStoredOrder(v: unknown): unknown {
 
 /** The same facts as confirmed answers about the representative (channel "firm_record", by the representative of
  *  record), so the case view, readiness and the filler read them like any other confirmed fact. Never stored. */
-export function representativeAnswers(firm: Firm, members: Member[]): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
-  const rep = representativeOf(members), facts = representativeContact(firm, members);
+export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId: string | undefined, phoneParts: boolean): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
+  const rep = representativeOf(members), facts = representativeContact(firm, members, phoneParts);
   if (!rep || !facts) return [];
-  return Object.entries(facts).map(([field, value]) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId: REPRESENTATIVE, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED", channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null }));
+  const answer = (subjectId: string, field: string, value: unknown) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED" as const, channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null });
+  return [
+    ...Object.entries({ ...facts, ...representativeLicence(firm, members) }).map(([field, value]) => answer(REPRESENTATIVE, field, value)),
+    ...(caseSubjectId ? [answer(caseSubjectId, USES_REPRESENTATIVE, true)] : []),
+  ];
 }
 
 /** BR-20: a change of representative of record asks for a new IMM 5476, and the one signed with the earlier

@@ -19,6 +19,8 @@ import { charsOf, factNames, inputsOf, LIVE_WAITING, PqrDrafts, PQR_AI, type Sav
 import { Checklists } from "./checklist.ts";
 import { linesOf, savedReading, staleReading } from "./saved-readings.ts";
 import { insertProposals } from "./proposals.ts";
+import { p121Rating } from "../../engine/agreement.ts";
+import type { Prisma } from "@prisma/client";
 import { pairOf, roundBudgetUsd, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { aiLive, Sources } from "./sources.ts";
 import { conditionsFromRounds, conditionsShapeOk, CONDITIONS_STEP, type CondAnswer, type CondRound } from "../../engine/qd-conditions.ts";
@@ -106,11 +108,11 @@ export class DraftQd {
       const prior = new Set((await this.db.draftingJob.findMany({ where: { attachmentId: a.id, kind: "checklist_draft", mode: "REPLAY" }, select: { id: true } })).map((j) => j.id));
       const job = await this.checklists.replay(actor, a);
       jobs.push(job.id);
-      const d = (job.detail ?? {}) as { proposed?: number; dropped?: string[] };
+      const d = (job.detail ?? {}) as { proposed?: number; dropped?: string[]; facts?: string[]; factsHeld?: string[] };
       const before = prior.has(job.id);
       const n = before ? 0 : d.proposed ?? linesOf(r, name).lines.length;
       proposed += n;
-      said.push(before ? `${name}: replayed before; its ${d.proposed ?? 0} document requirement${d.proposed === 1 ? "" : "s"} wait on To review` : `${name}: ${n} document requirement${n === 1 ? "" : "s"} for To review${d.dropped?.length ? `, ${d.dropped.length} left out with the reason` : ""}`);
+      said.push(before ? `${name}: replayed before; its ${d.proposed ?? 0} document requirement${d.proposed === 1 ? "" : "s"} wait on To review` : `${name}: ${n} document requirement${n === 1 ? "" : "s"}${d.facts?.length ? ` and ${d.facts.length} fact${d.facts.length === 1 ? "" : "s"} their conditions read` : ""} for To review${d.dropped?.length ? `, ${d.dropped.length} left out with the reason` : ""}${d.factsHeld?.length ? `; ${d.factsHeld.length} fact${d.factsHeld.length === 1 ? "" : "s"} not proposed: ${d.factsHeld.join("; ")}` : ""}`);
     }
     const message = `${said.join("; ")}. Saved AI reading, US$0; each line quotes the checklist. They are decided one by one on To review; accepting one writes it to the draft.`;
     return { status: jobs.length ? "COMPLETED" : "FAILED", message, proposed, detail: { checklist_jobs: jobs } };
@@ -169,18 +171,20 @@ export class DraftQd {
     // QA-162: the forms library, so a condition that names a form (not a question) is left out saying which form it is.
     const library = (await this.db.govFormDef.findMany({ where: { workspaceId: c.workspaceId, retiredAt: null, formKind: "data_form" }, select: { formKey: true, displayName: true } })).map((f) => ({ form_number: f.formKey, title: f.displayName }));
     const res = conditionsFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: jobId, combinationId: c.id }, await factNames(this.db, c.workspaceId, snapshot), library);
-    let fresh: typeof res.items = [], already = 0, removed = 0;
+    let fresh: typeof res.items = [], already = 0, removed = 0, rated = 0;
     await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `qd_conditions:${c.id}`);
-      const seen = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "condition", status: { in: ["waiting", "rejected", "accepted", "edited"] } }, select: { identityKey: true, status: true } });
+      const seen = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "condition", status: { in: ["waiting", "rejected", "accepted", "edited"] } }, select: { id: true, identityKey: true, status: true, confidence: true } });
       // Part 3: an accepted condition (its library change waits or is approved) is not proposed again either.
       const waiting = new Set(seen.filter((x) => x.status === "waiting").map((x) => x.identityKey)), gone = new Set(seen.filter((x) => x.status !== "waiting").map((x) => x.identityKey));
       fresh = res.items.filter((x) => !waiting.has(x.identity.key) && !gone.has(x.identity.key));
       already = res.items.filter((x) => waiting.has(x.identity.key)).length; removed = res.items.filter((x) => gone.has(x.identity.key) && !waiting.has(x.identity.key)).length;
       await insertProposals(tx, c.workspaceId, fresh);
+      // B86 BR-6: a waiting item is rated again from this reading, both ways (a form field confirmed or un-confirmed since).
+      for (const x of res.items) { const row = seen.find((s) => s.status === "waiting" && s.identityKey === x.identity.key); const now = p121Rating(x); if (row && row.confidence !== now.confidence) { await tx.proposalItem.update({ where: { id: row.id }, data: { confidence: now.confidence, rules: x.rules as Prisma.InputJsonValue, reason: now.reason } }); rated++; } }
     });
     const ready = fresh.filter((x) => x.confidence === "ready").length;
-    const message = `${fresh.length} condition${fresh.length === 1 ? "" : "s"} for To review (Ready ${ready} · Check ${fresh.filter((x) => x.confidence === "check").length} · Decide ${fresh.filter((x) => x.confidence === "decide").length})${already ? `; ${already} already waiting there` : ""}${removed ? `; ${removed} a person removed or accepted before are not proposed again` : ""}${res.dropped.length ? `; ${res.dropped.length} left out with the reason` : ""}. ${mode === "live" ? `Live, US$${usd.toFixed(2)}` : "Saved, US$0"}.`;
+    const message = `${fresh.length} condition${fresh.length === 1 ? "" : "s"} for To review (Ready ${ready} · Check ${fresh.filter((x) => x.confidence === "check").length} · Decide ${fresh.filter((x) => x.confidence === "decide").length})${already ? `; ${already} already waiting there` : ""}${rated ? `; ${rated} of them rated again` : ""}${removed ? `; ${removed} a person removed or accepted before are not proposed again` : ""}${res.dropped.length ? `; ${res.dropped.length} left out with the reason` : ""}. ${mode === "live" ? `Live, US$${usd.toFixed(2)}` : "Saved, US$0"}.`;
     return { status: "COMPLETED", message, proposed: fresh.length, usd, detail: { dropped: res.dropped, unresolved: res.unresolved, run_files: [d.runFile, k.runFile], details: conditionDetails(res) } };
   }
 

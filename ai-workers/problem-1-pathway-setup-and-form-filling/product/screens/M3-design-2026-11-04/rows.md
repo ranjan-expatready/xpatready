@@ -136,7 +136,7 @@ So slice PRs on C6.4, C7.3 and C7.7 can merge now. **The PR that claims Works** 
 **5. Size and order**
 * **Size:** (a) S; (b) M.
 * **(a) depends on:**
-  * for the PR that claims Works: qa closing QA-149, or a `Fixes: QA-149` line (gate B);
+  * for the PR that claims Works: qa closing QA-226, or a `Fixes: QA-226` line (gate B; QA-149 is closed);
   * the concept addendum and its challenge.
 * **(b) depends on:** C7.6 merged and a Sample Express Entry release.
 * **Unblocks:** DEMO row 15, C6.5's upload entry point and C7.7's document items.
@@ -855,7 +855,7 @@ Under P-316 (3) and P-223 (4), the tech lead approves each concept after reading
 
 | # | Row (slice) | Lane | Size | Files | Waits for | Unblocks | Before Claims Works (gate B) |
 |---|---|---|---|---|---|---|---|
-| 1 | **C6.4 (a)** Documents panel | screens | S | M3-only (UI only; API built) | the `documents/` concept approved | C6.5 2b, DEMO row 15, C7.7's document items | QA-149 closed (C6.4 Works also needs (b) named as breadth) |
+| 1 | **C6.4 (a)** Documents panel | screens | S | M3-only (UI only; API built) | the `documents/` concept approved | C6.5 2b, DEMO row 15, C7.7's document items | QA-226 closed (QA-149 is closed; C6.4 Works also needs the checkpoint's minor lines, row B102, and (b) named as breadth; #1073) |
 | 2 | **C7.7** Prepare application tab | screens | L | M3-only (`cases.tsx`, `forms.tsx`, two small `case-prepare.ts` changes; merge main first) | #709 re-score; the `prepare-tab/` concept approved | C11.6 (a), C6.12-25, C7.3 screen, the C7.6/C8.1/C8.2 screens, C10.2 | QA-152, QA-153 closed |
 | 3 | **C6.12 S7a** one fee loader (version 0), the route with a second person, the stamp per submission group (read-only list in PR 2) | runtime | M | M3-only (new `fee-table.ts`, migration) | the `fee-table/` concept approved; Q1 to Q3 | `setup_vv_m3` S7a green, C6.12-22 | — (C6.12 Works needs -22, -23, -25) |
 | 4 | **C6.5 2a** document reads, Confirm & use, checks, correction count (API) | runtime | M | M3-only (new `case-documents.ts`, migration) | — (parallel with 1 to 3) | C6.5 2b | — (C6.5 Works needs 2b) |

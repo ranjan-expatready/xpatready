@@ -20,7 +20,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { CHANNEL_WORDS, isBarcodeForm } from "../../contracts/forms.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
-import { caseView, checkValue, isClientField, knownOf } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, knownOf, optionsOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
@@ -31,12 +31,13 @@ import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { partsInFormOrder, sectionHash, sheetOf as layOut, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { formPartsOf } from "./form-parts.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
-import { render, type Role } from "../../engine/render.ts";
+import { lineCondition, render, type Role } from "../../engine/render.ts";
+import { conditionSubjects } from "../../engine/resolver.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, formPassed, inventoryOf } from "./fill-case.ts";
+import { CaseForms, copyNotForFiling, formPassed, inventoryOf } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -65,6 +66,45 @@ type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
 /** C9.2: one changed fact on an out-of-date item, as the screen reads it (Undo: what it restores, the answer seen). */
 type ChangeRow = { subject: string; fact: string; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null; undo: boolean; expected_id: string | null; restores: unknown };
 
+/** C9 (review M1): an item of the view by id, whether it is a form to fill or one not yet known (`waiting`): the item
+ *  routes (channel, PDF copy) act on both. */
+const itemIn = (v: { items: unknown[]; waiting?: unknown[] }, id: string) => [...v.items, ...(v.waiting ?? [])].find((i) => (i as { id: string }).id === id);
+type RenderedForm = { form: string; title?: string; form_kind?: string; person: string; applies: boolean | "cannot_tell" };
+/** An answer in words: Yes or No, or a choice's own label from the release (never its key). */
+const answerWords = (s: Parameters<typeof optionsOf>[0], fact: string, v: unknown) => (v === true ? "Yes" : v === false ? "No" : typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label ?? v : JSON.stringify(v));
+/** The facts a configured condition reads (its `field`s, nested `args` included), in order, once each. */
+const conditionFacts = (c: unknown, seen: string[] = []): string[] => {
+  if (!c || typeof c !== "object") return seen;
+  const o = c as { field?: unknown; args?: unknown };
+  if (typeof o.field === "string" && !seen.includes(o.field)) seen.push(o.field);
+  if (Array.isArray(o.args)) for (const a of o.args) conditionFacts(a, seen);
+  return seen;
+};
+/** C9 (QA-246): each filer's conditional form that an answer says does not apply, with that answer as its reason. A
+ *  line the person never reaches by its minimum age is not listed (it was never one of their forms, answered or not);
+ *  the age gates a dependent child only on a "principal, partner and adult children" line (QA-221). */
+export function notNeededForms(s: Parameters<typeof lineCondition>[0], people: Parameters<typeof lineCondition>[2], known: Parameters<typeof lineCondition>[1], forms: RenderedForm[], lines: Map<string, FormLine>,
+  filers: Set<string>, ages: Map<string, number | null>, caseSubject: string | null, answers: { subjectId: string; field: string; value: unknown; rowKey?: unknown }[], question: (fact: string) => string, label: Map<string, string>) {
+  return forms.filter((f) => f.applies === false && filers.has(f.person) && (f.form_kind ?? "data_form") === "data_form").flatMap((f) => {
+    const line = lines.get(f.form) as (FormLine & { condition?: { subjectKind?: string } | null; min_age?: number | null; who?: string }) | undefined;
+    if (!line?.condition) return [];
+    const role = people.find((p) => p.id === f.person)?.role, age = ages.get(f.person) ?? null;
+    const gated = !!line.min_age && !(line.who === "principal_partner_adult_children" && role !== "child");
+    if (gated && age !== null && age < line.min_age!) return [];
+    const rule = lineCondition(s, known, people, f.person, line.condition);
+    if (rule.applies !== false) return [];
+    // Review m3: the answer read is the one the condition is decided on (the holder, another person by role, or the
+    // case); with nobody in that role, that is the reason.
+    const on = conditionSubjects(people, f.person, line.condition.subjectKind), deciders = Array.isArray(on) ? on.filter((x) => people.some((p) => p.id === x)) : [];
+    const said = rule.nobody ? [`there is no ${rule.nobody} on this case`] : conditionFacts(line.condition).map((fact) => {
+      const a = deciders.map((d) => answers.find((x) => x.field === fact && !x.rowKey && x.subjectId === d)).find(Boolean) ?? answers.find((x) => x.field === fact && !x.rowKey && x.subjectId === caseSubject);
+      return a ? `"${question(fact)}" is answered ${answerWords(s, fact, a.value)}` : `the answer to "${question(fact)}" says it does not apply`;
+    });
+    return [{ kind: "form" as const, form: f.form, title: f.title ?? null, subject: f.person, person: label.get(f.person) ?? "", state: "not_needed" as const,
+      reason: `Not needed: ${said.join(" and ") || "its condition does not apply"}.`, decided_by: conditionFacts(line.condition) }];
+  });
+}
+
 @Injectable()
 export class CasePrepare {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(CaseForms) private readonly forms: CaseForms) {}
@@ -91,11 +131,12 @@ export class CasePrepare {
     // uses the default. One reading of the release's modes for this view and GET …/filings (releaseModes).
     const modes = releaseModes(s.combination.participants ?? []);
     const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label });
-    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], fees: [], readiness: [], stage1: [], version: "0" };
+    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], stage1: [], version: "0" };
 
     // Items the release and the case give each filer (forms by who and minimum age, the checklist's documents, biometrics).
     const { known } = knownOf(s, people, clean, rows, today);
-    const r = render(s, people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies })), known, { today });
+    const renderPeople = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
+    const r = render(s, renderPeople, known, { today });
     const list = caseChecklist(s, own!.combinationKey, people, known, today);
     const docs = new Map(list.derived ? list.people.map((p) => [p.subject, p.lines]) : []);
     // C11.12 (challenge M1): items go to each person on the filing they are on: an applying applicant on their filing (their
@@ -203,9 +244,11 @@ export class CasePrepare {
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
     // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
-    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true } } } });
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } } } });
     const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
-    for (const v of reads) { const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
+    // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
+    // counts, by the same rule as Validate and `lock` (copyNotForFiling): such rows were kept before Validate refused them.
+    for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
       return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;
@@ -246,6 +289,10 @@ export class CasePrepare {
     const undoable = (x: FactChange) => x.about !== REPRESENTATIVE && !x.relation && UUID.test(subjectOfAbout(x.about)) && placeOf.get(x.fact) !== "per_row" && typeOf.get(x.fact) !== "declaration";
     // `undo`, `expected_id` and `restores` are filled once every item is worked out (one read of the answers' history).
     const changeList = (cs: FactChange[]): ChangeRow[] => cs.map((x) => ({ subject: subjectOfAbout(x.about), fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, confirmed: x.confirmed, at: x.at, undo: undoable(x), expected_id: null, restores: null }));
+    // C9 (QA-246, C7.7; VV-R07, VV-R09, VV-R10): a form whose line applies only on an answer not given yet names the
+    // question it waits on, in the questionnaire's own words (never "N answers").
+    const asksOf = (facts: string[]) => facts.map((fact) => ({ fact, question: words.label(fact) }));
+    const waitWords = (facts: string[]) => facts.length ? `Cannot start yet: waits for the answer to ${asksOf(facts).map((q) => `"${q.question}"`).join(" and ")}, which decides whether it applies.` : "Cannot start yet: waits for an answer that decides whether it applies.";
     const staleOf = new Map<string, string[]>(); // C7.6: Online sections entered before a fact changed, per item
     const items = stored.items.flatMap((i) => {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
@@ -299,18 +346,30 @@ export class CasePrepare {
         const staleCopy = since && (since.changes.length || since.groups.length || ch.channel === "PAPER") ? since : null;
         const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
         if (ch.channel === "PAPER" && !waits) {
-          const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers, lineOnline: ch.line_channel === "ONLINE" });
+          const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers });
           // C7.7 (P-144): a Paper line keeps its own next step (a new barcode page), after the words of what changed.
           return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords("Make a new copy, press Validate again (a new barcode page) and read it back before you print, or undo the change.") : {}) };
         }
         if (staleCopy) return { ...fb, signers, validated, state: "out_of_date", ...staleWords() };
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
-          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
+          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? waitWords(w?.missing ?? []) : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
     });
+    // C6.11 (VV-R10, BR-20): a form that names the representative (IMM 5476's licence part, the library's representative.*
+    // facts, from the firm record) says which representative of record it is for, so a change of representative shows on
+    // the item that needs a new one. A form reading only a person's name and address about the representative (IMM
+    // 5475's designated individual, break M3) is not tagged.
+    const repOfRecord = (await this.db.caseTeamMember.findFirst({ where: { caseId: c.id, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
+    const namesRep = new Map<string, boolean>();
+    for (const i of items) {
+      if (i.kind !== "form" || !("form" in i) || !i.form) continue;
+      const k = `${i.form}|${i.subject}`;
+      if (!namesRep.has(k)) namesRep.set(k, nowFacts(i.form, i.subject).some((f) => f.about === REPRESENTATIVE && f.fact.startsWith("representative.")));
+      if (namesRep.get(k)) Object.assign(i, { representative: repOfRecord });
+    }
     // C9.2 review M1, M2: what Undo would put back for each change (the same rule as the route: the newest earlier value
     // that differs, undoTarget) and the answer the officer saw, so the screen names the real value and a stale tab gets 409.
     const rowsOfChanges = items.flatMap((x) => ((x as { changes?: ChangeRow[] }).changes ?? []).filter((y) => y.undo && UUID.test(y.subject)));
@@ -323,8 +382,17 @@ export class CasePrepare {
         y.expected_id = cur?.id ?? null; y.restores = target ? target.value : null; y.undo = !!target;
       }
     }
-    // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
-    const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
+    // C9 (QA-246, C7.7): the forms to fill and, apart, the forms not yet known. A form that cannot start yet (an answer
+    // decides whether it applies) is never a form to fill and never counted as one: it is listed in `waiting`, naming the
+    // question it waits on. Readiness still reads it (break B3: a CRITICAL line on its filing until that answer is in),
+    // and the C8.2 overlay sees every item as before. A conditional form answered so that it does not apply is listed in
+    // `not_needed`, with its reason, so it never just disappears.
+    const notYetKnown = (i: (typeof items)[number]) => i.kind === "form" && i.state === "cannot_start";
+    const toFill = items.filter((i) => !notYetKnown(i));
+    const waiting = items.filter(notYetKnown).map((i) => Object.assign(i, { waits_on: asksOf(wanted.find((x) => x.subject === i.subject && x.kind === "form" && x.key === ("form" in i ? i.form : null))?.missing ?? []) }));
+    const notNeeded = notNeededForms(s, renderPeople, known, r.forms as RenderedForm[], lines, new Set(filers), ages, people.find((p) => p.role === "case")?.subjectId ?? null, clean, words.label, label);
+    // Stage 1 (C7.7): the facts each filing's forms to fill still wait for, counted before any item.
+    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
     // The edition a form is filled on: the release's PDF edition in use (pdfMapInUse, P-32: the newest, as the fill picks
     // it; review M2 on #861); on a line filed Online, its online version, else the PDF edition its answer sheet follows
@@ -387,7 +455,7 @@ export class CasePrepare {
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
-      people: peopleView, filings, groups, items, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
+      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
@@ -441,7 +509,7 @@ export class CasePrepare {
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, item!.caseId, "officer");
     if (item!.kind !== "form" || !item!.active) refuse(422, "item", "Only a form on this application has a PDF copy.");
-    const now = (await this.build(actor, c)).items.find((i) => i.id === item!.id) as { channel?: string } | undefined;
+    const now = itemIn(await this.build(actor, c), item!.id) as { channel?: string } | undefined;
     if (now?.channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[(now?.channel ?? "PDF_UPLOAD") as keyof typeof CHANNEL_WORDS]}: its own PDF is what is filed, so there is no separate copy. Make its copy from the form.`);
     const b = (body ?? {}) as { idempotencyKey?: unknown };
     return this.forms.generate(actor, c.id, item!.itemKey, item!.subjectId, typeof b.idempotencyKey === "string" ? { idempotencyKey: b.idempotencyKey } : {});
@@ -514,7 +582,7 @@ export class CasePrepare {
     const ok = channelChange(item!.itemKey, b.channel, b.reason, accepts.get(item!.itemKey), portal);
     if (!ok.ok) refuse(ok.status, ok.field, ok.detail);
     const now = await this.build(actor, c);
-    const before = (now.items.find((i) => i.id === item!.id) as { channel?: keyof typeof CHANNEL_WORDS } | undefined)?.channel ?? "PDF_UPLOAD";
+    const before = (itemIn(now, item!.id) as { channel?: keyof typeof CHANNEL_WORDS } | undefined)?.channel ?? "PDF_UPLOAD";
     const to = (ok as { channel: keyof typeof CHANNEL_WORDS }).channel;
     const result = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
@@ -535,7 +603,7 @@ export class CasePrepare {
       await this.audit.log(c.workspaceId, actor.id, "changed", "item", item!.id, `${actor.name} changed how ${item!.itemKey} is filed for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}: from ${CHANNEL_WORDS[before]} to ${CHANNEL_WORDS[to]}${b.reason ? " (reason given)" : ""}`, { from: before, to, reason_given: !!b.reason });
     }
     const after = result === "same" ? now : await this.build(actor, await this.r.reach(actor, c.id, "officer"));
-    return { item: after.items.find((i) => i.id === item!.id), version: after.version, changed: result === "changed" };
+    return { item: itemIn(after, item!.id), version: after.version, changed: result === "changed" };
   }
 }
 

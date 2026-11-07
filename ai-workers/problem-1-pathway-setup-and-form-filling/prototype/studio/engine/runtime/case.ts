@@ -4,10 +4,12 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
-import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
+import { checkFormat, snapshotFieldFormat, writesParts } from "../field-format.ts";
+import { isCodeRange } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
@@ -73,12 +75,16 @@ export function shapeOf(s: Snapshot, field: string) {
   const dayNeeded = ts.some((t) => /date(_part)?:DD|date:YYYY-MM-DD|^date$|date:DD/.test(t)) || !ts.some((t) => /date(_part)?:MM/.test(t));
   // A short code list written in the map itself, "code_list:imm5257.visa_type (VisitorVisa, Transit)": the values a
   // choice field without an answer list may take (labels before any "=code").
-  const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find(Boolean);
+  // QA-272: "(01..09)" names no values: on a release that kept it the answer stays open, never one choice called "01..09".
+  const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find((x) => x && !isCodeRange(x));
   const choices = listed ? listed.split(",").map((x) => x.split("=")[0].trim()).filter(Boolean) : null;
   // C3.1 AT-10 (IRCC-F07, P-162): the form's own box limit for the whole answer (read from the PDF) counts too.
   const boxMax = snapshotFieldFormat(s as never, field).rules.filter((r) => r.check === "max_length" && !r.part).map((r) => Number(r.params.n)).filter((n) => n > 0);
   maxes.push(...boxMax);
-  return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
+  // QA-289: a field is a phone where any form's map says "phone_part" (as before), and also where the fill writes it part by
+  // part with "phone:" steps (field-format.ts writesParts), so the question, its answer and the form's boxes agree (IMM 5476's
+  // "phone:" boxes wrote nothing from text). Only ever adds the phone kind: no question that had it loses it (pre-flight, C4.4).
+  return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t) || (writesParts(t) && /\bphone:/.test(t))), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 
 
@@ -270,7 +276,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const r = render(s, renderPeople, known, { today });
   const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : about.split("/")[0]);
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
-  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
+  // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
+  const namingRep = formsNamingRepresentative(s.field_maps);
+  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
     const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
     // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
     // question fills the box too (P-62: every question asked fills a box or decides something).

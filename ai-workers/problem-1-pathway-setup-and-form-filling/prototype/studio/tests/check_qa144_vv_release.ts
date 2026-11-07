@@ -9,6 +9,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { LEDGER_DIR } from "../../p2/policy.ts";
+import { FORM_SETUP } from "../api/src/form-setup.ts";
+/** QA-144 slice 4 (P-319): the combinations set up from their forms are the form setup table's, never a list here. */
+const FROM_FORMS = Object.keys(FORM_SETUP).map((k) => `'${k}'`).join(", ");
 
 const PORT = Number(process.argv[2] ?? 4470), DB = process.argv[3] ?? "xr_studio_b8_qa144";
 let pass = 0, fail = 0;
@@ -41,7 +44,9 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   const errors = (o?.draft?.problems ?? []).filter((p: { level: string }) => p.level === "error");
   // QA-206 (tech lead on #883): the sections the forms print no heading over stay waiting on To review, so the facts only
   // their boxes read are asked of nobody until a person names them: the honest block, each named.
-  const held = sql(`select payload->>'label' from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' order by payload->>'label'`).split("\n").filter(Boolean);
+  // Row 7 is written before row 9: the family form release 2 files drafts its sections after it, and row 9 says what those leave (B97).
+  const held = sql(`select payload->>'label' from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and coalesce(form_edition, '') not like 'IMM 5645 (%' order by payload->>'label'`).split("\n").filter(Boolean);
+  const heldOnRowNine = n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work->>'unnamed' = 'true' and form_edition like 'IMM 5645 (%'`);
   // A form field no accepted section names is placed in the nearest one on its own form (form-part-placements.ts), so the
   // only facts left asked of nobody are those read on a form with no accepted section at all, every one of its sections
   // waiting for a name (IMM 5257 SCH1 prints no heading; review r8 M8: never a form with one held part among named ones).
@@ -49,7 +54,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // IRM 0002's saved map (#840) is replayed by the checkpoint (#891), so the release is the one outcome (review m2), unless
   // a form's sections all wait for a name (QA-206; tech lead on #883: the honest signal): then the release blocks on those
   // facts only, each named, and on nothing else.
-  const released = (l.body.released as string[]).some((x) => /Visitor visa/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${vv}' order by version desc limit 1`) === "1|user-B|user-A";
+  const released = (l.body.released as string[]).some((x) => /Visitor visa/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${vv}' and version = 1`) === "1|user-B|user-A"; // release 2 is row 9's (B97)
   if (!heldFacts.size) ok("QA-144 pass: the configured checkpoint releases the Visitor visa (release 1, submitted by the author, approved by the Approver)", released, { released: l.body.released, row10: r("10").why?.slice(0, 300) });
   else ok("QA-144 pass (QA-206): the Visitor visa's release blocks only on the facts of a form whose sections all wait for a name (IMM 5257 SCH1), each named on the release check (row 10)", !released && errors.length > 0 && errors.every((e: { item: string }) => heldFacts.has(e.item)) && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? ""), { released: l.body.released, notHeld: errors.filter((e: { item: string }) => !heldFacts.has(e.item)).map((e: { item: string; message: string }) => `${e.item}: ${e.message.slice(0, 120)}`).slice(0, 4) });
   ok("QA-144 pass: IRM 0002 is attached and mapped from its saved answer (US$0)", n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IRM 0002 (%' and m.outcome = 'mapped'`) > 0 && r("3").status === "done", r("3"));
@@ -59,8 +64,25 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Row 7: sections from the forms' own parts (rules, no AI), approved by a second person.
   // QA-206 (tech lead on #883): a held section is named only by print, or stays waiting and is named on the row.
   ok("QA-144 row 7: said in plain words (sections, questions, form fields, form lines); partial exactly while sections wait for a name, each named on the row", r("7").status === (held.length ? "partial" : "done") && /sections drafted from .*Visitor visa.*approved by the Approver/.test(r("7").shows) && held.every((h) => (r("7").why ?? "").includes(h)), { row: r("7"), held });
+  ok("QA-144 row 9 (B97): the family form's sections left waiting for a name are said on row 9, not lost after row 7 was written", !heldOnRowNine || /IMM 5645's sections left for a person: waiting for a name/.test(r("9").shows), { heldOnRowNine, shows: r("9").shows });
   ok("QA-144 row 7 (QA-206): no section was named by a made-up name: every section in the library carries a printed heading or a person's name, none a placeholder", n(`select count(*) from logical_section where title ilike 'unnamed section%'`) === 0 && n(`select count(*) from proposal_item where kind = 'section' and status = 'waiting' and work ? 'heading'`) === 0);
-  ok("QA-144 rules pass: every Visitor visa form it files had its sections drafted by rules (no AI, US$0; not IMM 5645, which the paper channel takes off)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form' and coalesce(edition, '') not like 'IMM 5645 (%'`)
+  // B78 (C10.1 row 7; P-343 (10)): every section no heading was read over has a person's name, through the naming edit.
+  // Not IMM 5645's: release 2 drafts its sections after row 7 is written, and row 9 says what those leave (B97).
+  const namedWhere = `kind = 'section' and work->>'unnamed' = 'true' and work->>'heading' is null and coalesce(form_edition, '') not like 'IMM 5645 (%'`;
+  const namedByPerson = n(`select count(*) from proposal_item where ${namedWhere} and status = 'edited'`);
+  ok("B78 pass: row 7 is done: no section waits for a name, and it says how many a person named", held.length === 0 && r("7").status === "done" && !r("7").why && /(\d+) sections with no heading read over their form fields named by a person from the form's own words \(Sample; 4 in a person's wording, Unconfirmed: expert\)/.exec(r("7").shows)?.[1] === String(namedByPerson), { row: r("7"), namedByPerson });
+  ok("B78 pass: all 59 (B78's 29, and B79b's 30 for Family sponsorship's IMM 5532 and IMM 5604) were named by the author through the naming edit, each landed on a section of the library under that name, none plain-accepted or rejected", namedByPerson === 59 && n(`select count(*) from proposal_item where ${namedWhere} and status <> 'edited'`) === 0
+    && n(`select count(*) from proposal_item p join logical_section s on s.section_key = p.decided_key where ${namedWhere.replace(/\b(kind|work)\b/g, "p.$1")} and p.status = 'edited' and p.decided_by = 'user-A' and lower(s.title) = lower(p.payload->>'label')`) === 59, { namedByPerson });
+  ok("B78 AGENTS rule 4: every section a person named carries its source on the decision (the form and page, marked Sample, or Sample, Unconfirmed: expert)", n(`select count(*) from proposal_item where ${namedWhere} and status = 'edited' and coalesce(decision_reason, '') !~ 'page [0-9]+\\) \\(Sample(, Unconfirmed: expert)?\\)'`) === 0);
+  // Review M1: naming decides where the questions are asked: a fact whose first form field is in a named part sits in that
+  // section, not the nearest other one (before this fix "Coming into Canada" and "Indicate whether you are" held none). A fact is
+  // asked once, in the section of the first form that reads it, so a named section may hold none (the line below lists them).
+  const askedIn = (fact: string) => sql(`select string_agg(s.title, '|') from section_question q join logical_section s on s.section_key = q.section_key where q.canonical_field_key = '${fact}'`);
+  const WANT = { "person.original_entry_date": "Coming into Canada", "case.subject_is_principal_applicant": "Indicate whether you are", "relationship.other_documentary_evidence": "Other documentary evidence", "case.representative_form_action": "Appointing or cancelling a representative" };
+  const emptyNamed = sql(`select string_agg(distinct s.title, ', ') from proposal_item p join logical_section s on s.section_key = p.decided_key where ${namedWhere.replace(/\b(kind|work)\b/g, "p.$1")} and p.status = 'edited' and not exists (select 1 from section_question q where q.section_key = s.section_key)`);
+  console.log(`      B78: named sections with no question (their form fields are filled by hand or read elsewhere): ${emptyNamed || "none"}`);
+  ok("B78 fail-guard (review M1): a fact first read in a named part is asked in that section, not the nearest other one", Object.entries(WANT).every(([f, t]) => askedIn(f) === t), Object.fromEntries(Object.keys(WANT).map((f) => [f, askedIn(f)])));
+  ok("QA-144 rules pass: every Visitor visa form had its sections drafted by rules (no AI, US$0; IMM 5645 too once release 2 files it, B97)", n(`select count(*) from drafting_job where combination_id = '${vv}' and kind = 'masters_edition' and mode = 'LOCAL' and cost_usd = 0`) === n(`select count(*) from source_attachment where combination_id = '${vv}' and kind = 'Form'`)
     && n(`select count(*) from drafting_job where kind = 'masters_edition' and mode <> 'LOCAL'`) === 0);
   // Slice 2 (#878): With an LMIA is released by the same load, so items its release uses read RELEASED too.
   // Approved by the Approver; a section the Visitor visa's release carries is RELEASED with it, one it does not use stays
@@ -78,7 +100,10 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Review M2: a section is chosen only when every applying person answers all of it anyway (C4.1 orders the chosen
   // ones); every other placement goes out because a form or a rule reads its fact, and only to whom it applies. A child
   // aged 1 is asked nothing only because a section is chosen, and no representative's licence facts.
-  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least three, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 3
+  // QA-144 slice 4 (qa's ruling on #1050, P-314): at least two, enough for C4.1's order since its pack reads the current
+  // last section. Express Entry's IMM 0008 puts its address parts in the shared "Contact information" section, so the
+  // Visitor visa unchooses it (review M2: no visitor is asked them); three were only for a fixed position.
+  ok("QA-144 placement M2: some sections are chosen on the Visitor visa (at least two, for C4.1's order), not every one holding a placed fact", n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) >= 2
     && n(`select count(*) from sqr_section_selection where combination_id = '${vv}'`) < n(`select count(distinct section_key) from section_question where updated_by = 'user-A'`), sql(`select string_agg(section_key, ',') from sqr_section_selection where combination_id = '${vv}'`));
   const pv = (await call("GET", `/combinations/${vv}/preview?people=${encodeURIComponent(JSON.stringify({ child: 1 }))}&answers=${encodeURIComponent(JSON.stringify({ "child-1|person.date_of_birth": "2025-03-01" }))}`)).body;
   const toddler = ((pv?.questions ?? []) as { fact: string; about: string; why?: string; required?: boolean }[]).filter((q) => q.about === "child-1");
@@ -129,7 +154,7 @@ type Row = { row: string; status: string; shows: string; why: string | null };
   // Slices 2 and 3 add With an LMIA (check_qa144_lmia_release.ts) and the Study permit (check_qa144_sp_release.ts); R2-m1
   // keeps the Visitor visa's chosen sections ones its people all answer (the toddler and never-married checks above run
   // after their placements).
-  ok("QA-144 scope: only the Visitor visa, With an LMIA and the Study permit are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in ('vv.single', 'wp.lmia_inside', 'sp.outside')`) === 0);
+  ok("QA-144 scope: only the combinations the form setup table holds are set up from their forms (no other combination has a rules pass)", n(`select count(*) from drafting_job j join combination c on c.id = j.combination_id where j.kind = 'masters_edition' and c.combination_key not in (${FROM_FORMS})`) === 0);
   console.log(`${pass}/${pass + fail} passed`);
   process.exitCode = fail ? 1 : 0;
 })();

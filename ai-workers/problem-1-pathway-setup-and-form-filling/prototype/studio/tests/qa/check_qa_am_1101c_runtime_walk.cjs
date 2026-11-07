@@ -1,6 +1,8 @@
 // qa after-merge 1 Nov, third round (main 63168762), explore runtime by walk (handover of #246):
 // Part A — a case with a representative (With an LMIA, the sample's Live combination that lists one) as the case
 //   officer: how the page names the representative (QA-76: lower-case "representative", team words), at 1440 px.
+//   B117 (P-373): the representative of record comes from the case team (C6.11), never added as a person: the walk opens
+//   the case with one and reads their name from the case team; adding one through the people route is now refused (422).
 // Part B — the client's questionnaire as Client A, keyboard only, at 200 % zoom (720 × 450 CSS px) and 1024 px:
 //   skip link or first focus, every focus visible, a text answer typed and saved by keyboard, no sideways scroll, axe.
 // Sample data (Load sample; the case is opened through the API as the case officer), no STUDIO_*_LIVE, US$0.
@@ -24,20 +26,25 @@ const step = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : 
   await actAs("user-A");
   if (!(await api("/demo/status", "user-A")).body?.loaded) step("setup: Load sample", (await api("/demo/load", "user-A", "POST")).status === 201);
   const lm = (await api("/catalogue?pathway=INDIVIDUAL&filter=all", "user-A")).body.rows.find((r) => r.label === "With an LMIA")?.combinationId;
-  const made = await api("/runtime/cases", "user-O", "POST", { combinationId: lm, reference: `QAREP-${Date.now().toString(36).slice(-5)}`, clientActor: "user-P", principal: { displayName: "Client A" } });
-  step("setup: a With an LMIA case opens", made.status === 201, made.status);
+  const made = await api("/runtime/cases", "user-O", "POST", { combinationId: lm, reference: `QAREP-${Date.now().toString(36).slice(-5)}`, clientActor: "user-P", principal: { displayName: "Client A" }, representative: "user-R", caseOfficers: ["user-O"] });
+  step("setup: a With an LMIA case opens with a representative of record in its case team", made.status === 201, made.body?.detail ?? made.status);
   const id = made.body.id;
-  const rep = await api(`/runtime/cases/${id}/people`, "user-O", "POST", { role: "representative", displayName: "Representative R" });
-  step("setup: the release lists a representative; one is added", rep.status === 201, rep.status);
+  const team = await api(`/runtime/cases/${id}/team`, "user-O");
+  const repName = team.body?.representative?.name ?? "";
+  step("setup: the case team names its representative of record", team.status === 200 && team.body?.representative?.id === "user-R" && !!repName, team.body?.representative ?? team.status);
+  const asPerson = await api(`/runtime/cases/${id}/people`, "user-O", "POST", { role: "representative", displayName: "Representative R" });
+  step("B117: a representative is never added as a person (422, the case team named)", asPerson.status === 422 && /case team/.test(asPerson.body?.detail ?? ""), asPerson.body?.detail ?? asPerson.status);
 
   // ---------------------------------------------------------------- Part A: the officer's page with a representative
   await actAs("user-O"); await p.goto(`${BASE}/cases/${id}`); await p.waitForLoadState("networkidle");
   const text = await p.locator("main").innerText();
   const tips = await p.locator("[title]").evaluateAll((els) => els.map((e) => e.getAttribute("title")).join(" | "));
   await p.screenshot({ path: path.join(SHOTS, "04-case-with-representative-1440.png"), fullPage: true });
-  const lower = [...`${text}\n${tips}`.matchAll(/(^|[\n•·|:] ?)representative\b/g)].length;
+  // B117: with the case team's representative of record, C7.7 now shows their firm-record e-mail on its own line
+  // ("representative@sample-firm.example"): an address, not a sentence or label, so it is not a lower-case start.
+  const lower = [...`${text}\n${tips}`.matchAll(/(^|[\n•·|:] ?)representative\b(?!@)/g)].length;
   step("QA-76 C7.x: a sentence or label never starts with lower-case \"representative\"", lower === 0, lower);
-  step("QA-76 C7.x: the representative is named (Representative R) on the case page", /Representative R/.test(text));
+  step(`QA-76 C7.x: the representative of record is named (${repName}) on the case page`, !!repName && text.includes(repName));
   step("QA-76 C7.x: no slice or lane word a person cannot act on (\"forms slice\", \"lane\", P-nn)", !/forms slice|\blane\b|\bP-\d+\b/.test(`${text}\n${tips}`), (`${text}`.match(/.{0,60}(forms slice|\blane\b|\bP-\d+\b).{0,40}/) ?? [""])[0]);
   const ax0 = await new AxeBuilder({ page: p }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
   step("axe: case page with a representative is clean", ax0.violations.length === 0, ax0.violations.map((v) => v.id));

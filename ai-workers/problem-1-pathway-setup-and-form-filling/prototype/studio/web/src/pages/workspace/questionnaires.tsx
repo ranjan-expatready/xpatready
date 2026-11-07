@@ -26,6 +26,7 @@ import { peopleWords } from "@/lib/people";
 import { DraftPqrPicks } from "@/components/pqr-draft";
 import { DraftQuestionsDocuments } from "@/components/qd-draft";
 import { PlaceFromFormParts } from "@/components/place-from-form-parts";
+import { OwnQuestionsLine } from "@/components/own-questions";
 import { appliesOf, FILING_TIP, filingWarnings, filingWords, previewFilings } from "../../../../engine/filing-modes";
 import type { LineMode } from "../../../../contracts/workspace";
 import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
@@ -507,7 +508,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       ) : null}
       {/* QA-144 part 1: offered while answers are asked of nobody or no section asks anything; it stays mounted, so its
           result (what no section groups, what a rule refused) stays readable once the gaps are gone. */}
-      <PlaceFromFormParts id={id} offer={q.coverage.gaps.length > 0 || !q.sections.length} />
+      <OwnQuestionsLine combinationId={id} />
+      <PlaceFromFormParts id={id} offer={q.coverage.gaps.length > 0 || q.coverage.conditionFacts > 0 || !q.sections.length} />
       {q.sections.map((s) => {
         const isOpen = opened.has(s.id) || filter !== "all";
         const lines = s.questions.filter((x) => keep(x.fact));

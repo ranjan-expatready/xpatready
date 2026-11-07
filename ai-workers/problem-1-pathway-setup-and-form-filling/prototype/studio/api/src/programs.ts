@@ -25,10 +25,11 @@ import { join, resolve } from "node:path";
 import { ACTORS, Audit, Db, isDemoWorkspace, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
-import { changeView, itemsOf, nearOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { changeView, nearOf, unapprovedWhy, unapprovedOf } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { emptyProblem, Studio } from "./studio.ts";
+import { conditionFactProblems } from "../../engine/coverage.ts";
 import { draftSourceProblems } from "./source-register.ts";
 import { filingProblems } from "../../engine/filing-modes.ts";
 import { attachedNotSetUp, removedLines } from "../../contracts/counts.ts";
@@ -207,7 +208,7 @@ export class Programs {
       // G1 BR-7 (challenge M1): numbers without a source hold the draft back, never relProblems (a release keeps its
       // status); and only a draft that will be submitted (changes, or no release yet), so a Live row with no draft
       // changes never reads "Fix n problems" (tech lead on #568, G2 challenge; engine/setup-checklist.ts).
-      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? [...draftSourceProblems(snapshot, demo), ...(demo ? [] : sampleContentProblems(snapshot))] : [])]; // C5.5: Sample content holds a real release (studio.problems)
+      const draftProblems = [...baseProblems, ...(changes > 0 || !rel ? [...conditionFactProblems(snapshot), ...draftSourceProblems(snapshot, demo), ...(demo ? [] : sampleContentProblems(snapshot))] : [])]; // C5.5: Sample content holds a real release (studio.problems)
       const relProblems = relSnap ? [...structure, ...validate(relSnap, library, derivedOf(relSnap))] : draftProblems;
       // G2 (challenge M1): only a draft with something to release is judged, so a Live, unchanged row keeps step 5 done.
       // Added to the draft's problems (the Release page holds the row on them), never to the released snapshot's.
@@ -436,7 +437,7 @@ export class Programs {
         if (r.holds) { why.set(id, { why: r.firstHold }); continue; }
         const gate = gates.get(id)!;
         if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
-        const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(id) as { snapshot: Snapshot }).snapshot));
+        const waiting = await unapprovedOf(this.db, workspaceId, (snaps.get(id) as { snapshot: Snapshot }).snapshot);
         if (waiting.length) { why.set(id, { why: `${unapprovedWhy(waiting).replace(/^it/, "It")}.` }); continue; }
         if (actor && (actor.duties as readonly string[]).includes("approve")) {
           if (gate.sub.submittedBy === actor.id) { why.set(id, { why: "You submitted it, so a different person releases it (BR-14).", self: true }); continue; }
