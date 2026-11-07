@@ -1,5 +1,5 @@
-// C6.9 part 3 (M3-D, concept screens/C6.9/concept.md §4–§5, BR-15, BR-16; stand-in SI-1): the staff eligibility page
-// (/cases/:id/eligibility) and its card on the case page. Each traveller's latest check: the outcome, every rule with the
+// C6.9 part 3 (M3-D, concept screens/C6.9/concept.md §4–§5, BR-15, BR-16; stand-in SI-1): the staff page "Case check
+// from confirmed facts" (P-236, B148; /cases/:id/eligibility) and its card on the case page. Each traveller's latest check: the outcome, every rule with the
 // values it read, what is missing, the officer's judgement lines, the disclaimer, who ran it and when; out of date when a
 // fact changed since. Run again needs a reason; an override sits beside the result (the engine's outcome stays visible);
 // Mark reviewed stamps "Reviewed by" (licensed representative) or "Seen by" (P-229 (2)). Drawers, never modals. Staff only:
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { useFirm } from "./team";
 import { restingOn, restingWords } from "./eligibility-unconfirmed";
+import { CASE_CHECK, CASE_CHECK_SHORT, OUTCOME_WORDS } from "../../../contracts/case-check-words";
 
 type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[]; restsOn?: string[] };
 type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
@@ -44,18 +45,19 @@ export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" 
   if (!r) return { text: "Not run", tone: "neutral", short: "Not run" };
   // B124 (P-393): while a deciding fact is unconfirmed, the outcome says so, with the count; the line naming them is below.
   const n = restingOn(r).length, few = n ? ` · ${n} not yet confirmed` : "";
-  if (r.outcome === "LIKELY_ELIGIBLE") return { text: `Likely eligible${restingWords(n)}`, tone: "ok", short: `Likely${few}` };
+  // B148 (P-236): the team's three words, Qualifies · Can't tell yet · Does not qualify (contracts/case-check-words.ts).
+  if (r.outcome === "LIKELY_ELIGIBLE") return { text: `${OUTCOME_WORDS.LIKELY_ELIGIBLE}${restingWords(n)}`, tone: "ok", short: `${OUTCOME_WORDS.LIKELY_ELIGIBLE}${few}` };
   if (r.outcome === "POSSIBLY_ELIGIBLE") {
-    // P-230 (1): a rule whose "when not met" is needs review asks for the representative, never a hard Not eligible.
+    // P-230 (1): a rule whose "when not met" is needs review asks for the representative, never a hard Does not qualify.
     const parts = [r.missingInputs.length ? `needs ${plural(r.missingInputs.length, "fact")}` : "", r.reviewGates?.length ? "the representative reviews this" : ""].filter(Boolean);
-    return { text: `Possibly eligible — ${parts.join("; ")}`, tone: "warn", short: "Possibly" };
+    return { text: `${OUTCOME_WORDS.POSSIBLY_ELIGIBLE} — ${parts.join("; ")}`, tone: "warn", short: OUTCOME_WORDS.POSSIBLY_ELIGIBLE };
   }
-  if (r.outcome === "NOT_ELIGIBLE") return { text: `Not eligible on this application's rules as written${restingWords(n)}`, tone: "danger", short: `Not eligible${few}` };
+  if (r.outcome === "NOT_ELIGIBLE") return { text: `${OUTCOME_WORDS.NOT_ELIGIBLE} on this application's rules as written${restingWords(n)}`, tone: "danger", short: `${OUTCOME_WORDS.NOT_ELIGIBLE}${few}` };
   return { text: r.outcome, tone: "neutral", short: r.outcome };
 }
 
 /** Review M1 on 2572b9b0 (WCAG 2.4.3): after an action, focus goes back to the button that started it, or to the
- *  result's heading when that button is gone or switched off (Run eligibility check becomes Run again; Mark reviewed
+ *  result's heading when that button is gone or switched off (Run case check becomes Run again; Mark reviewed
  *  is off once marked). */
 function focusBack(el: HTMLElement | null) {
   if (el && el.isConnected && !(el as HTMLButtonElement).disabled) { el.focus(); return; }
@@ -69,7 +71,7 @@ const latestOf = (list: Assessment[] | undefined, person: string) => (list ?? []
 
 // ------------------------------------------------------------------ the card on the case page
 
-/** "Eligibility (staff only)": one line per traveller, under People on this case. Shows nothing to a client. */
+/** "Case check from confirmed facts (staff only)": one line per traveller, under People on this case. Shows nothing to a client. */
 export function EligibilityCard({ caseId, people }: { caseId: string; people: CasePerson[] }) {
   const actor = useActorId();
   const q = useAssessments(caseId);
@@ -78,10 +80,10 @@ export function EligibilityCard({ caseId, people }: { caseId: string; people: Ca
   return (
     <section aria-labelledby="eligibility" className="rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-        <h2 id="eligibility" className="text-base font-semibold">Eligibility (staff only)</h2>
+        <h2 id="eligibility" className="text-base font-semibold">{CASE_CHECK} (staff only)</h2>
         <StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" />
         <span className="flex-1" />
-        <Link to={`/cases/${caseId}/eligibility`} className="text-[13px] font-medium text-text-link hover:underline">Open eligibility</Link>
+        <Link to={`/cases/${caseId}/eligibility`} className="text-[13px] font-medium text-text-link hover:underline">Open {CASE_CHECK_SHORT}</Link>
       </header>
       {q.isLoading ? <div className="px-4 py-3" aria-busy="true"><Skeleton className="h-5 w-1/2" /></div> : q.isError ? <p className="px-4 py-3 text-sm text-text-danger">{(q.error as Error).message}</p> : (
         <ul className="divide-y divide-border">
@@ -114,10 +116,10 @@ export function EligibilityPage() {
   };
   const [runError, setRunError] = React.useState<string | null>(null);
   const listRef = React.useRef<HTMLUListElement>(null);
-  if (!STAFF.has(actor)) return <Notice title="This page is for the firm's staff">Eligibility checks are seen by the firm's staff only.</Notice>;
+  if (!STAFF.has(actor)) return <Notice title="This page is for the firm's staff">Case checks are seen by the firm's staff only.</Notice>;
   if (view.isLoading || q.isLoading) return <div className="space-y-3" aria-busy="true"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-40 w-full" /></div>;
   if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
-  if (q.isError) return <Notice tone="danger" title="The eligibility checks could not be read">{(q.error as Error).message}</Notice>;
+  if (q.isError) return <Notice tone="danger" title="The case checks could not be read">{(q.error as Error).message}</Notice>;
   const c = view.data!.case, travellers = c.people.filter((p) => p.role !== "case" && p.applies);
   const person = travellers.find((p) => p.subject_id === chosen) ?? travellers[0];
   const runs = (q.data?.assessments ?? []).filter((a) => a.person === person?.subject_id);
@@ -131,10 +133,10 @@ export function EligibilityPage() {
   };
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">Eligibility</span></nav>
+      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">{CASE_CHECK}</span></nav>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">Eligibility · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{CASE_CHECK} · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
           <p className="mt-1 text-sm text-text-muted">{(q.data?.assessments ?? []).find((a) => a.results[0])?.results[0].programLabel ?? "This application"} · release {c.pin.release_version}{latest ? ` · rules as at ${day(Object.values(latest.rulesAsOfByProgram)[0])}` : ""} · staff only: the client never sees a verdict</p>
         </div>
         {person && q.data?.has_rules !== false ? <RunButton caseId={c.id} person={person} first={!runs.length} onAgain={() => setDrawer("run")} onError={setRunError} /> : null}
@@ -161,7 +163,7 @@ export function EligibilityPage() {
             <div className="space-y-4 px-4 py-4">
               {runError ? <Notice tone="danger" title="Nothing was run">{runError}</Notice> : null}
               {q.data?.has_rules === false && !latest ? <Notice title="No eligibility rules yet">This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.</Notice>
-                : !latest ? <p className="text-sm">No eligibility check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
+                : !latest ? <p className="text-sm">No case check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
                 : <Result caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
             </div>
           </section>
@@ -176,9 +178,9 @@ export function EligibilityPage() {
 }
 
 function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string; person: CasePerson; first: boolean; onAgain: () => void; onError: (m: string | null) => void }) {
-  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Eligibility checked", invalidate: [["runtime", "assessments", caseId]], onDone: () => { onError(null); setTimeout(() => focusBack(null), 50); } });
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Case checked", invalidate: [["runtime", "assessments", caseId]], onDone: () => { onError(null); setTimeout(() => focusBack(null), 50); } });
   if (!first) return <Button onClick={onAgain}>Run again</Button>;
-  return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run eligibility check</Button>;
+  return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run {CASE_CHECK_SHORT}</Button>;
 }
 
 function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; caseSubject: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
@@ -198,13 +200,13 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
       </div>
       {resting.length ? (
         <p className="text-sm" data-resting-on={resting.join(" ")}>
-          {r.outcome === "LIKELY_ELIGIBLE" ? "Likely eligible" : "Not eligible"} rests on {resting.length === 1 ? "an answer" : "answers"} not yet confirmed:{" "}
+          “{r.outcome === "LIKELY_ELIGIBLE" ? OUTCOME_WORDS.LIKELY_ELIGIBLE : OUTCOME_WORDS.NOT_ELIGIBLE}” rests on {resting.length === 1 ? "an answer" : "answers"} not yet confirmed:{" "}
           {resting.map((f, i) => <React.Fragment key={f}>{i ? ", " : ""}<Link to={`/cases/${caseId}#${lineId((a.inputs ?? []).find((i) => i.fact === f)?.about === "case" ? caseSubject : a.person, f)}`} className="text-text-link underline" title={`Open ${factWords(f)} in the Agent view, where its section is confirmed`}>{factWords(f)}</Link></React.Fragment>)}.
           {" "}Confirm {resting.length === 1 ? "it" : "them"} in the Agent view; this line goes once every deciding answer is confirmed.
         </p>
       ) : null}
       {r.outcome === "NOT_ELIGIBLE" ? <p className="text-sm">Fails: {r.failedGates.map((k) => labels.get(k) ?? k).join("; ")}{r.missingInputs.length ? `; also needs: ${r.missingInputs.map(factWords).join(", ")}` : ""}. The representative reviews this, and IRCC decides.</p> : null}
-      {r.reviewGates?.length ? <p className="text-sm">For the representative's review, a rule not met: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this never gives “Not eligible” on its own; the representative reviews it, and IRCC decides.</p> : null}
+      {r.reviewGates?.length ? <p className="text-sm">For the representative's review, a rule not met: {r.reviewGates.map((k) => labels.get(k) ?? k).join("; ")}. A rule like this never gives “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own; the representative reviews it, and IRCC decides.</p> : null}
       {a.overrides.map((x) => <p key={x.id} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm [overflow-wrap:anywhere]"><span className="font-medium">Officer's override: {x.label}</span> — {x.reason} <span className="text-xs text-text-muted">({x.name ?? nameOf(x.by)}, {when(x.at)}; the result above is the rules' own)</span></p>)}
       <div>
         <h3 className="mb-1 text-sm font-semibold">Rules checked</h3>
@@ -219,7 +221,7 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
               <span className="min-w-0">
                 <span className="block [overflow-wrap:anywhere]">{g.label}</span>
                 <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}${g.unconfirmed?.includes(f) ? " (not confirmed yet)" : ""}`).join(" · ")}</span>
-                {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: never “Not eligible” on its own</span> : null}
+                {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: never “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own</span> : null}
                 {g.missing.length ? <Link to={`/cases/${caseId}#agent-view`} className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the Agent view</Link> : null}
               </span>
             </li>
@@ -246,7 +248,7 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
 
 function RunAgainDrawer({ caseId, person, close }: { caseId: string; person: CasePerson; close: () => void }) {
   const [reason, setReason] = React.useState(""), [error, setError] = React.useState<string | null>(null);
-  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id, reason } }), { success: "Eligibility checked again", invalidate: [["runtime", "assessments", caseId]], onDone: close });
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id, reason } }), { success: "Case checked again", invalidate: [["runtime", "assessments", caseId]], onDone: close });
   const submit = () => { if (!run.isPending) run.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) }); };
   return (
     <Panel open onOpenChange={(o) => { if (!o) close(); }} title={`Run again for ${person.label}`} description="The earlier checks stay as they were; this one reads today's answers." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={run.isPending} onClick={submit}>Run again</Button></>}>
