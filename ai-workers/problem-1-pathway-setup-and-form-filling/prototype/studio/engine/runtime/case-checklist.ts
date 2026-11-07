@@ -148,7 +148,9 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     ? `${what}: check ${m.map((x) => x.question).join(" and ")}; together they do not give an answer (for example a birth date after the application date).`
     : `${what}: answer ${m.length ? m.map((x) => x.question).join(", ") : "the questions it depends on"} first.`;
   // B102 (A6): the release's own worked-out age about a person, if it has one (data: its inputs and reference date).
-  const ageValue = derived.find((d) => d.calculation === "age_in_years" && d.id.startsWith("person.") && d.inputs?.length && d.reference);
+  // Break MA1: the age the release's document lines read, never another worked-out age that sorts first; none read → none.
+  const linesRead = new Set(reqs.flatMap((r) => (r.condition ? [...JSON.stringify(r.condition).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [])));
+  const ageValue = derived.find((d) => d.calculation === "age_in_years" && d.id.startsWith("person.") && d.inputs?.length && d.reference && linesRead.has(d.id));
   const ageOf = (h: string): PersonAge => {
     const birthKey = ageValue?.inputs?.[0] ?? MINOR.birthDateField, onKey = ageValue?.reference ?? null;
     const born = known.get(`${h}|${birthKey}`)?.value;

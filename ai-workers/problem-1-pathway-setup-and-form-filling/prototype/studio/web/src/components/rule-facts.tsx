@@ -23,18 +23,22 @@ export function RuleFacts({ combinationId }: { combinationId: string }) {
   const q = useQuery<{ facts: RuleFact[]; types: string[]; rules?: RuleRef[]; subjects?: string[] }>({ queryKey: ["rule-facts", combinationId], queryFn: () => api(`/combinations/${combinationId}/rule-facts`) });
   const { canAuthor } = useSessionView();
   const facts = q.data?.facts ?? [], rules = q.data?.rules ?? [];
-  if (!facts.length && !(canAuthor && rules.length)) return null;
+  // Review m1, break mi4: after "Work it out" the row leaves; a status line says what was done and takes the focus.
+  const [done, setDone] = React.useState<string | null>(null);
+  const workedOut = (words: string) => { setDone(words); requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-work-out-done]")?.focus()); };
+  if (!facts.length && !(canAuthor && rules.length) && !done) return null;
   return (
     <section aria-labelledby="rf-h" className="space-y-2 rounded-lg border border-border p-3" data-rule-facts>
       <h3 id="rf-h" className="text-sm font-semibold">Facts a rule needs that no form asks{facts.length ? ` · ${facts.length}` : ""}</h3>
       <p className="text-xs text-text-muted">A fact enters the library only from a source. These are read by a rule here but are not in the library yet: name the rule, say what the fact means, and it goes to To review as a proposal (no AI, US$0). Sample until the immigration expert confirms.</p>
-      {facts.length ? <ul className="space-y-2">{facts.map((f) => <FactRow key={f.fact} combinationId={combinationId} f={f} types={q.data?.types ?? []} canAuthor={canAuthor} />)}</ul> : null}
+      {done ? <p className="text-sm outline-none" role="status" tabIndex={-1} data-work-out-done>{done}</p> : null}
+      {facts.length ? <ul className="space-y-2">{facts.map((f) => <FactRow key={f.fact} combinationId={combinationId} f={f} types={q.data?.types ?? []} canAuthor={canAuthor} onWorkedOut={workedOut} />)}</ul> : null}
       {canAuthor && rules.length ? <NewFact combinationId={combinationId} rules={rules} types={q.data?.types ?? []} subjects={q.data?.subjects ?? ["person"]} /> : null}
     </section>
   );
 }
 
-function FactRow({ combinationId, f, types, canAuthor }: { combinationId: string; f: RuleFact; types: string[]; canAuthor: boolean }) {
+function FactRow({ combinationId, f, types, canAuthor, onWorkedOut }: { combinationId: string; f: RuleFact; types: string[]; canAuthor: boolean; onWorkedOut: (words: string) => void }) {
   const qc = useQueryClient();
   const [open, setOpen] = React.useState(false), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
   const [rule, setRule] = React.useState(f.rules[0]?.key ?? ""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(""), [valueType, setType] = React.useState(""), [valuesText, setValues] = React.useState("");
@@ -54,7 +58,7 @@ function FactRow({ combinationId, f, types, canAuthor }: { combinationId: string
           : <span className="flex flex-wrap gap-1.5"><Button size="sm" variant="secondary" aria-expanded={open} aria-controls={id} onClick={() => { setOpen((o) => !o); setWork(false); }}>Add the fact this rule needs</Button>
             <Button size="sm" variant="ghost" aria-expanded={work} aria-controls={`${id}-wo`} onClick={() => { setWork((o) => !o); setOpen(false); }} data-work-out={f.fact}>Work it out instead</Button></span>}
       </div>
-      {work && !f.waitingProposal ? <WorkOut id={`${id}-wo`} combinationId={combinationId} fact={f.fact} /> : null}
+      {work && !f.waitingProposal ? <WorkOut id={`${id}-wo`} combinationId={combinationId} fact={f.fact} onDone={onWorkedOut} /> : null}
       {open && !f.waitingProposal ? (
         <div id={id} className="grid gap-2 pt-1 sm:grid-cols-2">
           {f.rules.length > 1 ? <Field label="The rule that needs it"><Select value={rule} onChange={(e) => setRule(e.target.value)}>{f.rules.map((r) => <option key={r.key} value={r.key}>{r.sentence}</option>)}</Select></Field> : null}
@@ -70,34 +74,36 @@ function FactRow({ combinationId, f, types, canAuthor }: { combinationId: string
   );
 }
 
-type WorkChoices = { calculations: { key: string; words: string }[]; from: { key: string; label: string; subject: string }[]; on: { key: string; label: string }[] };
+type WorkChoices = { calculations: { key: string; words: string }[]; from: { key: string; label: string; subject: string }[]; on: { key: string; label: string }[]; fits?: { ok: boolean; why: string | null } };
 /** B102 (A6, concept screens/A6-age-on-application-date): a fact a rule reads is worked out from library dates instead of
  *  asked (a person's age in whole years from the date of birth on the application date). The choices and every refusal
  *  are the server's (api/src/worked-out.ts); the key is the one the rule reads. */
-function WorkOut({ id, combinationId, fact }: { id: string; combinationId: string; fact: string }) {
+function WorkOut({ id, combinationId, fact, onDone }: { id: string; combinationId: string; fact: string; onDone: (words: string) => void }) {
   const qc = useQueryClient();
-  const q = useQuery<WorkChoices>({ queryKey: ["rule-facts", combinationId, "worked-out"], queryFn: () => api(`/combinations/${combinationId}/rule-facts/worked-out`) });
+  const q = useQuery<WorkChoices>({ queryKey: ["rule-facts", combinationId, "worked-out", fact], queryFn: () => api(`/combinations/${combinationId}/rule-facts/worked-out?fact=${encodeURIComponent(fact)}`) });
   const subject = fact.split(".")[0];
   const from = (q.data?.from ?? []).filter((d) => d.subject === subject), on = q.data?.on ?? [];
-  const [calc, setCalc] = React.useState(""), [fromKey, setFrom] = React.useState(""), [onKey, setOn] = React.useState("");
+  // null = not chosen yet, so the default applies; "" = the person chose "Choose a date…" (review m6: it stays).
+  const [calc, setCalc] = React.useState(""), [fromKey, setFrom] = React.useState<string | null>(null), [onKey, setOn] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
   // Defaults from what the library holds: the first calculation, a date of birth about the same subject, an application date.
-  const c = calc || q.data?.calculations[0]?.key || "", fk = fromKey || from.find((d) => /birth/i.test(d.key))?.key || "", ok = onKey || on.find((d) => /application/i.test(d.key))?.key || "";
+  const c = calc || q.data?.calculations[0]?.key || "", fk = fromKey ?? (from.find((d) => /birth/i.test(d.key))?.key || ""), ok = onKey ?? (on.find((d) => /application/i.test(d.key))?.key || "");
   // The words are the server's, built from the choices (challenge M2); shown here as they will read.
   const words = [q.data?.calculations.find((x) => x.key === c)?.words, from.find((d) => d.key === fk)?.label, on.find((d) => d.key === ok)?.label];
   const save = async () => {
     setBusy(true); setErr(null);
-    try { await api(`/combinations/${combinationId}/rule-facts/${encodeURIComponent(fact)}/worked-out`, { method: "POST", json: { calculation: c, from: fk, on: ok } }); await qc.invalidateQueries({ queryKey: ["rule-facts", combinationId] }); }
+    try { const r = await api<{ plain: string }>(`/combinations/${combinationId}/rule-facts/${encodeURIComponent(fact)}/worked-out`, { method: "POST", json: { calculation: c, from: fk, on: ok } }); onDone(`Worked out: ${fact} is now "${r.plain}" It reaches cases with the next approved release.`); await qc.invalidateQueries({ queryKey: ["rule-facts", combinationId] }); }
     catch (e) { setErr((e as Error).message); requestAnimationFrame(() => document.getElementById(`${id}-err`)?.focus()); } finally { setBusy(false); }
   };
   if (q.isLoading) return <p id={id} className="text-xs text-text-muted">Loading the dates the library holds…</p>;
   if (q.isError) return <p id={id} role="alert" className="text-sm text-text-danger">{(q.error as Error).message}</p>;
+  if (q.data?.fits && !q.data.fits.ok) return <p id={id} className="text-xs text-text-muted" data-work-out-not-offered>{q.data.fits.why}</p>;
   return (
     <div id={id} className="grid gap-2 pt-1 sm:grid-cols-2" data-work-out-form={fact}>
       <p className="text-xs text-text-muted sm:col-span-2">Worked out from answers the case already has, never asked. It reaches cases with the next approved release (no AI, US$0; Sample).</p>
-      <Field label="Worked out as"><Select value={c} onChange={(e) => setCalc(e.target.value)}>{(q.data?.calculations ?? []).map((x) => <option key={x.key} value={x.key}>{x.words}</option>)}</Select></Field>
-      <Field label="From"><Select value={fk} onChange={(e) => setFrom(e.target.value)}><option value="">Choose a date…</option>{from.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}</Select></Field>
-      <Field label="On">{on.length ? <Select value={ok} onChange={(e) => setOn(e.target.value)}><option value="">Choose a date about the case…</option>{on.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}</Select>
+      <Field label="Worked out as"><Select value={c} onChange={(e) => { setCalc(e.target.value); setErr(null); }}>{(q.data?.calculations ?? []).map((x) => <option key={x.key} value={x.key}>{x.words}</option>)}</Select></Field>
+      <Field label="From"><Select value={fk} onChange={(e) => { setFrom(e.target.value); setErr(null); }}><option value="">Choose a date…</option>{from.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}</Select></Field>
+      <Field label="On">{on.length ? <Select value={ok} onChange={(e) => { setOn(e.target.value); setErr(null); }}><option value="">Choose a date about the case…</option>{on.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}</Select>
         : <p className="text-xs text-text-warn" data-no-case-date>No date about the case in the library yet: add it first with "Add a fact a rule needs" below (for example "Application date", about the case, a date), or decide the one waiting on To review › Proposals; then place it in this questionnaire.</p>}</Field>
       <p className="text-sm sm:col-span-2" data-work-out-words>{words.every(Boolean) ? <>It will read: <span className="font-medium">{words[0]} from {words[1]}, on {words[2]}.</span></> : <span className="text-text-muted">Choose the two dates.</span>}</p>
       <div className="sm:col-span-2"><Button size="sm" busy={busy} disabled={!on.length} onClick={() => void save()}>Work it out · US$0</Button></div>

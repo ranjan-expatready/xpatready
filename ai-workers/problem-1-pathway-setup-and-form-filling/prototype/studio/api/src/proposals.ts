@@ -584,6 +584,11 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = await taken(tx, l.ws);
     // C3.6 (P-158 (5)): a fact added for a rule keeps the key that rule already reads (never typed), and names the rule.
     const ruleFact = (r.work as { ruleFact?: unknown } | null)?.ruleFact;
+    // B102 (A6, break MA2, MA3): a worked-out value's key is taken: a fact is asked or worked out, never both, whichever
+    // was written first (the add for a rule is refused here; an add by name gets another key).
+    const worked = new Set((await tx.derivedField.findMany({ where: { workspaceId: l.ws }, select: { derivedKey: true } })).map((d) => d.derivedKey));
+    if (typeof ruleFact === "string" && worked.has(ruleFact)) fail(`${ruleFact} is worked out (Questionnaires › Facts a rule needs › Work it out instead), so it is not asked: reject this one.`, HttpStatus.CONFLICT);
+    for (const k of worked) used.add(k);
     const rule = (r.source as { rule?: { key: string; sentence: string } | null } | null)?.rule;
     if (typeof ruleFact === "string" && used.has(ruleFact)) {
       const retired = await tx.canonicalField.findFirst({ where: { workspaceId: l.ws, canonicalFieldKey: ruleFact, status: "RETIRED", mergedIntoKey: null }, select: { id: true } });

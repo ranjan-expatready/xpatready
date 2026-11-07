@@ -37,7 +37,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   const ws = `(select workspace_id from combination where id='${combo}')`;
   const rule = (key: string, json: string, then: string) => sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, when_plain, then_plain, for_whom, version, status, origin, updated_by) values (gen_random_uuid(), ${ws}, '${combo}', '${key}', '${json}', 'when the test says so', '${then}', 'principal', 1, 'PUBLISHED', 'HUMAN', 'user-A')`);
   rule("r_b102_age", `{"field":"person.b102_years","op":"lt","value":18}`, "ask for the papers of a child");
-  rule("r_b102_asked", `{"field":"person.b102_asked","op":"eq","value":true}`, "a fact to ask");
+  rule("r_b102_asked", `{"field":"person.b102_asked","op":"gte","value":2}`, "a fact to ask");
   // A date about a person that the library holds and no questionnaire asks (scaffolding: a copy of the date of birth's row).
   sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label) select gen_random_uuid(), workspace_id, 'person.b102_unasked_date', 1, status, 'A date no questionnaire asks, for the B102 check.', value_type, data_type, scope, subject_kind, origin, updated_by, 'B102 unasked date' from canonical_field where workspace_id=${ws} and canonical_field_key='person.date_of_birth' order by version desc limit 1`);
   // The dates this combination's questionnaire asks (challenge M1: a worked-out value reads only dates a case can answer).
@@ -82,7 +82,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   r = await call("POST", url("person.b102_years"), { ...good, from: unasked });
   ok("B102 BR-3 fail (challenge M1): a date in the library that no questionnaire asks is refused, saying to place it first", r.status === 400 && /no questionnaire asks it: place it first/.test(msg(r)), [r.status, msg(r)]);
   // ─────────────────── BR-5: never both asked and worked out
-  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.b102_asked", rule: "r_b102_asked", label: "B102 asked fact", meaning: "A fact proposed to be asked, for the B102 check.", valueType: "yes_no" });
+  r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.b102_asked", rule: "r_b102_asked", label: "B102 asked fact", meaning: "A fact proposed to be asked, for the B102 check.", valueType: "number" });
   ok("setup: a proposal to ask person.b102_asked waits on To review", r.status === 201, [r.status, msg(r)]);
   r = await call("POST", url("person.b102_asked"), good);
   ok("B102 BR-5 fail: a fact with a waiting proposal to ask it is refused (409)", r.status === 409 && /decide it there first/.test(msg(r)), [r.status, msg(r)]);
@@ -102,6 +102,40 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   rule("r_b102_twice", `{"field":"person.b102_twice","op":"lt","value":18}`, "twice");
   const both = await Promise.all([call("POST", url("person.b102_twice"), good), call("POST", url("person.b102_twice"), good)]);
   ok("B102 fail (race): two parallel adds of one fact make one value; the other is refused (409)", both.filter((x) => x.status === 201).length === 1 && both.some((x) => x.status === 409) && sql(`select count(*) from derived_field where derived_key='person.b102_twice'`) === "1", both.map((x) => [x.status, msg(x)]));
+
+  // ─────────────────── review M1: an age is a number, so a rule that compares the fact with words is not offered
+  rule("r_b102_words", `{"field":"person.b102_words","op":"eq","value":"alone"}`, "words");
+  r = await call("POST", url("person.b102_words"), good);
+  ok("B102 review M1 fail: a fact a rule compares with words (eq \"alone\") is refused: a worked-out age is a number", r.status === 400 && /compares person\.b102_words with words/.test(msg(r)), [r.status, msg(r)]);
+  const fitsW = (await call("GET", `/combinations/${combo}/rule-facts/worked-out?fact=person.b102_words`)).body?.fits, fitsN = (await call("GET", `/combinations/${combo}/rule-facts/worked-out?fact=person.b102_twice`)).body?.fits;
+  ok("B102 review M1 pass and fail: the form is offered for a fact compared with a number, not for one compared with words", fitsN?.ok === true && fitsW?.ok === false && /^Not offered/.test(fitsW?.why ?? ""), { fitsN, fitsW });
+  // ─────────────────── break mi1, mi2, mi3
+  sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label) select gen_random_uuid(), workspace_id, 'person.b102_retired', 1, 'RETIRED', 'A retired field, for the B102 check.', value_type, data_type, scope, subject_kind, origin, updated_by, 'B102 retired' from canonical_field where workspace_id=${ws} and canonical_field_key='person.date_of_birth' order by version desc limit 1`);
+  rule("r_b102_retired", `{"field":"person.b102_retired","op":"lt","value":18}`, "retired");
+  r = await call("POST", url("person.b102_retired"), good);
+  ok("B102 break mi1 fail: a retired library field is not worked out (409, restore it)", r.status === 409 && /retired library field/.test(msg(r)), [r.status, msg(r)]);
+  rule("r_b102_dots", `{"field":"person.b102.dot","op":"lt","value":18}`, "dots");
+  r = await call("POST", url("person.b102.dot"), good);
+  ok("B102 break mi3 fail: a key with two dots is not a fact key (400)", r.status === 400 && /not a fact key/.test(msg(r)), [r.status, msg(r)]);
+  rule("r_b102_case", `{"field":"case.b102_years","op":"lt","value":18}`, "case");
+  r = await call("POST", url("case.b102_years"), { ...good, from: caseDate });
+  ok("B102 break mi2 fail: worked out from and on the same date is refused", r.status === 400 && /choose another date to work it out on/.test(msg(r)), [r.status, msg(r)]);
+  // ─────────────────── review m4: BR-5 by name (C3.6's add by a rule's key carries the key it would land as)
+  rule("r_b102_named", `{"field":"person.b102_named_years","op":"lt","value":18}`, "named");
+  r = await call("POST", `/combinations/${combo}/rules/r_b102_named/fact`, { label: "B102 named years", meaning: "A fact proposed by name, for the B102 check.", valueType: "number", subject: "person" });
+  ok("setup: a proposal by name for person.b102_named_years waits", r.status === 201 && r.body?.key === "person.b102_named_years", [r.status, r.body?.key]);
+  r = await call("POST", url("person.b102_named_years"), good);
+  ok("B102 review m4 / BR-5 fail: a fact proposed by name and waiting is not also worked out (409)", r.status === 409 && /decide it there first/.test(msg(r)), [r.status, msg(r)]);
+  // ─────────────────── break MA3: an add by name never builds a worked-out value's key
+  r = await call("POST", `/combinations/${combo}/rules/r_b102_age/fact`, { label: "B102 years", meaning: "A fact named like a worked-out value, for the B102 check.", valueType: "number", subject: "person" });
+  ok("B102 break MA3 pass and fail: a name that would build person.b102_years (worked out) gets another key", r.status === 201 && r.body?.key && r.body.key !== "person.b102_years", [r.status, r.body?.key]);
+  // ─────────────────── break MA2: asked and worked out at once: the landing refuses the ask
+  rule("r_b102_race", `{"field":"person.b102_race","op":"lt","value":18}`, "race");
+  const ask = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.b102_race", rule: "r_b102_race", label: "B102 race", meaning: "A fact asked and worked out at once, for the B102 check.", valueType: "number" });
+  sql(`insert into derived_field (id, workspace_id, derived_key, calculation, inputs, reference, plain, executable) values (gen_random_uuid(), ${ws}, 'person.b102_race', 'age_in_years', '{person.date_of_birth}', '${caseDate}', 'Worked out in the race (B102 check).', true)`); // the other request won the race
+  r = await call("POST", "/review/proposals/decide", { ids: [ask.body?.proposalId], action: "accept" }, "user-C");
+  const asField = sql(`select count(*) from canonical_field where canonical_field_key='person.b102_race'`);
+  ok("B102 break MA2 fail: accepting the ask of a fact worked out since is refused, so it is never both asked and worked out", ask.status === 201 && (r.status === 409 || r.body?.items?.[0]?.error) && asField === "0", [ask.status, r.status, JSON.stringify(r.body).slice(0, 200), asField]);
 
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

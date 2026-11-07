@@ -243,7 +243,9 @@ export class RuleFacts {
     // MA1 (review c36 r2): the key shown here is a preview against every key, retired ones included; the lander builds
     // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
     const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
-    const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
+    // B102 (A6, break MA3): a worked-out value's key is taken too, as the lander counts it (proposals.ts LANDERS.field).
+    const worked = (await this.db.derivedField.findMany({ where: { workspaceId: c.workspaceId }, select: { derivedKey: true } })).map((d) => d.derivedKey);
+    const key = keyFor(b.subject, b.label, new Set([...all.map((f) => f.canonicalFieldKey), ...worked]));
     const ruleValues = ruleValuesKnown(namedRules(snapshot).filter((r) => factsRead(r.tree).includes(key)), key, values); // break R2-M2: rules that already read the built key
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
