@@ -3,24 +3,5 @@
 # refuses it in CI. One path or prefix per line, relative to ai-workers/problem-1-pathway-setup-and-form-filling/prototype/.
 # The tech lead keeps this list; a builder who needs one of these asks in a PR comment "Question for the tech lead", and the
 # tech lead either removes the line or approves the file with a line in the PR body: "Hot file approved by the tech lead: <path>".
-studio/engine/validate.ts
-studio/engine/snapshot.ts
-studio/engine/render.ts
-studio/engine/library-index.ts
-studio/engine/field-map-rounds.ts
-studio/api/src/proposals.ts
-studio/api/src/review-proposals.ts
-studio/api/src/studio.ts
-studio/api/src/demo.ts
-studio/api/src/demo-reset-to-six.ts
-studio/api/src/forms-demo.ts
-studio/api/src/fact-sources.ts
-studio/api/src/sources.ts
-studio/api/src/library-
-studio/api/src/form-library.ts
-studio/api/src/form-masters.ts
-studio/api/src/field-drafts
-studio/api/src/field-map-check.ts
-studio/api/src/guide-sources.ts
-contracts/
-studio/contracts/
+# Emptied 8 Nov 00:36 IST (founder, typed "Yes, clear it"; P-415): M2 is 60/60, so no M2 file is still changing,
+# and the guard held five approved M3 PRs for nothing. The guard and this file stay; a later milestone can list files again.
