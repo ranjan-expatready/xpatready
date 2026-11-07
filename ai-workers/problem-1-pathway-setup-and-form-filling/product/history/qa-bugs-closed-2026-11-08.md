@@ -23,3 +23,28 @@ From `qa/BUGS.md`:
 From `qa/reports/bugs-open-detail.md`:
 
 | QA-251 | Gap · Major (cloud qa's M3 re-score, #1069, 5 Nov; narrowed 7 Nov by qa's fresh reader from four routes to two) | C8.1, C7.6 · P-348 (4), P-322 | main ffcfb45c8, 344e08699 (cloud); last seen main ecbd68301 | Two mutating routes that packs use have no caller in `web/src`: `POST /runtime/items/:id/sign-steps/:key` and `.../signed-scan`. So a person cannot record print, signed, scan received or Uploaded to IRCC by screens. `/runtime/filings/:id/ready` and `/warnings/:code/pass` now have a caller (`web/src/runtime/readiness.tsx:105`, `:183`; panel seen 7 Nov, not pressed in this round). Evidence `qa/reports/2026-11-07-c611-c81/walk.md` steps 10-11. Row B3 | M3 screens | Open |
+
+## QA-301 — closed 8 Nov 2026 (qa re-score after #1251, B150)
+
+Closed by the qa lane on main **e4d63f396** after #1251 (B150) (verdict by a fresh reader, P-360 (3); `qa/reports/2026-11-08-b150-rescore.md`). By screens as the case officer: the client's own answer reads "Declared"; Prepare application reads "filled from declared and confirmed answers" and "Declared or confirmed answers for 5 of 164 form fields"; no "Counts as confirmed" anywhere on the page. C6.6 pack 31/31 on the checkpoint (run 42425176291).
+
+From `qa/BUGS.md`:
+
+| QA-301 | Conflict · Major (qa row B146, L-SA6, 7 Nov ~15:48 IST; fresh reader) | C6.6, C6.3 · P-242 ("a client's own typed answer is **Declared**"), L-SA6 | main 9fd299219 (app of 83ee42dda) | A client's own typed answer fills the form at once (IMM 5257 SCH1's names written), but the Agent view marks it "Counts as confirmed", never "Declared". The Prepare application card says the forms are "filled from confirmed answers only" and counts the declared answer among "Confirmed answers for N": the rule P-242 replaced. The rule in code is still P-72/P-78's (`engine/runtime/case.ts:54-66`). Proposed fix row (runtime): show Declared on the answer, make the card read "declared and confirmed answers", with a C6.6 acceptance step on the words. Evidence `qa/reports/2026-11-07-lsa6/walk.md` steps 3-5 | runtime (proposed row) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-301 | Conflict · Major (qa row B146, L-SA6, 7 Nov ~15:48 IST; fresh reader) | C6.6, C6.3 · P-242 ("a client's own typed answer is **Declared**"), L-SA6 | main 9fd299219 (app of 83ee42dda) | A client's own typed answer fills the form at once (IMM 5257 SCH1's names written), but the Agent view marks it "Counts as confirmed", never "Declared". The Prepare application card says the forms are "filled from confirmed answers only" and counts the declared answer among "Confirmed answers for N": the rule P-242 replaced. The rule in code is still P-72/P-78's (`engine/runtime/case.ts:54-66`). Proposed fix row (runtime): show Declared on the answer, make the card read "declared and confirmed answers", with a C6.6 acceptance step on the words. Evidence `qa/reports/2026-11-07-lsa6/walk.md` steps 3-5 | runtime (proposed row) | Open |
+
+## QA-303 — closed 8 Nov 2026 (qa re-score after #1251, B150)
+
+Closed by the qa lane on main **e4d63f396** after #1251 (B150) (fresh reader; `qa/reports/2026-11-08-b150-rescore.md`). The founder answered both questions in P-411 (1) and (2), and the product does what P-411 says: the principal's answer for an adult fills at once, marked "Answered by the principal for <name>" (screens and API); an officer-typed answer fills at once, marked "Entered by staff · to confirm" (screens and API); a correction keeps the box filled (C6.3 pack 12/12 and `check_runtime_r1c.cjs`, not walked).
+
+From `qa/BUGS.md`:
+
+| QA-303 | Ambiguity · Major (qa row B146, L-SA6, 7 Nov; fresh reader; a question for the founder through the tech lead) | C6.6, C6.3 · P-242 ("Amends P-72 and P-78"), P-78, SA-1B-260…264 | main 9fd299219 | P-242 says a client's own typed answer fills at once, and that it amends P-72 and P-78 without saying how. Today the principal's answer for an adult spouse or adult child waits as "answered by the principal", and an officer-typed answer stays blank until confirmed, so an officer's correction of a client's answer empties the box (IMM 5257 SCH1's family name went from written to not written). Questions: does the principal's answer for an adult fill at once? Does an officer-typed answer fill before Confirm section (SA-1B: "no verified-only gate on forms")? Evidence `qa/reports/2026-11-07-lsa6/walk.md` steps 6, 8, 9, 13 | founder (through the tech lead) | Open |
+
+From `qa/reports/bugs-open-detail.md`:
+
+| QA-303 | Ambiguity · Major (qa row B146, L-SA6, 7 Nov; fresh reader; a question for the founder through the tech lead) | C6.6, C6.3 · P-242 ("Amends P-72 and P-78"), P-78, SA-1B-260…264 | main 9fd299219 | P-242 says a client's own typed answer fills at once, and that it amends P-72 and P-78 without saying how. Today the principal's answer for an adult spouse or adult child waits as "answered by the principal", and an officer-typed answer stays blank until confirmed, so an officer's correction of a client's answer empties the box (IMM 5257 SCH1's family name went from written to not written). Questions: does the principal's answer for an adult fill at once? Does an officer-typed answer fill before Confirm section (SA-1B: "no verified-only gate on forms")? Evidence `qa/reports/2026-11-07-lsa6/walk.md` steps 6, 8, 9, 13 | founder (through the tech lead) | Open |
+
