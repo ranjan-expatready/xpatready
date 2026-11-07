@@ -104,6 +104,8 @@ export const CONFIRM_WORDS = {
   client_own: "Counts as confirmed: the client's own answer",
   waits: "Waits for the officer's \"Confirm section\"",
   by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  /** C6.13: the principal is not the client (after Make principal): the client answered for them. */
+  by_client: "Answered by the client for this adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
 } as const;
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer

@@ -63,7 +63,7 @@ const shot = async (p, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: 
     await dlg.getByLabel("Principal applicant's name").fill("Sample Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);
-    await p.getByRole("heading", { name: "People on this case" }).waitFor(T);
+    await p.getByRole("heading", { name: "People and filings" }).waitFor(T);
     return p.url().split("/").pop();
   };
   const addButtons = async () => (await p.locator("[data-add-role]").evaluateAll((bs) => bs.map((b) => `${b.getAttribute("data-add-role")}|${(b.textContent ?? "").trim()}`)));
@@ -93,7 +93,7 @@ const shot = async (p, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: 
     await dlg.getByRole("button", { name: "Add", exact: true }).click();
     await dlg.waitFor({ state: "hidden", ...T });
     await p.getByText("Sponsor added: their questions are now asked").waitFor(T);
-    const chip = p.locator("section[aria-labelledby=people] li", { hasText: "Sample Sponsor A" });
+    const chip = p.locator("section[aria-labelledby=people] tr", { hasText: "Sample Sponsor A" });
     await chip.waitFor(T);
     ok("B115 pass: the sponsor is listed on the case in the release's words (Sponsor), sent with the principal's application", /Sponsor/.test(await chip.innerText()) && /Sent with the principal's application/.test(await chip.innerText()), await chip.innerText());
     ok("B115 fail (review m1): the sponsor carries no \"Not travelling\" pill (that pill says they are asked only what the principal's forms need)", !/Not travelling/.test(await chip.innerText()), await chip.innerText());

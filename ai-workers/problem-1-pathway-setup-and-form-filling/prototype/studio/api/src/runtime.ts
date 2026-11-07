@@ -4,6 +4,7 @@
 // on the workspace's cases; a client reaches only the case they answer, and only its questionnaire; configuration
 // people reach no case. Answer values and typed names never go into audit text or logs (STANDARDS §5): audit lines name
 // a case by its id.
+import { clientPersonOf, withClient, type StoredChange } from "../../engine/runtime/filing-changes.ts";
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
@@ -67,7 +68,9 @@ export class Runtime {
     const officer = isOfficer(actor), client = (actor.duties as readonly string[]).includes("answer");
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
-    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } } } });
+    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } },
+      // C6.13 BR-3b: the case's first Make principal names the client when roles were swapped (clientPersonOf).
+      filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } } } });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
     const pin = c!.pins[0];
@@ -77,7 +80,10 @@ export class Runtime {
 
   snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
   peopleOf(c: Reached): Participant[] {
-    return c.participants.map((p) => ({ subjectId: p.subjectId, role: p.role as Participant["role"], label: p.subject.label, applies: p.applies }));
+    const people = c.participants.map((p) => ({ subjectId: p.subjectId, role: p.role as Participant["role"], label: p.subject.label, applies: p.applies }));
+    // C6.13 BR-3b: the client stays the same person after Make principal; only a case whose roles were swapped says so.
+    if (!c.filingChanges.length) return people;
+    return withClient(people, clientPersonOf(people, c.filingChanges.map((x) => ({ kind: x.kind as StoredChange["kind"], subject: x.subjectId, other: x.otherSubjectId, at: x.changedAt.toISOString() }))));
   }
 
   async createCase(actor: Actor, body: unknown) {
@@ -150,7 +156,9 @@ export class Runtime {
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
       // B115: each person's role in the release's own words (the sponsor has no fixed word on the screen).
       // B115 review m1: co_files marks the person whose application is always sent with the principal's (the sponsor).
-      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role) })),
+      people: (() => { const client = new Map(this.peopleOf(c).map((x) => [x.subjectId, x.client])); return c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, role_label: roleOfRelease.get(p.role) ?? null, label: p.subject.label, applies: p.applies, co_files: coFiling.has(p.role),
+        // C6.13 BR-3b (break M1): who the client is, once roles were swapped (absent before any swap: the principal).
+        ...(client.get(p.subjectId) !== undefined ? { client: client.get(p.subjectId) } : {}) })); })(),
       // B115 (P-319): the roles the case page offers to add, from its pinned release, with how many the case has.
       can_add: offeredRoles(snapshot).map((p) => ({ role: p.role, label: roleWords(p), max: p.max!, has: c.participants.filter((x) => x.role === p.role).length })),
       // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
@@ -263,6 +271,15 @@ export class Runtime {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR NO KEY UPDATE`;
       await refuseIfCaseRecorded(tx, caseId, `nobody is marked ${b.applies ? "travelling" : "not travelling"}`);
       await tx.caseParticipant.update({ where: { id: p!.id }, data: { applies: b.applies } });
+      // C6.13 BR-10 (M4): this door changes a filing too, so it leaves the same record as the Filing changes route (no
+      // reason is typed here; the screen uses POST …/filing-changes, with its preview and reason).
+      if (p!.applies !== b.applies) {
+        const roles = Object.fromEntries(c.participants.filter((x) => x.role !== "case").map((x) => [x.subjectId, { role: x.role, applies: x.applies }]));
+        await tx.filingChange.create({ data: { workspaceId: c.workspaceId, caseId, kind: "travelling_flag", subjectId, rolesBefore: roles, rolesAfter: { ...roles, [subjectId]: { role: p!.role, applies: b.applies } }, changedBy: actor.id } });
+        // C6.13 BR-6 (break M2): a filing starting or stopping changes the others' fees, so no filing of the case stays
+        // marked Ready to file on the old shape (this door has no preview to name them; the case page uses the preview).
+        await tx.filing.updateMany({ where: { caseId, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
+      }
     });
     await this.audit.log(c.workspaceId, actor.id, "changed", "person", caseId, `${actor.name} marked a ${p!.role.replace(/_/g, " ")} on case ${short(caseId)} as ${b.applies ? "travelling" : "not travelling"}`);
     return { subject_id: subjectId, applies: b.applies };

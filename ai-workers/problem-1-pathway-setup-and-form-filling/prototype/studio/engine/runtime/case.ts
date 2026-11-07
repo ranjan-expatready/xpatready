@@ -14,7 +14,10 @@ import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
-export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
+export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean;
+  /** C6.13 BR-3b: whether this person is the client who answers the questionnaire (set by the runtime; absent in pure
+   *  checks, where the principal is the client). After Make principal the client stays the same person. */
+  client?: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
 /** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
@@ -60,13 +63,16 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
   if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
-  if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
+  // C6.13 BR-3b: the client's own answers, whatever role the client has now (the principal unless roles were swapped).
+  const own = who?.client ?? who?.role === "principal";
+  if (own || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
     if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})` };
-    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
+    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${who.client === false ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal} (the child is ${age})` };
   }
-  return { confirmed: false, why: CONFIRM_WORDS.by_principal };
+  // C6.13 (review, break M1): after a swap (`client` is set) the client answered for this adult, whoever the principal is.
+  return { confirmed: false, why: who?.client === false ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal };
 }
 
 /** How the forms that read a field write it (from the release's field maps): the precision and limits a value needs. */

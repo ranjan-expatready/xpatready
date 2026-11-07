@@ -1282,6 +1282,7 @@ model Case {
   findings    ReviewFinding[] // C7.5
   filingRecords FilingRecord[] // C8.2
   tasks         CaseTask[]     // C8.2
+  filingChanges FilingChange[] // C6.13
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -2320,4 +2321,28 @@ model FormEditionAcceptedUntil {
 
   @@index([formEditionId])
   @@map("form_edition_accepted_until")
+}
+
+/// C6.13 (B135, P-406 (1)): one Make principal, Remove filing, Add filing back or travelling-flag change on a case, with its
+/// reason (typed changes), the roles around it and the preview basis it was applied over. Append-only (trigger).
+model FilingChange {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  caseId         String   @map("case_id") @db.Uuid
+  /// make_principal · remove_filing · add_back · travelling_flag
+  kind           String
+  subjectId      String   @map("subject_id") @db.Uuid
+  /// make_principal: the former principal
+  otherSubjectId String?  @map("other_subject_id") @db.Uuid
+  rolesBefore    Json     @map("roles_before")
+  rolesAfter     Json     @map("roles_after")
+  reason         String?
+  basis          String?  @db.VarChar(64)
+  changedBy      String   @map("changed_by")
+  changedAt      DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, changedAt])
+  @@map("filing_change")
 }

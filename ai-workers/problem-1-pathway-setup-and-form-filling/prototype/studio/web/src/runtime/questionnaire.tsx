@@ -18,7 +18,9 @@ import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
-export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean };
+export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean;
+  /** C6.13 BR-3b: the client who answers, once roles were swapped (absent before any swap: the principal). */
+  client?: boolean };
 /** B115 (P-319): a role a person may add to this case, from its pinned release; has = how many the case has now. */
 export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
@@ -532,7 +534,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
+        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && !(person.client ?? person.role === "principal") ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
 
@@ -627,7 +629,7 @@ const aboutRepresentative = (q: Question) => q.subjectId === "representative";
 function ConfirmPill({ a }: { a: Answer }) {
   if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
-  const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
+  const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /^Answered by the client/.test(a.why) ? "Answered by the client" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
 const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
