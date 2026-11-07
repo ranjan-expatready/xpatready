@@ -1,0 +1,56 @@
+PASS  C11.5 fail: the representative's own firm (a box read for the representative) is not an employer fact — {"offered":false,"reason":"Not offered: the Employer-specific work permit has no employer facts.","facts":[]}
+PASS  C11.5: the work permit counts only the employer's facts, and the words say they are copied, not read-only (M1) — "Offered: the Employer-specific work permit forms read 2 employer facts; you can copy them from an employer case."
+PASS  C11.5: an employer fact with no person named still counts (by person, never by key)
+PASS  C1.3 BR-2: only the facts the release reads and asks move, in question order, each on its subject (M4) — [{"fact":"case.lmia_or_offer_number","label":"case.lmia_or_offer_number","value":"SAMPLE-1","on":"case"},{"fact":"organisation.employer_name","label":"organisation.employer_name","value":"Sample Ltd","on":"principal"}]
+PASS  C1.3 BR-2 fail: a fact the release does not read, the representative's firm and an unasked fact stay on the employer case
+PASS  C1.3 (M4): an unmarked organisation fact is copied where the resolver reads it (principal) — "principal"
+PASS  C1.3 (M4): a marked organisation fact is copied where the resolver reads it (principal) — "principal"
+PASS  C1.3 BR-2 fail: a blank value is not carried (blank stays blank)
+PASS  C1.3 BR-4 (M3): an equal address in another key order is Same
+PASS  C1.3 BR-4 fail: a different value is Different, and no answer is New
+PASS  C1.3 BR-4 (break m1): "Canada" and "canada" as the country, and a trailing space, read Same
+PASS  C1.3 BR-4 fail (break m1): a name in another case, or another city, stays Different
+PASS  C11.5 fail: a Corporate case never links to an employer case
+PASS  setup: With an LMIA – inside Canada is released on the checkpoint
+PASS  C1.3 BR-1: the work permit offers the link, counting 2 employer facts (not the representative's firm, m1) — {"combination_id":"b5b391d3-9d10-42dc-b91e-e877915113cd","release_version":1,"offered":true,"reason":"Offered: the With an LMIA – inside Canada forms read 2 employer facts; you can copy them from an employer case.","facts":["organisation.employer_address","org
+PASS  C11.5 fail (m1): the Visitor visa on the checkpoint is not offered the link (IMM 5475's representative's firm is not an employer fact) — {"combination_id":"0b989deb-d2e0-4261-ad07-e5065dabc097","release_version":1,"offered":false,"reason":"Not offered: the Visitor visa has no employer facts.","facts":[]}
+PASS  C11.5 fail (m1): the Study permit on the checkpoint is not offered the link (IMM 5475's representative's firm is not an employer fact) — {"combination_id":"f75dea38-5367-413a-9b6f-5a800504a14a","release_version":1,"offered":false,"reason":"Not offered: the Outside Canada has no employer facts.","facts":[]}
+PASS  C1.3 BR-1: the case header offers it from the pinned release
+PASS  C1.3 BR-1/BR-7 fail: the client cannot read the employer cases (403)
+PASS  C1.3 BR-1/BR-7 fail: the configuration author cannot read the employer cases (403)
+PASS  C1.3 BR-1/BR-7 fail: the solo firm's representative (another firm's case) cannot read the employer cases (404)
+PASS  C1.3 fail: a malformed case id is not found, never a server error
+PASS  C1.3 BR-1 fail: a Visitor visa case is refused with the offer's reason — {"type":"https://expatready.local/problems/not-possible","title":"Not possible now","status":409,"detail":"Not offered: the Visitor visa has no employer facts.","message":"Not offered: the Visitor visa has no employer facts."}
+PASS  C1.3 BR-7: the Sample firm sees its own Sample employer case only — ["sample-employer-1"]
+PASS  C1.3 BR-2: exactly the employer name, address and LMIA or offer number would move — [{"fact":"case.lmia_or_offer_number","label":"LMIA number or LMIA-exempt offer of employment number","value":"SAMPLE-0000000","on":"case","subject_id":"f5266074-d7c5-4f21-ad1f-8159e724766f","state":"new","current":null,"problems":[]},{"fact":"organisation.empl
+PASS  C1.3 BR-2 fail: the business number (not read) and the representative's firm do not
+PASS  C1.3 (M4): employer facts go on the principal, the LMIA number on the application — [{"fact":"case.lmia_or_offer_number","label":"LMIA number or LMIA-exempt offer of employment number","value":"SAMPLE-0000000","on":"case","subject_id":"f5266074-d7c5-4f21-ad1f-8159e724766f","state":"new","current":null,"problems":[]},{"fact":"organisation.empl
+PASS  C1.3 BR-7 fail: another firm's employer case is not found, and not named — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"No such employer case.","message":"No such employer case."}
+PASS  setup: the officer typed an LMIA number and the same address in another key order — {"answer":{"id":"b0fdf855-a1ce-4b13-a5ee-0b6166d2fc60","value":{"city":"Hamilton","country":"canada","province":"ON","postal_code":"L8P 0A1","street_name":"Example Street","street_number":"1"},"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026
+PASS  C1.3 BR-4: name New, address Same (M3), LMIA number Different — {"case.lmia_or_offer_number":"different","organisation.employer_address":"same","organisation.employer_name":"new"}
+PASS  C1.3 BR-6 fail (M2): an answer that arrived after the officer looked is refused with its label, nothing copied — {"type":"https://expatready.local/problems/stale-answer","title":"Changed since you looked","status":409,"detail":"Changed since you looked: LMIA number or LMIA-exempt offer of employment number. Reload to see the case's answers now; nothing was copied.","mess
+PASS  C1.3 fail: a request with an unknown field is refused (400)
+PASS  C1.3 BR-1 fail: the client cannot link (403)
+PASS  C1.3 fail (break m6): a client sending a malformed body still gets 403, never 400
+PASS  C1.3 fail (break m6): more than 50 seen answers is refused (400), nothing copied
+PASS  C1.3 BR-4: only the New fact is written; Same and an unticked Different are not — {"case_id":"018b435a-a6f6-4956-9878-45328ffb71b6","principal":"Client A","offer":{"offered":true,"reason":"Offered: the With an LMIA – inside Canada forms read 2 employer facts; you can copy them from an employer case.","facts":["organisation.employer_address"
+PASS  C1.3 BR-4 fail: the officer's LMIA number is kept, the address answer untouched — {"lmia":"A123","addr":"b0fdf855-a1ce-4b13-a5ee-0b6166d2fc60"}
+PASS  C1.3 BR-3: the copied name is a stored answer with source linked_file, the employer case and the date — {"id":"2fd34094-f0cd-46fb-8c21-3deea53ed160","value":"Sample Employer Ltd (Sample)","status":"DECLARED","channel":"linked_file","by":"user-O","at":"2026-11-05T07:41:14.153Z","answered":null,"problems":[],"confirmed":false,"why":"Waits for the officer's \"Confi
+PASS  C1.3 BR-5 fail: the copy is Declared (To confirm), never Verified by the copy
+PASS  C1.3 (M4): the copied name fills the worker's IMM 5710 — [{"form":"IMM 5710","person":"Client A","subject":"3aa54252-9ff9-4292-8505-c8ba89dd0a45","boxes":1}]
+PASS  C1.3: the case header names the employer case it relies on, in the team's CaseLink words — {"offered":true,"reason":"Offered: the With an LMIA – inside Canada forms read 2 employer facts; you can copy them from an employer case.","facts":["organisation.employer_address","organisation.employer_name"],"linked":{"kind":"worker_permit","facts":["organis
+PASS  C1.3 BR-6 fail: a second link on the same case is refused, naming the employer case — {"type":"https://expatready.local/problems/not-possible","title":"Not possible now","status":409,"detail":"This case already relies on Sample employer case: Sample Employer Ltd (Sample) (linked 5 Nov 2026). Its facts were copied then; edit a copied value on th
+PASS  C1.3 BR-3: a copied value is corrected on the worker's case like any answer; the link stays — {"answer":{"id":"c8fa94ff-9f4e-411b-8756-f332bdf46881","value":"Sample Employer Limited (Sample)","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-05T07:41:14.270Z","answered":null,"problems":[],"confirmed":false,"why":"Waits for the offi
+PASS  C1.3 BR-3 fail: nothing is live-linked: the copies are stored rows, one per fact copied
+PASS  C1.3 BR-5: Confirm section confirms the employer facts like any other answer — {"confirmed":2,"section":"details_of_intended_work_in_canada","missing":["Date of original entry to Canada for the current stay","Place of original entry to Canada","Details of the original purpose when it is 'other'","Original purpose for coming to Canada","D
+PASS  C1.3 BR-4: ticked, the employer case's LMIA number replaces the officer's; the officer's stays in history — {"r":["case.lmia_or_offer_number","organisation.employer_address","organisation.employer_name"],"now":"SAMPLE-0000000"}
+PASS  C1.3 BR-6 fail: two links at the same moment give one link and one set of copies — [201,409]
+PASS  C1.3 BR-5: Confirm section confirms the copied employer facts (Verified, still sourced from the employer case) — [["VERIFIED","linked_file"],["VERIFIED","linked_file"],["VERIFIED","linked_file"]]
+PASS  C1.3 (M4): once confirmed, IMM 5710 is filled from the copies (3 more boxes written, none of them still missing) — {"before":{"written_now":0,"mapped":169,"unconfirmed":3},"after":{"written_now":3,"mapped":169,"unconfirmed":0}}
+PASS  C1.3 BR-6 fail (outside review): the link waits for a save holding a kept answer it compared, then links — {"status":201,"waited":2024}
+PASS  setup: every fact on this case is already the same as the employer case's — ["same","same","same"]
+PASS  C1.3 BR-6 fail: four links at once with nothing to copy still give one link (the row lock), and nothing is written — [409,409,201,409]
+PASS  C1.3 BR-7: the solo firm reads only its own Sample employer case — ["sample-solo-employer-1"]
+PASS  C1.3 BR-7 fail: the Sample firm's employer case is not found from the solo firm — {"type":"https://expatready.local/problems/404","title":"Not found","status":404,"detail":"No such employer case.","message":"No such employer case."}
+
+54/54 passed
