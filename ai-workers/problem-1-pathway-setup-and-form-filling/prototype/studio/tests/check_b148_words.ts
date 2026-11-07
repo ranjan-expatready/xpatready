@@ -14,7 +14,9 @@ const ROOT = join(import.meta.dirname, "..");
 
 /** The page's words before P-236. "Eligibility rules" (the A4 rules an author writes, AG-03's gates) is not one. */
 const OLD: RegExp[] = [/\blikely eligible\b/i, /\bpossibly eligible\b/i, /\bnot eligible\b/i, /\beligibility\s*\(staff only\)/i, /\bopen eligibility\b/i,
-  /\beligibility checks?\b/i, /\beligibility checked\b/i, /\bruns eligibility\b/i, /\bLikely\b/, /\bPossibly\b/];
+  /\beligibility checks?\b/i, /\beligibility checked\b/i, /\bruns eligibility\b/i, /\bLikely\b/, /\bPossibly\b/,
+  // Review m2: the page's old title ("Eligibility · reference") and trail ("› Eligibility", a JSX text of its own).
+  /\bEligibility\s*·/, />\s*Eligibility\s*</, /›\s*Eligibility\b/];
 /** The one place the words "not eligible" mean something else: the AI launch's count of sources AI does not draft
  *  (api/src/ai.ts action not_eligible; not C6.9's outcome). Named here so any other hit fails. */
 const ELSEWHERE = [{ file: "web/src/components/ai-launch.tsx", line: /<Count n=\{p\.totals\.not_eligible\} l="not eligible" \/>/ }];
@@ -30,7 +32,7 @@ const hits = web.flatMap((p) => readFileSync(p, "utf8").split("\n").flatMap((lin
 }));
 ok(`pass: no word from before P-236 in web/src (${web.length} files read)`, web.length > 50 && hits.length === 0, hits);
 // The scan finds an old word when there is one (so a pass above means something).
-ok("fail: the scan catches each old word", ["Likely eligible", "Possibly", "If not met: Not eligible", "Eligibility (staff only)", "Open eligibility", "Run eligibility check"].every((w) => OLD.some((re) => re.test(w))));
+ok("fail: the scan catches each old word", ["Likely eligible", "Possibly", "If not met: Not eligible", "Eligibility (staff only)", "Open eligibility", "Run eligibility check", "Eligibility · {c.reference}", '<span className="text-text">Eligibility</span>'].every((w) => OLD.some((re) => re.test(w))));
 ok("fail: the A4 rules' own name is not an old word (\"Eligibility rules (staff check)\")", !OLD.some((re) => re.test("Eligibility rules (staff check)")));
 
 ok("pass: the page is \"Case check from confirmed facts\" (P-236)", CASE_CHECK === "Case check from confirmed facts");

@@ -89,7 +89,7 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   await page.waitForTimeout(1500);
   await eligibility(page, c.id);
   const t3 = await body(page);
-  ok("all confirmed: the line goes and the outcome reads plain 'Qualifies'", (await resting(page).count()) === 0 && /Qualifies/.test(t3) && !/not yet confirmed/.test(t3) && !/· \d+ not yet confirmed/.test(t3), t3.match(/Qualifies[^\n]*/g));
+  ok("all confirmed: the line goes and the outcome reads plain 'Qualifies'", (await resting(page).count()) === 0 && (await page.locator("[data-outcome]").innerText()).trim() === "Qualifies" && !/not yet confirmed/.test(t3) && !/· \d+ not yet confirmed/.test(t3), t3.match(/Qualifies[^\n]*/g));
   await page.screenshot({ path: path.join(OUT, "4-all-confirmed-1440.png") });
   await eligibility(small, c.id);
   ok("1024 px: all confirmed, no line, no sideways scroll", (await resting(small).count()) === 0 && !(await small.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));

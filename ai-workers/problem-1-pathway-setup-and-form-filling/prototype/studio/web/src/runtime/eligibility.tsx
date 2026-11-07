@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { useFirm } from "./team";
 import { restingOn, restingWords } from "./eligibility-unconfirmed";
-import { CASE_CHECK, CASE_CHECK_SHORT, OUTCOME_WORDS } from "../../../contracts/case-check-words";
+import { CASE_CHECK, CASE_CHECK_SHORT, OUTCOME_WORDS, outcomeWord } from "../../../contracts/case-check-words";
 
 type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[]; restsOn?: string[] };
 type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
@@ -53,7 +53,8 @@ export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" 
     return { text: `${OUTCOME_WORDS.POSSIBLY_ELIGIBLE} — ${parts.join("; ")}`, tone: "warn", short: OUTCOME_WORDS.POSSIBLY_ELIGIBLE };
   }
   if (r.outcome === "NOT_ELIGIBLE") return { text: `${OUTCOME_WORDS.NOT_ELIGIBLE} on this application's rules as written${restingWords(n)}`, tone: "danger", short: `${OUTCOME_WORDS.NOT_ELIGIBLE}${few}` };
-  return { text: r.outcome, tone: "neutral", short: r.outcome };
+  // Review m3 (B148): any other code (P-236 drops below the cut-off) in words, never the raw code.
+  return { text: outcomeWord(r.outcome), tone: "neutral", short: outcomeWord(r.outcome) };
 }
 
 /** Review M1 on 2572b9b0 (WCAG 2.4.3): after an action, focus goes back to the button that started it, or to the
@@ -178,7 +179,7 @@ export function EligibilityPage() {
 }
 
 function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string; person: CasePerson; first: boolean; onAgain: () => void; onError: (m: string | null) => void }) {
-  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Case checked", invalidate: [["runtime", "assessments", caseId]], onDone: () => { onError(null); setTimeout(() => focusBack(null), 50); } });
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id } }), { success: "Case check run", invalidate: [["runtime", "assessments", caseId]], onDone: () => { onError(null); setTimeout(() => focusBack(null), 50); } });
   if (!first) return <Button onClick={onAgain}>Run again</Button>;
   return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run {CASE_CHECK_SHORT}</Button>;
 }
@@ -195,7 +196,7 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill>
+        <span data-outcome className="contents"><Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill></span>
         <span className="text-xs text-text-muted" title="Programs with a points score show it here when the team's Qualifier is connected">Score: none (this application has no points score)</span>
       </div>
       {resting.length ? (
@@ -248,7 +249,7 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
 
 function RunAgainDrawer({ caseId, person, close }: { caseId: string; person: CasePerson; close: () => void }) {
   const [reason, setReason] = React.useState(""), [error, setError] = React.useState<string | null>(null);
-  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id, reason } }), { success: "Case checked again", invalidate: [["runtime", "assessments", caseId]], onDone: close });
+  const run = useAction(() => api(`/runtime/cases/${caseId}/assessments`, { method: "POST", json: { person: person.subject_id, reason } }), { success: "Case check run again", invalidate: [["runtime", "assessments", caseId]], onDone: close });
   const submit = () => { if (!run.isPending) run.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) }); };
   return (
     <Panel open onOpenChange={(o) => { if (!o) close(); }} title={`Run again for ${person.label}`} description="The earlier checks stay as they were; this one reads today's answers." footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={run.isPending} onClick={submit}>Run again</Button></>}>

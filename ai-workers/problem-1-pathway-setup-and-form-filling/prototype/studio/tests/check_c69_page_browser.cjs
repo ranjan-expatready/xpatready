@@ -82,7 +82,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // Facts answered after the check: out of date.
   await put(A, "person.passport_number", "SAMPLEP12"); await put(A, "person.passport_expiry_date", new Date(Date.now() + 3 * 365 * 864e5).toISOString().slice(0, 10)); await put(A, "person.criminal_history", true);
   await p.reload(); await settle();
-  step("C6.9 page pass: after the facts change the result says Out of date, naming the change, and stays readable", /Out of date: Passport number changed from not answered to SAMPLEP12/.test(await text()) && /Can't tell yet/.test(await text()));
+  step("C6.9 page pass: after the facts change the result says Out of date, naming the change, and stays readable", /Out of date: Passport number changed from not answered to SAMPLEP12/.test(await text()) && /^Can't tell yet — /.test(await p.locator("[data-outcome]").innerText()));
   await state("out-of-date");
 
   await tabTo(/^Run again$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]");
@@ -129,7 +129,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // 200 % zoom: a 1280 px window at 200 % is 640 CSS px wide.
   await p.setViewportSize({ width: 640, height: 900 }); await settle();
-  step("200 % zoom (640 px): no sideways page scroll; the result is still read", !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) && /Can't tell yet/.test(await text()));
+  step("200 % zoom (640 px): no sideways page scroll; the result is still read", !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) && /^Can't tell yet — /.test(await p.locator("[data-outcome]").innerText()));
   await p.screenshot({ path: path.join(SHOTS, `${String(++n).padStart(2, "0")}-zoom-200.png`), fullPage: true });
   await p.setViewportSize({ width: 1440, height: 900 });
 
