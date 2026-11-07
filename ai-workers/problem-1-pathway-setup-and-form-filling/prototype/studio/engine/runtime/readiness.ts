@@ -19,7 +19,8 @@
 //          edition_expired a form edition or a fee past IRCC's accepted-until date (P-151 (1); before it: "Adopt update")
 //          representative_review  the representative's review not done (P-155)
 // Warnings (passed with a reason, or fixed): missing_document · finding · edition_superseded · copy_stale ·
-// entered_out_of_date. An Online section entered before a fact changed warns (P-168, r5c BR-9). Passes (review M3):
+// entered_out_of_date · release_update (C9.5 BR-8: a newer release of the combination touches this filing; only filings it
+// touches, SA-1B-253 rule 11). An Online section entered before a fact changed warns (P-168, r5c BR-9). Passes (review M3):
 // each warning line has a key; a pass records the keys it covered when it was written, so it never covers a line that
 // appears later; a CRITICAL line's key names what it is about (the missing facts, the edition, the fee amount), so a
 // pass for two missing facts never covers a third. Dates are compared on their first 10 characters (YYYY-MM-DD);
@@ -34,10 +35,10 @@ export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 export type BlockCode = "barcode_not_validated";
 /** P-315: the former blocks, now CRITICAL warnings passed with a recorded reason (P-237, P-238). */
 export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review";
-export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date";
+export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "release_update";
 export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated"];
 export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review"];
-export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date"];
+export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "release_update"];
 export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODES as readonly string[]).includes(code);
 
 /** One form item of the filing, for one person. `readiness` is the built per-form P-71 result (engine/runtime/forms.ts);
@@ -56,7 +57,9 @@ export type FormItem = {
   signerOwes?: Owes;
   /** Signed or uploaded, then a fact changed: the fact and when (BR-12). `key` (C9.2, bot review on #926): a fingerprint of
    *  every change and its value now, so a pass covers only the changes it was given for, never a later one. */
-  outOfDate?: { fact: string; since: string; key?: string } | null;
+  outOfDate?: { fact: string; since: string; key?: string;
+    /** C9.5 (BR-6, challenge M4): out of date because the case moved to another release: these words, never a fact. */
+    words?: string } | null;
   edition?: { label: string; superseded: boolean; acceptedUntil: string | null } | null;
   /** Online lines: the "Download PDF copy" is older than the facts (P-145); an entered section is out of date (C7.3). */
   copyStale?: boolean; enteredOutOfDate?: string[];
@@ -80,6 +83,10 @@ export type FilingInput = {
   /** Break N2 (#861 round 2): the fingerprint of the filing's facts now; the review line's key carries it, so a pass of
    *  "not reviewed" never covers the filing after its facts change. */
   factsKey?: string;
+  /** C9.5 (BR-6): the review was made before the case moved to a release that changes this filing: the words name it. */
+  reviewWithdrawn?: string | null;
+  /** C9.5 (BR-8): a newer release of the combination touches this filing: what it touches, and its key (one per release). */
+  releaseUpdate?: { words: string; key: string } | null;
   passes?: Pass[];
   /** Today, YYYY-MM-DD (the firm's date; UTC until firms have a time zone). */
   today: string;
@@ -136,7 +143,7 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
     for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
     // BR-9 1: out of date, or a required signature missing.
-    if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
+    if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: f.outOfDate.words ? `${ofWho(f)}: ${f.outOfDate.words}` : `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
     if (signatureNeeded(f) && !f.signed) {
       const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : f.signature === "PEN" ? "signed in pen"
         : "signed (how it is signed is not set on the form line yet; until it is, the signature is waited for)";
@@ -161,10 +168,12 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     else if (fee.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `Fee "${fee.line}" has a newer amount${until ? `; it is accepted until ${until}` : ""}. Adopt update.` });
   }
   const before = x.reviewed ? null : dayOf(x.reviewedBefore, "the earlier review");
-  if (!x.reviewed) critical({ code: "representative_review", part: `${before ?? "none"}|${x.factsKey ?? ""}`, owes: "representative", words: before
+  if (!x.reviewed) critical({ code: "representative_review", part: `${before ?? "none"}|${x.factsKey ?? ""}`, owes: "representative", words: x.reviewWithdrawn && before
+    ? `${x.reviewWithdrawn}; this filing was reviewed on ${before}, before the move. The representative of record reviews it again.` : before
     ? `The filing changed after it was reviewed on ${before} (or the representative of record changed). The representative of record reviews it again.`
     // B149 (P-342, P-408): any firm staff may pass this with a reason (P-330 (3)), so the words say what happens.
     : "The representative of record has not reviewed this filing. Passing it needs a reason, which is kept in the history." });
+  if (x.releaseUpdate) warn({ code: "release_update", item: `release|${x.filing}`, part: x.releaseUpdate.key, owes: "staff", words: x.releaseUpdate.words });
   for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
 
@@ -229,6 +238,7 @@ export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
   missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
   representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
+  release_update: "A newer release",
 };
 
 /** Why a code cannot be passed (null: it can): blocks are never passed, only fixed; an unknown code is named. */

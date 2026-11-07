@@ -236,13 +236,14 @@ export async function openCases(db: Client, combinationIds: string[]): Promise<n
   return combinationIds.length ? db.case.count({ where: { combinationId: { in: combinationIds }, status: "OPEN" } }) : 0;
 }
 
-/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on; every case
- *  pins at open, runtime.ts). A case with no pin yet is counted with `release: null`. */
+/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on until a person
+ *  moves it, C9.5; every case pins at open, runtime.ts; a moved case counts once, on its newest revision). A case with no pin yet is counted with `release: null`. */
 export async function openCasesByRelease(db: Client, combinationIds: string[]): Promise<{ combinationId: string; release: number | null; cases: number }[]> {
   if (!combinationIds.length) return [];
   const [cases, pins] = await Promise.all([
     db.case.findMany({ where: { combinationId: { in: combinationIds }, status: "OPEN" }, select: { id: true, combinationId: true } }),
-    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true } }),
+    // C9.5 (challenge M1): a moved case has several pin revisions; ascending, so the newest one is the one kept per case.
+    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true }, orderBy: [{ caseId: "asc" }, { revision: "asc" }] }),
   ]);
   const versions = new Map((await db.configRelease.findMany({ where: { id: { in: [...new Set(pins.map((p) => p.configReleaseId))] } }, select: { id: true, version: true } })).map((r) => [r.id, r.version]));
   const releaseOf = new Map(pins.map((p) => [p.caseId, versions.get(p.configReleaseId) ?? null]));
