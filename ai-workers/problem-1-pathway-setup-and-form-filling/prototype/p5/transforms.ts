@@ -130,6 +130,11 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (max && v.length > max) return hand(`value is ${v.length} characters; the box holds ${max} (never truncated)`);
       continue;
     }
+    // B107 (QA-300): a length the map states as a step of its own ("as_is; max 30 characters", IMM 5476 (11-2021)'s question
+    // 7): checked on the value as it is now, never truncated.
+    if ((m = /^max (\d+) char(?:s|acters)$/.exec(s))) { const t = String(v); if (t.length > Number(m[1])) return hand(`value is ${t.length} characters; the box holds ${m[1]} (never truncated)`); continue; }
+    // B107: a box that takes digits only (a country calling code): the value's digits; a value with none is written by hand.
+    if (s === "digits_only") { const t = String(v).replace(/\D/g, ""); if (!t) return hand(`no digits in "${String(v)}"`); v = t; continue; }
     if ((m = /^date:(YYYY-MM-DD|YYYY|MM|DD)$/.exec(s))) {
       const d = DATE.exec(String(v)), mo = (m[1] === "YYYY" || m[1] === "MM") && !d ? MONTH.exec(String(v)) : null;
       if (mo) { v = m[1] === "YYYY" ? mo[1] : mo[2]; continue; }
