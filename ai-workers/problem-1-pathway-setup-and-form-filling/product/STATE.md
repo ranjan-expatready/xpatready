@@ -10,6 +10,7 @@ updated: 2026-11-07 19:05 IST by **Lead 32** (Lead 31's hand-over below) · mile
 * Prompt box only (the PR answers were already there from Lead 31): A6 #1222 (fix the two code-cause reds, then round 3), B107 #1231 (round 3 diff-only, ready, label).
 * Warm rows sent (P-413 (2)): the B3 lane takes B129 → B132 → B130; the B5 lane takes B133 → B152 → B151.
 * Waiting on a merge, to message then: UX lane builds C6.9 once #1250 merges; the forms lane B155 → B157 once #1256 merges; A5 takes B136 once #1054 merges (its own check-in reads Lead 31's ruling).
+* **Check 19:29 IST:** rulings on #1275 (row B160 to the CI-fixes lane after B134), #1252 (fresh Opus reviewer on the fix diff + breaker; migration approved on one condition: every pin read takes the newest revision), #1222 (A6's "worked-out value" on CONFIG_ENTITIES accepted). B160 and #1252's condition also typed into their sessions.
 * Queued: #1054, #1249, #1250; labelled not queued: #1246 (red, B150 lane fixing), #1251 (conflict), #1256 (B128, labelled itself ~18:59 IST).
 
 ## Hand-over to Lead 32 (18:55 IST): do first
