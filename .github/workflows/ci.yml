@@ -241,6 +241,8 @@ jobs:
           bash "$P/tools/check-lane-bind.sh"
           node "$P/tools/ci-and-lists.mjs"
           node "$P/tools/ci-and-lists.mjs" --self-test
+          node "$P/tools/suite-exit.mjs" --self-test   # B160: a suite whose last step is a bare summary() can never fail
+          node "$P/tools/suite-exit.mjs"
           bash "$P/tools/check-flaky.sh"
           bash "$P/tools/check-write-token.sh"
           node "$S/tools/check-gate-b.mjs"
@@ -474,6 +476,8 @@ jobs:
         run: |
           node "$P/tools/ci-and-lists.mjs"
           node "$P/tools/ci-and-lists.mjs" --self-test
+          node "$P/tools/suite-exit.mjs" --self-test
+          node "$P/tools/suite-exit.mjs"
       - name: official IRCC PDFs (manifest checksums, P-31)
         if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py

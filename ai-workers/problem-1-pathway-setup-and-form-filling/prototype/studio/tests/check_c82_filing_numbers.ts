@@ -29,4 +29,4 @@ ok("C8.2: nothing, null or blanks clears the number", JSON.stringify(v(null)) ==
 ok("C8.2 AG-7-95 r4: the same number on another filing names its case (a warning, never a refusal)", duplicateWarning([{ reference: "C-1" }, { reference: "C-1" }]) === "Already on case C-1.");
 ok("C8.2 AG-7-95 r4 (fail): no other filing, no warning", duplicateWarning([]) === null);
 ok("C8.2 (AGENTS rule 4): the pattern is labelled Sample, from the team's requirement, not IRCC", /^Sample: the team's requirement AG-07/.test(basis));
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
