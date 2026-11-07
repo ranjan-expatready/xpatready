@@ -1,4 +1,4 @@
-# The eight guards of 6 Nov (founder, ~03:00 IST: "make them hard rules"): every test passes, and each test fails with
+# The eight guards of 6 Nov and B134's label sweep (founder, ~03:00 IST: "make them hard rules"): every test passes, and each test fails with
 # its guard switched off (product/tools/check-guards.sh --mutate). Runs only when a guard, its test or a file it reads
 # changes; separate from ci.yml (owned by the flow-fix lane) and not a merge condition. About 1 minute, US$0.
 name: guards

@@ -1,0 +1,19 @@
+FAIL  the check ran to its end — browserType.launch: Failed to create a ProcessSingleton for your profile directory. This usually means that the profile is already in use by another instance of Chromium.
+Call log:
+[2m  - <launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,AvoidCorsURLLoaderRestartOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/tmp/claude-501/playwright_chromiumdev_profile-9N3aFK --remote-debugging-pipe --no-startup-window[22m
+[2m  - <launched> pid=58740[22m
+[2m  - [pid=58740][err] [1107/233804.697601:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.58744.19223300.YXMDMPGRHBLWFLNP: Permission denied (1100)[22m
+[2m  - [pid=58740][err] [1107/233804.700262:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0[22m
+[2m  - [pid=58740][err] [1107/233804.702150:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /Users/ranjansingh/Library/Application Support/Google/Chrome/Crashpad/settings.dat: Operation not permitted (1)[22m
+[2m  - [pid=58740][err] [1107/233804.702207:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /Users/ranjansingh/Library/Application Support/Google/Chrome/Crashpad/settings.dat: Operation not permitted (1)[22m
+[2m  - [pid=58740][err] [58740:19223160:1107/233804.770786:ERROR:chrome/browser/process_singleton_posix.cc:1046] Failed to create socket directory.[22m
+[2m  - [pid=58740][err] [58740:19223160:1107/233804.771106:ERROR:chrome/app/chrome_main_delegate.cc:624] Failed to create a ProcessSingleton for your profile directory. This means that running multiple instances would start multiple browser processes rather than opening a new window in the existing process. Aborting now to avoid profile corruption.[22m
+[2m  - [pid=58740] <gracefully close start>[22m
+[2m  - [pid=58740] <kill>[22m
+[2m  - [pid=58740] <will force kill>[22m
+[2m  - [pid=58740] exception while trying to kill process: Error: kill EPERM[22m
+[2m  - [pid=58740] <process did exit: exitCode=21, signal=null>[22m
+[2m  - [pid=58740] starting temporary directories cleanup[22m
+[2m  - [pid=58740] finished temporary directories cleanup[22m
+[2m  - [pid=58740] <gracefully close end>[22m
+
