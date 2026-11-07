@@ -2,7 +2,7 @@
 
 current_lead: local_f37a22d1-8132-4984-bf1a-8433da2ad65e Lead 30 · 7 Nov 14:47 IST (took over from Lead 29 at ~409k context, P-314)
 
-updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-403 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead30` (from lead29, whose records PR #1229 is queued)
+updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-403 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1525-lead30.md` · this branch: `lead/2026-11-07-lead30` (from lead29, whose records PR #1229 is queued)
 
 ## Hand-over to Lead 30 (14:47 IST): do first
 1. **Done 14:52 IST.** #1221 (B3): concept approved; rulings 1-4; new rows B129 (holds C8.1 Works) and B130; the Lead pushed 642d02d61 (two allow-list lines removed). #1225 (C3): diagnose first; facts no screen asks are product bugs (QA-300/QA-299/QA-296 = B107), never answered in the pack; C10 needs nothing (QA-235 closed); C4 moves go to a fresh runtime session at the founder's next typed turn.
@@ -13,12 +13,8 @@ updated: 2026-11-07 14:47 IST by **Lead 29, at the hand-over to Lead 30** · mil
 5. **Watchdog:** Lead 30's watchdog deleted; Lead 32 messaged "start the watchdog" 14:50 IST. Lead 30's check: cron c0793609 (:13/:43). Lead 31 stays a spare. At the founder's next typed turn, start one more standby.
 6. **Report hourly** against `design/next-12-hours-2026-11-07.md` section 7. Trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. Weekly 5% at 14:46 IST.
 
-## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
-* **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
-* **Connections:** gh fails TLS in the sandbox as before, curl with `gh auth token` returns 200 (P-363). Mergify merged #1215 and #1216 today, so it sees the repo. Cloud canary pushed `claude/canary-new-account-2026-11-07` 4656407d8 (one empty commit): cloud lanes can clone and push.
-* **Not yet checked:** claude.ai/code as text. The built-in browser is signed out of claude.ai (the app's sign-in is separate); the founder signs in there.
-* **Records #1215, #1216:** merged by Mergify 12:23 and 12:20 IST. Main ecbd68301.
-* **A3 #1198 needed no lane:** its `Reviewer: Approve 4b3b343e1` line (11:51 IST) came after Lead 26's last read; CI green; labelled 13:09 IST on the founder's named OK.
+## Account switch (P-394 to P-398): done 12:35-13:11 IST
+Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly 0% at 12:35 IST on the new account (Ultra; resets 13 Nov 04:29 IST); curl with `gh auth token` for GitHub (P-363).
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 | # | Question | Lead's recommendation | Blocks | Since | Status |
