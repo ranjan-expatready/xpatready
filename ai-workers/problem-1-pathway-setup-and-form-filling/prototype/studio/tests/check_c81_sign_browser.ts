@@ -90,6 +90,9 @@ const row5476 = rowOf(p, "IMM 5476", "Sample Client A"), row5257 = rowOf(p, "IMM
 const who = (await row5476.locator("[data-who-signs]").innerText().catch(() => "")).trim();
 ok("C8.1 BR-1 pass (VV-R10): IMM 5476's row says who signs: the person by name and the representative of record by name, signed by hand and scanned", /Who signs: Sample Client A and the representative of record/.test(who) && who.includes(nameOf(rep)) && /Signed by hand and scanned/.test(who), who);
 ok("C8.1 BR-2 fail-guard: IMM 5257 (not signed by hand) has no signing steps; IMM 5476 has one block", (await row5257.locator("[data-sign-block]").count()) === 0 && (await block().count()) === 1, { b5257: await row5257.locator("[data-sign-block]").count() });
+const unsigned = ((pv?.items ?? []) as (Item & { person: string; signed_by?: string | null })[]).filter((x) => x.kind === "form" && x.signature === "NONE");
+const unsignedWords = await Promise.all(unsigned.map(async (x) => (await rowOf(p, x.form!, x.person).locator("[data-who-signs]").innerText().catch(() => "")).trim()));
+ok("C8.1 BR-1 fail-guard: a form with no signature never contradicts itself: \"nobody\" when the release says none, else its signers and \"how it is signed is not set\"", unsignedWords.every((w, i) => w === "" || (unsigned[i].signed_by === "none" ? /^Who signs: nobody · No signature$/.test(w) : / · how it is signed is not set on the release's line yet$/.test(w) && !/No signature/.test(w))), unsigned.map((x, i) => `${x.form}: ${unsignedWords[i]}`));
 ok("C8.1-3 pass: the steps in order: Printed, Signed by hand, Signed scan received, Uploaded to IRCC", (await block().locator("[data-step]").evaluateAll((els) => els.map((e) => e.getAttribute("data-step")))).join() === "print,signed,scan_received,uploaded_to_ircc");
 // J-B3: "Signed" before "Print" is refused in words: here it cannot start, and its words are the server's refusal.
 const signedWhy = await whyOf("signed");
@@ -219,7 +222,7 @@ const fam = await openCase(vv, FAMILY);
 await as(p, officer); await open(p, fam.id);
 const childWho = (await rowOf(p, "IMM 5257", "Sample Child A1").locator("[data-who-signs]").innerText().catch(() => "")).trim();
 const adultWho = (await rowOf(p, "IMM 5257", "Sample Client A").locator("[data-who-signs]").innerText().catch(() => "")).trim();
-ok("C8.1-1 / BR-1 pass (VV-R09): Child A1's IMM 5257 names a parent as signer; Client A's names Client A", /Who signs: a parent, for Sample Child A1 \(under 18\)/.test(childWho) && /Who signs: Sample Client A\b/.test(adultWho) && !/parent/.test(adultWho), { childWho, adultWho });
+ok("C8.1-1 / BR-1 pass (VV-R09): Child A1's IMM 5257 names a parent as signer; Client A's names Client A", /Who signs: a parent, for Sample Child A1 \(under 18\)/.test(childWho) && /^Who signs: Sample Client A · /.test(adultWho) && !/parent/.test(adultWho), { childWho, adultWho });
 await state("family-who-signs", "[data-who-signs]");
 // Challenge m7: each adult's IMM 5476 has its own block; a step on one leaves the other as it was.
 const fp = (await prepare(fam.id, officer)).p;

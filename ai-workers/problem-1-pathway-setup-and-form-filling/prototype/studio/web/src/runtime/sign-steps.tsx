@@ -19,7 +19,7 @@ import { SIGN_STEPS, stepRefusal, type SignStepKey, type StepsDone } from "../..
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 
-type PrepItem = { id: string; kind: string; form?: string; subject: string; person: string; filing: string; signature?: Signature; signers?: string[];
+type PrepItem = { id: string; kind: string; form?: string; subject: string; person: string; filing: string; signature?: Signature; signed_by?: string | null; signers?: string[];
   state: string; reason?: string; replaces?: string | null; record?: string };
 type Filing = { id: string; label: string; status: string; read_only?: boolean };
 type PrepareView = { derived: boolean; filings: Filing[]; items: PrepItem[] };
@@ -33,7 +33,8 @@ const STATE: Record<string, { words: string; tone: string }> = {
   to_do: { words: "To do", tone: "neutral" }, in_progress: { words: "In progress", tone: "info" }, ready: { words: "Ready", tone: "ok" }, done: { words: "Done", tone: "ok" },
   out_of_date: { words: "Out of date", tone: "warn" }, cannot_start: { words: "Cannot start yet", tone: "neutral" }, not_needed: { words: "Not needed", tone: "neutral" },
 };
-const when = (at: string) => new Date(at).toLocaleString("en-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+// The same date words as the copy block in the same row (forms.tsx), so "Printed: the copy of 7 Nov, 08:36" names it exactly.
+const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const size = (n: number) => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
 const MEDIA_WORDS: Record<string, string> = { "application/pdf": "PDF", "image/jpeg": "JPEG", "image/png": "PNG" };
 const focusLater = (el: () => HTMLElement | null | undefined) => requestAnimationFrame(() => el()?.focus());
@@ -59,8 +60,12 @@ export function SignSteps({ caseId, f }: { caseId: string; f: CaseForm }) {
   const method = item.signature ? SIGNATURE_WORDS[item.signature] : null;
   return (<>
     {item.signature ? (
-      <p className="text-[13px]" data-who-signs={signers.join(",")}>
-        <span className="text-text-muted">Who signs: </span>{signers.length ? <span className="[overflow-wrap:anywhere]">{whoSigns(signers, person, rep)}</span> : item.signature === "NONE" ? "nobody" : "not set on this form's line yet (the release names who signs)"}{method ? <span className="text-text-muted"> · {method}</span> : null}
+      <p className="text-[13px]" data-who-signs={item.signature === "NONE" && item.signed_by === "none" ? "" : signers.join(",")}>
+        {/* "No signature" chosen on the release's line (signedBy none) names nobody. A line whose way of signing is not set
+            yet still names who signs by R7 (the person; a parent for a child, J7 5.8) and says the way is not set
+            (readiness S1 warns "missing signature" until it is). */}
+        <span className="text-text-muted">Who signs: </span>{item.signature === "NONE" && item.signed_by === "none" ? "nobody · No signature"
+          : <>{signers.length ? <span className="[overflow-wrap:anywhere]">{whoSigns(signers, person, rep)}</span> : "not set on this form's line yet"}<span className="text-text-muted"> · {item.signature === "NONE" ? "how it is signed is not set on the release's line yet" : method}</span></>}
       </p>
     ) : null}
     {item.signature === "HAND_SCANNED" ? <SignBlock caseId={caseId} item={item} f={f} who={signers.length ? whoSigns(signers, person, rep) : null} filing={prep.data!.filings.find((x) => x.id === item.filing)} /> : null}
@@ -78,8 +83,14 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
   const [refusal, setRefusal] = React.useState<string | null>(null), [fileErr, setFileErr] = React.useState<string | null>(null);
   const nameOf = (id: string) => (team?.representative?.id === id ? team.representative.name : null) ?? team?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? id;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
-  /** After a step: read everything again, then the focus goes to the next step's button, else the block's heading. */
-  const after = async () => { await refresh(); focusLater(() => next.current?.querySelector<HTMLElement>("button:not([disabled])") ?? heading.current); };
+  /** After a step: read everything again, then (once the buttons are no longer busy) the focus goes to the next step's
+   *  button, else the block's heading. */
+  const [focusNext, setFocusNext] = React.useState(false);
+  React.useEffect(() => {
+    if (!focusNext || busy) return;
+    setFocusNext(false); focusLater(() => next.current?.querySelector<HTMLElement>("button:not([disabled])") ?? heading.current);
+  }, [focusNext, busy]);
+  const after = async () => { await refresh(); setFocusNext(true); };
   async function run(key: SignStepKey, body: unknown, ok: string) {
     setBusy(true); setRefusal(null); setFileErr(null);
     try { await api(`/runtime/items/${item.id}/sign-steps/${key}`, { method: "POST", json: body }); toast.push({ tone: "ok", text: ok }); await after(); }
@@ -108,11 +119,12 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
   const done: StepsDone = Object.fromEntries(steps.filter((s) => s.done).map((s) => [s.key, s.done!]));
   const nextKey = SIGN_STEPS.find((k) => !done[k]) ?? null;
   const copyOf = (id: string | null | undefined) => copies.find((c) => c.id === id);
-  // BR-4 (challenge m2): the copy to print is the newest generated one, and only one the copy block would file: current,
-  // its file there, not stamped "Copy, not for filing", and the form's filling proven; otherwise the copy block's reason.
+  // BR-4 (challenge m2): the copy to print is the newest generated one: current, its file there, and not stamped "Copy,
+  // not for filing"; otherwise the copy block's reason. A form whose filling is not proven yet is warned, not blocked
+  // (EXPERIENCE §2.9; the checkpoint's IMM 5476 has no fill trial recorded): check the copy before it is signed.
   const latest = copies.find((c) => c.status === "GENERATED"), pending = copies[0] && (copies[0].status === "QUEUED" || copies[0].status === "RUNNING");
-  const notFiled = !f.for_filing ? `${form} is filed Online: a PDF copy is not for filing, so it is not printed to sign.` : latest?.copy_not_for_filing ? `This copy was made while ${form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy above and print that one.`
-    : !f.trial_passed ? (f.trial_why ?? `${form}: this form's filling is not proven yet, so its copy is for checking only, not for signing.`) : null;
+  const notFiled = !f.for_filing ? `${form} is filed Online: a PDF copy is not for filing, so it is not printed to sign.` : latest?.copy_not_for_filing ? `This copy was made while ${form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy above and print that one.` : null;
+  const unproven = f.trial_passed ? null : `${f.trial_why ?? `${form}: this form's filling is not proven yet.`} Check the copy against the case before it is signed.`;
   const current = latest && !latest.out_of_date && latest.file_ok && !notFiled ? latest : null;
   // BR-8 (C9.2; challenge M1): a new print starts the signing again exactly when the server allows it (sign-steps.ts
   // `restart`): Printed done, Uploaded to IRCC not, and the printed copy's facts changed since (its copy reads Out of date,
@@ -127,7 +139,7 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
 
   /** The print action, or why it cannot be done yet (BR-4): the newest generated copy that is still current. */
   const printAction = (label: string) => current
-    ? <Button size="sm" busy={busy} onClick={() => void run("print", { copy: current.id }, `${form}: Printed (copy of ${when(current.created_at)})`)} data-step-action="print">{label} {when(current.created_at)}</Button>
+    ? <div className="space-y-1">{unproven ? <p className="text-[13px] text-text-warn" data-unproven>{unproven}</p> : null}<Button size="sm" busy={busy} onClick={() => void run("print", { copy: current.id }, `${form}: Printed (copy of ${when(current.created_at)})`)} data-step-action="print">{label} {when(current.created_at)}</Button></div>
     : <p className="text-[13px] text-text-muted" data-step-why>{pending ? "The copy is being generated…" : notFiled ? notFiled : latest?.out_of_date ? `This copy is out of date: generate a new copy of ${form} above and print that one.` : latest && !latest.file_ok ? `The file of the newest copy of ${form} is missing: generate a new copy above.` : `Generate a copy of ${form} above first: the copy printed is named here.`}</p>;
 
   function action(key: SignStepKey) {
