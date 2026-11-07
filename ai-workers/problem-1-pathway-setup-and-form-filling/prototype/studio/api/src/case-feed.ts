@@ -15,7 +15,7 @@
 /** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts, sign-steps.ts, case-checklist.ts,
  *  case-prepare.ts, readiness.ts, assessments.ts, filing-record.ts, findings.ts). */
 export const CASE_ENTITIES: ReadonlySet<string> = new Set([
-  "case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */,
+  "case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */, "fee receipt" /* C8.2 B149 */,
   "sign step", "signed scan" /* C8.1 */, "case document" /* C6.4 */, "checklist line", "assessment", "assessment_override",
   "filing" /* C7.6 readiness and review, readiness.ts and case-prepare.ts (#861) */,
 ]);

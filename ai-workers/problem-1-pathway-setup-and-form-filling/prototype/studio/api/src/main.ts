@@ -190,6 +190,9 @@ class ProblemErrors implements ExceptionFilter {
         // C6.4 (break m5): a checklist line takes one PDF, JPEG or PNG of up to 20 MB, worded with its own limits.
         if (/\/checklist-lines\/[^/]+\/documents\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send one file at a time. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`);
+        // B149 (review M2, break m1): IRCC's Transaction Approved page, one PDF, JPEG or PNG of up to 20 MB (any letter case, as Express routes).
+        if (/\/filings\/[^/]+\/record\/fee-receipt\/?$/i.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send one file: the Transaction Approved page. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB: save the Transaction Approved page as a smaller PDF, JPEG or PNG. Nothing was stored.`);
         if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
