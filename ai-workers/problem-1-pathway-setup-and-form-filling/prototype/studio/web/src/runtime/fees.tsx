@@ -9,7 +9,8 @@ import * as React from "react";
 
 type Source = { page: string; url: string; read: string };
 /** A submission's line total, as engine/runtime/filings.ts familyFee gives it. */
-type Total = { line: string; label: string; people: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source?: Source };
+/** `basis` (B133): the fee table line's own basis (P-247), sent by the engine on each total. */
+type Total = { line: string; label: string; basis?: string; people: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source?: Source };
 type Group = { id: string; kind: string; label?: string; filings: string[]; totals?: Total[]; total_cents?: number | null };
 /** A fee line as GET …/prepare maps it (api/src/case-prepare.ts): `subject` is the person the line is for. */
 type FeeLine = { filing: string; subject: string; key: string; line: string; amount_words: string; exempt: boolean; reason: string; waiting?: string; source_detail?: Source | null };
@@ -23,15 +24,15 @@ export type FeesView = { groups: Group[]; filings: Filing[]; fees?: FeeLine[]; n
 export const cadWords = (cents: number) => `CAD ${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
 
 /** A fee's basis in P-247's words, once per fee on its totals line (challenge M1: never on a person's row, where an exempt
- *  or uncapped row would read "Family maximum"). Read from the server's own total: only the family maximum basis carries
- *  a maximum (engine familyFee); the other two are named in the server's words. null when it cannot be read: then only
- *  the why shows, never a guessed basis. A stopgap until /prepare sends the basis itself (concept question 2). */
+ *  or uncapped row would read "Family maximum"). Read from the total's own `basis` field (B133), never from its words or
+ *  its maximum; a basis the page does not know (or none) names nothing, never a guessed one: then only the why shows. */
 export function basisOf(t: Total | undefined): string | null {
-  if (!t) return null;
-  if (t.family_max_cents > 0) return `Per person, with a family maximum of ${cadWords(t.family_max_cents)} from ${t.family_from} people applying together`;
-  if (/\(per application;/.test(t.why)) return "Per application";
-  if (/\(per person;/.test(t.why)) return "Per person by role";
-  return null;
+  switch (t?.basis) {
+    case "family_maximum": return `Per person, with a family maximum of ${cadWords(t.family_max_cents)} from ${t.family_from} people applying together`;
+    case "per_person_by_role": return "Per person by role";
+    case "per_application": return "Per application";
+    default: return null;
+  }
 }
 
 /** A source's date as the table gives it: a page's own date is never shown as the day we read it (challenge m). */
