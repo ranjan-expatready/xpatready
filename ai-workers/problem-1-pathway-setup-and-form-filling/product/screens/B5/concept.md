@@ -19,19 +19,20 @@ amount comes from `samples/fee-table.json` through `GET /runtime/cases/:id/prepa
 | a waiting line shows `amount_words: null` | the page shows "Not counted yet" whenever the API's line has `waiting` | same result from a field the API already sends; the browser check fails if a waiting row shows "CAD" |
 | `total_words` from the API | the page writes the API's `total_cents` as words with the engine's own rule (`CAD n`, cents only when there are any) | the check compares each shown total with the engine's `cad()` of the API's number |
 | no case total | **"Total for the case"** at the panel's foot when the case has more than one submission (the sum of the API's submission totals); with one submission its total is the case's | P-247 "the case total applying the cap stays in C6.12"; a split group loses the family maximum and the officer must see the new total |
-| basis not shown by name | **each fee line names its basis** (P-247: "Every fee line carries a basis"): Family maximum · Per person · Per application | read from the line's API totals: `family_max_cents > 0` is the family maximum; otherwise the API's own `why` words "(per person; …)" or "(per application; …)". Question 2 asks for a `basis` field later |
+| basis not shown by name | **each fee names its basis once, on its totals line** (P-247: "Every fee line carries a basis"): "Per person, with a family maximum of CAD 500 from 5 people applying together" · "Per person by role" · "Per application" (challenge M1: never on a person's row) | read from the line's API totals: `family_max_cents > 0` is the family maximum basis; otherwise the API's own `why` words "(per person; …)" or "(per application; …)". Question 2 asks for a `basis` field later |
 
 ## 3. Business rules (each shown from the API, never priced by the page)
 * **BR-1 Each fee on a named filing:** under "Fees" at the foot of each submission, one table; rows grouped by filing (a row
   header with the filing's `label` and owner); each row: fee `line`, its basis, the person when not the filing's owner, the
   amount (`amount_words`), and `reason` as the API says it. An exempt line shows CAD 0 with its reason, never hidden.
-* **BR-2 Basis, P-247:** Family maximum · Per person · Per application, as in section 2. A line whose basis cannot be read
-  shows the API's `why` only, never a guessed name.
+* **BR-2 Basis, P-247:** once per fee on its totals line, as in section 2; no person's row carries one (an uncapped CAD 100 row
+  or an under-14 CAD 0 row never reads "family maximum"). A fee whose basis cannot be read shows the API's `why` only.
 * **BR-3 Totals with the cap:** each `totals[]` line with its `why` ("3 people applying together: the family maximum CAD 170
   applies instead of 3 × CAD 85 = CAD 255."), then "Total for this submission: CAD 570". More than one submission: "Total
   for the case: CAD n · n submissions, each priced on its own".
 * **BR-4 No amount where none is known:** `fees_worked_out: false` → `fees_why`, no amount and no total (never CAD 0).
-* **BR-5 A line waiting for a fact (G15):** "Not counted yet" and the API's reason; no CAD in that row; the total leaves it out (API).
+* **BR-5 A line waiting for a fact (G15):** "Not counted yet" and the API's reason; no CAD in that row; the total leaves it out (API)
+  and reads "Total so far: CAD n · 1 fee not counted yet" (challenge M2), "so far" on the case total too.
 * **BR-6 Nobody vanishes:** each `not_filing[]` person once, under the first submission, with the API's `why`; a declared-only
   applicant reads "Declared only: no fee".
 * **BR-7 Sources and Sample:** each distinct source once per submission (page name as a link, its `read` as given); the case's
@@ -59,13 +60,14 @@ Sources: IRCC fee list (read 2026-11-02) · When to give biometrics (read 2026-0
 ## 4b. Best in class (study, 7 Nov; P = primary page, X = search extract, T = our fee table's cite)
 | Who | What they do best | B5 |
 |---|---|---|
-| IRCC fee list (T, read 2 Nov; X 7 Nov) | per person and "per family" lines side by side; "maximum fee for a family of 5 or more people applying at the same time and place"; biometrics "maximum for a family of 2 or more" | **copied:** the same lines, IRCC's wording of the maximum, its link and read date on every line |
+| IRCC fee list (T, read 2 Nov; X 7 Nov) | per person and "per family" lines side by side; "maximum fee for a family of 5 or more people applying at the same time and place" (IRCC's words); biometrics CAD 170 for a family of 2 or more (our table's summary) | **copied:** the same lines, IRCC's wording of the maximum, its link and read date on every line |
 | USCIS online fee calculator (X) | asks only what changes the fee, adds biometrics only when needed, shows "the total fee amount … to be filed with the application"; **but** one form at a time, "does not calculate fees for multiple individuals" | **beaten:** nothing is typed (people and ages come from the case), every person and form of the family at once, the cap applied across them |
 | Immigration case tools (Docketwise, Visto, Migrawise, Officio; V4 3 Nov, X 7 Nov) | public pages show fee tracking or invoicing at most (MyCase "Smart Spend" tracks fee payments); none describes a per-person government fee with a family maximum | **beaten:** each fee on its filing with its basis, source and the reason a person pays nothing |
 | UK CMA price transparency (P, gov.uk CMA209 summary, X) | the total price up front, no hidden or "drip" charges | **copied:** the total on the same screen as its lines; an exempt or covered person shows CAD 0 and why, never hidden |
 | IRS Direct File fact graph (P, via `reports/best-in-class-C6.9-A4-2026-11-07.md`) | an incomplete fact is a state of its own, never a silent zero | **copied:** "Not counted yet" until the date of birth is answered (BR-5) |
 **Effort and errors:** no typing; one read shared with the panel (same query key), so the filings and their fees never disagree;
-a date of birth corrected on the questionnaire re-prices the block on the next read; a split shows the lost maximum at once.
+a date of birth corrected on the questionnaire re-prices the block on the next read; after a split (API only today: no split
+button on the case page) the new totals and the case total show the lost maximum.
 **Not built (named, not added):** paying (the e-app takes the card), the firm's own fees, a fee receipt per line.
 
 ## 5. Copy
@@ -83,7 +85,8 @@ listed with the API's why; BR-7 each source once; BR-8 no button in the block. B
 bases cannot be reached on the checkpoint: checked by serving `/prepare` in the browser with the engine's own output for a
 test table (`deriveFilings` with injected rules), each with its fail. **Walk:** Cases › the case › Submission to IRCC › Fees
 › Record the submission (the receipt box), by clicks, at 1440 and 1024 px.
-**Gate B (R11):** `C6.12.test.ts` whole and breadth step -25 on the checkpoint. **Held, never dropped (P-330 (7)):** steps -22
+**Gate B (R11):** `C6.12.test.ts` whole and breadth step -25 (gate B in a PR's CI runs on the six, so these packs run "fixture only"; the
+row's checkpoint run is the builder's, on an isolated copy). The breadth pack's -24 runs and passes too. **Held, never dropped (P-330 (7)):** steps -22
 (sponsorship) and -23 (the child study question) are outside the Visitor visa journey under the founder's answer to Q1 (6 Nov):
 rows S1 and S2. **Gates:** Opus review; a breaker run on money (fee lines and the case total), P-278; qa's gate A.
 
@@ -104,3 +107,16 @@ Every element is the capability (C6.12's screen part), read from the engine; not
 ## Definition of ready
 Acceptance test: `acceptance/C6.12-breadth.test.ts` step -25 and `C6.12.test.ts` whole, on the checkpoint. Row text: sprint plan
 "Row C5" and R11. Decisions: P-247, P-171, the founder's Q1 answer (6 Nov), Lead 12's ruling 1 on #1074.
+
+## Response to the challenge (`challenge.md`: Build after these changes; 0 Blockers, 3 Majors, 10 Minors)
+* **M1** accepted: the basis is named once per fee on its totals line in P-247's words, never on a person's row; a fail test.
+* **M2** accepted: "Total so far … n fees not counted yet" on the submission and the case while a line waits; pass and fail tests.
+* **M3** to the tech lead (question 3): gate B cannot express R11 today; recommend HELD, printed only while the part is absent
+  (-22 while the fee table has no `fs.spouse` entry, -23 while no release asks the question), the guard C11.3's helper uses.
+* **Minors taken:** "Per person by role"; a page date shows as "page date 2026-03-30", never as a read date; fees not worked
+  out shown once, under the first submission; best-in-class wording corrected (the biometrics line is our summary; split is
+  API only). **Minors left, listed in the PR:** decision codes inside the server's words (P-171, FQ-7: Q2's runtime row); no
+  thousands separator (the engine's own `cad`, kept so the page and the server agree); nobody applying (no group: the
+  panel's own message, Not built here); the walk ends at a disabled "Record the submission" on the checkpoint (no filing is
+  Ready to file there; C7.6's); total-first layout (left for the founder's look, P-392). The stubs use the real view with
+  `familyFee`'s own totals (`line` is the totals' own field), not the engine's raw fee lines.
