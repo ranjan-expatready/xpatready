@@ -151,7 +151,8 @@ function FeeReceipt({ f, r }: { f: Filing; r: FilingRecordView }) {
         : <p className="text-text-muted" data-receipt-none>No Transaction Approved page uploaded</p>}
       <p className="[overflow-wrap:anywhere]">{r.fee_receipt ? <>Receipt number: <span className="font-mono">{r.fee_receipt}</span></> : <span className="text-text-muted">No receipt number typed</span>}</p>
       <input ref={input} id={id} type="file" accept={RECEIPT_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => { const x = e.target.files?.[0]; if (x) void send(x); }} />
-      <Button size="sm" variant="ghost" busy={busy} aria-label={`${last ? "Upload a new" : "Upload the"} Transaction Approved page for ${whoOf(f)}’s filing`} onClick={() => input.current?.click()}>{last ? "Upload a new page…" : "Upload the Transaction Approved page…"}</Button>
+      <Button size="sm" variant="ghost" busy={busy} // WCAG 2.5.3: the name starts with the words on the button, then says whose filing.
+      aria-label={`${last ? "Upload a new page…" : "Upload the Transaction Approved page…"} for ${whoOf(f)}’s filing`} onClick={() => input.current?.click()}>{last ? "Upload a new page…" : "Upload the Transaction Approved page…"}</Button>
       {error ? <p id={`${id}-error`} role="alert" tabIndex={-1} className="text-text-danger">Not stored: {error}</p> : null}
     </div>
   );

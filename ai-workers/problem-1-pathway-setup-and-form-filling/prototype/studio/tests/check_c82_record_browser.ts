@@ -107,7 +107,7 @@ try {
   await panel().locator(`[data-submission-filing="${fP}"] [data-receipt-file]`).waitFor({ timeout: 15_000 });
   const receiptP = await panel().locator(`[data-submission-filing="${fP}"] [data-fee-receipt]`).innerText(), receiptS = await panel().locator(`[data-submission-filing="${fS}"] [data-fee-receipt]`).innerText();
   ok("B149 C8.2 (screen): the record shows the Transaction Approved page chosen in the dialog, with the typed number", /Transaction Approved page: transaction-approved-E\.pdf/.test(receiptP) && /Receipt number: SAMPLE-RECEIPT-E/.test(receiptP) && sql(`select count(*) from fee_receipt_file where filing_id='${fP}'`) === "1", receiptP);
-  ok("B149 C8.2 (screen): a filing without one says so and offers the upload; the typed number stays optional", /No Transaction Approved page uploaded/.test(receiptS) && /No receipt number typed/.test(receiptS) && (await panel().getByRole("button", { name: /Upload the Transaction Approved page for/ }).count()) === 1, receiptS);
+  ok("B149 C8.2 (screen): a filing without one says so and offers the upload; the typed number stays optional", /No Transaction Approved page uploaded/.test(receiptS) && /No receipt number typed/.test(receiptS) && (await panel().getByRole("button", { name: /^Upload the Transaction Approved page… for / }).count()) === 1, receiptS);
   ok("C8.2-8 (screen): the button is gone once recorded (one record per group)", (await panel().getByRole("button", { name: "Record the submission…" }).count()) === 0);
   ok("a11y: focus is back on the panel after the dialog closes", await p.evaluate(() => !!document.activeElement?.closest("[data-submission]")));
   ok("data: the records under the screen: two filing rows, one UCI, Prepared by the officer, Reviewed by the representative",
