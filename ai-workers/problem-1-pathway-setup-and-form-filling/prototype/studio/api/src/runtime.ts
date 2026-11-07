@@ -6,7 +6,7 @@
 // a case by its id.
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
-import type { z } from "zod";
+import { z } from "zod";
 import { ConfirmSection, fillsText, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
@@ -19,7 +19,7 @@ import { FIRM_RECORD, openingTeam, REPRESENTATIVE, representativeAnswers, USES_R
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
-import { ASKED_RELATIONS, relativeKey, relativeOf, type Relation } from "../../engine/runtime/relatives.ts";
+import { ASKED_RELATIONS, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -35,6 +35,8 @@ const RELATIONSHIP: Record<string, string> = { spouse_or_partner: "SPOUSE_OR_PAR
 const isOfficer = (a: Actor) => (a.duties as readonly string[]).includes("case");
 const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const short = (id: string) => id.slice(0, 8);
+/** B128 (QA-153): Confirm section also for a parent's key (`<person>/parent_1`); the same messages as the contract's. */
+const ConfirmSubject = ConfirmSection.extend({ subjectId: z.string({ message: "Choose whose section to confirm." }).regex(SUBJECT_OR_RELATIVE, "Choose whose section to confirm.") });
 /** B128: a relative with no stored subject yet has no answer to confirm (an id no subject ever has). */
 const NOTHING_STORED = "00000000-0000-0000-0000-000000000000";
 const nameIn = (f: { users: { id: string; name: string }[] }, id: string) => f.users.find((u) => u.id === id)?.name ?? id;
@@ -493,7 +495,7 @@ export class Runtime {
    *  listed, never confirmed unseen. Unanswered questions are listed, not blocked. */
   async confirmSection(actor: Actor, caseId: string, section: string, body: unknown) {
     const c = await this.reach(actor, caseId, "officer");
-    const b = parse(ConfirmSection, body);
+    const b = parse(ConfirmSubject, body);
     // B128: a relative's section is confirmed on the relative's own subject (none yet: nothing stored to confirm).
     const storedId = (await this.subjectFor(c, b.subjectId, false)).stored ?? NOTHING_STORED;
     const s = this.snapshotOf(c);

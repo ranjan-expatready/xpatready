@@ -7,9 +7,12 @@
 // brother or sister, and a list needs its own "none apply" and rows: not asked here yet (B128's PR, question for the
 // tech lead). Which facts are asked, in which section, with which words, is the release's (its placements and field
 // maps): nothing here names a form or a combination (P-319).
-import { ASKED_RELATIONS } from "../../contracts/runtime.ts";
-export { ASKED_RELATIONS };
+/** The relations a case asks one by one (resolver R4's relative keys that stand for one person). */
+export const ASKED_RELATIONS = ["parent_1", "parent_2"] as const;
 export type Relation = (typeof ASKED_RELATIONS)[number];
+/** A subject a section is confirmed for: a person's id, or a parent's key (`<person id>/parent_1`). The API's Confirm
+ *  section route extends contracts/runtime.ts ConfirmSection with it (an M3 change kept out of that M2 file). */
+export const SUBJECT_OR_RELATIVE = new RegExp(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(/(${ASKED_RELATIONS.join("|")}))?$`, "i");
 
 /** The person and the relation a relative's key names (`<person>/parent_1`), or null for anything else: a person, the
  *  case, the representative, a sibling (a list), or a key with more parts. */
