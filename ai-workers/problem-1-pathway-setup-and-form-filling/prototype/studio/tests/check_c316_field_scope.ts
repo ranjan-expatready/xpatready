@@ -9,6 +9,7 @@ import * as R from "../engine/resolver.ts";
 import { documentFacts } from "../engine/sources.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
+import { carriedFacts } from "../engine/runtime/employer.ts";
 
 const { ok, summary } = recorder();
 const P = (id: string, role: string): PersonOnFiling => ({ id, role, label: id, applies: true });
@@ -62,6 +63,21 @@ const docs = documentFacts(snap("organisation"), family);
 ok("C3.16 (M4) pass: the principal's job offer letter still supplies the employer name, now on the case", (docs.get(FILING)?.get("organisation.employer_name") ?? []).some((x) => x.key === "offer"));
 ok("C3.16 (M4) pass: a member's marriage certificate supplies the household date on the case", (docs.get(FILING)?.get("relationship.union_date") ?? []).some((x) => x.key === "marriage"));
 ok("C3.16 (M4, fail): unmarked, nothing is added on the case", !documentFacts(snap(), family).get(FILING));
+
+// ---- second lander with #1051 (tech lead on #1054, comment 6650232198): an employer copy goes where the one reader reads
+// it. carriedFacts writes on the case's own record exactly when the placement is stored once (isFilingFact): with C3.16,
+// a field marked Organisation (or Household) too; an unmarked "organisation." fact stays on the principal.
+{
+  const snap = (scope: string | null) => ({ combination: { label: "Sample work permit", client_type: "RETAIL" },
+    field_maps: [{ entries: [{ fact: "organisation.employer_name", outcome: "mapped", person: "form_subject", data_path: "IMM_5710[0].Employer[0]" }] }],
+    placements: [{ fact: "organisation.employer_name", repeats: "per_person", ...(scope ? { scope } : {}), order: 1 }],
+    canonical_fields: [{ id: "organisation.employer_name", label: "Employer name" }] });
+  const ec = { key: "sample-employer", firm: "sample-firm", label: "Sample Employer Ltd (Sample)", facts: { "organisation.employer_name": "Sample Employer Ltd (Sample)" } };
+  const marked = carriedFacts(snap("organisation") as never, ec), unmarked = carriedFacts(snap(null) as never, ec), household = carriedFacts(snap("household") as never, ec);
+  ok("C3.16 x #1051 pass: carriedFacts with { repeats: \"per_person\", scope: \"organisation\" } writes on the case (on: \"case\")", marked.length === 1 && marked[0].on === "case", marked);
+  ok("C3.16 x #1051 pass: a field marked Household is written on the case too", household.length === 1 && household[0].on === "case", household);
+  ok("C3.16 x #1051 fail: an unmarked organisation. fact stays on the principal (as before C3.16)", unmarked.length === 1 && unmarked[0].on === "principal", unmarked);
+}
 
 // ---- words
 ok("C3.16 BR-4: the save refusals and the tags in words", ONCE_WORDS.household === "This is asked once for the household, not for a person." && ONCE_WORDS.organisation === "This is asked once for the employer, not for a person." && SCOPE_TAG.household === "For the household" && SCOPE_TAG.organisation === "About the employer");
