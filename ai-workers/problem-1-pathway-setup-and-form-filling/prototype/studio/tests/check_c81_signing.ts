@@ -42,4 +42,4 @@ ok("C8.1 (SH3): signing.ts reads who signs from the resolver and keeps no copy o
   const fam: Person[] = [{ id: "principal", role: "principal", label: "P", applies: true }, { id: "child-1", role: "child", label: "C", applies: true }];
   ok("pass: with an impossible date the child's IMM 5257 is still signed by a parent", JSON.stringify(signersOf(fam, "child-1", "each_applicant", "parent_for_minor", minorFromAnswers([dob("child-1", "2000-01-99")], today))) === JSON.stringify(["parent"]));
 }
-summary();
+process.exit(summary() ? 1 : 0); // B129: a red line fails the suite (run-suites.sh judges the exit code)
