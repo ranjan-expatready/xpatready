@@ -108,7 +108,7 @@ export async function openCase(vv: string, people: Person[] = FAMILY, team?: { r
 }
 
 export const agent = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, officerOf(caseId))).body;
-type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean } | null; rows: { answer: { id: string } | null }[] };
+type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { answer: { id: string; awaits_client?: boolean } | null }[] };
 const questions = (v: { sections?: { questions: Q[] }[] }) => (v?.sections ?? []).flatMap((s) => s.questions);
 export async function answer(caseId: string, subject: string, fact: string, value: unknown, actor = officerOf(caseId), extra: Record<string, unknown> = {}): Promise<Res> {
   const q = questions(await agent(caseId)).find((x) => x.subjectId === subject && x.fact === fact);
@@ -154,6 +154,9 @@ export async function fillEverything(caseId: string): Promise<boolean> {
     }
     for (const s of (v?.sections ?? []).filter((x: { group: { required: boolean; rows: number; none_apply: unknown } | null }) => x.group?.required && x.group.rows === 0 && !x.group.none_apply))
       await call("PUT", `/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { noneApply: true, expectedId: null }, officer);
+    // C6.18 (P-244): a background answer the officer entered (another adult's, above) is the client's to re-confirm
+    // before signing; the client does, as a person would on their questionnaire, then the officer confirms the sections.
+    for (const q of questions(await agent(caseId))) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}, CLIENT);
     for (const subj of [...new Set(questions(v).map((q) => q.subjectId))]) await confirmAll(caseId, subj);
   }
   return false;

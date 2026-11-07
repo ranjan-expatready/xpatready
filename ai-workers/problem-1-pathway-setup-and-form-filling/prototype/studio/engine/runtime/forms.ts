@@ -159,7 +159,8 @@ export const blocksFiling = (c: { group?: string; severity: string }) => c.group
 
 export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
-  const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
+  // C6.18 (P-244): a background answer staff recorded is named as waiting for the client, who re-confirms it.
+  const reason = (a: { confirmed: boolean; problems: string[]; awaits_client?: boolean } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : a.awaits_client ? "waits for the client to re-confirm" as const : !a.confirmed ? "not confirmed" as const : null);
   // QA-122: an optional fact counts only when it is answered with a problem (it would be written wrong, P-71).
   const optional = (a: { problems: string[] } | null | undefined) => (a && a.problems.length ? "needs a fix" as const : null);
   const missing: Readiness["missing"] = reads.flatMap((q) => {

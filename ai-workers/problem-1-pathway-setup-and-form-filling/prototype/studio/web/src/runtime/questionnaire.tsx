@@ -402,6 +402,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
         <div className="mt-2 h-2 rounded-full bg-text/10" role="progressbar" aria-valuemin={0} aria-valuemax={parts.length} aria-valuenow={done} aria-label="Parts done"><div className="h-2 rounded-full bg-primary" style={{ width: `${(100 * done) / Math.max(parts.length, 1)}%` }} /></div>
         {next >= 0 ? <Button className="mt-4 h-11 w-full text-base" onClick={() => open(next)}>{done ? "Continue where you left off" : "Start"} <ChevronRight /></Button> : <Notice tone="ok" className="mt-4" title="Every part is answered">Your officer reviews your answers and may ask you about some of them.</Notice>}
       </div>
+      <RecordedForYou view={view} open={open} />
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
           <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{`About ${inSentence(label)}`}</h2>
@@ -503,7 +504,12 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   async function removeRow(row: string) {
     try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows/${row}`, { method: "DELETE" }); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
   }
-  const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />;
+  const field = (q: Question, row?: string) => cellAnswer(q, row)?.awaits_client ? (
+    <div key={keyOf(q, row)} className="space-y-2">
+      <ReconfirmLine caseId={caseId} q={q} a={cellAnswer(q, row)!} />
+      <QuestionField q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />
+    </div>
+  ) : <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />;
   // Saved answers of this part that do not pass their checks (stored and flagged, P-47): never reported as plainly saved.
   const needFix = cells.filter(({ q, row }) => (cellAnswer(q, row)?.problems.length ?? 0) > 0).length;
   const confirmWords = [...new Set(cells.map(({ q, row }) => cellAnswer(q, row)?.why).filter(Boolean))];
@@ -561,6 +567,61 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
         </div>
       </form>
     </div>
+  );
+}
+
+/** C6.18 (P-244): re-confirm one background answer the case officer recorded (the version shown), as the client. */
+function useReconfirm(caseId: string) {
+  const qc = useQueryClient(), toast = useToast();
+  const [busy, setBusy] = React.useState<string | null>(null);
+  async function reconfirm(a: Answer) {
+    setBusy(a.id);
+    try { const r = await api<{ message: string }>(`/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, { method: "POST", json: {} }); toast.push({ tone: "ok", text: r.message }); }
+    catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+    setBusy(null);
+  }
+  return { busy, reconfirm };
+}
+
+/** C6.18: above a question the case officer answered for the client: who, when, and "This is right" (or change it below). */
+function ReconfirmLine({ caseId, q, a }: { caseId: string; q: Question; a: Answer }) {
+  const { busy, reconfirm } = useReconfirm(caseId);
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warn/50 bg-warn/5 px-3 py-2 text-sm" data-reconfirm={q.fact}>
+      <span className="min-w-0 flex-1">Your case officer recorded <b>{shown(q, a.value)}</b> on {a.officer ? when(a.officer.at) : "your behalf"}. Is it right? If not, change it below and save.</span>
+      <Button type="button" size="sm" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}`}><Check aria-hidden />This is right</Button>
+    </div>
+  );
+}
+
+/** C6.18: the client's list of every background answer their case officer recorded and they have not re-confirmed yet,
+ *  first on their questionnaire: each is checked one by one (This is right, or Change in its part), before signing. */
+function RecordedForYou({ view, open }: { view: View; open: (i: number) => void }) {
+  const { busy, reconfirm } = useReconfirm(view.case.id);
+  const items = view.sections.flatMap((s, i) => s.questions.flatMap((q) => (q.group ? q.rows.map((r) => ({ q, a: r.answer, i, s })) : [{ q, a: q.answer, i, s }])))
+    .filter((x): x is { q: Question; a: Answer; i: number; s: Section } => !!x.a?.awaits_client);
+  if (!items.length) return null;
+  return (
+    <section aria-labelledby="recorded-for-you" className="rounded-xl border-2 border-warn bg-surface-raised p-4" data-recorded-for-you>
+      <h2 id="recorded-for-you" className="text-base font-semibold">Check what your case officer recorded ({items.length})</h2>
+      <p className="mt-1 text-sm text-text-muted">Your case officer wrote down {items.length === 1 ? "this answer" : "these answers"} for you. Check each one before you sign: {items.length === 1 ? "it goes" : "they go"} on your forms only once you say {items.length === 1 ? "it is" : "they are"} right.</p>
+      <ul className="mt-3 divide-y divide-border">
+        {items.map(({ q, a, i, s }) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm [overflow-wrap:anywhere]">{q.label}</p>
+              <p className="text-sm font-semibold">{shown(q, a.value)}</p>
+              <p className="text-xs text-text-muted">{s.about_label === "The application" ? "For the application" : `About ${inSentence(s.about_label)}`} · recorded by your case officer{a.officer ? ` on ${when(a.officer.at)}` : ""}</p>
+            </div>
+            <span className="flex gap-2">
+              <Button size="sm" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Check aria-hidden />This is right</Button>
+              <Button size="sm" variant="secondary" onClick={() => open(i)} aria-label={`Change: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Pencil aria-hidden />Change</Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -624,11 +685,20 @@ const fromFirm = (a: Answer | null | undefined) => a?.channel === FIRM_RECORD;
 const aboutRepresentative = (q: Question) => q.subjectId === "representative";
 function ConfirmPill({ a }: { a: Answer }) {
   if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
+  // C6.18 (P-244): a background answer staff recorded waits for the client, whatever the officer did with it.
+  if (a.awaits_client) return <Pill tone="warn" title={a.why}>Waits for the client</Pill>;
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+/** C6.18 (P-244): "Officer" on a background answer staff recorded (by phone or in person): who, when, and what follows. */
+function OfficerPill({ a }: { a: Answer }) {
+  if (!a.officer) return null;
+  const again = a.channel === "client_reconfirm" ? a.at : a.answered?.channel === "client_reconfirm" ? a.answered.at : null;
+  const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it goes on a form only once the client re-confirms it, before signing." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
+  return <Pill tone="info" title={title}>Officer</Pill>;
+}
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
 /** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
 const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
@@ -730,7 +800,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /><OfficerPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
@@ -758,6 +828,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           <Check aria-hidden />Confirm section
         </Button>
       </header>
+      {s.questions.some((q) => q.background) ? <p className="border-b border-border px-4 py-2 text-[13px] text-text-muted" data-background-note>Background answers are the client's. One you record (by phone or in person) is marked <b className="font-medium text-text">Officer</b> and waits for the client to re-confirm it before signing; Confirm section does not confirm it.</p> : null}
       {/* P-47 tier 2 (C4.4 part 2): the section's error summary, GOV.UK pattern: each answer to fix and each fired check, linked to its line. */}
       {(s.problems ?? []).length ? (
         <div className="border-b border-border px-4 py-2" data-section-summary>
@@ -814,6 +885,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />
         {a ? <p className="mt-3 text-xs text-text-muted">Now: {shown(q, a.value)} ({a.why}).</p> : null}
+        {q.background ? <Notice tone="info" className="mt-3" title="The client's background answer">Record only what the client told you (by phone or in person). It is marked Officer with your name and the time, and goes on a form only once the client re-confirms it, before signing.</Notice> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>

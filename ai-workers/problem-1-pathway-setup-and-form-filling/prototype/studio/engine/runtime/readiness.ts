@@ -131,7 +131,7 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line.
     const missing = f.readiness.missing.filter((m) => m.reason !== "needs a fix"), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
-    for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), m.label]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
+    for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), missingLabel(m)]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.
     for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
     for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
@@ -186,6 +186,10 @@ export function passKeys(r: FilingReadiness, code: WarnCode, key?: string): stri
 }
 
 /** Why a pass's reason is refused (null: accepted). A written reason of at least 5 characters (as the case team's). */
+/** C6.18 (P-244): a missing fact's words on Ready to file; a background answer staff recorded is named as the client's
+ *  to re-confirm. */
+export const missingLabel = (m: { label: string; reason: string }) => m.reason === "waits for the client to re-confirm" ? `${m.label}: recorded by staff, the client re-confirms it` : m.label;
+
 export function passProblem(reason: unknown): string | null {
   // The same rule as the contract's reason (contracts/runtime.ts `reason`: 5–300 characters, a letter or digit, no
   // control or invisible characters; review r4 m2).

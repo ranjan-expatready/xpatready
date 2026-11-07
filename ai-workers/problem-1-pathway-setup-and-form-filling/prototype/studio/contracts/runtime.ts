@@ -128,6 +128,8 @@ export type ViewQuestion = {
   countries: string[] | null;
   /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
   fills: { form: string; person: string; subject: string; boxes: number }[];
+  /** C6.18 (P-244): a background question (engine/runtime/background.ts); only on the case's own views. */
+  background?: boolean;
 };
 /** A repeating group's own answer: "none apply" (value true) or "entries apply" (false), confirmed like an answer. */
 export type ViewGroup = { required: boolean; client: boolean; rows: number; none_apply: (ViewAnswer & { value: boolean }) | null };
@@ -224,7 +226,7 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or a section check that fired on a fact it reads (fact "check:<id>", label the check's words, P-47 tier 2);
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "waits for the client to re-confirm" | "needs a fix" | "a check fired" }[] };
 /** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
  *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
  *  even one starting with "The", is kept as it is. */

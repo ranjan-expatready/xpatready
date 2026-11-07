@@ -287,11 +287,14 @@ export class Runtime {
     ]);
     // A confirmation version names the answer it confirmed (sourceJson.from): who first answered stays visible (review M4).
     const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
-    const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
+    const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string; recorded?: { by: string; at: string } }]));
     const bg = this.backgroundOf(c);
-    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? firsts.get(src.from) : undefined; const one: Answer = { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null };
+    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string; recorded?: { by: string; at: string } }; const first = src.from ? firsts.get(src.from) : undefined; const one: Answer = { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null };
       // C6.18 (P-244): a background answer, and whether an officer recorded it and the client has not re-confirmed it.
-      return bg.has(one.field) ? { ...one, background: true, awaitsClient: awaitsClient(one, bg) } : one; });
+      if (!bg.has(one.field)) return one;
+      // Who on the staff recorded it: this version, the version it confirms, or (re-confirmed) the one the client's names.
+      const officerRecorded = src.channel === OFFICER_ENTRY ? { by: src.actor, at: src.at } : first?.channel === OFFICER_ENTRY ? { by: first.actor, at: first.at } : src.recorded ?? first?.recorded ?? null;
+      return { ...one, background: true, awaitsClient: awaitsClient(one, bg), officerRecorded }; });
     const r: Row[] = rows.map((x) => ({ rowKey: x.rowKey, subjectId: x.subjectId, group: x.groupKey, order: x.order }));
     const gFrom = groupRows.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
     const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
@@ -311,7 +314,7 @@ export class Runtime {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
     const { answers, rows, groups } = await this.state(c);
-    return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups) };
+    return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) }) };
   }
 
   /** P-47 mode 1, PQR (C4.4 part 2): the pre-qualification questions only, with a plain result line. The officer's PQR
@@ -412,7 +415,7 @@ export class Runtime {
     await this.db.$transaction(async (tx) => {
       const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: row!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) conflict("This answer changed at the same moment; nothing was re-confirmed. Check the newer answer shown, then re-confirm that one.");
-      await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: row!.workspaceId, partyId: row!.partyId, subjectId: row!.subjectId, canonicalFieldId: row!.canonicalFieldId, canonicalFieldKey: row!.canonicalFieldKey, rowKey: row!.rowKey, valueJson: row!.valueJson as object, status: "DECLARED", sourceJson: { channel: CLIENT_RECONFIRM, actor: actor.id, at, from: officerAnswer } } });
+      await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: row!.workspaceId, partyId: row!.partyId, subjectId: row!.subjectId, canonicalFieldId: row!.canonicalFieldId, canonicalFieldKey: row!.canonicalFieldKey, rowKey: row!.rowKey, valueJson: row!.valueJson as object, status: "DECLARED", sourceJson: { channel: CLIENT_RECONFIRM, actor: actor.id, at, from: officerAnswer, recorded: a!.officerRecorded ?? null } } });
     });
     await this.audit.log(c.workspaceId, actor.id, "re-confirmed", "case fact", row!.canonicalFieldKey, `${actor.name} re-confirmed ${row!.canonicalFieldKey} on case ${short(caseId)}: a background answer the case officer ${a!.origin?.actor ?? a!.actor} recorded (Officer)`);
     const after = await this.view(actor, caseId, "sqr");
