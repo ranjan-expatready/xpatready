@@ -28,7 +28,7 @@ updated: 2026-11-07 13:11 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 **To-do, in order:**
 1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`, cron 2be371d8).
 2. **Lanes, counted only after a push:** B124 #1197 and B126 #1212. Read their PR comments each check. Label on an Approve line for the exact head + green CI.
-3. **qa:** nightly 42352179701 on main ecbd68301 (C6.11 C8.1, data=checkpoint). Read the pack lines ("on the checkpoint", not fixture), then a fresh qa re-scores C6.11 and C8.1 (P-339).
+3. **qa:** nightly 42352179701 on main ecbd68301 read: C6.11 25/25, C8.1 14/14, both exit 0 "on the checkpoint". Fresh qa started; label its records PR after reading the diff (P-339, P-385).
 4. **P-388 measurement:** batch failure rate over the 10 batches after 09:19 IST, `flow-measure.py --since 2026-11-07T03:49:00Z`; 1 failed of 5 at 11:02 IST (C1 interaction); verdict ~18:30 IST.
 5. **Hour-12 forecast** was due ~11:17 IST and not found in the records: write it from measured rows (M3 plan #1167 section 5).
 6. **Records PR** from this branch, once a day (P-336): label after reading the diff, founder names it if the classifier refuses.
@@ -45,7 +45,7 @@ updated: 2026-11-07 13:11 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 | B124 #1197 (cloud) | task_88bb8ba2, requested 13:09 IST | leave draft, full CI, Approve line |
 | B126 #1212 (cloud) | task_03fa773f, requested 13:09 IST | confirm 5/5 + C8.2 pack, Approve line |
 | Canary (cloud) | task_acca4ca2 | pushed; ends by itself |
-| qa (Mac) | fresh, after the nightly | re-score C6.11, C8.1 |
+| qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
 | Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | standby + watchdog |
 | Lead 31 (Mac) | `local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e` | standby |
 
