@@ -69,7 +69,9 @@ await main("C6.11", "Firm, users and case team — checkpoint checks", async () 
 
   // Break M3: the IMM 5476 item names the representative of record; IMM 5475 (its designated individual) is not tagged.
   const i5476 = itemsOf(p, fam.subjects["Sample Client A"], "IMM 5476")[0] as { representative?: string } | undefined;
-  const i5475 = itemsOf(p, fam.subjects["Sample Client A"], "IMM 5475")[0] as { representative?: string } | undefined;
+  // C9 (QA-246, on main since the merge of 7 Nov): a form that cannot start yet (IMM 5475 waits for its release answer) is
+  // listed in Prepare's `waiting`, not its `items`; either way it is the same item.
+  const i5475 = [...itemsOf(p, fam.subjects["Sample Client A"], "IMM 5475"), ...(((p as { waiting?: { form?: string; subject: string }[] } | null)?.waiting ?? []).filter((i) => i.subject === fam.subjects["Sample Client A"] && i.form === "IMM 5475"))][0] as { representative?: string } | undefined;
   ok("C6.11 pass: the IMM 5476 item names the representative of record", i5476?.representative === f.rep, i5476);
   ok("C6.11 fail (break M3): the IMM 5475 item carries no representative (its designated individual is not the case team)", !!i5475 && !("representative" in i5475), i5475);
 });

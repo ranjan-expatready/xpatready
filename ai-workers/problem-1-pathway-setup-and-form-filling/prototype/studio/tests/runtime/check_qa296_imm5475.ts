@@ -47,7 +47,10 @@ await main("QA-296", "IMM 5475's designated individual is never the representati
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [f.officer!] });
   const P = c.subjects["Sample Client A"], officer = f.officer!;
   const p = (await prepare(c.id, officer)).p;
-  ok("QA-296 setup: on the checkpoint the principal has IMM 5475 and IMM 5476", itemsOf(p, P, "IMM 5475").length === 1 && itemsOf(p, P, "IMM 5476").length === 1, itemsOf(p, P).map((i) => i.form));
+  // C9 (QA-246, on main since the merge of 7 Nov): a form that cannot start yet (IMM 5475 waits for its release answer) is
+  // listed in Prepare's `waiting`, not its `items`.
+  const waitingOf = (form?: string) => ((p as { waiting?: { form?: string; subject: string }[] } | null)?.waiting ?? []).filter((i) => i.subject === P && (!form || i.form === form));
+  ok("QA-296 setup: on the checkpoint the principal has IMM 5475 and IMM 5476", [...itemsOf(p, P, "IMM 5475"), ...waitingOf("IMM 5475")].length === 1 && itemsOf(p, P, "IMM 5476").length === 1, [...itemsOf(p, P), ...waitingOf()].map((i) => i.form));
 
   // The fault as qa read it, now in a filled copy: IMM 5475 for the principal.
   const c5475 = await generateCopy(c.id, "IMM 5475", P);
