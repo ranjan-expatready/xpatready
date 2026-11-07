@@ -217,9 +217,10 @@ const FAMILY_FORMS = ["IMM 5707", "IMM 5645"];
  *    "person_and_representative"); it applies when a representative is used (its condition, read as configured).
  *  - IMM 5409, IMM 5475, IRM 0002 apply only on an answer: their conditions are read as configured, never decided here
  *    (no row in compliance-trace.md; their quotes are in api/src/form-setup.ts VV_FORM_RULES).
- *  Read as configured, so where a release departs from a cited rule the answer follows the release (release 2 today: no
- *  line has "signed by" set, and IMM 5476 has no minimum age, unlike VV-R10's "under 18 covered by the applicant's form");
- *  a pack that matches it exactly records the release's gap, it does not bless it. */
+ *  Read as configured, so where a release departs from a cited rule the answer follows the release (release 2 on the
+ *  checkpoint, 7 Nov: Schedule 1, IMM 5645 and the answer-only forms have no "signed by" set, samples/checkpoint-stage-one.json
+ *  "signers_not_set", so the person is expected to sign); a pack that matches it exactly records the release's gap, it
+ *  does not bless it. */
 const ageOn = (dob: string | null, today = new Date().toISOString().slice(0, 10)) => {
   if (!dob) return null;
   const [y, m, d] = dob.split("-").map(Number), [ty, tm, td] = today.split("-").map(Number);

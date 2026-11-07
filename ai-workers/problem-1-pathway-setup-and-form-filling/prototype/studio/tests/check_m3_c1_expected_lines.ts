@@ -6,11 +6,14 @@
 //     (IMM 5257 a PDF upload with a typed name, IMM 5707 Online, IMM 5476 signed by hand and scanned), a child one;
 //   * release 2 of the configured checkpoint (Demo › Load the configured checkpoint): its seven form lines as the
 //     configuration dump of 6 Nov reads them (product/screens/M3-plan/packs-2026-11-06.md, "What the checkpoint's Visitor
-//     visa holds", on the M3 plan's branch, PR #1167), the four answer-only lines' facts from api/src/form-setup.ts VV_FORM_RULES.
+//     visa holds", on the M3 plan's branch, PR #1167), with what rows A1 (#1084) and A2 (#1072) set on them since (7 Nov):
+//     who signs (samples/checkpoint-stage-one.json, "signers": IMM 5257 a parent for a minor, IMM 5476 the person and the
+//     representative) and who files IMM 5476 (api/src/form-setup.ts VV_FORM_RULES: the principal, a partner, a child from
+//     18); the four answer-only lines' facts from the same VV_FORM_RULES.
 // Part 1 feeds both configurations to the helper without a server. Part 2 reads each live, on this copy: the fixture
 // first, then Demo › Reset and Load the configured checkpoint, each through a case opened by the helper; on the
 // checkpoint it also fills the case the packs' way and checks the helper's UCI fix (a UCI the release's own checks
-// accept, so nothing is left to confirm). Sample data, live AI off, no model call (US$0). It fails on a main
+// accept: what is left to confirm is only IMM 5476's representative facts, worked out by hand at C1-9). Sample data, live AI off, no model call (US$0). It fails on a main
 // without row C1 (no expectedLines).
 //   zsh studio/tools/isolated.sh rt_c1 4479 start && tsx studio/tests/check_m3_c1_expected_lines.ts 4479 xr_studio_rt_c1
 import { spawnSync } from "node:child_process";
@@ -43,14 +46,17 @@ const FIXTURE_LINES: Snap[] = [
 /** Release 2 of the checkpoint, from the dump (newest version per lineage; IMM 5707 retired): "IMM 5257 v2 PUBLISHED
  *  who=each_applicant ch=ONLINE sig=NONE", "IMM 5257 SCH1 who=principal_partner_adult_children ch=PDF_UPLOAD minAge=18",
  *  "IMM 5645 who=each_applicant ch=PDF_UPLOAD minAge=18", and IMM 5409, IMM 5475, IMM 5476 (sig=HAND_SCANNED), IRM 0002
- *  attach=ANSWER_CONDITIONAL; no line has "signed by" set. The conditions are api/src/form-setup.ts VV_FORM_RULES'. */
+ *  attach=ANSWER_CONDITIONAL. Since 7 Nov (A1, A2 merged): IMM 5257 signed "parent_for_minor" and IMM 5476
+ *  "person_and_representative" (checkpoint-stage-one.json, VV-R09, VV-R10); IMM 5476 filed by the principal, a partner and
+ *  a child from 18 (VV_FORM_RULES, VV-R10). SCH1, IMM 5645, IMM 5409, IMM 5475, IRM 0002 keep no signer
+ *  ("signers_not_set" there). The conditions are VV_FORM_RULES'. */
 const RELEASE2_LINES: Snap[] = [
-  { form_number: "IMM 5257", who: "each_applicant", status: "always", channel: "ONLINE" },
+  { form_number: "IMM 5257", who: "each_applicant", status: "always", channel: "ONLINE", signed_by: "parent_for_minor" },
   { form_number: "IMM 5257 SCH1", who: "principal_partner_adult_children", status: "always", min_age: 18 },
   { form_number: "IMM 5645", who: "each_applicant", status: "always", min_age: 18 },
   { form_number: "IMM 5409", who: "each_applicant", status: "conditional", condition: eq("person.marital_status", "common_law") },
   { form_number: "IMM 5475", who: "each_applicant", status: "conditional", condition: eq("case.authorizes_release_to_designated_individual", true, "CASE") },
-  { form_number: "IMM 5476", who: "each_applicant", status: "conditional", condition: eq("case.uses_representative", true, "CASE"), signature: "HAND_SCANNED" },
+  { form_number: "IMM 5476", who: "principal_partner_adult_children", status: "conditional", condition: eq("case.uses_representative", true, "CASE"), signature: "HAND_SCANNED", min_age: 18, signed_by: "person_and_representative" },
   { form_number: "IRM 0002", who: "each_applicant", status: "conditional", condition: eq("person.gender_identifier_differs_from_documents", true) },
 ];
 
@@ -60,13 +66,18 @@ const L = (form: string, channel: string, signature: string, signers: string, ki
 const words = (l: Line) => L(l.form, l.channel, l.signature, l.signers.join("+"), [l.online && "online", l.barcode && "barcode", l.barcodePdf && "barcode pdf", l.family && "family", l.handSigned && "hand-signed"].filter(Boolean).join(","), (l.waitsOn ?? []).join(","));
 const FIXTURE_ADULT = [L("IMM 5257", "PDF_UPLOAD", "TYPED_NAME", "person", "barcode,barcode pdf"), L("IMM 5707", "ONLINE", "TYPED_NAME", "person", "online,family"), L("IMM 5476", "PDF_UPLOAD", "HAND_SCANNED", "person+representative", "hand-signed")];
 const FIXTURE_CHILD = [L("IMM 5257", "PDF_UPLOAD", "TYPED_NAME", "parent", "barcode,barcode pdf")];
-const R2_WAITING = [L("IMM 5409", "PDF_UPLOAD", "NONE", "person", "", "person.marital_status"), L("IMM 5475", "PDF_UPLOAD", "NONE", "person", "", "case.authorizes_release_to_designated_individual"),
-  L("IMM 5476", "PDF_UPLOAD", "HAND_SCANNED", "person", "hand-signed", "case.uses_representative"), L("IRM 0002", "PDF_UPLOAD", "NONE", "person", "", "person.gender_identifier_differs_from_documents")];
+// Release 2, by hand: every person waits for IMM 5409, IMM 5475 and IRM 0002 (each applicant, an answer decides); IMM 5476
+// waits for the adults only (principal and partner always; the children are 10 and 15, under its 18), signed by the person
+// and the representative. Adults fill IMM 5257 (signed by the person, 18 or older), Schedule 1 and IMM 5645 (both from
+// 18); each child fills IMM 5257 only, signed by a parent (under 18).
+const R2_WAIT_ALL = [L("IMM 5409", "PDF_UPLOAD", "NONE", "person", "", "person.marital_status"), L("IMM 5475", "PDF_UPLOAD", "NONE", "person", "", "case.authorizes_release_to_designated_individual"),
+  L("IRM 0002", "PDF_UPLOAD", "NONE", "person", "", "person.gender_identifier_differs_from_documents")];
+const R2_WAIT_ADULT = [...R2_WAIT_ALL, L("IMM 5476", "PDF_UPLOAD", "HAND_SCANNED", "person+representative", "hand-signed", "case.uses_representative")];
 const R2_ADULT = [L("IMM 5257", "ONLINE", "NONE", "person", "online,barcode"), L("IMM 5257 SCH1", "PDF_UPLOAD", "NONE", "person"), L("IMM 5645", "PDF_UPLOAD", "NONE", "person", "family")];
-const R2_CHILD = [L("IMM 5257", "ONLINE", "NONE", "person", "online,barcode")];
+const R2_CHILD = [L("IMM 5257", "ONLINE", "NONE", "parent", "online,barcode")];
 const WANT = {
   fixture: { "Sample Client A": [FIXTURE_ADULT, []], "Sample Spouse A": [FIXTURE_ADULT, []], "Sample Child A1": [FIXTURE_CHILD, []], "Sample Child A2": [FIXTURE_CHILD, []] },
-  release2: { "Sample Client A": [R2_ADULT, R2_WAITING], "Sample Spouse A": [R2_ADULT, R2_WAITING], "Sample Child A1": [R2_CHILD, R2_WAITING], "Sample Child A2": [R2_CHILD, R2_WAITING] },
+  release2: { "Sample Client A": [R2_ADULT, R2_WAIT_ADULT], "Sample Spouse A": [R2_ADULT, R2_WAIT_ADULT], "Sample Child A1": [R2_CHILD, R2_WAIT_ALL], "Sample Child A2": [R2_CHILD, R2_WAIT_ALL] },
 } as const;
 const sorted = (x: readonly string[]) => [...x].sort();
 /** The differences between the helper's answer and the hand-worked one, per person (empty when equal). */
@@ -89,7 +100,7 @@ if (expectedLines && releaseLines) {
   let d = diff(expectedLines(release(FIXTURE_LINES), FAMILY), WANT.fixture);
   ok("C1-1 fixture: adults three forms (IMM 5257 barcode PDF, IMM 5707 Online family form, IMM 5476 hand-signed), each child one (IMM 5257, a parent signs), nothing waits", !d.length, d);
   d = diff(expectedLines(release(RELEASE2_LINES), FAMILY), WANT.release2);
-  ok("C1-2 release 2: adults IMM 5257 Online, Schedule 1 and IMM 5645 (family form); children IMM 5257 only; the four answer-only forms wait for every person, each on its own fact", !d.length, d);
+  ok("C1-2 release 2: adults IMM 5257 Online, Schedule 1 and IMM 5645 (family form); children IMM 5257 only, signed by a parent; IMM 5409, IMM 5475, IRM 0002 wait for every person, IMM 5476 (person and representative) for the adults only", !d.length, d);
   const minorPrincipal = expectedLines(release(RELEASE2_LINES), [{ role: "principal", name: "Sample Teen", dob: m3.yearsAgo(16) }])["Sample Teen"];
   ok("C1-3 release 2: a principal of 16 still fills Schedule 1 (the age gates dependent children only) and no IMM 5645 (from 18)", sorted((minorPrincipal?.forms ?? []).map((l) => l.form)).join("|") === "IMM 5257|IMM 5257 SCH1", minorPrincipal?.forms.map((l) => l.form));
   const away = expectedLines(release(FIXTURE_LINES), [...FAMILY.slice(0, 1), { role: "spouse_or_partner", name: "Sample Spouse A", dob: m3.yearsAgo(38), applies: false }])["Sample Spouse A"];
@@ -123,11 +134,30 @@ if (expectedFor) {
   ok("C1-7 Demo › Reset, then Load the configured checkpoint", reset < 300 && load < 300, [reset, load]);
   c = await openCase(needVisitorVisa());
   d = diff(await expectedFor(c.id), WANT.release2);
-  ok("C1-8 checkpoint, live: a new family case opens on release 2 and expectedLines equals the hand-worked answer (seven lines for adults, five for children)", !d.length, d);
-  // The helper's UCI fix, on the same case filled the packs' way (C7.7-9's own reading of stage 1).
-  const filled = await fillEverything(c.id);
+  ok("C1-8 checkpoint, live: a new family case opens on release 2 and expectedLines equals the hand-worked answer (seven lines for adults, four for children)", !d.length, d);
+  // The helper's UCI fix, on the same case filled the packs' way (C7.7-9's own reading of stage 1). Worked by hand since
+  // A2 (7 Nov): the case team answers "uses a representative" Yes, so the adults' IMM 5476 applies. Its released map,
+  // IMM 5476 (11-2021), reads 22 facts about the representative (REP_FACTS); the firm record fills five of them
+  // (engine/runtime/team.ts: the names at :84; the membership ID, licensing body and firm name at :114-116), so 17 are
+  // left that no route accepts before row B107 (#1072 names them; nothing about a person on the case). So stage 1 is 17
+  // for each adult's filing and 0 for each child's, and every form but the adults' IMM 5476 is ready.
+  const REP_FACTS = ["person.family_name", "person.given_names", "representative.membership_id", "representative.licensing_body", "representative.licensing_province", "representative.uncompensated_other_description",
+    "representative.uncompensated_category", "person.address_city", "person.address_country", "person.email", "person.fax_country_code", "person.fax_number", "representative.supervising_lawyer_name",
+    "representative.supervising_lawyer_membership_id", "representative.organization_name", "person.phone_country_code", "person.phone_number", "person.address_postal_code", "person.address_province_state",
+    "person.address_street_name", "person.address_street_number", "person.address_apt_unit"];
+  const FROM_FIRM = ["person.family_name", "person.given_names", "representative.membership_id", "representative.licensing_body", "representative.organization_name"];
+  const LEFT = REP_FACTS.filter((f) => !FROM_FIRM.includes(f)).sort();
+  const STAGE1: Record<string, number> = { "Sample Client A": LEFT.length, "Sample Spouse A": LEFT.length, "Sample Child A1": 0, "Sample Child A2": 0 };
+  await fillEverything(c.id);
+  const p = (await prepare(c.id)).p, nameOf = new Map(Object.entries(c.subjects).map(([n, s]) => [s, n]));
   const stage1 = ((await m3.call("GET", `/runtime/cases/${c.id}/prepare`, undefined, m3.officerOf(c.id))).body?.stage1 ?? []) as { filing: string; to_confirm: number }[];
-  ok("C1-9 checkpoint: filled the packs' way, every form is ready and stage 1 shows nothing left to confirm on any of the four filings (the UCI was the one fact left)", filled && stage1.length === 4 && stage1.every((x) => x.to_confirm === 0), { filled, stage1: stage1.map((x) => x.to_confirm) });
+  const byName = Object.fromEntries(stage1.map((x) => [nameOf.get(p?.filings.find((f) => f.id === x.filing)?.applicants[0]?.subject ?? "") ?? x.filing, x.to_confirm]));
+  ok(`C1-9 checkpoint: filled the packs' way, stage 1 is exactly ${LEFT.length} to confirm for each adult's filing (IMM 5476's representative facts no route fills before B107) and 0 for each child's (the UCI was the one other fact left)`,
+    LEFT.length === 17 && Object.keys(STAGE1).every((n) => byName[n] === STAGE1[n]) && stage1.length === 4, byName);
+  const forms = ((await m3.call("GET", `/runtime/cases/${c.id}/forms`, undefined, m3.officerOf(c.id))).body?.forms ?? []) as { form?: string; code?: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { about: string; fact: string }[] } }[];
+  const notReady = forms.filter((f) => f.applies && !f.readiness.ready);
+  const repOnly = notReady.every((f) => (f.form ?? f.code) === "IMM 5476" && f.readiness.missing.every((m) => m.about === "The representative") && [...new Set(f.readiness.missing.map((m) => m.fact))].sort().join("|") === LEFT.join("|"));
+  ok("C1-9b checkpoint: the only forms not ready are the two adults' IMM 5476, each missing exactly those 17 facts about the representative", repOnly && sorted(notReady.map((f) => f.person)).join("|") === "Sample Client A|Sample Spouse A", notReady.map((f) => `${f.form ?? f.code}/${f.person}: ${f.readiness.missing.length}`));
   const uciWarns = ((await prepare(c.id)).p?.readiness ?? []).flatMap((r) => r.warns).filter((w) => w.code === "fact_problem" && /Unique Client Identifier/.test(w.words));
   ok("C1-10 no \"fact with a problem\" warning on the UCI: the helper's Sample UCI is one the release's own checks accept", uciWarns.length === 0, uciWarns.map((w) => w.words.slice(0, 120)));
 }
