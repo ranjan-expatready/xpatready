@@ -219,7 +219,9 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or a section check that fired on a fact it reads (fact "check:<id>", label the check's words, P-47 tier 2);
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired";
+  /** B107: whose fact it is (the question's subject: a person's id, the case's, or "representative"), so who owes it is told by its own subject. */
+  subject?: string }[] };
 /** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
  *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
  *  even one starting with "The", is kept as it is. */

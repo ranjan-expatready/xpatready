@@ -14,6 +14,7 @@ import { nameOf } from "@/pages/review";
 import { ItemStatusNote, useCanAuthor, useItemLifecycle } from "@/pages/library-item-actions";
 import { TipProvider } from "@/components/status";
 import { AdminDetails } from "@/components/details";
+import { FieldScopePanel, SCOPE_PILL } from "@/pages/field-scope"; // C3.16
 
 /** QA-39: value types in words (the stored code stays the value). */
 const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address",
@@ -140,7 +141,7 @@ export function FieldPage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
       {/* UX-A part 4 (EXPERIENCE §5): the field's key is under Details, not under its name. */}
-      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{cur.mergedIntoKey ? <Pill>Merged</Pill> : retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{cur.mergedIntoKey ? <Pill>Merged</Pill> : retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{SCOPE_PILL[cur.scope] ?? "about each person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
@@ -172,6 +173,7 @@ export function FieldPage() {
           </> : null}
         </section>
       </div>
+      <FieldScopePanel fieldKey={key} retired={retiredNow || !!cur.mergedIntoKey} />
       <OtherNames fieldKey={key} cur={cur} shown={shown} retiredNow={retiredNow} actors={session.data?.actors} invalidate={inv} />
       <section data-format-panel className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Format</h2>

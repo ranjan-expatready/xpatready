@@ -1,75 +1,72 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_ab55f159-491a-451b-a4bc-e21d33d4e5e4 Lead 26 · 7 Nov 09:33 IST (took over from Lead 25 at ~375k context, P-314)
+current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 11:53 IST by **Lead 26** (account switch at 50%, P-397) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 11 M3 rows merged, 2 of 17 Works (C1.3, C11.5); C8.2 + C6.9 at qa gate A** · rules: **`RULES.md`** + DECISIONS P-354 to P-394 · earlier page: `history/STATE-2026-11-07-1055-lead26.md` · this branch: `lead/2026-11-07-switch`
+updated: 2026-11-07 16:19 IST by **Lead 31** (took over 15:45 IST); weekly 14% at 16:17 IST (~10%/h; 85% ~23:20 IST at this rate) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1619-lead31.md` · this branch: `lead/2026-11-07-lead31`
 
-## Account switch (P-394, P-396, P-397): read first
-* **Switch at 50% (~12:20 IST), founder ~11:52 IST.** Restart on the new account, from their PRs: A3 rework **#1198** (head 4b3b343e1, green, owes a re-review Approve), B124 **#1197** (owes Approve), B126 **#1212** (QA-295 fix, CI running), qa's C6.11 re-score is done: records PR **#1216** (head 9ca351d64; C6.11 Partial, ready for Works except P-339: Mac C6.11 25/25, C8.1 14/14; closed QA-152, QA-245, QA-283, QA-293; QA-289 narrowed to Minor; new QA-296 Major (representative's names fill IMM 5475, holds C7.7), QA-297, QA-298 Minor). Next on the new account: label #1216, then dispatch nightly capabilities="C6.11 C8.1" data=checkpoint on main and have a fresh qa re-score. Merged before the switch: #1204, #1201 (13 M3 rows), records #1199, #1208, F6 #1188 (main 28045a075). The Lead's notes: `history/lead-notes-2026-11-07/`. All sessions on the old account are deleted after the founder's yes (P-396).
-* **Weekly 48% at 10:49 IST** (~1% per 30 min → 50% ceiling ~11:50 IST). No new rows since 45%; rows in flight finish; then the switch **with the founder** (`RESUME-ON-NEW-ACCOUNT.md`: `get_usage` first, GitHub connected on claude.ai/code first, cloud canary before any lane counts).
-* **Paste-ready resume prompt for the new account** (founder types `/lead`, then pastes):
-  > Resume as tech lead after the account switch of 7 Nov. Read `product/RESUME-ON-NEW-ACCOUNT.md` "The new Lead, in order", then STATE "Start here". Run `get_usage` and tell me the weekly figure first. Check claude.ai/code shows no "Connect GitHub" and run a cloud canary before restarting any lane. Restart only the rows in STATE "In flight" that are not merged or labelled. Then start two standby Leads and the watchdog (P-389).
-* Held as NEW rows until the new account: A5, B5, C2 (#1075, ruled "wait"), the kind-job write-token fix, the b78 hang row.
+## Lead 31 (from 15:45 IST): standing items
+Cron **4b7708bc** (:13/:43). Weekly 16% at 16:47 IST (~4%/h over the last 30 min). The hand-over block and 15:55 progress lines are word for word in `history/STATE-2026-11-07-1650-lead31.md`.
+* **Lanes to read each check (PR comments):** UX (task_f4b1c488: #1245 study, #1255 C6.9 revision approved; the Lead approves each revision, P-316 (3)); concepts 1 (B135 #1242, B144 #1247, B141 #1248); concepts 2 (B145 #1252, B138 #1257, B139); C4 (task_3a2d7beb, pack lines, P-400); B150 #1251; B128; B148 #1250 → B149; C2 #1075; B3 lane (B129 → B132 → B130); A5 #1054 → B136; B5 #1233 → B133 → B152 → B151.
+* **The build lane (B140) stopped at its label (#1246); B137 and B142 need a new runtime lane** at the founder's next typed turn (card offered).
+* **#1222 (A6):** round 3 after the two code-cause reds are fixed. **#1054 (A5):** schema; the Lead reads the diff before the label.
+* **#1240:** its CI failed on G2 "C6.17 cites P-13": `tools/graph.mjs` read only a row's first P-id; fixed to read every id in the first cell (graph exit 0). Label on green at the final head (P-410).
+* **Order (16:48 IST):** B148 #1250 before the UX C6.9 revision #1255; B140 #1246 before B150 #1251 (B150 adapts: staff background answers fill at once, signing waits, P-244 + P-411).
+* **17:19 IST:** #1246 (B140) red after its label (code cause: P-244 changes "all confirmed" in C6.9 and C-9 checks); its lane stopped, so the B150 lane (#1251) fixes it first, then adapts B150. C7.6 is 15/25 on main vs qa's 19/25 (5 Nov), measured on #1261; qa asked to re-score; B149 accepted on "unchanged from main". #1240 labelled 17:19 IST (no CI run started on its head; push an empty commit if Mergify waits). Records now on `lead/2026-11-07-lead31`.
+* **17:50 IST:** #1240 conflicted with main (qa's CAPABILITIES rows), so its CI never ran. Merged in a scratch worktree (`$TMPDIR/lead31-merge`): **the main copy cannot merge main**, because the sandbox refuses writes to `.claude/skills/` (the UX lane's skill changes, #1258), so its checkout of the skills is stale until the founder pulls it. Do Lead records in that worktree.
+* Standbys: Lead 32 (watchdog), Lead 33.
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
+F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`).
+
 | # | Question | Lead's recommendation | Blocks | Since | Status |
 |---|---|---|---|---|---|
-| F1 | C1.3 "Follows" suggestions | after M3 | nothing | 6 Nov 23:52 | **answered "After M3"** (P-391) |
-| F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open: show when qa's C6.9 walk screenshots land (#1199) |
-| F3 | C6.9 counts unconfirmed facts | keep, outcome names them | B124 | 7 Nov 08:48 | **answered** (P-393, B124 = #1197) |
-| F4 | (founder ask, 11:20 IST) At the account switch, once all work is done: delete every Xpatready session on this account (Leads, lanes, qa, standbys) so nothing old can be used when he returns | Switch once every in-flight PR is labelled (Mergify merges without a Claude account); before deleting, copy the notes folder (it is named for Lead 19's session) to a stable folder, check each lane pushed, list exactly what goes, get his yes (permanent) | the switch | 7 Nov 11:20 | **answered: "Yes, that plan" (P-396)**; list + yes at the switch |
+| F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open: qa's walk screenshots landed with #1199 |
+| F6 | A hard boundary for `.github/**` changes: a Mergify condition (a GitHub approving review or a founder-only label) or a CODEOWNERS ruleset (#1232's breaker Blocker 1) | after B134 lands, a Mergify condition | nothing now (B134 is the interim) | 7 Nov 15:25 | open |
+| F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 15:50 | open (P-408) |
+| F9 | B144 (C8.3, #1247) conflicts with the team's AG-7-29: F1, a fact change after approval **withdraws** the form's approval (team: keeps it, flags it); F2, only the **representative of record** decides (team: any review-approve holder) | withdraw (row B6); representative of record (P-155 (1)); built that way, PR unlabelled until he answers | #1247's label | 7 Nov 16:09 | open |
+| F10 | B145 (C9.5, #1252): one release move per case now, refused once any filing is recorded; per-filing pins with SH4 (departs from P-316 (2), P-246 (2)) | per case now (one combination, one release, one questionnaire; SH4's contract not agreed); reversible | #1252's label | 7 Nov 16:18 | open |
+| F11 | For the immigration expert: are IMM 5257 Schedule 1's military service, government positions and organisation answers "background answers" (P-244: the client re-confirms staff entries before signing)? | not until the expert says so (AGENTS rule 4); behaviour as on main; row B154 if yes | nothing | 7 Nov 16:50 | open |
+| F12 | B138 (C6.16, #1257) privacy: Q1 privacy on at the adult's first right code or a staff tick, kept after take back; Q2 only staff send an accepted adult's link to a new address | both as recommended; built that way, PR unlabelled until he answers | #1257's label | 7 Nov 16:50 | open |
+| F13 | B139 (C6.17 multi-stage, #1262), sources conflict: Q1 the team's route for every declared sequence, no new tree level; Q2 the deadline as a computed Sample date, no filing item or reminder; Q3 key details on the stage record, only the UCI also the client's answer | all three as recommended; built that way, PR unlabelled until he answers | #1262's label | 7 Nov 17:19 | open |
 
 ## Start here (next Lead)
-**Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: the file lead26-pending in Lead 19's notes folder (`.../side-session-notes/local_8acced9f-…`).
-**Permission check (7 Nov):** the auto-mode classifier refuses a Lead label or a workflow dispatch as "External System Writes" until the founder names it in a typed turn ("label 1180 and 1202", "run on main"); later labels of other PRs then went through (1198, 1204). Never route a refused write through a lane.
-**Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 27).
+**Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
+**Founder, ~15:50 IST (P-410):** the Lead labels all approved green PRs, its own records too; no token cap, quality guards stay; the 50%-by-22:00 trip-wire is lifted. **Auto-mode rule (P-405, ~15:15 IST):** `~/.claude/settings.json` `autoMode` now allows the Lead's labels on Approve + green CI, its own records-only PR approval and label, and nightly.yml dispatch on main. First use is the test: on a refusal, ask the founder in one line as before and note it in DECISIONS. **Standing OK (P-402, 14:30 IST):** the Lead labels approved green PRs and dispatches re-tests on main without naming each. **Was refused before P-405:** the Lead's Approve and label on its own records PR (Self-Approval); try under P-405 first, then the founder names it ("label <n>"). **Permission check (7 Nov):** never route a refused write through a lane. Never route a refused write through a lane, and never split a refused command to retry it (12:39 IST: refused as a bypass).
+**Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 32).
+**Hand-over (P-409):** no hand-over with an in-process subagent running; its result goes to a file named in the hand-over block; briefs say report to the current Lead. Skill edit at the founder's next typed turn.
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
 **To-do, in order:**
-1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`) and Monitor `prwatch.sh` on `1198 1197 1201 1204 1188 1199 1075`.
-2. **Label on Approve line + green:** B124 #1197 (C6.9 unconfirmed-facts line); A7 #1201 (QA-289). #1188 F6 (Approve 822555b9c, green): label when the product queue is empty. qa records #1199 after qa merges main.
-3. **qa gate A** (`local_42b61af6-…`): sent 10:50 IST: C6.9 + C8.2 with nightly **42341735926 on main 4a7e3107d** (packs "on the checkpoint": C6.9 15/15, C8.2 12/12; C6.4 19/30, C6.4-8 group red). C6.9 also needs B124 merged (P-393). C6.11 when A7 #1201 + QA-293 #1204 land.
-4. **P-388 measurement:** batch failure rate over the 10 batches after 09:19 IST, `flow-measure.py --since 2026-11-07T03:49:00Z`; so far 0 failed of 4 (0df1f006a5, 3ef0d2164a, b1622253b9 passed; 23113b92e5 running); verdict ~18:30 IST.
-5. **Hour-12 forecast** (~11:17 IST) from measured rows (M3 plan #1167 section 5).
-6. **Records PR** from this branch (`lead/2026-11-07-lead26`, records only): open it now that #1128 is on main; label after reading the diff.
+1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`, cron 2be371d8).
+2. **Lanes, counted only after a push:** B124 #1197, B126 #1212 (the Lead labels these two; their briefs say so), C9, C3, B3, A6, B127 (these label themselves after Approve, P-277). Read their PR comments each check. Label on an Approve line for the exact head + green CI.
+3. **qa:** #1220 (head 8f1d6193e, main ecbd68301): C6.11 and C8.1 Partial, P-339 met; QA-296 confirmed, new QA-299, QA-300. Label after reading the diff and CI, once the founder gives the OK. **B107 needs a lane at his next typed turn (P-400).** Then: dispatch C8.2 C6.9 on the checkpoint after B126 and B124 land.
+4. **P-388 measurement:** 2 failed of the first 10 batches after 09:19 IST (23113b92e5 the C1 and A3 clash; 0f532b98fc not read yet): 20%, over the 10% bar. `flow-measure.py` hit a rate limit today: read `actions/workflows/ci.yml/runs` directly. Trip-wire: P-399.
+5. **Hourly report** against `design/next-12-hours-2026-11-07.md` section 7 (P-399); halfway review 20:00 IST, block review 02:00 IST.
+6. **Records:** #1229 labelled 14:32 IST (records queue). **Do not push to `lead/2026-11-07-lead29` while #1229 is queued** (a push drops the label); later commits go on a new lead branch after it merges.
 
-## Where we are (10:55 IST)
-* **M3 rows merged (11):** B120, B2 (night); A2 #1072, B1 #1073, A4 #1172, A1 #1084 (08:41-08:43); B117 #1148, B122 #1145, B121 #1149 (09:18-09:19); C1 #1180, B125 #1202 (10:31). Main 4a7e3107d. Queued: A3 #1198, QA-293 #1204 (Major fix).
-* **B125 proven:** gate B's checkpoint mode now runs each pack alone on the checkpoint (branch run 42338326649 and main run 42341735926 agree).
-* Records merged 09:50 IST: #1128 (Lead records + tools), #1196 (qa C6.4). Disk 11 GB. Spend today US$0. Lead context ~195k.
-
-## Board at the switch (factory-board.sh, 10:52 IST)
-```
-#1198  M3  Merge queue     A3 release 2's own lines (C7.6, C11.6, C8.1)
-#1204  -   Merge queue     QA-293 representative's tab
-#1201  -   CI running      QA-289 firm's office phone (A7)
-#1197  M3  Building        B124 C6.9 unconfirmed-facts line
-#1188  -   Ready for label F6 batch wait 5 min (label when product queue empty)
-#1054  M3  CI running      C3.16 shared field scope (red checks: 1)
-#1075  M3  Building        C7.3 / C2 (held, "wait")   no push 47 h
-#1074  M3  CI red          C6.12 spouse sponsorship    no push 47 h
-#1086, #945, #417, #1140, #671, #669: old, no push for 1-5 days (not M3 critical path)
-```
+## Where we are (16:19 IST)
+* M3: 28 capabilities (P-406); Works 4 on qa's #1238 (C1.3, C11.5, C6.9, C8.2; queued). Merged since 15:45 IST: C3 #1225, C9 #1223, qa #1226, #1220. Queued: #1238, #1221, #1233, #1232, #1237, #1241, #1245. Spend today US$0. Earlier lines: `history/STATE-2026-11-07-1619-lead31.md`; the account switch and 7 Nov lessons: `history/STATE-2026-11-07-1555-lead31.md`.
 
 ## In flight
+**qa's lane:** `local_0868d426-…`; #1226 (head c237fef9f, QA-235 closed, QA-153 rewritten) gets the P-401 wording, then the Lead reads and labels. QA-228's retest goes with C8.2 and C6.9. C6.9 and C8.2 go to it when they land.
 | Lane | Where | Row → next |
 |---|---|---|
-| M3 A1 (cloud) | session_015r4b48kw3JZTxj3QymQ6NR | A3 #1198 queued → (A-seat next held) |
-| M3 A2 (cloud) | session_015r4b498e1jCsPDDDvdXgcE | A7 #1201 → QA-293 #1204 queued → (A5 held) |
-| M3 A4 / seat B-2 (cloud) | session_015r4b4AB8rM3oGURRbp17g2 | B124 #1197 → (B5 held) |
-| M3 C1 (cloud) | session_015r4b4BcPvT6b7ntAX9yhS8 | C1 merged → (C2 held) |
-| B122 #1145 (cloud) | session_015r4b4AUe4k9SELZXqMjKHm | B125 merged → (token fix, b78 row held) |
-| B119 (cloud) | #1188 F6 | label when queue empty |
-| qa (Mac) | `local_42b61af6-fa15-4fbf-9bcb-5c4cb6e17905` | gate A C6.9/C8.2; #1199 |
-| Lead 27 (Mac) | `local_a2122a0e-82ba-44eb-913a-0d144a6da601` | standby + watchdog |
-| Lead 28 (Mac) | `local_4d35fb20-7e18-4522-9ae7-fc4d926bcee9` | standby |
+| C9 QA-246 (cloud) | #1223 | C7.7 forms waiting on an answer |
+| C4 (cloud) | task_3a2d7beb, requested 15:04 IST (P-404) | C7.6 → C9.2 → C11.6 → C7.7, the Lead approves pack lines before each label |
+| B3 → B129 | #1221 labelled 15:48 IST | B129 → B132 → B130 |
+| B131 (cloud) | task_32589e77, requested ~15:16 IST (P-405) | gate B NOT TESTED; may merge ahead (P-214) |
+| Lead 33 (Mac) | `local_b49efef4-ce4b-4e6d-b821-507aac4b653b` | standby |
+| A6 B102 (cloud) | #1222; concept approved 14:17 IST | calculated age, C6.4, QA-226 |
+| B107 (cloud) | task_fb1531a2, started ~14:28 IST | QA-296, QA-299, QA-300: C6.11's path |
+| Lead 32 (Mac) | `local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3` | standby + watchdog (after Lead 30 messages it) | representative's names on IMM 5475 |
+| qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
+| Lead 31 (Mac) | `local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e` | **current Lead** from 15:45 IST |
+| UX lane (cloud) | task_f4b1c488 (P-407) | study → scorecard → M3 screens |
+| New-rows concepts (cloud) | task_9975ca96 | B135 → B144 → B141 |
+| New-rows build (cloud) | task_404185d0 | B140 → B137 → B142 |
+| Started ~15:56 IST (cloud, P-410) | task_f622c350 B150 · task_1c1f5c6c B128 · task_cf52df0f B148 → B149 · task_7b81aa78 C2 on #1075 · task_d0f2097f concepts 2: B145 → B138 → B139 | count only after a push |
+| Warm rows by PR comment ~15:57 IST | #1221 lane: B129 → B132 → B130 · #1054 (A5): B136 · #1233 (B5): B133 after #1223 | |
+
+**Released 14:34 IST (P-403):** A5 #1054, C2 #1075, B5 (#1233), kind token then b78 (#1232); the old PRs off the critical path are listed in `history/STATE-2026-11-07-1545-lead30.md`.
 
 ## Leads, in order (highest = current)
-**Lead 26** `local_ab55f159-…` (from 09:33 IST 7 Nov) · Lead 25 `local_efdbee17-…` ended (07:33-09:35 IST) · Lead 24 `local_ce906423-…`, Leads 23-19 ended · Leads 1-18 earlier. Standbys: Lead 27 (watchdog), Lead 28. Never archive Lead 22 (Leads 23-24 nest under it).
-
-## Lessons (7 Nov, Leads 25-26)
-* A run said "checkpoint" but gate B used fixtures: read the pack lines ("on the checkpoint" vs "fixture only"), not the input (fixed by B125).
-* A test suite run from the sandbox in the main copy damaged it (mktemp failed): suites only in a scratch clone.
-* zsh does not split `$var` in `for d in $list`: use `${(f)list}` or xargs.
-* Pushing to a queued PR's branch removes its label (label guard): put new records on a new lead branch.
-* The permission check refuses a write the founder has not named; ask him to name it in one line, never route it through a lane.
-* A label claimed in notes is not a review on the PR: check for the `Reviewer: Approve <sha>` line before labelling (6 Nov).
+**Lead 31** `local_f02fdadd-…` (from 15:45 IST 7 Nov) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 33.

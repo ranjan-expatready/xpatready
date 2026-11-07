@@ -144,12 +144,14 @@ export async function fillEverything(caseId: string): Promise<boolean> {
     const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, officer)).body?.forms ?? [];
     if (forms.length && forms.every((f: { applies: boolean; readiness: { ready: boolean } }) => !f.applies || f.readiness.ready)) return true;
     const v = await agent(caseId);
-    for (const q of questions(v).filter((q) => q.required && !q.hidden && !q.group && !q.answer?.confirmed && q.fact !== "person.date_of_birth")) {
+    // A person's date of birth is set when the case opens (it decides ages); a parent's (B128, `<person>/parent_1`) is a
+    // fact like any other here, a Sample date some 70 years ago.
+    for (const q of questions(v).filter((q) => q.required && !q.hidden && !q.group && !q.answer?.confirmed && (q.fact !== "person.date_of_birth" || q.subjectId.includes("/")))) {
       const p = who.get(q.subjectId), clientFact = q.collected_from === "client_questionnaire";
       const put = (value: unknown) => clientFact && (!p || p.role === "principal" || isMinor(p.dob)) ? answer(caseId, q.subjectId, q.fact, value, CLIENT)
         : clientFact ? answer(caseId, q.subjectId, q.fact, value, officer, { onBehalfOf: q.subjectId, reason: "Entered from the person's signed form (Sample)" })
         : answer(caseId, q.subjectId, q.fact, value, officer);
-      const value = sample(q), r = await put(value);
+      const value = q.fact === "person.date_of_birth" ? yearsAgo(70) : sample(q), r = await put(value);
       if (value === "SAMPLE" && r.status < 300 && (r.body?.answer?.problems ?? []).length) await put(SAMPLE_DIGITS);
     }
     for (const s of (v?.sections ?? []).filter((x: { group: { required: boolean; rows: number; none_apply: unknown } | null }) => x.group?.required && x.group.rows === 0 && !x.group.none_apply))

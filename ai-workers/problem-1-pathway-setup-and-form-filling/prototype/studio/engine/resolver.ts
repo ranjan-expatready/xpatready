@@ -59,14 +59,22 @@ export function conditionSubjects(people: PersonOnFiling[], holder: string, kind
   return find(people, role).map((p) => p.id);
 }
 
-/** R5: the scope of a fact as the rules read it today (household is never produced; organisation is held). */
-export function scopeOf(fact: string, placement?: { repeats?: string | null } | null): Scope {
+/** A placement as the scope rules read it: `scope` is C3.16's mark, set by a release only when the field's stored scope
+ *  is Household or Organisation (engine/field-scope.ts; engine/snapshot.ts). */
+type Placed = { repeats?: string | null; scope?: string | null } | null | undefined;
+const marked = (placement: Placed): "household" | "organisation" | null => (placement?.scope === "household" || placement?.scope === "organisation" ? placement.scope : null);
+/** R5: the scope of a fact. C3.16: a placement's mark wins (household, organisation); otherwise as before C3.16 (a
+ *  `case.` key or a once-per-case placement is a filing fact; an unmarked `organisation.` fact is read per person). */
+export function scopeOf(fact: string, placement?: Placed): Scope {
+  const m = marked(placement);
+  if (m) return m;
   if (placement?.repeats === "once_per_case" || fact.startsWith("case.")) return "filing";
   if (fact.startsWith("organisation.")) return "organisation";
   return "person";
 }
-/** R5: a filing fact is stored once, on the filing. */
-export const isFilingFact = (fact: string, placement?: { repeats?: string | null } | null) => scopeOf(fact, placement) === "filing";
+/** R5: a fact asked and stored once, on the case's own record: a filing fact, and (C3.16) a marked household or
+ *  organisation fact. An unmarked `organisation.` fact stays per person, as before. */
+export const isFilingFact = (fact: string, placement?: Placed) => scopeOf(fact, placement) === "filing" || marked(placement) !== null;
 /** R5/R6: the subject an about-key stands for (relatives `${id}/parent_1` are about a person). */
 export const subjectOf = (about: string): Subject => (about === FILING ? { scope: "filing", id: FILING } : { scope: "person", id: about });
 /** The role of the person an about-key is about; FILING for the filing; the key itself when nobody on the case has it. */
@@ -81,11 +89,26 @@ export function partnerOf(people: PersonOnFiling[], id: string): string | null {
 
 /** R4: whose value a box reads, relative to the form's subject (the AI states it relative to the subject; the case
  *  decides who that is). Returns null when that person is not on the case. */
-export function aboutOf(people: PersonOnFiling[], subject: string, entry: { fact?: string; person?: string | null; row?: number | null }, placement?: { repeats?: string | null } | null): string | null {
+export function aboutOf(people: PersonOnFiling[], subject: string, entry: { fact?: string; person?: string | null; row?: number | null }, placement?: Placed): string | null {
   const fact: string = entry.fact ?? "";
-  const scope = scopeOf(fact, placement);
+  const scope = scopeOf(fact, placement), m = marked(placement);
   if (scope === "filing") return FILING;
-  if (scope === "organisation") return subject; // held (P-251): the prospective employer of the form's subject (P5 finding D33)
+  // C3.16 (QA-152; review M1 on #1054): a representative's box keeps its own reading whatever the field's scope (a form
+  // field map added after the scope was set is never checked by the scope route, so the rule is here).
+  if (m && entry.person === "representative") return personReading(people, subject, entry);
+  // C3.16 BR-4: a marked Organisation fact is the employer of the case's principal (one employer per case, the stand-in
+  // for the employer link, L-SA5): read once on the case only by a box about the principal's own form or about nobody
+  // on it; a box about anyone else (partner, child, parent, sibling) and any other person's form read nothing.
+  if (m === "organisation") return people.find((p) => p.id === subject)?.role === ROLE.principal && (entry.person === "form_subject" || entry.person === "none" || entry.person == null) ? FILING : null;
+  if (scope === "organisation") return subject; // unmarked: the prospective employer of the form's subject (P5 finding D33)
+  const own = personReading(people, subject, entry);
+  // C3.16 BR-4 (challenge B2): a marked Household fact replaces a person's own reading by the one value on the case, only
+  // where that reading finds a person on the case; where it finds nobody (a child's "spouse"), the box stays blank.
+  if (m === "household") return own === null || own === FILING ? own : own.includes("/") ? own : people.some((p) => p.id === own) ? FILING : null;
+  return own;
+}
+/** R4: whose value a box reads by its `person`, relative to the form's subject (no scope applied). */
+function personReading(people: PersonOnFiling[], subject: string, entry: { person?: string | null; row?: number | null }): string | null {
   switch (entry.person) {
     case "form_subject": return subject;
     case "subject_spouse_or_partner": return partnerOf(people, subject);

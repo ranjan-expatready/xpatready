@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Records-only: the one definition (P-371 (4), founder 6 Nov; Lead 21's ruling on #1139 and B119 #1147, 6 Nov). CI's
-# job "kind" runs it on every ready PR and puts the label it prints (`records-only.sh label`, "records") on a PR whose
+# Records-only: the one definition (P-371 (4), founder 6 Nov; Lead 21's ruling on #1139 and B119 #1147, 6 Nov).
+# .github/workflows/records-label.yml runs main's copy (records-label.sh, P-214 fix 7 Nov; it was CI's job "kind") on
+# every ready PR and puts the label it prints (`records-only.sh label`, "records") on a PR whose
 # change is records only, and takes the label off when the change stops being records only. Mergify's "records" queue
 # (B119) selects PRs by that label, and m2 and m3 skip it, so a records PR never joins a product batch. There is no
 # other records rule: B119 and any later tool read this one.
@@ -19,9 +20,11 @@ is_records() {   # stdin: changed paths
   local f; f=$(grep . || true)
   [ -n "$f" ] || { echo no; return; }
   printf '%s\n' "$f" | grep -vE "$RECORD_FILE" | grep -q . && { echo no; return; }
-  printf '%s\n' "$f" | grep -qE "^$P/product/tools/" && { echo no; return; }
-  [ "$(printf '%s\n' "$f" | bash "$T/change-kind.sh" --files)" = code ] && { echo no; return; }
-  echo yes
+  # Any case of "tools": on the Mac's case-insensitive disk product/Tools/x is product/tools/x (#1232 breaker, minor 7).
+  printf '%s\n' "$f" | grep -qiE "^$P/product/tools/" && { echo no; return; }
+  # Fails closed: change-kind.sh failing (no node, a crash) is "no", never a records label (#1232 breaker, minor 4).
+  local k; k=$(printf '%s\n' "$f" | bash "$T/change-kind.sh" --files) || { echo no; return; }
+  case "$k" in notes|records) echo yes;; *) echo no;; esac
 }
 
 self_test() {
@@ -42,6 +45,11 @@ self_test() {
   t no  "a records name outside product/" "$P/prototype/studio/STATE.md"
   t no  "a qa walk script (.cjs runs; it is code, not a record)" "$P/product/qa/walks/x/walk.cjs"
   t no  "a rename out of product/tools/ (both sides are read)" "$P/product/notes/check-docs.txt" "$P/product/tools/check-docs.sh"
+  t no  "product/Tools/ in another case (the Mac's disk: the tools folder)" "$P/product/Tools/typecheck-known.txt"
+  # change-kind.sh failing (exit 2, nothing printed: no node, a crash) is "no": fails closed (#1232 breaker, minor 4).
+  local d; d=$(mktemp -d) && printf '#!/usr/bin/env bash\necho "select-suites.mjs failed" >&2; exit 2\n' > "$d/change-kind.sh"
+  got=$(printf '%s\n' "$P/product/STATE.md" | T="$d" is_records 2>/dev/null); rm -rf "$d"
+  [ "$got" = no ] && echo "PASS  change-kind.sh failing is no records label" || { echo "FAIL  change-kind.sh failing gave $got"; bad=1; }
   [ "$(bash "$0" label)" = records ] && echo "PASS  the label is records" || { echo "FAIL  the label is not records"; bad=1; }
   [ "$bad" = 0 ] && echo "all passed"; return $bad
 }

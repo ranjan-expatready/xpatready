@@ -10,6 +10,7 @@ Each rule once, with the decision that set it. A decision newer than "as of" abo
 ## When a capability counts as Works
 * Its acceptance pack is green on `main` **and** an independent re-run confirms it (P-290), on the demo data (Reset to the six), not only the test fixture (P-304 (2)).
 * An open Major or Critical in `qa/BUGS.md` on it keeps it Partial (P-305 (3)).
+* A run with no pack for it, or a pack run with no server or on the fixture, is **Not tested**: never green, never Works evidence (P-405).
 * qa re-scores after every merged batch (P-277, P-311 (1)); qa's verdict decides.
 * Held parts (P-251, P-265, P-284) are listed in STATE; nobody builds them. L-SA3 is no longer held (P-315); the founder acts as the SA-01B product owner and lifted every hold decided in P-235–P-248, including G5, L-SA6–L-SA11 and C11 (P-316); Express Entry's police and medical block is the one hard stop besides Validate (P-172, P-315).
 

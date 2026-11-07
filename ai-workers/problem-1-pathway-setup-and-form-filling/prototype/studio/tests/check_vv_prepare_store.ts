@@ -84,8 +84,11 @@ const has = (n: ReturnType<typeof formItems>, form: string, who: string) => n.fi
     bar({ missing: 3 }).state === "to_do" && /Waiting for 3 facts/.test(bar({ missing: 3 }).reason) && /Waiting for 1 fact to/.test(plain({ missing: 1 }).reason));
   ok("C7.7 Paper (fail): with nothing missing the line does not say it waits for facts", !/Waiting for/.test(bar().reason) && !/Waiting for/.test(plain().reason));
   const all = [bar(), bar({ validated: V(true) }), bar({ validated: V(false) }), bar({ missing: 1 }), plain(), plain({ validated: V(true) })];
-  ok("C7.7 Paper (pass): mailing comes after Ready to file; printing, the pen and the post are not recorded here yet (done: null, C8.1's Paper part)",
-    all.every((l) => l.steps.find((x) => x.key === "mail")?.neededBefore === "after_ready" && l.steps.filter((x) => x.key !== "validate").every((x) => x.done === null)));
+  ok("C7.7 Paper (pass, B132): mailing comes after Ready to file and is not recorded yet (done: null); printing and the pen are recorded steps, not done until recorded (false)",
+    all.every((l) => l.steps.find((x) => x.key === "mail")?.neededBefore === "after_ready" && l.steps.find((x) => x.key === "mail")?.done === null && l.steps.filter((x) => x.key === "print" || x.key === "sign_in_pen").every((x) => x.done === false)));
+  const step = (l: ReturnType<typeof paperLine>, k: string) => l.steps.find((x) => x.key === k)?.done;
+  ok("C7.7 Paper (pass, B132): the recorded Printed and Signed in pen read as done on the line (readiness then counts the pen signature)",
+    step(bar({ validated: V(true), done: { print: { at: "x" }, sign_in_pen: { at: "x" } } }), "print") === true && step(bar({ validated: V(true), done: { print: { at: "x" }, sign_in_pen: { at: "x" } } }), "sign_in_pen") === true && step(plain({ done: { print: { at: "x" } } }), "sign_in_pen") === false);
   ok("C7.7 Paper (fail): a Paper line is never Ready or Done in the list before it is signed in pen (readiness stays C7.6's)", all.every((l) => !["ready", "done"].includes(l.state)), all.map((l) => l.state));
   ok("C7.7 Paper (pass): the pen step names who signs (a parent for a child under 18; the person and the representative)",
     /a parent \(for a child under 18\)/.test(bar({ signers: ["parent"] }).steps[2].words) && /the person and the representative/.test(plain().steps[1].words));
@@ -98,11 +101,14 @@ const has = (n: ReturnType<typeof formItems>, form: string, who: string) => n.fi
     pick([R("A", 9, true), R("B", 11, true), R("A", 10, true)])?.copy === "B" && pick([R("A", 9, true), R("A", 12, true), R("B", 11, true)])?.at.getTime() === at(12).getTime());
   ok("C7.7 Paper (fail): a copy whose newest read-back did not pass its form's own Validate never falls back to that copy's older passing one (the copy view and lock refuse it too)",
     pick([R("A", 9, true), R("A", 10, false)]) === null && pick([R("A", 9, true), R("A", 10, false), R("B", 8, true)])?.copy === "B" && pick([]) === null);
-  // Review M2 (part 2): a barcode form released as an Online line has no read-back on the case (its copy is not for filing).
-  ok("C7.7 Paper (pass): a barcode form moved to Paper from a line released Online says it cannot be validated and read back yet, and asks the Lead (never an endless To do)",
-    bar({ lineOnline: true }).state === "to_do" && /released as an Online line/.test(bar({ lineOnline: true }).reason) && /Ask the Lead/.test(bar({ lineOnline: true }).reason));
-  ok("C7.7 Paper (fail): a barcode form released as a PDF upload or Paper line keeps the Validate words, and a form with no barcode page is not affected",
-    !/released as an Online line/.test(bar({ lineOnline: false }).reason) && /Validate in Adobe/.test(bar().reason) && !/released as an Online line/.test(plain({ lineOnline: true }).reason));
+  // Row C3 (founder Q3, replaces review M2 part 2's "Ask the Lead"): a Paper line is the person's own choice, so its copy
+  // is for filing whatever the release line says; the engine no longer takes the release line's channel at all.
+  ok("C7.7 Paper (pass, row C3): a barcode form on Paper gives its Validate step and words, never \"Ask the Lead\" or \"not for filing\"",
+    bar().state === "to_do" && bar().steps[0].key === "validate" && /Validate in Adobe/.test(bar().reason) && !/Ask the Lead|not for filing|released as an Online line/.test(bar().reason));
+  // Review m3: by behaviour, not source text: an older caller still sending the removed option gets the same line.
+  const legacy = paperLine("IMM 5257", { barcode: true, missing: 0, validated: null, signers: ["person"], lineOnline: true } as Parameters<typeof paperLine>[1]);
+  ok("C7.7 Paper (fail, row C3): the release line's channel no longer stops a Paper line (\"released Online\" gives the same To do and steps, never \"Ask the Lead\")",
+    JSON.stringify(legacy) === JSON.stringify(bar()) && !/Ask the Lead|released as an Online line/.test(legacy.reason + plain().reason));
 }
 
 process.exitCode = summary() ? 1 : 0;

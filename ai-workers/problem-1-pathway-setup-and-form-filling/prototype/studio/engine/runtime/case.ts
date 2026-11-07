@@ -9,6 +9,10 @@ import { isCodeRange } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { gatesInForce } from "../form-field-condition.ts";
+import { SCOPE_TAG } from "../field-scope.ts";
+import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { isAskedRelative, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
@@ -25,7 +29,7 @@ const CLIENT_SOURCES = new Set(["client_questionnaire", "profile_record"]);
 const CLIENT_KINDS = new Set(["PERSON", "RELATIONSHIP", "CASE"]);
 
 /** The parts of a released placement and field this engine reads (the snapshot keeps them as loose JSON). */
-type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
+type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null; scope?: string };
 type FieldDef = { id: string; value_type?: string; meaning?: string; item_version?: number; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
@@ -255,6 +259,13 @@ export function hasChildrenOf(people: Participant[]): Map<string, true> {
   return new Map(people.filter((p) => p.role === "principal" || p.role === "spouse_or_partner").map((p) => [p.subjectId, true as const]));
 }
 
+/** C3.16: the tag and the people a household or employer question asked once on the case is read for. */
+function scopeTagOf(about: string, p: Placement | undefined, fills: Map<string, { person: string; subject: string }> | undefined) {
+  const mark = about === "case" && (p?.scope === "household" || p?.scope === "organisation") ? p.scope : null;
+  if (!mark) return {}; // unmarked questions keep their shape (every view without a scope stays as before)
+  return { scope_tag: SCOPE_TAG[mark], read_for: [...new Map([...(fills?.values() ?? [])].map((f) => [f.subject, { subjectId: f.subject, label: f.person }])).values()] };
+}
+
 /** Rows in their order; equal orders (never written by the API) fall back to the row id, so a form's first row is stable. */
 const byOrder = (a: Row, b: Row) => a.order - b.order || a.rowKey.localeCompare(b.rowKey);
 
@@ -273,10 +284,26 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
   const r = render(s, renderPeople, known, { today });
-  const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : about.split("/")[0]);
+  // B128 (QA-153): a parent a form describes is asked on their own key (`<person>/parent_1`), so their answers never land
+  // on the person whose parent they are, and only for a form that applies to that person (not while it may be needed:
+  // a child's form waiting for a date of birth asks no parents); any other relative (a sibling, a list) is not asked yet
+  // (engine/runtime/relatives.ts).
+  const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : isAskedRelative(about) ? about : about.split("/")[0]);
+  const applies = new Set<string>(), boxesOf = new Map<string, string[]>();
+  const asked = (q: { about: string; fact: string }) => !q.about.includes("/") || (isAskedRelative(q.about) && applies.has(`${q.about}|${q.fact}`));
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
-  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
-    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
+  // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
+  const namingRep = formsNamingRepresentative(s.field_maps);
+  // B107 (QA-299, QA-300): a form field whose gate does not hold writes nothing (engine/runtime/forms.ts formCoverage), so
+  // its question is not asked for that form either: IMM 5476's membership boxes of the other bodies, its uncompensated part
+  // for a compensated representative, its student-at-law and fax boxes. A gate that cannot tell yet keeps it asked.
+  const gates = new Map<string, Map<string, unknown>>();
+  const gatedOff = (c: { form: string; edition: string | null }, b: { box: string; about: string | null }) => {
+    const k = `${c.form}|${c.edition}`, g = (gates.get(k) ?? gates.set(k, gatesInForce(s, c.form, c.edition)).get(k)!).get(b.box);
+    return !!g && evalCondition(s, known, g, b.about === "case" ? "case" : b.about!.split("/")[0]).applies === false;
+  };
+  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && !gatedOff(c, b) && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
+    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); if (c.applies === true) { applies.add(k); if (isAskedRelative(b.about)) boxesOf.set(b.about, [...(boxesOf.get(b.about) ?? []), b.box]); } const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
     // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
     // question fills the box too (P-62: every question asked fills a box or decides something).
     const d = recordedDerivation(b.transform);
@@ -291,9 +318,12 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const derivedYes = hasChildrenOf(people);
-  const needed = r.questions.filter((q) => !q.about.includes("/") && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
-  const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
+  const notAsked = r.questions.filter((q) => asked(q)).length - needed.length;
+  // Review Major 1 (#1256): a parent is named by the boxes the person's forms write them into ("Sample Client W's
+  // mother"), so nobody types the father where the form wants the mother; "first parent" when the boxes do not say.
+  const labelOf = (q: { about: string; about_label: string }) => { const rel = relativeOf(q.about); return rel ? relativeLabel(people.find((p) => p.subjectId === rel.owner)?.label ?? rel.owner, rel.relation, boxesOf.get(q.about) ?? []) : q.about_label; };
   const fromDocuments = new Map<string, { subjectId: string; document: string; facts: string[] }>();
   const skipped = (q: (typeof needed)[number]) => {
     const doc = opts.skipDocumentFacts?.(subjectOf(q.about), q.fact);
@@ -307,21 +337,26 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const questions = needed.filter((q) => (mode === "agent" || (isClientField(s, q.fact) && q.about !== "representative")) && !skipped(q)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
-    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }
+    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId.split("/")[0]); required = c.applies === true; }
     if (!p?.condition && p?.condition_effect === "OPTIONAL") required = false; // optional for everyone (no condition)
     const group = p?.repeats === "per_row" ? q.section : null;
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
-    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)! } : null;
+    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!,
+      // Review m6 (#1256): a parent has no link of their own, so their answer waits for the officer, in those words.
+      ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed ? { why: `${CONFIRM_WORDS.waits} (a parent has no link of their own)` } : {}) } : null;
     const options = optionsOf(s, q.fact);
     return {
-      subjectId, about_label: q.about_label, fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,
+      subjectId, about_label: labelOf(q), fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,
       collected_from: q.collected_from, required, hidden, why: q.why, group, capacity: q.rows.length || null,
       answer: group ? null : one(current.find((a) => !a.rowKey)),
       rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: q.rows.length ? i < q.rows.length : true, answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
       options,
       note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No fixed list for this answer yet: check it before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
+      // C3.16 BR-4: a household or employer fact asked once on the case says so, and names whom it is read for (each
+      // member's part shows it read-only from these, challenge M6).
+      ...scopeTagOf(q.about, p, fills.get(`${q.about}|${q.fact}`)),
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
   });

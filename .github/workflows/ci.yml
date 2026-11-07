@@ -3,7 +3,8 @@
 # I1, 3 Nov (P-291 (3) and (8), P-292 (2)): what runs depends on what the change is (job "kind", tools/change-kind.sh):
 #   * notes   (only *.md records and files under product/reports/): check-docs.sh and decision-impact.sh, plus the push
 #             guard (excluded paths, secrets, personal names), on one GitHub machine; nothing else, about a minute.
-#             Records-only PRs are labelled "records" for Mergify's records queue (P-371 (4), below).
+#             Records-only PRs are labelled "records" for Mergify's records queue (P-371 (4), below) by
+#             records-label.yml, not here (P-214 fix, 7 Nov: no job of this workflow runs the PR's code with a write token).
 #   * records (boards, guards, settings, other workflows): the fast checks on one machine (push guard, rules files,
 #             decision impact, graph P-86, official PDFs P-31, explicit-any count, the tools' own checks); no suites.
 #   * code    (the app, its suites or their tools; select-suites.mjs decides): the fast checks on the first part, and
@@ -44,7 +45,8 @@
 #       that verdict; a red head is always tested again.
 #       The merge queue and the nightly full run never use memory: they run their full sets as before.
 #   (4) Records out of the product queue: a records-only PR (tools/records-only.sh, the one definition) is labelled
-#       "records" here, and the label comes off when the change stops being records only. Mergify's "records" queue
+#       "records" by records-label.yml (pull_request_target, main's code only; moved out of job "kind" 7 Nov), and the
+#       label comes off when the change stops being records only. Mergify's "records" queue
 #       (B119) selects PRs by that label and m2 and m3 skip it, so records never join a product batch (Lead 21, 6 Nov:
 #       one route, the queue; no direct merge).
 name: ci
@@ -78,8 +80,10 @@ jobs:
     if: "${{ (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}"
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # actions: read for the PR's earlier runs (memory); pull-requests and issues: write for the "records" label.
-    permissions: { contents: read, actions: read, pull-requests: write, issues: write }
+    # actions: read for the PR's earlier runs (memory). Read-only (P-214 fix, 7 Nov): this job runs the PR's own scripts
+    # (change-kind.sh, flaky.mjs, ci-memory.mjs, run-suites.sh), so it never holds a write token; the "records" label is
+    # set by .github/workflows/records-label.yml, which runs only main's code (product/tools/check-write-token.sh).
+    permissions: { contents: read, actions: read }
     outputs:
       autoq: ${{ steps.q.outputs.autoq }}
       kind: ${{ steps.k.outputs.kind }}
@@ -92,7 +96,6 @@ jobs:
       mbase: ${{ steps.m.outputs.mbase }}
       mhead: ${{ steps.m.outputs.mhead }}
       ctx: ${{ steps.m.outputs.ctx }}
-      records: ${{ steps.k.outputs.records }}
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
     steps:
@@ -108,8 +111,7 @@ jobs:
           queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
           n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
-          records=no; [ "$queue" = true ] || records=$(bash "$P/tools/records-only.sh" is-records "$range") || records=no
-          { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; echo "records=$records"; } >> "$GITHUB_OUTPUT"
+          { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
           case "$kind" in
             notes) why="Notes only: check-docs.sh and decision-impact.sh (and the push guard); no suites, no app build.";;
             records) why="Records, no code: the fast checks on one machine; no suites.";;
@@ -173,22 +175,6 @@ jobs:
             fi
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-      - name: the "records" label (tools/records-only.sh; Mergify's records queue selects it, P-371 (4), B119)
-        if: steps.k.outputs.queue != 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RECORDS: ${{ steps.k.outputs.records }}
-          HAS: ${{ contains(github.event.pull_request.labels.*.name, 'records') }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          L=$(bash "$P/tools/records-only.sh" label)
-          if [ "$RECORDS" = yes ] && [ "$HAS" != true ]; then
-            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=$L" >/dev/null
-            echo "labelled $L"
-          elif [ "$RECORDS" != yes ] && [ "$HAS" = true ]; then
-            gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$L" >/dev/null
-            echo "$L label removed: this change is not records-only"
-          else echo "records: $RECORDS (label already right)"; fi
   shard:
     # Records and code, on GitHub's machines unless BATCH_RUNNER / PR_RUNNER put them on the Mac (a fork never reaches it).
     needs: kind
@@ -255,7 +241,10 @@ jobs:
           bash "$P/tools/check-lane-bind.sh"
           node "$P/tools/ci-and-lists.mjs"
           node "$P/tools/ci-and-lists.mjs" --self-test
+          node "$P/tools/suite-exit.mjs" --self-test   # B160: a suite whose last step is a bare summary() can never fail
+          node "$P/tools/suite-exit.mjs"
           bash "$P/tools/check-flaky.sh"
+          bash "$P/tools/check-write-token.sh"
           node "$S/tools/check-gate-b.mjs"
           node "$S/tools/check-works-set.mjs"
       - name: Playwright's own Chromium
@@ -487,6 +476,8 @@ jobs:
         run: |
           node "$P/tools/ci-and-lists.mjs"
           node "$P/tools/ci-and-lists.mjs" --self-test
+          node "$P/tools/suite-exit.mjs" --self-test
+          node "$P/tools/suite-exit.mjs"
       - name: official IRCC PDFs (manifest checksums, P-31)
         if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true')
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
