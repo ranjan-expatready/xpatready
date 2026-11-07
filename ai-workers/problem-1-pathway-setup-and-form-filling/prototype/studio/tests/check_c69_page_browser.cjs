@@ -66,7 +66,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // A tall window, so focus does not scroll the pill (the shared Tip closes on scroll: a cross-screen follow-up row).
   await p.setViewportSize({ width: 1440, height: 2400 }); const cardHelp = card.locator("[data-help]").first(); await cardHelp.focus(); await p.waitForTimeout(400);
   step("C6.9 page pass (P-407 BIC-14): the case card's outcome help opens on keyboard focus", /^No case check has run for this person yet\./.test(await p.locator("[role=tooltip]").first().innerText().catch(() => "")));
-  await p.keyboard.press("Escape"); await p.evaluate(() => (document.activeElement)?.blur()); await p.setViewportSize({ width: 1440, height: 900 });
+  // Reload, so the keyboard walk below starts from the top of the page again (Chrome keeps the Tab start at the pill).
+  await p.keyboard.press("Escape"); await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/cases/${c.id}`); await settle(); await card.locator("li").first().waitFor({ timeout: 15000 });
   await tabTo(/^Open case check/); await p.keyboard.press("Enter"); await settle();
   step("C6.9 page pass: Open case check (keyboard) opens /cases/:id/eligibility with the trail Cases › reference › Case check from confirmed facts", p.url().endsWith(`/cases/${c.id}/eligibility`) && /Cases\s*›\s*C69P-[\s\S]*›\s*Case check from confirmed facts/.test(await p.locator("nav[aria-label=Path]").innerText()));
   step("C6.9 page pass: empty state in words: \"No case check yet … nothing is sent anywhere\"", /No case check yet for Sample Client A\. It reads the answers on file against this application's rules; nothing is sent anywhere\./.test(await text()));
