@@ -1,0 +1,51 @@
+# B150 review (P-303, Opus): declared answers fill at once, marked by who gave them (P-242, P-411; QA-301, QA-302, QA-303)
+
+**Commit reviewed:** e4a58efe099c28fd8b933f6673e752735bf77854 (branch claude/eloquent-thompson-u761l3, PR #1251). **Diff:** `git diff origin/main...e4a58efe0` on studio/ and screens/B150 (no png). **App:** isolated copy :4461, database xr_studio_b150, configured checkpoint, live AI off, US$0. B150 has no concept.md, so I judged it against the row, P-242, P-411 and QA-301 to QA-303.
+
+## What holds (evidence)
+* **The four fills, run here:** `acceptance/C6.6.test.ts 4461 xr_studio_b150`: 29/29, exit 0. `acceptance/C6.3.test.ts`: 12/12, exit 0. The principal's own names are written to IMM 5257 SCH1. The principal's answer for the spouse is written and marked "Answered by the principal for Sample Spouse A". The officer-typed answer is written and marked "entered by staff". The officer's correction keeps the box filled (`draft.written_now` stays 5 → 5, and the new copy writes OFFICERFAM). Both readiness lists still show these as "not confirmed".
+* **Design:** `knownOf(..., { forForms: true })` (engine/runtime/case.ts:251) is used only by `formCoverage` (engine/runtime/forms.ts:27). `render` reads the status only for box coverage (engine/render.ts:141), so conditions are unchanged. The case check C6.9 (api/src/assessments.ts:42), the checklist (case-checklist.ts:67), the prepare items (case-prepare.ts:136) and `readiness()` (forms.ts:162-176) still use `confirmed`. Locking a copy still needs readiness (fill-case.ts:339), so a principal-for-adult answer cannot be locked for signing until it is confirmed. Every caller of `markNothingRecorded`, `groupFacts` and `gateNo` moved to `fills` together, and copies, signatures and validated copies compare the same facts.
+* **Fail-first tests:** going back to `c.confirmed` fails C6.6-4/-7/-10 and RT-13 (check_case_engine.ts:158). Switching `settled` back to `.confirmed` fails check_c72 line 63. The changed assertions in check_c72, r1d, r1a, check_case_engine and qa165 are moved to the new rule (old fail cases reversed, each with a new fail case), not dropped. One exception, C1.3, is m2 below.
+* **My walk** (Sample case 9d8565dc…, by screens, 1440/1024/400 px): "Declared" for the client's own answer and "Answered by the principal for Sample Rev Spouse" for the spouse's. The officer corrected the spouse's name with the keyboard only (focus came back to Edit); the row then read "Entered by staff · to confirm" and every spouse form wrote as many fields before as after. The headers read "2 answered · 2 to confirm". No sideways scroll at any width, axe WCAG 2.2 A/AA found 0 on the case page (spouse tab) and on the client's spouse part, no page errors.
+
+## Findings
+**Blocker:** none.
+
+**M1 (Major): the Ready-to-file warning still says the old rule, at every width.** engine/runtime/readiness.ts:136 ends every `missing_facts` CRITICAL line with "Only confirmed facts fill the form." On my case the prepare view had 22 such lines, shown on the case page at 1440, 1024 and 400 px, for example "CRITICAL: IMM 5257 for Sample Rev A: 4 facts missing or not confirmed (…). Only confirmed facts fill the form." The card above it now says "filled from declared and confirmed answers". The failure: an officer about to pass this CRITICAL warning with a reason (P-238) reads that the unconfirmed boxes are blank. In fact the PDF already carries the principal's unconfirmed answer for the spouse and the staff-typed values. QA-301 was a Major for the same false sentence on the card. **Fix:** word it in P-411's terms, for example "Declared answers already fill the form; these still need the person's or the officer's confirmation before filing". Add a C6.6 step: no "Only confirmed facts fill" on the case page.
+
+**M2 (Major): the Online answer sheet (C7.3) now carries declared values without P-411's marks, and its pack and checks were not moved.** `sheetOf` (api/src/case-prepare.ts:608-609) reads `formCoverage`, so declared answers now go into `answers` (engine/runtime/answer-sheet.ts:48-50). I checked this through the API on the checkpoint, where IMM 5257 is filed **Online** for both adults. Before any confirmation, `GET /runtime/items/:id/answer-sheet` lists `date_of_birth=1985-03-04 (Case officer)` (typed by staff, not confirmed) and the spouse's `family_name=REVSPOUSE (Client)` (the principal's answer for the adult). `sourceOf` (answer-sheet.ts:30) knows only Document / Client / Case officer. Neither "answered by the principal for <name>" nor "to confirm" reaches the sheet the officer types into IRCC's portal from, and ticks with "Entered in the portal". So P-411 (1)'s "the adult sees and confirms it before signing" has no mark on the main filing path. Meanwhile `acceptance/C7.3.test.ts:28` (C7.3-4: "before confirmation the sheet shows no values … only confirmed facts fill, P-72") contradicts the new behaviour: openCase has the officer type both dates of birth, which now fill. I could not run C7.3 here (the checkpoint has no setup_vv_m3 IMM 5707 item: 0/13, every step 404). `tests/check_vv_answer_sheet.ts:37` stays green only because it builds the box coverage by hand. The answer-sheet.ts:4 and case-prepare.ts:606 headers still say "Only confirmed facts fill it". WAY-OF-WORKING: "When a decision changes behaviour, its pack changes in the same PR." **Fix:** carry each answer's mark (and "to confirm") on the sheet's answers. Move C7.3-4 and check_vv_answer_sheet:37 to P-411's rule with a fail case. If you think the Online sheet should stay confirmed-only, raise it in `challenge.md` for the tech lead rather than leave the two in conflict.
+
+**Minor**
+* m1 web/src/runtime/forms.tsx:136: the "Copy, not for filing" tooltip says "IRCC's PDF filled from the same confirmed facts". It shows on the checkpoint's IMM 5257 for both adults.
+* m2 acceptance/C1.3.test.ts:179: the move dropped the old assertion's proof that the three copied facts are written. `before.written_now >= 3` can come from the officer's dates of birth alone, so copies that never fill would still pass. Measure `written_now` before the link, or read a real copy (`lib/declared.ts written`).
+* m3 tests/qa/check_qa_r1a_probe.ts:294-296 (qa's file, the check QA-302 named) still asserts P-72's old rule ("an officer-typed passport number … fill.ts leaves it blank"; "the principal's unconfirmed answer for the spouse reaches no box"). It stays green because it calls `knownOf` without `forForms`. List it for qa in the PR.
+* m4 contracts/runtime.ts:111 promises that the adult "sees and confirms it on their own link before signing". contracts/runtime.ts:12 says the own link is not built, and I found none in api/ or web/. Only the officer's Confirm section confirms today. Word it as built, or record the own link as the P-411 (1) follow-up.
+* m5 out-of-date.ts:39/69: a value that is saved but not written is now only one that needs a fix, yet the change line still says "(not confirmed yet)". After merge, every copy, signature or entered tick made before B150 on a case with declared answers goes out of date at once, reading "changed from no answer to X on <date>". That date can be earlier than the copy. Say so in the PR's "On the demo:".
+* m6 Stale comments: forms.ts:154-157 ("not confirmed (never written, P-72)"), mandatory.ts:12 and :85 (the "answered, not confirmed yet" branch is now unreachable), out-of-date.ts:10/15, and the check_vv_answer_sheet.ts header.
+
+## D1–D20 (1–5, this row's scope)
+D1 3: four fills per P-411, but M1/M2 leave two surfaces on P-72 · D2 4: no new writes; one current answer, history kept (C6.3-6) · D3 4: one `Confirmation` drives every mark · D4 4: conditions unchanged (render.ts:141 only) · D5 4: stale edit 409 (C6.3-4) · D6 n/a · D7 n/a (no AI) · D8 4 · D9 4: "to confirm" counts give the next action · D10 3: M1, m1, m4 · D11 4: pills update, old copies read Out of date · D12 4: team pills, screenshot spouse-1024 · D13 4: keyboard edit, axe 0, 400/1024/1440 · D14 4 · D15 3: case page about 1.4–1.7 s to network idle (not this row's change) · D16 3: fail-first in r1c/C6.6/C6.3; C7.3 and the qa probe not moved (M2, m3) · D17 simulated only · D18 3: mark shown in the Agent view, missing on the answer sheet (M2) · D19 4 for the PDF path · D20 simulated only.
+
+## Journey test (reviewer role; report kept in this file, as the caller asked for one file)
+Journeys: (1) case officer, main path: read the marks and the Prepare card, generate, correct a name, forms keep their counts. (2) client: answer for self and spouse, read the part's words. (3) officer by keyboard only. (4) error: stale edit 409, invalid date flagged and not written (C6.6-12). (5) wrong role: the client is refused the forms list (403). (6) across the boundary: Ready-to-file lines and the Online answer sheet (M1, M2). Not walked: a real screen reader, an unaided intended user, the adult's own link (not built).
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| task completed | 1 | C6.6 29/29, C6.3 12/12, walk data equal before/after |
+| next step obvious | 1 | "N to confirm" pills, "Entered by staff · to confirm" |
+| plain words | ½ | M1 sentence on every CRITICAL line; m1; m4 |
+| feedback and state | 1 | pills change on save; earlier copies Out of date (C6.3-8) |
+| correct data | 1 | real copies write DECLAREDFAM/OFFICERFAM; one current answer |
+| error recovery | 1 | 409 on a stale edit; invalid date not written |
+| accessibility and screen sizes | 1 | axe 0; no sideways scroll at 400/1024/1440; keyboard edit |
+| speed | ½ | 1.4–1.7 s to network idle |
+| visual quality | 1 | team pills; screenshots spouse-1024, client-spouse-1440 |
+| trust and sources | ½ | origin shown in the Agent view; marks lost on the answer sheet (M2) |
+
+**Journey score: 8.5/10 (pass, no 0).** Raise it with the M1 words and the marks on the answer sheet.
+
+**Could not check:** C7.3 on its own setup (needs setup_vv_m3; reasoned from the code plus the API probe above); graph.mjs (it writes qa/graph.json and I may write only this file); pre-B150 copies on a live database (this copy has none).
+
+**To fix before Approve:** M1, M2. Minors m1–m6: fix them or list them in the PR.
+
+Verdict: Changes requested
