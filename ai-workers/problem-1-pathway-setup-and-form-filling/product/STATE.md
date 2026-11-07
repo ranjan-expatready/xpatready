@@ -2,7 +2,7 @@
 
 current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1630-lead31.md` · this branch: `lead/2026-11-07-lead30`
+updated: 2026-11-07 16:19 IST by **Lead 31** (took over 15:45 IST); weekly 14% at 16:17 IST (~10%/h; 85% ~23:20 IST at this rate) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1619-lead31.md` · this branch: `lead/2026-11-07-lead30`
 
 ## Lead 31 progress (15:55 IST)
 * Check cron **4b7708bc** (:13/:43, prompt exactly `run lead-watch; read STATE Start here`). Weekly **10% at 15:53 IST**; Lead 31 context 142k.
@@ -15,15 +15,12 @@ updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone:
 ## Hand-over to Lead 31 (15:45 IST): do first
 **The founder is away until about 18:45 IST** (P-407): ask only if urgent; no call that can wait on a prompt (no writes under `.claude/`, no settings). He reads from his phone: report hourly in plain words against `design/next-12-hours-2026-11-07.md` §7, and say proactively what you need from him.
 1. **#1238**: labelled 15:46 IST (done).
-2. **Drift audit (Lead 30's read-only subagent):** result file m3-screens-vs-boards (7 Nov) in the notes folder `~/Library/Application Support/Claude/side-session-notes/local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023/`. Lead 30 forwards its summary when it lands. Post it on the UX lane's PR 1 and tell the founder in one line (verdict, and only real drifts).
+2. **Drift audit:** ruled P-408 (rows B147-B149); post on the UX lane's PR 2 (its PR 1 is #1245, records).
 3. **New lanes (P-407), cloud; read their PRs each check:** UX lane task_f4b1c488 (study → scorecard in EXPERIENCE.md and the screen-concept/screen-review skills → each M3 screen revised; **you approve each UX revision on its PR**, P-316 (3)); concepts lane task_9975ca96 (B135 → B144 → B141; **you approve each concept**); build lane task_404185d0 (B140 → B137 → B142). Also C4 task_3a2d7beb (**you approve each pack's changed lines**, P-400) and B131 task_32589e77 (may merge ahead, P-214).
 4. **B3 #1221:** its lane takes B129 then B132 after its label (comment posted 15:43 IST). **C2 #1075** restarts only in a new session after #1223 and #1225 merge: at the founder's next typed turn.
 5. **Burn:** weekly 9% at 15:42 IST, about 4%/h, up to about 5%/h with the new lanes; trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. At about 4-5%/h the week's plan lasts about a day (resets 13 Nov 04:29 IST): tell the founder at his return, with options.
 6. **#1240**: the founder named it (P-410, ~15:50 IST); Approve posted; label on green at the final head.
 7. **Standbys:** Lead 32 (watchdog, first standby), Lead 33 (spare). Two standbys, so no new one is needed until the next hand-over.
-
-## Account switch, lessons of 7 Nov
-Word for word in `history/STATE-2026-11-07-1555-lead31.md` (account switch done 12:35-13:11 IST; Lessons, Leads 25-29).
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`).
@@ -34,6 +31,7 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 | F6 | A hard boundary for `.github/**` changes: a Mergify condition (a GitHub approving review or a founder-only label) or a CODEOWNERS ruleset (#1232's breaker Blocker 1) | after B134 lands, a Mergify condition | nothing now (B134 is the interim) | 7 Nov 15:25 | open |
 | F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 15:50 | open (P-408) |
 | F9 | B144 (C8.3, #1247) conflicts with the team's AG-7-29: F1, a fact change after approval **withdraws** the form's approval (team: keeps it, flags it); F2, only the **representative of record** decides (team: any review-approve holder) | withdraw (row B6); representative of record (P-155 (1)); built that way, PR unlabelled until he answers | #1247's label | 7 Nov 16:09 | open |
+| F10 | B145 (C9.5, #1252): one release move per case now, refused once any filing is recorded; per-filing pins with SH4 (departs from P-316 (2), P-246 (2)) | per case now (one combination, one release, one questionnaire; SH4's contract not agreed); reversible | #1252's label | 7 Nov 16:18 | open |
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
@@ -49,8 +47,8 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 5. **Hourly report** against `design/next-12-hours-2026-11-07.md` section 7 (P-399); halfway review 20:00 IST, block review 02:00 IST.
 6. **Records:** #1229 labelled 14:32 IST (records queue). **Do not push to `lead/2026-11-07-lead29` while #1229 is queued** (a push drops the label); later commits go on a new lead branch after it merges.
 
-## Where we are (15:45 IST)
-* M3: 28 capabilities (P-406); Works 4 on qa's #1238 (C1.3, C11.5, C6.9, C8.2). Merged since 13:11 IST: A3 #1198, B124 #1197, B126 #1212, records #1229. Queued: C3 #1225, B127 #1224, qa #1226. Spend today US$0. The 13:11 IST page is word for word in `history/STATE-2026-11-07-1545-lead30.md`.
+## Where we are (16:19 IST)
+* M3: 28 capabilities (P-406); Works 4 on qa's #1238 (C1.3, C11.5, C6.9, C8.2; queued). Merged since 15:45 IST: C3 #1225, C9 #1223, qa #1226, #1220. Queued: #1238, #1221, #1233, #1232, #1237, #1241, #1245. Spend today US$0. Earlier lines: `history/STATE-2026-11-07-1619-lead31.md`; the account switch and 7 Nov lessons: `history/STATE-2026-11-07-1555-lead31.md`.
 
 ## In flight
 **qa's lane:** `local_0868d426-…`; #1226 (head c237fef9f, QA-235 closed, QA-153 rewritten) gets the P-401 wording, then the Lead reads and labels. QA-228's retest goes with C8.2 and C6.9. C6.9 and C8.2 go to it when they land.
