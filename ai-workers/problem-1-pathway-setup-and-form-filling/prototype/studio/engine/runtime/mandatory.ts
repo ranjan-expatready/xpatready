@@ -9,7 +9,8 @@ import { recordedDerivation } from "../../../p5/transforms.ts";
 import type { BoxResult, Inventory } from "../form-values.ts";
 
 /** Why a mandatory form field is still empty, in the officer's words:
- *  - "needs an answer": a question fills it, and its answer is missing, not confirmed or has a problem;
+ *  - "needs an answer": a question fills it, and its answer is missing or has a problem (a case copy writes an
+ *    unconfirmed answer at once since P-411, so "answered, not confirmed yet" comes only from boxes read without it);
  *  - "no question asks it yet": nothing in the configuration fills it (the forms lane maps it), or it is a derived Yes/No
  *    whose No no answer can write;
  *  - "fill it in Adobe": the configuration decided it is not a fact the case keeps (IRCC's form may ask it only for some

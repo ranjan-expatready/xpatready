@@ -105,10 +105,12 @@ export const CONFIRM_WORDS = {
   client_own: "Declared: the client's own answer; it fills the forms now",
   waits: "Waits for the officer's \"Confirm section\"",
   staff: "Declared: entered by staff; it fills the forms now and waits for the officer's \"Confirm section\"",
-  by_principal: "Answered by the principal for an adult: declared, it fills the forms now; confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  by_principal: "Answered by the principal for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
 } as const;
 /** P-411 (1): the principal's answer for an adult spouse or adult child, marked with that person's name. */
-export const byPrincipalFor = (name: string) => `Answered by the principal for ${name}: declared, it fills ${name}'s forms now; ${name} sees and confirms it on their own link before signing, or the officer presses "Confirm section"`;
+/** P-411 (1) also says the adult sees and confirms it before signing; that person's own confirmation is not built yet
+ *  (B150 review m4), so the words name only what happens today: the officer's Confirm section before filing. */
+export const byPrincipalFor = (name: string) => `Answered by the principal for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
 /** Who gave the current answer (P-242, P-411): the mark shown beside it. Every mark fills the forms at once. */
 export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
 

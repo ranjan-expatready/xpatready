@@ -1,7 +1,8 @@
 // C7.3 Portal sheet: answers in the portal's order with copy buttons (M3-E; r5c BR-8; P-62 §6, P-152 (3)). Visitor
 // visa part: IMM 5707 is an Online line (Sample, FQ-2). Until the W6 extension the answer sheet follows the sections of
-// the PDF twin (contracts/pdf-sections.json: Section A, B, C), from confirmed facts only, each answer with its source and
-// the text to copy; "Entered in the portal" per section freezes that section's answers. A changed fact after "Entered"
+// the PDF twin (contracts/pdf-sections.json: Section A, B, C), from every declared or confirmed answer (P-242, P-411, row
+// B150; was confirmed only, P-72), each answer with its source, its mark, whether it is still to confirm, and the text to
+// copy; "Entered in the portal" per section freezes that section's answers. A changed fact after "Entered"
 // marks the section out of date (C9.2-5).
 // Breadth, after Visitor visa: the live portal screen order (W6, parked), online-only forms ordered by the drafted form.
 // Built (runtime lane, C7.3 PR): a tick sends the section's `version` from the sheet it read (M3-CONTRACT: "every write
@@ -25,13 +26,17 @@ await main("C7.3", "Answer sheet for an Online line (IMM 5707)", async () => {
   ok("C7.3-1 pass: an Online form item has an answer sheet for the officer", r.status === 200 && item?.channel === "ONLINE", r.status);
   ok("C7.3-2 fail: a client cannot read the answer sheet (403)", (await sheet(CLIENT)).r.status === 403);
   ok("C7.3-3 pass: the sheet follows the PDF twin's sections in order (Section A, B, C) until W6", s?.order_basis === "pdf_twin" && JSON.stringify(s?.sections.map((x) => x.title)) === JSON.stringify(Object.values(TWIN)), s?.sections.map((x) => x.title));
-  ok("C7.3-4 pass: before confirmation the sheet shows no values, only what it waits for (only confirmed facts fill, P-72)", (s?.sections ?? []).every((x) => x.answers.length === 0) && (s?.sections ?? []).some((x) => (x.waiting ?? []).length > 0));
+  // P-411 (B150 review M2): the officer typed both dates of birth (openCase), not confirmed yet: they are on the sheet at once,
+  // marked entered by staff and to confirm; what nobody answered yet is what the sheet waits for.
+  const typed = (s?.sections ?? []).flatMap((x) => x.answers as { fact: string; subject?: string; mark?: string | null; to_confirm?: boolean }[]).filter((x) => x.fact === "person.date_of_birth");
+  ok("C7.3-4 pass (P-411 (2), B150): before confirmation the sheet already shows the officer-typed dates of birth, each marked \"entered by staff\" and to confirm", typed.length >= 2 && typed.every((x) => x.mark === "by_staff" && x.to_confirm === true), typed);
+  ok("C7.3-4b fail: an unanswered fact is never shown as a value, only waited for", (s?.sections ?? []).some((x) => (x.waiting ?? []).length > 0) && !(s?.sections ?? []).some((x) => x.answers.some((y) => y.fact === "person.family_name")));
 
   await fillEverything(c.id);
   ({ s } = await sheet());
   const a = s?.sections[0]?.answers ?? [];
   const name = a.find((x) => x.fact === "person.family_name" && x.subject === P);
-  ok("C7.3-5 pass: Section A lists the applicant's confirmed answers with their source and the text to copy", !!name && name.copy_text === String(name.value) && ["Document", "Client", "Case officer"].includes(name.source), name);
+  ok("C7.3-5 pass: Section A lists the applicant's confirmed answers with their source and the text to copy, no longer to confirm", !!name && name.copy_text === String(name.value) && ["Document", "Client", "Case officer"].includes(name.source) && (name as { to_confirm?: boolean }).to_confirm === false, name);
   ok("C7.3-6 pass: Section A also carries the spouse's answers (IMM 5707 includes the spouse, VV-R07), labelled by person", a.some((x) => x.subject === c.subjects["Sample Spouse A"]));
   ok("C7.3-7 pass: a date is offered to copy as the portal takes it (YYYY-MM-DD)", a.filter((x) => /date/.test(x.fact)).length > 0 && a.filter((x) => /date/.test(x.fact)).every((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.copy_text)));
 

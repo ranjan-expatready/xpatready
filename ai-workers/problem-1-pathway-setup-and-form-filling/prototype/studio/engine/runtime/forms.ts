@@ -154,7 +154,7 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
  *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
  *  would be written wrong: review and break report M2). A required repeating group the form reads with no entries
  *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty, or answered
- *  validly and not confirmed (never written, P-72), do not; an optional fact answered with a problem does (QA-122).
+ *  validly and not confirmed (written at once since P-411, confirmed before filing only when required), do not; an optional fact answered with a problem does (QA-122).
  *  A section check that fired on a fact the form reads blocks it as well (P-47 tier 2). */
 /** Whether a fired check blocks "ready to file": only a section check at severity warn or block. */
 export const blocksFiling = (c: { group?: string; severity: string }) => c.group === "section_check" && (c.severity === "warn" || c.severity === "block");

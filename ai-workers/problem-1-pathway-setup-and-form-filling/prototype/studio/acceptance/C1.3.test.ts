@@ -167,6 +167,13 @@ async function api() {
   const s3 = subjects(c3);
   const formOf = async () => ((await call("GET", `/runtime/cases/${c3.id}/forms`, undefined, OFFICER)).body?.forms ?? []).find((f: { form: string; subject_id: string }) => /5710/.test(f.form) && f.subject_id === s3.principal);
   const before = await formOf();
+  { // B150 review m2: a real copy made before any confirmation writes the three copied facts (not only the draft's count).
+    const g = await call("POST", `/runtime/cases/${c3.id}/forms/${encodeURIComponent(before?.form ?? "IMM 5710")}/${s3.principal}/generate`, { idempotencyKey: `c13-b150-${run}` }, OFFICER);
+    let st = "";
+    for (let i = 0; i < 180 && g.body?.id && !["GENERATED", "FAILED"].includes(st); i++) { st = (await call("GET", `/runtime/form-copies/${g.body.id}`, undefined, OFFICER)).body?.status ?? ""; if (!["GENERATED", "FAILED"].includes(st)) await new Promise((r) => setTimeout(r, 500)); }
+    const boxes = (JSON.parse(sql(`select coalesce(result_json::text, '{}') from form_instance where id='${g.body?.id}'`) || "{}").boxes ?? []) as { fact: string | null; result: string }[];
+    ok("C1.3 (M4, P-411, B150): before confirmation, a copy of IMM 5710 already writes the copied employer name, address and LMIA number", st === "GENERATED" && [NAME, ADDRESS, LMIA].every((f) => boxes.some((b) => b.fact === f && b.result === "written")), { status: st, boxes: boxes.filter((b) => [NAME, ADDRESS, LMIA].includes(b.fact ?? "")) });
+  }
   const q3 = await questions(c3.id);
   const confirmAll = async (subject: string, section: string) => call("POST", `/runtime/cases/${c3.id}/sections/${section}/confirm`, { subjectId: subject, seen: (await questions(c3.id)).filter((q) => q.subjectId === subject && q.section === section && q.answer).map((q) => q.answer!.id) }, OFFICER);
   const nameQ = q3.find((q) => q.fact === NAME && q.subjectId === s3.principal)!, lmiaQ = q3.find((q) => q.fact === LMIA && q.subjectId === s3.filing)!;

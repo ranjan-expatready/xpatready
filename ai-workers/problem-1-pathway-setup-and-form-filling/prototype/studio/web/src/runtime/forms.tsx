@@ -133,7 +133,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <FileText className="size-4 text-text-muted" aria-hidden />
         <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
-        {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same confirmed facts, for reading and checking only">Copy, not for filing</Pill>
+        {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same declared and confirmed answers, for reading and checking only">Copy, not for filing</Pill>
           : !f.trial_passed ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
         {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
         {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. QA-229 (B2): nor is

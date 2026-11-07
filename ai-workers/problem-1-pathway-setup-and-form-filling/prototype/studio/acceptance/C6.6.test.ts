@@ -9,7 +9,7 @@
 // Runs on the configured checkpoint (P-322), loaded here on a blank copy through the Demo menu's own route when it is not
 // there yet. Sample people, no real names; US$0, no model call. Words on screen at 1440 and 1024 px (QA-301).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C6.6.test.ts 4440 xr_studio_accept
-import { CLIENT, PORT, agent, answer, call, main, ok, openCase, yearsAgo } from "./lib/m3.ts";
+import { CLIENT, PORT, agent, answer, call, main, ok, openCase, prepare, yearsAgo } from "./lib/m3.ts";
 import { walker } from "./lib/browser.ts";
 import { checkpointVisitorVisa as checkpoint, written } from "./lib/declared.ts";
 
@@ -54,6 +54,12 @@ await main("C6.6", "Declared answers fill the forms at once, marked by who gave 
   copy = await written(c.id, SCH1, S);
   ok("C6.6-7 pass (P-411 (2), QA-302): the officer-typed answer is written to the spouse's Schedule 1 at once", !!copy.id && copy.of(GIVEN) === "STAFFGIVEN", copy.why(GIVEN));
   ok("C6.6-8 fail (P-411 (2)): it stays on the Confirm list: not confirmed, and listed \"not confirmed\" before filing", typed?.confirmed === false && !!(await formOf(c.id, SCH1, S))?.readiness.missing.some((m) => m.fact === GIVEN && m.reason === "not confirmed"));
+
+  // 3b. Ready to file says what is true (B150 review M1): an unconfirmed answer already fills the form.
+  const lines = ((await prepare(c.id)).p?.readiness ?? []).flatMap((r) => [...r.blocks, ...r.warns]).map((x) => x.words);
+  const missingLines = lines.filter((x) => /missing or not confirmed/.test(x));
+  ok("C6.6-8b pass (P-411, review M1): each \"missing or not confirmed\" line on Ready to file says an answer fills the form as soon as it is given", missingLines.length > 0 && missingLines.every((x) => /fills the form as soon as it is given/.test(x)), missingLines.slice(0, 2));
+  ok("C6.6-8c fail (review M1): no Ready to file line says \"Only confirmed facts fill the form\"", lines.length > 0 && !lines.some((x) => /Only confirmed facts fill/.test(x)), lines.filter((x) => /Only confirmed/.test(x)).slice(0, 2));
 
   // 4. The officer corrects the principal's own answer (P-411 (2): a correction never empties a filled box).
   const before = (await formOf(c.id, SCH1, P))?.draft.written_now ?? -1;

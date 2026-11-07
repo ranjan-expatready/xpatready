@@ -1,14 +1,20 @@
 // C7.3 (M3-E, runtime lane; r5c §6, P-62 §6, P-72, P-65): the answer sheet of an Online form item: the answers the case
 // officer types into the IRCC portal, section by section, each with its person, its source and the text to copy. Until
 // the portal's own screen order is recorded (W6, parked) the sections are the PDF twin's (contracts/pdf-sections.json),
-// in that file's order; a form field outside them is left out. Only confirmed facts fill it (P-72): anything else is
-// listed as what the section waits for. "Entered in the portal" freezes a section's answers; a later change marks it out
+// in that file's order; a form field outside them is left out. Every declared or confirmed answer fills it at once,
+// each with its mark and whether it is still to confirm (P-242, P-411; B150 review M2: was confirmed only, P-72); an
+// answer that needs a fix, or none, is listed as what the section waits for. "Entered in the portal" freezes a section's answers; a later change marks it out
 // of date and shows the new value. Pure: no database, no clock. tests/check_vv_answer_sheet.ts.
 import { createHash } from "node:crypto";
 import type { BoxRow } from "../render.ts";
 import { sectionGroupOf } from "../twin.ts";
+import type { AnswerMark } from "../../contracts/runtime.ts";
 
-export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer" };
+/** `mark`, `to_confirm`, `why` (P-411): who gave the answer ("answered by the principal for <name>", "entered by staff"),
+ *  and whether it still waits for the officer's Confirm section; null and false where the case view has no such answer. */
+export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer"; mark: AnswerMark | null; to_confirm: boolean; why: string | null };
+/** The mark of the current answer behind a box (the case view's), by its whole "about", fact and row. */
+export type MarkOf = (about: string, fact: string, row: number | null) => { mark: AnswerMark; confirmed: boolean; why: string } | undefined;
 /** `version`: the section's fingerprint now; a tick sends the one it read, so it freezes what the officer saw. */
 export type SheetSection = { key: string; title: string; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[] };
 export type Sheet = { order_basis: "pdf_twin"; order_note: string; sections: SheetSection[] };
@@ -34,7 +40,7 @@ export const sectionHash = (answers: { fact: string; subject: string; row: numbe
 
 /** The sheet for one form and person, from the form's boxes for that person (formCoverage), the twin's sections and the
  *  entered ticks (each with the fingerprint of the answers it froze). */
-export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>): Sheet {
+export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined): Sheet {
   const out: SheetSection[] = Object.entries(sections).map(([key, title]) => ({ key, title, version: "", entered: null, out_of_date: false, answers: [], waiting: [] }));
   const byKey = new Map(out.map((x) => [x.key, x]));
   for (const b of boxes) {
@@ -47,7 +53,8 @@ export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], o
     if (!subject.split("/")[0]) continue; // a box about nobody on this case (for example the spouse's, with no spouse) is not asked for
     if (b.coverage === "confirmed fact") {
       if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
-      sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)) });
+      const m = markOf(subject, b.fact, b.row);
+      sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null });
     } else if (!sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });
   }
   for (const sec of out) {
