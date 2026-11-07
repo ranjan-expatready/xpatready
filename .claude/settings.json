@@ -43,13 +43,7 @@
     ],
     "allow": [
       "Bash(gh pr edit * --add-label \"review: approved\")",
-      "Bash(gh pr edit * --remove-label \"review: approved\")",
-      "mcp__terminal__run_in_terminal",
-      "mcp__terminal__read_terminal",
-      "mcp__terminal__list_terminal_tabs",
-      "mcp__terminal__stop_terminal_tab",
-      "mcp__terminal__open_terminal_tab",
-      "Bash(*)"
+      "Bash(gh pr edit * --remove-label \"review: approved\")"
     ]
   },
   "hooks": {
@@ -142,10 +136,5 @@
     "**/Xpatready/code/**",
     "**/Xpatready/sources/**",
     "**/Xpatready/archive/**"
-  ],
-  "sandbox": {
-    "network": {
-      "allowLocalBinding": true
-    }
-  }
+  ]
 }
