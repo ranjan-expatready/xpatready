@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
+import type { ProgressOnly } from "../../../contracts/person-link";
+import { PrincipalPersonLine, PrivateProgress, usePeoplePrivacy } from "./privacy"; // C6.16
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
 export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean };
@@ -23,11 +25,12 @@ export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
 export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
 export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
-export type View = QuestionnaireView & { case: CaseInfo };
+/** private_people (C6.16, client view only): people kept private from the client, with their progress only. */
+export type View = QuestionnaireView & { case: CaseInfo; private_people?: { subject_id: string; label: string; progress: ProgressOnly }[] };
 type Section = ViewSection;
 type Question = ViewQuestion;
 type Answer = ViewAnswer;
-type SaveResult = { answer: { id: string; problems: string[] }; fills: Question["fills"]; message: string };
+export type SaveResult = { answer: { id: string; problems: string[] }; fills: Question["fills"]; message: string };
 type Mode = "sqr" | "agent";
 
 const ROLE_WORDS: Record<string, string> = { case: "the whole application", principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
@@ -325,6 +328,25 @@ function putAnswer(caseId: string, q: Question, value: unknown, row?: string) {
   const seen = cellAnswer(q, row);
   return api<SaveResult>(`/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { method: "PUT", json: { value, expectedId: seen?.id ?? null, ...(row ? { row } : {}) } });
 }
+
+/** C6.16: where the one-part-per-screen questionnaire reads and saves: the client's runtime routes (the default), or an
+ *  adult's own link (/api/link/*, link/link-page.tsx), with the same screens and the same rules on the server. */
+export type QuestionnaireIo = {
+  mode: "client" | "link";
+  /** The query key prefix to refresh after a save, and the key of the view a part reads back after saving. */
+  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string) => unknown[];
+  put: (caseId: string, q: Question, value: unknown, row?: string) => Promise<SaveResult>;
+  addRow: (caseId: string, subjectId: string, group: string) => Promise<unknown>;
+  removeRow: (caseId: string, subjectId: string, row: string) => Promise<unknown>;
+  noneApply: (caseId: string, subjectId: string, group: string, body: { noneApply: boolean; expectedId: string | null }) => Promise<unknown>;
+};
+const RUNTIME_IO: QuestionnaireIo = {
+  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id) => ["runtime", "view", id, "sqr"], put: putAnswer,
+  addRow: (id, subject, group) => api(`/runtime/cases/${id}/groups/${subject}/rows`, { method: "POST", json: { group } }),
+  removeRow: (id, subject, row) => api(`/runtime/cases/${id}/groups/${subject}/rows/${row}`, { method: "DELETE" }),
+  noneApply: (id, subject, group, body) => api(`/runtime/cases/${id}/groups/${subject}/${group}/none-apply`, { method: "PUT", json: body }),
+};
+export const QuestionnaireIoContext = React.createContext<QuestionnaireIo>(RUNTIME_IO);
 const refusal = (e: unknown) => (e instanceof ApiError ? (e.status === 409 ? `${e.message}` : e.problem.errors?.[0]?.message ?? e.message) : (e as Error).message);
 
 /** Drafts for a set of questions (and row cells): what the person typed, compared with what is saved. */
@@ -354,7 +376,7 @@ export function Questionnaire({ caseId, mode }: { caseId: string; mode: Mode }) 
 
 /** Parts person by person, in the case's order (the application, the principal, then the family), each person's
  *  sections in the release's order: the client finishes one person before "answering for" the next. */
-function byPerson(v: View): View {
+export function byPerson(v: View): View {
   const at = (id: string) => v.case.people.findIndex((p) => p.subject_id === id);
   return { ...v, sections: [...v.sections].sort((a, b) => at(a.subjectId) - at(b.subjectId)) };
 }
@@ -376,7 +398,7 @@ function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
   return { tone: "ok", text: "Done", done: true };
 }
 
-function Sqr({ view }: { view: View }) {
+export function Sqr({ view }: { view: View }) {
   const [params, setParams] = useSearchParams();
   const parts = view.sections;
   const raw = params.get("part");
@@ -387,15 +409,21 @@ function Sqr({ view }: { view: View }) {
 }
 
 function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) {
+  const io = React.useContext(QuestionnaireIoContext), link = io.mode === "link";
   const passed = passedParts(view.case.id);
   const parts = view.sections, done = parts.filter((s) => partState(s, passed, view.checks).done).length;
   const next = parts.findIndex((s) => !partState(s, passed, view.checks).done);
-  const people = [...new Map(parts.map((s) => [s.subjectId, s.about_label])).entries()];
+  // C6.16: a person kept private from the client has no parts here, only their progress; Send to … sits under each adult.
+  const privacy = usePeoplePrivacy(link ? null : view.case.id);
+  const priv = view.private_people ?? [];
+  const at = (id: string) => view.case.people.findIndex((p) => p.subject_id === id);
+  const people = [...new Map<string, string>([...parts.map((s) => [s.subjectId, s.about_label] as const), ...priv.map((p) => [p.subject_id, p.label] as const)]).entries()].sort((a, b) => at(a[0]) - at(b[0]));
+  const lineOf = (id: string) => privacy.data?.people.find((p) => p.subject_id === id);
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold">Client questionnaire</h1>
-        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.</p>
+        <h1 className="text-2xl font-semibold">{link ? "Your questions" : "Client questionnaire"}</h1>
+        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${view.case.reference}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : `Case ${view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.`}</p>
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4">
         <p className="text-sm font-medium">{done} of {parts.length} parts done</p>
@@ -404,7 +432,9 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       </div>
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
-          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{`About ${inSentence(label)}`}</h2>
+          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{link ? "About you" : `About ${inSentence(label)}`}</h2>
+          {!link && lineOf(id) ? <PrincipalPersonLine caseId={view.case.id} person={lineOf(id)!} /> : null}
+          {priv.some((p) => p.subject_id === id) ? (lineOf(id) ? null : <PrivateProgress label={label} progress={priv.find((p) => p.subject_id === id)!.progress} />) : (
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
               const st = partState(s, passed, view.checks);
@@ -418,7 +448,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
                 </li>
               );
             })}
-          </ul>
+          </ul>)}
         </section>
       ))}
     </div>
@@ -427,7 +457,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
 
 function SqrPart({ view, index, go }: { view: View; index: number; go: (i: number | null) => void }) {
   const caseId = view.case.id, part = view.sections[index], total = view.sections.length;
-  const qc = useQueryClient(), toast = useToast();
+  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext);
   const person = view.case.people.find((p) => p.subject_id === part.subjectId);
   // A question a rule hides is not asked (its answer, if any, is kept and not used); rules apply on each save.
   const asked = part.questions.filter((q) => !q.hidden);
@@ -449,7 +479,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   // A save that finishes after the person left this part (Back, another part) never moves them (break report m6).
   const alive = React.useRef(true);
   React.useEffect(() => () => { alive.current = false; }, []);
-  const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+  const refresh = () => qc.invalidateQueries({ queryKey: io.viewKey(caseId) });
 
   const partChecks = view.checks.filter((c) => c.subjectId === part.subjectId && c.section === part.section);
   const checksOf = (q: Question, row?: string) => (row ? [] : partChecks.filter((c) => c.fact === q.fact).map((c) => c.message));
@@ -468,7 +498,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     for (const { q, row } of d.dirty) {
       const value = toValue(kindOf(q), d.get(q, row));
       if (value === undefined) { errs[keyOf(q, row)] = "An answer can be changed but not cleared here. Give an answer, or ask your officer to remove it."; continue; }
-      try { await putAnswer(caseId, q, value, row); } catch (e) { errs[keyOf(q, row)] = refusal(e); if (e instanceof ApiError && e.status === 409) d.reset([keyOf(q, row)]); }
+      try { await io.put(caseId, q, value, row); } catch (e) { errs[keyOf(q, row)] = refusal(e); if (e instanceof ApiError && e.status === 409) d.reset([keyOf(q, row)]); }
     }
     d.reset(d.dirty.map(({ q, row }) => keyOf(q, row)).filter((k) => !errs[k] || errs[k].startsWith("Someone")));
     await refresh();
@@ -484,7 +514,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     setLeaveTo({ to, words });
     const ok = await save();
     if (!alive.current) return;
-    const fresh = qc.getQueriesData<View>({ queryKey: ["runtime", "view", caseId, "sqr"] })[0]?.[1];
+    const fresh = qc.getQueriesData<View>({ queryKey: io.freshKey(caseId) })[0]?.[1];
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
@@ -497,13 +527,19 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   async function addRow() {
     if (adding) return;
     setAdding(true);
-    try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows`, { method: "POST", json: { group: part.section } }); await refresh(); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    try { await io.addRow(caseId, part.subjectId, part.section); await refresh(); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     setAdding(false);
   }
   async function removeRow(row: string) {
-    try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows/${row}`, { method: "DELETE" }); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    try { await io.removeRow(caseId, part.subjectId, row); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
   }
-  const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />;
+  const field = (q: Question, row?: string) => (
+    <React.Fragment key={keyOf(q, row)}>
+      <QuestionField q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />
+      {/* C6.16 (BR-6, P-78): on the person's own link, an answer the principal gave waits for them: Confirm keeps it as theirs. */}
+      {io.mode === "link" && !row && q.answer && !q.answer.confirmed && q.answer.channel === "questionnaire" && !d.dirty.some((x) => x.q === q) ? <ConfirmMine caseId={caseId} q={q} onDone={refresh} /> : null}
+    </React.Fragment>
+  );
   // Saved answers of this part that do not pass their checks (stored and flagged, P-47): never reported as plainly saved.
   const needFix = cells.filter(({ q, row }) => (cellAnswer(q, row)?.problems.length ?? 0) > 0).length;
   const confirmWords = [...new Set(cells.map(({ q, row }) => cellAnswer(q, row)?.why).filter(Boolean))];
@@ -530,7 +566,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
+        {io.mode === "link" ? "These are your own questions. The person who started the application sees how far you have got, not your answers." : person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
 
@@ -567,7 +603,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 /** A repeating group with no entries (Lead, break M3, P-71/P-72): add an entry, or say none apply; "none apply" is an
  *  answer like any other (confirmed by the same rule) and can be changed back. Shown in both views. */
 function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: Section; compact?: boolean; onAdd: () => void; adding: boolean }) {
-  const qc = useQueryClient(), toast = useToast();
+  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext);
   const [busy, setBusy] = React.useState(false);
   const g = s.group, na = g?.none_apply;
   // Keyboard (review M2): the pressed button is replaced; the focus goes to the control that replaces it.
@@ -578,11 +614,11 @@ function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: S
   async function say(noneApply: boolean) {
     setBusy(true);
     try {
-      await api(`/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { method: "PUT", json: { noneApply, expectedId: na?.id ?? null } });
+      await io.noneApply(caseId, s.subjectId, s.section, { noneApply, expectedId: na?.id ?? null });
       pressed.current = true;
       toast.push({ tone: "ok", text: noneApply ? `Saved: none apply in ${s.title} for ${inSentence(s.about_label)}.` : `Saved: entries apply in ${s.title}; add them now.` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
-    await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); setBusy(false);
+    await qc.invalidateQueries({ queryKey: io.viewKey(caseId) }); setBusy(false);
   }
   if (na?.value) return (
     <div className={cn("flex flex-wrap items-center gap-2", compact ? "text-[13px]" : "rounded-lg border border-border bg-surface-raised p-3 text-sm")}>
@@ -599,6 +635,20 @@ function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: S
         <Button ref={add} type="button" variant="secondary" size={compact ? "sm" : "default"} className={compact ? "" : "h-11"} busy={adding} onClick={onAdd} aria-label={compact ? `Add an entry: ${whose}` : undefined}><Plus aria-hidden />Add an entry</Button>
         <Button id={`none-apply-${s.subjectId}-${s.section}`} type="button" variant="ghost" size={compact ? "sm" : "default"} className={compact ? "" : "h-11"} busy={busy} onClick={() => void say(true)} aria-label={`None apply: ${whose}`}>None apply</Button>
       </div>
+    </div>
+  );
+}
+
+/** C6.16 (BR-6, m4): Confirm on the person's own link saves the same value again, with the id of the answer on screen: a
+ *  new answer of their own (a newer answer meanwhile is refused, 409). */
+function ConfirmMine({ caseId, q, onDone }: { caseId: string; q: Question; onDone: () => Promise<unknown> }) {
+  const io = React.useContext(QuestionnaireIoContext), toast = useToast();
+  const [busy, setBusy] = React.useState(false);
+  const by = WHO[q.answer!.by] ?? "the person who started the application";
+  return (
+    <div className="-mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-[13px]">
+      <span className="flex-1 text-text-muted">Answered by {by}. Keep it as your answer, or change it above.</span>
+      <Button type="button" size="sm" variant="secondary" busy={busy} aria-label={`Confirm: ${q.label}`} onClick={async () => { setBusy(true); try { await io.put(caseId, q, q.answer!.value); toast.push({ tone: "ok", text: "Confirmed: it is now your own answer." }); await onDone(); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); } setBusy(false); }}><Check aria-hidden />Confirm</Button>
     </div>
   );
 }
@@ -628,10 +678,12 @@ function ConfirmPill({ a }: { a: Answer }) {
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+const CHANNEL: Record<string, string> = { own_link: "their own link", questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
 /** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
 const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
-const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
+/** C6.16: an answer saved on a person's own link names them by their role in the case ("person:<subject id>"). */
+const WHO: Record<string, string> = new Proxy<Record<string, string>>({ "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" },
+  { get: (names, k) => (typeof k === "string" ? names[k] ?? (k.startsWith("person:") ? "the person, on their own link" : undefined) : undefined) });
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function AgentView({ view }: { view: View }) {

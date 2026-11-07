@@ -11,9 +11,10 @@ const idemKey = z.string().trim().min(8, "An idempotency key has at least 8 char
 /** A reason a person reads in the history: some letters or digits (as the case team's reasons). */
 const reason = (missing: string) => z.string({ message: missing }).trim().min(5, missing).max(300, "Keep it to 300 characters.").refine(clean, "Remove the control or invisible characters from this text.").refine((x) => /[\p{L}\p{N}]/u.test(x), missing);
 
-/** Send or resend to an adult on the case (the principal or case staff). */
+/** Send or resend to an adult on the case (the principal or case staff). Without an address: Resend, to the address of
+ *  the person's newest link (for the principal after acceptance, the kept address). */
 export const SendLink = z.object({
-  address: z.string({ message: "Enter their email address." }).trim().min(1, "Enter their email address.").max(254, "An email address has at most 254 characters."),
+  address: z.string({ message: "Enter their email address." }).trim().min(1, "Enter their email address.").max(254, "An email address has at most 254 characters.").optional(),
   idempotencyKey: idemKey.optional(),
 });
 /** Take back: case staff say why (kept in the history); the principal may leave it out. */

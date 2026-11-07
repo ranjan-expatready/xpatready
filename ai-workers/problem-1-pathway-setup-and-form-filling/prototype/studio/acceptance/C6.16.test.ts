@@ -147,9 +147,9 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   ok("C6.16-7 fail: nothing left to take back is refused in words (409)", tb2.status === 409 && /no working link/.test(tb2.body?.detail ?? ""), tb2.body?.detail);
 
   // ---- 8: resend to the kept address supersedes; a new address by Client A is refused; staff may.
-  const r8a = await call("POST", `/runtime/cases/${id}/people/${S}/link`, { address: pA }, CLIENT);
+  const r8a = await call("POST", `/runtime/cases/${id}/people/${S}/link`, { address: pA.toUpperCase() }, CLIENT);
   const t3 = tokenIn(await inbox(pA));
-  const r8b = await call("POST", `/runtime/cases/${id}/people/${S}/link`, { address: pA.toUpperCase() }, CLIENT);
+  const r8b = await call("POST", `/runtime/cases/${id}/people/${S}/link`, {}, CLIENT); // Resend: no address, the kept one
   const t4 = tokenIn(await inbox(pA));
   const o8 = await lcall("POST", "/link/open", { token: t3 });
   ok("C6.16-8 pass: Client A resends to the kept address; a second resend replaces the first, which says so", [200, 201].includes(r8a.status) && [200, 201].includes(r8b.status) && t3 !== t4 && o8.body?.state === "dead" && /replaced by a newer one sent on .*Use the newest email\./.test(o8.body?.why ?? "") && (await lcall("POST", "/link/open", { token: t4 })).body?.state === "live", [r8a.status, r8b.status, o8.body]);

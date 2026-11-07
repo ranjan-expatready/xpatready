@@ -17,6 +17,7 @@ import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
+import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -204,6 +205,7 @@ function CasePage() {
           {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{roleOf(p)}</span>{p.co_files ? <Pill title="Their forms are sent with the principal applicant's application, never on their own">Sent with the principal's application</Pill> : p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
         </ul>
       </section>
+      <OfficerPeoplePanel caseId={c.id} />
       <DocumentsPanel caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} nameOf={nameOf} />
       <EligibilityCard caseId={c.id} people={c.people} />
       <ItemChannels caseId={c.id} />
@@ -248,7 +250,7 @@ function ClientPage() {
   return <Questionnaire caseId={id!} mode="sqr" />;
 }
 
-function Toaster() {
+export function Toaster() {
   const t = useToast();
   return (
     <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:left-auto sm:w-96" aria-live="polite">

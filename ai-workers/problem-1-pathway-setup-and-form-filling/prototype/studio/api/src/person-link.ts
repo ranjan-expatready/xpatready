@@ -111,7 +111,10 @@ export class PersonLinks {
     const p = this.personOf(c, subjectId), label = p.subject.label, now = new Date();
     const adult = adultCheck({ role: p.role, label }, await this.birthOf(subjectId), now);
     if (!adult.ok) problem(409, "Not possible now", adult.why);
-    const address = normalAddress(b.address);
+    // Resend without an address: the newest link's address (after acceptance, the kept one).
+    const typed = b.address ?? (await this.db.personLink.findFirst({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
+    if (!typed) fieldError("address", "Enter their email address.");
+    const address = normalAddress(typed!);
     if (!address) fieldError("address", "Enter an email address like name@example.com.");
     if (!isDemoWorkspace()) problem(409, "Not possible now", "Sending email is not built in this workspace: the demo workspace's inbox stands in for it (stand-in SI-20). Nothing was sent.");
     const replay = async () => {

@@ -23,11 +23,13 @@ import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
 import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
 import { RuntimeApp } from "@/runtime/cases";
+import { DemoInbox, LinkApp } from "@/runtime/link-page";
 import { draftBarWords } from "../../contracts/status-words";
 
 export default function App() {
   // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
-  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
+  // C6.16: an adult's own link and the demo inbox (stand-in SI-20) are outside both shells and their simulated people.
+  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
 }
 
 function Shell() {
