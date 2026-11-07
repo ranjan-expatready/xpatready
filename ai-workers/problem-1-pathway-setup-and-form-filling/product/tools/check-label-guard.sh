@@ -135,6 +135,7 @@ if runs("labeled", ["review: approved"], "review: approved") is not True: out.ap
 if runs("labeled", ["review: approved", "records"], "records") is not False: out.append("adding another label runs the guard")
 if runs("labeled", ["review: approved", "queued"], "queued") is not True: out.append("Mergify's queued label does not run the guard (B134)")
 if runs("labeled", ["queued"], "queued") is not False: out.append("queued without review: approved runs the guard")
+if runs("opened", ["review: approved"]) is not False: out.append("a PR being opened runs the guard (only the sweep runs then)")
 if runs("synchronize", ["records"]) is not False: out.append("a push to an unlabelled PR runs the guard")
 if "github.event.pull_request.head.sha" not in after: out.append("AFTER has no fallback to the PR's head on a labeled event: " + after)
 print("; ".join(out) or "ok")

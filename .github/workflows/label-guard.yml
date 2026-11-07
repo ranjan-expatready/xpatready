@@ -8,12 +8,15 @@
 # Mergify, a GitHub App whose labels do start runs, puts `queued` on about a minute after `review: approved` and merges
 # 6 or more minutes later (#1232, #1258, 7 Nov). So when `queued` is added: the job "guard" checks the head's Approve
 # as for `review: approved` (whoever put the label on), and the job "sweep" (product/tools/label-sweep.sh) removes any
-# `review: approved` that github-actions[bot] put on; the sweep also runs every 10 minutes and after each ci run.
+# `review: approved` that github-actions[bot] put on; the sweep also runs when Mergify opens a batch PR (a PR could put
+# `queued` on itself first, so Mergify's own adds no event), every 10 minutes and after each ci run.
 # Removing the label takes the PR out of the queue. Main's copy only, as above. Test: check-label-sweep.sh.
 name: label-guard
 on:
   pull_request_target:
-    types: [synchronize, labeled]
+    # opened: Mergify (an App, so its events always start runs) opens a draft batch PR mergify/merge-queue/* before each
+    # merge; the sweep runs then too, even if a PR put `queued` on itself first (#1270 breaker, round 2).
+    types: [synchronize, labeled, opened]
   schedule:
     - cron: "*/10 * * * *"
   workflow_run:
@@ -64,7 +67,7 @@ jobs:
   sweep:
     # B134: no PR labels itself. Main's code only (schedule, workflow_run and pull_request_target all run the default
     # branch's copy); it reads labels and issue events through the API and checks out no pull request.
-    if: "github.event_name == 'schedule' || github.event_name == 'workflow_run' || (github.event.action == 'labeled' && github.event.label.name == 'queued')"
+    if: "github.event_name == 'schedule' || github.event_name == 'workflow_run' || (github.event.action == 'labeled' && github.event.label.name == 'queued') || (github.event.action == 'opened' && startsWith(github.event.pull_request.head.ref, 'mergify/merge-queue/'))"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     concurrency: { group: label-sweep, cancel-in-progress: false }

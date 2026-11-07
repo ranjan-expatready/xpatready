@@ -109,6 +109,8 @@ if not j: out.append("no job sweep")
 else:
     if "schedule" not in j.get("if", "") or "workflow_run" not in j.get("if", "") or "github.event.label.name == 'queued'" not in j.get("if", ""): out.append("sweep's if: " + j.get("if", ""))
     if "labeled" not in (on.get("pull_request_target") or {}).get("types", []): out.append("no labeled trigger for Mergify's queued")
+    # A PR can put queued on itself first, so Mergify's adds no event: the sweep also runs when Mergify opens its batch PR.
+    if "opened" not in (on.get("pull_request_target") or {}).get("types", []) or "startsWith(github.event.pull_request.head.ref, 'mergify/merge-queue/')" not in j.get("if", ""): out.append("the sweep does not run when Mergify opens a batch PR")
     co = [s for s in j["steps"] if str(s.get("uses", "")).startswith("actions/checkout")]
     if not co or co[0].get("with", {}).get("ref") != "main" or co[0]["with"].get("persist-credentials") is not False: out.append("sweep does not check out main without a kept token")
     runs = " ".join(str(s.get("run", "")) for s in j["steps"])
@@ -119,7 +121,7 @@ if "github.event.label.name == 'queued'" not in g: out.append("the guard does no
 print("; ".join(out) or "ok")
 PY
 )
-ok "B134: label-guard.yml runs the guard and the sweep when Mergify puts queued on (it merges 6+ min later), the sweep also every 10 min and after ci; main's copy, no PR checked out" "$([ "$wire" = ok ] && echo 1)" "$wire"
+ok "B134: label-guard.yml runs the guard and the sweep when Mergify puts queued on (it merges 6+ min later), the sweep also when Mergify opens a batch PR, every 10 min and after ci; main's copy, no PR checked out" "$([ "$wire" = ok ] && echo 1)" "$wire"
 cron=$(python3 -I -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])); print(d[True]["schedule"][0]["cron"])' "$W" 2>&1)
 ok "B134: the sweep's schedule is every 10 minutes (the backstop when no queued run comes)" "$([ "$cron" = "*/10 * * * *" ] && echo 1)" "$cron"
 finish
