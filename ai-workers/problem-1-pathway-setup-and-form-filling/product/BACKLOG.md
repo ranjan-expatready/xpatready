@@ -39,7 +39,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | L-follow | later | **Suggest the next application on a case** (C1.3's "Follows"): from follow rules per program, each cited from canada.ca with page, quote and date (AGENTS rule 4); concept first (screen-concept). Done when a case shows the next applications its program can lead to, with the source, and qa walks it | after M3's 48-hour sprint | P-391 |
 
 ## M3 wave after the weekly-plan reset (founder, 2 Nov: "After the reset"; start 5 Nov 23:00 UTC)
-C7.7 deliverables list (take over #357, part 1) · C8.1 signed scans and entered ticks · C8.2 filing record · C6.5 document reader (passport by rules first, then OCR through the STANDARDS §1 gate; P-256 brings "Fill this from my documents" with it) · C7.5 independent AI review (paid runs within P-225). Held rows (P-251) stay held. The tech lead shapes each row's "Done when" before the reset.
+C7.7 deliverables list (take over #357, part 1) · C8.1 signed scans (entered ticks moved to C7.3, P-401) · C8.2 filing record · C6.5 document reader (passport by rules first, then OCR through the STANDARDS §1 gate; P-256 brings "Fill this from my documents" with it) · C7.5 independent AI review (paid runs within P-225). Held rows (P-251) stay held. The tech lead shapes each row's "Done when" before the reset.
 
 ## Paid-AI rows: two parallel tracks (founder, 2 Nov: pick them up first on the new account, in parallel)
 | # | Area | Item | Done when (beyond the standard) | Source |
