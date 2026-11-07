@@ -27,9 +27,11 @@
 //   node studio/tools/gate-b.mjs --title "<t>" [--body-file <f>] [--kind code] [--bugs <BUGS.md>] [--no-packs] [--plan]
 //   --no-packs: only part 1 (and the packs it would run); --plan: print each named pack's run and stop. Off CI, packs
 //   run only with GATE_B_PORT (and GATE_B_NAME) set to the copy's own ports (WAY-OF-WORKING; never :4400).
-//   GATE_B_DATA=checkpoint (P-294 (a), tech lead 4 Nov): a pack alone runs on Demo › Load the configured checkpoint (a
-//   blank copy, then the checkpoint, as the author) instead of the six, and says "on the checkpoint"; unset or "six" is
-//   the six. A pack with setup steps stays on its own fixture either way.
+//   GATE_B_DATA=checkpoint (P-294 (a), tech lead 4 Nov; B125, 7 Nov): every pack runs alone on Demo › Load the configured
+//   checkpoint (a blank copy, then the checkpoint, as the author) and says "on the checkpoint". Its run line's setup
+//   steps (and the M3 setup added for a pack on lib/m3.ts) are skipped: the checkpoint already holds what they build
+//   (nightly 42335507309 ran C6.9, C8.2 and C6.4 "fixture only" because of them). Unset or "six" is the six, where a
+//   pack with setup steps stays on its own fixture.
 // Exit: 0 pass or skipped · 1 the gate refuses (the reasons are printed) · 2 the gate could not run.
 import { readFileSync, readdirSync, existsSync, appendFileSync, rmSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
@@ -253,8 +255,12 @@ export function dataOf(env = process.env) {
   if (v !== "six" && v !== "checkpoint") throw new Error(`GATE_B_DATA must be "six" or "checkpoint", not "${v}"`);
   return v;
 }
-/** Where a pack runs: on the six (or the checkpoint) when its run is the pack alone, else on its own fixture (tech lead, 4 Nov). */
-export const whereOf = (plan, data = "six") => (plan.steps.length === 1 ? (data === "checkpoint" ? "on the checkpoint" : "on the six") : "fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A)");
+/** Where a pack runs. On the checkpoint (GATE_B_DATA=checkpoint): always, the pack alone (B125: its setup is already in
+ *  the checkpoint). On the six: when its run is the pack alone, else on its own fixture (tech lead, 4 Nov). */
+export const whereOf = (plan, data = "six") => (data === "checkpoint" ? "on the checkpoint" : plan.steps.length === 1 ? "on the six" : "fixture only (its run line has setup steps; Works needs qa's demo-data PASS, gate A)");
+/** The steps the gate runs for a pack (B125): on the checkpoint, only the pack's own step (setup steps would build an
+ *  empty workspace's data again over the checkpoint); on the six, every step of its documented run. */
+export const stepsOf = (plan, file, data = "six") => (data === "checkpoint" ? plan.steps.filter((s) => s.script.endsWith(`acceptance/${file}`)) : plan.steps);
 /** Demo › Load the configured checkpoint on a fresh copy: Reset (blank), then the checkpoint, as the author. node:http,
  *  not fetch: the load can outlast fetch's 300 s header wait on a busy machine; up to 20 minutes. */
 function post(port, path, body, ms) {
@@ -299,7 +305,7 @@ const lastLines = (out) => { const t = tail(out); return t.length ? `; last line
 const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(l)).slice(0, 5); return f.length ? `; first FAIL lines: ${f.map((l) => l.slice(0, 160)).join(" | ")}` : ""; };
 /** Part 2: one pack on a fresh copy in slot `slot` (its own name and port). A pack whose run has no setup lines runs on
  *  the six (Demo › Reset to the six first); a pack whose run line builds its own data runs on its documented blank copy,
- *  "fixture only". Returns { log, why, infra }: why is null when it passed; infra when the gate could not run it. */
+ *  "fixture only". With GATE_B_DATA=checkpoint every pack runs alone on the checkpoint (B125). Returns { log, why, infra }: why is null when it passed; infra when the gate could not run it. */
 async function runPack(id, file, wanted, slot) {
   const plan = runPlan(file, readFileSync(join(S, "acceptance", file), "utf8"));
   if (plan.error) return { log: [], why: `${file}: ${plan.error}` };
@@ -307,7 +313,7 @@ async function runPack(id, file, wanted, slot) {
   if (missing.length) return { log: [], why: `${file}: its run names a file that does not exist: ${missing.map((f) => relative(PROTO, f)).join(", ")}` };
   const name = `${process.env.GATE_B_NAME ?? "gateb"}${slot}`, port = String(Number(process.env.GATE_B_PORT ?? 4590) + slot), db = `xr_studio_${name}`, env = cleanEnv(), t0 = Date.now();
   if (port === "4400") return { log: [], why: `${file}: port 4400 is the demo; the gate never runs there`, infra: true };
-  const data = dataOf(), onSix = plan.steps.length === 1, where = whereOf(plan, data), log = [];
+  const data = dataOf(), steps = stepsOf(plan, file, data), onSix = data === "checkpoint" || plan.steps.length === 1, where = whereOf(plan, data), log = [];
   const demo = data === "checkpoint" ? "Load the configured checkpoint" : "Reset to the six";
   const iso = (what) => sh("zsh", [join(S, "tools/isolated.sh"), name, port, what], { cwd: S, env }, 300_000);
   const up = await iso("start"), tUp = Date.now();
@@ -319,7 +325,7 @@ async function runPack(id, file, wanted, slot) {
     }
     const tSix = Date.now();
     let out = "", last = null, setupBad = "";
-    for (const s of plan.steps) {
+    for (const s of steps) {
       const bin = s.tool === "node" ? "node" : join(S, "node_modules/.bin/tsx");
       const args = s.args.map((a) => a.replace("{PORT}", port).replace("{DB}", db));
       const r = await sh(bin, args, { cwd: s.cwd === "prototype" ? PROTO : S, env }, 900_000);
@@ -400,7 +406,10 @@ async function main(argv) {
   const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
   if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
-  if (opt.plan) { for (const r of runs) console.log(r.f, JSON.stringify(runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")))); return 0; }
+  if (opt.plan) {   // what the gate will run, in this GATE_B_DATA (B125: on the checkpoint, the pack alone)
+    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")); console.log(r.f, p.error ? JSON.stringify(p) : `${whereOf(p, dataOf())} ${JSON.stringify(stepsOf(p, r.f, dataOf()))}`); }
+    return 0;
+  }
   let infra = false;
   if (opt.packs && runs.length) {
     if (!process.env.GITHUB_ACTIONS && !process.env.GATE_B_PORT) throw new Error("off CI, set GATE_B_PORT (and GATE_B_NAME) to this copy's own ports before running packs, or pass --no-packs");

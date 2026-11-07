@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, stepsOf, dataOf, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -158,7 +158,15 @@ ok("a pack with setup steps is labelled \"fixture only\"; a pack alone runs on t
 // P-294 (a): GATE_B_DATA picks the demo data a pack alone runs on; the default stays the six; a typo is refused.
 { const alone = runPlan("C11.13.test.ts", readFileSync(join(ACC, "C11.13.test.ts"), "utf8")), setup = runPlan("C7.5.test.ts", readFileSync(join(ACC, "C7.5.test.ts"), "utf8"));
   ok("GATE_B_DATA unset or \"six\": a pack alone runs on the six (the default)", dataOf({}) === "six" && dataOf({ GATE_B_DATA: "six" }) === "six" && whereOf(alone, dataOf({})) === "on the six");
-  ok("GATE_B_DATA=checkpoint: a pack alone runs on the checkpoint and says so; a pack with setup steps stays on its fixture", dataOf({ GATE_B_DATA: "checkpoint" }) === "checkpoint" && whereOf(alone, "checkpoint") === "on the checkpoint" && /^fixture only/.test(whereOf(setup, "checkpoint")));
+  ok("GATE_B_DATA=checkpoint: a pack alone runs on the checkpoint and says so", dataOf({ GATE_B_DATA: "checkpoint" }) === "checkpoint" && whereOf(alone, "checkpoint") === "on the checkpoint" && stepsOf(alone, "C11.13.test.ts", "checkpoint").length === 1);
+  // B125 (nightly 42335507309, data=checkpoint: C6.9, C8.2 and C6.4 ran "fixture only"): on the checkpoint a pack with
+  // setup steps runs alone too, its setup skipped (the checkpoint already holds it); on the six it keeps its fixture.
+  for (const f of ["C6.9.test.ts", "C8.2.test.ts", "C6.4.test.ts", "C7.5.test.ts"]) {
+    const p = runPlan(f, readFileSync(join(ACC, f), "utf8")), cp = stepsOf(p, f, "checkpoint"), six = stepsOf(p, f, "six");
+    ok(`B125: ${f} on the checkpoint: "on the checkpoint", the pack alone (${p.steps.length} steps on the six)`, p.steps.length > 1 && whereOf(p, "checkpoint") === "on the checkpoint" && cp.length === 1 && cp[0].script === `studio/acceptance/${f}` && cp[0].args.join(" ") === `studio/acceptance/${f} {PORT} {DB}`, { where: whereOf(p, "checkpoint"), cp });
+    ok(`B125: ${f} on the six keeps today's rule: "fixture only", every setup step`, /^fixture only/.test(whereOf(p, "six")) && /^fixture only/.test(whereOf(p)) && six === p.steps && six.length === p.steps.length, whereOf(p, "six"));
+  }
+  ok("B125: on the six, a pack alone still runs alone, on the six", whereOf(alone, "six") === "on the six" && stepsOf(alone, "C11.13.test.ts", "six") === alone.steps);
   let refused = ""; try { dataOf({ GATE_B_DATA: "checkpont" }); } catch (e) { refused = e.message; }
   ok("GATE_B_DATA with any other value is refused in words, never run on the six by mistake", /GATE_B_DATA must be "six" or "checkpoint", not "checkpont"/.test(refused), refused); }
 ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.test.ts", "// nothing here\nimport x from 'y';").error));
