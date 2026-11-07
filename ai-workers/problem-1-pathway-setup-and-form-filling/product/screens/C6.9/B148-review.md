@@ -44,3 +44,25 @@ D1 Requirement fit 9: every Done-when wording item is met (screen, A4 dialog, AP
 A real screen reader. An intended user's unaided walk (D17/D20 stay with the founder). The checkpoint (gate B) run. CI on GitHub (GraphQL is not reachable from here, and I did not read the REST check runs).
 
 **Verdict: Approve**. No open Blocker or Major at `9451799ca`. Fix list (Minors, optional for this PR): m1, m2, m4; m3 as a follow-up row. Add the label only once qa agrees to the pack wording and gate B exits 0, as the row's Done-when requires.
+
+## Re-review (diff-only, P-293 (3)): 9451799ca..7f3efd4a7
+
+Read: `git diff 9451799ca..7f3efd4a7`.
+* e252df934 holds only the M3-A4 walk screenshots from the b106 re-run.
+* 7f3efd4a7 changes 4 code and test files and commits my two report files unchanged (+88 lines, identical to what I wrote).
+
+Run here: `check_b148_words.ts` 13/13 and web `tsc --noEmit` (no error in `runtime/eligibility.tsx`). As asked, I did not re-run the browser suites; the coordinator is re-running `check_c69_page_browser` and `check_b124_unconfirmed_browser` on 7f3efd4a7. Gate B: the coordinator reports the C6.9 pack passed on the checkpoint at 9451799ca ("exit 0, 21/21", "Gate B: passed"). That closes the gate-B item under "Open before the label".
+
+* **m1: fixed.** `eligibility.tsx:199` wraps the outcome pill in `<span data-outcome className="contents">`. This is the only `data-outcome` in web/src, so Playwright's strict locator finds exactly one element. `display: contents` leaves the flex layout unchanged.
+  * `check_c69_page_browser.cjs:85,132` now test `/^Can't tell yet — /` on that span.
+  * `check_b124_unconfirmed_browser.cjs:92` now tests `=== "Qualifies"` exactly. That is stronger than main's `/Likely eligible/`, because it also fails if a "not yet confirmed" tail stays on the pill.
+  * A broken outcome line now fails all three checks; the people pill no longer satisfies them.
+* **m2: fixed.** `check_b148_words.ts:19` adds `/\bEligibility\s*·/`, `/>\s*Eligibility\s*</` and `/›\s*Eligibility\b/`. The self-test at :35 now includes main's exact title and trail span text. The exception for "Eligibility rules (staff check)" still holds (:36).
+* **m4: fixed.** The toasts now read "Case check run" and "Case check run again" (`eligibility.tsx:182,252`).
+* **m3: half fixed, as scoped.** The page's fallback (`eligibility.tsx:56-57`) now calls `outcomeWord`, so an unknown code is never shown raw. Two residuals, both Minor and neither blocking:
+  * **(a)** For `ELIGIBLE_BELOW_CUTOFF` the page would now read "Below the cut-off (not used: P-236)". A case officer reads that note as product-internal. Removing it belongs to the forms follow-up row that drops the fourth outcome from G4.
+  * **(b)** No test exercises this fallback branch: `outcomeWords` sits in a React file, and no browser check sends a fourth code. One line in that follow-up row would cover it.
+
+No new Blocker or Major. Still open before the label: qa's agreement on the C6.9 pack wording and J7 row 4.2 (choice 5), as the row's Done-when requires, plus green results from the coordinator's two browser re-runs on this head.
+
+**Verdict: Approve 7f3efd4a78c8fbf4877ba0b294aa811c193727d5**
