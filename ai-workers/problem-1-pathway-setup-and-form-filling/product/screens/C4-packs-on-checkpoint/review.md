@@ -59,3 +59,15 @@ Journeys: J1, the case officer takes Client A to Ready to file on release 2 (the
 Not tested: a real screen reader, 200 % zoom, and an intended user's unaided walk (D17 and D20 stay with the founder).
 
 **Verdict: Approve** (ff47fe7b85a40294188f02ef6fa054ff695f5bf4). Blockers: none. Majors: none. Minors: m1, m2.
+
+## Round 2 (diff only, 7 Nov)
+Diff `ff47fe7b8..2643989aff514b83645b167b122c4e4ece78c908`. Only `acceptance/C7.6.test.ts` changes code (+5/−4). The rest of the diff is this file, committed as I wrote it (unchanged), and two run logs refreshed. `lib/m3.ts` is still untouched.
+* **m1, fixed.** -2 now starts with `!!BC &&` (line 52) and -22 with `!!SL.barcode?.form &&` (line 137). An undefined form now fails both steps instead of printing "undefined" and passing. Neither data set changes meaning: both still give IMM 5257.
+* **m2, fixed.**
+  * The `asPaper` NOTE (line 36) now says "switched to Paper … (founder Q3)" only on a 200; otherwise it says "the switch to Paper was refused", with the status.
+  * `BCC` (line 48) is now the barcode item's own `channel` read from `/prepare` after the switch (`Prepare.items[].channel`, `lib/m3.ts:167`), no longer the release line.
+  * Nit, not a finding: an item that stayed Online would be labelled "PDF upload" at -6 (line 78). -6 would be red there anyway, because Online has no barcode block.
+* **Nothing else moved.** No predicate was weakened. The step ids are unchanged. No form number or channel was added to a check.
+* **Refreshed logs:** `runs/C7.6-checkpoint-branch.txt` shows 22/25, with -5, -12 and -19 red, both NOTE lines "switched … (200)", and -6 "IMM 5257 on Paper". `runs/C7.6-fixture-branch.txt` shows 25/25, with no NOTE line and -6 "on PDF upload". This matches my round 1 runs and the builder's report. I did not re-run on this head: the code change is the four lines above, and none of them can change an outcome on either data set.
+
+**Verdict: Approve** (2643989aff514b83645b167b122c4e4ece78c908). Blockers: none. Majors: none. Minors: none open (m1 and m2 fixed).
