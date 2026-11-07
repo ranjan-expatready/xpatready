@@ -6,7 +6,7 @@
 import { FILING, type PersonOnFiling } from "../contracts/resolver.ts";
 import { markOf, mergeScopeRefusal, ONCE_WORDS, placementRefusal, SCOPE_TAG, SCOPE_WORDS_REFUSED, scopeMark, scopeOfStored, scopeRefusal, storedOfScope, type ScopeFacts } from "../engine/field-scope.ts";
 import * as R from "../engine/resolver.ts";
-import { documentFacts } from "../engine/sources.ts";
+import { caseSuppliers, documentFacts } from "../engine/sources.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
 import { carriedFacts } from "../engine/runtime/employer.ts";
@@ -64,6 +64,8 @@ const docs = documentFacts(snap("organisation"), family);
 ok("C3.16 (M4) pass: the principal's job offer letter still supplies the employer name, now on the case", (docs.get(FILING)?.get("organisation.employer_name") ?? []).some((x) => x.key === "offer"));
 ok("C3.16 (M4) pass: a member's marriage certificate supplies the household date on the case", (docs.get(FILING)?.get("relationship.union_date") ?? []).some((x) => x.key === "marriage"));
 ok("C3.16 (M4, fail): unmarked, nothing is added on the case", !documentFacts(snap(), family).get(FILING));
+ok("C3.16 (break round 3, M1) pass: the household fact's suppliers are every member; the employer fact's the principal only", caseSuppliers(snap("organisation"), family, "relationship.union_date").join(",") === family.map((p) => p.id).join(",") && caseSuppliers(snap("organisation"), family, "organisation.employer_name").join(",") === "principal");
+ok("C3.16 (break round 3, M1, fail): an unmarked fact has no case suppliers (Preview keeps each person's own document line)", caseSuppliers(snap(), family, "relationship.union_date").length === 0 && caseSuppliers(snap(), family, "organisation.employer_name").length === 0);
 
 // ---- second lander with #1051 (tech lead on #1054, comment 6650232198): an employer copy goes where the one reader reads
 // it. carriedFacts writes on the case's own record exactly when the placement is stored once (isFilingFact): with C3.16,

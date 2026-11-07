@@ -28,6 +28,15 @@ export function suppliesOf(t: DocType): { fact: string; about: About }[] {
   return (t.supplies_facts ?? []).map((fact) => ({ fact, about: (t.supplies_about?.[fact] as About) ?? "holder" }));
 }
 
+/** C3.16: whose own documents supply a fact the release marks Household or Organisation, asked once on the case: any
+ *  member for a household fact, the principal for an employer fact; nobody for an unmarked fact (engine/field-scope.ts).
+ *  documentFacts credits their suppliers to the case and Preview reads their checklist lines (break round 3, M1). */
+export function caseSuppliers(s: Snapshot, people: Person[], fact: string): string[] {
+  const p = ((s.placements ?? []) as { fact: string; scope?: string }[]).find((x) => x.fact === fact && (x.scope === "household" || x.scope === "organisation"));
+  if (!p) return [];
+  return (p.scope === "household" ? people : people.filter((x) => x.role === ROLE.principal)).map((x) => x.id);
+}
+
 /** Challenge M3: which checklist documents supply which fact about whom (per person, never combination-wide): a
  *  passport asked only of the principal supplies only the principal's facts. */
 export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<string, Supplier[]>> {
@@ -49,11 +58,7 @@ export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<st
   }
   // C3.16 (challenge M4): a marked Household or Organisation fact is asked once on the case, so its suppliers are the
   // case's too: any member's documents for a household fact, the principal's for an employer fact (engine/field-scope.ts).
-  for (const p of (s.placements ?? []) as { fact: string; scope?: string }[]) {
-    if (p.scope !== "household" && p.scope !== "organisation") continue;
-    const from = p.scope === "household" ? people.map((x) => x.id) : people.filter((x) => x.role === ROLE.principal).map((x) => x.id);
-    for (const id of from) for (const sup of out.get(id)?.get(p.fact) ?? []) add(FILING, p.fact, sup);
-  }
+  for (const p of (s.placements ?? []) as { fact: string; scope?: string }[]) for (const id of caseSuppliers(s, people, p.fact)) for (const sup of out.get(id)?.get(p.fact) ?? []) add(FILING, p.fact, sup);
   // m1: a base requirement before a conditional one, then a stable order.
   for (const m of out.values()) for (const [f, list] of m) m.set(f, [...list].sort((a, b) => Number(b.base) - Number(a.base) || a.key.localeCompare(b.key)));
   return out;

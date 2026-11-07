@@ -126,6 +126,27 @@ async function sixPart() {
   ok("C3.16-5 fail: it never fills the spouse's form (one employer per case: the principal's)", bx.filter((x) => x.person !== "principal").every((x) => x.about === null && x.value === undefined), bx.filter((x) => x.person !== "principal"));
   ok("C3.16-5: the LMIA work permit's draft moved only by its marked field", (await preview(wp, { principal: 1 }))?.sha256 !== wpBefore);
 
+  // Break round 3, Major 1 (BR-4 "Documents", challenge M4): a document a member must bring still supplies a household
+  // fact, so Preview does not ask it. Test-only setup through people's steps: Visitor visa's checklist, then a Sample
+  // supply line on a type its checklist names (the author proposes, a second person approves). Never an official reading.
+  const dsetup = await T.documentsBySteps(vv);
+  const DOC = sql(`select document_type_key from document_requirement where combination_id='${vv}' and status <> 'RETIRED' and document_type_key='proof_of_financial_support' limit 1`) || "";
+  r = DOC ? await call("POST", `/library/document-types/${DOC}/supplies`, { facts: [{ fact: UNION, about: "holder", source: "Sample, test only (C3.16 pack), page 1", quote: "Sample: a test-only supply line, not an official reading.", readOn: "2026-11-07" }], reason: "C3.16 test: a Sample supply line, test only." }, AUTHOR) : r;
+  const sup = DOC && r.status < 300 ? await call("POST", `/library/changes/${r.body?.id ?? sql(`select id from library_change where kind='document_supplies' and key='${DOC}' and status='WAITING'`)}/approve`, { note: "Approved by a test as the second person (C3.16 setup)." }, APPROVER) : r;
+  ok("setup (P-322): Visitor visa's checklist and a Sample supply line for the date of the union, through people's steps", !!DOC && sup.status < 300 && dsetup.refused.length === 0, [DOC, sup.status, words(sup), dsetup.refused]);
+  const pv = (await call("GET", `/combinations/${vv}/workspace?tab=preview&person=principal`, undefined, AUTHOR)).body?.preview;
+  type QV = { questions: { fact: string; subjectId: string; label: string }[] }[];
+  const qsU = ((pv?.questionnaire?.sections ?? []) as QV).flatMap((s) => s.questions).filter((q) => q.fact === UNION);
+  // Every member who must bring it, marked missing: the household's answer is asked once on the case again (P-130).
+  const miss = Object.fromEntries(((pv?.people ?? []) as { subjectId: string; role: string }[]).filter((x) => x.role !== "case").map((x) => [`missing:${x.subjectId}|${DOC}`, true]));
+  const pm = (await call("GET", `/combinations/${vv}/workspace?tab=preview&person=principal&tweaks=${encodeURIComponent(JSON.stringify(miss))}`, undefined, AUTHOR)).body?.preview;
+  const qsM = ((pm?.questionnaire?.sections ?? []) as QV).flatMap((s) => s.questions).filter((q) => q.fact === UNION);
+  // from_documents names each fact by the question's label (engine/runtime/case.ts), as the client reads it.
+  const fromDocs = ((pv?.questionnaire?.from_documents ?? []) as { subjectId: string; document: string; facts: string[] }[]).filter((d) => !!qsM[0] && d.facts.includes(qsM[0].label));
+  ok("C3.16-5 pass (break round 3, M1): Household, Preview does not ask the date of the union a needed document supplies", !!pv && qsU.length === 0, qsU);
+  ok("C3.16-5 pass (break round 3, M1): it lists that document as where the household's answer comes from, once, on the case", fromDocs.length === 1 && fromDocs[0].subjectId === "case", [qsM[0]?.label, pv?.questionnaire?.from_documents]);
+  ok("C3.16-5 fail (break round 3, M1): with that document missing from everyone who brings it, Preview asks the date once, on the case", qsM.length === 1 && qsM[0].subjectId === "case", [Object.keys(miss), qsM]);
+
   // ------------------------------------------------------------------ C3.16-2: a published field (rule 4)
   r = await call("POST", "/demo/reset-to-six", { confirm: "RESET" }, AUTHOR);
   ok("setup: Demo › Reset to the six", r.status < 300, words(r));

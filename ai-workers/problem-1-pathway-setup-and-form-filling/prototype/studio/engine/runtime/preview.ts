@@ -11,8 +11,8 @@ import { questionsFor } from "./question-count.ts";
 import { MINOR, ONLINE_LATER_WAVE } from "../../contracts/runtime.ts";
 import { minorFromAnswers, signersOf } from "./signing.ts";
 import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewForm, type PreviewSets, type PreviewSign, type PreviewView } from "../../contracts/workspace.ts";
-import { documentFacts, factSources, prequalification, SOURCE_WORDS, suppliesOf } from "../sources.ts";
-import { sourceKey } from "../../contracts/resolver.ts"; // SH3 R8
+import { caseSuppliers, documentFacts, factSources, prequalification, SOURCE_WORDS, suppliesOf } from "../sources.ts";
+import { FILING, sourceKey } from "../../contracts/resolver.ts"; // SH3 R8
 
 type Line = { role: string; label?: string; min?: number; max?: number; applies?: boolean };
 const limits = (participants: Line[], role: string) => { const p = participants.find((x) => x.role === role); return { min: p?.min ?? 0, max: p?.max ?? 0, label: p?.label, applies: p?.applies !== false }; };
@@ -94,7 +94,11 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     // person's own document for a fact about its holder, the partner's for a fact about the holder's spouse.
     const t = (s.document_types as Parameters<typeof suppliesOf>[0][]).find((x) => x.key === key);
     const abouts = new Set((t ? suppliesOf(t) : []).filter((x) => x.fact === fact).map((x) => x.about));
-    const holders = new Set([abouts.has("holder") ? subjectId : null, abouts.has("holder.spouse") ? partnerOf(subjectId) : null].filter((x): x is string => !!x));
+    // C3.16 (break round 3, M1): a marked Household or Organisation fact is asked once on the case, but the checklist
+    // lines are per person. Its holders are the members whose own documents supply it (engine/sources.ts credits them
+    // to the case): any member for a household fact, the principal for an employer fact.
+    const from = subjectId === FILING ? caseSuppliers(s, renderPeople, fact) : [subjectId];
+    const holders = new Set(from.flatMap((m) => [abouts.has("holder") ? m : null, abouts.has("holder.spouse") ? partnerOf(m) : null]).filter((x): x is string => !!x));
     return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name) && !missing.has(`${d.person}|${key}`)) ? name : null;
   };
   const questionnaire = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });

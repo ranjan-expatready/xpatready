@@ -207,3 +207,76 @@
 * **New:** none. Not re-run: the configured-checkpoint lines of round 2 (no code on that path changed).
 
 **Verdict (re-check, 8e5197711): Approve from the breaker.** Round 2's Major 1 and Minors 2 and 3 are fixed. Minor 4 stays open, as agreed.
+
+## Round 3 (7 Nov, head d34ba017f)
+**Scope:** what the two main merges brought in (QA-293's representative's tab, QA-289's office phone, the IMM 5475/5476 representative parts), the scope route, merges, placements, conditions, the case's tag and read-only lines, Preview, and the two automated review comments.
+**Copies:** `brk_a5` on 4478 and `brk_a5c` on 4479, both stopped and their databases dropped. Live AI off, US$0, no priced button. Every value is Sample.
+* 4478 ran the six part, then a fresh six with pack2 `needQuestions` (Visitor visa first, then the LMIA work permit), `documentsBySteps` and `suppliesBySteps`.
+* 4479 ran `setup_visitor_visa.ts`, then the case part.
+
+**Code under test:** `git rev-parse HEAD` = d34ba017f. origin/main = 9dc77d1ac = the merge base. `git diff 8e5197711 HEAD` leaves these files unchanged: `api/src/{field-scope,question-condition,studio,forms}.ts`, `engine/{resolver,sources,snapshot}.ts`, `engine/runtime/{preview,employer}.ts`, `web/src/pages/field-scope.tsx` and `web/src/runtime/scope-tag.tsx`. So round 2's lock fixes stand as code.
+
+### Breaks
+**Major 1 (review comment a, reproduced): Preview asks a household fact that a needed document supplies (BR-4 "Documents", C3.16-5 "a document that supplies it still counts (M4)").**
+* Steps (4478, people's steps only):
+  1. Set up the six as above.
+  2. As user-A, POST `/library/document-types/proof_of_financial_support/supplies` with `relationship.union_start_date`. This is a test-only supply line, labelled Sample. As user-B, approve it (201).
+  3. GET `/combinations/<vv>/workspace?tab=preview&person=principal` (the default family: principal, spouse and two children).
+* Actual with the field set to Person:
+  * the union date is not asked;
+  * `from_documents` lists "Proof of financial support" for the principal and for the spouse;
+  * the principal's count is 133.
+* Actual after PUT `…/relationship.union_start_date/scope` Household (200):
+  * Preview asks it once (`case | For the household | Read for: Principal applicant, Spouse or partner (travelling)`);
+  * `from_documents` is empty and the principal's count is 134;
+  * GET `/combinations/<vv>/fact-sources` still says `case: DOCUMENT, Proof of financial support`. So the Fact sources tab says Document while Preview asks the client.
+* The same on the fixture release (4479's Visitor visa release 2, engine call `previewFamily`), with an added supplying line, for both `each_applicant` and `principal_applicant`.
+* Cause: `sources.ts:52-56` adds the members' suppliers under the case. But `fromDocument` (`engine/runtime/preview.ts:89-99`) builds `holders` from the subject id "case" (about "holder" gives "case"). The checklist lines are per person (`principal`, `spouse_or_partner`), so `r.checklist.some(...)` never matches.
+* An Organisation fact takes the same path: the principal's document never matches holder "case" (read in the code, not run: the LMIA work permit has no checklist on the six, because the checklist draft gives 409 "No saved AI reading of IMM 5556").
+* Why the pack misses it: C3.16-5 has no document line, so 33/33 never tries one.
+* Why Major: a concept line (C3.16-5, BR-4) fails when tried, and two screens disagree about the same fact. The case itself does not skip document facts yet (Preview only), so no stored value is wrong.
+
+**Minor 2 (review comment b, graded): "Read for" and the read-only line come from form fills, so a member whose forms do not read the fact gets no line.**
+* On 4479's case `d295455b` (principal, spouse, child), the agent and client views give `read_for = Client A + Client B`. In the browser at 1024 px, Child C's tab has 0 `[data-household-reads]`.
+* The cause is as the comment says (`engine/runtime/case.ts:260-263`, `scope-tag.tsx:26`).
+* Graded Minor: BR-4's wording says "each member's own part shows it read-only", but its own B2 rule (the child is never read) and C3.16-3's line ("each adult's part shows the read-only line") make the child's silence deliberate. Every member whose form reads the value is listed, because `read_for` and `fills` come from the same coverage. No needed field is hidden and no value is wrong. It is a wording gap between BR-4 and the pack.
+
+**Minor 3: Organisation is accepted on any person fact, and the release gate then misses the blanked boxes ("a rule that hides a needed field").**
+* PUT Organisation on `person.passport_number` and on `person.marital_status` gives 200 (4478).
+* Preview for a principal, spouse and child (draft) then shows:
+  * IMM 5257's passport number box reads `about=case` for the principal, and `about=null, coverage=unresolved` for the spouse and the child;
+  * neither of them is asked any more;
+  * unresolved goes from 29 to 31.
+* `coverageGaps` skips a box with no `about` (`engine/coverage.ts:44`, `!b.about`), so release is not held.
+* The concept allows "another person's box stays empty" for an employer fact, and the author has to choose this. Round 2's m3 guarded only the reverse case (an employer fact as Household). Restored to Person afterwards.
+
+### What held
+* **Migration:** `20261105100000_c316_field_scope` sorts after main's last migration (`20261105090000_b86…`). It holds only two `ADD VALUE IF NOT EXISTS`. A fresh copy applied it last, and `enum_range` gives all four values.
+* **Packs:**
+  * six part: 33/33, exit 0;
+  * case part (own copy): 16/16, exit 0;
+  * `check_c316_field_scope` 34/34, `check_sh3_resolver` 85/85 (with `api/tsconfig.json`), `check_qa182_no_box_words` 8/8.
+* **The representative (QA-152, QA-293, QA-289, IMM 5475/5476)** on the six's representative-read keys:
+  * Household and Organisation are refused with 422 in the new words ("A representative's part of the form reads this field, so it stays about each person."). The keys: `person.telephone_number`, `person.phone_number`, `person.family_name`, `person.mailing_address`, `person.address_city` and `organisation.name` (Organisation).
+  * `organisation.name` with Household gets the employer words; `representative.membership_id` gets "stays about each person".
+  * `person.email_address` and `person.mailing_address_*` are not library fields on the six: 404.
+  * A save of the household fact on subject `representative` gives 422 in QA-293's words, as officer and as client; a row on it gives the same.
+  * The principal or the child gives 422 "This is asked once for the household, not for a person."
+* **Two sessions:** officer and client saved the case answer at once with the same `expectedId`, 5 rounds. Each round gave one 200 and one 409, and left 1 current answer of 7 versions, on the case record only.
+* **Case and Preview:**
+  * asked once in The application, tagged "For the household", read for the two adults;
+  * the child's box stays blank;
+  * the principal-only case is not asked.
+* **Keyboard, 1024 px and 200 % zoom (512 CSS px):**
+  * "Change it in For the household" with Enter moves focus to the question line (`a-<case>-relationship-start_date`); round 1's m6 is fixed;
+  * on the field page the arrows skip the disabled Filing choice, and focus stays on the saved choice after Enter;
+  * no sideways scroll, no page errors.
+* **Budgets:** GET scope takes 7–12 ms, PUT 8–10 ms, the Preview tab 87–106 ms.
+* **Not applicable or not tried:**
+  * C3.16 has no upload, so no hostile PDF;
+  * an Organisation fact on a real case (no release on the six; round 2 ran it on the checkpoint);
+  * 100 programs (the team's scale work, STANDARDS §9);
+  * a screen reader;
+  * round 2's condition race was not re-run, because its code is unchanged.
+
+Breaker verdict: Block d34ba017f (Major 1: Preview asks a household or employer fact that a needed document supplies).
