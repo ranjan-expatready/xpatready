@@ -48,6 +48,6 @@ async function main() {
   ok("setup: the date is fixed to a real one and confirmed again", await answerAndConfirm(real));
   const good = await generate(2);
   ok("C7.6 QA-122 pass: fixed, the next copy writes it", good.state === "GENERATED" && good.mine.some((b) => b.result === "written") && good.facts.some((f) => f.value === real), good);
-  summary();
+  process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
 }
 await main();

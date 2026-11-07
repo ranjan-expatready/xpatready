@@ -130,9 +130,9 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     const at = { item: f.item, subject: f.subject, form: f.form };
     // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line. An unconfirmed answer
     // already fills the form (P-411, B150 review M1), so the words never say it is blank.
-    const missing = f.readiness.missing.filter((m) => m.reason !== "needs a fix"), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
+    const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
-    for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), m.label]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
+    for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), missingLabel(m)]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.
     for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). An answer fills the form as soon as it is given (P-242, P-411); each is confirmed before filing.` });
     for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
@@ -164,7 +164,8 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   const before = x.reviewed ? null : dayOf(x.reviewedBefore, "the earlier review");
   if (!x.reviewed) critical({ code: "representative_review", part: `${before ?? "none"}|${x.factsKey ?? ""}`, owes: "representative", words: before
     ? `The filing changed after it was reviewed on ${before} (or the representative of record changed). The representative of record reviews it again.`
-    : "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
+    // B149 (P-342, P-408): any firm staff may pass this with a reason (P-330 (3)), so the words say what happens.
+    : "The representative of record has not reviewed this filing. Passing it needs a reason, which is kept in the history." });
   for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
 
@@ -185,6 +186,13 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
 export function passKeys(r: FilingReadiness, code: WarnCode, key?: string): string[] {
   return r.warns.filter((w) => w.code === code && (!key || w.key === key)).map((w) => w.key);
 }
+
+/** Break m1 on #1246: the answers waiting for the client's re-confirmation first, so a long list's "and N more" never
+ *  hides them (stable otherwise). */
+export const missingFirst = <T extends { reason: string }>(ms: T[]): T[] => [...ms.filter((m) => m.reason === "waits for the client to re-confirm"), ...ms.filter((m) => m.reason !== "waits for the client to re-confirm")];
+/** C6.18 (P-244): a missing fact's words on Ready to file; a background answer staff recorded is named as the client's
+ *  to re-confirm. */
+export const missingLabel = (m: { label: string; reason: string }) => m.reason === "waits for the client to re-confirm" ? `${m.label}: recorded by staff, the client re-confirms it` : m.label;
 
 /** Why a pass's reason is refused (null: accepted). A written reason of at least 5 characters (as the case team's). */
 export function passProblem(reason: unknown): string | null {

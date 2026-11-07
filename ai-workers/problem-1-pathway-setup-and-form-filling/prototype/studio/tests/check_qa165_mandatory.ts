@@ -135,4 +135,4 @@ fc.assert(fc.property(fc.uniqueArray(field, { selector: (f) => f.name, maxLength
     && out.every((o) => { const f = fs.find((x) => o.box.endsWith(`.${x.name}[0]`))!; return o.reason === ({ none: "no question asks it yet", unresolved: "needs an answer", not_a_fact: "fill it in Adobe", mapped: "needs an answer" } as const)[f.mapped]; });
 }), { numRuns: 500 });
 ok("property (500 runs): exactly the mandatory fields left empty are listed, in the form's order, each with the reason its field's decision gives", true);
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)

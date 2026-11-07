@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import type { BoxesView, FamilyView, FieldsView, GateState, KeyView, LibraryField, Outcome, TestItem } from "../../../contracts/answer-keys";
+import { OUTCOME_WORDS as CASE_CHECK_WORDS } from "../../../contracts/case-check-words";
 import { api, ApiError, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Textarea, type ButtonProps } from "@/components/ui/controls";
 import { PERSON } from "@/pages/job";
@@ -34,7 +35,8 @@ export function Gated({ allowed, why, onClick, title, ...props }: ButtonProps & 
   return <>{/* the reason is read with the button */}<Button {...props} aria-disabled={!allowed || undefined} title={!allowed ? why : title} aria-describedby={!allowed ? id : undefined} onClick={allowed ? onClick : (e) => e.preventDefault()} />{!allowed ? <span id={id} className="sr-only">{why}</span> : null}</>;
 }
 const RELATIONS = [["parent_1", "first parent"], ["parent_2", "second parent"], ["sibling", "sibling"]] as const;
-export const OUTCOME_WORDS: Record<Outcome, string> = { LIKELY_ELIGIBLE: "Likely eligible", ELIGIBLE_BELOW_CUTOFF: "Eligible, below the cut-off", POSSIBLY_ELIGIBLE: "Possibly eligible", NOT_ELIGIBLE: "Not eligible" };
+// B148 (P-236): the case check's own words (contracts/case-check-words.ts), so a key reads like the page it tests.
+export const OUTCOME_WORDS: Record<Outcome, string> = CASE_CHECK_WORDS;
 const GATE_WORDS: Record<GateState, string> = { met: "Met", not_met: "Not met", not_answered: "Not answered" };
 export const SAMPLE_TIP = "Sample until the immigration expert signs the expected values (P-240).";
 

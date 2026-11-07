@@ -118,7 +118,10 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   };
   const newRow = async (subject: string, g: string) => (await call("POST", `/runtime/cases/${caseId}/groups/${subject}/rows`, { group: g }, OFFICER)).body.row as string;
   const none = async (subject: string, section: string) => { const s = (await view()).find((x) => x.subjectId === subject && x.section === section); await call("PUT", `/runtime/cases/${caseId}/groups/${subject}/${section}/none-apply`, { noneApply: true, expectedId: s?.group?.none_apply?.id ?? null }, OFFICER); };
-  const confirmAll = async () => { for (const s of await view()) { const seen = [...s.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${s.section}/confirm`, { subjectId: s.subjectId, seen }, OFFICER); } };
+  // C6.18 (P-244): background answers the officer entered here wait for the client, who re-confirms each before the
+  // officer confirms the sections (as a person does on the client questionnaire).
+  const reconfirm = async () => { for (const s of await view()) for (const q of s.questions) for (const a of [q.answer, ...q.rows.map((r) => r.answer)] as ({ id: string; awaits_client?: boolean } | null)[]) if (a?.awaits_client) await call("POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}, CLIENT); };
+  const confirmAll = async () => { await reconfirm(); for (const s of await view()) { const seen = [...s.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${s.section}/confirm`, { subjectId: s.subjectId, seen }, OFFICER); } };
   const generate = async (n: number) => {
     const g = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `c72-${run}-${n}` }, OFFICER);
     const copy: string = g.body?.id;
@@ -249,5 +252,5 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const later = (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body;
   ok("C7.2 cause 3 fail (review r1 M2): \"none apply\" taken back and an education entry added after the copy (unconfirmed) make the copy that says \"N\" out of date",
     undo.status < 300 && !!row && failed.length === 0 && fresh?.out_of_date === false && later?.out_of_date === true, { undo: undo.status, row, failed, before: fresh?.out_of_date, after: later?.out_of_date, changed: later?.changed });
-  summary();
+  process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
 })().catch((e) => { console.error(e); process.exit(2); });

@@ -5,7 +5,7 @@
 import { answerSheetOnly } from "../../contracts/forms.ts";
 import { createHash } from "node:crypto";
 import { evalCondition, kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
-import { notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
+import { boxGate, notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
@@ -41,6 +41,8 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // B86 BR-5 (here, not in render: the preview, the question list and "fills" read render and must not move): a form field
   // that holds its question's condition is written only while that condition is true, whatever answer is stored.
   const rules = rulesInForce(s, form, cov.edition);
+  const gateWords = new Map(((s.field_maps as { form_number: string; form_edition?: string; entries: { data_path: string; condition_rule?: unknown }[] }[]).find((m) => m.form_number === form && m.form_edition === cov.edition)?.entries ?? [])
+    .filter((e) => boxGate(e.condition_rule)).map((e) => [e.data_path, String((e.condition_rule as { words?: unknown }).words ?? "")]));
   const subjectOf = (about: string) => (about === "case" ? "case" : about.split("/")[0]);
   // BR-5b: an answer whose question a SHOW condition now hides is "kept and not used" (the screen's own words), so it does
   // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165, and so does a box reading the hidden answer
@@ -50,7 +52,9 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     const rule = b.about ? rules.get(b.box) : undefined;
     if (rule) {
       const c = evalCondition(s, known, rule, subjectOf(b.about!));
-      if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: notNeededWords(c, rule, words) }; }
+      // B107: a gate says why in the form's own words ("Not needed: written only when the representative is … CICC").
+      const said = gateWords.get(b.box);
+      if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: said && c.applies === false ? `Not needed: written only when ${said.replace(/[.\s]+$/, "")}` : notNeededWords(c, rule, words) }; }
     }
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
     const problems = checkValue(s, b.fact, b.value, today);
@@ -161,13 +165,14 @@ export const blocksFiling = (c: { group?: string; severity: string }) => c.group
 
 export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
-  const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
+  // C6.18 (P-244): a background answer staff recorded is named as waiting for the client, who re-confirms it.
+  const reason = (a: { confirmed: boolean; problems: string[]; awaits_client?: boolean } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : a.awaits_client ? "waits for the client to re-confirm" as const : !a.confirmed ? "not confirmed" as const : null);
   // QA-122: an optional fact counts only when it is answered with a problem (it would be written wrong, P-71).
   const optional = (a: { problems: string[] } | null | undefined) => (a && a.problems.length ? "needs a fix" as const : null);
   const missing: Readiness["missing"] = reads.flatMap((q) => {
     const why = q.required ? reason : optional;
     const r = q.group ? q.rows.map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
-    return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
+    return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r, subject: q.subjectId }] : [];
   });
   const read = new Set(reads.map((q) => `${q.subjectId}|${q.section}`));
   for (const sec of view.sections) {

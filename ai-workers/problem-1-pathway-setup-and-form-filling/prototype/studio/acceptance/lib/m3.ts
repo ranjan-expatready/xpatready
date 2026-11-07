@@ -108,7 +108,7 @@ export async function openCase(vv: string, people: Person[] = FAMILY, team?: { r
 }
 
 export const agent = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, officerOf(caseId))).body;
-type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean } | null; rows: { answer: { id: string } | null }[] };
+type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { answer: { id: string; awaits_client?: boolean } | null }[] };
 const questions = (v: { sections?: { questions: Q[] }[] }) => (v?.sections ?? []).flatMap((s) => s.questions);
 export async function answer(caseId: string, subject: string, fact: string, value: unknown, actor = officerOf(caseId), extra: Record<string, unknown> = {}): Promise<Res> {
   const q = questions(await agent(caseId)).find((x) => x.subjectId === subject && x.fact === fact);
@@ -144,16 +144,21 @@ export async function fillEverything(caseId: string): Promise<boolean> {
     const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, officer)).body?.forms ?? [];
     if (forms.length && forms.every((f: { applies: boolean; readiness: { ready: boolean } }) => !f.applies || f.readiness.ready)) return true;
     const v = await agent(caseId);
-    for (const q of questions(v).filter((q) => q.required && !q.hidden && !q.group && !q.answer?.confirmed && q.fact !== "person.date_of_birth")) {
+    // A person's date of birth is set when the case opens (it decides ages); a parent's (B128, `<person>/parent_1`) is a
+    // fact like any other here, a Sample date some 70 years ago.
+    for (const q of questions(v).filter((q) => q.required && !q.hidden && !q.group && !q.answer?.confirmed && (q.fact !== "person.date_of_birth" || q.subjectId.includes("/")))) {
       const p = who.get(q.subjectId), clientFact = q.collected_from === "client_questionnaire";
       const put = (value: unknown) => clientFact && (!p || p.role === "principal" || isMinor(p.dob)) ? answer(caseId, q.subjectId, q.fact, value, CLIENT)
         : clientFact ? answer(caseId, q.subjectId, q.fact, value, officer, { onBehalfOf: q.subjectId, reason: "Entered from the person's signed form (Sample)" })
         : answer(caseId, q.subjectId, q.fact, value, officer);
-      const value = sample(q), r = await put(value);
+      const value = q.fact === "person.date_of_birth" ? yearsAgo(70) : sample(q), r = await put(value);
       if (value === "SAMPLE" && r.status < 300 && (r.body?.answer?.problems ?? []).length) await put(SAMPLE_DIGITS);
     }
     for (const s of (v?.sections ?? []).filter((x: { group: { required: boolean; rows: number; none_apply: unknown } | null }) => x.group?.required && x.group.rows === 0 && !x.group.none_apply))
       await call("PUT", `/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { noneApply: true, expectedId: null }, officer);
+    // C6.18 (P-244): a background answer the officer entered (another adult's, above) is the client's to re-confirm
+    // before signing; the client does, as a person would on their questionnaire, then the officer confirms the sections.
+    for (const q of questions(await agent(caseId))) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}, CLIENT);
     for (const subj of [...new Set(questions(v).map((q) => q.subjectId))]) await confirmAll(caseId, subj);
   }
   return false;

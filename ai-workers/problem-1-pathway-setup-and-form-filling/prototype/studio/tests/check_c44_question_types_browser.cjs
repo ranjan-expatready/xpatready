@@ -123,7 +123,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     // ── The officer, in the Agent view ──
     const o = await open(OFFICER, 1440, 900);
     await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
-    await o.getByRole("tab", { name: /^Sample Applicant A/ }).click();
+    await o.getByRole("tab", { name: /^Sample Applicant A(?!'s )/ }).click();
     const sec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Personal details" }) }).first();
     // B150 (P-242, QA-301): every client answer now carries a "Declared" mark, so the declaration's own value is read on its
     // own row (lineId in web/src/runtime/questionnaire.tsx), where it reads "Declared" once (its mark is not repeated).

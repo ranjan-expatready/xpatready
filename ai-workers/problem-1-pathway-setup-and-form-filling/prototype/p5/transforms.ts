@@ -130,12 +130,20 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (max && v.length > max) return hand(`value is ${v.length} characters; the box holds ${max} (never truncated)`);
       continue;
     }
+    // B107 (QA-300): a length the map states as a step of its own ("as_is; max 30 characters", IMM 5476 (11-2021)'s question
+    // 7): checked on the value as it is now, never truncated.
+    if ((m = /^max (\d+) char(?:s|acters)$/.exec(s))) { const t = String(v); if (t.length > Number(m[1])) return hand(`value is ${t.length} characters; the box holds ${m[1]} (never truncated)`); continue; }
+    // B107: a box that takes digits only (a country calling code): the value's digits; a value with none is written by hand.
+    if (s === "digits_only") { const t = String(v).replace(/\D/g, ""); if (!t) return hand(`no digits in "${String(v)}"`); v = t; continue; }
     if ((m = /^date:(YYYY-MM-DD|YYYY|MM|DD)$/.exec(s))) {
       const d = DATE.exec(String(v)), mo = (m[1] === "YYYY" || m[1] === "MM") && !d ? MONTH.exec(String(v)) : null;
       if (mo) { v = m[1] === "YYYY" ? mo[1] : mo[2]; continue; }
       if (!d) return hand(`not a full date: ${v}`); v = m[1] === "YYYY-MM-DD" ? d[0] : m[1] === "YYYY" ? d[1] : m[1] === "MM" ? d[2] : d[3]; continue;
     }
     if ((m = /^(?:yes_no_code|check_code):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v ? m[1] : m[2]; continue; }
+    // B128 (QA-153): a drafted family-form map spells the Yes and No tick boxes "derived:checked_if_true:1/0" (check_code:1/0)
+    // and "derived:checked_if_false:1/0" (the same, ticked on No). Only a yes/no value; anything else by hand.
+    if ((m = /^derived:checked_if_(true|false):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v === (m[1] === "true") ? m[2] : m[3]; continue; }
     if ((m = /^derive:Y if any .+ (?:is|are) recorded, else N$/.exec(s))) { v = (Array.isArray(v) ? v.length > 0 : v !== false && v !== "") ? "Y" : "N"; continue; }
     // C7.7 (G25): an inverted yes/no box, "derive_inverse:1 when the subject has no child records (…), 0 when any child
     // exists": the first code when the fact is No, the second when it is Yes. Only a yes/no value; anything else by hand.
@@ -155,7 +163,8 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if ((m = /^phone:(country_code_digits|area_code_and_number)$/.exec(s))) { const p = v as Phone; const part = m[1] === "country_code_digits" ? p?.country_code : p?.number; if (!part) return blank(`no ${m[1] === "country_code_digits" ? "country calling code" : "number"}`); v = String(part).replace(/\D/g, ""); continue; }
     if (/^phone_part:nanp_/.test(s)) { const p = v as Phone; if (p.country_code !== "1") return blank("not a North American number"); return hand("North American number parts are not in the executable set yet"); }
     if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|apt_unit|district|po_box)\b/.exec(s))) { const a = parseAddress(v); const part = a?.[m[1] as keyof Address]; if (!part) return blank(`address has no ${m[1]}`); v = part; const max = /max (\d+) char/.exec(s); if (max && String(v).length > Number(max[1])) return hand(`${m[1]} longer than ${max[1]} characters`); continue; }
-    if ((m = /^address_single_line(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
+    // B128 (QA-153): "address_single_line_text" (a drafted map's spelling) is the same one-line address.
+    if ((m = /^address_single_line(?:_text)?(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
     if ((m = /^country_name_text(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const c = ISO3[String(v).toUpperCase()] ?? String(v); if (m[1] && c.length > Number(m[1])) return hand(`country name longer than ${m[1]} characters`); v = c; continue; }
     if ((m = /^code_list:[\w.]+(?: \((.*)\))?$/.exec(s))) {
       const inline: Record<string, string> = {};
