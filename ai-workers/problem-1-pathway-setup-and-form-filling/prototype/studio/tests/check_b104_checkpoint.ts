@@ -5,7 +5,7 @@
 // leaves unset stay unset, no other combination is touched, nothing was refused, and the log is in plain words. The
 // step's refusal paths are checked offline (tests/check_b104_stage_one.ts). Live AI off; no model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_b104 4436 start && tsx studio/tests/check_b104_checkpoint.ts 4436 xr_studio_runtime_b104
-import { stageOneOf } from "../api/src/checkpoint-stage-one-data.ts";
+import { releaseTwoOf, stageOneOf } from "../api/src/checkpoint-stage-one-data.ts";
 import { AUTHOR, OFFICER, PORT, call, needVisitorVisa, openCase, sql } from "../acceptance/lib/m3.ts";
 
 if (PORT === 4400) { console.error("never the demo (:4400)"); process.exit(2); }
@@ -27,7 +27,7 @@ const ok = (label: string, cond: boolean, detail: unknown = "") => { if (!cond) 
   // checkpoint also makes release 2 of Visitor visa (IMM 5257 Online, so IMM 5645 replaces IMM 5707), so release 1 is
   // read from its own row, and the newest release, the one Review and release and every new case read, is checked for
   // what it carries over (review round 3, M1).
-  type Form = { form_number: string; signed_by?: string | null; status?: string };
+  type Form = { form_number: string; signed_by?: string | null; signature?: string; status?: string };
   const formsOf = (list: Form[] | undefined) => new Map((list ?? []).map((f) => [f.form_number, f.signed_by ?? null]));
   const r1raw = sql(`select snapshot->'forms' from config_release where combination_id = '${vv}' and version = 1`);
   const r1 = formsOf(r1raw ? (JSON.parse(r1raw) as Form[]) : undefined);
@@ -48,6 +48,17 @@ const ok = (label: string, cond: boolean, detail: unknown = "") => { if (!cond) 
   const ch = (await call("GET", `/combinations/${vv}/channels`, undefined, AUTHOR)).body;
   ok("B104-L6 pass: Visitor visa files through the APR Portal (the Forms tab's account)", ch?.account === "APR_PORTAL", ch?.account);
 
+  // Row A3: release 2's own lines, set inside its draft before it is submitted (features/checkpoint/130-release-two.ts).
+  const r2log = (load.body.log as string[]).filter((l) => /release 2 lines/.test(l));
+  ok("A3-L1 pass: the load says release 2's own lines were set, in plain words, refusing none",
+    r2log.length === 1 && /IMM 5645 signed by the person the form is about/.test(r2log[0]) && /IMM 5257 SCH1: typed name/.test(r2log[0]) && !/refused|TYPED_NAME|_/.test(r2log[0]), r2log);
+  const two = releaseTwoOf("vv.single")!, snap = new Map(((pub?.forms ?? []) as Form[]).map((f) => [f.form_number, f]));
+  ok("A3-L2 pass: the newest release (Review and release's route) has IMM 5645 signed by the person, and IMM 5645 and Schedule 1 a typed name",
+    two.signers!.every((s) => snap.get(s.form)?.signed_by === s.signedBy) && two.signatures!.every((s) => snap.get(s.form)?.signature === s.signature),
+    ["IMM 5645", "IMM 5257 SCH1"].map((f) => ({ f, signed_by: snap.get(f)?.signed_by, signature: snap.get(f)?.signature })));
+  const r1sig = sql(`select string_agg(f->>'form_number' || '=' || coalesce(f->>'signature', '-'), ',' order by f->>'form_number') from config_release, jsonb_array_elements(snapshot->'forms') f where combination_id = '${vv}' and version = 1 and f->>'form_number' in ('IMM 5257 SCH1', 'IMM 5645')`);
+  ok("A3-L3 fail: release 1 is left as it was released (the step runs only in release 2's draft)", r1sig === "IMM 5257 SCH1=-", r1sig);
+
   // Nothing else is touched: no other combination of the checkpoint gets an account, a signer or gates from this step.
   const others = (sql(`select combination_key || '|' || coalesce(portal_key, '-') || '|' || coalesce(eligibility->>'version', '0') from combination where combination_key <> 'vv.single'`) ?? "").split("\n").filter(Boolean);
   ok("B104-L7 fail: no other combination gets eligibility gates from the checkpoint (P-319: only what the data names)", others.length > 0 && others.every((x) => x.endsWith("|0")), others);
@@ -57,6 +68,8 @@ const ok = (label: string, cond: boolean, detail: unknown = "") => { if (!cond) 
   const prep = (await call("GET", `/runtime/cases/${c.id}/prepare`, undefined, c.officer)).body;
   ok("B104-L8 pass: a case opened on the newest release is filed through the APR Portal", prep?.portal === "APR_PORTAL", { case: c.id, portal: prep?.portal });
   const run = await call("POST", `/runtime/cases/${c.id}/assessments`, { person: c.subjects["Sample Client A"] }, c.officer ?? OFFICER);
+  const fam = ((prep?.items ?? []) as { kind: string; form?: string; signature?: string; signers?: string[] }[]).filter((i) => i.kind === "form" && i.form === "IMM 5645");
+  ok("A3-L4 pass: on that case IMM 5645 is a typed name, signed by the person (not waiting for how it is signed)", fam.length >= 1 && fam.every((i) => i.signature === "TYPED_NAME" && JSON.stringify(i.signers) === '["person"]'), fam.map((i) => ({ signature: i.signature, signers: i.signers })));
   ok("B104-L9 pass: its eligibility check runs (not refused 409 for a release with no rules)", run.status < 300 && /POSSIBLY_ELIGIBLE/.test(JSON.stringify(run.body)), { status: run.status, detail: run.body?.detail });
 
   console.log(failed ? `\n${failed} failed` : "\nall passed");
