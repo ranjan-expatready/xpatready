@@ -2353,6 +2353,8 @@ model PersonLink {
   voidedBy       String?   @map("voided_by")
   voidReason     String?   @map("void_reason")
   supersededById String?   @map("superseded_by_id") @db.Uuid
+  /// The Send request's idempotency key: the same key again sends nothing new.
+  sendKey        String?   @map("send_key")
 
   case         Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
   subject      AnswerSubject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -2361,6 +2363,7 @@ model PersonLink {
   sessions     PersonLinkSession[]
   messages     DemoMessage[]
 
+  @@unique([caseId, sendKey])
   @@index([caseId])
   @@map("person_link")
 }

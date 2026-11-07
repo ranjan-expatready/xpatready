@@ -57,12 +57,15 @@ CREATE TABLE "person_link" (
     "voided_by" TEXT,
     "void_reason" TEXT,
     "superseded_by_id" UUID,
+    "send_key" TEXT,
     CONSTRAINT "person_link_pkey" PRIMARY KEY ("id")
 );
 CREATE UNIQUE INDEX "person_link_token_hash_key" ON "person_link"("token_hash");
 -- One link per person that has not died (a resend supersedes the old one in the same transaction).
 CREATE UNIQUE INDEX "person_link_one_open" ON "person_link"("subject_id") WHERE "voided_at" IS NULL;
 CREATE INDEX "person_link_case_id_idx" ON "person_link"("case_id");
+-- The same Send pressed twice (one key) sends once.
+CREATE UNIQUE INDEX "person_link_case_id_send_key_key" ON "person_link"("case_id", "send_key");
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_case_id_fkey" FOREIGN KEY ("case_id") REFERENCES "runtime_case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "answer_subject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_superseded_by_id_fkey" FOREIGN KEY ("superseded_by_id") REFERENCES "person_link"("id") ON DELETE SET NULL ON UPDATE CASCADE;
