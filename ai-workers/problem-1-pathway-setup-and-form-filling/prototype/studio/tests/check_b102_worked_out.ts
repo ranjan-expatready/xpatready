@@ -38,9 +38,16 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   const rule = (key: string, json: string, then: string) => sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, when_plain, then_plain, for_whom, version, status, origin, updated_by) values (gen_random_uuid(), ${ws}, '${combo}', '${key}', '${json}', 'when the test says so', '${then}', 'principal', 1, 'PUBLISHED', 'HUMAN', 'user-A')`);
   rule("r_b102_age", `{"field":"person.b102_years","op":"lt","value":18}`, "ask for the papers of a child");
   rule("r_b102_asked", `{"field":"person.b102_asked","op":"eq","value":true}`, "a fact to ask");
-  const caseDate = sql(`select canonical_field_key from canonical_field where workspace_id=${ws} and value_type='date' and canonical_field_key like 'case.%' and status in ('DRAFT','PUBLISHED') order by canonical_field_key limit 1`);
-  const personDate = sql(`select canonical_field_key from canonical_field where workspace_id=${ws} and value_type='date' and canonical_field_key like 'person.%' and canonical_field_key <> 'person.date_of_birth' and status in ('DRAFT','PUBLISHED') order by canonical_field_key limit 1`);
-  const good = { calculation: "age_in_years", from: "person.date_of_birth", on: caseDate, plain: "The person's age in whole years on the test date." };
+  // A date about a person that the library holds and no questionnaire asks (scaffolding: a copy of the date of birth's row).
+  sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label) select gen_random_uuid(), workspace_id, 'person.b102_unasked_date', 1, status, 'A date no questionnaire asks, for the B102 check.', value_type, data_type, scope, subject_kind, origin, updated_by, 'B102 unasked date' from canonical_field where workspace_id=${ws} and canonical_field_key='person.date_of_birth' order by version desc limit 1`);
+  // The dates this combination's questionnaire asks (challenge M1: a worked-out value reads only dates a case can answer).
+  const placed = new Set<string>(((await call("GET", `/combinations/${combo}/config`)).body?.snapshot?.placements ?? []).map((p: { fact: string }) => p.fact));
+  const choices = (await call("GET", `/combinations/${combo}/rule-facts/worked-out`)).body ?? { on: [], from: [] };
+  const caseDate: string = choices.on.map((d: { key: string }) => d.key).find((k: string) => placed.has(k)) ?? "";
+  const unasked: string = choices.from.map((d: { key: string }) => d.key).find((k: string) => k === "person.b102_unasked_date" && !placed.has(k)) ?? "";
+  const personDate: string = choices.from.map((d: { key: string }) => d.key).find((k: string) => k.startsWith("person.") && k !== "person.date_of_birth") ?? "";
+  ok("setup: the combination asks the date of birth and a date about the case, and the library has a date about a person it does not ask", placed.has("person.date_of_birth") && !!caseDate && !!unasked, { caseDate, unasked });
+  const good = { calculation: "age_in_years", from: "person.date_of_birth", on: caseDate };
   const url = (fact: string) => `/combinations/${combo}/rule-facts/${encodeURIComponent(fact)}/worked-out`;
 
   // ─────────────────── the choices the form offers
@@ -52,8 +59,8 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   // ─────────────────── BR-6: the configuration author only, with words
   r = await call("POST", url("person.b102_years"), good, "user-B");
   ok("B102 BR-6 fail: someone without the author duty is refused (403)", r.status === 403, [r.status, msg(r)]);
-  r = await call("POST", url("person.b102_years"), { ...good, plain: "age" });
-  ok("B102 BR-6 fail: words under 10 characters are refused, saying why", r.status === 400 && /10 characters or more/.test(msg(r)), [r.status, msg(r)]);
+  r = await call("POST", url("person.b102_years"), { ...good, plain: "Age on the application date" });
+  ok("B102 BR-6 fail (challenge M2): typed words are refused; the server builds them from the choices", r.status === 400 && /the words are built from the choices/.test(msg(r)), [r.status, msg(r)]);
   r = await call("POST", url("person.b102_years"), { ...good, key: "person.other" });
   ok("B102 BR-6 fail: a typed key is refused (the key is the one the rule reads)", r.status === 400 && /the key is the one the rule reads, never typed/.test(msg(r)), [r.status, msg(r)]);
   // ─────────────────── BR-1: only for a fact a rule reads, not in the library, not worked out
@@ -72,6 +79,8 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   // ─────────────────── BR-4: on a date about the case
   r = await call("POST", url("person.b102_years"), { ...good, on: personDate || "person.date_of_birth" });
   ok("B102 BR-4 fail: worked out on a date about the person is refused, saying to add the date about the case first", r.status === 400 && /add the date about the case first/.test(msg(r)), [r.status, msg(r)]);
+  r = await call("POST", url("person.b102_years"), { ...good, from: unasked });
+  ok("B102 BR-3 fail (challenge M1): a date in the library that this combination does not ask is refused, saying to place it first", r.status === 400 && /not asked in this combination's questionnaire: place it first/.test(msg(r)), [r.status, msg(r)]);
   // ─────────────────── BR-5: never both asked and worked out
   r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.b102_asked", rule: "r_b102_asked", label: "B102 asked fact", meaning: "A fact proposed to be asked, for the B102 check.", valueType: "yes_no" });
   ok("setup: a proposal to ask person.b102_asked waits on To review", r.status === 201, [r.status, msg(r)]);
@@ -82,6 +91,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   const audits = Number(sql(`select count(*) from audit_event where entity='worked-out value'`));
   r = await call("POST", url("person.b102_years"), good);
   ok("B102 BR-1 to BR-4 pass: the age is worked out from the date of birth on the case date (201)", r.status === 201 && r.body?.fact === "person.b102_years" && r.body?.from === "person.date_of_birth" && r.body?.on === caseDate, [r.status, r.body]);
+  ok("B102 BR-6 pass (challenge M2): the words are the server's and name both dates", /^Age in whole years from .+, on .+\.$/.test(r.body?.plain ?? ""), r.body?.plain);
   const row = sql(`select calculation || '|' || array_to_string(inputs, ',') || '|' || reference || '|' || executable from derived_field where derived_key='person.b102_years'`);
   ok("B102 pass (data): one derived value, executable, from the date of birth on the case date", row === `age_in_years|person.date_of_birth|${caseDate}|true`, row);
   ok("B102 BR-6 pass: one audit line names who worked it out", Number(sql(`select count(*) from audit_event where entity='worked-out value'`)) === audits + 1);

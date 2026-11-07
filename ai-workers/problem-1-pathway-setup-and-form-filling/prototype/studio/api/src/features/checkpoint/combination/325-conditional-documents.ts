@@ -20,7 +20,7 @@ import { placed } from "./_placed.ts";
 export const CONDITIONAL_DOCUMENTS = join(STUDIO, "samples", "conditional-documents.json");
 /** B102 (A6): a fact a line reads that is worked out from library dates (WorkedOut, "Work it out instead"), and the date
  *  about the case it is worked out on, added through C3.6's door when the library lacks it. */
-type WorkedOutSpec = { fact: string; calculation: string; from: string; on: { fact: string; label: string; meaning: string; question: string; beside: string[] }; plain: string };
+type WorkedOutSpec = { fact: string; calculation: string; from: string; on: { fact: string; label: string; meaning: string; question: string; beside: string[]; nearReason?: string } };
 type ConditionalDocuments = { lines: { type: string; who: string; condition: unknown; conditionPlain: string; sourceQuote: string; sourceFile: string }[]; facts: { fact: string; label: string; meaning: string; values: string[]; question: string; beside: string[] }[]; worked_out?: WorkedOutSpec[] };
 
 /** Each line on Documents as the author (Configuration › Documents); a type the library lacks waits as a proposal the
@@ -104,7 +104,7 @@ async function workOut(ctx: CheckpointContext, author: Actor, reviewer: Actor, a
     if (!(await db.canonicalField.count({ where: { workspaceId, canonicalFieldKey: w.on.fact, status: { in: ["DRAFT", "PUBLISHED"] } } }))) {
       const rule = (await ruleFacts.list(combinationId)).facts.find((x) => x.fact === w.fact)?.rules[0]?.key;
       if (!rule) { refused.push(`${w.fact}: no rule on this combination reads it, so it is not worked out`); return; }
-      const { proposalId, key } = await ruleFacts.addForRule(author, combinationId, rule, { label: w.on.label, meaning: w.on.meaning, valueType: "date", subject: w.on.fact.split(".")[0] });
+      const { proposalId, key } = await ruleFacts.addForRule(author, combinationId, rule, { label: w.on.label, meaning: w.on.meaning, valueType: "date", subject: w.on.fact.split(".")[0], ...(w.on.nearReason ? { nearReason: w.on.nearReason } : {}) });
       if (key !== w.on.fact) { refused.push(`${w.fact}: the date about the case would land as ${key}, not ${w.on.fact}, so it is not worked out`); return; }
       await decide(db, ctx.audit, reviewer, workspaceId, [proposalId], { action: "accept", reason: "Accepted by the sample loader: the date about the case a worked-out age is measured on (Sample; C6.4, B102)." });
       for (const ch of await db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "field", key: w.on.fact }, select: { id: true } }))
@@ -118,7 +118,7 @@ async function workOut(ctx: CheckpointContext, author: Actor, reviewer: Actor, a
       placedFacts.push(w.on.fact);
       await keepChosenEveryones(db, studio, author, combinationId, new Set([beside.sectionKey]), parts);
     }
-    await ctx.get(WorkedOut).add(author, combinationId, w.fact, { calculation: w.calculation, from: w.from, on: w.on.fact, plain: w.plain });
+    await ctx.get(WorkedOut).add(author, combinationId, w.fact, { calculation: w.calculation, from: w.from, on: w.on.fact });
   } catch (e) { refused.push(`${w.fact}: ${say(e)}`); }
 }
 

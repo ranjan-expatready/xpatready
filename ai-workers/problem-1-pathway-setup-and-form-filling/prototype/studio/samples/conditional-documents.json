@@ -181,9 +181,9 @@
           "beside": [
             "case.intended_stay_from",
             "case.intended_stay_to"
-          ]
+          ],
+          "nearReason": "The date this application is submitted to IRCC, not the date a Québec selection certificate (CSQ) was applied for."
         },
-        "plain": "The person's age in whole years on the application date.",
         "status": "Sample, Unconfirmed: expert; Unconfirmed: no counsel (which date the age counts on; a birthday on 29 February counts on 1 March in a year without one)",
         "sourceQuote": "Guide 5256, Applying for a visitor visa (temporary resident visa), canada.ca page (downloaded 2026-10-19; official page, may change), under \"Minors travelling alone\": \"Minors (under 18 years of age) travelling alone or with a person other than their parents or legal guardians should have a letter of authorization, preferably in English or French, signed by both parents or legal guardians.\" The page does not say on which date the age counts: the application date is Sample.",
         "sourceFile": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5256-applying-visitor-visa-temporary-resident-visa.html"

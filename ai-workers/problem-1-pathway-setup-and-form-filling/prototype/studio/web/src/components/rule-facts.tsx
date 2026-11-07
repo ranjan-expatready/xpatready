@@ -79,15 +79,15 @@ function WorkOut({ id, combinationId, fact }: { id: string; combinationId: strin
   const q = useQuery<WorkChoices>({ queryKey: ["rule-facts", combinationId, "worked-out"], queryFn: () => api(`/combinations/${combinationId}/rule-facts/worked-out`) });
   const subject = fact.split(".")[0];
   const from = (q.data?.from ?? []).filter((d) => d.subject === subject), on = q.data?.on ?? [];
-  const [calc, setCalc] = React.useState(""), [fromKey, setFrom] = React.useState(""), [onKey, setOn] = React.useState(""), [plain, setPlain] = React.useState(""), [touched, setTouched] = React.useState(false);
+  const [calc, setCalc] = React.useState(""), [fromKey, setFrom] = React.useState(""), [onKey, setOn] = React.useState("");
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
   // Defaults from what the library holds: the first calculation, a date of birth about the same subject, an application date.
   const c = calc || q.data?.calculations[0]?.key || "", fk = fromKey || from.find((d) => /birth/i.test(d.key))?.key || "", ok = onKey || on.find((d) => /application/i.test(d.key))?.key || "";
-  const onLabel = on.find((d) => d.key === ok)?.label;
-  const words = touched ? plain : c === "age_in_years" && onLabel ? `The person's age in whole years on the ${onLabel.toLowerCase()}.` : plain;
+  // The words are the server's, built from the choices (challenge M2); shown here as they will read.
+  const words = [q.data?.calculations.find((x) => x.key === c)?.words, from.find((d) => d.key === fk)?.label, on.find((d) => d.key === ok)?.label];
   const save = async () => {
     setBusy(true); setErr(null);
-    try { await api(`/combinations/${combinationId}/rule-facts/${encodeURIComponent(fact)}/worked-out`, { method: "POST", json: { calculation: c, from: fk, on: ok, plain: words } }); await qc.invalidateQueries({ queryKey: ["rule-facts", combinationId] }); }
+    try { await api(`/combinations/${combinationId}/rule-facts/${encodeURIComponent(fact)}/worked-out`, { method: "POST", json: { calculation: c, from: fk, on: ok } }); await qc.invalidateQueries({ queryKey: ["rule-facts", combinationId] }); }
     catch (e) { setErr((e as Error).message); requestAnimationFrame(() => document.getElementById(`${id}-err`)?.focus()); } finally { setBusy(false); }
   };
   if (q.isLoading) return <p id={id} className="text-xs text-text-muted">Loading the dates the library holds…</p>;
@@ -98,8 +98,8 @@ function WorkOut({ id, combinationId, fact }: { id: string; combinationId: strin
       <Field label="Worked out as"><Select value={c} onChange={(e) => setCalc(e.target.value)}>{(q.data?.calculations ?? []).map((x) => <option key={x.key} value={x.key}>{x.words}</option>)}</Select></Field>
       <Field label="From"><Select value={fk} onChange={(e) => setFrom(e.target.value)}><option value="">Choose a date…</option>{from.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}</Select></Field>
       <Field label="On">{on.length ? <Select value={ok} onChange={(e) => setOn(e.target.value)}><option value="">Choose a date about the case…</option>{on.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}</Select>
-        : <p className="text-xs text-text-warn" data-no-case-date>No date about the case in the library yet: add it first with "Add a fact a rule needs" below (for example "Application date", about the case, a date).</p>}</Field>
-      <Field label="In words"><Input value={words} maxLength={300} onChange={(e) => { setTouched(true); setPlain(e.target.value); }} /></Field>
+        : <p className="text-xs text-text-warn" data-no-case-date>No date about the case in the library yet: add it first with "Add a fact a rule needs" below (for example "Application date", about the case, a date), or decide the one waiting on To review › Proposals; then place it in this questionnaire.</p>}</Field>
+      <p className="text-sm sm:col-span-2" data-work-out-words>{words.every(Boolean) ? <>It will read: <span className="font-medium">{words[0]} from {words[1]}, on {words[2]}.</span></> : <span className="text-text-muted">Choose the two dates.</span>}</p>
       <div className="sm:col-span-2"><Button size="sm" busy={busy} disabled={!on.length} onClick={() => void save()}>Work it out · US$0</Button></div>
       {err ? <p id={`${id}-err`} tabIndex={-1} role="alert" className="text-sm text-text-danger sm:col-span-2">{err}</p> : null}
     </div>

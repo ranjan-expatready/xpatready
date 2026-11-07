@@ -2,9 +2,11 @@
 // the library lacks (C3.6's list) may be worked out from facts the library has, instead of being asked: a person's age
 // in whole years from their date of birth on the case's application date. The key is the one the rule reads (never
 // typed); the calculation is one the engine has a tested helper for (contracts/rules.ts CALCULATIONS); the dates are
-// library date fields, the first about the same subject, the second about the case. It is written as a derived value
-// with an audit line and reaches cases only in a release an Approver approves (the release check refuses a worked-out
-// value whose dates are not asked: engine/validate.ts). No model call, US$0. How age counts is Sample (BR-7, AGENTS rule 4).
+// library date fields asked in this combination's questionnaire, the first about the same subject, the second about the
+// case (challenge M1: the route refuses dates that are not asked, since the release check does not). Its words are built
+// by the server from the choices and name both dates, so the Approver's Review line says what the value really is
+// (challenge M2). It is written as a derived value with an audit line and reaches cases only in a release an Approver
+// approves. No model call, US$0. How age counts is Sample (BR-7, AGENTS rule 4).
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -24,7 +26,6 @@ export const WorkOut = z.object({
   calculation: z.string({ error: "Choose how it is worked out." }).trim().min(1, "Choose how it is worked out."),
   from: z.string({ error: "Choose the date it is worked out from." }).trim().min(1, "Choose the date it is worked out from."),
   on: z.string({ error: "Choose the date it is worked out on." }).trim().min(1, "Choose the date it is worked out on."),
-  plain: z.string({ error: "Say in words what the worked-out value is." }).trim().min(10, "Say in words what the worked-out value is (10 characters or more).").max(300, "Keep the words to 300 characters."),
 }).strict();
 
 type DateField = { key: string; label: string; subject: string };
@@ -59,7 +60,7 @@ export class WorkedOut {
   async add(actor: Actor, id: string, fact: string, body: unknown) {
     need(actor, "author"); // BR-6
     const extra = body && typeof body === "object" ? Object.keys(body).filter((k) => !(k in WorkOut.shape)) : [];
-    if (extra.length) fail(`Send only how it is worked out, the two dates and the words (not ${extra.join(", ")}): the key is the one the rule reads, never typed.`);
+    if (extra.length) fail(`Send only how it is worked out and the two dates (not ${extra.join(", ")}): the key is the one the rule reads, never typed, and the words are built from the choices.`);
     const parsed = WorkOut.safeParse(body ?? {});
     if (!parsed.success) fail(parsed.error.issues[0]?.message ?? "Choose how it is worked out, from which date and on which date.");
     const b = parsed.data!;
@@ -76,7 +77,8 @@ export class WorkedOut {
     const missing = missingRuleFacts(rulesOf(snapshot), new Set(fields.map((f) => f.canonicalFieldKey)), new Set(derived.map((d) => d.derivedKey))).find((m) => m.fact === fact);
     if (!missing) fail(`No condition, rule or check of this combination reads ${fact}: a value is worked out only for a rule that needs it.`, HttpStatus.NOT_FOUND);
     // BR-5: never both asked and worked out.
-    if (await this.db.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], equals: fact } }, select: { id: true } }))
+    // Challenge m2: a proposal made by name (C3.6's add by a rule's key) carries the key it would land as in keyPreview.
+    if (await this.db.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", OR: [{ work: { path: ["ruleFact"], equals: fact } }, { work: { path: ["keyPreview"], equals: fact } }] }, select: { id: true } }))
       fail(`A proposal to ask ${fact} is waiting on To review › Proposals: decide it there first (a fact is asked or worked out, not both).`, HttpStatus.CONFLICT);
     // BR-2: a calculation the engine works out.
     const calc = WORKED_OUT[b.calculation];
@@ -89,7 +91,11 @@ export class WorkedOut {
     // BR-4: on a date asked once per case.
     const on = dates.find((d) => d.key === b.on);
     if (!on || on.subject !== calc!.onGroup) fail(`${b.on} is not a date about the case in the library: add the date about the case first (Add a fact a rule needs, for example "Application date"), then work this out.`);
-    const words = b.plain;
+    // Challenge M1: both dates are asked in this combination's questionnaire, so a case can answer them.
+    const asked = new Set((snapshot.placements as { fact: string }[]).map((p) => p.fact));
+    for (const d of [from!, on!]) if (!asked.has(d.key)) fail(`${d.label} is in the library but not asked in this combination's questionnaire: place it first (Shared library › Fields › ${d.label}), so a case can answer it.`);
+    // Challenge M2: the words are built from the choices and name both dates.
+    const words = `${calc!.words} from ${from!.label}, on ${on!.label}.`;
     try {
       await this.db.derivedField.create({ data: { workspaceId: c.workspaceId, derivedKey: fact, calculation: b.calculation, inputs: [from!.key], reference: on!.key, plain: words, executable: true } });
     } catch (e) {
