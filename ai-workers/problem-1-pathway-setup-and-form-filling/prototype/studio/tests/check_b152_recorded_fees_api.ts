@@ -45,6 +45,10 @@ const ageBy = async (caseId: string, subject: string, dob: string, days: number,
   v = await view(c.id, officer);
   ok("B152 pass (fail-first): after the date moves, the recorded group still shows its recorded amounts (biometrics CAD 85, total CAD 285)", feesOf(v) === before && BIO(v) === 85_00 && v.groups[0].total_cents === 285_00, { now: feesOf(v), before });
   ok("B152 fail: the recorded group never gains the child's biometrics line as paid, although the child is 14 now", !v.fees.some((l) => l.subject === kid && /biometric/i.test(l.key) && !l.exempt), v.fees.filter((l) => l.subject === kid));
+  // Break M1 (review m2): GET …/filings reads the same recorded fees, so the two routes never price the case differently.
+  const fl = (await call("GET", `/runtime/cases/${c.id}/filings`, undefined, officer)).body as { groups: { id: string; total_cents: number | null; totals: Total[] }[]; fees: { person: string; line: string; exempt: boolean }[] };
+  ok("B152 pass (break M1): GET …/filings shows the recorded group's recorded total too (CAD 285, biometrics CAD 85)", fl?.groups?.[0]?.total_cents === 285_00 && fl.groups[0].totals.find((t) => /biometric/i.test(t.line))?.total_cents === 85_00, fl?.groups?.map((g) => g.total_cents));
+  ok("B152 fail (break M1): GET …/filings gives the child no paid biometrics line on the recorded group", !(fl?.fees ?? []).some((l) => l.person === kid && /biometric/i.test(l.line) && !l.exempt));
 
   // Control: an unrecorded case with the same move is priced again (only a recorded group is frozen).
   const u = await openCase(vv, [{ ...people[0], name: "Sample Client G" }, { ...people[1], name: "Sample Child G1" }], { representative: f.rep, caseOfficers: [officer] });
@@ -52,6 +56,38 @@ const ageBy = async (caseId: string, subject: string, dob: string, days: number,
   await ageBy(u.id, u.subjects["Sample Child G1"], people[1].dob, 3, officer);
   const after2 = await view(u.id, officer);
   ok("B152 fail (control): an unrecorded case is still worked out today: the same move adds the child's biometrics (CAD 85 → CAD 170, the family maximum)", before2 === 85_00 && BIO(after2) === 170_00 && !after2.groups[0].fees_recorded, [before2, BIO(after2)]);
+  ok("B152 fail (control, break M1): GET …/filings on the unrecorded case follows today too (CAD 170 biometrics)", ((await call("GET", `/runtime/cases/${u.id}/filings`, undefined, officer)).body?.groups?.[0]?.totals ?? []).find((t: Total) => /biometric/i.test(t.line))?.total_cents === 170_00);
+
+  // Break M2 (review M1): a fee still waiting for a date of birth is never frozen: the record waits until it is answered.
+  const w = await openCase(vv, [{ ...people[0], name: "Sample Client W" }, { role: "child", name: "Sample Child W1", dob: null }], { representative: f.rep, caseOfficers: [officer] });
+  const wKid = w.subjects["Sample Child W1"];
+  await readyToFile(w.id, f.rep);
+  let wv = await view(w.id, officer);
+  const body = (x: View, tag: string) => ({ version: x.version, ucis: [], filings: x.filings.map((y, i) => ({ filing: y.id, our_reference: `SAMPLE-${tag}-${i + 1}`, submitted_on: inDays(0), application_number: `V30015${tag === "W" ? 3 : 4}0${i + 1}`, fee_receipt: "SAMPLE-RECEIPT" })) });
+  const rw = await call("PATCH", `/runtime/groups/${wv.groups[0].id}/record`, body(wv, "W"), officer);
+  ok("B152 fail (break M2): recording while a fee waits for a date of birth is refused (409, the server's words name it); no snapshot, nothing submitted",
+    wv.fees.some((l) => (l as { waiting?: string }).waiting) && rw.status === 409 && /date of birth/i.test(JSON.stringify(rw.body)) && sql(`select count(*) from submission_group where case_id='${w.id}' and recorded_fees is not null`) === "0" && sql(`select count(*) from filing_record where case_id='${w.id}'`) === "0", [rw.status, rw.body?.detail]);
+  await answer(w.id, wKid, "person.date_of_birth", yearsAgo(15), officer);
+  await readyToFile(w.id, f.rep); // the new answer is a fact on the filing: its readiness is confirmed again
+  wv = await view(w.id, officer);
+  const rw2 = await call("PATCH", `/runtime/groups/${wv.groups[0].id}/record`, body(wv, "W"), officer);
+  ok("B152 pass (break M2): once the date of birth is answered (15), the record is taken and freezes CAD 370 (2 × 100 + 170)", rw2.status === 200 && sql(`select recorded_fees->>'total_cents' from submission_group where id='${wv.groups[0].id}'`) === "37000", [rw2.status, rw2.body?.detail]);
+
+  // Break M3 (review M2): a date of birth given at the moment of recording: the frozen fees and the filed facts agree.
+  const agree: unknown[] = [];
+  for (const delay of [0, 15, 40]) {
+    const x = await openCase(vv, [{ ...people[0], name: `Sample Client R${delay}` }, { role: "child", name: `Sample Child R${delay}`, dob: people[1].dob }], { representative: f.rep, caseOfficers: [officer] });
+    const xk = x.subjects[`Sample Child R${delay}`];
+    await readyToFile(x.id, f.rep);
+    const xv = await view(x.id, officer);
+    const [a, b] = await Promise.all([call("PATCH", `/runtime/groups/${xv.groups[0].id}/record`, { ...body(xv, "R"), filings: body(xv, "R").filings.map((y, i) => ({ ...y, application_number: `V3001${String(delay).padStart(2, "0")}${i}0${i + 1}` })) }, officer),
+      new Promise((r) => setTimeout(r, delay)).then(() => ageBy(x.id, xk, people[1].dob!, 3, officer))]);
+    const frozenExempt = sql(`select bool_and((l->>'exempt')::boolean) from submission_group g, jsonb_array_elements(g.recorded_fees->'fees') l where g.case_id='${x.id}' and l->>'subject'='${xk}' and l->>'key'='biometrics'`);
+    const filedDob = sql(`select string_agg(distinct (fact->>'value'), ',') from filing_record r, jsonb_array_elements(r.filed_facts) form, jsonb_array_elements(form->'facts') fact where r.case_id='${x.id}' and fact->>'fact'='person.date_of_birth' and form->>'subject'='${xk}'`);
+    agree.push({ delay, record: a.status, answer: b, frozenExempt, filedDob });
+    if (a.status === 200) ok(`B152 pass (break M3, delay ${delay} ms): the recorded fees and the filed date of birth agree (under 14 and the old date, or 14 and the new one)`, (frozenExempt === "t") === (filedDob === people[1].dob), agree.at(-1));
+    else ok(`B152 pass (break M3, delay ${delay} ms): a record that raced a new answer is refused as stale (409) and leaves nothing`, a.status === 409 && sql(`select count(*) from filing_record where case_id='${x.id}'`) === "0", agree.at(-1));
+  }
   ok("B152 fail: a client cannot read the recorded fees (403)", (await call("GET", `/runtime/cases/${c.id}/prepare`, undefined, "user-P")).status === 403);
   process.exitCode = summary() ? 1 : 0;
 })().catch((e) => { console.error(e); process.exitCode = 1; });
