@@ -777,7 +777,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const shownGroup = s.group && s.group.rows === 0 ? s.group.none_apply : null;
   // C7.7: firm-record answers are never sent as seen (they are not the case's to confirm).
   const seen = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
-  const open = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])), shownGroup].filter((a) => a && a.status !== "VERIFIED").length;
+  // Review m2 on #1246: an answer waiting for the client is not the officer's to confirm, so it never makes this the main action.
+  const open = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   async function confirm() {

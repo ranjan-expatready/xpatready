@@ -11,7 +11,7 @@ import { ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, N
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
-import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
+import { actorOf, Audit, CaseRead, Db, fail, need, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
@@ -429,7 +429,7 @@ export class Runtime {
       if (n.count !== 1) conflict("This answer changed at the same moment; nothing was re-confirmed. Check the newer answer shown, then re-confirm that one.");
       await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: row!.workspaceId, partyId: row!.partyId, subjectId: row!.subjectId, canonicalFieldId: row!.canonicalFieldId, canonicalFieldKey: row!.canonicalFieldKey, rowKey: row!.rowKey, valueJson: row!.valueJson as object, status: "DECLARED", sourceJson: { channel: CLIENT_RECONFIRM, actor: actor.id, at, from: officerAnswer, recorded: a!.officerRecorded ?? null } } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "re-confirmed", "case fact", row!.canonicalFieldKey, `${actor.name} re-confirmed ${row!.canonicalFieldKey} on case ${short(caseId)}: a background answer the case officer ${a!.origin?.actor ?? a!.actor} recorded (Officer)`);
+    await this.audit.log(c.workspaceId, actor.id, "re-confirmed", "case fact", row!.canonicalFieldKey, `${actor.name} re-confirmed ${row!.canonicalFieldKey} on case ${short(caseId)}: a background answer ${RUNTIME_ACTORS.find((x) => x.id === a!.officerRecorded?.by)?.name ?? "a member of staff"} recorded (Officer)`);
     const after = await this.view(actor, caseId, "sqr");
     const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === row!.subjectId && x.fact === row!.canonicalFieldKey);
     return { answer: (row!.rowKey ? q?.rows.find((x) => x.row === row!.rowKey)?.answer : q?.answer) ?? null, message: "Re-confirmed: it is your own answer now." };

@@ -185,14 +185,14 @@ export function passKeys(r: FilingReadiness, code: WarnCode, key?: string): stri
   return r.warns.filter((w) => w.code === code && (!key || w.key === key)).map((w) => w.key);
 }
 
-/** Why a pass's reason is refused (null: accepted). A written reason of at least 5 characters (as the case team's). */
-/** C6.18 (P-244): a missing fact's words on Ready to file; a background answer staff recorded is named as the client's
- *  to re-confirm. */
 /** Break m1 on #1246: the answers waiting for the client's re-confirmation first, so a long list's "and N more" never
  *  hides them (stable otherwise). */
 export const missingFirst = <T extends { reason: string }>(ms: T[]): T[] => [...ms.filter((m) => m.reason === "waits for the client to re-confirm"), ...ms.filter((m) => m.reason !== "waits for the client to re-confirm")];
+/** C6.18 (P-244): a missing fact's words on Ready to file; a background answer staff recorded is named as the client's
+ *  to re-confirm. */
 export const missingLabel = (m: { label: string; reason: string }) => m.reason === "waits for the client to re-confirm" ? `${m.label}: recorded by staff, the client re-confirms it` : m.label;
 
+/** Why a pass's reason is refused (null: accepted). A written reason of at least 5 characters (as the case team's). */
 export function passProblem(reason: unknown): string | null {
   // The same rule as the contract's reason (contracts/runtime.ts `reason`: 5–300 characters, a letter or digit, no
   // control or invisible characters; review r4 m2).
