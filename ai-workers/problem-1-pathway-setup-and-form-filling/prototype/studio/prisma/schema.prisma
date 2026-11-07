@@ -1279,6 +1279,7 @@ model Case {
   findings    ReviewFinding[] // C7.5
   filingRecords FilingRecord[] // C8.2
   tasks         CaseTask[]     // C8.2
+  feeReceipts   FeeReceiptFile[] // C8.2 B149
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -2155,9 +2156,34 @@ model FilingRecord {
   case   Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filing Filing          @relation(fields: [filingId], references: [id], onDelete: Cascade)
   group  SubmissionGroup @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
+  feeReceipts FeeReceiptFile[] // B149
 
   @@index([caseId])
   @@map("filing_record")
+}
+
+/// C8.2 B149 (P-408; board agent-view frame 7): the fee receipt's evidence, IRCC's "Transaction Approved" page, uploaded
+/// on a recorded filing (the FK to filing_record.filing_id: never before it is recorded). Append-only (a trigger refuses
+/// any UPDATE): a wrong file is followed by a new upload, the newest is the receipt, earlier ones stay in the history. The
+/// file is in the working files (var/), named by the row id, checked by its sha256, as C8.1's signed_scan.
+model FeeReceiptFile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  fileName    String   @map("file_name")
+  mediaType   String   @map("media_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String   @db.VarChar(64)
+  path        String
+  uploadedBy  String   @map("uploaded_by")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  case   Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  record FilingRecord @relation(fields: [filingId], references: [filingId], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("fee_receipt_file")
 }
 
 /// C8.2: the UCI IRCC gave one person on a recorded filing; only `uci` changes, through a correction (trigger).

@@ -4,6 +4,8 @@
 // receipt; a UCI per person. Once recorded the group is read-only: the record reads Prepared by · Reviewed by, a wrong
 // number is fixed with "Correct a number" (kept with its reason), and a fact changed after filing opens a task to
 // re-sign or tell IRCC (Unconfirmed: no counsel). The C7.7 Prepare application tab will host this panel when it lands.
+// B149 (P-408; board agent-view frame 7): the fee receipt's evidence is IRCC's "Transaction Approved" page, uploaded in
+// the record or later on the recorded filing (each upload kept; the newest is the receipt); the typed number is optional.
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, useApi, useToast } from "@/lib/api";
@@ -30,11 +32,11 @@ const PORTAL: Record<string, string> = { APR_PORTAL: "APR Portal" };
 type Problem = Record<string, string>;
 /** A save from a dialog: its refusals show on the dialog's own fields, never also as a toast over its buttons (break m on
  *  #924); a 409 re-reads the case, so the next try carries the version now (it failed again until a reload). */
-function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R) => string; onDone: () => void; onProblem: (p: Problem) => void }) {
+function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R) => string; tone?: (r: R) => "ok" | "warn"; onDone: () => void; onProblem: (p: Problem) => void }) {
   const qc = useQueryClient(), toast = useToast();
   return useMutation<R, Error>({
     mutationFn: fn,
-    onSuccess: (r) => { void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); toast.push({ tone: "ok", text: opts.success(r) }); opts.onDone(); },
+    onSuccess: (r) => { void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); toast.push({ tone: opts.tone?.(r) ?? "ok", text: opts.success(r) }); opts.onDone(); },
     onError: (e) => {
       if (e instanceof ApiError && e.status === 409) void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
       const list = e instanceof ApiError ? e.problem.errors ?? [] : [];
@@ -44,6 +46,12 @@ function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R
 }
 /** After a refusal, focus moves to the first field in error (break m on #924). */
 const focusFirstError = (root: HTMLElement | null) => requestAnimationFrame(() => (root?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? root?.querySelector<HTMLElement>('[role="alert"]'))?.focus());
+
+/** B149: one fee receipt file (IRCC's "Transaction Approved" page) sent to a recorded filing. */
+const sendReceipt = (filing: string, file: File) => { const fd = new FormData(); fd.append("file", file, file.name); return api(`/runtime/filings/${filing}/record/fee-receipt`, { method: "POST", body: fd }); };
+const RECEIPT_ACCEPT = "application/pdf,image/jpeg,image/png";
+const size = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const KIND: Record<string, string> = { "application/pdf": "PDF", "image/jpeg": "JPEG", "image/png": "PNG" };
 
 /** The case's submission groups and what was filed. Under the case view's query key, so an answer change re-reads it. */
 export function SubmissionPanel({ caseId }: { caseId: string }) {
@@ -108,7 +116,7 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
           <dd className="flex flex-wrap items-center gap-2"><span className="font-mono" data-number>{r.application_number}</span><Button size="sm" variant="ghost" onClick={(e) => onCorrect(e.currentTarget)}>Correct a number…</Button></dd>
           <dt className="text-text-muted">Submitted on</dt><dd>{day(r.submitted_on)}{r.portal ? ` · through ${PORTAL[r.portal] ?? r.portal}` : ""}</dd>
           <dt className="text-text-muted">Our reference</dt><dd className="[overflow-wrap:anywhere]">{r.our_reference}</dd>
-          <dt className="text-text-muted">Fee receipt</dt><dd className="[overflow-wrap:anywhere]">{r.fee_receipt ?? "None given"}</dd>
+          <dt className="text-text-muted">Fee receipt</dt><dd><FeeReceipt f={f} r={r} /></dd>
           <dt className="text-text-muted">UCI</dt>
           <dd><ul className="space-y-0.5" data-ucis>{r.ucis.map((u) => <li key={u.subject} className="flex flex-wrap items-center gap-2 [overflow-wrap:anywhere]" data-uci={u.subject}>
             <span>{u.person}: {u.uci ? <span className="font-mono">{u.uci}</span> : <span className="text-text-muted">none given</span>}</span>
@@ -124,20 +132,53 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
   );
 }
 
+/** B149: the fee receipt on a recorded filing: the "Transaction Approved" page uploaded (the newest; earlier uploads
+ *  are counted, never removed) and the typed number, both optional; "Upload the page" adds one. */
+function FeeReceipt({ f, r }: { f: Filing; r: FilingRecordView }) {
+  const qc = useQueryClient(), toast = useToast();
+  const input = React.useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
+  const files = r.fee_receipt_files ?? [], last = files[files.length - 1], id = `receipt-${f.id}`;
+  async function send(file: File) {
+    setBusy(true); setError(null);
+    try { await sendReceipt(f.id, file); toast.push({ tone: "ok", text: `${whoOf(f)}’s fee receipt stored: the Transaction Approved page is kept with the record.` }); void qc.invalidateQueries({ queryKey: ["runtime", "view"] }); }
+    catch (e) { setError((e as Error).message); requestAnimationFrame(() => document.getElementById(`${id}-error`)?.focus()); }
+    finally { setBusy(false); if (input.current) input.current.value = ""; }
+  }
+  return (
+    <div className="space-y-1" data-fee-receipt>
+      {last ? <p className="[overflow-wrap:anywhere]" data-receipt-file={last.id}>Transaction Approved page: {last.file_name} <span className="text-text-muted">({KIND[last.media_type] ?? last.media_type}, {size(last.size_bytes)}; uploaded by {last.uploaded_by}, {when(last.uploaded_at)}{files.length > 1 ? `; ${files.length - 1} earlier upload${files.length === 2 ? "" : "s"} kept` : ""})</span></p>
+        : <p className="text-text-muted" data-receipt-none>No Transaction Approved page uploaded</p>}
+      <p className="[overflow-wrap:anywhere]">{r.fee_receipt ? <>Receipt number: <span className="font-mono">{r.fee_receipt}</span></> : <span className="text-text-muted">No receipt number typed</span>}</p>
+      <input ref={input} id={id} type="file" accept={RECEIPT_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => { const x = e.target.files?.[0]; if (x) void send(x); }} />
+      <Button size="sm" variant="ghost" busy={busy} aria-label={`${last ? "Upload a new" : "Upload the"} Transaction Approved page for ${whoOf(f)}’s filing`} onClick={() => input.current?.click()}>{last ? "Upload a new page…" : "Upload the Transaction Approved page…"}</Button>
+      {error ? <p id={`${id}-error`} role="alert" tabIndex={-1} className="text-text-danger">Not stored: {error}</p> : null}
+    </div>
+  );
+}
+
 type Line = { our_reference: string; submitted_on: string; application_number: string; fee_receipt: string };
 function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string; view: PrepareView; group: Group; close: () => void; recorded: () => void }) {
   const fs = group.filings.map((id) => view.filings.find((f) => f.id === id)).filter((f): f is Filing => !!f);
   const people = fs.flatMap((f) => f.applicants.filter((a) => a.mode === "applying"));
   const [lines, setLines] = React.useState<Record<string, Line>>(() => Object.fromEntries(fs.map((f, i) => [f.id, { our_reference: fs.length > 1 ? `${view.reference}-${i + 1}` : view.reference, submitted_on: todayHere(), application_number: "", fee_receipt: "" }])));
   const [ucis, setUcis] = React.useState<Record<string, string>>({});
+  // B149: IRCC's "Transaction Approved" page per filing (optional), sent once the record is saved.
+  const [receipts, setReceipts] = React.useState<Record<string, File | null>>({});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const set = (id: string, k: keyof Line, value: string) => { setLines({ ...lines, [id]: { ...lines[id], [k]: value } }); setErrors({}); };
   const sent = people.filter((p) => (ucis[p.subject] ?? "").trim());
   const formRef = React.useRef<HTMLFormElement>(null);
-  const act = useSave(caseId, () => api<{ warning: string | null }>(`/runtime/groups/${group.id}/record`, { method: "PATCH", json: {
-    filings: fs.map((f) => ({ filing: f.id, ...lines[f.id], fee_receipt: lines[f.id].fee_receipt.trim() || null })),
-    ucis: sent.map((p) => ({ subject: p.subject, uci: ucis[p.subject].trim() })), version: view.version } }),
-    { success: (r) => `Submission recorded: these filings are now read-only.${r.warning ? ` ${r.warning}` : ""}`, onDone: recorded,
+  const act = useSave(caseId, async () => {
+    const r = await api<{ warning: string | null }>(`/runtime/groups/${group.id}/record`, { method: "PATCH", json: {
+      filings: fs.map((f) => ({ filing: f.id, ...lines[f.id], fee_receipt: lines[f.id].fee_receipt.trim() || null })),
+      ucis: sent.map((p) => ({ subject: p.subject, uci: ucis[p.subject].trim() })), version: view.version } });
+    // The record is saved and cannot be undone; a receipt refused now is named in the message and uploaded on the filing.
+    const missed: string[] = [];
+    for (const f of fs) { const x = receipts[f.id]; if (x) await sendReceipt(f.id, x).catch((e: Error) => { missed.push(`${whoOf(f)}’s fee receipt was not stored (${e.message}); upload it on the filing`); }); }
+    return { ...r, missed };
+  },
+    { success: (r) => `Submission recorded: these filings are now read-only.${r.warning ? ` ${r.warning}` : ""}${r.missed.length ? ` ${r.missed.join(". ")}.` : ""}`, tone: (r) => (r.missed.length || r.warning ? "warn" : "ok"), onDone: recorded,
       // filings.<i>.<field> → the filing's own field; ucis.<i>.* → that person's UCI.
       onProblem: (p) => { setErrors(Object.fromEntries(Object.entries(p).map(([k, v]) => { const m = /^(filings|ucis)\.(\d+)\.(\w+)$/.exec(k); if (!m) return [k, v];
         return m[1] === "filings" ? [`${fs[Number(m[2])]?.id}.${m[3]}`, v] : [`uci.${sent[Number(m[2])]?.subject}`, v]; }))); focusFirstError(formRef.current); } });
@@ -158,7 +199,10 @@ function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string
               <Field label="Submitted on" hint="Not after today" error={err(f.id, "submitted_on")}><Input type="date" value={lines[f.id].submitted_on} max={todayHere()} onChange={(e) => set(f.id, "submitted_on", e.target.value)} /></Field>
               <Field label="Our reference" error={err(f.id, "our_reference")}><Input value={lines[f.id].our_reference} maxLength={100} onChange={(e) => set(f.id, "our_reference", e.target.value)} /></Field>
             </div>
-            <Field label="Fee receipt (optional)" hint="The receipt number of the fees paid" error={err(f.id, "fee_receipt")}><Input value={lines[f.id].fee_receipt} maxLength={100} onChange={(e) => set(f.id, "fee_receipt", e.target.value)} /></Field>
+            <Field label="IRCC’s “Transaction Approved” page (optional)" hint="The fee receipt: the page IRCC shows once the fees are paid, as a PDF, JPEG or PNG up to 20 MB">
+              <Input type="file" accept={RECEIPT_ACCEPT} data-receipt-input onChange={(e) => setReceipts({ ...receipts, [f.id]: e.target.files?.[0] ?? null })} />
+            </Field>
+            <Field label="Fee receipt number (optional)" hint="The receipt number on that page, if you want it searchable" error={err(f.id, "fee_receipt")}><Input value={lines[f.id].fee_receipt} maxLength={100} onChange={(e) => set(f.id, "fee_receipt", e.target.value)} /></Field>
           </fieldset>
         ))}
         <fieldset className="space-y-3 rounded-lg border border-border p-3">

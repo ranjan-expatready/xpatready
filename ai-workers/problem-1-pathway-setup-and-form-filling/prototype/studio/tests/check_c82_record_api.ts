@@ -6,7 +6,8 @@
 //   zsh studio/tools/isolated.sh rt_c82 4431 start && tsx studio/tests/check_c82_record_api.ts 4431 xr_studio_rt_c82
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { CLIENT, DB, PORT, answer, call, fillEverything, firms, inDays, itemsOf, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
+import { createHash } from "node:crypto";
+import { AUTHOR, CLIENT, DB, PORT, answer, call, sendFile, fillEverything, firms, inDays, itemsOf, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -19,7 +20,7 @@ ok("setup: the copy has Visitor visa release 2 (the pack's setup)", releases() >
 const vv = needVisitorVisa();
 const f = await firms();
 const officer = f.officer!, rep = f.rep!;
-type Rec = { portal: string | null; our_reference: string; submitted_on: string; application_number: string; fee_receipt: string | null; prepared_by: { id: string; name: string }; reviewed_by: { id: string; name: string } | null; ucis: { subject: string; uci: string }[]; corrections: { before: string; after: string; reason: string; by: string }[] };
+type Rec = { portal: string | null; our_reference: string; submitted_on: string; application_number: string; fee_receipt: string | null; fee_receipt_files?: { id: string; file_name: string; media_type: string; size_bytes: number; uploaded_by: string; uploaded_at: string }[]; prepared_by: { id: string; name: string }; reviewed_by: { id: string; name: string } | null; ucis: { subject: string; uci: string }[]; corrections: { before: string; after: string; reason: string; by: string }[] };
 type Filing = Prepare["filings"][number] & { record?: Rec; read_only?: boolean };
 const filingsOf = (p: Prepare | null) => (p?.filings ?? []) as Filing[];
 /** Every filing of the case to Ready to file: C7.6's own way (readyToFile: review, warnings passed, Mark ready) once its
@@ -84,6 +85,12 @@ r = await record(body({ version: "stale-version" }));
 ok("fail: a stale version is refused (409, Reload)", r.status === 409 && /reload/i.test(JSON.stringify(r.body)), r.body);
 ok("data: none of the refusals recorded anything", sql(`select count(*) from filing_record where case_id='${c.id}'`) === "0" && sql(`select count(*) from filing_person_record where filing_id in ('${fP}','${fS}')`) === "0");
 
+// B149 (P-408): the fee receipt's evidence goes on a recorded filing only.
+const receipt = (label: string) => Buffer.from(`%PDF-1.4\n% SYNTHETIC SPECIMEN: IRCC Transaction Approved page, ${label} (Sample)\n%%EOF\n`, "latin1");
+const upload = (filing: string, file: Buffer, name = "transaction-approved.pdf", actor = officer) => sendFile(`/runtime/filings/${filing}/record/fee-receipt`, file, name, actor);
+let u = await upload(fP, receipt("early"));
+ok("B149 fail: a fee receipt before the submission is recorded is refused (409, says to record first), nothing stored", u.status === 409 && /Record the submission first/.test(JSON.stringify(u.body)) && sql(`select count(*) from fee_receipt_file where case_id='${c.id}'`) === "0", u);
+
 // The record.
 r = await record(body());
 p = (await prepare(c.id, officer)).p;
@@ -97,6 +104,38 @@ ok("C8.2-7 pass (view): the Prepare view reads Prepared by · Reviewed by with n
 ok("data: the filing's own application number follows the record (slice 1's filing record reads it)", sql(`select application_number from filing where id='${fS}'`) === "V300000102");
 ok("data: the audit line names no application number or UCI", sql(`select count(*) from audit_event where entity='submission group' and entity_key='${g?.id}' and summary not like '%V3000001%' and summary not like '%1111-1111%'`) === "1");
 r = await record(body({ version: p?.version }));
+// B149 (P-408; board agent-view frame 7): IRCC's "Transaction Approved" page is the fee receipt's evidence; the typed
+// number stays optional (the spouse's line above has none).
+u = await upload(fP, receipt("client C"), "Transaction Approved.pdf");
+p = (await prepare(c.id, officer)).p;
+let files = filingsOf(p).find((x) => x.id === fP)?.record?.fee_receipt_files ?? [];
+const sha = createHash("sha256").update(receipt("client C")).digest("hex");
+ok("B149 pass: the officer uploads the Transaction Approved page on a recorded filing (200); the record lists it with who and when",
+  u.status === 200 && files.length === 1 && files[0].file_name === "Transaction Approved.pdf" && files[0].media_type === "application/pdf" && !!files[0].uploaded_by && !!files[0].uploaded_at, { u, files });
+ok("B149 data: stored once, with the file's sha256, on that filing only", sql(`select sha256 || '|' || filing_id || '|' || uploaded_by from fee_receipt_file where case_id='${c.id}'`) === `${sha}|${fP}|${officer}`);
+ok("B149 pass: the typed receipt number stays optional: the spouse's filing has none typed and none uploaded", filingsOf(p).find((x) => x.id === fS)?.record?.fee_receipt === null && (filingsOf(p).find((x) => x.id === fS)?.record?.fee_receipt_files ?? []).length === 0);
+u = await upload(fP, receipt("client C, again"), "approved-2.pdf");
+p = (await prepare(c.id, officer)).p;
+files = filingsOf(p).find((x) => x.id === fP)?.record?.fee_receipt_files ?? [];
+ok("B149 pass: a new upload keeps the earlier one (append-only); the newest is listed last", u.status === 200 && files.map((x) => x.file_name).join() === "Transaction Approved.pdf,approved-2.pdf");
+// m3.ts sql answers null when the database refuses the statement.
+const dbRefused = sql(`update fee_receipt_file set file_name='x' where case_id='${c.id}'`) === null;
+ok("B149 fail (data): a stored receipt is never changed in place (the database refuses an UPDATE)", dbRefused && sql(`select count(*) from fee_receipt_file where case_id='${c.id}' and file_name='x'`) === "0");
+const before = sql(`select count(*) from fee_receipt_file where case_id='${c.id}'`);
+u = await upload(fP, receipt("client"), "x.pdf", CLIENT);
+ok("B149 fail (permissions): the case's client cannot upload a fee receipt (403)", u.status === 403, u.status);
+u = await upload(fP, receipt("author"), "x.pdf", AUTHOR);
+ok("B149 fail (permissions): a configuration person is refused before the file is read (403)", u.status === 403, u.status);
+u = await upload(fP, receipt("other firm"), "x.pdf", "user-S");
+ok("B149 fail (permissions): another firm's staff cannot reach this case's filing (404)", u.status === 404, u.status);
+u = await upload(fP, Buffer.from("MZ\x90\x00 not a receipt", "latin1"), "receipt.pdf");
+ok("B149 fail: a file that is not a PDF, JPEG or PNG by its bytes is refused (422), whatever its name", u.status === 422 && /PDF, JPEG or PNG/.test(JSON.stringify(u.body)), u);
+u = await upload(fP, Buffer.alloc(0), "empty.pdf");
+ok("B149 fail: an empty file is refused (400)", u.status === 400 && /empty/i.test(JSON.stringify(u.body)), u);
+u = await upload("00000000-0000-0000-0000-000000000000", receipt("none"), "x.pdf");
+ok("B149 fail: a filing that does not exist is 404", u.status === 404, u.status);
+ok("B149 data: none of the refusals stored a row", sql(`select count(*) from fee_receipt_file where case_id='${c.id}'`) === before);
+ok("B149 data: the audit line names no receipt number or file name", sql(`select count(*) from audit_event where entity='fee receipt' and summary like '%${c.id.slice(0, 8)}%' and summary not like '%approved-2%' and summary not like '%SAMPLE-RECEIPT%'`) === "2");
 ok("C8.2-8 fail (BR-15): a second recording is refused (409)", r.status === 409 && /already recorded/i.test(JSON.stringify(r.body)) && /problems\/conflict/.test(JSON.stringify(r.body)), r.body);
 // Review M1, break B1 and M1: the case's people are not changed once recorded.
 r = await call("POST", `/runtime/cases/${c.id}/people`, { role: "child", displayName: "Sample Child C1" }, officer);
@@ -176,7 +215,7 @@ ok("pass (break M4): the value changed back to the one filed: no form is marked 
 // (C8.1's "sign step" and "signed scan" lines reach other firms on main already: reported to the tech lead on #924.)
 type Line = { entity: string; summary: string; detail: unknown };
 const feedOf = async (who: string) => ((await call("GET", "/activity", undefined, who)).body ?? []) as Line[];
-const mine = (l: Line) => l.summary.includes(c.id.slice(0, 8)) && ["submission group", "application number", "person"].includes(l.entity) && /UCI|submission|application number/i.test(l.summary);
+const mine = (l: Line) => l.summary.includes(c.id.slice(0, 8)) && ["submission group", "application number", "person", "fee receipt"].includes(l.entity) && /UCI|submission|application number|fee receipt/i.test(l.summary);
 const [feedS, feedA] = [await feedOf("user-S"), await feedOf("user-A")];
 ok("fail (break R2-B1): another firm's feed has none of this case's record, number or UCI lines, and no feed carries a UCI or a number",
   !feedS.some(mine) && feedA.some((l) => mine(l) && /UCI/.test(l.summary)) && ![feedS, feedA].some((f) => /2222-3333|2222-2222|1111-1111|V30000010/.test(JSON.stringify(f))), { other: feedS.filter(mine).map((l) => l.summary) });

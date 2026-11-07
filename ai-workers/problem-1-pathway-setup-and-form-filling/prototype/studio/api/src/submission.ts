@@ -5,11 +5,18 @@
 //     longer ready is never recorded) and a second time (BR-15). Recording makes the filings read-only (C8.2-9).
 //   POST /api/runtime/filings/:id/record/corrections   "Correct a number": the old number stays in the history with the
 //     reason, who and when.
+//   POST /api/runtime/filings/:id/record/fee-receipt   (B149, P-408; board agent-view frame 7) the fee receipt's evidence:
+//     IRCC's "Transaction Approved" page as one PDF, JPEG or PNG (judged by its bytes), on a recorded filing only, by
+//     staff of the case's firm. Stored with its sha256 and never changed (fee_receipt_file, append-only): a wrong file
+//     is followed by a new upload, and the earlier one stays in the history. The typed receipt number stays optional.
 // Prepared by is the case officer who records; Reviewed by is the representative of record (P-155). The number's pattern
 // is Sample data (samples/filing-numbers.json, as slice 1). Government identifiers never go in an audit summary. US$0.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { AnyFilesInterceptor } from "@nestjs/platform-express";
+import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf } from "../../contracts/documents.ts";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { CorrectNumber, RecordSubmission } from "../../contracts/submission-record.ts";
@@ -18,12 +25,15 @@ import { recordedPeople, coverageProblem, duplicateInGroup, submittedOnProblem }
 import { checkValue } from "../../engine/runtime/case.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
 import { currentValues } from "../../engine/runtime/submission-record.ts";
-import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
+import { actorOf, Audit, CaseRead, Db, fail, STUDIO, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
+import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare, storedVersion } from "./case-prepare.ts";
 import type { FiledForm } from "./submission-record.ts";
 
 type H = string | undefined;
+type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
+const RECEIPTS = () => VAR(WORKSPACE_KEY);
 type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 /** The case's people as one key: who, in which role, travelling or not (break R2-M1). */
 const peopleKey = (ps: { subjectId: string; role: string; applies: boolean }[]) => ps.map((p) => `${p.subjectId}:${p.role}:${p.applies}`).sort().join("|");
@@ -172,6 +182,32 @@ export class Submission {
 
   /** Break M3 on #924: a person's UCI on a recorded filing, added later or corrected, kept with the reason (the old one
    *  in the history). The person must be applying on this filing; the UCI is in the release's shape for a UCI. */
+  /** B149: POST /runtime/filings/:id/record/fee-receipt. The fee receipt's evidence (IRCC's "Transaction Approved" page)
+   *  on a recorded filing. The bytes decide the kind, never the name; nothing is stored on any refusal. */
+  async feeReceipt(actor: Actor, filingId: string, files: Upload[] | undefined) {
+    const f = UUID.test(filingId) ? await this.db.filing.findUnique({ where: { id: filingId }, include: { record: true } }) : null;
+    if (!f) fail("No such filing.", HttpStatus.NOT_FOUND);
+    const c = await this.r.reach(actor, f!.caseId, "officer"); // a client: 403; another firm's case: 404
+    if (!f!.record) refuse("filing", "Record the submission first: the fee receipt is kept on the filing's record. Nothing was stored.", HttpStatus.CONFLICT);
+    const x = (files ?? []).filter((u) => u.buffer);
+    if (x.length !== 1 || x[0].fieldname !== "file") refuse("file", 'Send one file, in the field "file". Nothing was stored.');
+    const bytes = x[0].buffer!;
+    if (!bytes.length) refuse("file", "The file is empty. Nothing was stored.");
+    if (bytes.length > MAX_DOCUMENT_BYTES) refuse("file", `The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`, HttpStatus.PAYLOAD_TOO_LARGE);
+    const media = mediaOf(bytes);
+    if (!media) refuse("file", "Send IRCC's \"Transaction Approved\" page as a PDF, JPEG or PNG (judged by the file itself, not its name). Nothing was stored.", HttpStatus.UNPROCESSABLE_ENTITY);
+    const id = randomUUID(), sha256 = createHash("sha256").update(bytes).digest("hex");
+    const rel = join("cases", c.id, "fee-receipts", `${id}.${MEDIA[media!]}`), abs = join(RECEIPTS(), rel);
+    try {
+      mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, bytes);
+      await this.db.feeReceiptFile.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, filingId: f!.id, fileName: cleanName(utf8Name(x[0].originalname)), mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id } });
+    } catch (e) { rmSync(abs, { force: true }); throw e; } // a refused upload leaves no file behind
+    // No receipt number or file name in the summary (AG-7-95 safety, as the record's own line).
+    await this.audit.log(c.workspaceId, actor.id, "uploaded", "fee receipt", id, `${actor.name} uploaded the fee receipt (IRCC's Transaction Approved page) of a recorded filing on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`, { filing: f!.id });
+    const after = await this.prepare.view(actor, c.id);
+    return { filing: after.filings.find((y) => y.id === f!.id), version: after.version };
+  }
+
   private async correctUci(actor: Actor, c: Reached, f: { id: string }, u: { subject: string; uci: string }, reason: string) {
     const on = await this.db.filingApplicant.findFirst({ where: { filingId: f.id, subjectId: UUID.test(u.subject) ? u.subject : "00000000-0000-0000-0000-000000000000", mode: "applying" } });
     if (!on) refuse("uci.subject", "This person is not applying on this filing.");
@@ -202,5 +238,8 @@ export class Submission {
 export class SubmissionController {
   constructor(@Inject(Submission) private readonly x: Submission) {}
   @Patch("groups/:gid/record") record(@Headers("x-actor") a: H, @Param("gid") gid: string, @Body() b: unknown) { return this.x.record(actorOf(a), gid, b); }
+  // One byte over 20 MB so a file of exactly 20 MB is taken (as C6.4, C8.1); the route's own check refuses more.
+  @Post("filings/:id/record/fee-receipt") @HttpCode(HttpStatus.OK) @UseGuards(CaseActorGuard) @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_DOCUMENT_BYTES + 1, files: 1 } }))
+  feeReceipt(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.x.feeReceipt(actorOf(a), id, files); }
   @Post("filings/:id/record/corrections") @HttpCode(HttpStatus.OK) correct(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.correct(actorOf(a), id, b); }
 }
