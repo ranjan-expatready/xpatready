@@ -9,7 +9,8 @@
 //     visa holds", on the M3 plan's branch, PR #1167), with what rows A1 (#1084) and A2 (#1072) set on them since (7 Nov):
 //     who signs (samples/checkpoint-stage-one.json, "signers": IMM 5257 a parent for a minor, IMM 5476 the person and the
 //     representative) and who files IMM 5476 (api/src/form-setup.ts VV_FORM_RULES: the principal, a partner, a child from
-//     18); the four answer-only lines' facts from the same VV_FORM_RULES.
+//     18); the four answer-only lines' facts from the same VV_FORM_RULES; and what row A3 (#1198) sets inside release 2's
+//     draft ("release_two" in the same file): IMM 5645 signed by the person, IMM 5645 and Schedule 1 a typed name.
 // Part 1 feeds both configurations to the helper without a server. Part 2 reads each live, on this copy: the fixture
 // first, then Demo › Reset and Load the configured checkpoint, each through a case opened by the helper; on the
 // checkpoint it also fills the case the packs' way and checks the helper's UCI fix (a UCI the release's own checks
@@ -48,12 +49,13 @@ const FIXTURE_LINES: Snap[] = [
  *  "IMM 5645 who=each_applicant ch=PDF_UPLOAD minAge=18", and IMM 5409, IMM 5475, IMM 5476 (sig=HAND_SCANNED), IRM 0002
  *  attach=ANSWER_CONDITIONAL. Since 7 Nov (A1, A2 merged): IMM 5257 signed "parent_for_minor" and IMM 5476
  *  "person_and_representative" (checkpoint-stage-one.json, VV-R09, VV-R10); IMM 5476 filed by the principal, a partner and
- *  a child from 18 (VV_FORM_RULES, VV-R10). SCH1, IMM 5645, IMM 5409, IMM 5475, IRM 0002 keep no signer
- *  ("signers_not_set" there). The conditions are VV_FORM_RULES'. */
+ *  a child from 18 (VV_FORM_RULES, VV-R10). Row A3 (#1198; checkpoint-stage-one.json "release_two"): IMM 5645 signed by
+ *  "person", and IMM 5645 and SCH1 signed with a typed name (Sample, FQ-2). SCH1, IMM 5409, IMM 5475, IRM 0002 keep no
+ *  signer ("signers_not_set" there). The conditions are VV_FORM_RULES'. */
 const RELEASE2_LINES: Snap[] = [
   { form_number: "IMM 5257", who: "each_applicant", status: "always", channel: "ONLINE", signed_by: "parent_for_minor" },
-  { form_number: "IMM 5257 SCH1", who: "principal_partner_adult_children", status: "always", min_age: 18 },
-  { form_number: "IMM 5645", who: "each_applicant", status: "always", min_age: 18 },
+  { form_number: "IMM 5257 SCH1", who: "principal_partner_adult_children", status: "always", signature: "TYPED_NAME", min_age: 18 },
+  { form_number: "IMM 5645", who: "each_applicant", status: "always", signature: "TYPED_NAME", min_age: 18, signed_by: "person" },
   { form_number: "IMM 5409", who: "each_applicant", status: "conditional", condition: eq("person.marital_status", "common_law") },
   { form_number: "IMM 5475", who: "each_applicant", status: "conditional", condition: eq("case.authorizes_release_to_designated_individual", true, "CASE") },
   { form_number: "IMM 5476", who: "principal_partner_adult_children", status: "conditional", condition: eq("case.uses_representative", true, "CASE"), signature: "HAND_SCANNED", min_age: 18, signed_by: "person_and_representative" },
@@ -69,11 +71,12 @@ const FIXTURE_CHILD = [L("IMM 5257", "PDF_UPLOAD", "TYPED_NAME", "parent", "barc
 // Release 2, by hand: every person waits for IMM 5409, IMM 5475 and IRM 0002 (each applicant, an answer decides); IMM 5476
 // waits for the adults only (principal and partner always; the children are 10 and 15, under its 18), signed by the person
 // and the representative. Adults fill IMM 5257 (signed by the person, 18 or older), Schedule 1 and IMM 5645 (both from
-// 18); each child fills IMM 5257 only, signed by a parent (under 18).
+// 18, both a typed name since row A3; IMM 5645 signed by the person); each child fills IMM 5257 only, signed by a parent
+// (under 18).
 const R2_WAIT_ALL = [L("IMM 5409", "PDF_UPLOAD", "NONE", "person", "", "person.marital_status"), L("IMM 5475", "PDF_UPLOAD", "NONE", "person", "", "case.authorizes_release_to_designated_individual"),
   L("IRM 0002", "PDF_UPLOAD", "NONE", "person", "", "person.gender_identifier_differs_from_documents")];
 const R2_WAIT_ADULT = [...R2_WAIT_ALL, L("IMM 5476", "PDF_UPLOAD", "HAND_SCANNED", "person+representative", "hand-signed", "case.uses_representative")];
-const R2_ADULT = [L("IMM 5257", "ONLINE", "NONE", "person", "online,barcode"), L("IMM 5257 SCH1", "PDF_UPLOAD", "NONE", "person"), L("IMM 5645", "PDF_UPLOAD", "NONE", "person", "family")];
+const R2_ADULT = [L("IMM 5257", "ONLINE", "NONE", "person", "online,barcode"), L("IMM 5257 SCH1", "PDF_UPLOAD", "TYPED_NAME", "person"), L("IMM 5645", "PDF_UPLOAD", "TYPED_NAME", "person", "family")];
 const R2_CHILD = [L("IMM 5257", "ONLINE", "NONE", "parent", "online,barcode")];
 const WANT = {
   fixture: { "Sample Client A": [FIXTURE_ADULT, []], "Sample Spouse A": [FIXTURE_ADULT, []], "Sample Child A1": [FIXTURE_CHILD, []], "Sample Child A2": [FIXTURE_CHILD, []] },
