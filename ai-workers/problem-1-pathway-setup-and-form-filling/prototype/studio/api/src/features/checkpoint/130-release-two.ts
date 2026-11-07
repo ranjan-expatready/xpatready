@@ -4,6 +4,8 @@
 import { HttpException } from "@nestjs/common";
 import { type Listed, type ReleaseTwoStep, releaseTwoWords } from "../../checkpoint-words.ts";
 import { BY_HAND_REASON } from "./_constants.ts";
+import { releaseTwoOf } from "../../checkpoint-stage-one-data.ts";
+import { setStageOne } from "../../checkpoint-stage-one.ts";
 import { FormLibrary } from "../../form-library.ts";
 import { placeFromFormParts } from "../../form-part-placements.ts";
 import { Forms } from "../../forms.ts";
@@ -58,6 +60,9 @@ export default {
         for (const ch of await db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true } }))
           await library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint, release 2).");
         await forms.setChannel(author, vvId, "IMM 5476", { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" });
+        // Row A3: release 2's own lines (IMM 5645's signer, how IMM 5645 and Schedule 1 are signed), from samples/checkpoint-stage-one.json.
+        const own = await setStageOne({ db, audit: ctx.audit, studio, forms }, author, vvId, "vv.single", said, releaseTwoOf("vv.single"));
+        if (own.done.length || own.refused.length) ctx.log.push(`  vv.single release 2 lines: ${[...own.done, ...own.refused.map((x) => `refused: ${x}`)].join("; ")}`);
         await seedSampleSources(db, vvId);
         step = "submit";
         const sub = await studio.submit(author, vvId, "Release 2 with mixed channels, submitted by the sample loader (C10.1 checkpoint, row 9).");

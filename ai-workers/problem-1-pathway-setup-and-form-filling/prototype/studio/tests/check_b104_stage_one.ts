@@ -3,7 +3,7 @@
 // The live step (who signs, the IRCC account, the gates on Visitor visa's release 1) is proved on a fresh checkpoint by
 // the packs C8.2 and C6.9 and by the walk product/screens/B104-checkpoint-stage-one/walk-stage1-1440.cjs (PR #1084).
 //   tsx studio/tests/check_b104_stage_one.ts
-import { applyStageOne, stageOneOf, stageOneProblems, type StageOne, type StageOnePort } from "../api/src/checkpoint-stage-one-data.ts";
+import { applyStageOne, releaseTwoOf, stageOneOf, stageOneProblems, type StageOne, type StageOnePort } from "../api/src/checkpoint-stage-one-data.ts";
 import { VV_FORM_RULES, FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../api/src/form-setup.ts";
 
 let failed = 0;
@@ -30,14 +30,15 @@ ok("B104-9 fail: gates with no source quoted are refused", says({ ...base, eligi
 // The step itself (review M1 on #1084), on fake services that record every write. The live step is
 // tests/check_b104_checkpoint.ts.
 type Fake = { writes: string[]; port: StageOnePort };
-const fake = (o: { account?: string | null; lines?: { form: string; retired?: boolean; signedBy?: string | null }[]; gates?: number; gatesProblems?: string[]; refuse?: Record<string, string> } = {}): Fake => {
+const fake = (o: { account?: string | null; lines?: { form: string; retired?: boolean; signedBy?: string | null; channel?: string; signature?: string }[]; gates?: number; gatesProblems?: string[]; refuse?: Record<string, string> } = {}): Fake => {
   const writes: string[] = [];
   const no = (what: string) => { if (o.refuse?.[what]) throw new Error(o.refuse[what]); };
   return { writes, port: {
     account: async () => o.account ?? null,
     setAccount: async (from, to) => { no("account"); writes.push(`account ${from}->${to}`); },
-    lines: async () => (o.lines ?? [{ form: "IMM 5257" }, { form: "IMM 5707" }, { form: "IMM 5476" }]).map((l) => ({ form: l.form, retired: !!l.retired, signedBy: l.signedBy ?? null, revision: `rev-${l.form}` })),
+    lines: async () => (o.lines ?? [{ form: "IMM 5257" }, { form: "IMM 5707" }, { form: "IMM 5476" }]).map((l) => ({ form: l.form, retired: !!l.retired, signedBy: l.signedBy ?? null, revision: `rev-${l.form}`, channel: l.channel ?? "PDF_UPLOAD", signature: l.signature ?? "NONE" })),
     saveSigner: async (form, signedBy, revision) => { no(form); writes.push(`signer ${form}=${signedBy}@${revision}`); },
+    saveSignature: async (form, channel, from, to) => { no(`${form} signature`); writes.push(`signature ${form} ${channel} ${from}->${to}`); },
     gates: async () => ({ count: o.gates ?? 0, version: o.gates ? 3 : 0 }),
     gatesProblems: async () => o.gatesProblems ?? [],
     putGates: async (e, version) => { no("gates"); writes.push(`gates ${e.gates.length}/${e.judgement.length}@v${version}`); return { gates: e.gates.length, judgement: e.judgement.length }; },
@@ -70,6 +71,32 @@ await (async () => {
   f = fake();
   r = await applyStageOne(f.port, { ...vv!, signers: [{ form: "IMM 5707", signedBy: "nobody", cite: "a source quoted with its page and date" }] }, said);
   ok("B104-16 fail: a bad data file writes nothing at all", !f.writes.length && /"nobody".*nothing was set/.test(r.refused.join(" ")), r);
+
+  // Row A3 (M3 sprint plan): release 2's own lines, set inside release 2's draft (features/checkpoint/130-release-two.ts).
+  const r2 = releaseTwoOf("vv.single");
+  ok("A3-1 pass: release 2's data passes the guard: IMM 5645 signed by the person; IMM 5645 and Schedule 1 a typed name (Sample); no account, gates or accept record",
+    !!r2 && !stageOneProblems(r2).length && JSON.stringify(r2.signers?.map((s) => [s.form, s.signedBy])) === '[["IMM 5645","person"]]'
+    && JSON.stringify(r2.signatures?.map((s) => [s.form, s.signature])) === '[["IMM 5645","TYPED_NAME"],["IMM 5257 SCH1","TYPED_NAME"]]' && !r2.account && !r2.eligibility && !("accepts" in r2)
+    && r2.signers![0].cite.includes("2024-06-21") && r2.signatures!.every((s) => /^Sample, Unconfirmed: expert/.test(s.cite)), r2);
+  ok("A3-2 pass: IMM 5645 is the family form a release filing IMM 5257 Online files, and Stage 1 (release 1) leaves it alone",
+    FAMILY_FORM_BY_CHANNEL.online.form === "IMM 5645" && !(vv?.signers ?? []).some((s) => s.form === "IMM 5645") && !vv?.signatures, FAMILY_FORM_BY_CHANNEL);
+  const sig = { form: "IMM 5645", signature: "TYPED_NAME", cite: "a source quoted with its page and date" };
+  ok("A3-3 fail: a signature the product does not know is refused, naming the known ones", stageOneProblems({ signatures: [{ ...sig, signature: "INK" }] }).some((p) => /IMM 5645: signature "INK" is not one the product knows \(TYPED_NAME, HAND_SCANNED, PEN, NONE\)/.test(p)));
+  ok("A3-4 fail: how a line is signed with no source quoted, or named twice, is refused",
+    stageOneProblems({ signatures: [{ ...sig, cite: "Sample" }] }).includes("IMM 5645: how it is signed has no source quoted") && stageOneProblems({ signatures: [sig, sig] }).includes("IMM 5645: how it is signed is named twice"));
+  const draft2 = [{ form: "IMM 5257", channel: "ONLINE" }, { form: "IMM 5645" }, { form: "IMM 5257 SCH1" }, { form: "IMM 5707", retired: true }];
+  f = fake({ lines: draft2 });
+  r = await applyStageOne(f.port, r2, said);
+  ok("A3-5 pass: on release 2's draft, IMM 5645's signer, then each signature on the line's own channel over the signature seen, said in plain words",
+    f.writes.join(" · ") === "signer IMM 5645=person@rev-IMM 5645 · signature IMM 5645 PDF_UPLOAD NONE->TYPED_NAME · signature IMM 5257 SCH1 PDF_UPLOAD NONE->TYPED_NAME"
+    && !r.refused.length && r.done.join("; ") === "IMM 5645 signed by the person the form is about; IMM 5645: typed name; IMM 5257 SCH1: typed name", { writes: f.writes, r });
+  f = fake({ lines: [{ form: "IMM 5645", signedBy: "person", signature: "TYPED_NAME" }, { form: "IMM 5257 SCH1", retired: true }] });
+  r = await applyStageOne(f.port, r2, said);
+  ok("A3-6 fail: a removed line (Schedule 1) is said and never saved; what is already set is not saved again", !f.writes.length && r.refused.join() === "IMM 5257 SCH1: not a filed line of this combination, so how it is signed is not set", { writes: f.writes, r });
+  f = fake({ lines: draft2, refuse: { "IMM 5645 signature": "IMM 5645: \"Typed name\" does not fit a line filed as Paper." } });
+  r = await applyStageOne(f.port, r2, said);
+  ok("A3-7 fail: a signature the service refuses is said in its own words, not counted as done; the next line is still saved",
+    r.refused.includes("IMM 5645 signature: IMM 5645: \"Typed name\" does not fit a line filed as Paper.") && !r.done.includes("IMM 5645: typed name") && f.writes.some((w) => /signature IMM 5257 SCH1/.test(w)), { writes: f.writes, r });
 })();
 
 console.log(failed ? `\n${failed} failed` : "\nall passed");

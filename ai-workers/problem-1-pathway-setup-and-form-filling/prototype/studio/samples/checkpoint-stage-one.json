@@ -78,6 +78,28 @@
           "Ties that will take the person back home",
           "Will leave Canada at the end of the visit"
         ]
+      },
+      "release_two": {
+        "about": "Row A3 (M3 sprint plan, 6 Nov): release 2's own lines, set inside release 2's draft (features/checkpoint/130-release-two.ts) before it is submitted, through the Forms tab's own routes. Release 2 files IMM 5257 Online, so IMM 5645 replaces IMM 5707 (C10.1 row 9); release 2 keeps IMM 5257 Online and records nothing on what IRCC accepts for IMM 5257 (tech lead's ruling on #1167, 6 Nov 22:14 IST). Every value is Sample, Unconfirmed: expert.",
+        "signers": [
+          {
+            "form": "IMM 5645",
+            "signedBy": "person",
+            "cite": "Family information. canada.ca 'Family Information Form – Visitors, Students and Workers (IMM 5645)' (committed copy official-sources/ircc/canada/pages/imm5645.html, dcterms.modified 2024-06-21; canada.ca itself does not resolve from cloud sessions): \"This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada\"; and \"read “ Note 1 ”, then sign and date the declaration at the end of Section A\". IMM 5645 (official-sources/ircc/forms/imm5645e.pdf) has a \"Signature:\" box at the end of Sections A, B and C (prototype/p1/inventory/imm5645e.inventory.json). Each person signs their own copy. QA-228."
+          }
+        ],
+        "signatures": [
+          {
+            "form": "IMM 5645",
+            "signature": "TYPED_NAME",
+            "cite": "Sample, Unconfirmed: expert (FQ-2). The official words say the person signs and dates IMM 5645 (canada.ca IMM 5645 page, committed copy dated 2024-06-21, quoted with its signer), not how a copy uploaded as a PDF is signed. Typed name, as the M3 fixture sets a PDF upload with a typed name (acceptance/lib/setup_vv_m3.ts S4: IMM 5257, PDF upload, typed name), until the immigration expert says typed name or signed by hand."
+          },
+          {
+            "form": "IMM 5257 SCH1",
+            "signature": "TYPED_NAME",
+            "cite": "Sample, Unconfirmed: expert (FQ-2). IMM 5257 SCH1 (09-2023) p. 1 says who completes it (\"The principal applicant, his or her spouse or common-law partner, if applicable, and all dependent children aged 18 years or older listed in the application for temporary residence must complete their own copy of this form.\"), not how an uploaded copy is signed. Typed name, as the M3 fixture sets a PDF upload (acceptance/lib/setup_vv_m3.ts S4), until the expert confirms. Who signs it stays unset for the expert (signers_not_set above)."
+          }
+        ]
       }
     }
   }
