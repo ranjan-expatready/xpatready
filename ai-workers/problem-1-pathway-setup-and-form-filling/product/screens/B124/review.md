@@ -144,3 +144,68 @@ Seen, not a finding (already true before this change):
 Welcome in the same PR:
 * Minor 4: a test for "out of date gives no line".
 * A `case.*` line in the pure test.
+
+## Re-review 2 (diff 06cc27a24..a02dbb945)
+Same reviewer, 7 Nov, **commit a02dbb945** (HEAD). I reviewed only `git diff 06cc27a24..a02dbb945` and the builder's response (last section of `build-notes.md`). I kept the tree read-only. My copy ran on :4425 (`isolated.sh rev124c`, live AI off) and is stopped.
+
+### What changed
+* `engine/runtime/eligibility.ts` `restsOn`: the subset rule, a memo and `RESTS_MAX = 10`.
+* `tests/check_b124_rests_on.ts`: four new lines.
+* `tests/check_b124_unconfirmed_browser.cjs`: one new step (Minor 4).
+* `build-notes.md`; this file (my earlier re-review, committed); the six walk PNGs (a02dbb945).
+* Nothing else changed.
+
+### Evidence run
+* `npx tsx studio/tests/check_b124_rests_on.ts`: **12/12**.
+* `check_b124_unconfirmed_browser.cjs 4425 xr_studio_rev124c`: **19/19**, including "minor 4: after an answer changes, the run is out of date and shows no 'not yet confirmed' line". `walk/6` still reads "Not eligible on this application's rules as written, on 1 answer not yet confirmed", with the funds link.
+* A second run on the same database stopped at set-up ("Reset the demo first to load the sample inputs"). The walk needs a fresh copy. This is how the set-up works, not flakiness, and it is not a finding for this diff.
+* The new pure-test lines on **06cc27a24's** `restsOn` (a scratch copy with the builder's test pointed at it): **9/12**. The (a), (b) and (c) lines fail, so the new lines encode Major 1.
+* Mutants of the new code (scratch copies; each one is caught):
+  * Deleting `kkey(person, f)` instead of the holder's key: 11/12. The new `case.*` line catches it, which closes the gap I filed last time.
+  * Dropping "S leaves the gate unchanged": 10/12.
+  * Trying only S = {}: 8/12.
+  * Trying only S = {} and S = all the others: 11/12, caught by (c).
+  * `RESTS_MAX = 0`: 10/12.
+* Probes of the real function:
+  * `(A and B) or C`, all met and unconfirmed: [a, b, c].
+  * An "or" with A confirmed and B, C unconfirmed: [].
+  * `(A or B) and C` with A confirmed: [c].
+  * An "or" of 10 unconfirmed facts with only f0 = yes: [f0], in 46 ms. With 11 facts, all 11 are named (the stated cap).
+
+### Earlier findings
+* **Major 1 (narrowed): fixed.**
+  * `restsOn` names `f` when some S of the other unconfirmed answers gives `stateOf(S) === state` and `stateOf(S ∪ {f}) !== state`. This is the rule I asked for.
+  * It gives [a, b] for (a), [a, b] for (b) and [a, b, c] for (c), and all eight earlier lines still pass.
+  * The guard "removing them all changes nothing → []" comes first, as before.
+  * The memo is keyed on the sorted set ("|" cannot be in a fact key), so a gate costs at most 2^U evaluations, U ≤ 10.
+  * `RESTS_MAX` is a module `const` read only when the function is called, so it is never read before it is set.
+  * Past the cap, every answer is named. That leans toward naming too many, never too few, and the comment says so.
+* **Minor 4: fixed.**
+  * The step changes the funds answer from 8000 to 9000. The gate is still not met against CAD 100,000.
+  * By reading `api/src/assessments.ts:177`: without `o.out_of_date ||`, the run's not_met state against today's Known would name the funds answer, so the line would show and this step would fail. The step guards the rule.
+  * The answer is changed through the API as set-up. What the step checks is read through the screen.
+* **Pure-test `case.*` line (welcome): added.** It catches the holder-key mutant without the browser.
+* Minor 3: unchanged, accepted as a C6.9 words carry-over (see above).
+
+### Issues
+None open at Blocker or Major. No new Minor.
+
+Seen, not a finding:
+* About 46 ms for a gate at the cap. It happens only on rows that are not out of date and only for a gate reading 10 unconfirmed facts. Shipped gates read 1–2.
+
+### Journey test (reviewer, re-scored on this commit)
+Same journeys as above. Changes from the last score:
+* Correct data rises to 1: (a)–(c) are now right on the function, and the shipped gates are right in the walk.
+* Error recovery stays at 1, and the out-of-date path is now tested in the browser.
+* Plain words stay at ½ (Minor 3 carry-over; "Funds available cad").
+* The other criteria are as before.
+
+**Journey score 9.5/10, no criterion at 0: pass.**
+
+### Could not check
+* A real screen reader.
+* An unaided walk by an intended user (D17 and D20 stay with the founder).
+* An "or" or nested gate end to end in the browser: checked on the function only.
+* The out-of-date mutant against a running server: checked by reading the code, because the tree is read-only.
+
+**Verdict: Approve** (commit a02dbb945). No open Blocker or Major. Minor 3's spelling carry-over is for a C6.9 words pass.
