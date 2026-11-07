@@ -80,7 +80,7 @@ await main("C6.11", "Firm, users and case team", async () => {
   if (!has5476) pend(name16c, "the case's release has no IMM 5476, so no question reads representative.*");
   else {
     const qs = (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, first)).body?.sections?.flatMap((x: { questions: { fact: string; answer: { value: unknown; channel?: string } | null }[] }) => x.questions) ?? [];
-    ok(name16c, qs.some((q: { fact: string; answer: { value: unknown; channel?: string } | null }) => q.fact === "representative.membership_id" && q.answer?.value === rep?.licence?.number && q.answer?.channel === "firm"));
+    ok(name16c, qs.some((q: { fact: string; answer: { value: unknown; channel?: string } | null }) => q.fact === "representative.membership_id" && q.answer?.value === rep?.licence?.number && q.answer?.channel === "firm_record"));
   }
   const newRep = f.rep2;
   ok("C6.11-16a pass (FQ-9): the Sample firm has a second representative to hand the case to", !!newRep, f.firm?.users.map((u) => u.duties));

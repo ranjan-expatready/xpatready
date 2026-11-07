@@ -15,7 +15,7 @@ import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from 
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
-import { openingTeam, REPRESENTATIVE, representativeAnswers, type Member } from "../../engine/runtime/team.ts";
+import { FIRM_RECORD, openingTeam, REPRESENTATIVE, representativeAnswers, USES_REPRESENTATIVE, type Member } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { Programs } from "./programs.ts";
@@ -273,9 +273,12 @@ export class Runtime {
     const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
     const groups: GroupAnswer[] = groupRows.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? gFirsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, group: x.groupKey, noneApply: x.noneApply, status: x.status as GroupAnswer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     // C7.7 (G25): IMM 5476's representative block reads the representative of record from the firm record (never asked).
-    const f = firmByKey(c.firmKey);
-    if (f) a.push(...representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] }))));
-    return { answers: a, rows: r, groups };
+    // C6.11: so do its licence part and firm name, and "Uses a representative" for the application (the case has a
+    // representative of record), which replaces any answer typed before.
+    const f = firmByKey(c.firmKey), caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
+    const fromFirm = f ? representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] })), caseSubject) : [];
+    const firmGives = new Set(fromFirm.map((x) => `${x.subjectId}|${x.field}`));
+    return { answers: [...a.filter((x) => !firmGives.has(`${x.subjectId}|${x.field}`)), ...fromFirm], rows: r, groups };
   }
 
   async view(actor: Actor, caseId: string, mode: Mode) {
@@ -313,6 +316,12 @@ export class Runtime {
     const s = this.snapshotOf(c), officer = isOfficer(actor);
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
+    // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed; a client is
+    // told the case team sets it (403), staff that the team changes it (422). Only while the case has a representative.
+    if (fieldKey === USES_REPRESENTATIVE && who!.role === "case" && await this.db.caseTeamMember.count({ where: { caseId, role: "LEAD_REPRESENTATIVE", endedAt: null } })) {
+      if (!officer) fail("Your case team sets whether a representative is used; you don't need to answer it.", HttpStatus.FORBIDDEN);
+      fail("Uses a representative comes from the case team: this case has a representative of record. Change the team (Case team), not the answer.", HttpStatus.UNPROCESSABLE_ENTITY);
+    }
     const field = (s.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === fieldKey);
     const place = (s.placements as { fact: string; repeats: string; section_id: string; collected_from: string }[]).find((p) => p.fact === fieldKey);
     if (!field || !place) fail(`The release this case works from does not ask for ${fieldKey}.`, HttpStatus.NOT_FOUND);
@@ -439,6 +448,7 @@ export class Runtime {
     // section. A fact the view leaves out (a worked-out "has any children" once a child is on the case, C7.7 and D4) can
     // never be seen on screen, so its stored answer is neither asked as seen nor confirmed: it never blocks the section.
     const { answers: now, rows: nowRows, groups: nowGroups } = await this.state(c);
+    const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
     const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
       .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
     const confirmed = await this.db.$transaction(async (tx) => {
@@ -446,7 +456,9 @@ export class Runtime {
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
-      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey));
+      // C6.11 (review M1): a fact the firm record gives (the representative's part, "Uses a representative") shows the
+      // firm's answer, never a stored one, so a stored one can never be seen: it neither blocks nor is confirmed.
+      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey) && !firmGives.has(a.canonicalFieldKey));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
       // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
       const entries = await tx.clientFactRecord.count({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null, tombstone: false } });
