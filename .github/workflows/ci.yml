@@ -10,6 +10,14 @@
 #             the studio suites on the parallel parts (job "shard", run-suites.sh --shard i/n, each a fresh copy):
 #               - a builder's PR: only the suites its change can affect (run-suites.sh --changed);
 #               - a merge-queue batch: every suite but the quarantined ones (--skip-quarantined), once per change.
+#             Both retry a failed suite once (B122, P-376 (8), run-suites.sh --retry): "passed on retry" or "failed
+#             twice" in the summary, a record uploaded as suite-retries-<part>; a suite that passed only on retry in 2
+#             runs in 7 days is quarantined for every part (tools/flaky.mjs in job "kind"). The nightly never retries.
+#             F5 (founder 6 Nov): a suite named or titled race, concurrent, parallel or upsert, or on the quarantine
+#             list, is never retried; a pass on retry is never silent: a bug line in the job summary and a PR comment
+#             (on each PR of a merge-queue batch) with the 1st try's log tail; the batch may still merge. The comment
+#             comes from its own job, retry-comment, the only one with pull-requests: write: it runs the base commit's
+#             flaky.mjs on the parts' artifacts, so the write token never meets the PR's own code (npm install, suites).
 #             US$0 model spend: every suite replays saved runs.
 # Switches (repository variables, gh variable set NAME --body VALUE):
 # Type check (P-291, the outsider audit of 29 Oct): job "types", tsc --noEmit for api and web (tools/typecheck.mjs; fails
@@ -73,6 +81,7 @@ jobs:
     # actions: read for the PR's earlier runs (memory); pull-requests and issues: write for the "records" label.
     permissions: { contents: read, actions: read, pull-requests: write, issues: write }
     outputs:
+      autoq: ${{ steps.q.outputs.autoq }}
       kind: ${{ steps.k.outputs.kind }}
       shards: ${{ steps.m.outputs.mode == 'same' && '[]' || steps.m.outputs.shards || steps.k.outputs.shards }}
       n: ${{ steps.m.outputs.n || steps.k.outputs.n }}
@@ -107,6 +116,20 @@ jobs:
             *) [ "$queue" = true ] && why="Code, merge-queue batch: every suite but the quarantined ones, on $n parts." || why="Code, pull request: only the suites this change can affect, on $n parts (the full set runs in the merge queue).";;
           esac
           echo "**$kind** · $why" | tee -a "$GITHUB_STEP_SUMMARY"
+      - id: q
+        name: flaky suites to quarantine (B122; passed only on retry in 2 runs in 7 days; tools/flaky.mjs)
+        # Worked out once here, so every part deals and skips the same suites. A failure of the API never fails the
+        # check: no automatic quarantine this run, said in the summary. It reads all 9 parts' records (SHARDS may have
+        # been higher in the last 14 days; review round 2, minor 2).
+        if: steps.k.outputs.kind == 'code'
+        timeout-minutes: 3
+        continue-on-error: true
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        run: |
+          if q=$(node "$P/tools/flaky.mjs" quarantine 2> flaky.err); then cat flaky.err
+          else q=""; cat flaky.err; echo "::warning::flaky.mjs could not read the retry records: no automatic quarantine this run"; fi
+          echo "autoq=$q" >> "$GITHUB_OUTPUT"
+          [ -z "$q" ] || { echo "**Quarantined automatically (B122):**"; sed 's/^/- /' flaky.err; } >> "$GITHUB_STEP_SUMMARY"
       - id: m
         name: memory (P-371 (3)) — this head already judged on this base? suites green earlier with unchanged inputs?
         # Never for a merge-queue batch or a fork. Reads only this PR's own earlier runs of this workflow.
@@ -117,6 +140,7 @@ jobs:
           QUEUE: ${{ steps.k.outputs.queue }}
           N: ${{ steps.k.outputs.n }}
           PR_SUITES: ${{ vars.PR_SUITES }}
+          SUITES_QUARANTINE_AUTO: ${{ steps.q.outputs.autoq }}
           SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -184,6 +208,7 @@ jobs:
       KIND: ${{ needs.kind.outputs.kind }}
       QUEUE: ${{ needs.kind.outputs.queue }}
       N: ${{ needs.kind.outputs.n }}
+      SUITES_QUARANTINE_AUTO: ${{ needs.kind.outputs.autoq }}
       GREEN: ${{ needs.kind.outputs.green }}
       RANGE: "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
     steps:
@@ -230,6 +255,7 @@ jobs:
           bash "$P/tools/check-lane-bind.sh"
           node "$P/tools/ci-and-lists.mjs"
           node "$P/tools/ci-and-lists.mjs" --self-test
+          bash "$P/tools/check-flaky.sh"
           node "$S/tools/check-gate-b.mjs"
           node "$S/tools/check-works-set.mjs"
       - name: Playwright's own Chromium
@@ -242,14 +268,14 @@ jobs:
         if: matrix.shard == 1 && env.KIND == 'code'
         env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
         run: node "$S/tools/gate-b.mjs"
-      - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --shard; US$0 model spend)
+      - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --retry --shard; US$0 model spend)
         if: env.KIND == 'code'
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
         run: |
           if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct)
             # P-371 (3): suites remembered green on this base with unchanged inputs (never in the merge queue).
             if [ -n "$GREEN" ]; then printf '%s\n' "$GREEN" > "$RUNNER_TEMP/green.tsv"; sel+=(--skip-green "$RUNNER_TEMP/green.tsv"); fi; fi
-          bash "$P/tools/run-suites.sh" --demo "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
+          bash "$P/tools/run-suites.sh" --demo --retry "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always() && env.KIND == 'code'
@@ -274,6 +300,20 @@ jobs:
         with:
           name: suite-logs-shard-${{ matrix.shard }}-a${{ github.run_attempt }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14
+      - name: retry records (B122; only when a suite was retried; tools/flaky.mjs reads them)
+        if: always() && env.KIND == 'code'
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-retries-${{ matrix.shard }}
+          # The records, each retried suite's first-try log and api.log (the evidence its owner needs), and F5's bug
+          # lines (retry-bugs.md), which the job retry-comment posts.
+          path: |
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retry-bugs.md
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/*.try1*.log
+          if-no-files-found: ignore
+          overwrite: true
           retention-days: 14
   types:
     # P-291: tsc --noEmit for api and web, beside the parts (no added wall time); records and code, never notes.
@@ -462,11 +502,11 @@ jobs:
       - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
         if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (steps.code.outputs.suites == 'true'))
         # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
-        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1", SUITES_QUARANTINE_AUTO: "${{ needs.kind.outputs.autoq }}" }
         # One at a time on the Mac (a parallel trial, 30 Oct, failed 12 suites); the chosen set, not every suite: a full
         # run there takes about 80 minutes of suites, near this job's 90-minute limit (I1 kept the Mac path as it was).
         run: |
-          bash "$P/tools/run-suites.sh" --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
+          bash "$P/tools/run-suites.sh" --retry --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: env.MODE != 'same' && (env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true'))
@@ -477,6 +517,20 @@ jobs:
         with:
           name: suite-logs-a${{ github.run_attempt }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14
+      - name: retry records (B122; only when a suite was retried; tools/flaky.mjs reads them)
+        if: env.KIND != 'notes' && env.SHARDED != 'true' && (always() && steps.code.outputs.suites == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-retries-1
+          # The records, each retried suite's first-try log and api.log (the evidence its owner needs), and F5's bug
+          # lines (retry-bugs.md), which the job retry-comment posts.
+          path: |
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retries.tsv
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/retry-bugs.md
+            ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/*.try1*.log
+          if-no-files-found: ignore
+          overwrite: true
           retention-days: 14
       # ---- P-371 (3): a green verdict, so a later run on the same head, base, title and body (ready again) reuses it.
       # Only green: a red head is always tested again.
@@ -495,3 +549,38 @@ jobs:
           path: memory/
           retention-days: 7
           if-no-files-found: ignore
+  retry-comment:
+    # B122 F5: a pass on retry reaches its PR (or each PR of a merge-queue batch) as a comment, with its bug line and the
+    # 1st try's log tail. Its own job, the only one with pull-requests: write (review of F5, Major 1): it never runs the
+    # PR's code, only the base commit's tools/flaky.mjs on the parts' artifacts, with no token kept by checkout. Not a
+    # check Mergify reads, and continue-on-error: it never holds a merge or turns a run red.
+    needs: [kind, shard, ci]
+    if: ${{ always() && needs.kind.outputs.kind == 'code' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions: { contents: read, pull-requests: write }
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { pattern: "suite-retries-*", path: retries }
+      - id: b
+        name: any pass on retry? (retry-bugs.md in the parts' suite-retries-<part> artifacts)
+        run: |
+          shopt -s nullglob; f=(retries/*/retry-bugs.md)
+          if [ ${#f[@]} -eq 0 ]; then echo "no pass on retry in this run"; echo "post=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          for x in "${f[@]}"; do d=$(basename "$(dirname "$x")"); echo "**Part ${d#suite-retries-}**"; echo; cat "$x"; echo; done > retry-bugs.md
+          echo "post=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.b.outputs.post == 'true'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+          sparse-checkout: ai-workers/problem-1-pathway-setup-and-form-filling/product/tools
+      - name: post it (tools/flaky.mjs comment, from the base commit)
+        if: steps.b.outputs.post == 'true'
+        env: { GITHUB_TOKEN: "${{ github.token }}", PR_BODY: "${{ github.event.pull_request.body }}", PR: "${{ github.event.pull_request.number }}", QUEUE: "${{ needs.kind.outputs.queue }}" }
+        run: |
+          q=(); if [ "$QUEUE" = true ]; then q=(--queue); fi
+          node base/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/flaky.mjs comment --body retry-bugs.md --pr "$PR" "${q[@]}"

@@ -1,0 +1,134 @@
+Verdict: Block
+
+# B121 review: reference graph in select-suites.mjs, contract and schema checks (independent reviewer, P-303)
+
+Commit reviewed: **5eaf0dec4** (`git diff origin/main...5eaf0dec4`, merge base 4e26fb229). CI tooling, not a screen: D1-D20 do not apply; reviewed as the code that decides which suites a PR check runs. US$0, no model calls, port 4400 not used.
+
+## What I ran (exit codes)
+* `bash product/tools/check-select-suites.sh`: **exit 0**, 48 passed, 0 failed (20.8 s).
+* `tsx --tsconfig api/tsconfig.json tests/check_contract_seams.ts`: **exit 0**, 98/98 (0.65 s).
+* `tsx ... tests/check_prisma_schema.ts`: **exit 0**, 5/5 (6.0 s). The PostgreSQL database list was identical before and after; nothing left in `var/`.
+* `bash product/tools/check-test-dbs.sh`: **exit 0**, 27/27.
+* Mutations in a scratch clone of 5eaf0dec4. Seam check, 7 faults, each **exit 1** with the right FAIL line: a missing name imported by an api module, the same in a multi-line web import, a value import from `engine/`, `process.env`, an undefined export, a throw at load, and a default import of `node:fs`. Schema check: a migration with no schema model, and a schema model with no migration, each **exit 1**.
+* The origin/main selector against this one on the same tree: all 126 `api/src` modules, all 102 `engine/` and `contracts/` files, config files, `--direct`, and 12 real merged PRs. I also instrumented a scratch copy to print the endpoints and set-up decisions inside `apiPick`.
+
+## Blockers
+None.
+
+## Majors
+**M1. main.ts's controller endpoints are never looked up, so the new set-up endpoint rule never fires and demo.ts changes skip their own suites.** `select-suites.mjs:203` blanks every string in main.ts to `""`. `:209` then calls `endpoints(block)` on that blanked text, so each `@Controller("api/demo")` / `@Post("load")` becomes `""`, and `pathPattern("")` returns null. This drops all 73 endpoints of main.ts's five controllers (Studio, Sources, Demo, Ai, Programs). Among them are `/demo/load`, called by 208 suite files, and `/demo/reset`, called by 151. Instrumented: DemoController is matched as a user of `Demo` (`used=Demo`), but its endpoints come back as `["","",""]`.
+* The bug is older than this PR (the same lines are on origin/main). But B121 now depends on it:
+  * (a) The set-up rule (`:214-224`) never fires. I logged every set-up decision for all 126 api/src modules, `engine/near.ts`, `contracts/counts.ts` and `samples/wave1.json`: zero hits.
+  * (b) The comment at `:214-217` says the rule chooses `check_s7_load.ts`, `check_s7_reset.ts` and `check_forms_demo.ts`, and that "before, any change the sample loader imports chose about 300 of the 342 suites through these two". The code does neither. `engine/snapshot.ts` chooses 315 suites, 168 through endpoint calls and 124 through the graph, and none through `/demo/load`.
+  * (c) Before, ALL covered this gap. Now it is exposed.
+* **Failing scenario:** PR #1062 (703d11fba, 36 files including `api/src/demo.ts` and `section-names.ts`) ran ALL on origin/main. The new selector chooses 324 suites, but not `check_s7_load.ts`, `check_s7_reset.ts` or `check_s7_dialogs_browser.cjs`, which test exactly what demo.ts does. A demo.ts change alone chooses 52 suites, none of these three.
+* **Merge queue:** catches it (it runs every suite).
+* **Likelihood:** high for this path. 29 of the last 80 merges touch one of the demo-loader modules (demo, fill, fill-trials, section-names, sample-case, form-setup, demo-reset-to-six, checkpoint-words). demo.ts is in 102 commits since 25 Oct.
+* **Fix:** read each used controller's endpoints from the raw source. Split `msrc` on `(?=@Controller\()` the same way and call `endpoints(raw[i])`. Keep the blanked block only for the `used` test. I tried this in a scratch copy:
+  * demo.ts: 52 → 75 suites, now including `check_s7_load.ts`, `check_s7_reset.ts`, `check_forms_demo.ts`, `check_g3_demo_release_browser.cjs` and both D1 suites, all through the set-up rule (7 set-up lines).
+  * fill.ts: 75 → 207.
+  * engine/near.ts: 289 → 303.
+* Then add a pass case and a fail case for the set-up rule to `check-select-suites.sh` (it has none).
+
+**M2. The shell/home exemption changes the API-module rule: 81 of 126 modules lose suites compared with origin/main, and the Demo menu's own browser suites go with them.** `select-suites.mjs:240` (with `shell`/`home` set at `:146`, `:150`, `:164`) stops an endpoint called by the shell or by "/" from running every browser suite. Measured against origin/main:
+* No module gains a suite.
+* demo.ts 163 → 52, fill.ts 178 → 75, demo-reset-to-six.ts 160 → 48. section-names, sample-case, form-setup and checkpoint-words each lose 111-112.
+* Most of the dropped escalations were false positives on origin/main. App.tsx's import path `@/runtime/cases` (App.tsx:25) and its nav route `"/structure"` (App.tsx:44) were read as endpoint calls. Dropping those is right.
+* But App.tsx's real calls are the Demo menu: `/demo/load` (App.tsx:200, :204), `/demo/reset` (:299) and `/demo/reset-to-six` (:330). Some suites test these only through the page and neither call nor name the endpoint. So the premise at `:232-235` ("an action by the suites that call or name it") does not hold for them.
+* **Failing scenario:** a change to `Demo.reset()`'s result (the "N rows and M working files removed" text that `check_s7_dialogs_browser.cjs:42` waits for). origin/main ran that suite for demo.ts. The new selector does not, and still would not with M1 fixed.
+* `check_d1_reset_to_six_browser.cjs` (the Demo › Reset to the six walk) is no longer chosen for `demo-reset-to-six.ts`. It is quarantined today, so that one has no live effect.
+* **Merge queue:** catches it.
+* **Likelihood:** moderate, on the same frequently changed modules as M1.
+* **Fix (keeps the right part):** apply the exemption only when the change reaches the API module through the graph (`seeds` is not `[f]`). When `f` is the module that declares an endpoint the shell calls, keep origin/main's behaviour. Or, at minimum, add the browser suites whose file name has one of the endpoint's words (as the set-up rule does), so `check_s7_*`/`d1_*` come back. Add a pass case and a fail case.
+
+## Minors
+* **m1. `/*` inside strings is treated as a comment start** (`select-suites.mjs:271`), so up to the next `*/` is erased. Measured erasures: App.tsx (2.5 KB), check_g1_source_entry_points_browser.cjs, check_g1_source_register_browser.cjs, check_forms_b86_panel_browser.cjs, and `prototype/tests/score_p2.ts`. In score_p2.ts the erasure runs from its line-2 `expected/*.v2.json` down to line 27, swallowing line 23's `read("expected/slice-1-field-map.v2.json")` and `read("expected/fact-aliases-c1.json")`. No concrete miss today, because score_p2.ts names the same files again at :366. Fix: skip `/*` that falls inside a quote, for example with a small quote-aware scan.
+* **m2. Python imports are not followed** (`:269`: only `CODE` files get `importsOf`; `.py` files contribute only names). Examples: `import e5_roundtrip as E` (5 modules), `import xfa_inventory as X` (studio/tools/read_form.py:20), `from read_validated import` (simulate_validate.py:17). I compared each importer's selection with its import's selection. The only differences came from comment mentions, so no real miss today. Fix: map `^\s*(from|import)\s+(\w+)` to a sibling `<name>.py`.
+* **m3. `--direct` with a migration-only change does not choose `check_prisma_schema.ts`.** Under `--direct`, the schema itself does choose it, by name. In normal mode both run everything. Fix: in `pick()`, add `check_prisma_schema.ts` for `prisma/` changes, as is done for contracts.
+* **m4. check_prisma_schema.ts cleanup.** The `finally` at `:80-83` does not run on SIGTERM or SIGINT, and run-suites.sh's `timeout 1200` sends SIGTERM. A timeout would leave `xr_studio_b121_<pid>` and `var/schema-check-<pid>` behind. prune-test-dbs.sh's default `xr_studio_` match would drop the database later, so this is low risk. Also, `:53` sets the datasource to `DATABASE_URL`, which run-suites.sh points at xr_studio_demo. `migrate diff` does not write to it, but the check need not name the demo at all. Fix: add signal handlers, use `dropdb --force`, and point the datasource at the shadow URL.
+* **m5. Name edges match the basename only** (`:275`, `:294`). `api/src/features/README.md`, a doc, chooses 310 suites through unrelated files that say "README.md". Common names such as `programs.ts` and `rules.ts` chain the same way. This costs speed, not safety. Fix: require the parent folder's name, or a path, in the same string for very common basenames.
+* **m6. Rules with no pass/fail case in check-select-suites.sh:** `FINGERPRINT_ONLY` (`:254`), `R1_SETUP`, `./x.js → x.ts` resolution, and the lister restriction at `:298` (a non-test file listing a folder of code is no use). The set-up and shell rules are covered in M1 and M2. The row asks for pass and fail tests for the selector.
+* **m7. Traceability.** P-376 and B121 appear in neither DECISIONS.md nor BACKLOG.md, on origin/main (a45b4aee7) or on this branch. Only this folder's evidence cites them, so I could not check the row's wording against the record (AGENTS.md rule 2).
+
+## Rules that should be unchanged (compared with origin/main on real files)
+* **Same as origin/main:** package files, `api/tsconfig.json`, `prisma.config.ts`, `stop.sh`, `web-fresh.sh`, `restart-api.sh` and `prototype/tsconfig.json` all run everything. `web/tsconfig.json`, `vite.config.ts` and `index.html` run every browser suite.
+* **Same as origin/main:** docs, product/tools, `.github` and official sources (all in check-select-suites.sh); `web/src/pages/history.tsx` (15 = 15) and `App.tsx` (132 = 132); `api/src/core.ts`, `features.ts` and `main.ts` (all ALL); feature files (ALL, now "no suite calls its 0 endpoints").
+* **Changed:** the `api/src` module rule. See M2.
+* **`--direct`:** never runs everything. Engine and contract files now choose about 290-315 suites under `--direct` (about 7 on origin/main), because the graph replaces the "suites that import it" fallback.
+* **Deletions:** a deleted helper that is still imported chooses the same as before (19 = 19, `tests/seed_proposals.ts`, in a scratch clone).
+
+## The two new checks
+* **Seam check:** each of its three rules (load, purity, names) fails on its fault (7 mutations above). All consumer imports of contracts are relative, which `resolveSpec` handles.
+* **Schema check:** catches drift in both directions. The five KNOWN differences are listed with the finding, and a fixed one fails the "still there" line, so KNOWN cannot go stale silently.
+* **Running conventions:** both run under run-suites.sh's plain-tsx convention. Their usage lines (`:9` and `:8`) are the first lines naming `studio/tests/<file>`. Times were added to suite-times.tsv (2 s and 7 s).
+* **Leftovers:** neither leaves a database or file behind on a normal exit, and check-test-dbs.sh still passes.
+
+## Evidence file (read after the above): claims checked
+* **"The 75th percentile does not move (28.9 → 28.5)":** consistent with what I measured. Engine and contract files choose a mean of 246 of 344 suites, and real code PRs choose 307-324. Stated honestly.
+* **"Old selector 100 s, new 5 s":** consistent. On ed03aac6c (223 files), the old selector took about 113 s per run and the new one 5.3 s.
+* **"`engine/snapshot.ts` … the sample loader (`/demo/load`, called by 208 suites) runs":** the count is right (208). As an explanation of why the selection is about 300, it is wrong: the selector never sees `/demo/load` (M1).
+* **"Every suite that failed is still chosen":** I could not reproduce this (it needs the GitHub runs API). The window does not exercise M1 or M2: `check_d1_reset_to_six_browser.cjs` is quarantined, and no `check_s7_*` suite failed in it.
+
+## Journey score (reviewer, journey-test adapted: no screen)
+Journey: a builder opens a PR → CI reads the diff → the "suites chosen / why" table → a red suite points at the cause. Walked on the CLI: plain mode, `--why`, `SELECT_DEBUG=1`, `--direct`, and outside a git copy. No browser, axe or widths: not applicable to a CLI.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| task completed | ½ | Right for most files; misses in M1 and M2 |
+| next step obvious | 1 | `--why` prints the whole chain (`wave1.json → C11.12.test.ts → check-gate-b.mjs → …`) |
+| plain words | 1 | Reasons read as sentences |
+| feedback and state | 1 | `SELECT_DEBUG` shows each followed use |
+| correct data | ½ | The set-up rule never fires; the comment's claims do not match the code |
+| error recovery | 1 | Outside git: exit ≠ 0, and run-suites.sh stops with exit 2 |
+| accessibility and sizes | 1 | Plain-text TSV and a markdown table (n/a beyond that) |
+| speed | ½ | Selector ≤ 6 s per part (was up to 113 s); PR-check p75 unchanged |
+| visual quality | 1 | Table unchanged |
+| trust and sources | 1 | Every choice carries its reason |
+
+**8.5 / 10**, no 0. It is still blocked by M1 and M2.
+
+## Not checked
+The full suite set (hours). The replay against GitHub's runs API. CI on the six parts. graph.mjs and GRAPH.md (no screen capability).
+
+**Verdict: Block.** Fix M1 and M2 (each with a pass and a fail case in check-select-suites.sh), then request a re-review of the new commit.
+
+## Re-review (e8c6bc80a)
+Verdict: Approve
+
+Diff-only re-review: `git diff 5eaf0dec4 e8c6bc80a` (select-suites.mjs, check-select-suites.sh, check_prisma_schema.ts, the replay notes). US$0, port 4400 not used.
+
+**Ran (exit codes):**
+* `check-select-suites.sh`: **exit 0**, 58/58 (24.6 s).
+* `check_contract_seams.ts`: **exit 0**, 98/98.
+* `check_prisma_schema.ts`: **exit 0**, 5/5.
+* `check-test-dbs.sh`: **exit 0**, 27/27.
+* origin/main's selector against this one on all 126 `api/src` modules, and on the 12 real merged PRs among the last 40 that did not run everything.
+
+**Per finding:**
+* **M1: closed.**
+  * main.ts's endpoints now come from the raw controller text (`select-suites.mjs:209-214`). main.ts has 6 controller splits in both the raw and the blanked text, so the two stay index-aligned.
+  * demo.ts: 163 on origin/main, 171 now, with `check_s7_load.ts`, `check_s7_reset.ts`, `check_s7_dialogs_browser.cjs`, `check_forms_demo.ts` and both D1 suites. The set-up rule now fires (7 lines).
+  * fill.ts: 219. engine/near.ts: 303, snapshot.ts: 328, contracts/counts.ts: 328, samples/wave1.json: 259. All of these include s7_load and s7_reset.
+  * The false "about 300 through these two" comment is gone.
+* **M2: closed.** `viaGraph` (`:187`, `:244`) keeps origin/main's behaviour for a direct change to an API module. Of the 126 modules, **none loses a suite** compared with origin/main (72 gain, 54 the same); demo-reset-to-six.ts is 160 = 160. For a change that reaches a module through the graph, the shell and home-page exemption still applies, as intended, and both directions are now tested.
+* **m1: closed.** The quote-aware `stripComments` (`:263-274`) never drops a file name that the old regex kept: 0 of 933 code files (13.9 MB) lose one, in 256 ms in total.
+* **m2: closed for sibling modules.** Imports through `sys.path` into another folder are still not import edges: studio/tools/read_form.py and read_validated.py importing p1's xfa_inventory and e5_roundtrip. Both files are still reached through name edges and the sibling chain (read_validated.py ← simulate_validate.py), so there is no miss.
+* **m3: closed.** Under `--direct`, a migration alone chooses `check_prisma_schema.ts` (tested).
+* **m4: closed, with one new minor (n1).**
+  * The datasource is now `postgres`, and dropdb uses `--force`.
+  * I tested the start-up cleanup with a dead pid (999999) and a live one: the dead pid's database and folder are dropped, the live pid's are kept.
+  * After `timeout -s TERM 3`, the scratch database was still there (the signal lands during spawnSync, as the builder says). The next run removed it. In CI each part is a fresh machine.
+* **m5:** not changed, accepted as a speed cost only.
+* **m6: closed.** 10 new pass/fail cases on the synthetic repo.
+* **m7: closed.** P-376 is on `origin/lead/2026-11-05-lead14b` (DECISIONS.md line 6, BACKLOG.md line 181).
+
+**New findings:**
+* **n1 (Minor).** `check_prisma_schema.ts:64` calls `readdirSync(join(STUDIO, "var"))` before `mkdirSync(WORK)`. In a fresh copy with no `studio/var/`, the check stops with ENOENT, exit 1, before checking anything. I reproduced this in a scratch clone of e8c6bc80a. Under run-suites.sh it works, because run-suites.sh creates `var/suites` first (`run-suites.sh:67`). CI is unaffected, but running the file by its own usage line in a new copy fails. Fix: `existsSync(...) ? readdirSync(...) : []`, or `mkdirSync(WORK)` first.
+* **n2 (Minor).** `alive()` treats EPERM, a live process owned by another user, as dead. That would drop that run's scratch database. Only possible on a machine shared across users, which no copy here is. Fix: treat `e.code === "EPERM"` as alive.
+* **n3 (for the tech lead, not a code defect).** BACKLOG.md:181 B121 "Done when" also asks for:
+  * (a) the Prisma client and web build cached across parts (`actions/cache`), which is not in this PR;
+  * (b) a replayed 75th percentile under 10 min, which predicts 28.8 min.
+
+  The deviation is not silent. `replay-2026-11-06.md` measures that caching would save about 2 s, and that exact per-file selection cannot reach the target on this window (most code PRs still reach 275-328 suites). Approving this commit's code does not make B121 Done: the tech lead accepts that evidence or keeps the row open.
+
+**Verdict: Approve** for e8c6bc80a: no Blocker or Major open. n1 and n2 can follow; n3 is the tech lead's call on the row.
