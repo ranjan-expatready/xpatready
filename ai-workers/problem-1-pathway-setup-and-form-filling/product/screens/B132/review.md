@@ -71,3 +71,32 @@ Reviewer: Opus, a fresh session that did not build this change. Branch `claude/s
 (Should: m1 and m2 in the same PR. m3 is for the tech lead to rule on.)
 
 Verdict: Block — commit 56459093c74bddd2bb1c0f94b67b6d05e5d8839d
+
+## Round 2 — diff `56459093c..17484897c` only
+
+Own copy `rev_b132` on :4444 (stopped after: database and files removed). Live AI off, US$0, no tracked file changed by the runs. `check_c81_signing_api.ts`: **36/36, exit 0**. `check_vv_prepare_store.ts`: **28/28**. I also re-ran my round-1 probes on this code (scratch files, deleted).
+
+- **M1: fixed.** A barcode form on Paper is now judged with `isBarcodeForm`. It is refused when no current validated copy exists (`notValidated`, checked before the restart shortcut), and the copy printed must be `validated.copy` itself (`sign-steps.ts`, the print checks in `step()`).
+  - The round-1 repro now goes:
+    1. Print the validated copy (200), then Signed in pen (200).
+    2. Change a fact the form reads.
+    3. Re-print a plain copy: **409** "Printed comes after the validated copy … is read back".
+    4. Re-print the old validated copy: **409**, the same words.
+    5. Validate again, then print a plain copy: **409** "Print the validated copy of IMM 5257 … not another copy. Nothing was recorded."
+    6. Print the new validated copy: 200, and the steps restart. Signed in pen: 200.
+  - The line ends `validate:true, print:true, sign_in_pen:true, mail:null`, and the recorded printed copy is the new validated copy.
+  - A line waiting for an answer has no `validated`, so the check now fails closed (this also covers m1).
+- **M2: fixed.** `lockCase` (FOR UPDATE on the case row) is taken first in the scan transaction, before the `signed_scan` insert, and first in the restart transaction. That matches `case-prepare.ts` `channel()`'s order: case row, then sign_step. The extra lock inside `save()` is harmless, since the same transaction already holds it.
+  - Three uploads of the same scan at once, on 6 cases: **6 × 201, 12 × 409** in words, exactly one scan stored per item.
+  - No `40P01` in the API log (round 1 gave 6 × 500 with 40P01).
+- **m2: fixed.** Section (7) checks that a hand-signed IMM 5476 refuses `sign_in_pen` (409, naming its own steps, nothing recorded).
+- **Tests:** section (7) has fail and pass lines for:
+  - the first print (plain copy refused, validated copy printed)
+  - the re-print (a copy never validated refused with the signed print kept; the new validated copy printed with the steps restarted)
+  - m2 and the concurrent upload
+  
+  The builder reports them red before the code fix (31/36) and 36/36 three times after. My run agrees on the after state.
+- **m3** (a pen signature on a form with no barcode page never goes out of date) has been put to the tech lead on #1278 as a follow-up row. That is accepted here: it is outside this row's barcode-form scope.
+- Nothing new found in this diff. No Blocker or Major is open.
+
+Verdict: Approve — commit 17484897c695f5bf7c43b38f7c168cd193d403a5
