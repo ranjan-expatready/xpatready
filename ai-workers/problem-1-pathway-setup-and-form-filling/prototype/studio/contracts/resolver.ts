@@ -3,8 +3,9 @@
 // engine/sources.ts (behind api/src/fact-sources.ts) and api/src/form-lines.ts; the implementation is now
 // engine/resolver.ts and those places call it. Contract tests: tests/check_sh3_resolver.ts (they pin today's behaviour;
 // SH3 changes none). Pure: types and constants only, no database, no vendor, no country value (P-249 lift-ready).
-// Shape: the four scopes of C3.16 / SA-1B-130 (person · filing · household · organisation); person and filing are
-// built, household and organisation are a held design (P-251) and nothing produces them yet.
+// Shape: the four scopes of C3.16 / SA-1B-130 (person · filing · household · organisation), all built (C3.16, #1054): a
+// field's stored scope is read in one place (engine/field-scope.ts) and a release marks a household or organisation
+// placement, which is then asked and stored once on the case's own record (FILING), see R5.
 //
 // The rules (each has a passing and a failing check in tests/check_sh3_resolver.ts):
 //  R1  People on a filing. Each participant line of the combination gives n = max(preview ?? min ?? 0, 0) people. One
@@ -32,8 +33,10 @@
 //      representative, or the literal "representative" when none; none → the filing; anything else → nobody (null).
 //  R5  Scope of a fact: a fact whose id starts "case." or whose placement repeats once_per_case is a filing fact (stored
 //      once per case, R1; render's deciders and the case checklist pass the placement since C7.7, see (c)); one that
-//      starts "organisation." is an organisation fact, held (P-251): until the organisation subject exists it is read on
-//      the form's subject; any other fact is a person fact. No fact is a household fact yet.
+//      starts "organisation." is an organisation fact, read on the form's subject unless marked; any other fact is a
+//      person fact. C3.16: a placement marked "household" or "organisation" (the field's stored scope) is asked and
+//      stored once on the filing record; a household box reads it only where its person reading finds someone on the
+//      case, an organisation box only on the principal's forms.
 //  R6  Facts a subject sees: its own person facts plus the filing's facts; never another person's; a value stored per
 //      list row (`|<row>`) is not a single fact and is left out.
 //  R6b Whose value a person's fact is read from (one fact, as R6 reads it): the person's own answer; else the filing's
@@ -83,12 +86,10 @@
 /** C3.16 / SA-1B-130 rule 1: the four scopes a shared field may carry. */
 export const SCOPES = ["person", "filing", "household", "organisation"] as const;
 export type Scope = (typeof SCOPES)[number];
-/** Built now; the other two are a held design (P-251: household and filing scopes, organisation subject). */
-export const BUILT_SCOPES = ["person", "filing"] as const satisfies readonly Scope[];
-export const HELD_SCOPES = {
-  household: "Held (P-251): household scope is a design sent to the product owner; no fact is household-scoped yet.",
-  organisation: "Held (P-251): the organisation subject is a design sent to the product owner; until then an organisation fact is read on the form's subject (R5).",
-} as const satisfies Record<Exclude<Scope, (typeof BUILT_SCOPES)[number]>, string>;
+/** All four are built (C3.16, #1054; P-316 (2) lifted P-251's hold). Household and organisation values are held on the
+ *  case's own record (one household and one employer per case: named stand-ins until PartyRelationship membership and
+ *  the employer link, L-SA5). */
+export const BUILT_SCOPES = ["person", "filing", "household", "organisation"] as const satisfies readonly Scope[];
 /** Where a value of each scope lives: the SA-1B-130 rule 3 TARGET, not what is built (built: person on the person,
  *  filing once per case, R1), and the team's enum value it maps to (SA-1B-130 §7: FieldScope
  *  becomes PERSON | HOUSEHOLD | FILING | ORGANISATION; built CLIENT_LEVEL → PERSON, CASE_LEVEL → FILING, rule 6). */
@@ -103,7 +104,7 @@ export const SCOPE_RULES: Record<Scope, { team: "PERSON" | "HOUSEHOLD" | "FILING
 export const FILING = "case";
 
 /** A subject a fact is resolved for. `id` is a person id (R1), a relative `${person}/parent_1|parent_2|sibling` (R4), or
- *  FILING. Household and organisation subjects are part of the shape only (held). */
+ *  FILING. Household and organisation subjects are part of the shape only: their values sit on FILING (C3.16). */
 export type Subject =
   | { scope: "person"; id: string }
   | { scope: "filing"; id: typeof FILING }

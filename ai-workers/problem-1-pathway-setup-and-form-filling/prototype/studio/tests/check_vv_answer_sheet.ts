@@ -3,7 +3,7 @@
 // copy; what is not confirmed is listed as waited for; "Entered in the portal" ticks go out of date when an answer they
 // froze changes (P-65). Each rule has a passing and a failing case. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_vv_answer_sheet.ts
-import { answerSheet, copyText, sectionHash, sourceOf } from "../engine/runtime/answer-sheet.ts";
+import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sourceOf, type FormPart } from "../engine/runtime/answer-sheet.ts";
 import type { BoxRow } from "../engine/render.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -52,6 +52,39 @@ ok("C7.3: the source says Document for a document read, Client for the questionn
   const changed = answerSheet(SECTIONS, boxes.map((b) => (b.about === "p" && b.fact === "person.family_name" ? { ...b, value: "SAMPLEDX" } : b)), origin, labels, tick);
   ok("C7.3 (fail): a changed answer marks the entered section out of date and shows the new value", changed.sections[0].out_of_date === true && changed.sections[0].answers.some((x) => x.value === "SAMPLEDX"));
   ok("C7.3: the fingerprint does not depend on the order of the answers", sectionHash([...first.sections[0].answers].reverse()) === sectionHash(first.sections[0].answers));
+}
+
+// The form's own parts from the release's configuration (P-319): no table of form numbers; the form's order; a field no
+// part groups goes in "Other questions"; a part with nothing to type for this person is left out.
+{
+  const F = "IMM_5707[0].page1[0].";
+  const parts: FormPart[] = [
+    { key: "children", title: "Section B - children", named: true, fieldKeys: [`${F}SectionB[0].Child[0].Name[0]`] },
+    { key: "applicant", title: "Applicant", named: true, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`, `${F}SectionA[0].Applicant[0].FamilyName2[0]`, `${F}SectionA[0].Applicant[0].DOB[0]`] },
+    { key: "part_1", title: "Unnamed section 1 of the form", named: false, fieldKeys: [`${F}SectionA[0].Spouse[0].FamilyName[0]`] },
+    { key: "sign", title: "Section C - certification", named: true, fieldKeys: [`${F}SectionC[0].Sign[0]`] },
+    { key: "applicant_again", title: "Applicant (proposed again)", named: true, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] },
+  ];
+  const order = boxes.map((b) => b.box);
+  const inOrder = partsInFormOrder(parts, order);
+  ok("C7.3: the form's own parts go in the order the form prints them (their first form field), whatever order they were proposed in", inOrder.map((p) => p.key).join() === "applicant,part_1,children,sign", inOrder.map((p) => p.key));
+  ok("C7.3 (fail): a part proposed twice for the same form fields is shown once (the first kept)", !inOrder.some((p) => p.key === "applicant_again"));
+  const s = sheetOf({ basis: "form_parts", parts: inOrder }, boxes, origin, labels, new Map());
+  ok("C7.3: a sheet from the form's own parts says so and titles each section with the configuration's name", s.order_basis === "form_parts" && s.sections[0].title === "Applicant" && /configuration/.test(s.order_note));
+  ok("C7.3: each answer goes in the part that groups its form field", s.sections[0].answers.every((a) => a.subject === "p") && s.sections.find((x) => x.key === "part_1")?.answers.some((a) => a.subject === "s") === true);
+  ok("C7.3: a part not named yet is shown with its placeholder and marked not named (B78), never dropped", s.sections.find((x) => x.key === "part_1")?.named === false && s.sections[0].named === undefined);
+  const other = s.sections.find((x) => x.key === OTHER_PART);
+  ok("C7.3 (fail): a form field no part groups is never dropped: it goes last, in \"Other questions\"", s.sections.at(-1)?.key === OTHER_PART && !!other?.answers.some((a) => a.fact === "person.note") && !!other?.waiting.some((w) => w.subject === "p/parent_1"));
+  ok("C7.3 (fail): a part with nothing to type for this person (a signature block) is not a step on the sheet", !s.sections.some((x) => x.key === "sign"));
+  const tick = new Map([["sign", { at: "2026-11-01T10:00:00Z", by: "user-O", hash: sectionHash([]) }]]);
+  ok("C7.3: a ticked part stays on the sheet with its tick even with nothing to type", sheetOf({ basis: "form_parts", parts: inOrder }, boxes, origin, labels, tick).sections.find((x) => x.key === "sign")?.entered?.by === "user-O");
+  const clash = sheetOf({ basis: "form_parts", parts: [{ key: OTHER_PART, title: "A part keyed like Other", named: true, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] }] }, boxes, origin, labels, new Map());
+  ok("C7.3 (review m3, fail): \"Other questions\" never takes a part's key, even one keyed like it", new Set(clash.sections.map((x) => x.key)).size === clash.sections.length && clash.sections.some((x) => x.title === "Other questions" && x.key !== OTHER_PART));
+  const dup = partsInFormOrder([{ key: "part_old", title: "Unnamed section 1", named: false, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] }, { key: "applicant", title: "Applicant", named: true, fieldKeys: [`${F}SectionA[0].Applicant[0].FamilyName[0]`] }], order);
+  ok("C7.3 (review m5, fail): of two parts with the same first form field, the named one is kept, never the one still waiting", dup.length === 1 && dup[0].key === "applicant");
+  const long = `${F}SectionA[0].Applicant[0].${"X".repeat(130)}[0]`;
+  const cut = sheetOf({ basis: "form_parts", parts: [{ key: "applicant", title: "Applicant", named: true, fieldKeys: [long.slice(0, 120)] }] }, [{ ...boxes[0], box: long }], origin, labels, new Map());
+  ok("C7.3 (review m1): a form field whose data path is longer than the 120 characters the rules pass keeps still goes in its part", cut.sections[0].key === "applicant" && cut.sections[0].answers.length === 1 && !cut.sections.some((x) => x.key === OTHER_PART));
 }
 
 process.exitCode = summary() ? 1 : 0;

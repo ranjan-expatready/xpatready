@@ -401,3 +401,30 @@ An independent Opus challenge of PR #1167 found the plan "sound with changes" an
 **After the tech lead's rulings of about 20:30 IST, 6 Nov:** R8, R9, R10 and R11 are recorded as ruled in section 7 (a fourth builder for B2 at hour 0, on the founder's next typed turn; A4 ahead of B3; row C10 for QA-235; B5 fourth in stream B with gate B's steps named). Row C10 is added, and it says the fix for QA-235 is already on `main`, so it starts with a retest. C6.5's paid run waits for a Go of its own with a measured estimate. This was the planning lane's last push.
 
 **Not changed:** the pack results (section 2), the journeys already written (section 6, three added), and every measured number. Nothing was re-run for this revision.
+
+## Rows added 7 Nov from the coverage audit (founder: "Yes, add them", ~15:31 IST; P-406)
+
+Source: `reports/coverage-prep-filing-2026-11-07.md`, 94 requirement rows on preparing and filing, read against the capabilities, backlog and decisions on main 83ee42dda. The 17 cover the main path. **M3 is now 28 capabilities:** the 17, plus 11 below. Two more go to the team (C8.4 withdraw a submitted filing, SI-18; C8.5 stored signature, SI-19).
+
+**Order, by a person's journey (P-348 (1)); a seat takes the next row as one frees; the 17 keep first place:**
+
+| # | Row | Capability | Needs first |
+|---|---|---|---|
+| 1 | B146 | L-SA6 checked against C6.6 (qa) | nothing |
+| 2 | B140 | C6.18 officer entry for background answers | nothing |
+| 3 | B137 | C6.15 document substitute sets | nothing |
+| 4 | B136 | C6.14 one document for the whole application | C3.16 (#1054) |
+| 5 | B135 | C6.13 make principal, remove a filing | concept |
+| 6 | B138 | C6.16 adult privacy, "Send to …" | concept; breaker |
+| 7 | B141 | C7.8 add a library form to one filing | concept |
+| 8 | B142 | C7.9 must verify before filing | nothing |
+| 9 | B144 | C8.3 representative review | concept; breaker |
+| 10 | B143 | C7.10 readiness figure per filing | C7.6 Works |
+| 11 | B145 | C9.5 adopt a published update | concept |
+| 12 | B139 | C6.17 multi-stage case (large) | concept |
+
+**Settled in a row's "Done when" before that row claims Works (ambiguous items in the audit):** cross-applicant contradictions (AG-8-30) in C7.5; language-test and ECA report reading (AG-9-52) in C6.5; the per-box "came from" view (SA-1B-28) in C7.7; provincial file numbers (AG-7-95) and the values frozen at submission (SA-1B-259) in C8.2. C8.2 is already Works: a missing one becomes its own row, never a demotion without qa.
+
+**Still open:** S8, the card-by-card trace of SA-01B v2.1 (most of SA-1B-150 to 301 appear nowhere in the records). Run after this block, read-only.
+
+**Forecast (estimate, not measured):** six of the 11 need a concept and a fresh challenge (about 1-1.5 h each), builds 2-5 h, gate A about 1 h. With seats freeing from the current block, all 28 in about **7-10 days**, against 5-7 days for the 17. Measured so far: 4 of 17 Works in the first 16.5 h of the M3 clock.

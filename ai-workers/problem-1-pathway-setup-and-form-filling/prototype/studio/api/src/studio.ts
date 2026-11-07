@@ -35,6 +35,7 @@ import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } fro
 import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
 import { firmMayRead } from "./case-feed.ts";
+import { placementRefusal } from "../../engine/field-scope.ts"; // C3.16: a field asked once for the household or employer stays single and unconditioned
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -675,6 +676,7 @@ export class Studio {
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
       await lockItem(tx, workspaceId, "section", [b.sectionKey]); await refuseRetired(tx, workspaceId, "section", [b.sectionKey]); // round 3 Major 1
+      { const no = placementRefusal((await tx.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } }))?.scope, { repeats: b.repeats, condition: b.condition }); if (no) fail(no, HttpStatus.UNPROCESSABLE_ENTITY); } // C3.16 (#1054 M3, M1; review m1: under the field's lock)
       if (!rows.length) {
         const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
         return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
