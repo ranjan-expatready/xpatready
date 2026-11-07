@@ -1,0 +1,30 @@
+C6.11 — Firm, users and case team
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.11-1 pass: GET /runtime/firm, read as one user of each firm, gives one Sample firm and one Sample solo firm, marked Stand-in SI-9 — 200
+PASS  C6.11-2 pass: the firm's representative holds a licence body and number; the case officer holds none — {"body":"CICC","category":"rcic","number":"R000000"}
+PASS  C6.11-3 pass: the solo firm is one person holding all three duties (representative, case officer, firm admin) — [{"actor":"user-S","name":"Solo representative (Sample)","duties":["case_officer","representative","firm_admin"],"licence":{"body":"CICC","category":"rcic","number":"R000001"}}]
+PASS  C6.11-3a fail (BR-20): each firm sees only its own users (the solo firm's person is not in the Sample firm's list, nor the other way) — [["user-R","user-O","user-T"],["user-S"]]
+PASS  C6.11-4 fail: a client cannot list firms or users (403)
+PASS  C6.11-5 pass (as built): a case opened without naming a representative of record still has exactly one, the firm's default representative (never none) — {"status":201,"noRep":"user-R"}
+PASS  C6.11-6 fail: an unlicensed case officer cannot be the representative of record (400 on the field, names the licence) — "Case officer (Sample) is not a licensed representative, so cannot be the representative of record."
+PASS  C6.11-7 pass: the case shows its team: representative of record (name, licence) and case officers, chip SI-9 — {"firm":{"key":"sample-firm","name":"Sample immigration firm","solo":false},"stand_in":{"id":"SI-9","words":"Today: one Sample firm and one Sample solo firm, seeded. Later: the team's AG-01 firm setup and users, and AG-07's case team."},"representative":{"id":
+PASS  C6.11-8 pass (data): the team is stored in AG-07's CaseTeamMember shape (LEAD_REPRESENTATIVE once, OFFICER)
+PASS  C6.11-9 fail: a case officer without the firm admin duty cannot assign or take off a case officer (403) — [403,403]
+PASS  C6.11-10 fail: taking a case officer off without a reason is refused on the field (400) — 400
+PASS  C6.11-11 pass: the firm admin reassigns the case officer; the history says who, when, from, to and why — [{"user":"Second representative (Sample)","user_id":"user-T","role":"OFFICER","assigned_by":"Representative (Sample)","assigned_at":"2026-11-05T07:28:47.924Z","ended_at":null,"ended_by":null,"reason":null},{"user":"Case officer (Sample)","user_id":"user-O","ro
+PASS  C6.11-12 pass (data): the earlier assignment is ended, never deleted
+PASS  C6.11-13 fail: a change made from an older view of the team is refused (409) and changes nothing — 409
+PASS  C6.11-14 fail: a client or the configuration author cannot change the team (403) — [403,403]
+FAIL  C6.11-15 pass: IMM 5476 is a deliverable for the principal and the spouse (each 18 or older), none for a child of 10 (VV-R10) — ["bf0fd974-f80b-441b-aad5-daacd95a370a","f4b57d18-ffc7-463e-afea-f0cff181f197","e2227254-e6b7-4db7-8f50-63782e530684","856d2db5-a8f2-48a3-a6d5-bbe843ded514"]
+PASS  C6.11-16 pass: the representative's facts IMM 5476 reads (category, membership ID) come from the representative of record, not typed per case — {"facts":{"representative.representative_category":"rcic","representative.membership_id":"R000000","representative.licensing_province":null},"new_needed":false,"since":null,"earlier":null}
+FAIL  C6.11-16c pass: the questionnaire shows IMM 5476's representative facts (membership ID) from the representative of record, source "Firm", not typed per case
+PASS  C6.11-16a pass (FQ-9): the Sample firm has a second representative to hand the case to — [["case_officer","representative","firm_admin"],["case_officer"],["case_officer","representative"]]
+PASS  C6.11-16b fail: a representative from another firm cannot become this case's representative of record (422) — 422
+PASS  C6.11-17 pass: changing the representative of record asks for a new IMM 5476 (the team says "new IMM 5476 needed", naming the earlier one); the history keeps who, when and why — {"facts":{"representative.representative_category":"rcic","representative.membership_id":"R000002","representative.licensing_province":null},"new_needed":true,"since":"2026-11-05T07:28:48.373Z","earlier":"user-R"}
+FAIL  C6.11-17a pass: the new IMM 5476 is To do naming the new representative; a signed earlier one goes Out of date (C9.2-6)
+PASS  C6.11-18 fail (data): a case never has two representatives of record at once
+PASS  C6.11-19 pass: a solo firm opens a case where one person is representative of record and case officer — {"firm":{"key":"sample-solo","name":"Sample solo practice","solo":true},"stand_in":{"id":"SI-9","words":"Today: one Sample firm and one Sample solo firm, seeded. Later: the team's AG-01 firm setup and users, and AG-07's case team."},"representative":{"id":"use
+PASS  C6.11-19a fail (BR-20): the Sample firm cannot read the solo firm's case (404)
+
+22/25 passed
