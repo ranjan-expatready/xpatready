@@ -11,7 +11,7 @@ import { ArrowRight, Lock, LogOut, Mail } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button, Field, Input, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StandIn } from "@/components/stand-in";
+import { ProposedStandIn } from "./privacy";
 import { byPerson, QuestionnaireIoContext, shown, Sqr, type QuestionnaireIo, type View } from "./questionnaire";
 import { Toaster } from "./cases";
 import { LINK_RULES, LINK_WORDS, type LinkOpened, type LinkSession } from "../../../contracts/person-link";
@@ -64,7 +64,7 @@ export function LinkApp() {
         <span className="h-6 w-px bg-border" />
         <p className="text-sm font-semibold">Your own questions</p>
         <span className="ml-auto flex items-center gap-2">
-          <StandIn id="SI-21" today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
+          <ProposedStandIn today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
           {stored ? <Button size="sm" variant="ghost" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, open the link from your email again and ask for a new code."); }}><LogOut aria-hidden />Sign out</Button> : null}
         </span>
       </header>
@@ -182,7 +182,7 @@ export function DemoInbox() {
   const q = useQuery({ queryKey: ["inbox", shownAddress], queryFn: () => api<{ messages: { id: string; kind: string; subject: string; body: string; link: string | null; created_at: string }[] }>(`/demo/inbox?address=${encodeURIComponent(shownAddress!)}`), enabled: !!shownAddress, retry: false, refetchInterval: 5000 });
   return (
     <div className="mx-auto max-w-xl px-4 py-5">
-      <div className="flex items-center gap-2"><h1 className="text-2xl font-semibold">Demo inbox</h1><StandIn id="SI-20" today="links and codes go to this demo inbox by address (Demo workspace only)" later="the team's email sending (AG-10)" /></div>
+      <div className="flex items-center gap-2"><h1 className="text-2xl font-semibold">Demo inbox</h1><ProposedStandIn today="links and codes go to this demo inbox by address (Demo workspace only)" later="the team's email sending (AG-10)" /></div>
       <p className="mt-1 text-sm text-text-muted">Demo chrome, not for porting: it stands in for a person's email.</p>
       <form className="mt-3 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); setParams({ address }); }}>
         <Field className="flex-1" label="Email address"><Input type="email" value={address} onChange={(e) => setAddress(e.target.value)} /></Field>

@@ -7,7 +7,6 @@ import { Info, Lock, Mail, RotateCcw, Send, Undo2 } from "lucide-react";
 import { api, ApiError, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Table, Textarea } from "@/components/ui/controls";
 import { Tip, TipProvider } from "@/components/status";
-import { StandIn } from "@/components/stand-in";
 import { LINK_WORDS, type PeoplePrivacy, type PersonPrivacy, type ProgressOnly } from "../../../contracts/person-link";
 
 export const usePeoplePrivacy = (caseId: string | null) => useApi<PeoplePrivacy>(["runtime", "privacy", caseId], caseId ? `/runtime/cases/${caseId}/people/privacy` : null);
@@ -61,7 +60,7 @@ function TakeBackDialog({ caseId, person, staff, close }: { caseId: string; pers
   const take = useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/link`, { method: "DELETE", json: reason.trim() ? { reason } : {} }), { success: `${person.label}'s link was taken back.`, invalidate: REFRESH, onDone: close });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Take back ${person.label}'s link?`} description={person.private.on ? LINK_WORDS.takeBack(person.label) : `${person.label}'s link stops working now. You can send a new one later.`}
-      footer={<><Button variant="ghost" onClick={close}>Keep the link</Button><Button variant="destructive" busy={take.isPending} onClick={() => take.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) })}><Undo2 aria-hidden />Take back</Button></>}>
+      footer={<><Button variant="ghost" onClick={close}>Keep the link</Button><Button busy={take.isPending} onClick={() => take.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("reason") ?? e.message : e.message) })}><Undo2 aria-hidden />Take back</Button></>}>
       {staff ? <Field label="Why (kept in the case history)" error={error}><Textarea rows={2} value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} /></Field> : error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : <p className="text-sm text-text-muted">Nothing else changes.</p>}
     </Dialog>
   );
@@ -138,7 +137,7 @@ export function OfficerPeoplePanel({ caseId }: { caseId: string }) {
     <section aria-labelledby="own-links" className="rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <h2 id="own-links" className="text-base font-semibold">Own links and privacy</h2>
-        <StandIn id="SI-20" today="links and codes go to a demo inbox by address (Demo workspace only)" later="the team's email sending (AG-10)" />
+        <ProposedStandIn today="links and codes go to a demo inbox by address (Demo workspace only)" later="the team's email sending (AG-10)" />
         <p className="w-full text-[13px] text-text-muted">Staff always see and edit every answer. An adult who answers on their own link is kept private from {q.data?.principal ?? "the principal"}, who then sees their progress only.</p>
       </header>
       {q.isLoading ? <p className="px-4 py-3 text-sm text-text-muted">Loading who answers for each person…</p> : q.isError ? <div className="p-3"><Notice tone="danger" title="Who answers could not be loaded">{(q.error as Error).message}</Notice></div> : (
@@ -178,3 +177,13 @@ function ResendButton({ caseId, person }: { caseId: string; person: PersonPrivac
   return <TipProvider><Tip tip={`A new link to ${person.kept_masked ?? person.link?.email_masked}; the earlier one stops working.`}><Button size="sm" variant="secondary" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button></Tip></TipProvider>;
 }
 
+
+/** C6.16: the stand-in chip's look for a stand-in the tech lead has not yet added to product/STAND-INS.md (proposed on
+ *  PR #1257 as SI-20 and SI-21). It carries no data-stand-in until its row exists; then it becomes <StandIn id="SI-n">. */
+export function ProposedStandIn({ today, later }: { today: string; later: string }) {
+  return (
+    <TipProvider><Tip focusable tip={<>Today: {today}<br />Later: {later}<br /><span className="text-text-muted">Proposed for the stand-ins register</span></>}>
+      <span className="inline-flex h-5 items-center rounded-full border border-dashed border-border-strong px-2 text-[11px] font-medium text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Stand-in</span>
+    </Tip></TipProvider>
+  );
+}
