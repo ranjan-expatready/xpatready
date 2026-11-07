@@ -82,7 +82,7 @@ export function diffFilings(before: CaseFilings, after: CaseFilings, people: Par
   for (const p of people.filter((x) => x.role !== "case")) {
     const s = p.subjectId, words: string[] = [];
     const fb = b.get(s), fa = a.get(s);
-    if (fb && !fa) words.push("Their own filing stops (not travelling); its items are kept and come back if the filing is added back");
+    if (fb && !fa) words.push("Their own filing stops (not travelling)");
     if (!fb && fa) words.push("Their own filing starts again (the same filing and items as before)");
     if (fb && fa) {
       const ab = new Set(fb.applicants.map((x) => x.subject)), aa = new Set(fa.applicants.map((x) => x.subject));

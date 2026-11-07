@@ -33,7 +33,9 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
   const [open, setOpen] = React.useState<{ kind: Kind; subject: string; reason?: string } | null>(null);
   const [last, setLast] = React.useState<{ words: string; undo: { kind: Kind; subject: string }; reason: string } | null>(null);
   const filings = prep.data?.derived ? prep.data.filings : [];
-  const filingOf = (s: string) => filings.find((f) => f.applicants.some((a) => a.subject === s && a.mode === "applying"));
+  const filingOf = (s: string) => filings.find((f) => f.applicants[0]?.subject === s);
+  /** On someone else's filing (C11.12: on the principal's application, applying or declared only). */
+  const onFiling = (s: string) => { const f = filings.find((x) => x.applicants[0]?.subject !== s && x.applicants.some((a) => a.subject === s)); return f ? { f, mode: f.applicants.find((a) => a.subject === s)!.mode, owner: people.find((p) => p.subject_id === f.applicants[0]?.subject)?.label ?? "the principal" } : null; };
   const recorded = filings.some((f) => f.status.toLowerCase() === "submitted" || !!f.record);
   const lastRemoval = (s: string) => hist.data?.changes.find((c) => c.subject === s && (c.kind === "remove_filing" || c.kind === "travelling_flag"));
   const lastSwap = hist.data?.changes.find((c) => c.kind === "make_principal");
@@ -54,16 +56,17 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
             <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="px-4 py-2 font-medium">Person</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1" title={ROLE_TIP}>Role<Info className="size-3" aria-label={ROLE_TIP} /></span></th><th className="px-2 py-2 font-medium">Filing</th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {shown.map((p) => {
-                const f = filingOf(p.subject_id), removal = !p.applies ? lastRemoval(p.subject_id) : undefined;
+                const f = filingOf(p.subject_id), on = f ? null : onFiling(p.subject_id), removal = !p.applies ? lastRemoval(p.subject_id) : undefined;
                 const swapNote = p.role === "principal" && lastSwap?.subject === p.subject_id ? lastSwap : undefined;
                 return (
                   <tr key={p.subject_id} className="border-b border-border last:border-0 align-top" data-person-row={p.subject_id}>
                     <td className="px-4 py-2 font-medium [overflow-wrap:anywhere]">{p.label}</td>
                     <td className="px-2 py-2">{roleOf(p)}{swapNote ? <div className="text-xs text-text-muted" data-change-reason>Made principal {day(swapNote.at)} by {nameOf(swapNote.by)}: “{swapNote.reason}”</div> : null}</td>
                     <td className="px-2 py-2">{p.co_files ? <Pill title="Their forms are sent with the principal applicant's application, never on their own">Sent with the principal's application</Pill>
-                      : f ? "Own application" : <span className="text-text-muted">No filing: not travelling</span>}
+                      : f ? "Own application" : on ? (on.mode === "declared_only" ? <span className="text-text-muted">Declared only on {on.owner}'s application (not travelling)</span> : `On ${on.owner}'s application`)
+                      : <span className="text-text-muted">No filing: not travelling</span>}
                       {removal ? <div className="text-xs text-text-muted [overflow-wrap:anywhere]" data-change-reason>{removal.reason ? `Removed ${day(removal.at)} by ${nameOf(removal.by)}: “${removal.reason}”` : `Marked not travelling ${day(removal.at)} by ${nameOf(removal.by)}`}</div> : null}</td>
-                    <td className="px-2 py-2">{f ? <Pill>{STATUS[f.status.toLowerCase()] ?? f.status.toLowerCase().replace(/_/g, " ")}</Pill> : "—"}</td>
+                    <td className="px-2 py-2">{(f ?? on?.f) ? <Pill>{(({ status }) => STATUS[status.toLowerCase()] ?? status.toLowerCase().replace(/_/g, " "))((f ?? on?.f)!)}</Pill> : "—"}</td>
                     <td className="px-4 py-2 text-right">{recorded ? <span className="text-xs text-text-muted" data-recorded-note>Recorded as submitted: no person or filing changes here</span>
                       : p.co_files ? null : <RowMenu p={p} onPick={(kind) => setOpen({ kind, subject: p.subject_id })} />}</td>
                   </tr>);
@@ -130,14 +133,14 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
         {refusal ? <Notice tone="warn" title="Not possible">{refusal}</Notice> : null}
         {!view && !refusal ? <div className="space-y-2"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-16 w-full" /></div> : null}
         {view ? <>
-          {others.length ? <p className="rounded-lg bg-warn/15 px-3 py-2 text-sm font-medium text-text-warn" data-dependants>{others.length} other filing{others.length === 1 ? "" : "s"} depend{others.length === 1 ? "s" : ""} on this change and change:</p>
+          {others.length ? <p className="rounded-lg bg-warn/15 px-3 py-2 text-sm font-medium text-text-warn" data-dependants>{others.length} other filing{others.length === 1 ? " depends" : "s depend"} on this one and change{others.length === 1 ? "s" : ""}:</p>
             : <p className="text-sm text-text-muted">No other filing changes.</p>}
           <ul className="space-y-2">{view.changes.map((c) => <li key={c.person} className="rounded-lg border border-border px-3 py-2" data-change-filing={c.person}>
             <p className="font-medium">{c.label}'s filing{c.person === subject ? " (this one)" : ""}</p>
             <ul className="ml-4 list-disc text-sm">{c.words.map((w) => <li key={w}>{w}</li>)}</ul></li>)}</ul>
           {view.totals && view.totals.before_cents !== view.totals.after_cents ? <p className="text-sm text-text-muted" data-change-totals>Fees for this case: {cad(view.totals.before_cents)} → {cad(view.totals.after_cents)} (amounts from the cited fee table, Sample).</p> : null}
           <Field label="Why?" hint="Kept with the change and shown on the person's row." error={error}>
-            <Textarea value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} maxLength={500} placeholder="For example: added by mistake; the spouse holds the job offer" data-change-reason-input autoFocus />
+            <Textarea value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} maxLength={500} placeholder={kind === "make_principal" ? "For example: the spouse holds the job offer" : kind === "remove_filing" ? "For example: added by mistake; not travelling after all" : "For example: travelling after all"} data-change-reason-input autoFocus />
           </Field>
         </> : null}
       </div>

@@ -88,7 +88,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("button", { name: "Add spouse or partner" }).click(); await o.getByLabel("Name", { exact: true }).fill("Sample Spouse D"); await o.getByRole("button", { name: "Add", exact: true }).click(); await idle(o);
   step("officer fail: a second spouse is refused with the release's limit, in the dialog", await shows(o.getByText(/at most 1 spouse/i).first()));
   await o.getByRole("button", { name: "Cancel" }).click();
-  step("officer pass: spouse and child are on the case and get their own tabs of sections", await shows(o.getByRole("tab").nth(3)) && await o.getByRole("tab").count() === 4 && await shows(o.locator("section", { hasText: "People on this case" }).getByText("Sample Child C")));
+  step("officer pass: spouse and child are on the case and get their own tabs of sections", await shows(o.getByRole("tab").nth(3)) && await o.getByRole("tab").count() === 4 && await shows(o.locator("section", { hasText: "People and filings" }).getByText("Sample Child C")));
   await state(o, "officer-case-new", [1440, 1024]);
 
   // ── 2. The client answers on a phone
