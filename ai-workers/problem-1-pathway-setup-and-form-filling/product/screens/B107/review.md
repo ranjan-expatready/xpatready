@@ -47,3 +47,26 @@ Rendering in Adobe (XFA data read only). 400 px and 200 % zoom on these pages. A
 Journey score (reviewer): **8.5/10** (`journey-test-reviewer-2026-11-07.md`).
 
 Verdict: Block. Fix M1, with a fail test, then a diff-only re-review.
+
+## Round 2 (diff only, `7a673ee57..464943d4405a8f68b395d937aae30c92c3b40641`, 7 Nov 2026)
+Read the whole code diff and ran it on the builder's copy :4450, which serves the new head after a fresh checkpoint load. My checkout was fast-forwarded to the head. The builder committed this file and the journey report unchanged.
+
+**Round 1 findings**
+* **M1: fixed.** `ACTION_WORD` now has both actions (library-changes.ts:32). The heading reads "Change when a form field is filled: …". `sentence` no longer carries the lead words (form-field-gates.ts:64-66). The card has its own gate/by-hand branch: "The form's words (summarised)" or "Why", then "Source"; by-hand reads "Filled by hand: the product writes nothing in it", with its own footer (review-items.tsx:86-93). The contract addition is optional (contracts/screen02.ts). Seen on my re-run's `06-review-by-hand-change-1440.png`; walk 10/10. Tests C19–C21 cover it.
+* **m2, m5, m6, m7, m8: fixed.** B107-22…26 pass. The words, the file names, the plain quotes and the release words are all as asked. m3 and m4 are noted in the PR, which is acceptable.
+* **m1: the tests are written, but they fail on a second run on the same copy (R2-M1).**
+
+**Re-run on :4450:** check_b107_form_field_gates all passed (with 22–26). qa's check 7/7, C6.11 25/25, check_c611_checkpoint 14/14, J-A2 19/19 and the B107 walk 10/10 all pass with the leftover state below. **check_b107_representative_copies: 23/26, exit 1, on both of my runs.** C22, C23 and C24 get `404 "Not found"`.
+
+**R2-M1 (Major, Must): the new C22–C24 cannot be re-run, and they leave a library draft behind.** tests/check_b107_representative_copies.ts:118-136.
+* The test inserts a WAITING gate change on the ICCRCMember key and approves it, leaving it APPROVED, with a DRAFT v2 of IMM 5476's CICC box whose gate words are "B107 check words". Nothing undoes either.
+* On the next run on the same copy, the insert hits `library_change_one_open` (unique while WAITING or APPROVED). `sql` returns no id, the route answers 404, and C22–C24 fail. On :4450 now: `APPROVED|user-A|user-B|IMM 5476 · B107 check gate`; `form_field_map` ICCRCMember v2 DRAFT `user-A`, "B107 check words".
+* The next release on such a copy carries those words onto the CICC box ("Not needed: written only when B107 check words").
+* These checkpoint suites run by hand on copies, not in CI. Re-running on the same copy is how an independent session confirms a row (P-291), and every other suite here re-runs cleanly. As written, the evidence "26/26" cannot be reproduced on the copy the builder handed over.
+* **Fix:** clean up at the end of the test, in a `finally`: set the test change to WITHDRAWN and delete the DRAFT row it created. Also remove any earlier run's leftover first (match its label `IMM 5476 · B107 check gate`). Then run the file twice in a row on one copy and give both exit codes in the PR. On :4450, the current leftover row and change need removing, or reload the checkpoint.
+
+**New Minor:** on the gate and by-hand cards the source is shown twice, as "Source" and again as "Reason:" below. The reason is the cite (form-field-gates.ts:235). It is cosmetic: drop one, or store a short reason.
+
+Product code: no new issue. The approval rules hold, as in round 1 and in the builder's C22–C24 on a fresh copy.
+
+Verdict: Block. Fix R2-M1 (test clean-up and two consecutive runs), then a diff-only check of the test file.

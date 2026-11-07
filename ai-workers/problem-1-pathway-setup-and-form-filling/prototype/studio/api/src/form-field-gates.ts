@@ -70,7 +70,7 @@ export class FormFieldGates implements OnModuleInit {
       if (await tx.libraryChange.findFirst({ where: { workspaceId, kind: FORM_FIELD_KIND, key, status: { in: BLOCKING } } })) throw problem(409, "Already waiting", "A change of this form field already waits on To review. Decide or withdraw it first.");
       const replaces = await closeReplaced(tx, workspaceId, key);
       const matches: Matches = { formEditionId: ed.id, dataPath: p.dataPath, form: ed.form.formKey, edition: ed.editionLabel, caption: cur.caption ?? "", words, sentence, cite: p.cite.trim(), before: seenOf(cur), after, byHand: !!p.byHand, reason: p.cite.trim(), replaces };
-      const change = await tx.libraryChange.create({ data: { workspaceId, kind: FORM_FIELD_KIND, key, label, action: p.byHand ? BY_HAND_ACTION : GATE_ACTION, reason: p.cite.trim().slice(0, 1000), status: "WAITING", proposedBy: actor.id, appliedBy: actor.id, combinationId,
+      const change = await tx.libraryChange.create({ data: { workspaceId, kind: FORM_FIELD_KIND, key, label, action: p.byHand ? BY_HAND_ACTION : GATE_ACTION, reason: p.byHand ? "Nobody on the case can answer it, from the form's own words (Source above)." : "Which form field takes the answer, from the form's own words and scripts (Source above).", status: "WAITING", proposedBy: actor.id, appliedBy: actor.id, combinationId,
         matches: matches as unknown as Prisma.InputJsonValue } });
       await this.audit.log(workspaceId, actor.id, "proposed", "form field", ed.form.formKey, `${actor.name} proposed: ${label}. It waits for a second person.`, undefined, combinationId ?? undefined);
       return { id: change.id, status: change.status, label };

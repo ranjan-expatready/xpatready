@@ -115,8 +115,16 @@ await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — c
 
   // ---- The door at approval (review m1), through the real approve route: a WAITING gate change shaped as the door writes it.
   const BOX = `${Q6}questionII[0].ICCRCMember[0]`, ed = sql(`select id from form_edition where edition_label = 'IMM 5476 (11-2021)' and channel <> 'ONLINE' limit 1`);
-  const row = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' order by version desc limit 1`);
   const ws = sql(`select workspace_id from form_edition where id = '${ed}'`);
+  // Review R2-M1: the check leaves nothing behind, and an earlier run's leftover is removed first, so it re-runs on one copy:
+  // its change withdrawn, the draft version of the form field it approved deleted (the released version stays as loaded).
+  const cleanUp = () => {
+    sql(`delete from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' and status = 'DRAFT' and condition_rule->>'words' = 'B107 check words'`);
+    sql(`update library_change set status = 'WITHDRAWN', decision_note = 'B107 check: cleaned up' where label = 'IMM 5476 · B107 check gate' and status in ('WAITING', 'RETURNED', 'APPROVED')`);
+  };
+  cleanUp();
+  const row = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' order by version desc limit 1`);
+  try {
   const changeId = sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, matches, meaning_checked, status, proposed_by, proposed_at, version, applied_by)
     select gen_random_uuid(), '${ws}', 'form_field_condition', '${ed}:${BOX}', 'IMM 5476 · B107 check gate', 'SET_FORM_FIELD_GATE', 'B107 check, Sample',
       jsonb_build_object('formEditionId', '${ed}', 'dataPath', '${BOX}', 'form', 'IMM 5476', 'edition', 'IMM 5476 (11-2021)', 'caption', coalesce(m.caption, ''), 'words', 'B107 check words', 'sentence', 'B107 check words', 'cite', 'IMM 5476 (11-2021) p. 1, B107 check source',
@@ -134,4 +142,6 @@ await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — c
   const good = await approve(APPROVER);
   const drafted = sql(`select updated_by || ':' || (condition_rule->>'words') from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' and status = 'DRAFT'`);
   ok("B107-C24 pass: unchanged, a second person's approval writes a draft of the form field holding the gate, by the proposer", good.status < 300 && drafted === `${AUTHOR}:B107 check words`, [good.status, good.body?.detail, drafted]);
+  } finally { cleanUp(); }
+  ok("B107-C25 pass (review R2-M1): nothing of the check is left: no open change of it, no draft of the CICC box", sql(`select count(*) from library_change where label = 'IMM 5476 · B107 check gate' and status in ('WAITING', 'RETURNED', 'APPROVED')`) === "0" && sql(`select count(*) from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' and status = 'DRAFT'`) === "0");
 });
