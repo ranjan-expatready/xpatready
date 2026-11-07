@@ -61,7 +61,9 @@ async function state(name: string, scope: string, widths = [1440, 1024]) {
 
 await as(OFFICER); await p.goto(`${BASE}/cases/${fam}`); await notice().waitFor({ timeout: 60_000 });
 const nt = await notice().innerText();
-ok("C9.5 BR-1, BR-8: the notice under the case header says the newer release is out and the case stays on release 1 until it is moved", /Release \d+ of Visitor visa is out \(released /.test(nt) && /This case stays on Release 1 until you move it/.test(nt), nt);
+ok("C9.5 BR-1, BR-8: the notice under the case header says the newer release is out and the case stays on release 1 until it is moved", /Release \d+ of Visitor visa is out( Demo release)? \(released /.test(nt) && /This case stays on Release 1 until you move it/.test(nt), nt);
+const demo = sql(`select count(*) from config_release where combination_id='${vv}' and version=${later.version}`) === "1" ? (await call("GET", `/runtime/cases/${fam}/release-update`, undefined, OFFICER)).body?.target?.demo : null;
+ok("BR-2 (break m6): a Demo release says so on the notice", demo === true ? /Demo release/.test(nt) : demo === false && !/Demo release/.test(nt), { demo, nt });
 await p.locator("[data-release-notice] button[aria-label='What a release is']").focus(); await p.waitForTimeout(400);
 ok("BIC-14: the ⓘ tooltip opens on keyboard focus and explains a release", /frozen set of the combination's forms/.test(await p.locator("[data-slot='tooltip-content']").first().innerText().catch(() => "")));
 await state("notice", "main");
