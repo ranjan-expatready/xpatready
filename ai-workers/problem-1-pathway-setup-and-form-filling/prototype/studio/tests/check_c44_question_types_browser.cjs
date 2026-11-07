@@ -123,7 +123,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     // ── The officer, in the Agent view ──
     const o = await open(OFFICER, 1440, 900);
     await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
-    await o.getByRole("tab", { name: /^Sample Applicant A/ }).click();
+    await o.getByRole("tab", { name: /^Sample Applicant A(?!:)/ }).click();
     const sec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Personal details" }) }).first();
     step("officer: the answers read as a person writes them (labels, the name, the periods)", await shows(sec.getByText("Tourism, Visit family")) && await shows(sec.getByText("Sampled (no given name)")) && await shows(sec.getByText(/Jun 2014 to Jan 2019: Sample work; Jun 2020 to today: Sample study/)) && await shows(sec.getByText("Declared", { exact: true })));
     step("officer (review M1): the declaration reads \"Declared\" with no Edit: only the client makes it", await shows(sec.getByText("Only the client makes this declaration")) && (await sec.getByRole("button", { name: /^(Edit|Add) Declaration/ }).count()) === 0);
