@@ -19,7 +19,8 @@ import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APP
 import { caseChecklist, type PersonLine } from "../../engine/runtime/case-checklist.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
-import { Runtime, type Reached } from "./runtime.ts";
+import { privateWords, Runtime, type Reached } from "./runtime.ts";
+import { privateFrom } from "../../engine/runtime/privacy.ts";
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -115,6 +116,9 @@ export class CaseChecklists {
     const row = workspaceId ? await this.db.checklistLine.findFirst({ where: { id, workspaceId } }) : null;
     if (!row) fail("No such checklist line.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, row!.caseId, want);
+    // C6.16 BR-7 (challenge M3): a client never uploads to, or reads the line of, a person kept private from them.
+    const who = c.participants.find((p) => p.subjectId === row!.subjectId);
+    if (who && !(actor.duties as readonly string[]).includes("case") && privateFrom({ kind: "client" }, { subjectId: who.subjectId, role: who.role, keepPrivate: who.keepPrivate })) fail(privateWords(who.subject.label), HttpStatus.FORBIDDEN);
     const list = await this.stored(c);
     const person = list.derived ? list.people.find((p) => p.subject === row!.subjectId) : undefined;
     const shown = person?.lines.find((l) => l.id === id);

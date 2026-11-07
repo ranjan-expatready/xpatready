@@ -9,7 +9,8 @@ import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { ConfirmSection, fillsText, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, OWN_LINK, pqrView, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { privateFrom, progressOf } from "../../engine/runtime/privacy.ts"; // C6.16
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
@@ -51,7 +52,29 @@ export const REPRESENTATIVE_NOT_TYPED = "The representative's details come only 
  *  offers to add one as a person; every other role comes from the release (P-319). */
 export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
+/** What a reached case carries: its pin and release, and its people with their party and profile. */
+const REACHED = { pins: { include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" as const }, include: { subject: { include: { party: { include: { profile: true } } } } } } };
+/** The pin must still match its release's hash: a changed pin or release is refused, never read. */
+function pinned<C extends { combinationId: string; pins: { contentHash: string; release: { sha256: string; combinationId: string } }[] }>(c: C): C {
+  const pin = c.pins[0];
+  if (!pin || c.pins.length !== 1 || pin.contentHash !== pin.release.sha256 || pin.release.combinationId !== c.combinationId) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
+  return c;
+}
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
+/** C6.16 (challenge M2): who saves an answer, row or group answer: case staff and the case's client (simulated by
+ *  x-actor), or an adult on their own link (/api/link/*, actor "person:<subject id>", channel own_link, only their own
+ *  subject). One write path for all three, so the rules are checked once. */
+export type Writer = { id: string; name: string; officer: boolean; channel: "agent_view" | "questionnaire" | typeof OWN_LINK; own: string | null };
+export const writerOf = (a: Actor): Writer => ({ id: a.id, name: a.name, officer: isOfficer(a), channel: isOfficer(a) ? "agent_view" : "questionnaire", own: null });
+/** C6.16 BR-7: the words a client reads on a person whose answers are kept private from them. */
+export const privateWords = (label: string) => `${label}'s answers are private to them and the firm: ${label} answers on their own link. You see how far they have got, not their answers.`;
+/** C6.16 BR-7 (challenge M3): the client's view without the parts of people kept private from them, its summary counted
+ *  again from what is left. */
+function withoutHidden<V extends CaseView>(v: V, hidden: Set<string>, hiddenLabels: Set<string>, shownLabels: Set<string>): V {
+  const sections = v.sections.filter((x) => !hidden.has(x.subjectId));
+  return { ...v, sections, checks: v.checks.filter((x) => !hidden.has(x.subjectId)), forms: v.forms.filter((f) => !hiddenLabels.has(f.person) || shownLabels.has(f.person)),
+    summary: { ...v.summary, questions: sections.reduce((n, x) => n + x.questions.length, 0), answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
+}
 
 @Injectable()
 export class Runtime {
@@ -65,12 +88,18 @@ export class Runtime {
     const officer = isOfficer(actor), client = (actor.duties as readonly string[]).includes("answer");
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
-    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } } } });
+    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: REACHED });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
-    const pin = c!.pins[0];
-    if (!pin || c!.pins.length !== 1 || pin.contentHash !== pin.release.sha256 || pin.release.combinationId !== c!.combinationId) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
-    return c!;
+    return pinned(c!);
+  }
+
+  /** C6.16 (BR-5): the case of a link session, which /api/link/*'s guard already checked (live session, live link, the
+   *  person still on the case). The same pin check as reach. */
+  async reachByLink(caseId: string) {
+    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId: await this.ws.id() }, include: REACHED });
+    if (!c) fail("No such case.", HttpStatus.NOT_FOUND);
+    return pinned(c!);
   }
 
   snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
@@ -295,17 +324,47 @@ export class Runtime {
   async view(actor: Actor, caseId: string, mode: Mode) {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
+    if (!isOfficer(actor)) { const v = await this.clientView(c); return { case: await this.get(actor, caseId), ...v.view, private_people: v.private_people }; }
     const { answers, rows, groups } = await this.state(c);
     return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups) };
+  }
+
+  /** C6.16 BR-7 (challenge M3, M4): the client's questionnaire. The values, rows and group answers of a person whose
+   *  stored setting is on are left out before anything is worked out, so no follow-up question, check or form reveals
+   *  them; that person's parts are dropped and their progress (counted from all answers, on the server) takes their place. */
+  async clientView(c: Reached) {
+    const s = this.snapshotOf(c), people = this.peopleOf(c), now = new Date();
+    const st = await this.state(c);
+    const hidden = new Set(c.participants.filter((p) => privateFrom({ kind: "client" }, { subjectId: p.subjectId, role: p.role, keepPrivate: p.keepPrivate })).map((p) => p.subjectId));
+    if (!hidden.size) return { view: caseView(s, people, st.answers, st.rows, "sqr", now, st.groups), private_people: [] };
+    const full = caseView(s, people, st.answers, st.rows, "sqr", now, st.groups);
+    const private_people = c.participants.filter((p) => hidden.has(p.subjectId)).map((p) => ({ subject_id: p.subjectId, label: p.subject.label, progress: progressOf(full.sections.filter((x) => x.subjectId === p.subjectId)) }));
+    const seen = caseView(s, people, st.answers.filter((a) => !hidden.has(a.subjectId)), st.rows.filter((r) => !hidden.has(r.subjectId)), "sqr", now, st.groups.filter((g) => !hidden.has(g.subjectId)));
+    const labels = (keep: boolean) => new Set(c.participants.filter((p) => hidden.has(p.subjectId) === keep).map((p) => p.subject.label));
+    return { view: withoutHidden(seen, hidden, labels(true), labels(false)), private_people };
+  }
+
+  /** C6.16 BR-5 (SA-1B-269 rule 2): what an adult reads on their own link: their own parts (to answer) and the
+   *  application's (shared, read-only); nobody else's part, check or form. */
+  async linkView(c: Reached, own: string) {
+    const s = this.snapshotOf(c), st = await this.state(c);
+    const caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
+    const keep = (id: string) => id === own || id === caseSubject;
+    const v = caseView(s, this.peopleOf(c), st.answers, st.rows, "sqr", new Date(), st.groups);
+    const others = new Set(c.participants.filter((p) => !keep(p.subjectId)).map((p) => p.subjectId));
+    const labels = (k: boolean) => new Set(c.participants.filter((p) => keep(p.subjectId) === k).map((p) => p.subject.label));
+    return { case: { id: c.id, reference: c.reference, people: c.participants.filter((p) => keep(p.subjectId)).map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) }, own,
+      ...withoutHidden(v, others, labels(false), labels(true)) };
   }
 
   /** P-47 mode 1, PQR (C4.4 part 2): the pre-qualification questions only, with a plain result line. The officer's PQR
    *  reads the agent view; a client's reads their own questionnaire (PQR ⊂ SQR). */
   async pqr(actor: Actor, caseId: string) {
     const c = await this.reach(actor, caseId, "read");
-    const { answers, rows, groups } = await this.state(c);
     const s = this.snapshotOf(c), people = this.peopleOf(c);
-    return { case: await this.get(actor, caseId), ...pqrView(s, people, caseView(s, people, answers, rows, isOfficer(actor) ? "agent" : "sqr", new Date(), groups)) };
+    if (!isOfficer(actor)) return { case: await this.get(actor, caseId), ...pqrView(s, people, (await this.clientView(c)).view) }; // C6.16 BR-7
+    const { answers, rows, groups } = await this.state(c);
+    return { case: await this.get(actor, caseId), ...pqrView(s, people, caseView(s, people, answers, rows, "agent", new Date(), groups)) };
   }
 
   /** P-47 tier 3 (C4.4 part 2): the independent review the officer runs on demand. It reads answers and never changes
@@ -323,11 +382,29 @@ export class Runtime {
   async putAnswer(actor: Actor, caseId: string, subjectId: string, fieldKey: string, body: unknown) {
     if (!FIELD_KEY.test(fieldKey)) fail("No such question.", HttpStatus.NOT_FOUND);
     const c = await this.reach(actor, caseId, "answer");
+    return this.saveAnswer(c, writerOf(actor), subjectId, fieldKey, body, () => this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr"));
+  }
+
+  /** C6.16 (challenge M3): before any value of the person is read, the writer must be allowed to write them: a client
+   *  never writes a person whose stored setting is on (403, also after take back: challenge M4); a link writes only its
+   *  own person. */
+  private refusePrivate(w: Writer, c: Reached, subjectId: string) {
+    if (w.officer) return;
+    if (w.own !== null) { if (subjectId !== w.own) fail("Your link is for your own questions only.", HttpStatus.FORBIDDEN); return; }
+    const p = c.participants.find((x) => x.subjectId === subjectId);
+    if (p && privateFrom({ kind: "client" }, { subjectId, role: p.role, keepPrivate: p.keepPrivate })) fail(privateWords(p.subject.label), HttpStatus.FORBIDDEN);
+  }
+
+  /** One answer saved by case staff, the client or an adult on their own link (Writer). */
+  async saveAnswer(c: Reached, w: Writer, subjectId: string, fieldKey: string, body: unknown, after: () => Promise<{ sections: CaseView["sections"] }>) {
+    if (!FIELD_KEY.test(fieldKey)) fail("No such question.", HttpStatus.NOT_FOUND);
+    const caseId = c.id;
     const b = parse(PutAnswer, body);
-    const s = this.snapshotOf(c), officer = isOfficer(actor);
+    const s = this.snapshotOf(c), officer = w.officer;
     // QA-293: the representative is no person on the case; their details come only from the firm record of the
     // representative of record (C7.7, C6.11), so a save about them is refused in words (never "not on this case").
     if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY);
+    this.refusePrivate(w, c, subjectId); // C6.16 BR-7: before the current answer (and the 409 body) is read
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed; a client is
@@ -349,7 +426,7 @@ export class Runtime {
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });
     if (!def) fail(`The library has no version ${field!.item_version} of ${fieldKey}.`, HttpStatus.CONFLICT);
     const rowKey = b.row ?? null;
-    const source = { channel: officer ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() };
+    const source = { channel: w.channel, actor: w.id, at: new Date().toISOString() };
     const newId = randomUUID();
     try {
       await this.db.$transaction(async (tx) => {
@@ -364,9 +441,8 @@ export class Runtime {
       if (unique(e)) { const now = await this.db.clientCanonicalAnswer.findFirst({ where: { subjectId, canonicalFieldKey: fieldKey, rowKey, supersededById: null } }); conflict("Someone answered this at the same moment; their answer is shown. Check it and save again.", { current: now ? { id: now.id, value: now.valueJson } : null }); }
       throw e;
     }
-    await this.audit.log(c.workspaceId, actor.id, "answered", "case fact", fieldKey, `${actor.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : "Client questionnaire"})`);
-    const after = await this.view(actor, caseId, officer ? "agent" : "sqr");
-    const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
+    await this.audit.log(c.workspaceId, w.id, "answered", "case fact", fieldKey, `${w.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : w.own ? "their own link" : "Client questionnaire"})`);
+    const q = (await after()).sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
@@ -377,8 +453,9 @@ export class Runtime {
    *  numbered one at a time (a transaction lock), and the database refuses two live rows in one place. */
   /** Who may write a repeating group of a person on this case: the group exists, belongs to that kind of subject, and
    *  the client writes it only when it holds a client field. */
-  private groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string) {
+  private groupFor(w: Writer, c: Reached, subjectId: string, groupKey: string) {
     if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY); // QA-293 review m3
+    this.refusePrivate(w, c, subjectId); // C6.16 BR-7
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     const s = this.snapshotOf(c);
@@ -386,23 +463,26 @@ export class Runtime {
     if (!group.length) fail("That section has no repeating group.", HttpStatus.NOT_FOUND);
     const caseLevel = group.every((p) => p.fact.startsWith("case."));
     if (caseLevel !== (who!.role === "case")) fail(caseLevel ? "This group is asked once for the application, not for a person." : "This group is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
-    if (!isOfficer(actor) && !group.some((p) => isClientField(s, p.fact))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
+    if (!w.officer && !group.some((p) => isClientField(s, p.fact))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
     return who!;
   }
 
   async addRow(actor: Actor, caseId: string, subjectId: string, body: unknown) {
-    const c = await this.reach(actor, caseId, "answer");
+    return this.saveRow(await this.reach(actor, caseId, "answer"), writerOf(actor), subjectId, body);
+  }
+  async saveRow(c: Reached, w: Writer, subjectId: string, body: unknown) {
+    const caseId = c.id;
     const b = parse(NewRow, body);
-    this.groupFor(actor, c, subjectId, b.group);
+    this.groupFor(w, c, subjectId, b.group);
     const id = randomUUID();
     await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${b.group}`}))`;
       // "None apply" stands until someone says entries apply: an entry is never added beside it (never contradict silently).
       if ((await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey: b.group, supersededById: null } }))?.noneApply) refused("\"None apply\" is recorded for this group; change it to \"entries apply\" first, then add the entries.");
       const live = await tx.clientFactRecord.findMany({ where: { subjectId, groupKey: b.group, supersededById: null } });
-      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: b.group, rowKey: id, order: live.length ? Math.max(...live.map((x) => x.order)) + 1 : 0, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: b.group, rowKey: id, order: live.length ? Math.max(...live.map((x) => x.order)) + 1 : 0, sourceJson: { channel: w.channel, actor: w.id, at: new Date().toISOString() } } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "added", "row", b.group, `${actor.name} added a row to ${b.group} on case ${short(caseId)}`);
+    await this.audit.log(c.workspaceId, w.id, "added", "row", b.group, `${w.name} added a row to ${b.group} on case ${short(caseId)}`);
     return { row: id, group: b.group };
   }
 
@@ -410,9 +490,12 @@ export class Runtime {
    *  each time (append-only), checked against the version the person saw, never beside live entries. It waits for
    *  confirmation by the same rule as an answer to the group (the client's own answer counts for the principal). */
   async noneApply(actor: Actor, caseId: string, subjectId: string, groupKey: string, body: unknown) {
-    const c = await this.reach(actor, caseId, "answer");
+    return this.saveNoneApply(await this.reach(actor, caseId, "answer"), writerOf(actor), subjectId, groupKey, body, () => this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr"));
+  }
+  async saveNoneApply(c: Reached, w: Writer, subjectId: string, groupKey: string, body: unknown, after: () => Promise<{ sections: CaseView["sections"] }>) {
+    const caseId = c.id;
     const b = parse(NoneApply, body);
-    const who = this.groupFor(actor, c, subjectId, groupKey);
+    const who = this.groupFor(w, c, subjectId, groupKey);
     const id = randomUUID();
     const changed = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${groupKey}`}))`;
@@ -424,26 +507,30 @@ export class Runtime {
       const entries = await tx.clientFactRecord.count({ where: { subjectId, groupKey, supersededById: null, tombstone: false } });
       if (b.noneApply && entries) refused(`This group has ${entries} entr${entries === 1 ? "y" : "ies"}; remove ${entries === 1 ? "it" : "them"} first, then say none apply.`);
       if (cur) { const n = await tx.clientGroupAnswer.updateMany({ where: { id: cur.id, supersededById: null }, data: { supersededById: id } }); if (n.count !== 1) conflict("Someone answered this at the same moment; nothing was saved. Look at their answer and try again."); }
-      await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: w.channel, actor: w.id, at: new Date().toISOString() } } });
       return true;
     });
-    if (changed) await this.audit.log(c.workspaceId, actor.id, "answered", "group", groupKey, `${actor.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")} on case ${short(caseId)}`);
-    const v = await this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr");
+    if (changed) await this.audit.log(c.workspaceId, w.id, "answered", "group", groupKey, `${w.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")} on case ${short(caseId)}`);
+    const v = await after();
     return { saved: changed, group: v.sections.find((x) => x.subjectId === subjectId && x.section === groupKey)?.group ?? null };
   }
 
   /** Removing a row inserts a tombstone version of it; its answers stay stored and are no longer read (team rule). */
   async removeRow(actor: Actor, caseId: string, subjectId: string, rowKey: string) {
-    const c = await this.reach(actor, caseId, "answer");
+    return this.dropRow(await this.reach(actor, caseId, "answer"), writerOf(actor), subjectId, rowKey);
+  }
+  async dropRow(c: Reached, w: Writer, subjectId: string, rowKey: string) {
+    const caseId = c.id;
+    this.refusePrivate(w, c, subjectId); // C6.16 BR-7: before the row is read
     const cur = await this.db.clientFactRecord.findFirst({ where: { rowKey, subjectId, supersededById: null, tombstone: false } });
     if (!cur || !c.participants.some((p) => p.subjectId === subjectId)) fail("No such row for this person.", HttpStatus.NOT_FOUND);
     const id = randomUUID();
     await this.db.$transaction(async (tx) => {
       const n = await tx.clientFactRecord.updateMany({ where: { id: cur!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) conflict("Someone changed this row at the same moment; refresh and try again.");
-      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: cur!.groupKey, rowKey, order: cur!.order, tombstone: true, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: cur!.groupKey, rowKey, order: cur!.order, tombstone: true, sourceJson: { channel: w.channel, actor: w.id, at: new Date().toISOString() } } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "removed", "row", cur!.groupKey, `${actor.name} removed a row from ${cur!.groupKey} on case ${short(caseId)}`);
+    await this.audit.log(c.workspaceId, w.id, "removed", "row", cur!.groupKey, `${w.name} removed a row from ${cur!.groupKey} on case ${short(caseId)}`);
     return { row: rowKey, removed: true };
   }
 

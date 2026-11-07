@@ -227,7 +227,8 @@ async function main() {
     // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made every page a 404.
     app.useStaticAssets(web, { index: false, dotfiles: "allow" });
     const index = join(web, "index.html");
-    app.getHttpAdapter().getInstance().get(/^\/(?!api\/).*/, (_req: any, res: any) => res.sendFile(index, { dotfiles: "allow" }));
+    // C6.16 (challenge m1): the adult's link page sends no referrer (its token lives in the fragment, never sent anyway).
+    app.getHttpAdapter().getInstance().get(/^\/(?!api\/).*/, (req: any, res: any) => { if (req.path === "/link") res.setHeader("Referrer-Policy", "no-referrer"); res.sendFile(index, { dotfiles: "allow" }); });
   }
   await app.listen(port, "127.0.0.1");
   console.log(`Product Studio on http://localhost:${port}`);
