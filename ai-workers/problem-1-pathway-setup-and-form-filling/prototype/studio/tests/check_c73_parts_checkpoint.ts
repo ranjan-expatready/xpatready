@@ -51,8 +51,14 @@ await fillEverything(c.id);
   ok("C7.3 (review M1, fail): where the data paths' alphabet orders the parts otherwise, the sheet does not follow it", JSON.stringify(alphabet) !== JSON.stringify(titles), { alphabet, titles });
 }
 
-// M2, M3: a part with no name at release, named on To review after it.
-const sch = await online("IMM 5257 SCH1");
+// M2, M3: a part with no name at release, named on To review after it. The form is the first of the principal's
+// whose edition, in the case's own release, has a part still waiting for a name that was proposed before the release
+// (release 1: IMM 5257 SCH1; release 2 names SCH1's parts, so IMM 5645): read from the data, never a form number here.
+const unnamed = (sql(`select distinct m->>'form_number' from config_release r join pack_work_pin w on w.config_release_id = r.id, jsonb_array_elements(r.snapshot->'field_maps') m where w.case_id = '${c.id}' and exists (select 1 from proposal_item p where p.kind = 'section' and p.status = 'waiting' and p.form_edition = m->>'form_edition' and p.created_at <= r.released_at) order by 1`) ?? "").split("\n").filter(Boolean);
+const now = (await prepare(c.id)).p, form = unnamed.find((f) => itemsOf(now, P, f).length);
+if (!form) { console.log(`STOP  setup: the case's release has no form of the principal's with a part not named at release (${unnamed.join(", ") || "none"})`); process.exit(2); }
+console.log(`      setup: ${form} has a part not named at release; the officer files it Online (C11.6)`);
+const sch = await online(form);
 const before = await sheet(sch);
 // A part still waiting on To review now (on a copy used before, an earlier run named one: it is not taken again).
 const waitingId = (title: string) => sql(`select id from proposal_item where kind = 'section' and status = 'waiting' and payload->>'label' = '${title.replace(/'/g, "''")}' limit 1`) || null;
