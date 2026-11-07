@@ -11,7 +11,7 @@ updated: 2026-11-07 15:45 IST by **Lead 30, at the hand-over to Lead 31** · mil
 3. **New lanes (P-407), cloud; read their PRs each check:** UX lane task_f4b1c488 (study → scorecard in EXPERIENCE.md and the screen-concept/screen-review skills → each M3 screen revised; **you approve each UX revision on its PR**, P-316 (3)); concepts lane task_9975ca96 (B135 → B144 → B141; **you approve each concept**); build lane task_404185d0 (B140 → B137 → B142). Also C4 task_3a2d7beb (**you approve each pack's changed lines**, P-400) and B131 task_32589e77 (may merge ahead, P-214).
 4. **B3 #1221:** its lane takes B129 then B132 after its label (comment posted 15:43 IST). **C2 #1075** restarts only in a new session after #1223 and #1225 merge: at the founder's next typed turn.
 5. **Burn:** weekly 9% at 15:42 IST, about 4%/h, up to about 5%/h with the new lanes; trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. At about 4-5%/h the week's plan lasts about a day (resets 13 Nov 04:29 IST): tell the founder at his return, with options.
-6. **Records PR #1240 (Lead 30, head b88aad693):** the Approve line on its own records PR was **refused as Self-Approval at 15:47 IST even under P-405**: the rule covers labels and dispatches, not self-approval. Do not approve or label it for Lead 30 (that would route a refused write); the founder names it ("label 1240") at his return. Until then add records on this same branch (it is not labelled), or start `lead/2026-11-07-lead31` from `origin/main` after it merges.
+6. **Records PR #1240 (Lead 30, head b88aad693):** the Approve line on its own records PR was **refused as Self-Approval at 15:43 IST even under P-405**: the rule covers labels and dispatches, not self-approval. Do not approve or label it for Lead 30 (that would route a refused write); the founder names it ("label 1240") at his return. Until then add records on this same branch (it is not labelled), or start `lead/2026-11-07-lead31` from `origin/main` after it merges.
 7. **Standbys:** Lead 32 (watchdog, first standby), Lead 33 (spare). Two standbys, so no new one is needed until the next hand-over.
 
 ## Account switch (P-394 to P-398): done 12:35-13:11 IST
@@ -68,7 +68,7 @@ Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly
 | New-rows concepts (cloud) | task_9975ca96 | B135 → B144 → B141 |
 | New-rows build (cloud) | task_404185d0 | B140 → B137 → B142 |
 
-**Released 14:34 IST (P-403), cloud lanes:** A5 #1054 (task_91f8e1f6), C2 #1075 (task_142d777f, after #1223 and #1225), B5 (task_909c403b), CI fixes kind token then b78 (task_11a034e6). Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
+**Released 14:34 IST (P-403):** A5 #1054, C2 #1075, B5 (#1233), kind token then b78 (#1232); the old PRs off the critical path are listed in `history/STATE-2026-11-07-1545-lead30.md`.
 
 ## Leads, in order (highest = current)
 **Lead 31** `local_f02fdadd-…` (from 15:45 IST 7 Nov) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 31.
