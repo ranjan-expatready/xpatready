@@ -125,7 +125,7 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
       done(r, reason.trim());
     } catch (e) {
       const status = e instanceof ApiError ? e.status : 0;
-      if (status === 409) { setStale(`${(e as Error).message} What changes now is shown below; nothing was changed.`); void load(); }
+      if (status === 409) { setStale(`${(e as Error).message} What changes now is shown below.`); void load(); }
       else setError(e instanceof ApiError ? e.field("reason") ?? e.message : (e as Error).message);
     } finally { setBusy(false); }
   };
@@ -135,7 +135,7 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} wide title={view?.title ?? verb} description={view?.stays}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button>{view ? <Button variant={kind === "remove_filing" ? "destructive" : "default"} busy={busy} onClick={() => void apply()} data-confirm>{verb}</Button> : null}</>}>
       <div className="space-y-3" data-change-dialog>
-        {stale ? <Notice tone="warn" title="Changed since you opened this" data-change-stale>{stale}</Notice> : null}
+        {stale ? <Notice tone="warn" title="Changed since you opened this">{stale}</Notice> : null}
         {refusal ? <Notice tone="warn" title="Not possible">{refusal}</Notice> : null}
         {!view && !refusal ? <div className="space-y-2"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-16 w-full" /></div> : null}
         {view ? <>

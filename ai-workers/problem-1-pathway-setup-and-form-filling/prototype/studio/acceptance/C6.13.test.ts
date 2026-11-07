@@ -69,8 +69,13 @@ await main("C6.13", "Filing changes while preparing (Visitor visa)", async () =>
   ok("C6.13-5 fail (BR-2): removing the principal's filing → 422 \"Make someone else principal first\"", r.status === 422 && /Make someone else principal first/.test(words(r.body)), r.body);
 
   // 6 · make principal
-  await answer(c.id, A, "person.family_name", "SAMPLE-A", CLIENT);
-  await answer(c.id, S, "person.family_name", "SAMPLE-S", CLIENT);
+  // A text question the client answers for each adult, read from the agent view (no fact named in code, P-319).
+  type Qn = { subjectId: string; fact: string; value_type: string; collected_from: string; group: string | null; hidden: boolean; answer?: { why?: string } | null };
+  const questionsOf = async () => ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, officer)).body?.sections ?? []).flatMap((x: { questions: Qn[] }) => x.questions) as Qn[];
+  const textQ = (qs: Qn[], who: string) => qs.find((q) => q.subjectId === who && q.collected_from === "client_questionnaire" && q.value_type === "text" && !q.group && !q.hidden)?.fact;
+  const q0 = await questionsOf(), factA = textQ(q0, A), factS = textQ(q0, S);
+  await answer(c.id, A, factA ?? "", "SAMPLE-A", CLIENT);
+  await answer(c.id, S, factS ?? "", "SAMPLE-S", CLIENT);
   const conf0 = confirmations((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, officer)).body);
   r = await call("POST", `/runtime/cases/${c.id}/filing-changes`, { kind: "make_principal", subject: S, preview: true }, officer);
   const mp = r.body, mline = (s: string) => (mp?.changes ?? []).find((x: { person: string }) => x.person === s)?.words?.join(" | ") ?? "";
@@ -86,11 +91,9 @@ await main("C6.13", "Filing changes while preparing (Visitor visa)", async () =>
   const conf1 = confirmations((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, officer)).body);
   const view6 = (await call("GET", `/runtime/cases/${c.id}`, undefined, officer)).body;
   const flag = (x: string) => (view6?.people ?? []).find((p: { subject_id: string }) => p.subject_id === x)?.client;
-  let whyS = "";
-  const findWhy = (x: unknown): void => { if (Array.isArray(x)) x.forEach(findWhy); else if (x && typeof x === "object") { const o = x as Record<string, unknown>; if (o.value === "SAMPLE-S" && typeof o.why === "string") whyS = o.why; Object.values(o).forEach(findWhy); } };
-  findWhy((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, officer)).body);
+  const whyS = (await questionsOf()).find((q) => q.subjectId === S && q.fact === factS)?.answer?.why ?? "";
   ok("C6.13-6e pass (break M1): after the swap the case says who the client is (Sample Client A), and the new principal's answers read \"Answered by the client\", not by the principal",
-    flag(A) === true && flag(S) === false && /^Answered by the client/.test(whyS), { a: flag(A), s: flag(S), whyS });
+    !!factS && flag(A) === true && flag(S) === false && /^Answered by the client/.test(whyS), { a: flag(A), s: flag(S), factS, whyS });
   ok("C6.13-6b pass (BR-3b, the Blocker): no answer's confirmation changes with the swap (the client stays the same person)",
     conf0.size > 0 && conf0.size === conf1.size && [...conf0].every(([id, v]) => conf1.get(id) === v), { before: [...conf0].filter(([, v]) => v).length, after: [...conf1].filter(([, v]) => v).length, size: conf0.size });
 
@@ -129,17 +132,19 @@ await main("C6.13", "Filing changes while preparing (Visitor visa)", async () =>
 
   // 13 · Ready to file: the preview names every filing the apply takes back, and no other (review M1, M2; break M2, M4)
   const f = await firms();
-  const c3 = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }, { role: "child", name: "Sample Child A1", dob: yearsAgo(10) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
+  // The pack's FAMILY: three people of 14 to 79 share the CAD 170 biometrics cap, so removing the spouse moves the
+  // principal's and the 15-year-old's fees; the 10-year-old has no biometrics and nothing of theirs changes.
+  const c3 = await openCase(vv, FAMILY, { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
   const [A3, S3, K3] = [c3.subjects["Sample Client A"], c3.subjects["Sample Spouse A"], c3.subjects["Sample Child A1"]];
   const ready3 = await readyToFile(c3.id, f.rep);
   const st = (x: string) => sql(`select status from filing where case_id='${c3.id}' and subject_id='${x}'`);
   let q3 = await call("POST", `/runtime/cases/${c3.id}/filing-changes`, { kind: "remove_filing", subject: S3, preview: true }, c3.officer);
   const said = (x: string) => (q3.body?.changes ?? []).find((y: { person: string }) => y.person === x)?.words?.join(" | ") ?? "";
-  ok("C6.13-13 pass (BR-6): with every filing Ready to file, the preview says \"Marked Ready to file → Not started\" for the principal's filing, whose fee changes, and not for the child's, which does not",
-    ready3.length === 3 && /Marked Ready to file → Not started/.test(said(A3)) && !said(K3), { ready3, a: said(A3), k: said(K3) });
+  ok("C6.13-13 pass (BR-6): with every filing Ready to file, the preview says \"Marked Ready to file → Not started\" for the principal's filing, whose fee changes, and names nothing for the child of 10, whose filing does not change",
+    ready3.length === 4 && /Marked Ready to file → Not started/.test(said(A3)) && !said(K3), { ready3, a: said(A3), k: said(K3) });
   r = await call("POST", `/runtime/cases/${c3.id}/filing-changes`, { kind: "remove_filing", subject: S3, basis: q3.body?.basis, reason: "Not travelling after all (Sample)" }, c3.officer);
   ok("C6.13-13a pass (BR-6): the apply takes back exactly the filings the preview named: the principal's is Not started", r.status === 200 && st(A3) === "NOT_STARTED", { status: r.status, a: st(A3) });
-  ok("C6.13-13b fail (BR-6): a filing the preview did not name keeps its Ready to file mark (the child's)", st(K3) === "READY_TO_FILE", st(K3));
+  ok("C6.13-13b fail (BR-6): a filing the preview did not name keeps its Ready to file mark (the child of 10's)", st(K3) === "READY_TO_FILE", st(K3));
   r = await call("PATCH", `/runtime/cases/${c3.id}/people/${S3}`, { applies: true }, c3.officer);
   ok("C6.13-13c pass (BR-10, break M2): the travelling flag door, which has no preview, takes back every Ready to file mark of the case", r.status === 200 && st(K3) === "NOT_STARTED", { status: r.status, k: st(K3) });
   ok("C6.13-13d fail (break m): a filing_change row is not deleted while its case exists", sql(`delete from filing_change where case_id='${c3.id}'`) === null && Number(sql(`select count(*) from filing_change where case_id='${c3.id}'`)) >= 2);

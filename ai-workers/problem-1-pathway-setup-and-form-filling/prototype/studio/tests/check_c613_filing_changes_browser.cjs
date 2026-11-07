@@ -74,6 +74,7 @@ const yearsAgo = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYea
     const row = section.locator("tr", { hasText: "Sample Spouse A" });
     await row.getByText(/Removed .* by .*Added by mistake \(Sample\)/).waitFor(T);
     ok("C6.13 walk 6 pass (BR-1, BR-6): the spouse stays on the case with no filing, and the reason shows on their row", /No filing: not travelling/.test(await row.innerText()));
+    ok("C6.13 walk 6a pass (review M4): after the change, focus is back on the person's row (its menu button)", await p.evaluate(() => !!document.activeElement?.closest("[data-person-row]") && document.activeElement?.hasAttribute("data-person-menu")));
     await shot("04-removed-with-undo");
 
     await section.locator("[data-undo]").click();
@@ -82,6 +83,24 @@ const yearsAgo = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYea
     await dlg.getByRole("button", { name: "Add filing back" }).click();
     await row.getByText("Own application").waitFor(T);
 
+    // Review M3, break M3: the case changes while the dialog is open (a child's date of birth): the apply is refused and
+    // the dialog says so, and keeps saying so after it shows the new preview; nothing changes until a second press.
+    await section.getByRole("button", { name: "Actions for Sample Child A2" }).click();
+    await p.getByRole("menu").getByText("Remove filing…").click();
+    await dlg.locator("[data-change-reason-input]").waitFor(T);
+    const before = (await call("GET", `/runtime/cases/${id}/questionnaire?mode=agent`)).body;
+    const dobQ = (before?.sections ?? []).flatMap((x) => x.questions).find((q) => q.subjectId === subjects["Sample Child A2"] && q.fact === "person.date_of_birth");
+    await call("PUT", `/runtime/cases/${id}/answers/${subjects["Sample Child A2"]}/person.date_of_birth`, { value: yearsAgo(13), expectedId: dobQ?.answer?.id ?? null });
+    await dlg.locator("[data-change-reason-input]").fill("Added by mistake (Sample)");
+    await dlg.getByRole("button", { name: "Remove filing" }).click();
+    await dlg.getByText("Changed since you opened this", { exact: true }).waitFor(T);
+    await p.waitForTimeout(800);
+    ok("C6.13 walk 7a fail (BR-8): a change made meanwhile is refused and the dialog says so, after showing the new preview; the filing is still there",
+      await dlg.getByText("Changed since you opened this", { exact: true }).isVisible() && /What changes now is shown below/.test(await dlg.innerText()) && /Own application/.test(await section.locator("tr", { hasText: "Sample Child A2" }).innerText()));
+    await shot("04b-changed-since-you-opened");
+    await dlg.getByRole("button", { name: "Cancel" }).click();
+    await p.waitForTimeout(400);
+    ok("C6.13 walk 7b pass (review M4): Cancel puts focus back on that person's row", await p.evaluate(() => document.activeElement?.closest("[data-person-row]")?.textContent?.includes("Sample Child A2") === true));
     await section.getByRole("button", { name: "Actions for Sample Spouse A" }).click();
     await p.getByRole("menu").getByText("Make principal…").click();
     await dlg.locator("[data-change-filing]").first().waitFor(T);
