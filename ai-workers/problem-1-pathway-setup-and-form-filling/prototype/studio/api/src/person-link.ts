@@ -411,8 +411,8 @@ export class LinkController {
 }
 
 @OpenRead("the demo inbox by address (stand-in SI-20): demo workspace only, 404 elsewhere")
-@Controller("api/demo/inbox")
+@Controller("api/demo")
 export class DemoInboxController {
   constructor(@Inject(PersonLinks) private readonly x: PersonLinks) {}
-  @Get() inbox(@Query("address") address: H) { return this.x.inbox(address); }
+  @Get("inbox") inbox(@Query("address") address: H) { return this.x.inbox(address); }
 }

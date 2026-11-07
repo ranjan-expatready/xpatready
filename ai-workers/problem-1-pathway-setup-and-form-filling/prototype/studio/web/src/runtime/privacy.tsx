@@ -45,7 +45,7 @@ function SendDialog({ caseId, person, mode, close }: { caseId: string; person: P
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={mode === "new" ? `Send to a new address for ${person.label}` : `Send to ${person.label}`} description={mode === "new" ? `${person.label} already answers on ${person.kept_masked}. A new address replaces it; the old link stops working.` : undefined}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={send.isPending} onClick={submit}><Send aria-hidden />{mode === "new" ? "Send to the new address" : `Send to ${person.label}`}</Button></>}>
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); submit(); }} noValidate>
-        <Field label={`${person.label}'s email`} hint="Sample addresses only in the prototype (name@example.com)." error={error}><Input type="email" autoComplete="off" value={address} onChange={(e) => { setAddress(e.target.value); setError(null); }} /></Field>
+        <Field label={`${person.label}'s email (required)`} hint="Sample addresses only in the prototype (name@example.com)." error={error}><Input type="email" autoComplete="off" value={address} onChange={(e) => { setAddress(e.target.value); setError(null); }} /></Field>
         <p className="text-sm text-text-muted">{LINK_WORDS.dialog(person.label)}</p>
         <button type="submit" hidden />
       </form>
