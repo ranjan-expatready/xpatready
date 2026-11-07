@@ -45,7 +45,9 @@ export function gateProblems(p: Pick<GateProposal, "words" | "cite" | "gate" | "
   if (typeof p.cite !== "string" || p.cite.trim().length < 20) out.push("no source is quoted (P-170: the form, its page and its words)");
   if (!!p.byHand === !!p.gate) out.push("say either a gate or filled by hand, not both");
   if (p.gate) {
-    const errs = validatePredicate(p.gate, isNode);
+    // A gate is always read about its own form field's person (the box's own subject), so it names no subject itself.
+    const own = p.gate && typeof p.gate === "object" && "subjectKind" in p.gate;
+    const errs = own ? ["a gate is read about its own form field's person, so it carries no subjectKind"] : validatePredicate({ subjectKind: "PERSON", ...(p.gate as object) }, isNode);
     if (errs.length) out.push(`the gate is not a condition the rules can run: ${errs.join("; ")}`);
     for (const f of gateFields(p.gate)) if (!known(f)) out.push(`the gate reads "${f}", which is not in the shared library`);
   }
