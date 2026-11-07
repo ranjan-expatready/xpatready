@@ -51,3 +51,33 @@ D1 Requirement fit **4**: every BR has a behaviour and a test; BR-5 misfires in 
 A real screen reader; an intended user's unaided walk (D17/D20); the full CI suite on this head (draft); the validated-copy path in cloud copies (QA-285, D3); entered sections on a changed Online map (no such data).
 
 **Verdict: Block** on `14ef16070829203a6b11c16f1bc55ce9824bd96f`. To fix: F1 (Major). Minors m1-m10 can follow, or the tech lead can accept them.
+
+## Round 2 (138535ab8)
+Diff-only re-review of `git diff 14ef16070..138535ab8` (the last round allowed, P-293 (3)). **Exact head: `138535ab8314306291745478ee5e80575b1ae3e8`**. Copy `review_c95` on :4443 only, stopped after each run (one stop ran by hand, `isolated.sh review_c95 4443 stop`; no listener left); never :4400.
+* **Runs on this head:**
+  * Pack `tsx acceptance/C9.5.test.ts 4443 xr_studio_review_c95`: **43/43, exit 0**.
+  * Engine test: **32/32**.
+  * The builder's walk, run from a copy that saves its screenshots in my scratchpad (none committed): **34/34**.
+  * My journey script: 23/25. The 2 FAILs are the 720 and 400 px sideways scroll already on `main` (C7.7's validated-copy row, round 1).
+  * After a move, the demo reset still works: 8 pins with max revision 3 went to 0 pins and 0 cases. So the new delete trigger lets a case's own cascade through.
+* **F1 fixed.** `release-update.ts:142` checks `from_revision` before "newest" (pack C9.5-5b). My J9 retest: two moves at once gave one 200 and one 409 `stale`. The stale tab shows "This case or its release changed while you read the list" with "Read the list again", then refetches. The header reads Release 7 and the notice is gone. The screen no longer contradicts itself.
+* **Breaker B1 fixed.** Migration `20261107220000_c95_pin_guards` adds `release_update` to the known-codes check. The rest of the list is identical to `20261104120000_c76_readiness:58`. Pack C9.5-8b: passed with a reason, then Ready to file on its release. The same migration also only adds rules: the delete trigger and the stricter insert rule (blank reason, hash, case combination). Pack m4/m5 checks pass, and nothing else deletes pins directly (grep).
+* **Round-1 Minors:**
+  * m1: `waitingFactsKey`, with an order test (pass and fail).
+  * m3: entered sections get the release's words (`case-prepare.ts:488-494`). The pack has no data for it, as stated.
+  * m4: the review rule now covers every move after the review (`case-prepare.ts:466-471`).
+  * m5: C9.5-13b holds the lock with the move first and gets Fill 409. The builder reports it fails with the guard removed.
+  * m7: where-used is checked on the database through Prisma (C9.5-6).
+  * m8 (part): the filings are read once per GET, the notice's place is held, and the audit line is in the move's transaction (C9.5-14b, same `xmin`).
+  * m9: Fill appears on fillable rows and the words are honest.
+  * m10: `ReleaseLastMove` is in the contract.
+  * The "not fixed" items have reasons in build-notes: m6, the rest of m8, breaker m11. D1 and D5 were kept by the tech lead. All accepted as Minor.
+* **Breaker m3, m7, m9, m10:** the GET writes nothing on a never-prepared case (C9.5-1b, it reads through `peek`). A long lock wait gives a worded 503 (C9.5-6b). Record, split and channel writes from a screen read before a move get 409, because the pin revision is now part of the version (C9.5-10c). A review sent with a stale `pin_revision` gets 409 (C9.5-8c).
+* **Tests:** no existing assertion is weakened. Outside the C9.5 files, no test changed. Inside them, one regex follows the new draft-note words ("the draft copy" became "the copy"), and the notice regex allows the new "Demo release" pill, which a new assertion now checks. The only screenshots in the diff are B145's 10.
+* **New Minors (Should, none blocking):**
+  * r1: when the stale tab's refetch finds no newer release, `ReleaseNotice` returns null (`web/src/runtime/release-update.tsx:50`). That unmounts the panel, so the new "This case was moved while you read the list" words (`:162`) never show, and focus falls to the page body (J9: active element BODY). Keep the panel mounted until it is closed, or move focus to the header.
+  * r2: the review's `pin_revision` check runs only when it is sent (`api/src/readiness.ts:55`). The app's readiness screen sends it; any other client is not guarded.
+  * r3: once, my script read focus on BODY after the main move. The builder's walk shows focus on "Moved to Release …" within 5 s, so this is unconfirmed.
+* **Journey (re-walk):** error recovery ½ → 1 (the conflict recovers and the screen is consistent); the other criteria are unchanged. **8.5/10, pass.** D5 Stability and D11 Feedback go 3 → 4.
+
+**Verdict: Approve** on `138535ab8314306291745478ee5e80575b1ae3e8`: no open Blocker or Major. Open Minors: r1-r3, and round 1's m6 and the rest of m8, accepted with reasons in build-notes.
