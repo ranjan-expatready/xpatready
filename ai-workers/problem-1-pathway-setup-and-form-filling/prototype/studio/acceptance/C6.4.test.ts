@@ -26,7 +26,27 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   ok("C6.4-1 pass: GET /runtime/cases/:id/checklist answers per person for the case officer; storage marked Stand-in SI-14", r.status === 200 && l?.people.length === 4 && l?.stand_in === "SI-14", r.status);
   ok("C6.4-2 fail: another client cannot read the checklist (403 or 404) while the officer can", r.status === 200 && [403, 404].includes((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, "user-Q")).status));
   ok("C6.4-3 pass: every person has a passport line (VV-R05)", [P, S, K1, c.subjects["Sample Child A2"]].every((s) => has(l, s, /passport/i)));
-  ok("C6.4-4 pass: proof of financial support is on the principal only (VV-R06, Sample: the principal shows money for the family)", has(l, P, /financial support/i) && !has(l, S, /financial support/i) && !has(l, K1, /financial support/i));
+  // C6.4-4 (tech lead's ruling on #1073, Q2; qa's OK there): the line is on the holders the case's pinned release names,
+  // read from that release, never a fixed list. IMM 5484 (05-2026), Document checklist for a temporary resident visa,
+  // p. 1: "Proof of Financial Support. You must include proof that you can support yourself and any family members
+  // accompanying you while you are in Canada." Sample, Unconfirmed: expert (it may also be read as one person showing
+  // money for the family: the expert's answer may change the release, not this step).
+  const FS = /financial support/i;
+  const fsWho = sql(`select d->>'who' from pack_work_pin p join config_release r on r.id = p.config_release_id, jsonb_array_elements(r.snapshot->'document_requirements') d where p.case_id = '${c.id}' and d->>'document_type' ~* 'financial support' limit 1`) || null;
+  const K2a = c.subjects["Sample Child A2"];
+  const holdersOf: Record<string, string[]> = { each_applicant: [P, S, K1, K2a], each_person: [P, S, K1, K2a], principal_applicant: [P], spouse_or_partner: [S], couple_once: [S], each_dependent_child: [K1, K2a] };
+  const fsHolders = fsWho ? holdersOf[fsWho] ?? null : null;
+  const fsHave = (l?.people ?? []).filter((x) => x.lines.some((y) => FS.test(y.label))).map((x) => x.subject);
+  // The fail part (qa on #1073): a person the line does not name does not get it: a spouse who is not travelling is no
+  // applicant (and no principal), so neither of the release's readings puts the line on them.
+  const apart = await openCase(vv, [{ role: "principal", name: "Sample Client F", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse F", dob: yearsAgo(38), applies: false }]);
+  const PF = apart.subjects["Sample Client F"], SF = apart.subjects["Sample Spouse F"];
+  const apartHolders: Record<string, string[]> = { each_applicant: [PF], principal_applicant: [PF], each_person: [PF, SF], spouse_or_partner: [SF], couple_once: [SF], each_dependent_child: [] };
+  const al0 = (await call("GET", `/runtime/cases/${apart.id}/checklist`, undefined, OFFICER)).body as Checklist;
+  const apartHave = (al0?.people ?? []).filter((x) => x.lines.some((y) => FS.test(y.label))).map((x) => x.subject);
+  const exact = (want: string[] | null | undefined, got: string[]) => !!want && got.length === want.length && want.every((x) => got.includes(x));
+  ok("C6.4-4 pass and fail (IMM 5484 p. 1, Sample): proof of financial support is on every holder the case's release line names, by name, and on nobody else (a spouse not travelling does not get it)",
+    !!fsWho && exact(fsHolders, fsHave) && fsHolders!.every((x) => has(l, x, FS)) && exact(fsWho ? apartHolders[fsWho] : null, apartHave) && !!SF && !has(al0, SF, FS), { who: fsWho, holders: fsHolders, have: fsHave, apart: apartHave });
   ok("C6.4-5 pass: each line says why it is there (requirement, role, condition)", of(l, P).length >= 2 && of(l, P).every((x) => typeof x.reason === "string" && x.reason.length > 5));
   ok("C6.4-6 pass: every line starts in one of the team's states, Not requested", (l?.people ?? []).flatMap((p) => p.lines).length >= 5 && (l?.people ?? []).flatMap((p) => p.lines).every((x) => STATES.includes(x.state) && x.state === "not_requested"));
   // R3 (P-230 (3), closes FQ-4): a minor's travel answers decide five lines, each only under 18 (worked out on the

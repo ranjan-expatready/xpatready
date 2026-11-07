@@ -64,7 +64,7 @@ All documents, names and values are **Sample**; identity documents are synthetic
 * "May be needed: answer … first" lines, with no actions.
 * Actions in a ⋯ menu: Request, Upload (not on Not applicable lines), Not applicable…, History.
 * A count per person ("1 of 2 received").
-* Lines are drawn from the Visitor visa release (`acceptance/lib/setup_vv_m3.ts`): passport per person; proof of funds on the principal; the minor's letter of authorization from "travels with" (P-230 (3)).
+* Lines are whatever the case's pinned release carries, never named in the panel (C6.4-checkpoint challenge r2, B1). On the configured checkpoint (5 Nov) that is a fee payment receipt, the passport page and proof of financial support for each applicant, and the marriage certificate once for the couple. As built in #1073.
 
 **Fill drawer** (a right panel of 480–560 px, EXPERIENCE §; frame 2). It opens from a section's "Fill this from documents", shown in agent mode only (a one-line hook in `questionnaire.tsx`).
 * **One block per document:** its type, page, reader ("Passport machine-readable lines · rules"), "Check digits: passed/failed", and an "Open the passport" link.
@@ -137,7 +137,7 @@ All documents, names and values are **Sample**; identity documents are synthetic
 * Tests: `C6.4-screen.test.ts`, `C6.5-screen.test.ts`.
 * Rows: C6.4 (a), C6.5 2b.
 * Decisions: P-169, P-133, P-134, P-171 (6), P-172, P-238, P-242, P-243, P-316.
-* **Gate B** (`tools/gate-b.mjs`) applies only to the PR with a "Claims Works: C6.4" line. Before it, qa retests and closes QA-149 (CAPABILITIES says fixed by `tests/qa/check_qa_vv_1102_decider.ts`), or that PR carries `Fixes: QA-149`.
+* **Gate B** (`tools/gate-b.mjs`) applies only to the PR with a "Claims Works: C6.4" line. C6.4 Works needs its pack green on the configured checkpoint (the minor lines wait on row B102), qa closing QA-226 (or a `Fixes: QA-226` line), and (b) named as breadth (C6.4-checkpoint challenge r2, M3; QA-149 is closed).
 * Approval by the tech lead after `challenge.md`.
 
 ## Drafter's response to the challenge (4 Nov)
