@@ -1,0 +1,15 @@
+SETUP questions through the people's steps: {"accepted":191,"applied":8,"ownYesNo":3,"byHand":58,"sections":28,"reused":0,"held":12,"approved":185,"placed":154,"refused":[],"retried":[]}
+PASS  setup: one PQR tick on the draft — ""
+PASS  setup: one section taken out of the questionnaire (an SQR change) — ""
+PASS  C4.8 pass: no route approves, signs off or releases a PQR or questionnaire on its own — []
+PASS  C4.8 pass: nothing is released by the tick or the section change
+PASS  C4.8 fail (P-279): Submit is refused while 2 numbers have no source entry, in words — "Fix the problems before submitting: 2 numbers have no source entry. Each is listed on Review and release. First: No document line yet: a case on this combinatio"
+PASS  setup (P-279): every number the draft publishes has a source answer before Submit — {"written":2,"numbers":10,"held_back":0}
+FAIL  C4.8 pass: the author submits the combination for its one review — "Fix 1 problem before submitting: No document line yet: a case on this combination would collect no document (it has forms but no documents). Add at least one document the applicant provides before sending it for review (Documents tab, from the program's docum
+FAIL  C4.8 pass: the review lists the PQR tick as a change, in words — []
+FAIL  C4.8 pass: the review lists the section change as a change, in words — []
+PASS  C4.8 pass: the content reviewer signs every line (each 2xx) — []
+FAIL  C4.8 pass: the approver releases the combination, questionnaire changes with it — "Release refused: 1 problem (No document line yet: a case on this combination would collect no document (it has forms but no documents). Add at least one document the applicant provides before sending it for review (Documents tab, from the program's document c
+FAIL  C4.8 pass: after release the tick is in the country PQR (P-132)
+
+7/12 passed

@@ -1,0 +1,16 @@
+C10.2 — Finished demo story: Visitor visa family case at application ready
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FAIL  C10.2-1 fail: only the founder's configuration people load a checkpoint (403 for a case officer) — 404
+FAIL  C10.2-2 pass: loading the finished story is a job (202) — 404
+FAIL  C10.2-3 pass: the demo status says Finished story
+FAIL  C10.2-4 pass: one Visitor visa family case of four people, and one thin case beside it — [{"id":"8b45dcea-989e-49f4-a871-43083d844abc","people":4}]
+FAIL  C10.2-5 pass (row 14): one filing per person, all Ready to file, one family group
+FAIL  C10.2-6 pass (row 14): the principal's filing mixes Online (IMM 5707, sections entered) and PDF upload (IMM 5257 validated read back, IMM 5476 signed scan)
+FAIL  C10.2-7 pass (row 15): the document checklist lists every person's lines, some received
+FAIL  C10.2-8 pass (rows 14, 16): the family case is on release 2; the thin case stays on release 1 while release 2 is out
+FAIL  C10.2-9 pass: no model call (US$0); every AI result in the story is a replay
+FAIL  C10.2-10 pass: loading again keeps one story (still the two Visitor visa cases)
+FAIL  C10.2-11 pass: Reset removes the story (no cases left) — 201
+
+0/11 passed

@@ -1,0 +1,16 @@
+C9.2 — Changed facts mark finished items out of date (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C9.2-1 pass: before anything is generated, a fact change only recomputes drafts: nothing out of date — 200
+FAIL  C9.2-2 pass: IMM 5257 validated and read back, IMM 5476 signed scan in (setup)
+PASS  C9.2-3 pass: the uploaded IMM 5257 is Out of date, naming the fact, the old and new value and the date — "The validated copy of IMM 5257 read back 5 Nov 2026 is out of date: family name (surname) as shown on the person's passport or travel document of Sample Client A changed from \"SAMPLE\" to \"SAMPLEDZ\" on 5 Nov 2026. Make a new copy of IMM 5257, validate it a
+FAIL  C9.2-4 pass: the validated copy itself is never changed (same bytes); the signed scan keeps its checksum — {"validatedSha":"260c7fe78715f79ce873cb720e6e9bfc3b9831b60b4e334fe316d0b771e9155b","before":"260c7fe78715f79ce873cb720e6e9bfc3b9831b60b4e334fe316d0b771e9155b"}
+PASS  C9.2-5 fail (P-136, P-168, P-237): an out-of-date uploaded or signed item is a CRITICAL warning that stops Ready to file — ["CRITICAL: IMM 5257 for Sample Client A is out of date: \"Family name (surname) as shown on the person's passport or travel document\" changed on 2026-11-05 after it was signed or uploaded. Make a new copy."]
+FAIL  C9.2-6 pass: the signed IMM 5476 that prints the family name is Out of date too
+FAIL  C9.2-7 pass (scope): the spouse's own IMM 5257 does not use the principal's family name and stays as it was — [["IMM 5707","to_do"],["IMM 5257 SCH1","to_do"],["IMM 5257","to_do"]]
+PASS  C9.2-8 pass: Undo of the change restores the earlier value; the items are no longer out of date — 200
+FAIL  C9.2-9 pass: changing the spouse's date of birth marks the principal's entered IMM 5707 section out of date
+FAIL  C9.2-10 pass: a new representative of record marks the signed IMM 5476 out of date and asks for a new one — []
+PASS  C9.2-11 pass (data): an answer is never changed in place: the old value stays on record
+
+5/11 passed

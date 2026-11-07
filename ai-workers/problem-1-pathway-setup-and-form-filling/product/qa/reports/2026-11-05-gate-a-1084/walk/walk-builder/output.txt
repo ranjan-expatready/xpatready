@@ -1,0 +1,15 @@
+SEEN    J7 0.1  Demo › Reset, then Load the configured checkpoint, through the menu — 184 s
+SEEN    J7 1.1  Visitor visa opens, showing its release — Released versions: Release 1, today at 8:58 a.m., approved by Approver 
+SEEN    J7 1.2  IMM 5476: signed by the person and the representative — IMM 5476 Use of Representative "Use of a representative (IMM 5476) (if using an authorized representative)" Each applicant Conditional (a rule) Online (typed in by hand for now) (IRCC does not accept it) PDF upload Paper
+SEEN    J7 1.3a  IMM 5707: each person from 18, signed by the person — IMM 5707 Family Information "You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country." Each applicant · 18+ Always Online (typed in by hand for now) PDF upl
+SEEN    J7 1.3b  IMM 5257: a parent signs for a minor — IMM 5257 Application for visitor visa (temporary resident visa) "This form must be completed by each person applying for a Temporary Resident Visa to visit Canada." Each applicant Always Online (typed in by hand for now)
+SEEN    J7 1.3c  IMM 5257 SCH1: children from 18 (its signer left unset, for the expert) — IMM 5257 SCH1 Schedule 1 - Application for temporary residence "IMM 5257 SCH1 (09-2023): IMM 5905 (C1) and IMM 5881 (C2): 'If you have answered “yes” to any of the background informati…" Principal, spouse or partner, and
+SEEN    J7 1.5  IRCC account: APR Portal — APR Portal
+SEEN    J7 1.2w  The Forms tab has no sideways page scroll at 1440 px (its table scrolls inside itself) — 1440 px wide in a 1440 px window
+NOTE    J7 1.8  Eligibility gates: no authoring screen (row B106); set by the checkpoint, read on the case at 4.1 below — allow-listed route, tech lead's ruling on #1084
+SEEN    J7 2.1a  Open a case offers Visitor visa — Visitor visa · release 1
+SEEN    J7 2.1b  The case opens on Visitor visa — http://127.0.0.1:4478/cases/4c08b965-78b7-4a64-b838-e42f3c94a94a
+SEEN    J7 2.3  "Filed through APR Portal" read-only on the case —  Filed through APR Portal: set by the combination, not
+SEEN    J7 4.1a  Run eligibility check gives a result, not a refusal — ample Client A — Visitor visa Possibly eligible — needs 3 facts Score: none (this application has no points score) Rules checke
+SEEN    J7 4.1b  The four officer's-judgement lines are listed, never gates
+seen 13/13 steps, 1 note; errors: 0

@@ -1,0 +1,29 @@
+SETUP questions through the people's steps: {"accepted":191,"applied":8,"ownYesNo":3,"byHand":58,"sections":28,"reused":0,"held":12,"approved":185,"placed":154,"refused":[],"retried":[]}
+PASS  C4.1 pass: each applying person role has its own questions (IRCC: family members complete their own forms) — ["principal:141","spouse_or_partner:120","child:96","representative:21"]
+PASS  C4.1 pass: no role has a gap (every fact a form needs is asked or comes from a document or the case officer)
+PASS  C4.1 pass (G5): no fact a form needs is asked of nobody, for any role — {"count":0}
+PASS  C4.1 pass (G10, QA-133): every section header is a title in words, never a system key — ["Contact information","US PR card","National identity document","Background information","Details of visit to Canada","Education"]
+PASS  setup: the combination has at least two chosen sections — ["contact_information","us_pr_card","national_identity_document","background_information","details_of_visit_to_canada","education","employment"]
+PASS  C4.1 pass: Move up puts the second section first — ["us_pr_card","contact_information","national_identity_document"]
+PASS  C4.1 fail: the first section cannot move up (409, in words) — "\"US PR card\" is already the first section."
+PASS  C4.1 fail: the last section cannot move down (409) — "\"Employment\" is already the last section."
+PASS  C4.1 fail: a direction other than up or down is refused (400, in words) — "Say which way to move the section: \"up\" or \"down\"."
+PASS  C4.1 fail: a move from an older order is refused (409, in words); nothing moves — "The sections were reordered since you opened this tab. Reload to see the order now, then move it again."
+PASS  C4.1 fail: only an author moves sections (approver 403) — 403
+PASS  C4.1 pass: the Smart questionnaire (SQR) tab shows the new order — ["us_pr_card","contact_information","national_identity_document"]
+PASS  C4.1 pass: the section keeps the library's one title (P-216 (2)) — {"tab":"US PR card","library":"US PR card"}
+PASS  C4.1-Q221a (QA-221) the SCH1 line names whom IMM 5257 SCH1's own words name (the principal, a spouse or partner, each child 18 or older, from 18) — {"set_by_loader":"principal_partner_adult_children|18"}
+PASS  C4.1-Q221b (QA-221) fail: the Child's questionnaire loses SCH1's questions once SCH1 names its own people (the Smart questionnaire tab) — {"each_applicant":120,"own_who":96}
+PASS  C4.1-Q221c (QA-221) fail: a dependent child under 18 (10) does not fill IMM 5257 SCH1, so is not asked its facts — {"principal":true,"spouse":true,"child-1":false,"child-2":true}
+PASS  C4.1-Q221d (QA-221) pass: a dependent child of 18 or older (19) fills IMM 5257 SCH1 — {"principal":true,"spouse":true,"child-1":false,"child-2":true}
+PASS  C4.1-Q221e (QA-221) pass: the spouse or partner fills IMM 5257 SCH1 — {"principal":true,"spouse":true,"child-1":false,"child-2":true}
+PASS  C4.1-Q221f (QA-221) pass: a principal applicant under 18 (16) still fills IMM 5257 SCH1 (the form names the principal at any age) — {"principal":true}
+PASS  C4.1-Q221g (QA-221) the engine keeps 'each applicant, from 18' as before, as IMM 5707's line on the checkpoint uses it (a child of 10 not, adults and a child of 19 yes, a principal of 16 not) — {"f3":{"principal":true,"spouse":true,"child-1":false,"child-2":true},"f4":{"principal":false}}
+PASS  C4.1 fail (P-279): Submit is refused while 2 numbers have no source entry, in words — "Fix the problems before submitting: 2 numbers have no source entry. Each is listed on Review and release. First: No document line yet: a case on this combinatio"
+PASS  setup (P-279): every number the draft publishes has a source answer before Submit — {"written":2,"numbers":10,"held_back":0}
+PASS  C4.1-B71a pass: Submit goes through, and on a combination never released the review lists its sections as added in the new order, the moved one first — {"first":{"key":"us_pr_card","kind":"Section","label":"US PR card","change":"added","needs_sme":false},"moved":"us_pr_card"}
+SETUP document lines and the facts they supply through the people's steps: {"docs":{"drafted":1,"accepted":15,"approved":9,"refused":[]},"sup":{"proposed":1,"approved":1,"refused":[]}}
+PASS  C4.1 pass (G4): Visitor visa's questionnaire has IMM 5257's printed sections Details of visit to Canada and Personal details, and asks the principal's previous countries of residence — {"sections":["Contact information","US PR card","National identity document","Background information","Details of visit to Canada","Education","Employment","Your declaration","Request for a change of sex or gender identifier","Section A: applicant information"
+PASS  C4.1 pass: a fact the passport supplies is not asked of the principal in the SQR — ["Family name as shown on passport or travel document","Given name(s) as shown on passport or travel document","Country of citizenship"]
+
+25/25 passed

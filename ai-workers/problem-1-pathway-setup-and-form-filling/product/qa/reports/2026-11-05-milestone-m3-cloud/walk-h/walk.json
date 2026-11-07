@@ -1,0 +1,168 @@
+{
+ "caseUrl": "http://127.0.0.1:4478/cases/d2c0bb77-56fd-46c6-a36f-182ed50eb506",
+ "steps": [
+  {
+   "j7": "0.1",
+   "what": "Demo › Configured checkpoint loads through the menu",
+   "seen": true,
+   "detail": "92 s; result table saved"
+  },
+  {
+   "j7": "1.1",
+   "what": "Immigration programs lists Visitor visa as released",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "2.1a",
+   "what": "Open a case offers Visitor visa (released)",
+   "seen": true,
+   "detail": "Outside Canada · release 1 / Visitor visa · release 1 / With an LMIA – inside Canada · release 1"
+  },
+  {
+   "j7": "2.1b",
+   "what": "Choose the representative of record (one of the Sample firm's two)",
+   "seen": true,
+   "detail": "Representative (Sample) · CICC R000000 / Second representative (Sample) · CICC R000002"
+  },
+  {
+   "j7": "2.1c",
+   "what": "\"Will be created as\": filings, one family submission, release named",
+   "seen": false,
+   "detail": "Open a case The case works from the combination's latest release, frozen now: a later release never changes it. Combination (released) Outside Canada · release 1 Visitor visa · release 1 With an LMIA – inside Canada · release 1 Case reference Your firm's reference, at least 3 characters Principal applicant's name Shown to the client as written; Sample names only in the prototype Client login that "
+  },
+  {
+   "j7": "2.1d",
+   "what": "Add a person asks for a date of birth",
+   "seen": false,
+   "detail": "Add a spouse or partner Within the limits of this case's release. Their questions are added to the Client questionnaire at once. Name Sample names only in the prototype Cancel Add"
+  },
+  {
+   "j7": "2.1e",
+   "what": "Team chip Representative · Case officer",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "2.3a",
+   "what": "Filings chip \"Visitor visa · 4 filings\"",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "2.3b",
+   "what": "\"Filed through APR Portal\" read-only on the case",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "2.4",
+   "what": "Fees panel: Visitor visa CAD 100 × 4, biometrics with IRCC's source",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "2.5",
+   "what": "Reassign the case officer (firm admin)",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "3.1",
+   "what": "Documents checklist per person (passports, proof of financial support)",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "3.3",
+   "what": "Request / upload a document from the case",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "3.4",
+   "what": "\"Fill this from documents\" on a section",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "4.1",
+   "what": "Eligibility card with a case check",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "5.1",
+   "what": "Prepare application lists IMM 5257, IMM 5707, IMM 5476 per person",
+   "seen": true,
+   "detail": "IMM 5476 listed"
+  },
+  {
+   "j7": "5.2",
+   "what": "Change channel on a form row",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "5.3",
+   "what": "IMM 5707 answer sheet with Copy buttons",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "5.5",
+   "what": "Download PDF copy / Generate a copy",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "5.6",
+   "what": "Upload the validated copy (barcode form)",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "5.7",
+   "what": "Sign steps: print → signed → scan → uploaded",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "6.1",
+   "what": "Review: rules cross-checks / findings",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "6.4",
+   "what": "Readiness per filing: blocks by who owes them",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "6.6",
+   "what": "Representative reviews the filing",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "7.1",
+   "what": "Pass a warning with a reason; press Ready to file",
+   "seen": false,
+   "detail": ""
+  },
+  {
+   "j7": "7.3",
+   "what": "Record the submission for the family",
+   "seen": true,
+   "detail": ""
+  },
+  {
+   "j7": "4.1b",
+   "what": "Eligibility tab: Possibly eligible — needs …; officer's judgement lines",
+   "seen": true,
+   "detail": "Cases Acting as (simulated) Case officer · Sample firm Representative · Sample firm · firm admin Second representative · Sample firm Solo representative · Sample solo firm Client A · Client Client B ·"
+  }
+ ],
+ "errors": []
+}

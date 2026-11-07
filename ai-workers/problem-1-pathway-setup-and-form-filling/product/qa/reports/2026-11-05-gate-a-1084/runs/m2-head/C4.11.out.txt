@@ -1,0 +1,27 @@
+SETUP questions through the people's steps: {"accepted":191,"applied":8,"ownYesNo":3,"byHand":58,"sections":28,"reused":0,"held":12,"approved":185,"placed":154,"refused":[],"retried":[]}
+PASS  C4.11-1 pass: the plan lists the 7 steps in order — ["facts","documents","document_facts","comes_from","conditions","pqr_picks","checker"]
+PASS  C4.11-2 pass: each step says its mode and its cost (usual and worst); Saved and Rules cost US$0
+PASS  C4.11-3 pass: a Saved step names its saved result (date, edition, US$0, current)
+PASS  C4.11-4 pass: the plan carries its fingerprint (plan_sha256)
+PASS  C4.11-5 fail: a plan with Live steps on a copy without the founder's Go says so and cannot run (live.approved false, in words) — "Live is not open yet: each paid run is approved first, with its cost stated. Also, facts, document_facts, comes_from are worked out by the rules (no AI): plan them as rules."
+PASS  C4.11-6 fail: steps out of order, or a step whose inputs are not planned, are refused (400, in words) — "Plan the steps in their order, each once: facts, documents, document_facts, comes_from, conditions, pqr_picks, checker."
+PASS  C4.11-7 fail: a run of a plan that is not the one shown is refused (409: plan changed) — "This is not a plan shown for this combination in the last hour (or the forms, people or steps changed): plan again before it runs."
+PASS  C4.11-8 pass: the run starts (202 or 201) with a run id — {"runId":"e5a64a85-649b-4888-9faa-a6990b0ddf09","status":"running"}
+PASS  C4.11-9 pass: the same click twice is one run (idempotency key)
+PASS  C4.11-10 pass: the run finishes, each of the 7 steps with its outcome — ["facts:done","documents:done","document_facts:done","comes_from:done","conditions:done","pqr_picks:done","checker:done"]
+PASS  C4.11-11 pass: the queue gets documents per person, conditions and PQR picks — ["pqr_pick","document_type","requirement_line","condition"]
+PASS  C4.11-12 pass: step 4 gives every fact a form needs its source (document, client or case officer), changeable on the Questions tab — {"facts":397,"step4":"397 answers: Document 0 · Client 373 · Case officer 24. The rules' choice applies until a person changes it on the Questions tab."}
+PASS  C4.11-13 pass: every item names a step of this run (acceptance rate per step, P-130 §6.3) — ["pqr_picks","checklist_draft","qd_conditions"]
+PASS  C4.11-14 pass: every AI item has both readings (draft and the independent checker) or is marked One reading only
+PASS  C4.11-15 pass: every requirement line and condition rests on an official file with its quote found
+PASS  C4.11-16 pass (checker): every PQR pick is a fact a client or document question asks (PQR ⊂ SQR) — ["case|case.intended_stay_to","case|case.visit_purpose","principal|person.criminal_history","case|case.funds_available_cad","principal|person.health_condition_requiring_services","principal|person.violent_organization_association","spouse_or_partner|person.cri
+PASS  C4.11-17 pass (checker): every fact from a document names a document on the checklist — {"from_documents":0,"missing":[]}
+PASS  C4.11-18 data: every item is Sample; nothing is in the combination's draft until accepted
+PASS  C4.11-19 pass (BR-7): no item names a person role that Who can be does not list — ["principal","spouse_or_partner"]
+PASS  C4.11-G5 pass (G5): with the run's Ready items accepted, no fact a form needs is asked of nobody (any role) — {"ready":6,"nobody":0}
+PASS  C4.11-20 fail (BR-12): a live run whose worst case is over the spend limit is refused before any call (409, 'use saved results or rules only') — "This plan has Live steps: Live is not open yet: each paid run is approved first, with its cost stated. Nothing was called; use saved results or rules only."
+PASS  C4.11-21 fail (BR-10): a checklist text no saved reading has read is not offered as Saved (Out of date or none, with the reason), never replayed silently — {"usd":0,"state":"none","date":null,"edition":null,"why":"No saved AI reading of this combination's checklist yet: it is recorded in an approved Live run of the checklist, on its page."}
+PASS  C4.11-22 pass: Stop stops a run (its state says stopped or finished, in words) — {"stop":201,"status":"stopping"}
+PASS  C4.11-23 pass: the whole run spent US$0 (Replay and Rules only) — {"spent":0,"worst":0,"usual":null,"about":null}
+
+24/24 passed
