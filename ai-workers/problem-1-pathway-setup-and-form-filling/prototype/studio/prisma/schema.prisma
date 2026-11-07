@@ -41,9 +41,12 @@ enum FieldDataType {
   COMPOSITE
 }
 
+/// C3.16 (SA-1B-130): CLIENT_LEVEL is the team's PERSON and CASE_LEVEL its FILING (one reader, engine/field-scope.ts).
 enum FieldScope {
   CLIENT_LEVEL
   CASE_LEVEL
+  HOUSEHOLD
+  ORGANISATION
 }
 
 enum ConditionEffect {
