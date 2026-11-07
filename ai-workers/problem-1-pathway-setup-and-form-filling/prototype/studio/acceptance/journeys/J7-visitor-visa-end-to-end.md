@@ -48,12 +48,12 @@ Pack 4 (P-220 Day 0). The click-through a builder turns into a browser check (Pl
 | 3.8 | Visit section: "Fill this from documents" on the uploaded letter of invitation (Replay; the saved read recorded once, FQ-10) | Contact name proposed, marked "Replayed", cost US$0; a live read is not offered without the founder's Go | C6.5-19/20 |
 | 3.9 | Confirm every section for every person (about 56 clicks for a family of four, one per section: FQ-13 asks for a "Confirm all") | Stage 1 card: nothing left to confirm | C7.7-9 |
 
-## Stage 4 — Eligibility (M3-D)
+## Stage 4 — Case check from confirmed facts (M3-D; was Eligibility, P-236)
 | # | Who does what | Expected result | Check |
 |---|---|---|---|
-| 4.1 | Eligibility tab, Client A, before the passport and convictions are answered | "Possibly eligible — needs passport, convictions"; "No score yet (team's AG-03)"; disclaimer; Stand-in chip SI-1; four officer's-judgement lines. Builder's browser check: a fixture result in AG-03's shape (below cut-off, a score, a breakdown) shows with no page change (the SI-1 plug-in test) | C6.9-3/5/6 |
-| 4.2 | Answer convictions "yes", Run again with a reason | "Not eligible: has a criminal or immigration-related conviction" | C6.9-7 |
-| 4.3 | Correct to "no", Run again | "Likely eligible"; the earlier run kept, marked out of date | C6.9-8/9 |
+| 4.1 | Case check page, Client A, before the passport and convictions are answered | "Can't tell yet — needs passport, convictions"; "No score yet (team's AG-03)"; disclaimer; Stand-in chip SI-1; four officer's-judgement lines. Builder's browser check: a fixture result in AG-03's shape (below cut-off, a score, a breakdown) shows with no page change (the SI-1 plug-in test) | C6.9-3/5/6 |
+| 4.2 | Answer convictions "yes", Run again with a reason | "Can't tell yet — the representative reviews this" (P-230 (1): never Does not qualify on that rule) | C6.9-7 |
+| 4.3 | Correct to "no", Run again | "Qualifies"; the earlier run kept, marked out of date | C6.9-8/9 |
 | 4.4 | Override without a reason; then with a reason; Mark reviewed | Refused on the field; then saved beside the result; reviewer and time shown | C6.9-11/12/13 |
 
 ## Stage 5 — Filing: prepare each item (M3-E)
