@@ -12,6 +12,7 @@
 //    release it again, and a real case asks the date once. It moves to the six when Visitor visa releases there (B82).
 // Every value is Sample (IMM 5257's "Date" of the current union is the form's own box, read through the partner). US$0.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C3.16.test.ts 4440 xr_studio_accept
+// The case part runs on its own fresh copy, never after the six part on the same copy (gate B reads the run above alone):
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept && tsx studio/acceptance/C3.16.test.ts 4440 xr_studio_accept case
 import { AUTHOR, APPROVER, REVIEWER, pack2, run } from "./lib/pack2.ts";
 
