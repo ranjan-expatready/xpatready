@@ -1,0 +1,3 @@
+Gate B: the PR names C8.1; claims Works for none (no bug check).
+    C8.1.test.ts on the checkpoint: exit 0, 14/14 passed (119 s: copy 5, Load the configured checkpoint 100, run 14)
+Gate B: passed.
