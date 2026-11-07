@@ -1,0 +1,29 @@
+C6.12 — Filings and fees derived from the case (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.12-1 pass: GET /runtime/cases/:id/prepare answers 200 for the case officer — 200
+PASS  C6.12-2 fail: a client cannot read the prepare view (403)
+PASS  C6.12-3 pass: four people who each file their own application give four filings, one applicant each, mode files_own (VV-R03) — [[{"subject":"0b243c6f-db63-4a82-a0e7-3d090d4515b5","label":"Sample Client A","role":"principal","mode":"applying"}],[{"subject":"d0eaf738-b066-410e-97f6-f52753940c61","label":"Sample Spouse A","role":"spouse_or_partner","mode":"applying"}],[{"subject":"6f7a4a
+PASS  C6.12-3a pass (qa-2 #296): the filings follow the RELEASED filing mode, not a rule in code: the case's pinned release lists files_own for every role
+PASS  C6.12-4 pass: the four filings form one family submission group, which can be split — [{"id":"ac897c72-bb48-4ae7-a0e2-61073bef6f57","kind":"family","label":"One submission for 4 people applying","filings":["a67e03f0-ffa6-44ad-9206-a1215f1d4d46","f14d6822-1ce7-4e67-86f2-acd2eb32d8ee","21c465dd-6b2c-4cb3-8c9e-cfab0524ab22","7347e3f9-0b27-40fb-b84
+PASS  C6.12-5 pass (data): filing, filing_applicant and submission_group rows match the view
+PASS  C6.12-6 fail: the officer never creates a filing by hand (POST …/filings is not a route: 404 or 405)
+PASS  C6.12-7 pass: visitor visa fee CAD 100 per person, CAD 400 for four (under 5, no family maximum; VV-R13) — [{"filing":"a67e03f0-ffa6-44ad-9206-a1215f1d4d46","subject":"0b243c6f-db63-4a82-a0e7-3d090d4515b5","payer":"0b243c6f-db63-4a82-a0e7-3d090d4515b5","key":"visitor_visa","line":"Visitor visa fee","amount":100,"amount_cents":10000,"amount_words":"CAD 100","exempt"
+PASS  C6.12-8 pass: biometrics CAD 170 for the family (three people 14–79; maximum for 2 or more; VV-R14); the child of 10 has no biometrics line, with the reason "under 14" (VV-R15) — [{"filing":"a67e03f0-ffa6-44ad-9206-a1215f1d4d46","subject":"0b243c6f-db63-4a82-a0e7-3d090d4515b5","payer":"0b243c6f-db63-4a82-a0e7-3d090d4515b5","key":"biometrics","line":"Biometrics fee","amount":170,"amount_cents":17000,"amount_words":"CAD 170","exempt":fal
+PASS  C6.12-9 pass: the visitor visa and biometrics fee lines cite the IRCC fee list (VV-R13, VV-R14); any other line says Sample — ["https://ircc.canada.ca/english/information/fees/fees.asp","https://ircc.canada.ca/english/information/fees/fees.asp","https://ircc.canada.ca/english/information/fees/fees.asp","https://ircc.canada.ca/english/information/fees/fees.asp","https://ircc.canada.ca
+PASS  C6.12-9a pass (G13): the case names its release in the studio's words (same label and number) — {"studio":"Release 6","case":"Release 6"}
+PASS  C6.12-10 pass: six people in one group pay the CAD 500 family maximum, once, on the principal's filing; the others are fee-exempt with the reason — [{"filing":"4402f017-4f95-4e1b-adf9-a9e60e7c7114","subject":"f5f88045-75f2-4065-86a9-9a9c5c7e7fb2","payer":"f5f88045-75f2-4065-86a9-9a9c5c7e7fb2","key":"visitor_visa","line":"Visitor visa fee","amount":500,"amount_cents":50000,"amount_words":"CAD 500","exempt"
+PASS  C6.12-11 fail: a seventh person is refused (a child is at most 4 in this combination's "Who can be in this application")
+PASS  C6.12-12 fail: splitting without a reason is refused on the field and says the family maximum would be lost (400) — {"type":"https://expatready.local/problems/validation","title":"Some details need fixing","status":400,"detail":"Give a reason to split this filing out: it is then priced on its own, and the family maximum (Visitor visa fee CAD 500 for 5 or more, Biometrics fe
+PASS  C6.12-13 pass: after the split there are two groups; visa fees CAD 500 (five) + CAD 100 (one); biometrics CAD 170 + CAD 85 — {"groups":[{"id":"c3984ed3-1ee4-4d7f-87c9-302961d3b153","kind":"family","label":"One submission for 5 people applying","filings":["4402f017-4f95-4e1b-adf9-a9e60e7c7114","6e5e4fdf-de60-471d-aad9-ecf5881e2099","1e89c15e-60b9-49d2-adfd-c1a3b7fde860","8e7fb0b0-6cd
+PASS  C6.12-13a pass (qa-2 #296): a split keeps every filing's identity (same filing id for each person) — {"before":{"Sample Client A":"4402f017-4f95-4e1b-adf9-a9e60e7c7114","Sample Spouse A":"6e5e4fdf-de60-471d-aad9-ecf5881e2099","Sample Child A1":"1e89c15e-60b9-49d2-adfd-c1a3b7fde860","Sample Child A2":"a867ca01-d560-4f65-bcdc-8a6a696afc84","Sample Child A3":"8e
+PASS  C6.12-14 fail: splitting a filing that is no longer in the group is refused (409 or 422) — 409
+PASS  C6.12-15 pass: just past the 14th birthday, and aged 79, a person pays visa CAD 100 and biometrics CAD 85; two days before turning 14, no biometrics
+PASS  C6.12-16 pass: a person just past 80 has no biometrics line ("over 79")
+PASS  C6.12-17 pass: correcting the child's date of birth to 16 adds a biometrics line for them; the family total stays at the CAD 170 maximum
+PASS  C6.12-18 pass: a child who is not travelling has no filing and no fee, and the view says why — 3
+PASS  C6.12-19 pass: marking the child as travelling adds their filing and fees; everyone else keeps the same filing id — {"before":{"Sample Client A":"6235b6e0-3d31-4743-8e89-c623d9d97a25","Sample Spouse A":"dc143a2f-2430-4d5e-88df-964659f79ad9","Sample Child A1":"2d6c89ca-10d9-4753-98e1-77472fdfe979"},"status":200}
+PASS  C6.12-20 fail (qa-2 #296): taking the child of 10 off the trip never moves another person's filing to them (ids are not positions)
+PASS  C6.12-21 pass (G15): a child with no date of birth has a biometrics line that waits for the date of birth, not counted in the total and not exempt — {"filing":"bdca2fad-0cc6-479d-bc82-f33f8f49edd7","subject":"f5589899-0eaa-4079-8416-8c5e899a05df","payer":"f5589899-0eaa-4079-8416-8c5e899a05df","key":"biometrics","line":"Biometrics fee","amount":85,"amount_cents":8500,"amount_words":"CAD 85","exempt":false,"
+
+24/24 passed

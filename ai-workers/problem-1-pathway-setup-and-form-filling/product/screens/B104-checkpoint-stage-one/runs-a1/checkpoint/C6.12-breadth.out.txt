@@ -1,0 +1,9 @@
+C6.12 breadth — Filings and fees: the parts C6.12 is Partial for
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FAIL  C6.12-22 pass (Partial: sponsorship): spouse or partner sponsorship is two filings, the sponsorship and the PR application, in one submission group — Spouse or common-law partner is released and its fee lines are set per filing — {"released":1,"feeTable":"no fs.spouse entry in samples/fee-table.json (only vv.single today)"}
+FAIL  C6.12-23 pass (Partial: child study question): a release of a student or worker combination asks the case officer "will this child study 6 months or more?" (yes adds a study permit filing) — {"releasesWithTheQuestion":0}
+PASS  C6.12-24 pass (Partial: other combinations): the fee table prices study permits, work permits and extensions, none with a family maximum — {"lines":["visitor_visa","biometrics","spouse_sponsorship","spouse_dependent_child","pr_adult","pr_dependent_child","study_permit","work_permit","open_work_permit_holder","visitor_extension"],"combinations":["vv.single"]}
+FAIL  C6.12-25 pass (Partial: the screen): the case page shows the case's filings and fees (visitor visa CAD 100 each, biometrics CAD 170 for the family) — "no fee or CAD on the case page"
+
+1/4 passed

@@ -21,6 +21,7 @@ import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
 import { BeforeForms } from "@/components/before-forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
+import { EligibilityGatesSection } from "@/components/eligibility-gates-editor";
 import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
 import { LEVEL_TEXT } from "@/components/levels";
@@ -149,7 +150,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
   if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} removedEver={v.removedEver} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
-  if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
+  if (v.tab === "questionnaires") return <div className="space-y-6"><QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} /><EligibilityGatesSection id={id} /></div>; // B106 (Q2): eligibility rules at the end of the tab
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
 }

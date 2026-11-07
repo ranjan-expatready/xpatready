@@ -13,6 +13,7 @@ import { lineCondition, lineHolders, type Known, type Person } from "../render.t
 import type { Snapshot } from "../snapshot.ts";
 import { isFilingFact } from "../resolver.ts";
 import { FILING } from "../../contracts/resolver.ts";
+import { WHO_WORDS } from "../../contracts/lines-bulk.ts";
 import type { Participant } from "./case.ts";
 import { FEE_TABLE } from "./filings.ts";
 
@@ -39,14 +40,19 @@ export const MAX_VALIDITY_MONTHS = 120;
 export type Need = "needed" | "not_needed" | "answer_first";
 /** A question to answer first; `answered`: it is answered, but with the others it does not work out (e.g. a birth date
  *  after the application date), so it is to check rather than to answer. */
-export type Missing = { key: string; question: string; answered: boolean };
+export type Missing = { key: string; question: string; answered: boolean;
+  /** C6.4 (a): whose question it is, so a link reaches it: the case's own (asked once for the application) or a person's,
+   *  and which person (Devin on #1073: the person whose answer decides the line may not be the line's holder). */
+  on: "case" | "person"; subject: string | null };
 /** M3-CONTRACT (pack 4, C6.4): a line's id, document type, label, the team's state (SI-14: storage, requests and file
  *  status are AG-09's; every derived line is Not requested until C6.4's storage slice), reason and required; plus this
  *  slice's detail. A line is in `lines` when the person needs it, in `waiting` when an answer decides it first, and in
  *  `not_needed` with the answer that decided it. */
 export type PersonLine = { id: string; document_type: string; label: string; state: "not_requested"; reason: string; required: boolean; documents: never[];
   need: Need; lineage: string; also_from: string[]; document: { key: string; name: string }; missing: Missing[]; base: boolean;
-  provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null };
+  provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null;
+  /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
+  who: string; who_words: string };
 export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number };
 export type CaseChecklist =
   | { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string }
@@ -130,7 +136,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const has = (f: string) => known.has(`${isFilingFact(f, placed.get(f)) ? FILING : about}|${f}`) || known.has(`${isFilingFact(f) ? FILING : about}|${f}`);
       const all = d ? [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])] : [k];
       const open = all.filter((f) => !has(f));
-      for (const f of open.length ? open : all) out.set(f, { key: f, question: words(f), answered: !open.length });
+      for (const f of open.length ? open : all) { const onCase = isFilingFact(f, placed.get(f)) || about === FILING; out.set(f, { key: f, question: words(f), answered: !open.length, on: onCase ? "case" : "person", subject: onCase ? null : about }); }
     }
     return [...out.values()];
   };
@@ -149,7 +155,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     // A person not applying has no filing on a Visitor visa (C6.12), so no lines of their own.
     const holders = [...new Set(lineHolders(persons, r.who).map((h) => (h === "case" ? principal : h)))].filter((h): h is string => !!h && applying.has(h));
     for (const h of holders) {
-      const plain = r.condition_plain ?? null;
+      const plain = inReason(r.condition_plain);
       let state: Need = "needed", missing: Missing[] = [];
       let why = r.base_or_conditional === "base" ? "Always needed for this application." : `Needed: ${plain ?? "its condition holds"}.`;
       if (r.who === "each_adult_18_plus") {
@@ -157,7 +163,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
         if (age === undefined) {
           state = "answer_first";
           const born = known.has(`${h}|${MINOR.birthDateField}`);
-          missing = born ? [{ key: MINOR.birthDateField, question: words(MINOR.birthDateField), answered: true }, ...(day(appDate) ? [{ key: APPLICATION_DATE, question: words(APPLICATION_DATE), answered: true }] : [])] : toAsk([MINOR.birthDateField], h);
+          missing = born ? [{ key: MINOR.birthDateField, question: words(MINOR.birthDateField), answered: true, on: "person" as const, subject: h }, ...(day(appDate) ? [{ key: APPLICATION_DATE, question: words(APPLICATION_DATE), answered: true, on: "case" as const, subject: null }] : [])] : toAsk([MINOR.birthDateField], h);
           why = say(missing, "Needed from age 18");
         }
         else if (age < 18) { state = "not_needed"; why = `Only for people 18 or older; this person is ${age} on ${agesOn}.`; }
@@ -173,7 +179,8 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       }
       const line: PersonLine = { id: `${h}:${r.lineage}`, document_type: document.key, label: document.name, state: "not_requested", reason: why, required: state === "needed", documents: [],
         need: state, lineage: r.lineage, also_from: [], document, missing, base: r.base_or_conditional === "base", provided_by: r.provided_by,
-        alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null };
+        alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null,
+        who: r.who, who_words: whoWords(r.who) };
       // Minor: two requirements for the same document on one person (e.g. a case line and the principal's own) are one
       // line: the strongest state wins and the other requirement is named in also_from.
       // Break m7: the merged line is "always" when either requirement is.
@@ -191,6 +198,26 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     }) };
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
+
+/** C6.4 (a), challenge r2 M1: a release's plain condition as it reads inside a reason ("Needed: …."): its last full stop
+ *  removed, and its first word lower-cased only when it is a common opening word ("The applicant is married." → "the
+ *  applicant is married"), so the reason never reads "married.." or "the case that The applicant". Any other first word
+ *  (a name, a nationality, IMM, IRCC) is kept as written (review minor 2). */
+const OPENERS = new Set(["The", "A", "An", "This", "That", "These", "Those", "Only", "If", "When", "Each", "Every", "Any", "Applicant", "Applicants", "Person", "Someone", "Anyone"]);
+export function inReason(plain: string | null | undefined): string | null {
+  const t = (plain ?? "").trim().replace(/[.\s]+$/, "");
+  if (!t) return null;
+  const first = t.split(/\s/)[0];
+  return OPENERS.has(first) ? t[0].toLowerCase() + t.slice(1) : t;
+}
+/** Whose line it is, in the words of the Forms and Documents tabs (contracts/lines-bulk.ts WHO_WORDS), as a note
+ *  ("For each applicant", "Once for the couple"); an unknown "who" is named as it is, never hidden. */
+export function whoWords(who: string): string {
+  if (who === "couple_once") return "Once for the couple";
+  if (who === "case") return "Once for the application";
+  const w = WHO_WORDS[who];
+  return w ? `For ${w}` : `For: ${who}`;
+}
 
 /** A condition decided on its own subject, by the one rule Preview and the Documents tab use (render.ts lineCondition;
  *  Q2 on #325), with the case checklist's words for "nobody on the case". */

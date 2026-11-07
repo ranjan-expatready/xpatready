@@ -99,7 +99,7 @@ export class CaseChecklists {
       const orphans = rows.filter((x) => x.subjectId === p.subject && !listed.has(x.documentType) && (x.state !== "not_requested" || docsOf(p.subject, x.documentType).length > 0))
         .map((x): PersonLine => ({ id: `${p.subject}:${x.lineage}`, document_type: x.documentType, label: typeName(x.documentType), state: "not_requested", required: false, documents: [],
           reason: p.applies ? "The case's release no longer asks this person for it." : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
-          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null }));
+          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, who: "", who_words: "" }));
       const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true)), ...orphans.map((l) => out(l, true))];
       return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };
     });
