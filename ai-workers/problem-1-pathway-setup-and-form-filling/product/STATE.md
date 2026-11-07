@@ -18,13 +18,11 @@ updated: 2026-11-07 15:45 IST by **Lead 30, at the hand-over to Lead 31** · mil
 Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly 0% at 12:35 IST on the new account (Ultra; resets 13 Nov 04:29 IST); curl with `gh auth token` for GitHub (P-363).
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
+F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403); rows word for word in `history/STATE-2026-11-07-1545-lead30.md`.
+
 | # | Question | Lead's recommendation | Blocks | Since | Status |
 |---|---|---|---|---|---|
-| F1 | C1.3 "Follows" suggestions | after M3 | nothing | 6 Nov 23:52 | **answered "After M3"** (P-391) |
 | F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open: qa's walk screenshots landed with #1199 |
-| F3 | C6.9 counts unconfirmed facts | keep, outcome names them | B124 | 7 Nov 08:48 | **answered** (P-393, B124 = #1197) |
-| F4 | Delete every session on the old account at the switch | as planned | the switch | 7 Nov 11:20 | **done per the founder's resume note** (P-396) |
-| F5 | Release the rows held at 45% | release them, critical path first | M3 pace | 7 Nov 13:11 | **answered "Yes, release them"** (P-403) |
 | F6 | A hard boundary for `.github/**` changes: a Mergify condition (a GitHub approving review or a founder-only label) or a CODEOWNERS ruleset (#1232's breaker Blocker 1) | after B134 lands, a Mergify condition | nothing now (B134 is the interim) | 7 Nov 15:25 | open |
 | F7 | Coverage of preparation and filing (audit 7 Nov 15:30 IST, `reports/coverage-prep-filing-2026-11-07.md`; 94 requirement rows: 32 in M3's 17, 30 elsewhere, 22 out of scope by decision, **7 gaps**, 3 ambiguous; 8 rows labelled M3 not scheduled: B3, B6, B8, B9, B10, L-SA6, L-SA8, L-SA10) | add the 7 gaps as rows (3 need his call: withdrawing a filing, readiness score, representative's stored signature); schedule or rule out the 8; run S8's card-by-card trace | M3's true size | 7 Nov 15:32 | **answered "Yes, add them"** and three calls (P-406) |
 
