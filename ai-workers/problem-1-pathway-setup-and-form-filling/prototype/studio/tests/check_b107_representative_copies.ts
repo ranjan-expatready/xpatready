@@ -4,13 +4,16 @@
 // (samples/form-field-gates.json), proposed by the author and approved by a second person when the checkpoint loads
 // (api/src/features/checkpoint/045-form-field-gates.ts). Each rule with a passing and a failing case. Sample data
 // (samples/firms.json), US$0, no model call.
-//   zsh studio/tools/isolated.sh fb107 4450 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
-//   tsx studio/tests/check_b107_representative_copies.ts 4450 xr_studio_fb107
+// On a copy that does not hold the configured checkpoint yet (no released B107 gate), it loads it first, as Demo › Reset and
+// Demo › Load the configured checkpoint do (as check_m3_c1_expected_lines.ts does), so CI's suite runner runs it on its own
+// copy; on a copy that holds it, it runs on it as it is (it re-runs on one copy: C25).
+//   zsh studio/tools/isolated.sh forms_b107 4452 start && tsx studio/tests/check_b107_representative_copies.ts 4452 xr_studio_forms_b107
 import { execFileSync } from "node:child_process";
+import { request } from "node:http";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answer, APPROVER, AUTHOR, call, CLIENT, copyBytes, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { answer, APPROVER, AUTHOR, call, CLIENT, copyBytes, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, PORT, prepare, readinessOf, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
@@ -33,7 +36,19 @@ const FIRMS = JSON.parse(readFileSync(join(STUDIO, "samples", "firms.json"), "ut
 
 const B = "IMM_5476[0].Page1[0].SectionB[0].", Q6 = `${B}question6[0].`, Q7 = `${B}question7[0].`;
 
+/** Demo › Reset, then Demo › Load the configured checkpoint, as the author (node:http: the load can outlast fetch's wait). */
+const post = (path: string, body: unknown) => new Promise<number>((done) => {
+  const data = JSON.stringify(body);
+  const rq = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, method: "POST", timeout: 1_200_000, headers: { "content-type": "application/json", "x-actor": AUTHOR, "content-length": Buffer.byteLength(data) } }, (r) => { r.resume(); r.on("end", () => done(r.statusCode ?? 0)); });
+  rq.on("timeout", () => rq.destroy(new Error("timeout"))); rq.on("error", () => done(0)); rq.end(data);
+});
+
 await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — checkpoint, field by field", async () => {
+  const held = Number(sql(`select count(*) from library_change where action = 'SET_FORM_FIELD_GATE' and status = 'RELEASED'`) ?? "0") > 0;
+  if (!held) {
+    const reset = await post("/demo/reset", { confirm: "RESET" }), load = reset < 300 ? await post("/demo/load", { sample: "configured" }) : 0;
+    ok("B107-C0 setup: Demo › Reset, then Load the configured checkpoint (this copy did not hold it)", reset < 300 && load < 300, [reset, load]);
+  }
   const vv = needVisitorVisa(), f = await firms(), officer = f.officer!;
   const firm = FIRMS.firms.find((x) => x.users.some((u) => u.id === f.rep))!, rep = firm.users.find((u) => u.id === f.rep)!, rep2 = firm.users.find((u) => u.id === f.rep2)!;
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client B107", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [officer] });
