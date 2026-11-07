@@ -85,3 +85,47 @@ Two things are open: one standard line not met on the new block, and gate B, whi
 **Verdict: Block** (commit 163bd3338). To fix: (1) "Not counted yet" must not cover its reason at 1024 px and 200 % zoom, with a
 test at 512 px. (2) Add the tech lead's ruled HELD lines for -22 and -23 (own commit, guarded, never green), so gate B can be
 green; that pack commit needs its own review on the new head.
+
+## Round 2 (diff only, 1ea633935)
+**Reviewed:** `git diff 163bd3338..1ea633935` under `prototype/studio/` on head 1ea633935473830cc73468bf8834d634cd05d0b5 (PR head
+checked): `acceptance/C6.12-breadth.test.ts` (6939e5646), `web/src/runtime/fees.tsx` and `tests/check_c612_fees_browser.ts`
+(1ea633935). **Ran:** isolated `rev_b5` on :4445, configured checkpoint (reset, load as `user-A`, 90 to 101 s), stopped after.
+`C6.12-breadth.test.ts`: -24 and -25 PASS, -22 and -23 HELD, "2/2 passed", exit 0. `C6.12.test.ts`: 24/24, exit 0.
+`check_c612_fees_browser.ts`: 56/56; the screenshots it rewrote under `screens/C6.12/screenshots/` were restored with
+`git checkout --`. My own browser script (scratch, run twice, 19/19 both times). Live AI off, US$0.
+
+**M1 (200 % zoom): closed.** Case: principal, a child with no date of birth, spouse. At 512 css px "Not counted yet" wraps to
+2 lines inside its cell (text ends x=235, Why starts x=256, no cell overflow). Same at 1024, 720 and 400 css px. No "CAD n"
+breaks inside a word. axe at 512 px in this state: 0 violations. Removing the fix in the browser (`white-space: nowrap` put
+back) makes the same measure show the overlap (text ends x=283 > 256), so the builder's new 512 px check (`check_c612_fees_browser.ts:154-159`)
+fails when the fix is removed.
+**M2 (gate B): closed.** `held()` (`C6.12-breadth.test.ts:20-24`) is the C11.3 AT-5 guard: PASS when green; HELD only
+while `still`; otherwise an ordinary FAIL; never counted green. -22's `still` is `!fsTable` (no `fs.spouse` entry in the fee
+table; the release exists, `released: 1`); -23's is `studyQ === 0` (no release asks the question). These are the tech lead's
+two conditions on #1233 (09:55 UTC). Each HELD line and the summary cite the founder's answer to Q1 (6 Nov, P-380) and rows S1
+and S2. No id or step is dropped (P-330 (7)). Gate B (C6.12 whole plus breadth -25) is green on this head.
+**Break m2: fixed.** The waiting line's total reads "Biometrics fee: CAD 170 so far · 1 not counted yet"; the other line has
+no "so far"; once the date of birth is answered no line says it (`fees.tsx:103`, counted on the group's own lines).
+**Break m4 and round-1 issue 5 (captions): fixed.** After two splits, three tables have three different accessible names, each
+listing its filings ("Fees for One submission: Visitor visa: Sample Child A1"). The table is now named by its caption
+(`aria-labelledby` dropped, `fees.tsx:66-67`); the aria snapshot confirms it. The visible headings still all read "One submission" (B133).
+**Break m5 and round-1 issue 6 (BR-4 on real data): fixed.** The new check uses a real `sp.outside` case. I also opened real
+`sp.outside` and `fs.spouse` cases: each shows the server's `fees_why` once and no CAD.
+**Money:** the page equals `/prepare` in every state I tried: CAD 470 "so far", whose line totals add up to 47000 cents, and a
+case total of CAD 655 over 3 submissions. No page or console error.
+
+**New, Minor (Should, not blocking):**
+* a. At 400 css px (below the 512 px bar) the 41 px amount column breaks "count|ed" inside the word (`[overflow-wrap:anywhere]`,
+  `fees.tsx:86`). It is still legible and does not overlap. Screenshot (scratch): `r2-waiting-400.png`.
+* b. "CAD 170 so far · 1 not counted yet" also shows when the line is already at its family maximum, so it cannot rise. The
+  words are true, but they suggest the total may grow (`fees.tsx:103`).
+* c. PR body: the tech lead asked for "fixture only" to be said plainly. The body does not say it yet, and its "Checks and
+  results" still reads "To come". This is PR text, not code; fix it before the label.
+
+**Scores changed:** D13 3→4 (200 % fixed, axe clean at 512 px). D16 4→5 (BR-4 on real data; the M1 check can fail when its
+fix is removed). The rest are unchanged. **Journey score (my one score for this check): 9 / 10, pass.** Accessibility and
+screen sizes ½→1. Breakdown in `journey-test-reviewer-2026-11-07.md`, Round 2.
+**Could not check:** a real screen reader reading the new captions; gate B in CI on the six (fixture only).
+
+**Verdict: Approve** (commit 1ea633935473830cc73468bf8834d634cd05d0b5). No Blocker or Major is open. The three Minors above
+are for the builder's judgement or B133 (c is the PR body).

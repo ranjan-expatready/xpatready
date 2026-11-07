@@ -72,3 +72,23 @@ case page loading.
 **Score: 8.5 / 10. Pass (8 or more, no 0).** To raise it: fix F1 (wrap or widen the amount cell), then F2 and F4 through B133.
 **Not tested:** a real screen reader; an intended user's unaided walk (D17 and D20 stay with the founder); recording a submission
 (no checkpoint filing is Ready to file, so the receipt box was not opened).
+
+## Round 2 (diff only, 1ea633935, reviewer)
+**Copy:** `rev_b5` on :4445, configured checkpoint, stopped after. A scratch Playwright script, run twice, 19/19 both times.
+**Journeys re-walked:** J2 (sizes) and J5 (a child with no date of birth). I reached the case by clicking it on the Cases list,
+read it at 1024, 720, 512 and 400 css px, answered the date of birth, then reloaded. J6 (fees not worked out) on real
+`sp.outside` and `fs.spouse` cases. J7 (split) with 3 submissions.
+**Held:** "Not counted yet" wraps inside its cell at every width, and never meets the Why text (512 px: text ends x=235, Why
+starts x=256). With nowrap put back in the browser the overlap returns (x=283), so the check can catch a regression. axe at
+512 px finds 0 violations. The waiting line's total says "so far · 1 not counted yet", and drops it once the date of birth
+is answered. The 3 tables have 3 distinct accessible names that list their filings. The page totals equal `/prepare`
+(CAD 470 so far; case CAD 655).
+**Findings:** Minor: at 400 css px the word breaks as "count|ed". Minor: "so far" also shows on a line already at its family
+maximum.
+
+| Criterion | R1 | R2 | Evidence |
+|---|---|---|---|
+| Accessibility and screen sizes | ½ | 1 | F1 closed at 512 px; axe clean; distinct table names |
+| All others | as R1 | as R1 | Unchanged by the diff (next step ½, plain words ½) |
+
+**Score: 9 / 10. Pass.** Not tested: a real screen reader; an intended user's unaided walk.
