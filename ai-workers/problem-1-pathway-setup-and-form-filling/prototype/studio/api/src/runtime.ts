@@ -23,6 +23,7 @@ import { linkedOf } from "./employer-cases.ts";
 import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "../../engine/runtime/background.ts";
 import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
+import { pinChain } from "../../engine/runtime/release-update.ts";
 import { ASKED_RELATIONS, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
 
 type H = string | undefined;
@@ -77,11 +78,13 @@ export class Runtime {
     const officer = isOfficer(actor), client = (actor.duties as readonly string[]).includes("answer");
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
-    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } } } });
+    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { orderBy: { revision: "desc" }, include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } } } });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
+    // C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`, ordered above); every revision, older
+    // ones too, must still match its release and the case's combination, and the chain must hold (1…n, forward only).
     const pin = c!.pins[0];
-    if (!pin || c!.pins.length !== 1 || pin.contentHash !== pin.release.sha256 || pin.release.combinationId !== c!.combinationId) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
+    if (!pin || !pinChain(c!.pins.map((p) => ({ revision: p.revision, version: p.release.version }))).ok || c!.pins.some((p) => p.contentHash !== p.release.sha256 || p.release.combinationId !== c!.combinationId)) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
     return c!;
   }
 

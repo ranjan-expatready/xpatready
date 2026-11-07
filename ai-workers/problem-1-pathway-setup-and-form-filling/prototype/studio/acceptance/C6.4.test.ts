@@ -32,7 +32,7 @@ await main("C6.4", "Document checklist per person (Visitor visa)", async () => {
   // accompanying you while you are in Canada." Sample, Unconfirmed: expert (it may also be read as one person showing
   // money for the family: the expert's answer may change the release, not this step).
   const FS = /financial support/i;
-  const fsWho = sql(`select d->>'who' from pack_work_pin p join config_release r on r.id = p.config_release_id, jsonb_array_elements(r.snapshot->'document_requirements') d where p.case_id = '${c.id}' and d->>'document_type' ~* 'financial support' limit 1`) || null;
+  const fsWho = sql(`select d->>'who' from pack_work_pin p join config_release r on r.id = p.config_release_id, jsonb_array_elements(r.snapshot->'document_requirements') d where p.case_id = '${c.id}' and p.revision = (select max(z.revision) from pack_work_pin z where z.case_id = p.case_id) and d->>'document_type' ~* 'financial support' limit 1`) || null;
   const K2a = c.subjects["Sample Child A2"];
   const holdersOf: Record<string, string[]> = { each_applicant: [P, S, K1, K2a], each_person: [P, S, K1, K2a], principal_applicant: [P], spouse_or_partner: [S], couple_once: [S], each_dependent_child: [K1, K2a] };
   const fsHolders = fsWho ? holdersOf[fsWho] ?? null : null;

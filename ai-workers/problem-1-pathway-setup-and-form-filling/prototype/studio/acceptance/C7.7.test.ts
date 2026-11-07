@@ -103,7 +103,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   // for one statement as tests/check_vv_prepare_store_api.ts does), and all is put back in `finally`. Who and minimum
   // age are Sample (SCH1's are the checkpoint's, api/src/form-setup.ts VV_FORM_RULES; DEP's "each dependent child").
   // The copies the steps make stay on the case (a copy is never deleted); only the release and its pins are put back.
-  const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}'`);
+  const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}' order by revision desc limit 1`);
   // The scaffolding is put back by removing exactly the lines it added (a whole snapshot is too long for one psql
   // argument), so none of them may be in the release before.
   const ADDED = ["IMM 5257 SCH1", "IMM 0008 DEP", "IMM 5409"], inList = ADDED.map((f) => `'${f}'`).join(",");
