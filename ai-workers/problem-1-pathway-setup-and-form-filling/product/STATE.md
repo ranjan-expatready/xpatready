@@ -13,6 +13,7 @@ Cron **4b7708bc** (:13/:43). Weekly 16% at 16:47 IST (~4%/h over the last 30 min
 * **Order (16:48 IST):** B148 #1250 before the UX C6.9 revision #1255; B140 #1246 before B150 #1251 (B150 adapts: staff background answers fill at once, signing waits, P-244 + P-411).
 * **17:19 IST:** #1246 (B140) red after its label (code cause: P-244 changes "all confirmed" in C6.9 and C-9 checks); its lane stopped, so the B150 lane (#1251) fixes it first, then adapts B150. C7.6 is 15/25 on main vs qa's 19/25 (5 Nov), measured on #1261; qa asked to re-score; B149 accepted on "unchanged from main". #1240 labelled 17:19 IST (no CI run started on its head; push an empty commit if Mergify waits). Records now on `lead/2026-11-07-lead31`.
 * **17:50 IST:** #1240 conflicted with main (qa's CAPABILITIES rows), so its CI never ran. Merged in a scratch worktree (`$TMPDIR/lead31-merge`): **the main copy cannot merge main**, because the sandbox refuses writes to `.claude/skills/` (the UX lane's skill changes, #1258), so its checkout of the skills is stale until the founder pulls it. Do Lead records in that worktree.
+* **18:19 IST:** #1256 (B128) third diff-only round; rows B155 (siblings), B157 (parent uniqueness), B158 (parent titles), B159 (child's parents on the case); C7.7 pack port stays with the C4 lane. #1252 (B145) D1 and D5 kept. Queue: 3 batches running, oldest 30 min.
 * Standbys: Lead 32 (watchdog), Lead 33.
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
