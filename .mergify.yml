@@ -66,7 +66,8 @@ queue_rules:
     merge_method: merge
 
 # -draft (P-371 (1), founder 6 Nov): a draft never joins a batch; a draft runs only the push guard. Records PRs carry the
-# label "records", set by ci.yml from tools/records-only.sh; the "records" queue that selects it, and the "-label=records"
+# label "records", set by records-label.yml (main's tools/records-only.sh; before 7 Nov ci.yml's job "kind"); the
+# "records" queue that selects it, and the "-label=records"
 # that keeps it out of m2 and m3, are B119's (#1147, Lead 21's ruling, 6 Nov; see above).
 
 # Approved PRs join the queue by themselves (the queue_conditions above decide which); no "@mergifyio queue" needed.

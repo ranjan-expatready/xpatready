@@ -34,7 +34,15 @@
 //   (C4.4's setup_c44_types.ts, which the checkpoint lacks) still runs after the load, and the line names it. A pack whose
 //   run uses no server (C6.5 --engine) loads nothing. Unset or "six" is the six, where a pack with setup steps stays on
 //   its own fixture.
-// Exit: 0 pass or skipped · 1 the gate refuses (the reasons are printed) · 2 the gate could not run.
+//   NOT TESTED (B131, founder 7 Nov ~15:20 IST, P-405; re-test 42357755876 went green on C3.16, C11.5 with no pack and on
+//   C6.5 with no server): a named capability with no acceptance pack to run, or a pack that runs "on no demo data (its run
+//   uses no server)" or "fixture only", ran no test on the data asked for. Each prints "NOT TESTED: <cap> has no
+//   acceptance pack" or "NOT TESTED on the <six|checkpoint>: <cap> <file> runs <where>" before anything else, and goes
+//   into the step summary. The mode comes from GITHUB_EVENT_NAME: a re-test run (workflow_dispatch or schedule, i.e.
+//   nightly.yml) exits 3, so its job is red with that reason, never green; anywhere else (a pull request, a merge-queue
+//   run, off CI) it is a ::warning:: and the exit stays as it was. Which packs run, and their lines, do not change.
+// Exit: 0 pass or skipped · 1 the gate refuses (the reasons are printed) · 2 the gate could not run · 3 NOT TESTED in a
+//   re-test run (nothing refused, but a named capability ran no test on the data asked for; B131). 1 and 2 win over 3.
 import { readFileSync, readdirSync, existsSync, appendFileSync, rmSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { join, resolve, dirname, relative } from "node:path";
@@ -257,6 +265,10 @@ export function dataOf(env = process.env) {
   if (v !== "six" && v !== "checkpoint") throw new Error(`GATE_B_DATA must be "six" or "checkpoint", not "${v}"`);
   return v;
 }
+/** The run's mode (B131): "retest" for nightly.yml's re-test (GITHUB_EVENT_NAME workflow_dispatch or schedule), where
+ *  NOT TESTED is exit 3; "pr" anywhere else (pull_request, a merge-queue run, off CI), where it is a warning. */
+export const RETEST_EVENTS = new Set(["workflow_dispatch", "schedule"]);
+export const modeOf = (env = process.env) => (RETEST_EVENTS.has(env.GITHUB_EVENT_NAME ?? "") ? "retest" : "pr");
 /** The setups Demo › Load the configured checkpoint already holds (it builds vv.single and its release 2, which they
  *  build on an empty workspace): skipped on the checkpoint (B125). Any other setup is the pack's own and still runs. */
 export const IN_CHECKPOINT = new Set(["studio/tests/runtime/setup_visitor_visa.ts", "studio/acceptance/lib/setup_vv_m3.ts"]);
@@ -277,6 +289,20 @@ export function placeOf(plan, data = "six") {
 }
 /** Where a pack runs, in words (placeOf's where). */
 export const whereOf = (plan, data = "six") => placeOf(plan, data).where;
+/** The NOT TESTED lines (B131) for the named capabilities and the packs that will run: a capability with no pack to
+ *  run, and a pack whose run loads no demo data (no server, or "fixture only") on `data`. A pack whose run line cannot
+ *  be read is a refusal already (runPack), not counted here. `read` gives a pack file's text. */
+export function notTested(caps, runs, data, read = (f) => readFileSync(join(S, "acceptance", f), "utf8")) {
+  const out = [];
+  for (const id of caps) if (!runs.some((r) => r.id === id)) out.push(`NOT TESTED: ${id} has no acceptance pack`);
+  for (const r of runs) {
+    const plan = runPlan(r.f, read(r.f));
+    if (plan.error) continue;
+    const place = placeOf(plan, data);
+    if (place.load === null) out.push(`NOT TESTED on the ${data}: ${r.id} ${r.f} runs ${place.where}`);
+  }
+  return out;
+}
 /** Demo › Load the configured checkpoint on a fresh copy: Reset (blank), then the checkpoint, as the author. node:http,
  *  not fetch: the load can outlast fetch's 300 s header wait on a busy machine; up to 20 minutes. */
 function post(port, path, body, ms) {
@@ -415,12 +441,17 @@ async function main(argv) {
   }
   const cl = claims(opt.title, opt.body);
   if (!cl.caps.size && !cl.unread.length) { say("Gate B: skipped (the PR names no capability: C<n.n> in its title, or a \"Capabilities:\" or \"Claims Works:\" line)."); return 0; }
-  const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
-  say(`Gate B: the PR names ${named || "nothing readable"}${cl.works.size ? `; claims Works for ${[...cl.works].join(", ")}` : "; claims Works for none (no bug check)"}${cl.fixes.size ? `; says it fixes ${[...cl.fixes].join(", ")}` : ""}.`);
-  const reasons = part1(cl, bugs);
   // GATE_B_SKIP_PACKS: pack files left out by name (the protected regression set's held packs, works-set.mjs).
   const skip = new Set((process.env.GATE_B_SKIP_PACKS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
   const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
+  // B131: what ran no test on the data asked for comes first (a wrong GATE_B_DATA is left to the pack run to refuse).
+  let data = null; try { data = dataOf(); } catch { /* refused below when packs run */ }
+  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, data) : [];
+  for (const l of untested) say(l);
+  if (untested.length) for (const l of untested) console.log(`::${mode === "retest" ? "error" : "warning"} title=Gate B NOT TESTED::${l.replace(/^NOT TESTED(?: on the \w+)?: /, "")}`);
+  const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
+  say(`Gate B: the PR names ${named || "nothing readable"}${cl.works.size ? `; claims Works for ${[...cl.works].join(", ")}` : "; claims Works for none (no bug check)"}${cl.fixes.size ? `; says it fixes ${[...cl.fixes].join(", ")}` : ""}.`);
+  const reasons = part1(cl, bugs);
   if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) {   // what the gate will run, in this GATE_B_DATA (B125: on the checkpoint, the pack alone)
@@ -442,6 +473,8 @@ async function main(argv) {
     say(`  packs took ${Math.round((Date.now() - t0) / 1000)} s in all`);
   }
   if (reasons.length) { say(infra ? "Gate B could not run every pack, and refuses:" : "Gate B refuses:"); for (const r of reasons) say(`  * ${r}`); return infra ? 2 : 1; }
+  if (untested.length && mode === "retest") { say(`Gate B: NOT TESTED on the ${data} (exit 3): ${untested.length} named ${untested.length === 1 ? "part" : "parts"} ran no test on the data asked for; a re-test job is never green without one (B131).`); return 3; }
+  if (untested.length) { say(`Gate B: passed part 1 and the packs that ran, with ${untested.length} NOT TESTED on the ${data} (a warning on a pull request, never a refusal; B131).`); return 0; }
   say("Gate B: passed."); return 0;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))

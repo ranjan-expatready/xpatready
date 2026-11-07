@@ -14,6 +14,7 @@ import { noRetryOnRefusal } from "./questionnaire";
 import { openLines } from "../../../engine/runtime/open-lines";
 import { OutOfDate } from "./out-of-date";
 import { ReadinessPanel } from "./readiness"; // C7.6 (B2): the filings' readiness from /prepare, right after the forms
+import { SignSteps } from "./sign-steps"; // C8.1 (B3): who signs, and the steps of a form signed by hand and scanned
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
@@ -162,6 +163,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       ) : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
       {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
+      <SignSteps caseId={caseId} f={f} />
       {earlier.length ? (
         <details className="text-[13px]">
           <summary className="cursor-pointer text-text-link">Earlier copies ({earlier.length})</summary>
