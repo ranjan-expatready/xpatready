@@ -51,7 +51,7 @@ export class Assessments {
     const p = c.participants.find((x) => x.subjectId === person);
     if (!p) fieldError("person", "That person is not on this case.");
     if (p!.role === "case") fieldError("person", "The case itself is not a traveller: choose a person.");
-    if (!p!.applies) fieldError("person", "Not travelling on this application: eligibility is checked only for travellers.");
+    if (!p!.applies) fieldError("person", "Not travelling on this application: the case check is run only for travellers.");
     return p!;
   }
 
