@@ -1730,6 +1730,10 @@ model SubmissionGroup {
   /// Who made the group (the read that first derived it, or the officer who split).
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// B152 (FQ-7, C6.12, C8.2): the group's fee lines and totals as GET …/prepare showed them when the submission was
+  /// recorded, written once by "Record the submission"; a recorded group is read from it, so a birthday, a corrected date
+  /// of birth or a fee-table change later never changes what was filed. Null until recorded.
+  recordedFees Json?   @map("recorded_fees")
 
   case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filings Filing[]
