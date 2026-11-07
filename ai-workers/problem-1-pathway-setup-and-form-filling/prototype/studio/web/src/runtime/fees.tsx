@@ -9,7 +9,7 @@ import * as React from "react";
 
 type Source = { page: string; url: string; read: string };
 /** A submission's line total, as engine/runtime/filings.ts familyFee gives it. */
-type Total = { line: string; label: string; people: number; family_max_cents: number; total_cents: number; cap_applied: boolean; why: string; source?: Source };
+type Total = { line: string; label: string; people: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source?: Source };
 type Group = { id: string; kind: string; label?: string; filings: string[]; totals?: Total[]; total_cents?: number | null };
 /** A fee line as GET …/prepare maps it (api/src/case-prepare.ts): `subject` is the person the line is for. */
 type FeeLine = { filing: string; subject: string; key: string; line: string; amount_words: string; exempt: boolean; reason: string; waiting?: string; source_detail?: Source | null };
@@ -22,15 +22,20 @@ export type FeesView = { groups: Group[]; filings: Filing[]; fees?: FeeLine[]; n
 /** Whole cents as the engine writes them (engine/runtime/filings.ts `cad`): "CAD 570", cents only when there are any. */
 export const cadWords = (cents: number) => `CAD ${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
 
-/** A line's basis by name (P-247), read from the server's own total: only the family maximum basis has a maximum
- *  (familyFee); the other two are named in the server's words. null when it cannot be read: then only the why shows. */
+/** A fee's basis in P-247's words, once per fee on its totals line (challenge M1: never on a person's row, where an exempt
+ *  or uncapped row would read "Family maximum"). Read from the server's own total: only the family maximum basis carries
+ *  a maximum (engine familyFee); the other two are named in the server's words. null when it cannot be read: then only
+ *  the why shows, never a guessed basis. A stopgap until /prepare sends the basis itself (concept question 2). */
 export function basisOf(t: Total | undefined): string | null {
   if (!t) return null;
-  if (t.family_max_cents > 0) return "Family maximum";
+  if (t.family_max_cents > 0) return `Per person, with a family maximum of ${cadWords(t.family_max_cents)} from ${t.family_from} people applying together`;
   if (/\(per application;/.test(t.why)) return "Per application";
-  if (/\(per person;/.test(t.why)) return "Per person";
+  if (/\(per person;/.test(t.why)) return "Per person by role";
   return null;
 }
+
+/** A source's date as the table gives it: a page's own date is never shown as the day we read it (challenge m). */
+const dateOf = (read: string) => /page date/i.test(read) ? `page date ${read.replace(/\s*\(page date\)\s*/i, "").trim()}` : `read ${read}`;
 
 /** Each distinct source of the submission's lines and exemptions, once (concept BR-7). */
 function sourcesOf(totals: Total[], lines: FeeLine[]): Source[] {
@@ -41,7 +46,7 @@ function sourcesOf(totals: Total[], lines: FeeLine[]): Source[] {
 /** The fee block of one submission group. `first`: the case's first submission, which also lists the people with no filing. */
 export function FeeBlock({ view, group, first }: { view: FeesView; group: Group; first: boolean }) {
   const h = `fees-${group.id}`, name = group.label ?? "this submission";
-  if (view.fees_worked_out === false) return (
+  if (view.fees_worked_out === false) return !first ? null : (
     <div className="mt-3" data-fees={group.id} data-fees-worked-out="false">
       <h4 id={h} className="text-[13px] font-semibold">Fees</h4>
       <p className="mt-1 text-[13px] text-text-muted [overflow-wrap:anywhere]">{view.fees_why ?? "The fees are not worked out for this case."}</p>
@@ -52,7 +57,7 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
   const totals = group.totals ?? [];
   const lines = view.fees.filter((l) => group.filings.includes(l.filing));
   const sources = sourcesOf(totals, lines);
-  const totalOf = (key: string) => totals.find((t) => t.line === key);
+  const waiting = lines.filter((l) => l.waiting).length;
   return (
     <div className="mt-3" data-fees={group.id}>
       <h4 id={h} className="text-[13px] font-semibold">Fees</h4>
@@ -70,12 +75,11 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
             <tbody key={f.id} data-fee-filing={f.id}>
               <tr><th scope="rowgroup" colSpan={3} className="pt-2 pb-1 text-[12px] font-semibold text-text [overflow-wrap:anywhere]">{f.label}</th></tr>
               {mine.map((l) => {
-                const basis = basisOf(totalOf(l.key)), other = f.owner && l.subject !== f.owner.subject ? f.applicants.find((a) => a.subject === l.subject)?.label : null;
+                const other = f.owner && l.subject !== f.owner.subject ? f.applicants.find((a) => a.subject === l.subject)?.label : null;
                 return (
                   <tr key={`${l.key}-${l.subject}`} data-fee-line={l.key} data-fee-subject={l.subject} data-fee-exempt={l.exempt ? "true" : "false"} data-fee-waiting={l.waiting ?? undefined}>
                     <th scope="row" className="border-b border-border py-1.5 pr-3 align-top font-normal [overflow-wrap:anywhere]">
-                      <span className="block">{l.line}{other ? <span className="text-text-muted"> · for {other}</span> : null}</span>
-                      {basis ? <span className="block text-xs text-text-muted" data-fee-basis>{basis}</span> : null}
+                      {l.line}{other ? <span className="text-text-muted"> · for {other}</span> : null}
                     </th>
                     <td className="border-b border-border py-1.5 pr-3 align-top whitespace-nowrap" data-fee-amount>{l.waiting ? <span className="text-text-muted">Not counted yet</span> : l.amount_words}</td>
                     <td className="border-b border-border py-1.5 align-top text-text-muted [overflow-wrap:anywhere]">{l.reason}</td>
@@ -94,13 +98,14 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
         })}
       </table>
       {totals.length ? <ul className="mt-2 space-y-0.5 text-[13px]" data-fee-totals>
-        {totals.map((t) => <li key={t.line} className="[overflow-wrap:anywhere]" data-fee-total-line={t.line}><span className="font-medium">{t.label}: {cadWords(t.total_cents)}</span> <span className="text-text-muted">· {t.why}</span></li>)}
+        {totals.map((t) => { const basis = basisOf(t); return <li key={t.line} className="[overflow-wrap:anywhere]" data-fee-total-line={t.line}><span className="font-medium">{t.label}: {cadWords(t.total_cents)}</span>{basis ? <span className="text-text-muted"> · <span data-fee-basis>{basis}</span></span> : null} <span className="text-text-muted">· {t.why}</span></li>; })}
       </ul> : null}
-      {group.total_cents != null ? <p className="mt-1 text-sm font-semibold" data-fee-total>Total for this submission: {cadWords(group.total_cents)}</p> : null}
+      {/* Challenge M2: while a fee waits for a fact the total is not final, and says so (the server leaves the line out). */}
+      {group.total_cents != null ? <p className="mt-1 text-sm font-semibold" data-fee-total>{waiting ? "Total so far" : "Total for this submission"}: {cadWords(group.total_cents)}{waiting ? <span className="font-normal text-text-muted" data-fee-waiting-count> · {waiting} fee{waiting === 1 ? "" : "s"} not counted yet</span> : null}</p> : null}
       {first && view.not_filing?.length ? <ul className="mt-2 space-y-0.5 text-[13px]" data-fee-not-filing>
         {view.not_filing.map((n) => <li key={n.subject} className="[overflow-wrap:anywhere]" data-fee-no-filing={n.subject}><span className="font-medium">{n.label}: no fee.</span> <span className="text-text-muted">{n.why}</span></li>)}
       </ul> : null}
-      {sources.length ? <p className="mt-2 text-xs text-text-muted [overflow-wrap:anywhere]" data-fee-sources>Sources: {sources.map((s, i) => <React.Fragment key={s.url}>{i ? " · " : ""}<a href={s.url} target="_blank" rel="noreferrer" className="text-text-link hover:underline">{s.page}</a> (read {s.read})</React.Fragment>)}</p> : null}
+      {sources.length ? <p className="mt-2 text-xs text-text-muted [overflow-wrap:anywhere]" data-fee-sources>Sources: {sources.map((s, i) => <React.Fragment key={s.url}>{i ? " · " : ""}<a href={s.url} target="_blank" rel="noreferrer" className="text-text-link underline">{s.page}</a> ({dateOf(s.read)})</React.Fragment>)}</p> : null}
     </div>
   );
 }
@@ -110,10 +115,10 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
 export function CaseFees({ view }: { view: FeesView }) {
   if (!view.fees || view.fees_worked_out === false) return null;
   const priced = view.groups.filter((g) => g.total_cents != null);
-  const sum = priced.reduce((s, g) => s + (g.total_cents ?? 0), 0);
+  const sum = priced.reduce((s, g) => s + (g.total_cents ?? 0), 0), waiting = view.fees.filter((l) => l.waiting).length;
   return (
     <div className="border-t border-border px-4 py-3" data-case-fees>
-      {priced.length > 1 ? <p className="text-sm font-semibold" data-case-fee-total>Total for the case: {cadWords(sum)} <span className="font-normal text-text-muted">· {priced.length} submissions, each priced on its own</span></p> : null}
+      {priced.length > 1 ? <p className="text-sm font-semibold" data-case-fee-total>{waiting ? "Total for the case so far" : "Total for the case"}: {cadWords(sum)} <span className="font-normal text-text-muted">· {priced.length} submissions, each priced on its own{waiting ? ` · ${waiting} fee${waiting === 1 ? "" : "s"} not counted yet` : ""}</span></p> : null}
       {view.basis ? <p className={`${priced.length > 1 ? "mt-1 " : ""}text-xs text-text-muted [overflow-wrap:anywhere]`} data-fee-basis-sentence>{view.basis}</p> : null}
     </div>
   );
