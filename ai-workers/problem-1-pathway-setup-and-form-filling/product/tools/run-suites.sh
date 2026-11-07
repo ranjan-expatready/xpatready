@@ -93,13 +93,17 @@ SKIP="check_catalogue_scale.cjs"
 # in each PR's own check and locally. It uses no server or database and ends with process.exit, so the hang is in the
 # runner or the shard, not in the suite's checks. The nightly full set still runs it. Fix row: B122 (#1145, flaky-test
 # handling) diagnoses the hang, and takes it off this list in that PR with a fail test.
-# Back on 7 Nov (the b78 row, P-214 fix to the checks), on evidence, not on a found cause: it passed 3 runs in a row in
-# CI on the guarded runner (#1236), and locally cold in 0.5 s even with stdin an open pipe. The 6 Nov cause is still
-# open: the rows said exit 124, so the TERM did end it (not a TERM-ignoring hang), and GitHub's runner gives a step no
-# open stdin. What changed (guarded(), above run()): /dev/null as stdin, timeout -k, and, at the limit, the hung suite's
-# processes (state, wait channel, open files) in its log, so a recurrence says where it waits. If it hangs again, it
-# comes back on this list with that log.
-QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
+# Off the list for #1236's own check (7 Nov): it passed there (run 42361397319), then hung again in the merge-queue batch
+# of #1236 (batch PR #1271, run 42377102612, part 1/6, job 128416970748, 7 Nov 13:51-14:11 UTC), after its 11 PASS lines
+# and "11 passed, 0 failed", until the 1200 s limit. This time guarded() wrote where it waited (STOP lines in its log):
+#   timeout (sigsuspend) > tsx's CLI parent (Sl, ep_poll: idle, waiting for its child) > the suite's node (Node 24.21,
+#   Sl, futex_do_wait) > [esbuild] <defunct>, an exited esbuild child the suite's node never reaped; stdin /dev/null.
+# So the suite's own node process blocks on a lock while exiting (process.exit), with tsx's esbuild service already
+# gone: a tsx / Node 24 exit hang, not the runner, not stdin, not the suite's checks (cold tsx start in a fresh part).
+# Back on this list until that is fixed; the nightly full set still runs it. Fix row (proposed on #1236): run it so the
+# exit cannot deadlock (Node 24's own type stripping instead of tsx's loader thread, or no process.exit), then 3 batch
+# passes in a row.
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs check_b78_section_names.ts"
 # Automatic quarantine (B122): only well-formed entries; anything else is named and ignored, never run blind.
 AUTOQ=" "
 for e in ${SUITES_QUARANTINE_AUTO:-}; do
