@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C9.5 Release update: draft board</title>
+<style>
+:root{--primary:#0862c5;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--line:#ececec;--warn-t:#663200;--warn-tint:#fff1e0;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--info-tint:#e8f1fb;--info-t:#054e9c;--crit-t:#8a1c1c;--crit-tint:#fdeaea;--bg:#e9ecef}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 60px}.frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:22px 0;padding:16px}
+.frame>h2{font-size:15px}.note,.muted{color:var(--muted);font-size:12.5px}.note{margin:2px 0 12px}
+.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.ok{background:var(--ok-tint);color:var(--ok-t);border-color:transparent}.warn{background:var(--warn-tint);color:var(--warn-t);border-color:transparent}.info{background:var(--info-tint);color:var(--info-t);border-color:transparent}.crit{background:var(--crit-tint);color:var(--crit-t);border-color:transparent}
+.btn{display:inline-flex;gap:4px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 12px;font:inherit;font-size:13px}.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.off{opacity:.45}
+.lay{display:grid;grid-template-columns:1fr 560px;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}@media(max-width:1100px){.lay{grid-template-columns:1fr}}
+.head{padding:12px 16px;border-bottom:1px solid var(--border)}.notice{margin:10px 16px;padding:9px 12px;border-radius:8px;background:var(--info-tint);color:var(--info-t);display:flex;gap:10px;align-items:center}.notice span{flex:1}
+.list .row{display:flex;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)}.list .row span:first-child{flex:1}
+.panel{border-left:1px solid var(--border);padding:14px 18px}.panel h3{font-size:14px;margin:14px 0 6px}.panel textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit}
+.g{border:1px solid var(--line);border-radius:8px;margin:6px 0}.g .r{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;border-top:1px solid var(--line)}.g .r:first-child{border-top:0}.g b{font-weight:600}
+.del{text-decoration:line-through;color:var(--muted)}.toast{background:#1f2933;color:#fff;border-radius:8px;padding:10px 14px;display:inline-block}.toast a{color:#9cc8ff;margin-left:8px}
+</style></head><body><div class="wrap">
+<h1>C9.5 · Adopt a published update on an open case (draft board, B145)</h1>
+<p class="muted">Intent, not pixels (P-44). Sample names (Client A principal, Client B spouse, Client C child). Form numbers are placeholders ("IMM aaaa"): the build and the pack read the real changes from the two releases, never a fixed number (P-319). On the founder's case header and Needs you (agent-view board).</p>
+
+<div class="frame"><h2>1 · Case page: the notice, then the panel "What changes for this case"</h2>
+<p class="note">The case keeps release 1 until someone moves it (P-67). The notice stays until the move; "Not now" stores nothing. The panel computes the list without writing.</p>
+<div class="lay">
+ <div>
+  <div class="head"><b>Case VV-0012 · Client A family</b> <span class="pill">Visitor visa</span> <span class="pill">Release 1</span> <span class="muted">· Preparing</span></div>
+  <div class="notice"><span>Release 2 of Visitor visa is out (released 7 Nov). This case stays on release 1 until you move it. ⓘ</span><button class="btn primary">What changes for this case</button></div>
+  <div class="list">
+   <div class="row"><span><b>Needs you</b></span><span class="muted">4</span></div>
+   <div class="row"><span>IMM aaaa · Client A · validated copy</span><span class="pill ok">Validated</span></div>
+   <div class="row"><span>IMM bbbb (family form) · Client B · draft</span><span class="pill">Draft</span></div>
+   <div class="row"><span>IMM cccc · Client A · signed scan</span><span class="pill ok">Signed</span></div>
+   <div class="row"><span>Ready to file · Client A's filing</span><span class="pill warn">1 warning: Release 2 is out; this case is on release 1</span></div>
+  </div>
+ </div>
+ <div class="panel">
+  <h2 style="font-size:16px">What changes for this case</h2><p class="muted">Release 1 → release 2 of Visitor visa. Nothing changes until you move.</p>
+  <h3>What changes</h3>
+  <div class="g"><div class="r"><span><b>Forms</b></span><span class="muted">3</span></div>
+   <div class="r"><span>IMM aaaa: filed <span class="del">PDF upload</span> → Online (portal) · Client A, B, C</span><span class="pill info">Channel</span></div>
+   <div class="r"><span>Family form: <span class="del">IMM bbbb</span> → IMM dddd · Client A, B (18 or over)</span><span class="pill info">Replaced</span></div>
+   <div class="r"><span>IMM cccc: signed by hand and scanned · Client A</span><span class="pill info">Signing</span></div></div>
+  <div class="g"><div class="r"><span><b>Documents</b></span><span class="muted">0</span></div><div class="r"><span class="muted">No document line changes.</span><span></span></div></div>
+  <div class="g"><div class="r"><span><b>Questions</b></span><span class="muted">2 new</span></div><div class="r"><span>2 new questions for Client B (they land in Needs you)</span><span class="pill">New</span></div></div>
+  <div class="g"><div class="r"><span><b>Fees</b></span><span></span></div><div class="r"><span class="muted">Fees are not part of a release yet; they come from the fee table.</span><span></span></div></div>
+  <h3>What happens to work already done</h3>
+  <div class="g">
+   <div class="r"><span><b>Fills again</b> · 2 draft copies (IMM dddd · Client A, B) ⓘ</span><span class="pill">2</span></div>
+   <div class="r"><span><b>Approval withdrawn</b> · the representative's review of Client A's filing · 1 pass given before</span><span class="pill warn">2</span></div>
+   <div class="r"><span><b>Stays as it is, marked out of date</b> · validated IMM aaaa · Client A; signed scan IMM cccc · Client A</span><span class="pill">2</span></div>
+   <div class="r"><span><b>No change</b> · 9 items the release does not touch keep their approval</span><span class="pill ok">9</span></div>
+  </div>
+  <h3>Reason</h3><textarea rows="2">Adopting the current release</textarea>
+  <p style="margin-top:12px"><button class="btn primary">Move this case to release 2</button> <button class="btn">Not now</button></p>
+ </div>
+</div></div>
+
+<div class="frame"><h2>2 · States</h2>
+<p class="note">Refused (all or nothing, nothing written) · conflict · done.</p>
+<div class="notice" style="background:var(--crit-tint);color:var(--crit-t);margin:8px 0"><span>Can't move yet: Client B's answer to "Date of birth" does not fit release 2 (it expects a date). Nothing was changed.</span><button class="btn off">Move this case to release 2</button></div>
+<div class="notice" style="background:var(--crit-tint);color:var(--crit-t);margin:8px 0"><span>Can't move: Client A's filing is recorded as submitted on release 1. Nothing was changed.</span></div>
+<div class="notice" style="background:var(--warn-tint);color:var(--warn-t);margin:8px 0"><span>This case or its release changed while you read the list.</span><button class="btn">Read the list again</button></div>
+<p><span class="toast">Moved to release 2. 2 forms fill again; 2 approvals withdrawn; 2 finished items marked out of date, not changed. <a>See them</a></span></p>
+<p class="muted">Newest release: no notice. Staff without the duty: the list, no button. The client never sees the notice or the panel.</p>
+</div>
+</div></body></html>
