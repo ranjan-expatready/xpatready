@@ -3,6 +3,7 @@
 import { itemState, libraryFilter, lockItem, openItemChanges, originWords, refuseRetired, retiredFieldKeys } from "./library-items.ts";
 import { current } from "../../engine/where-used.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
+import { openBackgroundChanges } from "./section-background.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
@@ -693,11 +694,14 @@ export class Studio {
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const [src, { ids, labels: used }, open, { formsOf }, questions] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedInBoth("section", workspaceId), openItemChanges(this.db, workspaceId, "section"), this.formUsage(workspaceId),
       this.db.sectionQuestion.findMany({ where: { workspaceId } })]);
+    const marks = await openBackgroundChanges(this.db, workspaceId); // B154: a waiting change of a section's background mark
     // C3.13 BR-2: a section is used by the forms that fill a field its current questions ask, and by the combinations that
     // choose it; no section holds another, so its sections count is 0.
     const formsIn = new Map<string, Set<string>>();
     for (const x of current(questions, (r) => r.lineageKey)) for (const f of formsOf.get(x.canonicalFieldKey) ?? []) formsIn.set(x.sectionKey, (formsIn.get(x.sectionKey) ?? new Set()).add(f));
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: ids.get(r.sectionKey)?.size ?? 0, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: ids.get(r.sectionKey)?.size ?? 0, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin,
+      // B154 (P-97, P-244): released mark (the newest published version; a brand-new draft section its own) and any open change of it.
+      client_only: (rows.find((x) => x.sectionKey === r.sectionKey && x.status === "PUBLISHED") ?? r).clientOnly, background_change: marks.get(r.sectionKey) ?? null, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */

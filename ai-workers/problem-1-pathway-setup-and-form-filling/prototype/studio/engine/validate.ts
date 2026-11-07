@@ -252,6 +252,8 @@ export type Change = { kind: string; key: string; change: "added" | "changed" | 
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];
   const sme = (kind: string, x: any) => ["Rule", "Document requirement", "Check"].includes(kind) || x?.origin === "AI_PROPOSAL" || (kind === "Form" && !!x?.condition);
+  // B154 (P-97, P-244): a section's background mark changes each of its questions; it is named once per section, in words.
+  const marks = new Map<string, { on: boolean; n: number }>();
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key });
@@ -263,6 +265,10 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
           if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
         }
+        if (k === "placements" && !!was.client_only !== !!x.client_only) {
+          const m = marks.get(x.section_id) ?? { on: !!x.client_only, n: 0 }; m.n++; marks.set(x.section_id, m);
+          if (bare({ ...was, client_only: null }) === bare({ ...x, client_only: null })) continue;
+        }
         // P-319 (Lead 4 on #833): a form's role to IRCC's rules is named in words and needs the immigration expert's sign-off.
         if (k === "forms" && (was.form_role ?? null) !== (x.form_role ?? null)) {
           const fam = (r: unknown) => r === FAMILY_INFORMATION;
@@ -272,6 +278,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
+  }
+  for (const [key, m] of marks) {
+    const title = [...((next.sections ?? []) as { id: string; title?: string }[]), ...(next.section_titles ?? [])].find((y) => y.id === key)?.title ?? key.replace(/_/g, " ");
+    out.push({ kind: "Background answers", key, change: "changed", needs_sme: true, label: m.on
+      ? `"${title}": its ${m.n} question${m.n === 1 ? " is a background answer" : "s are background answers"} now: the client's own; staff may record one, marked Officer, and the client re-confirms it before signing (shared library, every combination)`
+      : `"${title}": its ${m.n} question${m.n === 1 ? " is" : "s are"} no longer background answers (shared library, every combination)` });
   }
   // C4.1 (P-216): the combination's own section order is part of its release. A move changes no section, so the lines
   // above miss it; it is named once, in words, with each moved section's new place among the sections kept.
