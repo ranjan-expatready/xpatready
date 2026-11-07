@@ -79,6 +79,7 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
 
   // ---------------------------------------------------------------- C9.5-13, -6: Fill racing the move, then the move
   const fillsBefore = n(`select count(*) from form_instance where case_id='${fam}'`);
+  const answersKept = n(`select count(*) from client_canonical_answer a join case_participant p on p.subject_id=a.subject_id where p.case_id='${fam}' and a.superseded_by_id is null`);
   const race = await Promise.all([move(fam, body), ...[[P, "IMM 5475"], [S, "IMM 5475"], [P, "IRM 0002"]].map(([who, form]) => call("POST", `/runtime/cases/${fam}/forms/${encodeURIComponent(form as string)}/${(who as { subject_id: string }).subject_id}/generate`, { idempotencyKey: `c95race${String(form).replace(/\W/g, "")}${(who as { role: string }).role}${Date.now()}` }, OFFICER))]);
   await until(async () => n(`select count(*) from form_instance where case_id='${fam}' and status in ('QUEUED','RUNNING')`) === 0, 120_000);
   let moved = race[0];
@@ -97,6 +98,12 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const rdP = readinessOf(p, filingOfP);
   ok("C9.5-6 pass (BR-6): Prepare reads release 2: Client A's IMM 5257 is filed Online now and says the copy made on release 1 is kept and not filed; the Prepare groups list what the move did",
     i5257?.channel === "ONLINE" && /Filed another way now/.test(i5257?.release_note ?? "") && ((await view(fam)).last_move?.effects.filed_another_way.length ?? 0) > 0, i5257);
+  // BR-6: questions the new release adds land in the questionnaire as questions (Needs you), never as a refusal; a question
+  // it no longer asks keeps its answer (stored per person and fact, never per release).
+  const newQ = (v?.changes?.questions ?? []).find((q) => q.kind === "New question"), goneQ = (v?.changes?.questions ?? []).find((q) => q.kind === "No longer asked");
+  const qv = await call("GET", `/runtime/cases/${fam}/questionnaire?mode=agent`, undefined, OFFICER);
+  const asked = ((qv.body?.sections ?? []) as { about_label: string; questions: { label: string; hidden: boolean; answer: unknown }[] }[]).filter((x) => newQ?.who.includes(x.about_label)).flatMap((x) => x.questions).filter((q) => !q.hidden && q.label === newQ?.what);
+  ok("C9.5-6 pass (BR-6): a question release 2 adds is asked in the questionnaire for the people it names (not a refusal); a question it drops keeps its answer", qv.status === 200 && !!newQ && asked.length > 0 && !!goneQ && answersKept === n(`select count(*) from client_canonical_answer a join case_participant p on p.subject_id=a.subject_id where p.case_id='${fam}' and a.superseded_by_id is null`), { newQ: newQ?.what, asked: asked.length, goneQ: goneQ?.what });
   ok("C9.5-8 pass (BR-6, challenge M5): the representative's review of Client A's filing is withdrawn by the move (the C7.6 line is back, naming the move), with the facts unchanged", !rdP?.reviewed && (rdP?.warns ?? []).some((w) => w.code === "representative_review" && /moved to/i.test(w.words)), rdP?.warns.filter((w) => w.code === "representative_review").map((w) => w.words));
   ok("C9.5-7 pass (part 1): the IMM 5257 copy made on release 1 is never changed by the move (same checksum, still on release 1)", !!vSha && sql(`select sha256 || '|' || config_release_id from form_instance where id='${draft5257}'`) === `${vSha}|${r1}`);
 
