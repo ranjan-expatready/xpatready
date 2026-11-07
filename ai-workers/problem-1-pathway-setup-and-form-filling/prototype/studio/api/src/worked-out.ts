@@ -91,9 +91,11 @@ export class WorkedOut {
     // BR-4: on a date asked once per case.
     const on = dates.find((d) => d.key === b.on);
     if (!on || on.subject !== calc!.onGroup) fail(`${b.on} is not a date about the case in the library: add the date about the case first (Add a fact a rule needs, for example "Application date"), then work this out.`);
-    // Challenge M1: both dates are asked in this combination's questionnaire, so a case can answer them.
-    const asked = new Set((snapshot.placements as { fact: string }[]).map((p) => p.fact));
-    for (const d of [from!, on!]) if (!asked.has(d.key)) fail(`${d.label} is in the library but not asked in this combination's questionnaire: place it first (Shared library › Fields › ${d.label}), so a case can answer it.`);
+    // Challenge M1: both dates are asked by a question, so a case can answer them. One this combination does not show yet
+    // is pulled into its questionnaire with the worked-out value (engine/snapshot.ts: a derived value's inputs and
+    // reference travel with it), so a placement anywhere in the library counts.
+    const placedKeys = new Set((await this.db.sectionQuestion.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: { in: [from!.key, on!.key] }, status: { not: "RETIRED" } }, select: { canonicalFieldKey: true } })).map((q) => q.canonicalFieldKey));
+    for (const d of [from!, on!]) if (!placedKeys.has(d.key)) fail(`${d.label} is in the library but no questionnaire asks it: place it first (Shared library › Fields › ${d.label}), so a case can answer it.`);
     // Challenge M2: the words are built from the choices and name both dates.
     const words = `${calc!.words} from ${from!.label}, on ${on!.label}.`;
     try {

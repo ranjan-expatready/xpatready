@@ -80,7 +80,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   r = await call("POST", url("person.b102_years"), { ...good, on: personDate || "person.date_of_birth" });
   ok("B102 BR-4 fail: worked out on a date about the person is refused, saying to add the date about the case first", r.status === 400 && /add the date about the case first/.test(msg(r)), [r.status, msg(r)]);
   r = await call("POST", url("person.b102_years"), { ...good, from: unasked });
-  ok("B102 BR-3 fail (challenge M1): a date in the library that this combination does not ask is refused, saying to place it first", r.status === 400 && /not asked in this combination's questionnaire: place it first/.test(msg(r)), [r.status, msg(r)]);
+  ok("B102 BR-3 fail (challenge M1): a date in the library that no questionnaire asks is refused, saying to place it first", r.status === 400 && /no questionnaire asks it: place it first/.test(msg(r)), [r.status, msg(r)]);
   // ─────────────────── BR-5: never both asked and worked out
   r = await call("POST", `/combinations/${combo}/rule-facts`, { fact: "person.b102_asked", rule: "r_b102_asked", label: "B102 asked fact", meaning: "A fact proposed to be asked, for the B102 check.", valueType: "yes_no" });
   ok("setup: a proposal to ask person.b102_asked waits on To review", r.status === 201, [r.status, msg(r)]);
