@@ -11,6 +11,7 @@ import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
+import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { useFirm } from "./team";
@@ -18,7 +19,7 @@ import { restingOn, restingWords } from "./eligibility-unconfirmed";
 import { CASE_CHECK, CASE_CHECK_SHORT, OUTCOME_WORDS, outcomeWord } from "../../../contracts/case-check-words";
 
 type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[]; restsOn?: string[] };
-type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
+type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; maxScore?: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
 type Override = { id: string; programKey: string; fromOutcome: string; label: string; reason: string; by: string; name?: string; duty?: string; at: string; outOfDate?: boolean };
 export type Assessment = {
   id: string; person: string; releaseId: string; packVersion: number; rulesAsOfByProgram: Record<string, string>; disclaimerText: string;
@@ -36,7 +37,11 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "nume
 const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 /** A fact key in words: "person.passport_number" → "Passport number". */
 export const factWords = (f: string) => { const w = f.replace(/^[a-z]+\./, "").replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
-const shown = (v: unknown) => (v === null || v === undefined || v === "" ? "not answered" : v === true ? "Yes" : v === false ? "No" : typeof v === "object" ? JSON.stringify(v) : String(v));
+/** P-407 (BIC-19): a date value reads like the rest of the page ("9 May 2029"), never in ISO form. */
+const shown = (v: unknown) => (v === null || v === undefined || v === "" ? "not answered" : v === true ? "Yes" : v === false ? "No" : typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? day(v) : typeof v === "object" ? JSON.stringify(v) : String(v));
+/** P-407 (BIC-08): each traveller's role in the case page's own words (cases.tsx roleOf; that file imports this one). */
+const ROLE_WORDS: Record<string, string> = { principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
+const roleOf = (p: CasePerson) => ROLE_WORDS[p.role] ?? p.role_label ?? p.role.replace(/_/g, " ");
 /** Label suggestions on the override drawer (concept §4); any label up to 80 characters is accepted. */
 const OVERRIDE_LABELS = ["Refer to the representative", "Not advisable in practice", "Borderline: worth exploring"] as const;
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
@@ -56,6 +61,24 @@ export function outcomeWords(r: Result | undefined): { text: string; tone: "ok" 
   // Review m3 (B148): any other code (P-236 drops below the cut-off) in words, never the raw code.
   return { text: outcomeWord(r.outcome), tone: "neutral", short: outcomeWord(r.outcome) };
 }
+
+/** P-407 (BIC-14): what an outcome means, in one line, from the same parts as outcomeWords (a tooltip and the
+ *  people list's accessible name). */
+export function outcomeTip(r: Result | undefined): string {
+  if (!r) return "No case check has run for this person yet.";
+  const n = restingOn(r).length, few = n ? ` It rests on ${plural(n, "answer")} not yet confirmed.` : "";
+  if (r.outcome === "LIKELY_ELIGIBLE") return `${OUTCOME_WORDS.LIKELY_ELIGIBLE}: every rule is met on the answers on file.${few}`;
+  if (r.outcome === "POSSIBLY_ELIGIBLE") {
+    const parts = [r.missingInputs.length ? `${plural(r.missingInputs.length, "fact")} not answered yet` : "", r.reviewGates?.length ? "a rule the representative reviews is not met" : ""].filter(Boolean);
+    return `${OUTCOME_WORDS.POSSIBLY_ELIGIBLE}: no rule failed, but ${parts.join(" and ")}.`;
+  }
+  if (r.outcome === "NOT_ELIGIBLE") return `${OUTCOME_WORDS.NOT_ELIGIBLE}: a rule is not met on this application's rules as written; the representative reviews this, and IRCC decides.${few}`;
+  return outcomeWord(r.outcome);
+}
+const OUT_OF_DATE_TIP = "A fact this check read has changed since it ran.";
+/** A pill with help on keyboard focus: a focusable span (the shared Pill passes no tabIndex) and its own provider, as
+ *  StandIn does (the case page has none above the card). */
+const Help = ({ tip, children }: { tip: string; children: React.ReactElement }) => <TipProvider><Tip focusable tip={tip}><span data-help className="inline-flex rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">{children}</span></Tip></TipProvider>;
 
 /** Review M1 on 2572b9b0 (WCAG 2.4.3): after an action, focus goes back to the button that started it, or to the
  *  result's heading when that button is gone or switched off (Run case check becomes Run again; Mark reviewed
@@ -90,7 +113,7 @@ export function EligibilityCard({ caseId, people }: { caseId: string; people: Ca
         <ul className="divide-y divide-border">
           {travellers.map((p) => {
             const a = latestOf(q.data?.assessments, p.subject_id), o = outcomeWords(a?.results[0]);
-            return <li key={p.subject_id} className="flex min-h-10 flex-wrap items-center gap-2 px-4 py-2 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><Pill tone={o.tone}>{o.short}</Pill>{a?.out_of_date ? <Pill tone="warn" title="A fact this check read has changed since">Out of date</Pill> : null}</li>;
+            return <li key={p.subject_id} className="flex min-h-10 flex-wrap items-center gap-2 px-4 py-2 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><Help tip={outcomeTip(a?.results[0])}><Pill tone={o.tone}>{o.short}</Pill></Help>{a?.out_of_date ? <Help tip={OUT_OF_DATE_TIP}><Pill tone="warn">Out of date</Pill></Help> : null}</li>;
           })}
         </ul>
       )}
@@ -153,6 +176,8 @@ export function EligibilityPage() {
                   <li key={p.subject_id} role="option" aria-selected={on} tabIndex={on ? 0 : -1} onClick={() => { setChosen(p.subject_id); setRunError(null); }}
                     className={cn("flex min-h-11 cursor-pointer flex-col justify-center rounded-lg px-3 py-1.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", on ? "bg-primary/10" : "hover:bg-text/5")}>
                     <span className="flex flex-wrap items-center gap-2"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><Pill tone={o.tone}>{o.short}</Pill>{a?.out_of_date ? <Pill tone="warn">Out of date</Pill> : null}</span>
+                    <span className="text-xs text-text-muted" data-role>{roleOf(p)}</span>
+                    <span className="sr-only">{outcomeTip(a?.results[0])}{a?.out_of_date ? ` ${OUT_OF_DATE_TIP}` : ""}</span>
                     {a?.results[0]?.missingInputs.length ? <span className="text-xs text-text-muted">needs {a.results[0].missingInputs.map(factWords).join(", ")}</span> : null}
                   </li>
                 );
@@ -196,9 +221,18 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        <span data-outcome className="contents"><Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill></span>
-        <span className="text-xs text-text-muted" title="Programs with a points score show it here when the team's Qualifier is connected">Score: none (this application has no points score)</span>
+        <span data-outcome className="contents"><Help tip={outcomeTip(r)}><Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill></Help></span>
       </div>
+      <details data-how className="text-sm">
+        <summary className="cursor-pointer text-text-link">How this result is worked out</summary>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-muted">
+          <li>Every rule must be met. When a rule is not met, the result is “{OUTCOME_WORDS.NOT_ELIGIBLE}”, even if facts are still missing.</li>
+          <li>A fact not answered gives “{OUTCOME_WORDS.POSSIBLY_ELIGIBLE}”. A rule the representative reviews never gives “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own.</li>
+          <li>When the result rests on answers not yet confirmed, it says so.</li>
+          {r.judgement.length ? <li>The lines under Officer's judgement never change the result.</li> : null}
+          <li data-score>{r.score === null || r.score === undefined ? "No points score on this application." : `Score: ${r.score}${r.maxScore ? ` of ${r.maxScore}` : ""}.`}</li>
+        </ul>
+      </details>
       {resting.length ? (
         <p className="text-sm" data-resting-on={resting.join(" ")}>
           “{r.outcome === "LIKELY_ELIGIBLE" ? OUTCOME_WORDS.LIKELY_ELIGIBLE : OUTCOME_WORDS.NOT_ELIGIBLE}” rests on {resting.length === 1 ? "an answer" : "answers"} not yet confirmed:{" "}
@@ -223,7 +257,7 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
                 <span className="block [overflow-wrap:anywhere]">{g.label}</span>
                 <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}${g.unconfirmed?.includes(f) ? " (not confirmed yet)" : ""}`).join(" · ")}</span>
                 {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: never “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own</span> : null}
-                {g.missing.length ? <Link to={`/cases/${caseId}#agent-view`} className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the Agent view</Link> : null}
+                {g.missing.length ? <Link to={`/cases/${caseId}#${lineId((a.inputs ?? []).find((i) => i.fact === g.missing[0])?.about === "case" || g.missing[0].startsWith("case.") ? caseSubject : a.person, g.missing[0])}`} data-missing-link className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the Agent view</Link> : null}
               </span>
             </li>
           ))}
@@ -231,7 +265,8 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
       </div>
       {r.judgement.length ? (
         <div>
-          <h3 className="mb-1 text-sm font-semibold" title="IRCC's officer decides these. Rules cannot check them, so they never change the result.">Officer's judgement, not checked by rules</h3>
+          <h3 className="text-sm font-semibold">Officer's judgement, not checked by rules</h3>
+          <p className="mb-1 text-xs text-text-muted">IRCC's officer decides these; they never change the result.</p>
           <ul className="list-disc space-y-0.5 pl-5 text-sm">{r.judgement.map((j) => <li key={j}>{j}</li>)}</ul>
         </div>
       ) : null}
@@ -239,7 +274,7 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
       <p className="whitespace-pre-line text-xs text-text-muted [overflow-wrap:anywhere]">Run by {nameOf(a.createdBy)} · {when(a.createdAt)} · release {a.packVersion}{a.reason ? ` · reason: ${a.reason}` : ""}{a.reviewedAt ? ` · ${stamp} ${a.reviewStamp?.name ?? nameOf(a.reviewedBy)}, ${when(a.reviewedAt)}${a.reviewNote ? `: ${a.reviewNote}` : ""}` : ""}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" size="sm" onClick={() => open("override")}>Override result…</Button>
-        <Button variant="secondary" size="sm" disabled={!!a.reviewedAt} title={a.reviewedAt ? "Already marked" : undefined} onClick={() => open("review")}>Mark reviewed…</Button>
+        <Button variant="secondary" size="sm" disabled={!!a.reviewedAt} onClick={() => open("review")}>Mark reviewed…</Button>{a.reviewedAt ? <span className="text-xs text-text-muted">Already marked reviewed</span> : null}
         <span className="flex-1" />
         <Button variant="ghost" size="sm" onClick={() => open("history")}><History aria-hidden />History ({plural(runs, "run")})</Button>
       </div>
