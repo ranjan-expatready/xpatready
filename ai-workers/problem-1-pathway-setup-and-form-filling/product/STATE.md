@@ -10,6 +10,11 @@ updated: 2026-11-07 07:35 IST by **Lead 24** (hand-over to Lead 25) · milestone
 * **Waiting on the founder (asked 07:31):** #1128 carries `.claude/settings.json` changes from earlier Leads (allow `Bash(*)`, terminal tools, sandbox `allowLocalBinding`); Lead 24 recommended stripping them, keeping only records. Do not label #1128 until he answers.
 * Next: qa gate-A goes as rows merge (C6.9 needs A1 + A4; C8.2 needs A1; C6.11 needs A2 + B117 + A7; C6.4 needs B1); #1084's question (A3: wait for the merge, then stack); #1075 C2 is dirty and has a question; new PR #1188 (F6, B119 lane). Weekly 40% at 07:32: the 45% soft stop and the morning account switch are next (P-383).
 
+## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
+| # | Question | Lead's recommendation | Blocks | Since | Status |
+|---|---|---|---|---|---|
+| F1 | C1.3: "Follows" is only a suggestion and nothing on main suggests a next application. Build a real suggestion? | Not in M3: keep as a recorded limit; a backlog row after M3, with follow rules cited from IRCC | nothing now (C1.3 Works) | 6 Nov 23:52 IST | open |
+
 ## Start here (next Lead)
 **Branch** `lead/2026-11-05-lead14b`, records PR **#1128** (the Lead labels records PRs itself, P-385). **Once #1128 merges: a fresh `lead/<today>` branch from `origin/main` every day; never merge `main` into an old lead branch (P-388).** **Stall guard (P-388):** while the founder is away, no call that can wait on a prompt; `lead-watch.sh` prints an ACT line when the previous check ran over 40 min ago: tell the founder at once. **Watchdog (P-389):** the first standby runs `lead-heartbeat.sh` every 15 min and pushes the founder a notification when the Lead's check is over 40 min old; on take-over the standby deletes its watchdog and the new first standby starts one. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Working notes, every id and ruling: the file lead24-pending in Lead 19's side-session notes folder (`.../side-session-notes/local_8acced9f-…`); CURRENT-LEAD.md there names the current Lead.
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline (rows, rulings, reviews, labels, CI, paid runs inside the US$30 cap). Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard, #1136), records PRs too.
@@ -20,7 +25,7 @@ updated: 2026-11-07 07:35 IST by **Lead 24** (hand-over to Lead 25) · milestone
 4. Follow-up row to shape: B2's concept change (a), the PDF-upload line's In progress from `readBackOf`, after #1072 (stream C, `tests/check_vv_prepare_api.ts`).
 5. Account (P-383): stop new rows at ~45% weekly (32% at 23:48 IST, ~1.3%/h → ~09:30 IST); morning switch with the founder; GitHub connection first.
 6. Morning cleanup: restore the four `.claude` files in qa's worktree (Terminal tab); stray database `xr_studio_qa270`; archive finished cloud lanes (B120, Flow fix, Land #1136, B119 after F6) after checking for unpushed work.
-7. Founder product question (one, morning): C1.3 says "'Follows' is only a suggestion"; nothing suggests a next application on main. qa counts it as a limit; ask whether a real suggestion is wanted (a new row if yes).
+7. Founder questions: the table "For the founder" above (P-390).
 
 ## Where we are (23:57 IST)
 * **Merged tonight:** #1174 push guard (22:05), #1178 hang quarantine + #1168 flow fix + #1136 guardrails (22:54), **B120 #1158 (23:17, M3 hour 0)**, **B2 #1171 (23:23, first M3 row: C7.6 Ready to file by screens)**, qa records #1184 (23:52), **B119 #1147 records queue (23:55)**; #1167 M3 plan labelled.
