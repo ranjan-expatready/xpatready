@@ -1,6 +1,6 @@
 // The case engine (runtime lane, R1): pure functions from a pinned release snapshot, the people on a case and their
 // current answers, to what each person is asked, how each answer checks, whether it is confirmed (P-72) and which form
-// boxes it fills. The questionnaire itself comes from the common renderer (engine/render.ts), so a case asks exactly
+// boxes it fills (every current answer, marked by who gave it: P-242, P-411). The questionnaire itself comes from the common renderer (engine/render.ts), so a case asks exactly
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
@@ -15,7 +15,7 @@ import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { CLIENT_RECONFIRM } from "./background.ts";
 import { isAskedRelative, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
-import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { Address, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null /** C6.18 (P-244): a background answer (engine/runtime/background.ts), and one an officer recorded that the client has
@@ -27,7 +27,10 @@ export type Answer = { id: string; subjectId: string; field: string; rowKey: str
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
 /** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
 export type GroupAnswer = { id: string; subjectId: string; group: string; noneApply: boolean; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
-export type Confirmation = { confirmed: boolean; why: string };
+/** `confirmed`: off the officer's Confirm list (P-72, P-78). `fills`: written to the forms now (P-242, P-411: every
+ *  declared answer fills at once, whoever typed it; a document's read value is a proposal, never an answer, until
+ *  "Confirm & use"). `mark`: who gave it, shown beside it. */
+export type Confirmation = { confirmed: boolean; why: string; fills: boolean; mark: AnswerMark };
 
 /** Fields the client answers (P-72 "the client's fields"): placed in the questionnaire or the client's profile, and
  *  about a person, a relationship or the application (never the representative's own facts). */
@@ -61,24 +64,30 @@ export function ageOn(birth: unknown, today: Date): number | null {
   return age;
 }
 
-/** P-72 and P-78: VERIFIED is confirmed; the client's (principal's) typed answer on a client field counts as confirmed
- *  for the principal, the application and a minor child; for an adult it is "answered by the principal" until that
- *  adult or the officer confirms; everything else waits for "Confirm section". */
+/** P-72 and P-78 as P-242 and P-411 amend them. Every current answer fills the forms at once (`fills`), marked by who
+ *  gave it; `confirmed` says whether it is off the officer's Confirm list. VERIFIED is confirmed. The client's
+ *  (principal's) own typed answer on a client field is Declared and needs no officer confirmation for the principal, the
+ *  application and a minor child; for an adult it is "answered by the principal for <name>" until that adult or the
+ *  officer confirms (P-411 (1)); an answer staff typed or corrected is "entered by staff" and stays on the Confirm list
+ *  (P-411 (2)), so a correction never empties a filled form field. */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
-  // C6.18 (P-244): a background answer the officer recorded never counts as confirmed until the client re-confirms it,
-  // even after the officer's "Confirm section": it is the client's answer, so it is never written on a form before.
-  if (a.awaitsClient) return { confirmed: false, why: CONFIRM_WORDS.awaits_client };
-  if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
+  const fills = true;
+  // C6.18 (P-244) with P-411 (Lead 31, 16:18 IST on #1246): a background answer the officer recorded fills the forms at
+  // once, marked as staff's, but never counts as confirmed until the client re-confirms it, even after the officer's
+  // "Confirm section": readiness, Ready to file and signing wait for the client.
+  if (a.awaitsClient) return { confirmed: false, why: CONFIRM_WORDS.awaits_client, fills, mark: "by_staff" };
+  if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer, fills, mark: "confirmed" };
   // The client's re-confirmation of an officer's answer counts as the client's own answer (C6.18).
-  if (a.channel !== "questionnaire" && a.channel !== CLIENT_RECONFIRM) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
-  if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
-  if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
+  if (a.channel !== "questionnaire" && a.channel !== CLIENT_RECONFIRM) return { confirmed: false, why: CONFIRM_WORDS.staff, fills, mark: "by_staff" };
+  if (!isClientField(s, a.field)) return { confirmed: false, why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (a fact the officer confirms from a document or record)`, fills, mark: "declared" };
+  if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own, fills, mark: "declared" };
+  const forAdult = (note?: string): Confirmation => ({ confirmed: false, why: `${who?.label ? byPrincipalFor(who.label) : CONFIRM_WORDS.by_principal}${note ? ` (${note})` : ""}`, fills, mark: "by_principal" });
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
-    if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})` };
-    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
+    if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})`, fills, mark: "declared" };
+    return forAdult(age === null ? "the child's date of birth is not answered yet, or is not a real past date" : `the child is ${age}`);
   }
-  return { confirmed: false, why: CONFIRM_WORDS.by_principal };
+  return forAdult();
 }
 
 /** C6.18 (P-244): on a background answer, who on the staff recorded it and when ("Officer"), whether they recorded this
@@ -242,8 +251,11 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
 }
 
 /** The renderer's known facts from current answers: confirmed ones as "confirmed", the rest as "answered". Row answers
- *  take the row's place among the subject's live rows of that group; a box with no row reads the first row. */
-export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], today: Date): { known: Known; confirm: Map<string, Confirmation> } {
+ *  take the row's place among the subject's live rows of that group; a box with no row reads the first row.
+ *  `forForms` (P-242, P-411): what a form writes, so every answer that fills (every declared answer, whoever typed it)
+ *  is "confirmed" to the renderer, whose "confirmed fact" is the form field it writes. Without it (the case check C6.9,
+ *  the checklist, the questionnaire's counts) "confirmed" stays the officer's Confirm list (P-72, P-78). */
+export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], today: Date, opts: { forForms?: boolean } = {}): { known: Known; confirm: Map<string, Confirmation> } {
   const known: Known = new Map(), confirm = new Map<string, Confirmation>();
   const about = (subjectId: string) => (people.find((p) => p.subjectId === subjectId)?.role === "case" ? "case" : subjectId);
   const index = new Map<string, number>();
@@ -257,7 +269,7 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
     confirm.set(a.id, c);
     // A number answered as digits ("000", "0.0") is read as the number it is, so rules compare numbers (break report m9).
     const value = fieldOf(s, a.field)?.value_type === "number" && typeof a.value === "string" && /^\d+(\.\d+)?$/.test(a.value.trim()) ? Number(a.value) : a.value;
-    const v = { value, status: c.confirmed ? "confirmed" as const : "answered" as const, source: `${a.channel} by ${a.actor}` };
+    const v = { value, status: (opts.forForms ? c.fills : c.confirmed) ? "confirmed" as const : "answered" as const, source: `${a.channel} by ${a.actor}` };
     const row = a.rowKey ? index.get(a.rowKey)! : undefined;
     known.set(kkey(about(a.subjectId), a.field, row), v);
     if (row === 0 && !known.has(kkey(about(a.subjectId), a.field))) known.set(kkey(about(a.subjectId), a.field), v);
@@ -361,7 +373,8 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
     const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!, ...officerMark(a),
       // Review m6 (#1256): a parent has no link of their own, so their answer waits for the officer, in those words.
-      ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed ? { why: `${CONFIRM_WORDS.waits} (a parent has no link of their own)` } : {}) } : null;
+      // B150 (P-411): it is on the forms at once, so the words say so; an answer waiting for the client keeps its own words.
+      ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed && !a.awaitsClient ? { why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (a parent has no link of their own)` } : {}) } : null;
     const options = optionsOf(s, q.fact);
     return {
       subjectId, about_label: labelOf(q), fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,

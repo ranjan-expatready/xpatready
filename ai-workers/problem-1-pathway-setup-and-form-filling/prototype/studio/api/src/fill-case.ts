@@ -1,5 +1,5 @@
 // Case forms (runtime lane, R1d, plan §8 RT-13…RT-17): IMM 5257 and the case's other PDF forms filled from the case's
-// confirmed facts only (P-72), through the shared filler (fill.ts writeForm: each value in the form field's own format,
+// declared and confirmed answers (P-242, P-411; P-72 had "confirmed facts only"), through the shared filler (fill.ts writeForm: each value in the form field's own format,
 // signatures never typed, append-only writer, read back, signatures checked). Never overwrite (P-65 d): each copy is a
 // new row with the facts it read frozen beside it; a later answer makes a copy "out of date" (a locked one "stale") and
 // never changes it; a new copy is made only when the officer asks. Generation runs as a queued job (STANDARDS §3:
@@ -161,7 +161,7 @@ export class CaseForms implements OnModuleInit {
     const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     // QA-165 part 2 (review M-1, M-2 on #592): the case's own question words, and the groups settled as "none apply".
-    const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.confirmed)
+    const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.fills)
       .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
     const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply, gateOf: (fact) => { const g = gateOf(s.placements as GatePlacement[], fact); return g ? labels.get(g) ?? g : undefined; } };
     const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
@@ -175,7 +175,7 @@ export class CaseForms implements OnModuleInit {
         if (chosen(s, items, form, p.subjectId) === "NOT_NEEDED" && !mine.length) continue; // C11.6 (Devin on #1056): nothing to fill or file
         const channel = chosen(s, items, form, p.subjectId);
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
-          draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
+          draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, to_fix: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
           readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), copyNotForFiling(s, x), nameOf)) });
       }
     }

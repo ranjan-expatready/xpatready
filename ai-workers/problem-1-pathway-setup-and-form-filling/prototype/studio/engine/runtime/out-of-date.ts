@@ -7,12 +7,13 @@ import { createHash } from "node:crypto";
 import type { FormFact } from "./forms.ts";
 
 /** One fact that reads differently now from when the item was made: whose, which, the value then and now, and when. */
-/** `confirmed`: false when the new value is saved but not confirmed yet (so the form does not read it). */
+/** `confirmed`: false when the new value is saved but not confirmed yet (since P-411 the form reads it at once; it still
+ *  waits for the officer's Confirm section before filing). */
 /** `about`: the person (subject) the answer is stored on; `relation`: the relative on that person's form it is about
  *  (for example "parent_1"), or null for the person's own fact. */
 export type FactChange = { fact: string; about: string; relation: string | null; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null };
 /** What the API knows to word a change: the question's words, a person's label, when the current answer was saved, and
- *  (optional) the newest value saved for a fact the form no longer reads because it is not confirmed. */
+ *  (optional) the newest value saved for a fact the form does not read (since P-411: one that needs a fix). */
 export type ChangeWords = { label: (fact: string) => string; person: (about: string) => string; at: (about: string, fact: string) => string | null; saved?: (about: string, fact: string) => unknown };
 
 const subjectOf = (about: string) => about.split("/")[0];

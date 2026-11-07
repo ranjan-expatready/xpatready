@@ -13,7 +13,7 @@
 //   zsh studio/tools/isolated.sh rt_c81 4438 start && tsx studio/tests/check_c81_signing_api.ts 4438 xr_studio_rt_c81
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { AUTHOR, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, inDays, itemsOf, needVisitorVisa, openCase, prepare, readinessOf, readyToFile, sendFile, signedScan, sql, validateRoundTrip, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, CLIENT, DB, OFFICER, PORT, REVIEWER, agent, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, inDays, itemsOf, needVisitorVisa, openCase, prepare, readinessOf, readyToFile, sendFile, signedScan, sql, validateRoundTrip, yearsAgo } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -251,6 +251,30 @@ else {
   ok("B130 fail: a signed scan naming the copy printed before is refused (409, the server's words), no scan stored", sc.status === 409 && /not the one printed now/.test(sc.body?.detail ?? "") && sql(`select count(*) from signed_scan where item_id='${i76?.id}'`) === "0", [sc.status, sc.body?.detail]);
   sc = await scanWith(copy2, "imm5476-this-copy.pdf");
   ok("B130 pass: the signed scan naming the copy printed now is stored; the item is Ready", sc.status === 201 && live() === "print,signed,scan_received", [sc.status, sc.body?.detail, live()]);
+}
+// B150 merge check M1 (P-244 with P-411; Lead 31, 16:18 IST on #1246): an officer-recorded background answer is on the
+// draft at once, but a form is printed and signed only once the client re-confirms it (refused in words, nothing kept).
+// IMM 5257 reads the background answers; on Paper it is signed in pen (B132), so it has a Printed step.
+{
+  const officer = f.officer ?? OFFICER;
+  const c9 = await openCase(vv, [{ role: "principal", name: "Sample Client G", dob: yearsAgo(41) }], { representative: f.rep, caseOfficers: [officer] });
+  const P9 = c9.subjects["Sample Client G"];
+  await fillEverything(c9.id);
+  let pv = (await prepare(c9.id, officer)).p;
+  const i57 = itemsOf(pv, P9, "IMM 5257")[0];
+  const moved = await call("PATCH", `/runtime/items/${i57?.id}/channel`, { channel: "PAPER", reason: "Sample: on paper as an accommodation (B150 M1)", version: (pv as unknown as { version: string }).version }, officer);
+  type BQ = { subjectId: string; fact: string; value_type: string; background?: boolean; answer: { id: string; awaits_client?: boolean } | null };
+  const qs9 = async () => ((await agent(c9.id))?.sections ?? []).flatMap((x: { questions: BQ[] }) => x.questions) as BQ[];
+  const bq = (await qs9()).find((q) => q.subjectId === P9 && q.background && q.value_type === "yes_no");
+  const rec = bq ? await answer(c9.id, P9, bq.fact, false, officer) : null;
+  const waiting = (await qs9()).find((q) => q.subjectId === P9 && q.fact === bq?.fact)?.answer;
+  ok("setup (B150 M1): IMM 5257 on Paper; the officer records a background answer for the client (it waits for the client)", moved.status === 200 && rec?.status === 200 && waiting?.awaits_client === true, { moved: moved.status, fact: bq?.fact, status: rec?.status, waiting });
+  const vcopy = await validateRoundTrip(c9.id, "IMM 5257", P9);
+  let r = await call("POST", `/runtime/items/${i57?.id}/sign-steps/print`, { copy: vcopy }, officer);
+  ok("B150 M1 fail: Printed is refused (409) while a background answer the officer recorded waits for the client, naming it; nothing recorded", !!vcopy && r.status === 409 && /re-confirms what the case officer recorded/.test(r.body?.detail ?? "") && sql(`select count(*) from sign_step where item_id='${i57?.id}'`) === "0", [r.status, r.body?.detail]);
+  const rc = waiting ? await call("POST", `/runtime/cases/${c9.id}/answers/${waiting.id}/reconfirm`, {}, CLIENT) : null;
+  r = await call("POST", `/runtime/items/${i57?.id}/sign-steps/print`, { copy: vcopy }, officer);
+  ok("B150 M1 pass: once the client re-confirms it (same value, so the validated copy stays current), Printed is recorded", rc !== null && rc.status < 300 && r.status === 200, [rc?.status, r.status, r.body?.detail]);
 }
 // B129: a red line fails the suite (run-suites.sh judges the exit code; before, this suite always exited 0).
 process.exit(summary() ? 1 : 0);
