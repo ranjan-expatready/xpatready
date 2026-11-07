@@ -42,7 +42,7 @@ export const SCOPE_WORDS_REFUSED = {
   caseKey: "This is about the application: choose Filing, Household or Organisation.",
   filingKey: "Not built: a person's fact asked once for the application. Ask it as an application fact instead.",
   perRow: "A list is asked per person today; a household or employer list is not built.",
-  representative: "A representative's box reads this field, so it stays about each person.",
+  representative: "A representative's part of the form reads this field, so it stays about each person.",
   condition: "A household question cannot depend on one person's answer yet.",
   personOnly: "This fact is about one person and stays about each person.",
   employerHousehold: "This is the employer's fact: choose Organisation, not Household.",

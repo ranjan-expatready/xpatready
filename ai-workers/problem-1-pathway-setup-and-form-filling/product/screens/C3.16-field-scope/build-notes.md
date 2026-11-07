@@ -74,3 +74,7 @@ Not touched: `api/src/demo.ts`, `engine/render.ts`, `api/src/proposals.ts`, `api
     * API lines on the case part's SQL-scoped fixture: a link puts the answer on the case's own record, the question shows it, the principal's IMM 5710 box reads it, and a value typed beforehand shows Same or Different.
   * Neither this pack nor `check_c316_field_scope.ts` calls `carriedFacts` or the link route today.
   * A trial merge against #1051 conflicts only on import lines in `api/src/runtime.ts` and `web/src/runtime/questionnaire.tsx`: keep both sides.
+
+## Second main merge (7 Nov, 14:55 IST, row A5)
+* `origin/main` merged at `87d16a23d` with no conflict (the import lines in `api/src/question-condition.ts` were already resolved at `b11c26e36`).
+* **One copy change, a code cause from CI:** the PR's CI at `47747b13b` failed `check_qa182_no_box_words.ts` (QA-182, P-63: no shown message says "box"). The representative refusal read "A representative's box reads this field, so it stays about each person." It now reads **"A representative's part of the form reads this field, so it stays about each person."** The concept's copy (r4, BR-2) keeps the old words as written then; this line is the change. `acceptance/C3.16.test.ts` C3.16-2 matches the new words.
