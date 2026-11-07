@@ -35,7 +35,17 @@ Row (BACKLOG B135, P-406, on `lead/2026-11-07-lead30`): make principal and remov
 The chips become a **People and filings** table (person, role ⓘ, filing, status from the Prepare view, actions). Row menu ⋯ shows only what the row allows, each item with one line of consequence. Dialogs: title = the question with the name; body = what stays, then "N other filings depend on this one and change", one card per filing; reason field; danger button names the action. Undo in the toast (Remove → Add filing back; Make principal → Make <former> principal). States: empty (only the principal: no menu items, tooltip says why) · loading (skeleton rows) · conflict (BR-8) · read-only (recorded) · long names wrap · keyboard: menu and dialog fully keyboard, focus returns to the row.
 
 ## 4b. Best in class
-*(filled from the research note below; primary sources with URL, quote and date.)*
+All read 7 Nov 2026 from the projects' own published source (this session's network blocks the doc sites and vendor help centres, so each page was read in the repository that publishes it). **Not opened, so not cited:** Docketwise, INSZoom, LawLogix, Clio, TurboTax, Healthcare.gov, Jira, NN/g; their pages need the hosts allowed (a gap for the UX lane's study, P-407).
+| Who | Best at | Source and quote |
+|---|---|---|
+| OpenSPP (open-source social registry), "Change head of household" | The change also says what the old head becomes | `github.com/OpenSPP/OpenSPP2/blob/19.0/spp_change_request_v2/details/change_hoh.py`: "The new role for the previous head (e.g., Spouse, Other Adult)" |
+| OpenSPP, same request | Refuses in words | `…/strategies/change_hoh.py`: "No new head of household selected." |
+| GitHub, delete a repository | Names what else goes with it before confirming | `github.com/github/docs/…/deleting-a-repository.md`: "will delete all forks of the repository" |
+| GOV.UK Design System, Button | No silent disabled buttons | `github.com/alphagov/govuk-design-system/…/button/index.md`: "Disabled buttons have poor contrast and can confuse some users, so avoid them if possible." |
+| Shopify Polaris, Button and Modal | Say why something is unavailable; the title is the question | `github.com/Shopify/polaris/…/button.mdx`: "make it clear why the button is disabled and what needs to be done to enable it"; `…/modal.mdx`: Do "Delete customer?" |
+| Carbon, danger modal · GOV.UK warning text | Confirm only for real loss; warn about consequences | `carbon-design-system/carbon-website/…/modal/usage.mdx`: "an action that would result in a significant data loss"; `govuk-design-system/…/warning-text/index.md`: "legal consequences of an action" |
+
+**Copied:** the swap names the old principal's new role in the dialog (OpenSPP); the dependants are named by person before confirming (GitHub); refused actions stay visible with the reason and the way out (GOV.UK, Polaris); dialog titles are the question with the name (Polaris). **Beaten:** GitHub and Polaris confirm a loss that cannot be undone; here nothing is lost (answers, uploads, ids kept), so the dialog says what stays and the toast offers Undo, and it shows the **numbers that change** (fees per filing, the submission total) from the same derivation as Prepare application, so the two screens always agree. **Effort:** one menu, one dialog, one reason; nothing typed twice (answers stay with each person); errors caught before the click (child, not travelling, submitted).
 
 ## 5. Copy
 * Role ⓘ: "The principal applicant carries the family's capped fees and answers the household questions. Change it with Make principal."
