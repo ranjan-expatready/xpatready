@@ -14,7 +14,7 @@
 #        it), or a suite that starts its own copy or touches no database. Its row says "passed on retry" (not a
 #        failure) or "failed twice". Never retried, because the retry could not start fresh and a first-run-only bug
 #        would pass on it: the R1 group (three suites on one copy) and a plain suite on the shared demo database. Also
-#        not retried: a suite that hit its 20-minute limit (exit 124), and any failure after SUITES_RETRY_MAX (default 2)
+#        not retried: a suite that hit its 20-minute limit (exit 124, or 137 when the TERM was ignored), and any failure after SUITES_RETRY_MAX (default 2)
 #        retries in one run (many failures are a real break, and retrying them only spends time). Never retried either
 #        (F5, founder 6 Nov): a suite whose file name or title (the comment block at its top) says race, concurrent,
 #        parallel or upsert, or whose 1st try's FAIL lines do, and a suite on the QUARANTINE list: a pass on retry would
@@ -93,7 +93,13 @@ SKIP="check_catalogue_scale.cjs"
 # in each PR's own check and locally. It uses no server or database and ends with process.exit, so the hang is in the
 # runner or the shard, not in the suite's checks. The nightly full set still runs it. Fix row: B122 (#1145, flaky-test
 # handling) diagnoses the hang, and takes it off this list in that PR with a fail test.
-QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs check_b78_section_names.ts"
+# Back on 7 Nov (the b78 row, P-214 fix to the checks), on evidence, not on a found cause: it passed 3 runs in a row in
+# CI on the guarded runner (#1236), and locally cold in 0.5 s even with stdin an open pipe. The 6 Nov cause is still
+# open: the rows said exit 124, so the TERM did end it (not a TERM-ignoring hang), and GitHub's runner gives a step no
+# open stdin. What changed (guarded(), above run()): /dev/null as stdin, timeout -k, and, at the limit, the hung suite's
+# processes (state, wait channel, open files) in its log, so a recurrence says where it waits. If it hangs again, it
+# comes back on this list with that log.
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
 # Automatic quarantine (B122): only well-formed entries; anything else is named and ignored, never run blind.
 AUTOQ=" "
 for e in ${SUITES_QUARANTINE_AUTO:-}; do
@@ -233,20 +239,60 @@ why() { (grep -m1 -E '^(FAIL|STOP)' "$1" || grep -m1 -E 'Error: ' "$1" || grep -
 # The first try's api.log is kept beside its suite log (stop moves it to isolated-logs, where the retry would replace it).
 recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1
   cp "$S/var/isolated-logs/$1-api.log" "$OUT/${RF%.*}.try1-api.log" 2>/dev/null; zsh "$S/tools/isolated.sh" "$@" >/dev/null 2>&1; }
+# One suite, guarded. Hardening and diagnostics after the b78 hang (6 Nov: check_b78_section_names.ts printed "11 passed"
+# and then did not end until the 1200 s limit, twice, as the first suite of merge-queue part 2; its cause is not found,
+# see QUARANTINE above). Before, each suite got the caller's stdin and a plain `timeout 1200`:
+#   * stdin is /dev/null: a suite, its tsx parent or anything they start never waits on a stdin the runner was handed
+#     (an open pipe: `... | bash run-suites.sh`, a lane's terminal; GitHub's runner already gives a step none);
+#   * timeout -k: a suite (or tsx, which relays the TERM to its child) that ignores the TERM at the limit is killed
+#     SUITES_KILL_AFTER (30) s later; a plain timeout waits for it for ever, until the part's 45-minute job limit, with no
+#     row and no log;
+#   * one second before the limit its processes (timeout's process group: pid, parent, state, wait channel, age,
+#     command; on Linux each one's open files) are written to its log under a STOP line, so a hang says where it waits.
+# SUITES_TIMEOUT (seconds, default 1200) and SUITES_KILL_AFTER are for tools/check-flaky.sh's fixtures; CI sets neither.
+LIMIT="${SUITES_TIMEOUT:-1200}"; [[ "$LIMIT" =~ ^[1-9][0-9]*$ ]] || LIMIT=1200
+KILL_AFTER="${SUITES_KILL_AFTER:-30}"; [[ "$KILL_AFTER" =~ ^[1-9][0-9]*$ ]] || KILL_AFTER=30
+lim() { if [ $((LIMIT % 60)) = 0 ]; then echo "$((LIMIT / 60)) min"; else echo "$LIMIT s"; fi; }
+timedout() { [ "$1" = 124 ] || { [ "$1" = 137 ] && [ "$2" -ge "$LIMIT" ]; }; }   # exit code, seconds taken
+hangdump() {  # hangdump <timeout's pid>: the suite's processes while they still run
+  kill -0 "$1" 2>/dev/null || return 0
+  local p fd fds
+  echo "STOP still running at the $(lim) limit; its processes below, then TERM (KILL ${KILL_AFTER} s later)"
+  # Linux (procps) cuts the wait channel to 6 letters unless given a width; BSD ps (the Mac) takes no width.
+  local wc=wchan=; [ -d /proc/self/fd ] && wc=wchan:32=
+  ps -A -o pid=,ppid=,pgid=,stat=,"$wc",etime=,args= 2>/dev/null | awk -v g="$1" '$3 == g' | cut -c1-300
+  [ -d /proc/self/fd ] || return 0
+  for p in $(ps -A -o pid=,pgid= 2>/dev/null | awk -v g="$1" '$2 == g { print $1 }'); do
+    fds=""; for fd in /proc/"$p"/fd/*; do [ -e "$fd" ] || [ -L "$fd" ] || continue; fds="$fds ${fd##*/}:$(readlink "$fd" 2>/dev/null)"; done
+    echo "open files of $p:$fds" | cut -c1-600
+  done
+}
+guarded() {  # guarded <log> <command...>: the exit code is timeout's (124 timed out, 137 killed after ignoring the TERM)
+  local log="$1"; shift; local pid w code
+  # Append mode, so the suite's later lines never write over the STOP lines (its own offset would).
+  : > "$log"; "$TIMEOUT" -k "$KILL_AFTER" "$LIMIT" "$@" < /dev/null >> "$log" 2>&1 &
+  pid=$!
+  ( s=""; trap '[ -n "$s" ] && kill "$s" 2>/dev/null; exit 0' TERM
+    sleep "$(( LIMIT > 2 ? LIMIT - 1 : 1 ))" > /dev/null 2>&1 & s=$!; wait "$s"; hangdump "$pid" >> "$log" ) < /dev/null &
+  w=$!
+  wait "$pid"; code=$?
+  kill "$w" 2>/dev/null; wait "$w" 2>/dev/null
+  return "$code"
+}
 run() {  # $1 file, $2 label, rest: command. AGAIN readies a retry (recopy ...); NORETRY says why there is none; both cleared.
   local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS code=0 code2=0 note="" a src="" rw=""; RF="$f"
   for a in "$@"; do case "$a" in */"$f") src="$a";; esac; done   # the suite's own file, for its title (F5)
-  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else code=$?; st=FAIL; fi
+  if guarded "$log" "$@"; then st=PASS; else code=$?; st=FAIL; fi
   if [ "$st" = FAIL ] && [ "$RETRY" = 1 ]; then
     [ -z "$NORETRY" ] && rw=$(racy "$f" "$src" "$log")
     if [ -n "$NORETRY" ]; then note="not retried: $NORETRY"
     elif case " $QUARANTINE " in *" $f "*) true;; *) false;; esac; then note="not retried: on the quarantine list (F5)"
     elif [ -n "$rw" ]; then note="not retried: its name, title or FAIL line says \"$rw\", and a pass on retry would hide a race (F5)"
-    elif [ "$code" = 124 ]; then note="timed out at 20 min, not retried"
+    elif timedout "$code" $((SECONDS - t0)); then note="timed out at $(lim), not retried"
     elif [ "$RETRIES" -ge "$RETRY_MAX" ]; then note="not retried: $RETRY_MAX retries already in this run"
     else
       RETRIES=$((RETRIES + 1)); local first; first="exit $code: $(why "$log")"; mv "$log" "$OUT/${f%.*}.try1.log"
-      if { [ ${#AGAIN[@]} -eq 0 ] || "${AGAIN[@]}"; } && "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st="passed on retry"
+      if { [ ${#AGAIN[@]} -eq 0 ] || "${AGAIN[@]}"; } && guarded "$log" "$@"; then st="passed on retry"
       else code2=$?; [ -s "$log" ] || echo "STOP the copy for the retry did not start" > "$log"; st="failed twice"; fi
       printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$f" "$st" "$code" "$code2" "$(git rev-parse --short HEAD)" >> "$OUT/retries.tsv"
       RETRIED+=("$f|$st")
@@ -307,7 +353,7 @@ RT="$S/tests/runtime"; [ -n "${SUITES_TESTS_DIR:-}" ] && RT=/nonexistent; RN=$(i
 if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 # The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
 if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn check_runtime_r1a.ts; then
-  if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
+  if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && guarded "$OUT/setup_visitor_visa.log" $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN"; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     # Never retried one by one (review M2): the three share one copy, so a retry would start from the first try's data.
     [ -f "$RT/check_runtime_r1c.cjs" ] && NORETRY="the R1 suites share one copy" && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
