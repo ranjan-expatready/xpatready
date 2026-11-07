@@ -10,6 +10,7 @@ import { decide } from "../../../proposals.ts";
 import { RuleFacts } from "../../../rule-facts.ts";
 import { Screen02 } from "../../../screen02.ts";
 import { Studio } from "../../../studio.ts";
+import { WorkedOut } from "../../../worked-out.ts";
 import type { CheckpointContext } from "../_context.ts";
 import { type CombinationStep, formSetup } from "../080-form-setup.ts";
 import { factsOf } from "./_facts-asked.ts";
@@ -17,7 +18,10 @@ import { placed } from "./_placed.ts";
 
 /** Conditional document lines per combination, with the facts their conditions read. */
 export const CONDITIONAL_DOCUMENTS = join(STUDIO, "samples", "conditional-documents.json");
-type ConditionalDocuments = { lines: { type: string; who: string; condition: unknown; conditionPlain: string; sourceQuote: string; sourceFile: string }[]; facts: { fact: string; label: string; meaning: string; values: string[]; question: string; beside: string[] }[] };
+/** B102 (A6): a fact a line reads that is worked out from library dates (WorkedOut, "Work it out instead"), and the date
+ *  about the case it is worked out on, added through C3.6's door when the library lacks it. */
+type WorkedOutSpec = { fact: string; calculation: string; from: string; on: { fact: string; label: string; meaning: string; question: string; beside: string[] }; plain: string };
+type ConditionalDocuments = { lines: { type: string; who: string; condition: unknown; conditionPlain: string; sourceQuote: string; sourceFile: string }[]; facts: { fact: string; label: string; meaning: string; values: string[]; question: string; beside: string[] }[]; worked_out?: WorkedOutSpec[] };
 
 /** Each line on Documents as the author (Configuration › Documents); a type the library lacks waits as a proposal the
  *  content reviewer accepts (C3.6). Then each fact a line reads is added for that line's rule with its answer values
@@ -35,7 +39,7 @@ async function conditionalDocumentLines(ctx: CheckpointContext, author: Actor, r
   // A line goes in only when each fact its condition reads is in the library, is a calculated fact, or is one this step
   // adds; otherwise the release would be refused ("reads …, which is not in the library"), so the line waits and is named.
   const known = new Set([...(await db.canonicalField.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey),
-    ...(await db.derivedField.findMany({ where: { workspaceId }, select: { derivedKey: true } })).map((d) => d.derivedKey), ...spec.facts.map((f) => f.fact)]);
+    ...(await db.derivedField.findMany({ where: { workspaceId }, select: { derivedKey: true } })).map((d) => d.derivedKey), ...spec.facts.map((f) => f.fact), ...(spec.worked_out ?? []).map((w) => w.fact)]);
   const waiting: string[] = [];
   for (const l of spec.lines) {
     const missing = [...factsOf(l.condition)].filter((f) => !known.has(f));
@@ -73,9 +77,12 @@ async function conditionalDocumentLines(ctx: CheckpointContext, author: Actor, r
       await keepChosenEveryones(db, studio, author, combinationId, new Set([beside.sectionKey]), parts);
     } catch (e) { refused.push(`${f.fact}: ${say(e)}`); }
   }
-  // A line whose fact did not reach the library is taken back, so the release is never refused over it (break m6).
-  const inLib = new Set((await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: spec.facts.map((f) => f.fact) }, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey));
-  const lost = spec.facts.map((f) => f.fact).filter((f) => !inLib.has(f));
+  for (const w of spec.worked_out ?? []) await workOut(ctx, author, reviewer, approver, workspaceId, combinationId, w, parts, placedFacts, refused, say);
+  // A line whose fact did not reach the library (or was not worked out) is taken back, so the release is never refused
+  // over it (break m6).
+  const inLib = new Set([...(await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: spec.facts.map((f) => f.fact) }, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true } })).map((f) => f.canonicalFieldKey),
+    ...(await db.derivedField.findMany({ where: { workspaceId }, select: { derivedKey: true } })).map((d) => d.derivedKey)]);
+  const lost = [...spec.facts.map((f) => f.fact), ...(spec.worked_out ?? []).map((w) => w.fact)].filter((f) => !inLib.has(f));
   if (lost.length) {
     for (const r of await db.documentRequirement.findMany({ where: { combinationId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { lineageKey: true, predicateJson: true } })) {
       if (![...factsOf(r.predicateJson)].some((f) => lost.includes(f))) continue;
@@ -84,6 +91,35 @@ async function conditionalDocumentLines(ctx: CheckpointContext, author: Actor, r
     }
   }
   return { n, waiting };
+}
+
+/** B102 (A6): the date about the case through C3.6's door when the library lacks it (Add a fact a rule needs, named by
+ *  a line that reads the worked-out fact; accepted by the content reviewer, approved by the Approver), asked once per
+ *  case beside a date the case already asks; then the fact worked out through the route the screen calls
+ *  ("Work it out instead"). A step a rule refuses is named in `refused`, never dropped. */
+async function workOut(ctx: CheckpointContext, author: Actor, reviewer: Actor, approver: Actor, workspaceId: string, combinationId: string, w: WorkedOutSpec, parts: PlacedFromParts, placedFacts: string[], refused: string[], say: (e: unknown) => string) {
+  const db = ctx.db, studio = ctx.get(Studio), ruleFacts = ctx.get(RuleFacts), library = ctx.get(Screen02);
+  if (await db.derivedField.count({ where: { workspaceId, derivedKey: w.fact } })) return; // another combination worked it out already
+  try {
+    if (!(await db.canonicalField.count({ where: { workspaceId, canonicalFieldKey: w.on.fact, status: { in: ["DRAFT", "PUBLISHED"] } } }))) {
+      const rule = (await ruleFacts.list(combinationId)).facts.find((x) => x.fact === w.fact)?.rules[0]?.key;
+      if (!rule) { refused.push(`${w.fact}: no rule on this combination reads it, so it is not worked out`); return; }
+      const { proposalId, key } = await ruleFacts.addForRule(author, combinationId, rule, { label: w.on.label, meaning: w.on.meaning, valueType: "date", subject: w.on.fact.split(".")[0] });
+      if (key !== w.on.fact) { refused.push(`${w.fact}: the date about the case would land as ${key}, not ${w.on.fact}, so it is not worked out`); return; }
+      await decide(db, ctx.audit, reviewer, workspaceId, [proposalId], { action: "accept", reason: "Accepted by the sample loader: the date about the case a worked-out age is measured on (Sample; C6.4, B102)." });
+      for (const ch of await db.libraryChange.findMany({ where: { workspaceId, status: "WAITING", kind: "field", key: w.on.fact }, select: { id: true } }))
+        await library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (C6.4, B102: the date a worked-out age is measured on).");
+    }
+    if (!(await db.sectionQuestion.count({ where: { workspaceId, canonicalFieldKey: w.on.fact, status: { not: "RETIRED" } } }))) {
+      const near = await db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: { in: w.on.beside } }, select: { canonicalFieldKey: true, sectionKey: true } });
+      const beside = w.on.beside.map((k) => near.find((x) => x.canonicalFieldKey === k)).find(Boolean);
+      if (!beside) { refused.push(`${w.on.fact}: none of ${w.on.beside.join(", ")} is asked in a section`); return; }
+      await studio.placeField(author, w.on.fact, { sectionKey: beside.sectionKey, collectedFrom: "staff_working_view", repeats: "once_per_case", tier: "case", questionText: w.on.question });
+      placedFacts.push(w.on.fact);
+      await keepChosenEveryones(db, studio, author, combinationId, new Set([beside.sectionKey]), parts);
+    }
+    await ctx.get(WorkedOut).add(author, combinationId, w.fact, { calculation: w.calculation, from: w.from, on: w.on.fact, plain: w.plain });
+  } catch (e) { refused.push(`${w.fact}: ${say(e)}`); }
 }
 
 export default {

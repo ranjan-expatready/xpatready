@@ -28,7 +28,7 @@ type Req = { lineage: string; document_type: string; document_type_key?: string;
   condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null };
 type Cond = { subjectKind?: string; [k: string]: unknown };
 type DocType = { key: string; name: string };
-type Derived = { id: string; inputs?: string[]; reference?: string };
+type Derived = { id: string; calculation?: string; inputs?: string[]; reference?: string };
 
 /** A document validity rule from the release: a `document_validity` check whose condition is
  *  `{ op: "issued_within_months", months, before, cite: { page, url, read } }` and whose applies_to is a document type key. */
@@ -53,7 +53,11 @@ export type PersonLine = { id: string; document_type: string; label: string; sta
   provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null;
   /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
   who: string; who_words: string };
-export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number };
+/** B102 (A6, BR-8): a person's age in whole years as the lines read it: on the date the release's worked-out age is
+ *  measured on (the application date), or, when the release works out no age, on the date the 18-or-older lines use.
+ *  `years` is null when it cannot be worked out yet, and `why` then names what to answer or check first. */
+export type PersonAge = { years: number | null; on: string | null; why: string; worked_out: boolean };
+export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number; age: PersonAge };
 export type CaseChecklist =
   | { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string }
   | { derived: false; combination: string; why: string };
@@ -143,6 +147,19 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
   const say = (m: Missing[], what: string) => m.length && m.every((x) => x.answered)
     ? `${what}: check ${m.map((x) => x.question).join(" and ")}; together they do not give an answer (for example a birth date after the application date).`
     : `${what}: answer ${m.length ? m.map((x) => x.question).join(", ") : "the questions it depends on"} first.`;
+  // B102 (A6): the release's own worked-out age about a person, if it has one (data: its inputs and reference date).
+  const ageValue = derived.find((d) => d.calculation === "age_in_years" && d.id.startsWith("person.") && d.inputs?.length && d.reference);
+  const ageOf = (h: string): PersonAge => {
+    const birthKey = ageValue?.inputs?.[0] ?? MINOR.birthDateField, onKey = ageValue?.reference ?? null;
+    const born = known.get(`${h}|${birthKey}`)?.value;
+    const on = onKey ? known.get(`${FILING}|${onKey}`)?.value : agesOn;
+    if (!day(born)) return { years: null, on: null, why: `Age: answer ${words(birthKey)} first.`, worked_out: !!ageValue };
+    if (!day(on)) return { years: null, on: null, why: `Age: answer ${words(onKey!)} first.`, worked_out: !!ageValue };
+    const years = ageInYears(born, on);
+    if (years === undefined) return { years: null, on: String(on), why: `Age: check ${words(birthKey)} and ${onKey ? words(onKey) : "today's date"}; together they give no age (a birth date after ${on}).`, worked_out: !!ageValue };
+    const which = onKey ? (onKey === APPLICATION_DATE ? "the application date" : words(onKey)) : day(appDate) ? "the application date" : "today: the application date is not answered yet";
+    return { years, on: String(on), why: `Age ${years} on ${on} (${which})`, worked_out: !!ageValue };
+  };
   const byPerson = new Map<string, PersonLine[]>(persons.map((p) => [p.id, []]));
   const applying = new Set(persons.filter((p) => p.applies).map((p) => p.id));
   const principal = persons.find((p) => p.role === "principal")?.id;
@@ -194,7 +211,7 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     people: persons.map((p) => {
       const all = byPerson.get(p.id)!.sort((a, b) => a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage));
       const of = (n: Need) => all.filter((l) => l.need === n);
-      return { subject: p.id, label: p.label, role: p.role, applies: p.applies, lines: of("needed"), waiting: of("answer_first"), not_needed: of("not_needed"), needed: of("needed").length, answer_first: of("answer_first").length };
+      return { subject: p.id, label: p.label, role: p.role, applies: p.applies, lines: of("needed"), waiting: of("answer_first"), not_needed: of("not_needed"), needed: of("needed").length, answer_first: of("answer_first").length, age: ageOf(p.id) };
     }) };
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
