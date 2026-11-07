@@ -17,7 +17,7 @@ import { createRequire } from "node:module";
 import { awaitsClient, backgroundBlock, backgroundFacts } from "../engine/runtime/background.ts";
 import { confirmation, type Answer, type Participant } from "../engine/runtime/case.ts";
 import { readiness } from "../engine/runtime/forms.ts";
-import { missingLabel } from "../engine/runtime/readiness.ts";
+import { missingFirst, missingLabel } from "../engine/runtime/readiness.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import type { QuestionnaireView } from "../contracts/runtime.ts";
 import { client, recorder } from "./runtime/api.ts";
@@ -68,6 +68,8 @@ ok("C6.18-R3b fail: any other unconfirmed answer keeps its own words", r3b.missi
 const words = missingLabel({ label: "Criminal offence", reason: "waits for the client to re-confirm" });
 ok("C6.18-R3c pass: Ready to file's words name it as the client's to re-confirm", /recorded by staff, the client re-confirms it/.test(words), words);
 ok("C6.18-R3d fail: any other missing fact keeps its label only", missingLabel({ label: "Criminal offence", reason: "not confirmed" }) === "Criminal offence");
+const order = missingFirst([{ label: "A", reason: "not answered" }, { label: "B", reason: "waits for the client to re-confirm" }, { label: "C", reason: "not confirmed" }]).map((m) => m.label).join("");
+ok("C6.18-R3e pass (break m1): on Ready to file the answers waiting for the client come first, so \"and N more\" never hides them", order === "BAC", order);
 
 // ── R4, R5 through the API.
 (async () => {
@@ -99,6 +101,23 @@ ok("C6.18-R3d fail: any other missing fact keeps its label only", missingLabel({
   ok("C6.18-R5d pass: the client re-confirms it; it no longer waits and still shows who recorded it", r.status === 201 && after?.awaits_client === false && after?.officer?.by === OFFICER, { status: r.status, after });
   r = await call("POST", `/runtime/cases/${id}/answers/${after?.id}/reconfirm`, {}, CLIENT);
   ok("C6.18-R5e fail: nothing to re-confirm twice (409)", r.status === 409, r.status);
+  // Break M2 on #1246: a blank in any shape is no answer; an answer with a problem is never re-confirmed as it is.
+  const det = (await qs(OFFICER)).find((q) => q.subjectId === p && q.background && !q.hidden && !q.group && q.value_type !== "yes_no" && q.value_type !== "declaration");
+  const shapes: number[] = [];
+  for (const v of ["   ", "\t", "　", [], {}, [""]]) { const cur = (await qs(OFFICER)).find((q) => q.subjectId === p && q.fact === det?.fact)?.answer?.id ?? null; shapes.push((await call("PUT", `/runtime/cases/${id}/answers/${p}/${det?.fact ?? b.fact}`, { value: v, expectedId: cur }, OFFICER)).status); }
+  ok("C6.18-R5f fail (break M2): a blank of any shape (spaces, a tab, an ideographic space, [], {}, [\"\"]) is refused (400) for a background answer", !!det && shapes.every((s) => s === 400), shapes);
+  const yn = (await qs(OFFICER)).find((q) => q.subjectId === p && q.background && !q.hidden && !q.group && q.value_type === "yes_no" && q.fact !== b.fact && !q.answer);
+  r = await call("PUT", `/runtime/cases/${id}/answers/${p}/${yn?.fact}`, { value: "maybe", expectedId: null }, OFFICER);
+  const bad = (await qs(CLIENT, "sqr")).find((q) => q.subjectId === p && q.fact === yn?.fact)?.answer;
+  r = await call("POST", `/runtime/cases/${id}/answers/${bad?.id}/reconfirm`, {}, CLIENT);
+  ok("C6.18-R5g fail (break M2): an officer's answer with a problem (\"maybe\" to a yes/no) is not re-confirmed (409, names the fix)", r.status === 409 && /fix/i.test(r.body?.detail ?? ""), r.body?.detail ?? r.status);
+  // Break M1 on #1246: the client changed the answer on screen, then pressed "This is right": nothing is re-confirmed.
+  await call("PUT", `/runtime/cases/${id}/answers/${p}/${yn?.fact}`, { value: false, expectedId: bad?.id ?? null }, OFFICER);
+  const ok2 = (await qs(CLIENT, "sqr")).find((q) => q.subjectId === p && q.fact === yn?.fact)?.answer;
+  r = await call("POST", `/runtime/cases/${id}/answers/${ok2?.id}/reconfirm`, { value: true }, CLIENT);
+  ok("C6.18-R5h fail (break M1): re-confirming with a value other than the officer's is refused (409) and nothing changes", r.status === 409 && (await qs(CLIENT, "sqr")).find((q) => q.subjectId === p && q.fact === yn?.fact)?.answer?.id === ok2?.id, r.body?.detail ?? r.status);
+  r = await call("POST", `/runtime/cases/${id}/answers/${ok2?.id}/reconfirm`, { value: false }, CLIENT);
+  ok("C6.18-R5i pass: re-confirming the value the client sees (the officer's) works", r.status === 201, r.body?.detail ?? r.status);
   summary();
   process.exit(process.exitCode ?? 0);
 })();

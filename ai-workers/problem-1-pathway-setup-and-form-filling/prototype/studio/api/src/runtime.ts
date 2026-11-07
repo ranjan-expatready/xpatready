@@ -7,7 +7,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
-import { ConfirmSection, fillsText, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
@@ -29,6 +29,9 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   return r.data;
 }
 /** A rule refuses the request (nobody else changed anything): 409 "Not possible now" (break r1d-none-apply m4). */
+/** Break M2 on #1246: blank in any shape: a string of spaces only (any Unicode space), an empty list or group, or one
+ *  holding only blanks. */
+const isBlank = (v: unknown): boolean => v === null || v === undefined || (typeof v === "string" && !v.trim()) || (Array.isArray(v) && v.every(isBlank)) || (typeof v === "object" && !Array.isArray(v) && Object.values(v as object).every(isBlank));
 const refused = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/not-possible", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
 const conflict = (detail: string, extra: Record<string, unknown> = {}): never => { throw new HttpException({ type: "https://expatready.local/problems/stale-answer", title: "Changed by someone else", status: 409, detail, ...extra }, HttpStatus.CONFLICT); };
 const fieldError = (field: string, message: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: message, errors: [{ field, message }] }, HttpStatus.BAD_REQUEST); };
@@ -371,6 +374,9 @@ export class Runtime {
     // C6.18 (P-244): staff may record a background answer (by phone or in person): it is marked "Officer" (its channel,
     // who and when) and waits for the client to re-confirm it before signing. A blank is never saved (PutAnswer).
     const recordedForClient = officer && this.backgroundOf(c).has(fieldKey);
+    // Break M2 on #1246: a blank in any shape (spaces, an empty list or group) is no answer to a background question,
+    // whoever gives it: it is refused, never saved or re-confirmed (P-244: a blank is never defaulted).
+    if (this.backgroundOf(c).has(fieldKey) && isBlank(b.value)) fail("Give an answer: a background question is never saved blank (spaces or an empty list are blank).", HttpStatus.BAD_REQUEST);
     const newId = randomUUID();
     try {
       await this.db.$transaction(async (tx) => {
@@ -398,9 +404,10 @@ export class Runtime {
    *  the version they were shown: a new version of the same value, the client's own from now on, that still names the
    *  officer's answer (who recorded it and when stays visible). Only the client does this; staff never do it for them.
    *  To change the value instead, the client answers the question again (their own answer replaces the officer's). */
-  async reconfirm(actor: Actor, caseId: string, answerId: string) {
+  async reconfirm(actor: Actor, caseId: string, answerId: string, body: unknown = {}) {
     if (isOfficer(actor)) fail("Only the client re-confirms an answer their case officer recorded; staff cannot do it for them.", HttpStatus.FORBIDDEN);
     const c = await this.reach(actor, caseId, "answer");
+    const b = parse(Reconfirm, body ?? {});
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const row = UUID.test(answerId) ? await this.db.clientCanonicalAnswer.findUnique({ where: { id: answerId } }) : null;
     if (!row || !c.participants.some((p) => p.subjectId === row.subjectId)) fail("No such answer on this case.", HttpStatus.NOT_FOUND);
@@ -409,6 +416,11 @@ export class Runtime {
     const a: Answer | undefined = (await this.state(c)).answers.find((x) => x.id === answerId);
     if (!a?.awaitsClient) refused("Nothing to re-confirm: your case officer did not record this answer for you, or you have already re-confirmed it.");
     if (!isClientField(this.snapshotOf(c), row!.canonicalFieldKey)) fail("The officer enters this fact from a document or record.", HttpStatus.FORBIDDEN);
+    // Break M1 on #1246: what the client has on screen is the officer's answer, or they changed it (then it is saved, as theirs).
+    if (b.value !== undefined && JSON.stringify(b.value) !== JSON.stringify(row!.valueJson)) refused("You changed this answer, so it was not re-confirmed as your case officer's. Press Save to keep your answer.");
+    // Break M2 on #1246: an answer with a problem is never vouched for as it is.
+    const problems = checkValue(this.snapshotOf(c), row!.canonicalFieldKey, row!.valueJson);
+    if (problems.length) refused(`This answer needs a fix first: ${problems.join(" ")} Change it, then save it as your answer.`);
     // The officer's own answer stays the one named (a "Confirm section" version names it in its turn).
     const officerAnswer = (row!.sourceJson as { channel: string; from?: string }).channel === OFFICER_ENTRY ? row!.id : (row!.sourceJson as { from?: string }).from ?? row!.id;
     const id = randomUUID(), at = new Date().toISOString();
@@ -593,6 +605,6 @@ export class RuntimeController {
   @Put("cases/:id/groups/:subject/:group/none-apply") noneApply(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("group") g: string, @Body() b: unknown) { return this.r.noneApply(actorOf(a), id, s, g, b); }
   @Post("cases/:id/groups/:subject/rows") addRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.addRow(actorOf(a), id, s, b); }
   @Delete("cases/:id/groups/:subject/rows/:row") removeRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("row") r: string) { return this.r.removeRow(actorOf(a), id, s, r); }
-  @Post("cases/:id/answers/:answer/reconfirm") reconfirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("answer") x: string) { return this.r.reconfirm(actorOf(a), id, x); }
+  @Post("cases/:id/answers/:answer/reconfirm") reconfirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("answer") x: string, @Body() b: unknown) { return this.r.reconfirm(actorOf(a), id, x, b); }
   @Post("cases/:id/sections/:section/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("section") s: string, @Body() b: unknown) { return this.r.confirmSection(actorOf(a), id, s, b); }
 }

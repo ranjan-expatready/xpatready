@@ -90,6 +90,9 @@ export const NoneApply = z.object({
 export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
+/** C6.18 (P-244): the client re-confirms an answer their case officer recorded; `value` is what the client has on screen
+ *  (break M1 on #1246: a changed answer is saved, never re-confirmed as the officer's). */
+export const Reconfirm = z.object({ value: z.unknown().optional() }).strict();
 export const ConfirmSection = z.object({
   subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
   seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500, "Send at most 500 reviewed answer ids; confirm a long section in parts."),

@@ -67,8 +67,8 @@ await main("C6.18", "Officer entry for background answers; the client re-confirm
 
   // No blank is defaulted.
   const before = sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='${refused.fact}'`);
-  const blanks = await Promise.all([null, ""].map(async (v) => (await call("PUT", `/runtime/cases/${c.id}/answers/${P}/${refused.fact}`, { value: v, expectedId: null }, officer)).status));
-  ok("C6.18-7 fail: an empty or missing background answer is refused (400) and nothing is stored", blanks.every((s) => s === 400) && sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='${refused.fact}'`) === before, blanks);
+  const blanks = await Promise.all([null, "", "   ", [], {}].map(async (v) => (await call("PUT", `/runtime/cases/${c.id}/answers/${P}/${refused.fact}`, { value: v, expectedId: null }, officer)).status));
+  ok("C6.18-7 fail: an empty, missing or blank-in-any-shape background answer (spaces, [], {}) is refused (400) and nothing is stored", blanks.every((s) => s === 400) && sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='${refused.fact}'`) === before, blanks);
   ok("C6.18-8 fail: a background question nobody answered stays unanswered after the officer's Confirm section (no answer is made up)", (await q(officer, "agent", P, refused.fact))?.answer === null);
 
   // Before signing: not confirmed, so the form does not write it and is not ready.

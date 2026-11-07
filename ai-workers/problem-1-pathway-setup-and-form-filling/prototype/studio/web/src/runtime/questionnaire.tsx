@@ -506,7 +506,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   }
   const field = (q: Question, row?: string) => cellAnswer(q, row)?.awaits_client ? (
     <div key={keyOf(q, row)} className="space-y-2">
-      <ReconfirmLine caseId={caseId} q={q} a={cellAnswer(q, row)!} />
+      <ReconfirmLine caseId={caseId} q={q} a={cellAnswer(q, row)!} changed={d.dirty.some((x) => x.q === q && x.row === row)} />
       <QuestionField q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />
     </div>
   ) : <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />;
@@ -576,7 +576,8 @@ function useReconfirm(caseId: string) {
   const [busy, setBusy] = React.useState<string | null>(null);
   async function reconfirm(a: Answer) {
     setBusy(a.id);
-    try { const r = await api<{ message: string }>(`/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, { method: "POST", json: {} }); toast.push({ tone: "ok", text: r.message }); }
+    // Break M1 on #1246: the value the client sees goes with it; a changed answer is refused (it is saved instead).
+    try { const r = await api<{ message: string }>(`/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, { method: "POST", json: { value: a.value } }); toast.push({ tone: "ok", text: r.message }); }
     catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
     setBusy(null);
@@ -585,8 +586,12 @@ function useReconfirm(caseId: string) {
 }
 
 /** C6.18: above a question the case officer answered for the client: who, when, and "This is right" (or change it below). */
-function ReconfirmLine({ caseId, q, a }: { caseId: string; q: Question; a: Answer }) {
+function ReconfirmLine({ caseId, q, a, changed }: { caseId: string; q: Question; a: Answer; changed: boolean }) {
   const { busy, reconfirm } = useReconfirm(caseId);
+  // Break M1 on #1246: once the client changed it on screen, only Save keeps it (theirs); break M2: a problem is fixed first.
+  if (changed || a.problems.length) return (
+    <p className="rounded-lg border border-warn/50 bg-warn/5 px-3 py-2 text-sm" data-reconfirm={q.fact}>{changed ? "You changed what your case officer recorded. Press Save and continue to keep your answer." : `Your case officer recorded an answer that needs a fix: ${a.problems[0]} Answer it below and save.`}</p>
+  );
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warn/50 bg-warn/5 px-3 py-2 text-sm" data-reconfirm={q.fact}>
       <span className="min-w-0 flex-1">Your case officer recorded <b>{shown(q, a.value)}</b> on {a.officer ? when(a.officer.at) : "your behalf"}. Is it right? If not, change it below and save.</span>
@@ -615,7 +620,7 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
               <p className="text-xs text-text-muted">{s.about_label === "The application" ? "For the application" : `About ${inSentence(s.about_label)}`} · recorded by your case officer{a.officer ? ` on ${when(a.officer.at)}` : ""}</p>
             </div>
             <span className="flex gap-2">
-              <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Check aria-hidden />This is right</Button>
+              {a.problems.length ? <span className="max-w-56 text-xs text-text-warn">Needs a fix: {a.problems[0]}</span> : <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Check aria-hidden />This is right</Button>}
               <Button size="sm" variant="ghost" onClick={() => open(i)} aria-label={`Change: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Pencil aria-hidden />Change</Button>
             </span>
           </li>
