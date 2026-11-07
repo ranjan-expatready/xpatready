@@ -21,7 +21,9 @@ export type Outcome = "LIKELY_ELIGIBLE" | "ELIGIBLE_BELOW_CUTOFF" | "POSSIBLY_EL
 export type GateState = "met" | "not_met" | "not_answered";
 export type GateResult = { key: string; label: string; state: GateState; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet: WhenNotMet;
   /** Answered facts not confirmed yet (concept BR-9: they count, and the page marks them "Not confirmed yet"). */
-  unconfirmed: string[] };
+  unconfirmed: string[];
+  /** B124 (P-393), worked out when read: the unconfirmed answers this gate's Met or Not met rests on (restsOn). */
+  restsOn?: string[] };
 /** AG-03 §7 AssessmentProgramResult, plus our `gates` and `judgement` (concept §1 "Our additions"). */
 export type ProgramResult = {
   programKey: string; programLabel: string; outcome: Outcome;
@@ -110,12 +112,49 @@ export function outOfDate(inputs: Input[], now: (fact: string) => unknown, sameR
 /** Today's value of a fact for this person, read the same way a run reads it (for outOfDate). */
 export const nowOf = (known: Known, person: string) => (fact: string) => valueOf(known, fact, person);
 
+/** B124 (P-393; review Major 1 on ca72fa195 and its re-review on 06cc27a24): the unconfirmed answers a gate's Met or
+ *  Not met rests on. An answer `f` is named when some set S of the other unconfirmed answers can be treated as missing
+ *  (as a run treats an unanswered fact) with the gate still reading the same, while S and `f` together change it: so
+ *  `f` matters once S is set aside. An "or" branch met on a confirmed answer, or a false branch of a met "or", decides
+ *  nothing; a passing part of a failed "and" decides nothing; `(A or B) and C` met on three unconfirmed answers rests on
+ *  all three, so confirming C alone never makes the line come back with A and B. Gates read few facts; past
+ *  RESTS_MAX unconfirmed answers every one is named rather than trying every set. */
+export function restsOn(s: Snapshot, known: Known, gate: Gate, person: string, state: GateState, unconfirmed: string[]): string[] {
+  if (!unconfirmed.length || (state !== "met" && state !== "not_met")) return [];
+  const without = (drop: string[]): GateState => {
+    const k = new Map(known) as Known;
+    for (const f of drop) k.delete(kkey(aboutOf(known, f, person), f));
+    const e = evalCondition(s, k, rewriteMissing(gate.condition, (f) => !present(valueOf(k, f, person))), person);
+    return e.applies === true ? "met" : e.applies === false ? "not_met" : "not_answered";
+  };
+  if (without(unconfirmed) === state) return [];
+  if (unconfirmed.length > RESTS_MAX) return unconfirmed;
+  const memo = new Map<string, GateState>();
+  const stateOf = (drop: string[]) => { const k = [...drop].sort().join("|"); if (!memo.has(k)) memo.set(k, without(drop)); return memo.get(k)!; };
+  return unconfirmed.filter((f) => {
+    const others = unconfirmed.filter((x) => x !== f);
+    for (let mask = 0; mask < 1 << others.length; mask++) {
+      const S = others.filter((_, i) => mask & (1 << i));
+      if (stateOf(S) === state && stateOf([...S, f]) !== state) return true;
+    }
+    return false;
+  });
+}
+const RESTS_MAX = 10;
+
 /** BR-9, worked out when read (review minor 6 on 2572b9b0): a fact the run read unconfirmed and that is confirmed now
  *  with the same value is no longer marked "not confirmed yet". Confirm section keeps a run up to date (BR-13), so
  *  the mark must follow it too. The stored row is never changed. */
-export function withUnconfirmedNow(r: ProgramResult, known: Known, person: string): ProgramResult {
-  return { ...r, gates: r.gates.map((g) => ({ ...g, unconfirmed: (g.unconfirmed ?? []).filter((f) => {
-    const k = known.get(kkey(aboutOf(known, f, person), f));
-    return !(k && k.status === "confirmed" && canonical(k.value as never) === canonical(g.values[f] as never));
-  }) })) };
+export function withUnconfirmedNow(r: ProgramResult, known: Known, person: string, rests?: { s: Snapshot; gates: Gate[] } | "none"): ProgramResult {
+  return { ...r, gates: r.gates.map((g) => {
+    const unconfirmed = (g.unconfirmed ?? []).filter((f) => {
+      const k = known.get(kkey(aboutOf(known, f, person), f));
+      return !(k && k.status === "confirmed" && canonical(k.value as never) === canonical(g.values[f] as never));
+    });
+    // B124: what the gate rests on, from the release the run read (same release only); an out-of-date run rests on
+    // nothing here, since its band already says to run again (review minor 1).
+    const gate = rests && rests !== "none" ? rests.gates.find((x) => x.key === g.key) : undefined;
+    const on = rests === "none" ? [] : gate ? restsOn(rests!.s, known, gate, person, g.state, unconfirmed) : undefined;
+    return { ...g, unconfirmed, ...(on ? { restsOn: on } : {}) };
+  }) };
 }
