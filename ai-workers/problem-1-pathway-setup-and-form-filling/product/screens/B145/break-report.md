@@ -96,3 +96,41 @@ Diff `14ef16070..138535ab8` on exact head **138535ab8314306291745478ee5e80575b1a
   * The checkpoint load ran before the cases moved; a load with moved cases present was not run.
 * **m5:** a tab and new-line reason, a wrong content hash, and a revision-1 pin of another combination are all refused. A valid SQL move is still accepted.
 * **m8:** the audit line is now written in the move's transaction (`release-update.ts:166-169`); read in the code, not forced to fail. Not re-tested: round 1 m11 (200 % zoom) and the Demo pill (m6, read in the code only).
+
+## Round 3 (468ea98e5)
+**Setup.** Diff `f583c3e28..468ea98e5`, run in the worktree at exact head **468ea98e57472d5fe7b9d4751996a9b01ed4bcc8**. Own copy on :4449 (database `xr_studio_break_c95r3`, files in `studio/var/isolated-break_c95r3`), started and stopped in one command; database dropped. AI off, US$0.
+
+**Harness notes (not findings).**
+* `isolated.sh` cannot start from this worktree. Its `pg_ctl … status` check runs as the postgres user, who cannot traverse `/tmp/claude-0`. A scratch script ran the same steps without that check: web-fresh, `migrate deploy`, the server, and a trap that drops the database.
+* The worktree's source files were rewritten at 14:51:32 by another session while my first copy ran. That copy served pre-fix code: the review did not wait for the lock, and Fill answered 500 at line 238. All of its results are discarded. Every result below comes from a fresh copy, with the tree equal to HEAD both at start and at the end.
+
+**No Blocker. No Major.**
+
+**Minor**
+* **R3-m1 · A wrong-typed `pin_revision` gets a false message.** `pin_revision: "2"` (text) or `null`, on a case at revision 2, answers 409 "This case moved to another release after you opened the filing". The case did not move. A missing `pin_revision` correctly gets 400 (`readiness.ts:57-58`). Reachable by direct API calls only.
+* **R3-m2 · A review is not idempotent.** Four simultaneous `POST /runtime/filings/:id/review` calls with the same `pin_revision` and hash all answer 200 and write 4 review rows and 4 audit lines. They are serialized under the lock and none is wrong, but nothing dedupes them. This existed before this diff.
+
+**Held: (a) the review under the lock**
+* **Lock wait:** while the case row was held for 6 s, the review waited 5.5 s and then answered 200. Fill now answers a worded **503** after its 5 s timeout (R2-m1 fixed). A review held for 18 s gets the worded **503** after 15 s.
+* **Review, then move, then review, all queued on the lock:**
+  * The first review is 200 (reviewed at 14:58:44.716, before the pin at .734).
+  * The move is 200, and it withdraws that first review ("CRITICAL: The case moved to Release 7…").
+  * The second review is **409** "moved … while you reviewed".
+* **Move first, then a review:** the review gets 409 (round 2 pattern, re-checked here).
+* **Body checks on a moved case:** without `pin_revision` → 400; with 3 → 409.
+* **Fill, review, record and move queued on one lock:** Fill 202, review 200, record 200, move 409 "recorded". No deadlock, no 500, nothing left waiting.
+* **Parallel reads:** 6 Prepare GETs and 2 release-update GETs alongside a move, then 4 Prepare GETs alongside 2 reviews: all 200, the move made revision 2, and "deadlock" appears 0 times in the log.
+
+**Held: (b) every read route on revision 2**
+Checked on F (moved 1→3, revision 2 on Release 7) and on B, whose revision 2 was inserted before revision 1 (ctid 0,6 before 0,7, triggers disabled and then re-enabled).
+* **Case and prepare:** the case reads `release_version 3`, `revision 2` (Release 7). Prepare reads 3 with `pin_revision 2`, and IMM 5645 is there with no IMM 5707.
+* **Release-specific content:** the checklist reads 3, filings read 3, forms list IMM 5645, and the questionnaire asks release 2's new "The person's full name" question for all four people.
+* **Routes that answer the same on either release:** team, findings and filing-record answer 200. Sign steps for IMM 5476 answer 200 (`person`, `representative`). The employer link answers 409 "Not offered", as it does on every release.
+* **Assessment:** a new assessment is run on release 3, on both F and B.
+* **Release-update:** shows `last_move` from Release 6 to 7 on B.
+* **Where-used** (`change-sets/check`): open cases are release 2 → 1 case and release 3 → 2 cases (F and B).
+* **Kept by:** the query counts only the newest pin per case: release 1 → 0 cases, 2 → 1, 3 → 2. The configured library has no older edition, so I checked the query, not its words.
+
+**Held: (c) the type check and rule-only warnings**
+* **Application-level type check:** release 4 (author's routes) makes `case.visit_contact_name` a date. F's list then shows `refused: type_mismatch` "The application's answer to "Name of a person or institution to be visited in Canada" does not fit the new release (it expects a date)". POST → 409, still revision 2.
+* **Rule-only touched-filing warning:** checked in the engine only (`tests/check_c95_release_update.ts` 34/34). It warns where who needs a form changes, and not where it stays the same. I made no rule-only release by the author's routes.

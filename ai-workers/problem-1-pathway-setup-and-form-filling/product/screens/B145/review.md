@@ -81,3 +81,52 @@ Diff-only re-review of `git diff 14ef16070..138535ab8` (the last round allowed, 
 * **Journey (re-walk):** error recovery ½ → 1 (the conflict recovers and the screen is consistent); the other criteria are unchanged. **8.5/10, pass.** D5 Stability and D11 Feedback go 3 → 4.
 
 **Verdict: Approve** on `138535ab8314306291745478ee5e80575b1ae3e8`: no open Blocker or Major. Open Minors: r1-r3, and round 1's m6 and the rest of m8, accepted with reasons in build-notes.
+
+## Fresh diff-only review of f583c3e28..468ea98e5
+A reviewer that did not build or review this item before. Scope: `git diff f583c3e28..468ea98e5` only (Devin's three findings on #1252, R2-m1, Lead 32). **Exact head: `468ea98e57472d5fe7b9d4751996a9b01ed4bcc8`**. Copy `rev2_c95` on :4448 only, started and stopped in one command each run (trap), never :4400. AI off, US$0.
+* **Harness:** `isolated.sh` stops at its `pg_ctl … status` check here, because the postgres user cannot traverse `/tmp/claude-0`. It ran unchanged otherwise: its text was read with only that path resolved, and `$0` was the real script. Disclosure: for the fail-first run I put the 8 app files back to f583c3e28 in this worktree for about 4 minutes (from about 14:51), then restored them (`git checkout --`). The breaker, working in the same tree, saw that (break-report round 3) and threw out its run. `break-report.md` is modified in the tree by that session; I did not touch it.
+* **Runs:**
+  * Pack `C9.5.test.ts 4448 xr_studio_rev2_c95` on HEAD: **48/48, exit 0**, four times.
+  * Engine `tests/check_c95_release_update.ts`: **34/34**.
+  * Type check (`product/tools/typecheck.mjs`): no new errors.
+  * `graph.mjs --check`: exit 0, and no gap names a C9.5 route or module.
+* **Fail-first, re-done:**
+  * HEAD's tests on f583c3e28's app and engine code give **44/48, exit 1**. The four FAILs are exactly -11b (the move answered 200), -8d (200), -8e (200) and the setup step that depends on -11b.
+  * On the old engine the engine test is **33/34**, and the FAIL is BR-8 "rule-only change touches".
+  * So each new test fails without its fix.
+
+**Fixes: correct and complete**
+* **1 (`release-context.ts:42-46`, `release-update.ts:124-127`):** once-per-case answers now count, people's answers first. `asked` and the panel's `refused` read the same `caseInputs`, so the GET and the move agree. J1 on screen: "Can't move yet: The application's answer to "Relationship of …" does not fit the new release (it expects a date)", with Move disabled.
+* **2 (`readiness.ts:57`, `:85-95`):** the review and its audit line are in one transaction under `runtime_case FOR UPDATE`, and the newest revision is re-read there. A case still on revision 1 that is moved meanwhile is also refused, even when no `pin_revision` was sent.
+  * **Deadlock check:** every writer that takes this lock takes it first: prepare (`case-prepare.ts:222`, NO KEY UPDATE), the move (`release-update.ts:156`), Fill (`fill-case.ts:242`), split, channel and entered. The review then takes only a KEY SHARE on `filing`, through the foreign key. The only `filing FOR UPDATE` holder, pass (`readiness.ts:115`), never asks for the case row. So there is no cycle.
+  * The breaker's queued Fill + review + record + move run had no deadlock. Their timestamps (review .716 < pin .734) show the times are taken under the lock.
+* **3 (`engine/runtime/release-update.ts:185-191`):** a rule-only form change touches a filing only when it changes whether the form applies, read per person under each release. The words are de-duplicated (`:203`). `effectsOf` and the prepare warning read the same `touchedFilings`.
+* **R2-m1 (`busy.ts:25`, `fill-case.ts:240`):**
+  * J5: Fill held 17 s answers 503 "being changed by someone else", and no copy is made.
+  * J6: a review held 17 s also answers a worded 503.
+* **Lead 32:** my grep of api/src, engine, web/src and tools for packWorkPin, pack_work_pin and pins finds every app read either on `reach()` (`runtime.ts:69`, revision desc, `pins[0]`) or ordered by revision. `where-used.ts:241` reads ascending and the last one wins. `fill-case.ts:287` finds the release by the copy's id on purpose. `form-library.ts:494` is fixed. web/src reads no pins.
+* **Tests:** no existing assertion is weakened.
+  * Every changed SQL read only narrows to the newest revision (C6.4, C6.11, C7.7, s5, vv-checklist, vv-prepare-store, qa-am-s5, qa-r1a, c9-waiting, r1a, vv-filings). The qa script moved from oldest to newest, which is the same row on a one-pin case.
+  * C9.5:147 adds `pin_revision`, which the new 400 needs. `sampleRelease` `typeOf` accepts a list, and the old form still works.
+  * The only screenshots in the diff are B145's three.
+
+**Blockers:** none. **Majors:** none.
+
+**Minors (Should, none blocking)**
+* **f1 · The pack step's title says more than it checks.** C9.5-6 (Lead 32, `C9.5.test.ts:115-118`) checks the revision or version on 4 routes. For /forms, /assessments, /team and /questionnaire it checks only status 200, and for /employer-cases only a 409. The step passes on f583c3e28 too: it is a regression guard, not a fail-first test. Narrow the title, or assert a release-specific item on each route.
+* **f2 · Two test pin reads were missed.** `acceptance/C6.12.test.ts:26` (`limit 1`, any revision) and `tests/check_vv_prepare_store_api.ts:66` still read every revision. This contradicts build-notes "Pin reads in tests and packs now filter to the newest revision". Both are on unmoved cases today. Also, `acceptance/lib/m3.ts:384` (`readyToFile`) sends no `pin_revision`, so it now gets 400 on any moved case.
+* **f3 · No pack test covers the new 503s.** No test fails if `busyWords` is removed from `fill-case.ts:240` or `readiness.ts:85`. My J5 and J6 show both work.
+* **f4 · The fail-first count mixes in two test defects.** Build-notes give "41/47" for aa1f378b9's tests. That count includes two defects the fix commit then changed: -6 did not allow the employer-cases 409, and the child's re-review was missing. On HEAD's tests the honest number is 44/48 (above). Record it.
+* **f5 · A wrong-typed `pin_revision` gets a false message (breaker R3-m1).** `readiness.ts:58` answers a text or null `pin_revision` with the 409 "moved to another release", although the case did not move. A 400 field error would be right. API only; the screen always sends the number.
+
+**Journey (reviewer role, diff-scoped; script in my scratchpad, nothing committed):** J1-J6 replayed twice. The first J2/J3 run waited on the panel, not its rows, which was my script's fault; after that fix, **15/15**.
+* **J1 (fix 1):** the officer opens the panel. It is refused, naming the application's answer: 489 ms, axe 0 violations, no sideways scroll at 1024 and 400 px.
+* **J2:** the representative reviews a moved case (revision 2), keyboard only. The toast reads "Reviewed by …", one row is added, and the audit line has the same xmin.
+* **J3:** the screen is read, the case is moved, then Confirm is pressed. The answer is "This case moved to another release after you opened the filing: nothing was recorded. Reload…". After Reload, the review goes through.
+* **J4:** a case officer's review gets 403.
+* **J5 and J6:** the worded 503s.
+* **No console errors.**
+
+Score: task 1 · next step 1 · plain words ½ (f5; the refused box says "Nothing was changed" twice) · feedback 1 · correct data 1 · recovery 1 · accessibility and sizes ½ (200 % zoom and the J3 refusal state not axe-scanned this round) · speed 1 (readiness 315 ms) · visual 1 · trust 1 (Demo release pill) → **9/10, pass**. D1-D20 stay as in round 2. D5 Stability holds at 4: the review race is closed. Not checked: a real screen reader, an intended user's walk (D17/D20), and the full CI suite.
+
+**Verdict: Approve** on `468ea98e57472d5fe7b9d4751996a9b01ed4bcc8`: no open Blocker or Major. Minors f1-f5 can follow, or the tech lead can accept them.
