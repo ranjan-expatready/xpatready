@@ -7,7 +7,7 @@
 set -u
 . "$(dirname "$0")/guard-test-lib.sh"
 command -v zsh >/dev/null || { echo "zsh is missing; nothing was checked"; exit 2; }
-T=$(mktemp -d); F="$T/fake"; mkdir -p "$F/bin" "$F/listen" "$F/db"
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; F="$T/fake"; mkdir -p "$F/bin" "$F/listen" "$F/db"
 cleanup() { for f in "$F"/listen/*; do [ -f "$f" ] && kill "$(cat "$f")" 2>/dev/null; done; pkill -f "isolated-ttl.*$T" 2>/dev/null; rm -rf "$T"; }
 trap cleanup EXIT
 SRC="$TOOLS/../../prototype/studio"

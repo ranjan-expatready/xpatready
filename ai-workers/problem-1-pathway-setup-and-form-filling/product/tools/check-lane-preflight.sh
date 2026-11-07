@@ -6,7 +6,7 @@
 set -u
 . "$(dirname "$0")/guard-test-lib.sh"
 command -v jq >/dev/null || { echo "jq is missing; nothing was checked"; exit 2; }
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT; mkdir "$T/bin"
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; trap 'rm -rf "$T"' EXIT; mkdir "$T/bin"
 printf '#!/bin/sh\necho "Filesystem 1024-blocks Used Available Capacity Mounted"\necho "/dev/disk3s1 990000000 1 $FAKE_KB 1%% /"\n' > "$T/bin/df"
 printf '#!/bin/sh\necho "{ $FAKE_LOAD 9.00 8.00 }"\n' > "$T/bin/sysctl"
 printf '#!/bin/sh\nfor p in $FAKE_PORTS; do echo "node 1$p u 20u IPv4 0x1 0t0 TCP 127.0.0.1:$p (LISTEN)"; done\n' > "$T/bin/lsof"
