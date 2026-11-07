@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { relativeOf } from "../../engine/runtime/relatives.ts";
+import { parentWord, relativeLabel, relativeOf } from "../../engine/runtime/relatives.ts";
 import { runTransform } from "../../../p5/transforms.ts";
 import { agent, answer, call, CLIENT, copyBytes, fillEverything, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo } from "../../acceptance/lib/m3.ts";
 
@@ -40,6 +40,9 @@ await main("B128", "IMM 5645's parents are asked, stored on their own, waited fo
   // ---- The rule, pure: which relatives a case asks one by one. ----
   ok("B128-1 pass: a parent's key names the person and the relation (`<person>/parent_1`, `/parent_2`)", JSON.stringify([relativeOf("p1/parent_1"), relativeOf("p1/parent_2")]) === JSON.stringify([{ owner: "p1", relation: "parent_1" }, { owner: "p1", relation: "parent_2" }]));
   ok("B128-2 fail: a person, the application, the representative, a sibling (a list), a third part or an empty person are not a relative asked one by one", ["p1", "case", "representative", "p1/sibling", "p1/parent_1/x", "/parent_1", "p1/parent_3"].every((k) => relativeOf(k) === null));
+  // Review Major 1 (#1256), pure: a parent is named by the boxes their forms write them into, never by a constant.
+  ok("B128-2c pass: boxes named Mother, or a mother's field, name the mother; Father, or a father's field, the father", parentWord(["F[0].page1[0].SectionA[0].Mother[0].MotherName[0]", "F[0].page1[0].SectionA[0].Mother[0].ChildMStatus[0]"]) === "mother" && parentWord(["G[0].#subform[0].page1[0].fathersGivenName[0]"]) === "father" && relativeLabel("Sample Client F", "parent_1", ["x.Mother[0].MotherDOB[0]"]) === "Sample Client F's mother");
+  ok("B128-2d fail: boxes that say only Parent1, or name both, or a grandmother, name no parent: first or second parent then", parentWord(["F[0].SectionA[0].Parent1[0].FamilyName[0]"]) === null && parentWord(["a.Mother[0].X[0]", "b.fathersGivenName[0]"]) === null && parentWord(["a.Grandmother[0]"]) === null && parentWord([]) === null && relativeLabel("Sample Client F", "parent_2", []) === "Sample Client F's second parent");
   // The filler, pure: the map's spelling of a Yes and a No tick box, and of a one-line address.
   const run = (t: string, v: unknown) => { const o = runTransform(t, v, {}); return o.ok ? o.value : "hand" in o ? "by hand" : "blank"; };
   ok("B128-2a pass: \"checked_if_true\" ticks on Yes, \"checked_if_false\" on No; a one-line address is written", [run("derived:checked_if_true:1/0", true), run("derived:checked_if_true:1/0", false), run("derived:checked_if_false:1/0", false), run("derived:checked_if_false:1/0", true), run("address_single_line_text", { street_name: "Sample Road", city: "Sample City", country: "Canada" })].join("|") === "1|0|1|0|Sample Road, Sample City, Canada",
@@ -58,6 +61,8 @@ await main("B128", "IMM 5645's parents are asked, stored on their own, waited fo
   let secs = await sectionsOf(c.id);
   const asked = (key: string) => [...new Set(secs.filter((s) => s.subjectId === key).flatMap((s) => s.questions).filter((q) => q.fills.some((x) => x.form === FORM && x.subject === P)).map((q) => q.fact))].sort();
   ok("B128-4 pass: every fact IMM 5645's map reads about each parent is a question on that parent's own key, filling the principal's IMM 5645", want.length >= 7 && JSON.stringify(asked(M)) === JSON.stringify(want) && JSON.stringify(asked(D)) === JSON.stringify(mapped("parent_2")), { want, parent_1: asked(M), parent_2: asked(D) });
+  const labelOf = (key: string) => [...new Set(secs.filter((x) => x.subjectId === key).map((x) => (x as S & { about_label?: string }).about_label))];
+  ok("B128-4a pass (review Major 1): the first parent is named the mother and the second the father, as IMM 5645's boxes name them (Mother, Father)", JSON.stringify(labelOf(M)) === JSON.stringify(["Sample Client F's mother"]) && JSON.stringify(labelOf(D)) === JSON.stringify(["Sample Client F's father"]), [labelOf(M), labelOf(D)]);
   ok("B128-5 fail: no sibling question (a list, not asked yet) and no relative's question on the application", !secs.some((s) => s.subjectId.endsWith("/sibling") || s.subjectId.startsWith(`${c.caseSubject}/`)), [...new Set(secs.map((s) => s.subjectId))]);
 
   const forms = async () => ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body?.forms ?? []) as { form: string; subject?: string; readiness: { ready: boolean; missing: { fact: string; about: string }[] } }[];
@@ -85,15 +90,19 @@ await main("B128", "IMM 5645's parents are asked, stored on their own, waited fo
   const no1 = await answer(c.id, `${c.caseSubject}/parent_1`, "person.full_name", "X", officer);
   const no2 = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/sibling/person.full_name`, { value: "X", expectedId: null }, officer);
   const no3 = await call("PUT", `/runtime/cases/${c.id}/answers/00000000-0000-4000-8000-000000000000/parent_1/person.full_name`, { value: "X", expectedId: null }, officer);
+  const no5 = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/parent_1/person.passport_number`, { value: "X", expectedId: null }, officer);
   const no4 = await call("POST", `/runtime/cases/${c.id}/sections/personal_details/confirm`, { subjectId: `${P}/sibling`, seen: [] }, officer);
   ok("B128-8 fail: the application's parent, a sibling and a person not on the case are refused (404, in words); a confirm for a sibling is a field error (400)", no1.status === 404 && no2.status === 404 && no3.status === 404 && no4.status === 400 && [no1, no2, no3].every((r) => /not on this case|No such/.test(r.body?.detail ?? "")), [no1, no2, no3, no4].map((r) => [r.status, r.body?.detail]));
+  ok("B128-8a fail (review m2): a fact no form of the release asks about a parent (a passport number) is refused (404, in words), nothing stored", no5.status === 404 && /asks this about that parent/.test(no5.body?.detail ?? "") && sql(`select count(*) from client_canonical_answer a join answer_subject s on s.id = a.subject_id where s.subject_kind = 'parent_1' and a.canonical_field_key = 'person.passport_number'`) === "0", [no5.status, no5.body?.detail]);
 
   // ---- Waited for: while a parent fact is new and not confirmed, IMM 5645 is not ready and never says every fact is confirmed. ----
   let rd = (await forms()).find((x) => x.form === FORM)?.readiness;
   const item = itemsOf((await prepare(c.id, officer)).p, P, FORM)[0];
   secs = await sectionsOf(c.id);
   const unconfirmed = secs.filter((s) => s.subjectId === M || s.subjectId === D).flatMap((s) => s.questions).filter((q) => !q.answer?.confirmed).map((q) => `${q.about_label}: ${q.fact}`);
-  ok("B128-9 pass: IMM 5645 waits for the parents' facts still to confirm (named by parent), not \"Every fact it reads is confirmed\"", rd?.ready === false && unconfirmed.length === 4 && (rd?.missing ?? []).every((m) => /parent [12]/.test(m.about)) && (rd?.missing ?? []).length === unconfirmed.length && !/every fact it reads is confirmed/i.test(item?.reason ?? ""), { missing: rd?.missing, unconfirmed, reason: item?.reason });
+  const whyWaits = secs.filter((s) => s.subjectId === M || s.subjectId === D).flatMap((s) => s.questions).filter((q) => q.answer && !q.answer.confirmed).map((q) => (q.answer as { why?: string }).why);
+  ok("B128-9a pass (review m6): a parent's answer waits for the officer, in those words (a parent has no link of their own)", whyWaits.length === 4 && whyWaits.every((w) => /Confirm section.*a parent has no link of their own/.test(w ?? "")), whyWaits);
+  ok("B128-9 pass: IMM 5645 waits for the parents' facts still to confirm (named by parent), not \"Every fact it reads is confirmed\"", rd?.ready === false && unconfirmed.length === 4 && (rd?.missing ?? []).every((m) => /'s (mother|father)$/.test(m.about)) && (rd?.missing ?? []).length === unconfirmed.length && !/every fact it reads is confirmed/i.test(item?.reason ?? ""), { missing: rd?.missing, unconfirmed, reason: item?.reason });
 
   // ---- Confirm section on a parent's key: an unseen answer is refused, a seen one is confirmed. ----
   const parentSecs = secs.filter((s) => s.subjectId === M || s.subjectId === D);

@@ -90,9 +90,13 @@ export const NoneApply = z.object({
 export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
+/** B128 (QA-153): the relatives a case asks one by one (resolver R4's keys `<person>/parent_1`, `/parent_2`; a sibling is
+ *  a list and is not asked yet). engine/runtime/relatives.ts reads them; Confirm section accepts them. */
+export const ASKED_RELATIONS = ["parent_1", "parent_2"] as const;
+const SUBJECT_KEY = new RegExp(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(/(${ASKED_RELATIONS.join("|")}))?$`, "i");
 export const ConfirmSection = z.object({
-  // B128 (QA-153): a person on the case, or a parent a form describes (`<person>/parent_1`, engine/runtime/relatives.ts).
-  subjectId: z.string({ message: "Choose whose section to confirm." }).regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/parent_[12])?$/i, "Choose whose section to confirm."),
+  // B128 (QA-153): a person on the case, or a parent a form describes (`<person>/parent_1`).
+  subjectId: z.string({ message: "Choose whose section to confirm." }).regex(SUBJECT_KEY, "Choose whose section to confirm."),
   seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500, "Send at most 500 reviewed answer ids; confirm a long section in parts."),
 });
 

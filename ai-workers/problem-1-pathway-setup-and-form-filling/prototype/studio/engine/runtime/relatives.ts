@@ -7,9 +7,8 @@
 // brother or sister, and a list needs its own "none apply" and rows: not asked here yet (B128's PR, question for the
 // tech lead). Which facts are asked, in which section, with which words, is the release's (its placements and field
 // maps): nothing here names a form or a combination (P-319).
-
-/** The relations a case asks one by one (resolver R4's relative keys that stand for one person). */
-export const ASKED_RELATIONS = ["parent_1", "parent_2"] as const;
+import { ASKED_RELATIONS } from "../../contracts/runtime.ts";
+export { ASKED_RELATIONS };
 export type Relation = (typeof ASKED_RELATIONS)[number];
 
 /** The person and the relation a relative's key names (`<person>/parent_1`), or null for anything else: a person, the
@@ -22,3 +21,15 @@ export function relativeOf(about: string): { owner: string; relation: Relation }
 export const isAskedRelative = (about: string) => relativeOf(about) !== null;
 /** The key a relative's answers are read under, as the resolver names it. */
 export const relativeKey = (owner: string, relation: Relation) => `${owner}/${relation}`;
+
+/** Review Major 1 (#1256): which parent a relative is, in the words of the boxes the person's forms write it into (the
+ *  form fields' own names in the release's field maps, IRCC's words): "mother" or "father" when every box that names one
+ *  names the same, else null. Never a constant: one form's first parent is the mother, another form's the father, and a
+ *  form can say only "parent 1". A word inside another ("grandmother") does not count. */
+export function parentWord(boxPaths: string[]): "mother" | "father" | null {
+  const named = new Set(boxPaths.flatMap((p) => [...p.matchAll(/(?:^|[^a-z])(mother|father)/gi)].map((m) => m[1].toLowerCase() as "mother" | "father")));
+  return named.size === 1 ? [...named][0] : null;
+}
+const ORDINAL: Record<Relation, string> = { parent_1: "first parent", parent_2: "second parent" };
+/** A relative named for people: "Sample Client W's mother", else "Sample Client W's first parent". */
+export const relativeLabel = (ownerLabel: string, relation: Relation, boxPaths: string[]) => `${ownerLabel}'s ${parentWord(boxPaths) ?? ORDINAL[relation]}`;

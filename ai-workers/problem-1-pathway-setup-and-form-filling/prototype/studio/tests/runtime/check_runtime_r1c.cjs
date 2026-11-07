@@ -89,9 +89,10 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("officer fail: a second spouse is refused with the release's limit, in the dialog", await shows(o.getByText(/at most 1 spouse/i).first()));
   await o.getByRole("button", { name: "Cancel" }).click();
   // B128 (QA-153): this release's family form (IMM 5707, for every applicant) reads each person's two parents, so each
-  // person also has a tab for each parent (a relative the form describes, never a person on the case).
+  // person also has a tab for each parent (a relative the form describes, never a person on the case). Its boxes say
+  // "Parent1" and "Parent2", not mother or father, so the tabs say first and second parent (review Major 1 on #1256).
   const tabNames = (await o.getByRole("tab").allInnerTexts()).map((t) => t.split("\n")[0].trim()).sort();
-  const wantTabs = ["The application", ...["Sample Applicant C", "Sample Spouse C", "Sample Child C"].flatMap((n) => [n, `${n}: parent 1`, `${n}: parent 2`])].sort();
+  const wantTabs = ["The application", ...["Sample Applicant C", "Sample Spouse C", "Sample Child C"].flatMap((n) => [n, `${n}'s first parent`, `${n}'s second parent`])].sort();
   step("officer pass: spouse and child are on the case and get their own tabs of sections (and a tab for each person's parents)", await shows(o.getByRole("tab").nth(3)) && JSON.stringify(tabNames) === JSON.stringify(wantTabs) && await shows(o.locator("section", { hasText: "People on this case" }).getByText("Sample Child C")), tabNames);
   await state(o, "officer-case-new", [1440, 1024]);
 
@@ -232,7 +233,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // ── 3. The officer reviews in the Agent view (a household of four children, the release's limit: review M6)
   for (const n of [2, 3, 4]) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child C${n} with a rather long name` }, "user-O");
   await o.reload(); await idle(o);
-  await o.getByRole("tab", { name: /^Sample Spouse C(?!:)/ }).click(); 
+  await o.getByRole("tab", { name: /^Sample Spouse C(?!'s )/ }).click(); 
   const spouseMarital = o.locator("section", { has: o.getByRole("heading", { name: "Personal details" }) }).filter({ hasText: "for Sample Spouse C" });
   step("agent: the client's answer shows with its source and the P-78 state", await shows(spouseMarital.getByText("Married", { exact: true })) && await shows(spouseMarital.getByText("Answered by the principal")) && await shows(spouseMarital.getByText(/questionnaire · Client A/)));
   await o.getByRole("tab", { name: /^The application/ }).click(); 
@@ -271,7 +272,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
   step("agent conflict pass (review M3): saving again from the newer answer works", await gone(o.getByRole("dialog")) && (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections.flatMap((s) => s.questions).find((q) => q.fact === "case.funds_available_cad").answer.value === "7000");
   // Officer-only fact: the passport number, typed from the document
-  await o.getByRole("tab", { name: /^Sample Applicant C(?!:)/ }).click(); 
+  await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click(); 
   const travel = o.locator("section").filter({ has: o.getByRole("heading", { name: "Travel and identity documents" }) }).filter({ hasText: "for Sample Applicant C" });
   await travel.getByRole("button", { name: /^Add Number of the passport/ }).first().click();
   await o.getByRole("dialog").getByRole("textbox").fill("SAMPLE-C-123");
@@ -315,7 +316,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // says it for the principal's education in the Agent view, then confirms the section.
   const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
-  await o.getByRole("tab", { name: /^Sample Applicant C(?!:)/ }).click();
+  await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click();
   await edu.getByRole("button", { name: "None apply" }).click();
   step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));
   await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
@@ -409,7 +410,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const inPage = [];
   const personTab = (p) => async () => {
     await p.evaluate(() => { window.__tab0 = null; addEventListener("pointerdown", () => { window.__tab0 = performance.now(); }, { capture: true, once: true }); });
-    await p.getByRole("tab", { name: /^Sample Applicant C(?!:)/ }).click(); await p.getByRole("heading", { name: "Travel and identity documents" }).waitFor();
+    await p.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click(); await p.getByRole("heading", { name: "Travel and identity documents" }).waitFor();
     inPage.push(await p.evaluate(() => (window.__tab0 === null ? null : Math.round(performance.now() - window.__tab0))));
   };
   const backToApplication = (p) => async () => { await p.getByRole("tab", { name: /^The application/ }).click(); await p.getByRole("heading", { name: "Application details" }).waitFor(); };

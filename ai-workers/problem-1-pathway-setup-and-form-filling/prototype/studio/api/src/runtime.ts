@@ -84,7 +84,8 @@ export class Runtime {
   /** B128 (QA-153): the relatives' answer subjects of this case (a parent a form describes, never a person on it), each
    *  with the key the engine reads it under (`<person>/parent_1`). A relative's subject hangs on the party of the person
    *  whose relative it is, as the application's own subject hangs on the principal's (AnswerSubject: no migration); one
-   *  per party and relation, the oldest if a race ever made two. */
+   *  per party and relation, made under a lock (subjectFor). Should two ever exist, every read takes the same one (the
+   *  lowest id), so answers are never split between them; a database check needs a migration (the PR's question). */
   async relativesOf(c: Reached): Promise<{ id: string; key: string }[]> {
     const owner = new Map(c.participants.filter((p) => p.role !== "case").map((p) => [p.subject.partyId, p.subjectId]));
     if (!owner.size) return [];
@@ -95,15 +96,16 @@ export class Runtime {
   }
 
   /** B128: who an answer about `subjectId` belongs to on this case, and the stored subject it is kept on. A relative's
-   *  key names a person on the case (never the application) and a relation the release's forms read; its subject is
-   *  made on its first answer (`create`), under a lock, so two first answers never make two. */
-  private async subjectFor(c: Reached, subjectId: string, create: boolean): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
+   *  key names a person on the case (never the application) and a relation the release's forms read (with `fact`, that
+   *  fact about that relation: review m2, a fact no form reads about a parent is never stored); its subject is made on
+   *  its first answer (`create`), under a lock, so two first answers never make two. */
+  private async subjectFor(c: Reached, subjectId: string, create: boolean, fact?: string): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
     const rel = relativeOf(subjectId);
     const who = c.participants.find((p) => p.subjectId === (rel ? rel.owner : subjectId) && (!rel || p.role !== "case"));
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     if (!rel) return { who: who!, stored: subjectId };
-    const read = (this.snapshotOf(c).field_maps as { entries: { person?: string | null; outcome?: string }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}`));
-    if (!read) fail("No form of this case's release describes that relative.", HttpStatus.NOT_FOUND);
+    const read = (this.snapshotOf(c).field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}` && (!fact || e.fact === fact)));
+    if (!read) fail(fact ? "No form of this case's release asks this about that parent." : "No form of this case's release describes that relative.", HttpStatus.NOT_FOUND);
     const found = (await this.relativesOf(c)).find((x) => x.key === subjectId);
     if (found || !create) return { who: who!, stored: found?.id ?? null };
     const stored = await this.db.$transaction(async (tx) => {
@@ -367,7 +369,7 @@ export class Runtime {
     // representative of record (C7.7, C6.11), so a save about them is refused in words (never "not on this case").
     if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY);
     // B128: a relative's answer (`<person>/parent_1`) is kept on the relative's own subject, never on the person's.
-    const { who } = await this.subjectFor(c, subjectId, false);
+    const { who } = await this.subjectFor(c, subjectId, false, fieldKey);
     // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed; a client is
     // told the case team sets it (403), staff that the team changes it (422). Only while the case has a representative.
     if (fieldKey === USES_REPRESENTATIVE && who!.role === "case" && await this.db.caseTeamMember.count({ where: { caseId, role: "LEAD_REPRESENTATIVE", endedAt: null } })) {
@@ -389,7 +391,7 @@ export class Runtime {
     const rowKey = b.row ?? null;
     const source = { channel: officer ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() };
     const newId = randomUUID();
-    const stored = subjectId === who!.subjectId ? subjectId : (await this.subjectFor(c, subjectId, true)).stored!;
+    const stored = subjectId === who!.subjectId ? subjectId : (await this.subjectFor(c, subjectId, true, fieldKey)).stored!;
     try {
       await this.db.$transaction(async (tx) => {
         // The row stays live until this answer is saved: a removal at the same moment waits, or wins and this one is refused.

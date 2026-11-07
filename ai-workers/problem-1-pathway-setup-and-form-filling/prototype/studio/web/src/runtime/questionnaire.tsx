@@ -396,7 +396,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
     <div className="mx-auto max-w-xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Client questionnaire</h1>
-        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.</p>
+        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application{view.sections.some((x) => x.subjectId.includes("/")) ? ", and for the parents its forms ask about" : ""}. Each answer is saved when you press Save; you can stop and come back at any time.</p>
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4">
         <p className="text-sm font-medium">{done} of {parts.length} parts done</p>
