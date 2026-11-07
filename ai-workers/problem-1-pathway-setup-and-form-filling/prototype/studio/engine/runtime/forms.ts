@@ -10,6 +10,7 @@ import { groupLabel, type QuestionnaireView, type Readiness } from "../../contra
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -22,7 +23,9 @@ export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
 /** `edition`: read that PDF edition of the form (an answer key's own, break B1); otherwise the edition in use (P-32). */
 export function formCoverage(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, today = new Date(), edition?: string | null) {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
-  const { known } = knownOf(s, people, answers, rows, today);
+  const { known: all } = knownOf(s, people, answers, rows, today);
+  // QA-296: the firm record's facts about the representative fill only a form that names the representative of record.
+  const known = formsNamingRepresentative(s.field_maps).has(form) ? all : new Map([...all].filter(([k, v]) => !firmRecordFact(k, v.source)));
   const cov = render(s, renderPeople, known, { today, ...(edition ? { editions: new Map([[form, edition]]) } : {}) }).coverage.find((c) => c.form === form && c.person === subjectId);
   if (!cov) return null;
   // QA-122 (P-71, P-72): a confirmed answer that fails its checks is never written; its form field is "not written"
