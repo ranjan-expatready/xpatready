@@ -89,7 +89,10 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
         readiness: { ready: false, missing: [{ fact: `applies:${f.form}`, label: `whether ${f.form} applies (${(f.reason ?? "it waits for an answer").replace(/\.$/, "")})`, about: f.person, reason: "not answered" }] }, owesFact: { [`applies:${f.form}`]: "staff" } } satisfies FormItem;
       const label = x.editionOf(f.form, f.channel), until = label ? untilOf.get(label) ?? null : null;
       const facts = x.factsOf(f.form, f.subject);
-      const owesFact: Record<string, Owes> = Object.fromEntries(facts.missing.map((m) => [m.fact, x.owesFact(m.fact, f.subject)]));
+      // B107 (QA-300): who owes a fact is told by the fact's own subject (a fact about the representative is the firm's, never
+      // the client's); a fact missing for two people on one form is the client's if either owes it.
+      const owesFact: Record<string, Owes> = {};
+      for (const m of facts.missing) { const o = x.owesFact(m.fact, m.subject ?? f.subject); owesFact[m.fact] = owesFact[m.fact] === "client" ? "client" : o; }
       // Signed: a hand-signed scan received (C8.1); on Paper, the "sign in pen" step done (C7.7 part 2).
       const signed = f.signature === "HAND_SCANNED" ? x.scanned(f.id) : f.signature === "PEN" ? !!f.steps?.some((s) => s.key === "sign_in_pen" && s.done) : false;
       const who = f.signers ?? []; // never trusted to be there: a line without it reads as "each person who signs it"

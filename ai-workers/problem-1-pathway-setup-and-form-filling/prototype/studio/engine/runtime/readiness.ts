@@ -171,7 +171,8 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   if (!x.reviewed) critical({ code: "representative_review", part: `${before ?? "none"}|${x.factsKey ?? ""}`, owes: "representative", words: x.reviewWithdrawn && before
     ? `${x.reviewWithdrawn}; this filing was reviewed on ${before}, before the move. The representative of record reviews it again.` : before
     ? `The filing changed after it was reviewed on ${before} (or the representative of record changed). The representative of record reviews it again.`
-    : "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
+    // B149 (P-342, P-408): any firm staff may pass this with a reason (P-330 (3)), so the words say what happens.
+    : "The representative of record has not reviewed this filing. Passing it needs a reason, which is kept in the history." });
   if (x.releaseUpdate) warn({ code: "release_update", item: `release|${x.filing}`, part: x.releaseUpdate.key, owes: "staff", words: x.releaseUpdate.words });
   for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });

@@ -211,17 +211,18 @@ ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the r
 // exit 0", three green jobs that tested nothing on the checkpoint. A capability that ran no test on the data asked for is
 // "NOT TESTED": on a pull request a warning (exit 0, never blocked); in a re-test run (nightly.yml: workflow_dispatch or
 // schedule) exit 3 with "NOT TESTED: …" as the first line. A pack that runs on the asked data is unchanged.
+// C11.5 is the example of a capability with no acceptance pack: C3.16 had none on main when B131 landed; #1054 adds it.
 { const PR = { GITHUB_EVENT_NAME: "pull_request" }, RETEST = { GITHUB_EVENT_NAME: "workflow_dispatch" }, CP = { GATE_B_DATA: "checkpoint" };
   const first = (o) => o.out.split("\n")[0];
-  r = run(["--title", "C3.16"], { ...PR, ...CP });
-  ok("B131: no pack on a pull request: exit 0, \"NOT TESTED: C3.16 has no acceptance pack\" and a ::warning:: annotation, never \"Gate B: passed.\" alone", r.code === 0 && /^NOT TESTED: C3\.16 has no acceptance pack$/m.test(r.out) && /^::warning title=Gate B NOT TESTED::C3\.16 has no acceptance pack$/m.test(r.out) && !/^Gate B: passed\.$/m.test(r.out), r);
-  r = run(["--title", "C3.16"], { ...PR, ...CP, GITHUB_EVENT_NAME: "merge_group" });
-  ok("B131: no pack in a merge-queue run: exit 0 with the warning (a merge-queue run is a PR check)", r.code === 0 && /^::warning title=Gate B NOT TESTED::C3\.16/m.test(r.out), r);
-  { const sf = join(T, "summary.md"); writeFileSync(sf, ""); r = run(["--title", "C3.16"], { ...PR, ...CP, GITHUB_STEP_SUMMARY: sf });
-    ok("B131: the NOT TESTED line is in the step summary", /^NOT TESTED: C3\.16 has no acceptance pack$/m.test(readFileSync(sf, "utf8")), readFileSync(sf, "utf8")); }
+  r = run(["--title", "C11.5"], { ...PR, ...CP });
+  ok("B131: no pack on a pull request: exit 0, \"NOT TESTED: C11.5 has no acceptance pack\" and a ::warning:: annotation, never \"Gate B: passed.\" alone", r.code === 0 && /^NOT TESTED: C11\.5 has no acceptance pack$/m.test(r.out) && /^::warning title=Gate B NOT TESTED::C11\.5 has no acceptance pack$/m.test(r.out) && !/^Gate B: passed\.$/m.test(r.out), r);
+  r = run(["--title", "C11.5"], { ...PR, ...CP, GITHUB_EVENT_NAME: "merge_group" });
+  ok("B131: no pack in a merge-queue run: exit 0 with the warning (a merge-queue run is a PR check)", r.code === 0 && /^::warning title=Gate B NOT TESTED::C11\.5/m.test(r.out), r);
+  { const sf = join(T, "summary.md"); writeFileSync(sf, ""); r = run(["--title", "C11.5"], { ...PR, ...CP, GITHUB_STEP_SUMMARY: sf });
+    ok("B131: the NOT TESTED line is in the step summary", /^NOT TESTED: C11\.5 has no acceptance pack$/m.test(readFileSync(sf, "utf8")), readFileSync(sf, "utf8")); }
   for (const ev of ["workflow_dispatch", "schedule"]) {
-    r = run(["--title", "C3.16"], { ...CP, GITHUB_EVENT_NAME: ev });
-    ok(`B131: no pack in a re-test run (${ev}): exit 3 (not 0, 1 or 2), first line "NOT TESTED: C3.16 has no acceptance pack"`, r.code === 3 && first(r) === "NOT TESTED: C3.16 has no acceptance pack" && !/^Gate B: passed\.$/m.test(r.out), r);
+    r = run(["--title", "C11.5"], { ...CP, GITHUB_EVENT_NAME: ev });
+    ok(`B131: no pack in a re-test run (${ev}): exit 3 (not 0, 1 or 2), first line "NOT TESTED: C11.5 has no acceptance pack"`, r.code === 3 && first(r) === "NOT TESTED: C11.5 has no acceptance pack" && !/^Gate B: passed\.$/m.test(r.out), r);
   }
   r = run(["--title", "C6.5"], { ...RETEST, ...CP });
   ok("B131: a no-server pack (C6.5 --engine) in a re-test on the checkpoint: exit 3, \"NOT TESTED on the checkpoint: C6.5 …no demo data…\" first", r.code === 3 && /^NOT TESTED on the checkpoint: C6\.5 C6\.5\.test\.ts runs on no demo data \(its run uses no server\)$/.test(first(r)), r);
@@ -231,10 +232,10 @@ ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the r
   ok("B131: the same no-server pack on a pull request: exit 0 with the NOT TESTED line and the warning", r.code === 0 && /^NOT TESTED on the checkpoint: C6\.5 /m.test(r.out) && /^::warning title=Gate B NOT TESTED::/m.test(r.out), r);
   const a = run(["--title", "C6.9"], { ...RETEST, ...CP }), b = run(["--title", "C6.9"], CP);
   ok("B131: a normal pack on the checkpoint in a re-test is unchanged: exit 0, \"Gate B: passed.\", no NOT TESTED line, the same output as before", a.code === 0 && /^Gate B: passed\.$/m.test(a.out) && !/NOT TESTED|::warning/.test(a.out) && a.out === b.out, [a, b]);
-  r = run(["--title", "C6.9 C3.16"], { ...RETEST, ...CP });
-  ok("B131: one capability tested and one not, in a re-test: exit 3, first line names the untested one", r.code === 3 && first(r) === "NOT TESTED: C3.16 has no acceptance pack" && /packs: C6\.9\.test\.ts$/m.test(r.out), r);
-  r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C3.16, C11.13"], { ...RETEST, ...CP });
-  ok("B131: a refusal still exits 1 when a capability is also NOT TESTED (exits 1 and 2 keep their meaning)", r.code === 1 && /QA-192/.test(r.out) && /^NOT TESTED: C3\.16/m.test(r.out), r);
+  r = run(["--title", "C6.9 C11.5"], { ...RETEST, ...CP });
+  ok("B131: one capability tested and one not, in a re-test: exit 3, first line names the untested one", r.code === 3 && first(r) === "NOT TESTED: C11.5 has no acceptance pack" && /packs: C6\.9\.test\.ts$/m.test(r.out), r);
+  r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.5, C11.13"], { ...RETEST, ...CP });
+  ok("B131: a refusal still exits 1 when a capability is also NOT TESTED (exits 1 and 2 keep their meaning)", r.code === 1 && /QA-192/.test(r.out) && /^NOT TESTED: C11\.5/m.test(r.out), r);
   r = run(["--title", "infra: faster suites"], RETEST);
   ok("B131: naming no capability is still a skip, exit 0, in a re-test run too", r.code === 0 && /names no capability/.test(r.out), r); }
 r = run(["--title", "x", "--bogus"]);

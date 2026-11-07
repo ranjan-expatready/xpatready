@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
+import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
@@ -138,7 +139,7 @@ export function QuestionField({ q, draft, onChange, errors, warnings = [], idBas
   const note = officer ? q.note : null; // a configuration note ("no answer list yet") is for the officer, not the client
   const hint = [q.required ? null : "Optional", note].filter(Boolean).join(" · ");
   const control = { id: idBase, "aria-invalid": invalid || undefined, "aria-describedby": invalid || warnings.length || hint ? noteId : undefined };
-  const label = <>{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span className="font-normal text-text-muted"> (optional)</span>}</>;
+  const label = <>{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span className="font-normal text-text-muted"> (optional)</span>}<ScopeTag q={q} /></>;
   const listId = q.countries ? `${idBase}-countries` : undefined;
   const countryList = q.countries ? <datalist id={listId}>{q.countries.map((c) => <option key={c} value={c} />)}</datalist> : null;
   const notes = (
@@ -405,6 +406,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
           <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{`About ${inSentence(label)}`}</h2>
+          <div className="mb-2"><HouseholdReads view={view} subjectId={id} words={{ who: WHO, when, shown }} /></div>
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
               const st = partState(s, passed, view.checks);
@@ -680,6 +682,7 @@ function AgentView({ view }: { view: View }) {
       <div className="min-w-0 space-y-4">
         <p className="text-[13px] text-text-muted">Click Edit on any answer to change it. A change updates every form that uses it, with a message, and needs the section confirmed again.</p>
         {view.checks.filter((c) => c.subjectId === who && !c.section).map((c) => <Notice key={c.id} tone="warn" title="Check">{c.message}</Notice>)}
+        <HouseholdReads view={view} subjectId={who} words={{ who: WHO, when, shown }} onChange={(to, fact) => { setWho(to); requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById(lineId(to, fact))?.focus())); }} />
         {mine.map((s) => <AgentSection key={`${s.subjectId}|${s.section}`} view={view} s={s} edit={openEdit} />)}
       </div>
     </TabsContent>
@@ -726,7 +729,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     );
     return (
       <div key={keyOf(q, row)} id={lineId(s.subjectId, q.fact, row)} tabIndex={-1} className="grid scroll-mt-4 gap-x-4 gap-y-1 border-t border-border px-4 py-2.5 outline-none first:border-t-0 focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]">
-        <div className="text-[13px] text-text-muted">{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span> (optional)</span>}</div>
+        <div className="text-[13px] text-text-muted">{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span> (optional)</span>}<ScopeTag q={q} /></div>
         <div className="min-w-0 text-sm">
           {a ? (
             <>
