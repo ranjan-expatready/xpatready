@@ -3,7 +3,7 @@
 # an excluded path, a PDF, a secret or a personal name. Called by .githooks/pre-push for every pushed ref
 # and by the CI guard job for each pull request.
 #   push-guard.sh <old>..<new> [...]   check the given commit ranges
-#   push-guard.sh --unpushed <sha>     check every commit on <sha> that is not on any remote branch
+#   push-guard.sh --unpushed <sha> [remote]   check every commit on <sha> not on <remote>'s branches (default origin)
 # Exit 1 and print every violation; exit 0 when the range is clean.
 set -u
 HERE="$(git rev-parse --show-toplevel)"; cd "$HERE" || exit 2
@@ -21,6 +21,11 @@ NAMES_RE='\b(Ranjan|Sanjay|Tanu|Vishrutha|Ayush|Vivek|Ishaan|Tanvi)\b'
 GUARD_REL="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"
 
 bad=0
+# Private temp folder, created up front: if it cannot be made the guard refuses (fail closed). Before 6 Nov it wrote
+# fixed /tmp files; where /tmp was not writable (the Mac's sandbox) every scan silently found nothing and said "clean".
+G_TMP=$(mktemp -d "${TMPDIR:-/tmp}/push-guard.XXXXXX" 2>/dev/null) && [ -d "$G_TMP" ] && [ -w "$G_TMP" ] \
+  || { echo "push guard: REFUSED — cannot create a temp folder under ${TMPDIR:-/tmp}, so nothing could be checked"; exit 1; }
+trap 'rm -rf "$G_TMP"' EXIT
 check_range() {
   local range="$1" commits
   # Intentionally unquoted: $range carries several rev-list args (e.g. "HEAD --not --remotes").
@@ -32,7 +37,7 @@ check_range() {
   local tip pdf_dir manifest_list
   tip=$(echo "$commits" | head -1)
   pdf_dir='ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/'
-  manifest_list="${TMPDIR:-/tmp}/guard-manifests.$$"
+  manifest_list="$G_TMP/manifests"
   git ls-tree -r --name-only "$tip" -- "$pdf_dir" 2>/dev/null | grep '/manifest\.json$' | while read -r m; do
     git show "$tip:$m" 2>/dev/null | grep -oE '"sha256"[[:space:]]*:[[:space:]]*"[0-9a-f]{64}"' | grep -oE '[0-9a-f]{64}'
   done | sort -u > "$manifest_list"
@@ -54,16 +59,20 @@ check_range() {
   done < <(echo "$commits" | while read -r c; do git diff-tree --no-commit-id -r --diff-filter=AMRC --name-only "$c" | sed "s/^/$c\t/"; done)
   rm -f "$manifest_list"
   # Added lines only: secrets and personal names.
-  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > ${TMPDIR:-/tmp}/guard-secrets.$$
-  [ -s ${TMPDIR:-/tmp}/guard-secrets.$$ ] && { cat ${TMPDIR:-/tmp}/guard-secrets.$$; bad=1; }
-  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > ${TMPDIR:-/tmp}/guard-names.$$
-  [ -s ${TMPDIR:-/tmp}/guard-names.$$ ] && { cat ${TMPDIR:-/tmp}/guard-names.$$; bad=1; }
-  rm -f ${TMPDIR:-/tmp}/guard-secrets.$$ ${TMPDIR:-/tmp}/guard-names.$$
+  # Held in variables, not files, so a failed write can never read as "nothing found" (#1174 review m4).
+  local hits
+  hits=$(git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5)
+  [ -n "$hits" ] && { printf '%s\n' "$hits" | while read -r m; do echo "GUARD: possible secret in $range: $m"; done; bad=1; }
+  hits=$(git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5)
+  [ -n "$hits" ] && { printf '%s\n' "$hits" | while read -r m; do echo "GUARD: personal name in $range: $m"; done; bad=1; }
 }
 
 if [ "${1:-}" = "--unpushed" ]; then
-  cs=$(git rev-list "$2" --not --remotes 2>/dev/null | tr '\n' ' ')
-  [ -n "$cs" ] && check_range "$2 --not --remotes"
+  # Only the pushed remote's own branches count as already checked (#1174 review m2): never a hand-made ref under
+  # refs/remotes/ (pr/, rev/ ...) or another remote. A rev-list error refuses (m3).
+  rem="${3:-origin}"
+  cs=$(git rev-list "$2" --not --remotes="$rem" 2>/dev/null) || { echo "GUARD: cannot list commits of '$2' — refusing"; exit 1; }
+  [ -n "$cs" ] && check_range "$2 --not --remotes=$rem"
 else
   for r in "$@"; do check_range "$r"; done
 fi

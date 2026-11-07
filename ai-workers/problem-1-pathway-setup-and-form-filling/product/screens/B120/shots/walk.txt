@@ -1,0 +1,6 @@
+loaded through the menu in 145 s
+rows on screen: 1:done 2:out 3:done 4:done 5:done 6:done 7:done 8:done 9:done 10:done 11:done 12:done 17:done
+status: loaded true
+next step: Immigration programs · Product Studio at /c/719d4f90-26a1-44d2-aec2-87da7064fddf
+Reset to the six: done
+page and console errors: 404 GET /api/combinations/719d4f90-26a1-44d2-aec2-87da7064fddf (after: next step: Immigration programs · Product Studio at /c/719d4f90-26a1-44d2-aec2-87da7064fddf) | Failed to load resource: the server responded with a status of 404 (Not Found) | 404 GET /api/combinations/719d4f90-26a1-44d2-aec2-87da7064fddf/summary (after: next step: Immigration programs · Product Studio at /c/719d4f90-26a1-44d2-aec2-87da7064fddf) | Failed to load resource: the server responded with a status of 404 (Not Found)
