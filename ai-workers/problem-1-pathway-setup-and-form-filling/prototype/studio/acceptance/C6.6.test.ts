@@ -9,48 +9,19 @@
 // Runs on the configured checkpoint (P-322), loaded here on a blank copy through the Demo menu's own route when it is not
 // there yet. Sample people, no real names; US$0, no model call. Words on screen at 1440 and 1024 px (QA-301).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C6.6.test.ts 4440 xr_studio_accept
-import { AUTHOR, CLIENT, PORT, agent, answer, call, generateCopy, main, ok, openCase, sql, yearsAgo } from "./lib/m3.ts";
+import { CLIENT, PORT, agent, answer, call, main, ok, openCase, yearsAgo } from "./lib/m3.ts";
 import { walker } from "./lib/browser.ts";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-
-/** The repository root: a copy's path is kept relative to it (api/src/fill-case.ts ROOT). */
-const REPO = join(import.meta.dirname, "..", "..", "..", "..", "..");
+import { checkpointVisitorVisa as checkpoint, written } from "./lib/declared.ts";
 
 const SCH1 = "IMM 5257 SCH1", NAME = "person.family_name", GIVEN = "person.given_names";
 type A = { id: string; status: string; confirmed: boolean; why: string; mark?: string; fills?: boolean } | null;
 type Q = { subjectId: string; fact: string; label: string; answer: A };
 type Form = { form: string; subject_id: string; draft: { written_now: number; mapped: number }; readiness: { missing: { fact: string; reason: string }[] } };
 
-async function checkpoint() {
-  const released = () => sql("select count(*) from config_release r join combination c on c.id=r.combination_id where c.combination_key='vv.single'") !== "0";
-  if (!released()) {
-    await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
-    const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
-    ok("setup: Demo › Load the configured checkpoint", l.status === 201 || l.status === 200, l.status);
-  }
-  const vv = sql("select id from combination where combination_key='vv.single'");
-  ok("setup: Visitors › Visitor visa is released on the checkpoint", released() && !!vv);
-  if (!vv) process.exit(2);
-  return vv;
-}
-
 const questionOf = async (caseId: string, subject: string, fact: string): Promise<Q | undefined> =>
   ((await agent(caseId))?.sections ?? []).flatMap((s: { questions: Q[] }) => s.questions).find((q: Q) => q.subjectId === subject && q.fact === fact);
 const formOf = async (caseId: string, form: string, subject: string): Promise<Form | undefined> =>
   ((await call("GET", `/runtime/cases/${caseId}/forms`)).body?.forms ?? []).find((f: Form) => f.form === form && f.subject_id === subject);
-/** A real copy of the form: what the filler was asked to write into each form field (the copy's request file beside the
- *  PDF, as check_runtime_r1d.ts reads it), by fact, and why a form field was not written. */
-async function written(caseId: string, form: string, subject: string): Promise<{ id: string | null; of: (fact: string) => string; why: (fact: string) => string }> {
-  const id = await generateCopy(caseId, form, subject);
-  const raw = id ? sql(`select json_build_object('path', path, 'result', result_json)::text from form_instance where id='${id}' and status='GENERATED'`) : null;
-  const row = raw ? JSON.parse(raw) as { path: string; result: { boxes: { box: string; fact: string | null; result: string; why?: string | null; row?: number | null }[] } } : null;
-  const request = row ? join(REPO, row.path.replace(/\.pdf$/, ".request.json")) : "";
-  const values = (row && existsSync(request) ? JSON.parse(readFileSync(request, "utf8")).values : {}) as Record<string, string>;
-  const own = (fact: string) => row?.result.boxes.find((b) => b.fact === fact && (b.row === null || b.row === undefined || b.row === 0));
-  return { id: row ? id : null, of: (fact) => (own(fact)?.result === "written" ? values[own(fact)!.box] ?? "" : ""), why: (fact) => own(fact)?.why ?? own(fact)?.result ?? "(no form field)" };
-}
-
 await main("C6.6", "Declared answers fill the forms at once, marked by who gave them (P-242, P-411)", async () => {
   const vv = await checkpoint();
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }]);

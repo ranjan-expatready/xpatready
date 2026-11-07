@@ -1,4 +1,4 @@
-// R1d checks (runtime lane, plan §8 RT-13…RT-17): a case's IMM 5257 filled from confirmed facts only, through the
+// R1d checks (runtime lane, plan §8 RT-13…RT-17): a case's IMM 5257 filled from declared and confirmed answers (P-411; was confirmed facts only, P-72), through the
 // shared filler (read back, signatures checked); a new copy only when the officer asks; out of date and stale after a
 // fact changes; a locked copy never changes (service and database); audit without values. Every rule with a passing and
 // a failing case, on an isolated copy where setup_visitor_visa.ts released the visitor visa. No model call (US$0).

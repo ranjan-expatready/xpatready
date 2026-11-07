@@ -329,7 +329,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     step("B150 pass (P-411 (2), QA-303): the officer's correction keeps the box filled (a copy made now writes as many form fields), marked \"entered by staff\" and to confirm", fix?.status === 200 && q?.answer?.mark === "by_staff" && q.answer.confirmed === false && (await writes("Sample Applicant C")).draft.written_now === w0, { before: w0, now: (await writes("Sample Applicant C")).draft, answer: q?.answer });
   }
 
-  // ── 4. R1d: forms filled from confirmed facts; never overwritten (RT-13…RT-16)
+  // ── 4. R1d: forms filled from declared and confirmed answers (P-411); never overwritten (RT-13…RT-16)
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
   const forms = o.locator("section", { has: o.getByRole("heading", { name: "Prepare application", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
