@@ -56,6 +56,17 @@ export function tweakAnswers(tweaks: Record<string, boolean>, today: Date): Answ
   return Object.entries(tweaks).map(([k, value]) => { const [subjectId, field] = k.split("|"); return { id: `tweak:${k}`, subjectId, field, rowKey: null, value, status: "DECLARED", channel: "preview", actor: "preview", at: today.toISOString() }; });
 }
 
+/** Preview (Lead Q2, P-130): whose checklist lines can supply a fact about `subjectId`: the person's own line for a fact
+ *  about its holder, the partner's for a fact about the holder's spouse. C3.16 (break round 3, M1): a marked Household or
+ *  Organisation fact is asked once on the case, but the checklist lines are per person, so the members whose own
+ *  documents supply it count too (caseSuppliers).
+ */
+export function documentLineHolders(s: Snapshot, people: Person[], subjectId: string, fact: string, abouts: Set<string>, partnerOf: (id: string) => string | null): Set<string> {
+  // Review 2, M1: the application's own line (who: "case") always counts for a fact on the case, marked or not (as on main).
+  const from = subjectId === FILING ? [FILING, ...caseSuppliers(s, people, fact)] : [subjectId];
+  return new Set(from.flatMap((m) => [abouts.has("holder") ? m : null, abouts.has("holder.spouse") ? partnerOf(m) : null]).filter((x): x is string => !!x));
+}
+
 /** The preview for one family and one person: what the client sees (caseView's output unchanged), the documents and the
  *  forms, each saying why. The family defaults to the largest one the people allow. */
 /** C4.5: the Preview key prefix that tries a person's document as missing or unreadable ("missing:principal|passport…"). */
@@ -94,11 +105,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     // person's own document for a fact about its holder, the partner's for a fact about the holder's spouse.
     const t = (s.document_types as Parameters<typeof suppliesOf>[0][]).find((x) => x.key === key);
     const abouts = new Set((t ? suppliesOf(t) : []).filter((x) => x.fact === fact).map((x) => x.about));
-    // C3.16 (break round 3, M1): a marked Household or Organisation fact is asked once on the case, but the checklist
-    // lines are per person. Its holders are the members whose own documents supply it (engine/sources.ts credits them
-    // to the case): any member for a household fact, the principal for an employer fact.
-    const from = subjectId === FILING ? caseSuppliers(s, renderPeople, fact) : [subjectId];
-    const holders = new Set(from.flatMap((m) => [abouts.has("holder") ? m : null, abouts.has("holder.spouse") ? partnerOf(m) : null]).filter((x): x is string => !!x));
+    const holders = documentLineHolders(s, renderPeople, subjectId, fact, abouts, partnerOf);
     return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name) && !missing.has(`${d.person}|${key}`)) ? name : null;
   };
   const questionnaire = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });

@@ -7,6 +7,7 @@ import { FILING, type PersonOnFiling } from "../contracts/resolver.ts";
 import { markOf, mergeScopeRefusal, ONCE_WORDS, placementRefusal, SCOPE_TAG, SCOPE_WORDS_REFUSED, scopeMark, scopeOfStored, scopeRefusal, storedOfScope, type ScopeFacts } from "../engine/field-scope.ts";
 import * as R from "../engine/resolver.ts";
 import { caseSuppliers, documentFacts } from "../engine/sources.ts";
+import { documentLineHolders } from "../engine/runtime/preview.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
 import { carriedFacts } from "../engine/runtime/employer.ts";
@@ -66,6 +67,14 @@ ok("C3.16 (M4) pass: a member's marriage certificate supplies the household date
 ok("C3.16 (M4, fail): unmarked, nothing is added on the case", !documentFacts(snap(), family).get(FILING));
 ok("C3.16 (break round 3, M1) pass: the household fact's suppliers are every member; the employer fact's the principal only", caseSuppliers(snap("organisation"), family, "relationship.union_date").join(",") === family.map((p) => p.id).join(",") && caseSuppliers(snap("organisation"), family, "organisation.employer_name").join(",") === "principal");
 ok("C3.16 (break round 3, M1, fail): an unmarked fact has no case suppliers (Preview keeps each person's own document line)", caseSuppliers(snap(), family, "relationship.union_date").length === 0 && caseSuppliers(snap(), family, "organisation.employer_name").length === 0);
+{
+  const partner = (id: string) => (id === "principal" ? "spouse_or_partner" : id === "spouse_or_partner" ? "principal" : null);
+  const holders = (scope: string | undefined, subject: string, fact: string, about = "holder") => [...documentLineHolders(snap(scope), family, subject, fact, new Set([about]), partner)].sort().join(",");
+  ok("C3.16 (review 2, M1, fail): an unmarked application fact keeps the application's own line (who: \"case\") as its holder, as on main", holders(undefined, FILING, "case.funds_available_cad") === FILING);
+  ok("C3.16 (review 2, M1): a marked household fact counts the application's own line and every member's", holders("organisation", FILING, "relationship.union_date") === [FILING, ...family.map((p) => p.id)].sort().join(","));
+  ok("C3.16 (review 2, M1): a marked employer fact counts the application's own line and the principal's only", holders("organisation", FILING, "organisation.employer_name") === [FILING, "principal"].sort().join(","));
+  ok("C3.16 (review 2, M1): a person's fact is unchanged: the person's own line, or the partner's for a fact about the holder's spouse", holders("organisation", "principal", "person.family_name") === "principal" && holders("organisation", "principal", "person.family_name", "holder.spouse") === "spouse_or_partner");
+}
 
 // ---- second lander with #1051 (tech lead on #1054, comment 6650232198): an employer copy goes where the one reader reads
 // it. carriedFacts writes on the case's own record exactly when the placement is stored once (isFilingFact): with C3.16,
