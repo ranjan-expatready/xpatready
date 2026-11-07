@@ -9,6 +9,7 @@ import { caseView, type Answer, type Participant } from "../../engine/runtime/ca
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { ASKED_RELATIONS, parentWord, relativeKey, relativeLabel, relativeOf, SUBJECT_OR_RELATIVE } from "../../engine/runtime/relatives.ts";
 import { factChanges, type ChangeWords } from "../../engine/runtime/out-of-date.ts";
+import { familyPeople, previewFamily } from "../../engine/runtime/preview.ts";
 import { recorder } from "./api.ts";
 
 const { ok, summary } = recorder();
@@ -104,5 +105,15 @@ const ch = factChanges(then, [], words(new Map([["p0/parent_1|person.family_name
 ok("fail: a new parent value (not confirmed yet) is a change to that value, not confirmed, named for that person's parent", ch.length === 1 && ch[0].now === "JANET" && ch[0].confirmed === false && ch[0].relation === "parent_1" && ch[0].person === "Sample Person 0's parent 1" && ch[0].at !== null, ch);
 const none = factChanges(then, [], words(new Map()));
 ok("fail: a parent value no longer read and not saved again is a change to no answer", none.length === 1 && none[0].now === null && none[0].confirmed === true, none);
+
+// ── The studio's Preview (merge batch #1280, C4.1 on the six): its parts, chips and passport skips are per person of its
+// Sample family, so its client questionnaire holds no relative's section; a case's view of the same family asks them.
+const pv = previewFamily(S, "", "principal", {}, TODAY);
+const pvKeys = [...new Set(pv.questionnaire.sections.map((x) => x.subjectId))];
+const fam = familyPeople((S.combination as { participants: never[] }).participants, pv.family as never);
+const caseKeys = new Set(caseView(S, fam, pv.questionnaire.sections.length ? [{ id: "d", subjectId: "principal", field: "person.date_of_birth", rowKey: null, value: "1988-01-01", status: "VERIFIED", channel: "confirm_section", actor: "user-O", at: TODAY.toISOString() }] : [], [], "sqr", TODAY).sections.map((x) => x.subjectId));
+ok("pass (C4.1): the Preview's client questionnaire has the Sample family's people and no relative's section", pvKeys.includes("principal") && !pvKeys.some((k) => k.includes("/")), pvKeys);
+ok("fail (control): a case's client view of the same family asks the principal's parents on their own keys", caseKeys.has("principal/parent_1") && caseKeys.has("principal/parent_2"), [...caseKeys]);
+ok("pass: the Preview's checks name no relative either", !pv.questionnaire.checks.some((c) => c.subjectId.includes("/")));
 
 process.exitCode = summary() ? 1 : 0;
