@@ -50,3 +50,22 @@ export const filedEarlierWords = (form: string, owner: string, changed: { label:
   const day = new Date(`${on}T12:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   return `Filed with an earlier value: ${shown} changed after ${owner}'s ${form} was filed on ${day}. Re-sign it, or tell IRCC of the change (Unconfirmed: no counsel).`;
 };
+
+/** QA-295 (P-155 (1)): who the filing record names as having prepared and reviewed a filing. The reviewer is the one the
+ *  filing's latest review names (readiness.ts), never whoever records it. A self-review (the representative was the
+ *  case's officer, or a solo firm) names the reviewer as preparer too. A review by a second person names the case
+ *  officer on the case team when the review was made (the earliest assigned, never the reviewer). With no review (a
+ *  filing recorded before reviews existed), the one recording prepared it and the representative of record reviewed it,
+ *  as before. */
+export function recordedPeople(
+  review: { reviewedBy: string; kind: string; reviewedAt: Date } | null,
+  team: { userId: string; role: string; assignedAt: Date; endedAt: Date | null; id: string }[],
+  recorder: string, representative: string | null,
+): { preparedBy: string; reviewedBy: string | null } {
+  if (!review) return { preparedBy: recorder, reviewedBy: representative };
+  if (review.kind === "self_reviewed") return { preparedBy: review.reviewedBy, reviewedBy: review.reviewedBy };
+  const at = review.reviewedAt.getTime();
+  const officer = team.filter((m) => m.role === "OFFICER" && m.userId !== review.reviewedBy && m.assignedAt.getTime() <= at && (!m.endedAt || m.endedAt.getTime() > at))
+    .sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id))[0];
+  return { preparedBy: officer?.userId ?? recorder, reviewedBy: review.reviewedBy };
+}
