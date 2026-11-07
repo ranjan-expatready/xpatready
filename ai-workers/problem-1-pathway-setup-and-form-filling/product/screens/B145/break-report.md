@@ -64,3 +64,35 @@ None beyond B1.
   * Tab only: the notice button is reached in 10 / 9 presses, Enter opens the panel with focus on the reason, Not now and Move are the next two stops, all in view, and focus stays in the dialog. Escape closes it and focus returns to the notice button.
   * X shows the refusal and the Move button is off. An emptied reason gives POST 400 and "Say why…" on the field.
   * As the client, there is no notice and no release-update request at all.
+
+## Round 2 (138535ab8)
+Diff `14ef16070..138535ab8` on exact head **138535ab8314306291745478ee5e80575b1ae3e8**. A fresh `break_c95` copy on :4444, started and stopped (database dropped) in one command, with migration `20261107220000_c95_pin_guards` applied. Configured checkpoint, then Sample releases 3, 4 and 5 by the author's routes. AI off, US$0. **No Blocker. No Major.**
+
+**Minor, still open:**
+* **R2-m1 · Fill waiting more than 5 s on the case lock answers 500.** The case row was held 8 s; `POST …/forms/IMM 5476/:subject/generate` → 500 after 7.7 s. `fill-case.ts:239` runs with Prisma's default 5 s timeout and is not wrapped in `busyWords`, which turns the move's own wait into a worded 503. A move holds this lock while it re-reads the answers and checks the refusals.
+* **R2-m2 · The insert trigger still accepts a reason with no visible text.** It refuses tabs and new lines now, but `E'   '` (no-break spaces) and `E'​​​'` (zero-width spaces) as a revision-2 reason → `INSERT 0 1`. `[[:space:]]` does not match them. SQL only; the API refuses both.
+* **R2-m3 · `TRUNCATE pack_work_pin` empties every pin** (row DELETE triggers do not fire). SQL only; noted for the "never deleted" claim.
+* **R2-m4 · A review sent without `pin_revision` is still accepted after a move.** The check is opt-in (`readiness.ts:185`). On W after the move, `POST /runtime/filings/5a60b777…/review {facts_hash: <read before the move>}` with no `pin_revision` → 200. The screen sends `pin_revision`, so this is reachable only by a direct API call.
+
+**Fixed, re-tested and holding:**
+* **B1:**
+  * **Pass works:** U was Ready on release 6 and was demoted when release 7 came out. The officer's pass of `release_update` → 200 (key `release|filing|3`), a second pass → 409 "no open warning", `/ready` → 200. Same on W with release 8.
+  * **Pass permissions:** Client A and Client B 403, author and approver 403, other firm 404, no actor 401.
+* **m9, record racing the move:**
+  * Move queued on the lock first: move 200 (revision 2), record → 409 "This application changed since you read it", no `filing_record`.
+  * Record first: record 200, then the move → 409 "recorded".
+* **m10, review from a screen read before the move:** with `pin_revision: 1` → 409 "This case moved to another release…".
+* **The changed prepare version:**
+  * A never-moved case keeps its version with no `~r` suffix (X `936fd8506341d18b`, the same after a release was published), and record → 200 on it.
+  * On a moved case the version reads `…~r2`. A channel change sent with the version from before the move → 409 stale; with the version from a fresh read → 200.
+* **m3, GET writes nothing:** on Z, never prepared, three `GET …/release-update` leave the row count of every table and the `pg_stat_user_tables` insert/update/delete total (20852) unchanged.
+* **m7:** a move waiting 17.8 s on the lock → **503** "This case is being changed by someone else right now: nothing was changed". Pin and audit are untouched.
+* **m2:** a recorded filing (X) carries no `release_update` warning.
+* **m1:** after F's 1→4 move, the list for 4→5 has an empty *No longer required*. The IMM 5707 copies appear only in `last_move`, the move that dropped them.
+* **m4:**
+  * A lone `delete from pack_work_pin` → refused `runtime_pin_no_delete`.
+  * Deleting a case, and deleting two cases in one statement, cascade to 0 pins (rolled back).
+  * Demo Reset with two moved cases (2 pins each) → 201, 0 pins and 0 cases.
+  * The checkpoint load ran before the cases moved; a load with moved cases present was not run.
+* **m5:** a tab and new-line reason, a wrong content hash, and a revision-1 pin of another combination are all refused. A valid SQL move is still accepted.
+* **m8:** the audit line is now written in the move's transaction (`release-update.ts:166-169`); read in the code, not forced to fail. Not re-tested: round 1 m11 (200 % zoom) and the Demo pill (m6, read in the code only).
