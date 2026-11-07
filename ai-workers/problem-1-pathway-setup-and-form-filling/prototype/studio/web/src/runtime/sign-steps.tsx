@@ -68,49 +68,68 @@ export function SignSteps({ caseId, f }: { caseId: string; f: CaseForm }) {
           : <>{signers.length ? <span className="[overflow-wrap:anywhere]">{whoSigns(signers, person, rep)}</span> : "not set on this form's line yet"}<span className="text-text-muted"> · {item.signature === "NONE" ? "how it is signed is not set on the release's line yet" : method}</span></>}
       </p>
     ) : null}
-    {item.signature === "HAND_SCANNED" ? <SignBlock caseId={caseId} item={item} f={f} who={signers.length ? whoSigns(signers, person, rep) : null} filing={prep.data!.filings.find((x) => x.id === item.filing)} /> : null}
+    {item.signature === "HAND_SCANNED" ? <SignBlock caseId={caseId} item={item} f={f} filing={prep.data!.filings.find((x) => x.id === item.filing)} /> : null}
   </>);
 }
 
-function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: PrepItem; f: CaseForm; who: string | null; filing: Filing | undefined }) {
+function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem; f: CaseForm; filing: Filing | undefined }) {
   const copies = f.copies;
   const qc = useQueryClient(), toast = useToast(), firm = useFirm();
   const team = useApi<TeamView>(["runtime", "team", caseId], `/runtime/cases/${caseId}/team`, { retry: noRetryOnRefusal }).data;
   const form = item.form ?? "";
-  const q = useApi<ItemView>(["runtime", "view", caseId, "sign-item", item.id], `/runtime/items/${item.id}`, { retry: noRetryOnRefusal });
+  const q = useApi<ItemView>(["runtime", "view", caseId, "sign-item", item.id], `/runtime/items/${item.id}`, { retry: noRetryOnRefusal, refetchOnWindowFocus: true });
   const heading = React.useRef<HTMLHeadingElement>(null), next = React.useRef<HTMLDivElement>(null), file = React.useRef<HTMLInputElement>(null);
   const [busy, setBusy] = React.useState(false);
   const [refusal, setRefusal] = React.useState<string | null>(null), [fileErr, setFileErr] = React.useState<string | null>(null);
-  const nameOf = (id: string) => (team?.representative?.id === id ? team.representative.name : null) ?? team?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? id;
+  const nameOf = (id: string) => (team?.representative?.id === id ? team.representative.name : null) ?? team?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? "a person no longer on the firm's list"; // review m6: never a raw id
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
   /** After a step: read everything again, then (once the buttons are no longer busy) the focus goes to the next step's
    *  button, else the block's heading. */
-  const [focusNext, setFocusNext] = React.useState(false);
+  // Review Major 1 (b): the focus moves only once no button is busy (a busy button is disabled and cannot take it).
+  const [focusTo, setFocusTo] = React.useState<"next" | "heading" | null>(null);
   React.useEffect(() => {
-    if (!focusNext || busy) return;
-    setFocusNext(false); focusLater(() => next.current?.querySelector<HTMLElement>("button:not([disabled])") ?? heading.current);
-  }, [focusNext, busy]);
-  const after = async () => { await refresh(); setFocusNext(true); };
+    if (!focusTo || busy) return;
+    const to = focusTo; setFocusTo(null);
+    focusLater(() => (to === "next" ? next.current?.querySelector<HTMLElement>("button:not([disabled])") : null) ?? heading.current);
+  }, [focusTo, busy]);
+  const after = async () => { await refresh(); setFocusTo("next"); };
+  /** Break M2: before Signed by hand or the scan, the copies are read again; a printed copy whose facts changed since (a
+   *  change made in another tab or by the client) is refused here in words, nothing sent. The server checks only the
+   *  order (a follow-up row asks it to check the printed copy too). True when refused. */
+  async function printedCopyStale(): Promise<boolean> {
+    const key = ["runtime", "view", caseId, "forms"];
+    await qc.refetchQueries({ queryKey: key });
+    const fresh = qc.getQueriesData<{ forms: CaseForm[] }>({ queryKey: key }).flatMap(([, d]) => d?.forms ?? []).find((x) => x.form === f.form && x.subject_id === f.subject_id);
+    const copy = fresh?.copies.find((c) => c.id === done.print?.copy);
+    if (!copy?.out_of_date) return false;
+    await refresh();
+    setRefusal(`The printed copy of ${form} is out of date: a fact on it changed since it was printed. Nothing was recorded. Print a new copy and have that one signed.`);
+    setFocusTo("heading");
+    return true;
+  }
   async function run(key: SignStepKey, body: unknown, ok: string) {
     setBusy(true); setRefusal(null); setFileErr(null);
-    try { await api(`/runtime/items/${item.id}/sign-steps/${key}`, { method: "POST", json: body }); toast.push({ tone: "ok", text: ok }); await after(); }
-    catch (e) { await refresh(); setRefusal((e as Error).message); focusLater(() => heading.current); } // BR-9: the server's own words (a 409 means the page was out of date)
+    try {
+      if (key === "signed" && (await printedCopyStale())) return; await api(`/runtime/items/${item.id}/sign-steps/${key}`, { method: "POST", json: body }); toast.push({ tone: "ok", text: ok }); await after(); }
+    catch (e) { await refresh(); setRefusal((e as Error).message); setFocusTo("heading"); } // BR-9: the server's own words (a 409 means the page was out of date)
     finally { setBusy(false); }
   }
   async function upload(f: File) {
     setRefusal(null); setFileErr(null);
     // BR-6: the size is checked here first (the server checks it again, and the type by the file's own bytes).
-    if (f.size > MAX_DOCUMENT_BYTES) { setFileErr(`The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`); focusLater(() => next.current?.querySelector<HTMLElement>("button")); return; }
-    if (!f.size) { setFileErr("The file is empty. Nothing was stored."); focusLater(() => next.current?.querySelector<HTMLElement>("button")); return; }
+    const refuse = (words: string) => { setFileErr(words); if (file.current) file.current.value = ""; setFocusTo("next"); };
+    if (f.size > MAX_DOCUMENT_BYTES) return refuse(`The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`);
+    if (!f.size) return refuse("The file is empty. Nothing was stored.");
     setBusy(true);
     try {
+      if (await printedCopyStale()) return;
       const fd = new FormData(); fd.append("file", f, f.name);
       await api(`/runtime/items/${item.id}/signed-scan`, { method: "POST", body: fd });
       toast.push({ tone: "ok", text: `${form}: signed scan received` }); await after();
     } catch (e) {
       // A refusal about the file (its type, size, emptiness) stays on the upload; any other (the order, a stale page) under the block.
-      if (e instanceof ApiError && [400, 413, 422].includes(e.status)) { setFileErr(e.message); focusLater(() => next.current?.querySelector<HTMLElement>("button")); }
-      else { await refresh(); setRefusal((e as Error).message); focusLater(() => heading.current); }
+      if (e instanceof ApiError && [400, 413, 422].includes(e.status)) { setFileErr(e.message); setFocusTo("next"); }
+      else { await refresh(); setRefusal((e as Error).message); setFocusTo("heading"); }
     } finally { setBusy(false); if (file.current) file.current.value = ""; }
   }
 
@@ -143,7 +162,7 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
     : <p className="text-[13px] text-text-muted" data-step-why>{pending ? "The copy is being generated…" : notFiled ? notFiled : latest?.out_of_date ? `This copy is out of date: generate a new copy of ${form} above and print that one.` : latest && !latest.file_ok ? `The file of the newest copy of ${form} is missing: generate a new copy above.` : `Generate a copy of ${form} above first: the copy printed is named here.`}</p>;
 
   function action(key: SignStepKey) {
-    if (key === "print") return <div className="space-y-1"><p className="text-[13px] text-text-muted">Download the copy above, print it, then record it here.</p>{printAction("Printed: the copy of")}</div>;
+    if (key === "print") return <div className="space-y-1">{current ? <p className="text-[13px] text-text-muted">Download the copy above, print it, then record it here.</p> : null}{printAction("Printed: the copy of")}</div>;
     if (key === "signed") return <Button size="sm" busy={busy} onClick={() => void run("signed", {}, `${form}: Signed by hand`)} data-step-action="signed">Signed by hand</Button>;
     if (key === "scan_received") return (
       <div className="space-y-1">
@@ -165,7 +184,8 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
     // Challenge m1: the officer records a step; the signers sign (there is no signing for the client, C8.1-12).
     const by = <span className="text-text-muted">recorded by {nameOf(s.done.by)}, {when(s.done.at)}</span>;
     if (s.key === "print") { const c = copyOf(s.done.copy); return <>{c ? <>Copy of {when(c.created_at)} · </> : null}{by}</>; }
-    if (s.key === "signed") return <>{who ? <>Signed by {who} · </> : null}{by}</>;
+    // Break M1: the record holds who recorded it, not who signed: the signers are today's "Who signs" line above, never
+    // written here (they change with the case team).
     if (s.key === "scan_received") {
       const x = q.data?.signed_scans[q.data.signed_scans.length - 1];
       return <>{x ? <span data-scan-file><span className="[overflow-wrap:anywhere]">{x.file_name}</span> · {MEDIA_WORDS[x.media_type] ?? x.media_type} · {size(x.size_bytes)} · </span> : null}{by}
@@ -180,7 +200,7 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
       <div className="flex flex-wrap items-center gap-2">
         <h4 ref={heading} id={`${blockId}-h`} tabIndex={-1} className="text-[13px] font-semibold outline-none">Sign and scan</h4>
         <Pill tone={st.tone} title="This form's state on the application">{st.words}</Pill>
-        {item.reason ? <span className="min-w-0 flex-1 text-[13px] text-text-muted [overflow-wrap:anywhere]" data-reason>{item.reason}</span> : null}
+        {item.reason && !recorded ? <span className="min-w-0 flex-1 text-[13px] text-text-muted [overflow-wrap:anywhere]" data-reason>{item.reason}</span> : null}
       </div>
       <p className="text-[13px] text-text-muted">Signed by hand and scanned: print the copy, have it signed, upload the scan. Each step is recorded with who and when.</p>
       {refusal ? <div data-sign-refusal><Notice tone="danger" title="Not recorded"><p className="[overflow-wrap:anywhere]">{refusal}</p></Notice></div> : null}
@@ -190,7 +210,7 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
           {recorded ? <p className="text-[13px] text-text-muted" data-sign-readonly>The submission is recorded: this application is read-only.{done.uploaded_to_ircc ? "" : ` "Uploaded to IRCC" was not ticked for ${form} before it was recorded.`}</p> : null}
           {again && !recorded ? (
             <div className="space-y-1 rounded-md border border-border px-2 py-1.5" data-sign-again>
-              <p className="text-[13px] text-text-warn">The signed {form} is out of date: print a new copy, have it signed and upload the new scan. The earlier scan is kept.</p>
+              <p className="text-[13px] text-text-warn">{done.scan_received ? `The signed ${form} is out of date: print a new copy, have it signed and upload the new scan. The earlier scan is kept.` : `The printed copy of ${form} is out of date: a fact on it changed. Print a new copy and have that one signed.`}</p>
               {printAction("Printed: the new copy of")}
             </div>
           ) : null}
@@ -199,7 +219,7 @@ function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: Pre
             const why = !s.done && !isNext && !again && !recorded ? stepRefusal(s.key, done, form, { viaUpload: true, filingReady: true }) : null;
             return (
               <li key={s.key} className="flex flex-wrap items-start gap-x-3 gap-y-1 text-[13px]" data-step={s.key} data-done={s.done ? "yes" : "no"}>
-                <span className="flex min-w-48 items-center gap-1.5 font-medium">
+                <span className="flex items-center gap-1.5 font-medium sm:min-w-48">
                   {s.done ? <Check className="size-3.5 text-text-ok" aria-hidden /> : <Circle className="size-3.5 text-text-muted" aria-hidden />}
                   <span>{i + 1}. {s.words}</span><span className="sr-only">{s.done ? ": done" : isNext ? ": next" : ": not yet"}</span>
                 </span>

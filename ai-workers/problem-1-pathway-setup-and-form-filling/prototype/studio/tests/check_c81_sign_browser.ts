@@ -63,11 +63,15 @@ const p = await ctx.newPage(); const errs: string[] = [];
 const watch = (pg: Page) => { pg.on("pageerror", (e) => errs.push(e.message)); pg.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); }); };
 watch(p);
 const as = async (pg: Page, actor: string) => { await pg.goto(BASE); await pg.evaluate((a) => localStorage.setItem("xr-actor", a), actor); };
-const settle = async (pg: Page = p) => { await pg.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !document.querySelector(".animate-spin"), null, { timeout: 90_000 }); await pg.waitForTimeout(300); };
+// Review Major 1 (a): also until every signing block has read its steps (its skeleton pulses until then).
+const settle = async (pg: Page = p) => { await pg.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !document.querySelector(".animate-spin") && !document.querySelector("[data-sign-block] .animate-pulse"), null, { timeout: 90_000 }); await pg.waitForTimeout(300); };
 const blockOn = (pg: Page) => pg.locator(`[data-sign-block="${it?.id}"]`);
 const block = () => blockOn(p);
 const rowOf = (pg: Page, form: string, person: string) => pg.locator("li", { has: pg.getByRole("heading", { name: `${form} for ${person}`, exact: true }) });
-const open = async (pg: Page = p, caseId = c.id) => { await pg.goto(`${BASE}/cases/${caseId}`); await pg.locator("[data-readiness]").waitFor({ timeout: 60_000 }); await settle(pg); };
+const open = async (pg: Page = p, caseId = c.id) => {
+  await pg.goto(`${BASE}/cases/${caseId}`); await pg.locator("[data-readiness]").waitFor({ timeout: 60_000 });
+  await pg.locator("[data-sign-block] [data-step]").first().waitFor({ timeout: 60_000 }).catch(() => null); await settle(pg);
+};
 const press = async (loc: Locator, pg: Page = p) => { await loc.focus(); await pg.keyboard.press("Enter"); await settle(pg); };
 const stepEl = (key: string) => block().locator(`[data-step="${key}"]`);
 const whyOf = async (key: string) => ((await stepEl(key).locator("[data-step-why]").first().innerText().catch(() => "")).trim());
@@ -105,10 +109,13 @@ await state("not-printed");
 // Generate a copy (the row's own button), then Printed names it.
 await press(row5476.getByRole("button", { name: /^Generate a (new )?copy$/ }));
 await stepEl("print").getByRole("button", { name: /^Printed: the copy of/ }).waitFor({ timeout: 120_000 }).catch(() => null);
+const f5476Unproven = (await stepEl("print").locator("[data-unproven]").innerText().catch(() => "")).trim();
 const copyId = sql(`select id from form_instance where case_id = '${c.id}' and subject_id = '${P}' and form_number = 'IMM 5476' and status = 'GENERATED' order by created_at desc limit 1`) ?? "";
 await press(stepEl("print").getByRole("button", { name: /^Printed: the copy of/ }));
 await block().locator('[data-step="print"][data-done="yes"]').waitFor({ timeout: 15_000 }).catch(() => null);
 ok("C8.1-6 / BR-4 pass: Printed is recorded with the copy printed (the newest generated copy), and the step names it, who and when", steps().join() === `print|${copyId}` && /Copy of .* · recorded by /.test(await stepEl("print").innerText()) && (await stepEl("print").innerText()).includes(nameOf(officer)), { steps: steps(), copyId, text: await stepEl("print").innerText() });
+const trial = ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body?.forms ?? []).find((x: { form: string; subject_id: string }) => x.form === "IMM 5476" && x.subject_id === P)?.trial_passed;
+ok("C8.1 BR-4 (review m5): Printed is offered with a warning exactly when the form's filling is not proven (warned, not blocked), never otherwise", typeof trial === "boolean" && (trial ? f5476Unproven === "" : /Check the copy against the case before it is signed/.test(f5476Unproven)), { trial, f5476Unproven });
 ok("keyboard: after Printed the focus is on the next step's button (Signed by hand)", await p.evaluate(() => document.activeElement?.getAttribute("data-step-action")) === "signed");
 await state("printed");
 
@@ -119,7 +126,13 @@ const q5476 = ((await agent(c.id))?.sections ?? []).flatMap((x: { questions: Q[]
   .find((q: Q) => q.subjectId === P && !q.hidden && !q.group && q.value_type === "text" && q.fills.some((x) => x.form === "IMM 5476"));
 const changed = q5476 ? await answer(c.id, P, q5476.fact, "Sample Changed Value", officer) : null;
 if (q5476) await confirmAll(c.id, P);
+// Break M2: this page has not read the change (another person made it); its "Signed by hand" is refused in words before
+// anything is sent, because the copies are read again first.
+await press(block().locator('[data-step-action="signed"]'));
+const staleCopy = (await block().locator("[data-sign-refusal]").innerText().catch(() => "")).trim();
+ok("C8.1 break M2 fail: on a page that has not read the change, Signed by hand on the out-of-date printed copy is refused in words; nothing recorded", /The printed copy of IMM 5476 is out of date/.test(staleCopy) && /Nothing was recorded/.test(staleCopy) && steps().map((x) => x.split("|")[0]).join() === "print", { staleCopy, steps: steps() });
 await open();
+await block().locator("[data-sign-again]").waitFor({ timeout: 15_000 }).catch(() => null);
 ok("C8.1 BR-8 / challenge M1 fail: after a fact on the printed copy changed, Signed by hand is not offered; the block says the signed copy is out of date and the copy must be generated again",
   !!q5476 && (changed?.status ?? 500) < 300 && (await block().locator('[data-step-action="signed"]').count()) === 0 && await block().locator("[data-sign-again]").isVisible() && /generate a new copy of IMM 5476/.test(await block().locator("[data-sign-again]").innerText()), { fact: q5476?.fact, status: changed?.status, text: await block().innerText().catch(() => "") });
 await state("printed-copy-out-of-date");
@@ -139,7 +152,7 @@ const stale = (await blockOn(p2).locator("[data-sign-refusal]").innerText().catc
 ok("C8.1 BR-3 / BR-9 fail (stale tab): the second \"Signed by hand\" is refused in the server's words; nothing recorded twice", /Not recorded/.test(stale) && /Signed by hand is already done for IMM 5476/.test(stale) && steps().filter((s) => s.startsWith("signed|")).length === 1, { stale, steps: steps() });
 ok("keyboard (stale tab): after the refusal the focus is on the block's heading", await blockOn(p2).locator("h4").evaluate((el) => el === document.activeElement));
 await p2.close();
-ok("C8.1-7 pass / challenge m1: Signed by hand names the signers and who recorded it, and when", steps().map((s) => s.split("|")[0]).join() === "print,signed" && /Signed by Sample Client A and the representative of record/.test(await stepEl("signed").innerText()) && (await stepEl("signed").innerText()).includes(`recorded by ${nameOf(officer)}`), await stepEl("signed").innerText());
+ok("C8.1-7 pass / challenge m1: Signed by hand says who recorded it, and when; break M1 fail-guard: it never names today's signers as the people who signed", steps().map((s) => s.split("|")[0]).join() === "print,signed" && (await stepEl("signed").innerText()).includes(`recorded by ${nameOf(officer)}`) && !/Signed by Sample Client A/.test(await stepEl("signed").innerText()), await stepEl("signed").innerText());
 await state("signed");
 
 // The scan: the upload button opens the file chooser (keyboard); a text file is refused on the upload by the server.
@@ -214,6 +227,7 @@ const g = pv?.groups.find((x) => x.filings.includes(fid));
 const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto" });
 const rec = await call("PATCH", `/runtime/groups/${g?.id}/record`, { filings: [{ filing: fid, our_reference: "SAMPLE-REF-B3", submitted_on: today, application_number: "V300000031", fee_receipt: "SAMPLE-RECEIPT" }], ucis: [{ subject: P, uci: "3333-3333" }], version: pv?.version }, officer);
 await open();
+await block().locator("[data-sign-readonly]").waitFor({ timeout: 15_000 }).catch(() => null);
 ok("challenge M2 pass: once the submission is recorded, the block says the application is read-only and offers no step", rec.status < 300 && await block().locator("[data-sign-readonly]").isVisible() && (await block().locator("[data-step-action]").count()) === 0 && (await block().locator("[data-step-why]").count()) === 0, { rec: rec.status, detail: (rec.body as { detail?: string } | null)?.detail });
 await state("recorded-read-only");
 
@@ -236,8 +250,11 @@ const doneOf = async (id: string | undefined) => p.locator(`[data-sign-block="${
 ok("challenge m7 pass: Printed on one adult's IMM 5476 shows on that block only", pr.status === 200 && (await doneOf(h1?.id)) === "yes" && (await doneOf(h2?.id)) === "no", { pr: pr.status, a: await doneOf(h1?.id), b: await doneOf(h2?.id) });
 
 // ---------------------------------------------------------------- the client never reaches the block
-await as(p, CLIENT); await p.goto(`${BASE}/cases/${c.id}`); await p.waitForTimeout(1500);
-ok("roles fail: the client's view has no signing block", (await p.locator("[data-sign-block]").count()) === 0);
+await as(p, CLIENT); await p.goto(`${BASE}/cases/${c.id}`);
+// Review m4: wait for the client's own page to render before counting (never a fixed wait that passes on a blank page).
+await p.waitForFunction(() => (document.querySelector("main")?.textContent ?? "").trim().length > 40 && !document.querySelector(".animate-pulse"), null, { timeout: 60_000 }).catch(() => null);
+await p.waitForTimeout(500);
+ok("roles fail: the client's view rendered and has no signing block", ((await p.locator("main").innerText().catch(() => "")).trim().length > 40) && (await p.locator("[data-sign-block]").count()) === 0);
 ok("no page error or console error during the walk", errs.length === 0, errs.slice(0, 3));
 
 await b.close();
