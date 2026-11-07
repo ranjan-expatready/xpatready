@@ -78,7 +78,7 @@ ok("C3.16 (M4, fail): unmarked, nothing is added on the case", !documentFacts(sn
   ok("C3.16 x #1051 pass: carriedFacts with { repeats: \"per_person\", scope: \"organisation\" } writes on the case (on: \"case\")", marked.length === 1 && marked[0].on === "case", marked);
   // Break round 2, m3: Household is refused on an employer fact (scopeRefusal), so an employer copy never carries it; the
   // reader would still put a marked fact on the case, which is why the refusal is the guard.
-  ok("C3.16 x #1051 fail (break round 2, m3): Household cannot be set on the employer's fact, so no employer copy is Household", scopeRefusal(facts({ key: "organisation.employer_name" }), "household")?.status === 422 && household.length === 1);
+  ok("C3.16 x #1051 fail (break round 2, m3): Household cannot be set on the employer's fact (the refusal is the guard; a copy marked Household by other means would still go on the case)", scopeRefusal(facts({ key: "organisation.employer_name" }), "household")?.status === 422 && household.length === 1 && household[0].on === "case");
   ok("C3.16 x #1051 fail: an unmarked organisation. fact stays on the principal (as before C3.16)", unmarked.length === 1 && unmarked[0].on === "principal", unmarked);
 }
 

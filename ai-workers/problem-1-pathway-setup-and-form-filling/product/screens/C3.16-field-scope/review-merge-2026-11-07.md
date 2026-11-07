@@ -147,3 +147,88 @@ These match the builder's reports.
 representative refusal) and this PR's approved behaviour. Migrations and schema are additive and ordered. The two new checks
 do what the tech lead ruled and assert what their names say. The only M2-hot files are the three the tech lead approved.
 Typecheck shows no new errors, and every suite passes on fresh copies.
+
+## Diff-only check, 8e5197711
+
+Independent reviewer, P-318 (1). Range checked: `git diff 23e70d7a7 8e5197711`, one commit, 8e5197711, the builder's answers to
+the breaker's round 2 (`break-report.md`, "Round 2": M1, m2, m3, m4). The code changes are in `api/src/question-condition.ts`,
+`api/src/forms.ts` and `engine/field-scope.ts`, plus the two checks. Paths are relative to `prototype/studio/`. The copy
+`rva5` ran on port 4446 only (two fresh starts) and is stopped, with its database dropped.
+
+### What I checked
+
+* **No nested `$transaction`.**
+  * `applyCondition` (`api/src/question-condition.ts:69`) has one caller, `Lifecycle.afterApprove`
+    (`api/src/lifecycle.ts:468`, `applyCondition(this.db, …)`). `afterApprove` has one caller,
+    `Screen02.decideLibraryChange` (`api/src/screen02.ts:137`), which calls it after `decideChange` returns and outside any
+    transaction. So the new `db.$transaction` (`question-condition.ts:76`) always runs on the top-level client.
+  * The merge (`api/src/forms.ts:448-449`) only adds `lockItem(tx, …)` inside its existing transaction; it opens no new one.
+* **Lock keys match the scope route.** All three call the same `lockItem(tx, workspace, "field", [key])`, whose key is
+  `library-item:<workspace>:field:<key>` (`api/src/library-items.ts:40`):
+  * the scope route, `api/src/field-scope.ts:101` with `[key]`;
+  * the condition, `question-condition.ts:77` with `[current.canonicalFieldKey]`, the field key, as `refuseScoped` reads it;
+  * the merge, `forms.ts:449` with `[from, to]`, both field keys.
+  The workspace is the same one in each (`ws.id()`, `c.workspaceId`, `m.workspaceId`).
+* **No deadlock.**
+  * Scope and condition take one field lock each. The merge takes two in one call, and `lockItem` sorts the keys
+    (`library-items.ts:40`).
+  * Each of the three takes its advisory locks first, before any row write. The merge now locks before `fieldMerge.updateMany`.
+    The condition holds nothing before its lock: its earlier reads take no locks.
+  * Every other transaction that takes more than one field lock takes them sorted, in one call: `api/src/sources.ts:911`.
+    No transaction takes a field lock after holding another field lock.
+  * The only mixed-kind pair, field then section (`api/src/studio.ts:677-678`), is never reversed: `studio.ts:725` locks a
+    section only. So no wait cycle is possible.
+* **The locks close both races.**
+  * M1: whichever transaction takes the lock first commits first. The second then reads it, because Postgres reads committed
+    data at each statement. The scope route's `factsOf` reads the placement's condition, and `refuseScoped` reads the scope,
+    both after the lock.
+  * m2: the merge re-reads both fields after the lock (`forms.ts:453-455`), so a scope save on either field is seen by the
+    `mergeScopeRefusal` re-check.
+* **The m3 refusal.**
+  * Words (`engine/field-scope.ts:48`): "This is the employer's fact: choose Organisation, not Household." Plain and in the
+    concept's voice. It names the scope that is allowed.
+  * Position (line 78): after the key-based refusals (merged, published, `case.`, person-only), before the placement-based
+    ones (per row, representative box, condition). That is right, because the key alone decides it.
+  * It refuses Household only; Organisation on an `organisation.` key stays allowed (checked in the unit test).
+  * No pack or fixture sets Household on an `organisation.` key:
+    * the C3.16 pack's Household targets are the `relationship.%` union date (`acceptance/C3.16.test.ts:25`), a per-row key
+      (`:87`), a `person.%` condition key (`:93`), a `person.%` race key (`:106`) and `person.date_of_birth` (`:85`);
+    * the only SQL scaffolding with HOUSEHOLD is the union date (`:156`);
+    * the second-lander check sets ORGANISATION;
+    * nothing else in `acceptance/`, `tests/` or `samples/` writes the value.
+* **The tests.**
+  * `check_c316_field_scope`: **34/34** at 8e5197711. With only `engine/field-scope.ts` put back to 23e70d7a7 (via
+    `git archive` into the scratchpad), it gives **32/34**: exactly the two m3 lines fail. This matches the builder.
+  * `check_c316_link_second_lander`: **13/13** on a fresh configured checkpoint.
+    * n2 is fixed: line 68 now matches by the principal's subject only.
+    * n1 is fixed: line 75 types the employer's own value on a third case's application and asserts `state === "same"` on
+      the case subject. If the PUT failed, the line would read New and fail, so it cannot pass by accident.
+  * C3.16 six part: **33/33** on a fresh copy.
+  * Typecheck: PASS, no new errors (15 known, 0 fixed).
+
+### Findings
+
+**Blocker:** none. **Major:** none. **Minor:** none.
+
+**Nits** (none blocks the merge):
+
+* **n5. A unit line's name says more than it asserts.** `tests/check_c316_field_scope.ts:81` is named "…so no employer copy is
+  Household". It asserts the m3 refusal again, plus `household.length === 1`, which says the opposite: a Household-marked copy
+  *is* still carried (on the case). The comment above it (lines 79-80) says this. The refusal is the guard, and that is
+  right. But the name would read truer as "Household cannot be set on the employer's fact (the refusal is the guard; carriedFacts
+  would still carry a marked copy)", with `household[0].on === "case"` asserted.
+* **n6. Some of `applyCondition`'s reads are still outside the lock.** `placementOf` and the `sameTree` "Changed since" check
+  (`api/src/question-condition.ts:71-73`) run before the transaction, so `revise` writes from rows read before the lock. This
+  does not reopen M1: the scope is read under the lock, and the scope route reads placements under the same lock. It is also
+  older than this diff. Moving those reads inside the transaction (`placementOf(tx, …)`) would make the whole
+  check-and-write atomic against `placeField`, which takes the same field lock (`studio.ts:677`).
+* **n7. One pack query could later trip the new refusal.** The per-row Household key in `acceptance/C3.16.test.ts:87` is picked as
+  the first per-row draft field by key, other than `case.%`. On today's six it is `person.education_city`. An
+  `organisation.%` per-row draft field would sort before `person.%` and get the new m3 refusal instead of the per-row one.
+  Adding `and q.lineage_key not like 'organisation.%'` keeps the line about what its name says.
+
+### Verdict (8e5197711)
+
+**Approve.** M1 and m2 are closed by the same field lock the scope route takes. Nothing nests, and the lock order cannot
+deadlock. The m3 refusal is worded and placed right, and no fixture depends on the old behaviour. n1 and n2 are fixed, and
+the checks fail without the change and pass with it.

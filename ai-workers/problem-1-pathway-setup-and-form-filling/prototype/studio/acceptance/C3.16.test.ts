@@ -84,7 +84,7 @@ async function sixPart() {
   ok("C3.16-2 fail: Filing on a person's fact is 422 (Filing is the case. facts only)", r.status === 422 && /Not built: a person's fact asked once/.test(words(r)), [personKey, r.status, words(r)]);
   r = await setScope("person.date_of_birth", "household", "person");
   ok("C3.16-2 fail: date of birth stays about each person (422)", r.status === 422 && /stays about each person/.test(words(r)), [r.status, words(r)]);
-  const rowKey = sql("select q.lineage_key from section_question q join canonical_field f on f.canonical_field_key=q.lineage_key where q.repeats='per_row' and f.status='DRAFT' and q.lineage_key not like 'case.%' order by 1 limit 1") ?? "";
+  const rowKey = sql("select q.lineage_key from section_question q join canonical_field f on f.canonical_field_key=q.lineage_key where q.repeats='per_row' and f.status='DRAFT' and q.lineage_key not like 'case.%' and q.lineage_key not like 'organisation.%' order by 1 limit 1") ?? ""; // review n7: an organisation. key would meet the employer refusal first
   r = await setScope(rowKey, "household", "person");
   ok("C3.16-2 fail: Household on a field asked per row is 422 (a household list is not built)", !!rowKey && r.status === 422 && /household or employer list is not built/.test(words(r)), [rowKey, r.status, words(r)]);
   const repKey = sql("select distinct m.canonical_field_key from form_field_map m join canonical_field f on f.canonical_field_key=m.canonical_field_key where m.person='representative' and f.status='DRAFT' and m.canonical_field_key not like 'representative.%' order by 1 limit 1") ?? "";
