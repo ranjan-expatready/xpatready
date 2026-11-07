@@ -1,0 +1,12 @@
+# B124 (M3 row A8, P-393) build notes: the outcome says when it rests on unconfirmed answers
+
+Seat B-2, 7 Nov. Row: BACKLOG B124 on `lead/2026-11-05-lead14b`; evidence `reports/best-in-class-C6.9-A4-2026-11-07.md` improvement 7. No concept file: the row is wording on the built C6.9 page (the tech lead's brief, 08:52 IST); no new screen, route, record or migration. Unconfirmed: no counsel on the wording.
+
+## What
+* **Deciding facts** (`web/src/runtime/eligibility-unconfirmed.ts`, pure): Likely eligible rests on every gate (all met); Not eligible rests on the gates it fails, never on a "the representative reviews it" gate (it never gives Not eligible); Possibly eligible (can't tell yet) rests on nothing here. Of those gates' facts, the ones answered but not confirmed now (each gate's `unconfirmed`, already worked out when read by `withUnconfirmedNow`, engine/runtime/eligibility.ts) are named, in gate order, once each.
+* **Words** (`web/src/runtime/eligibility.tsx`): the outcome pill reads "Likely eligible, on 3 answers not yet confirmed" (or "Not eligible on this application's rules as written, on 1 answer not yet confirmed"); the short pill in the people list, the case card and History reads "Likely · 3 not confirmed". A line under it names each answer as a link to that person's question in the Agent view (`lineId`, the C6.4 deep link that opens the person's tab), where Confirm section confirms it. The line goes once every deciding answer is confirmed; no new run is needed (the count is read now). BR-9 unchanged: an unconfirmed answer still counts as answered.
+* Why the app's words, not "Qualifies": the page says Likely eligible / Possibly eligible / Not eligible (C6.9 concept §5); the brief's "Qualifies, on 3 answers not yet confirmed" is the pattern, kept as ", on N answers not yet confirmed".
+
+## Tests
+* `acceptance/C6.9.test.ts` C6.9-16 (none confirmed: 3 named), -17 (Confirm section on the passport section: only Criminal history left, outcome unchanged), -18 (all confirmed: none), -19 pass/fail (Not eligible rests on failed not-review gates only; Possibly on nothing; read on the function, since no Visitor visa gate gives Not eligible). **20/20 exit 0 on the configured checkpoint** (A1 on main) and on the fixture.
+* `tests/check_b124_unconfirmed_browser.cjs` **14/14**: Possibly unchanged; none / some (Confirm section by screen, via the link) / all; people-list pill; axe; 1440 and 1024 px. Screenshots `walk/`.
