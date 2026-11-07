@@ -98,3 +98,25 @@ Journeys walked:
 * The configuration titles.
 
 Verdict: Approve
+
+## Round 3 (diff only, `2c7f6e422..eb8ff41`; approved by the tech lead, Lead 31)
+**bb92858, the Confirm section key moved out of the M2 hot file.**
+* `contracts/runtime.ts` is byte-for-byte main's again. `ASKED_RELATIONS` and `SUBJECT_OR_RELATIVE` have one home, `engine/runtime/relatives.ts:11-15`, so m7 still holds.
+* `api/src/runtime.ts:39` `ConfirmSubject = ConfirmSection.extend(...)` keeps the contract's messages; `confirmSection` (:498) is its only user, and no web code imports `ConfirmSection`.
+* Exercised directly with the schema: a uuid, `/parent_1` and `/parent_2` pass; `/sibling`, `case` and `/parent_1/x` give "Choose whose section to confirm."; a bad `seen` id is refused.
+* `import { z }` is a value import, as `.extend` needs. `tsc -p api` shows no error in any touched file (the only errors are old ones in unrelated tests).
+
+**eb8ff41, out-of-date reads a parent by the parent's key (Devin).**
+* `engine/runtime/out-of-date.ts:37,41` now call `words.saved`/`words.at` with the whole `f.about`. `case-prepare.ts:227-233` looks answers up by `subjectId`, and `state()` gives a parent's answers the key `<id>/parent_1`, so the lookup now finds the parent's own answer.
+* For a person, the application (`subjectOfAbout`) and the representative, `f.about` has no "/" and equals what was passed before, so nothing changes for them.
+* Before, a parent's newer unconfirmed value showed as a change to "no answer, confirmed", with no date.
+* `tests/runtime/check_b128_relatives.ts` passed **10/10** (fast-check is already a dependency used by other checks).
+* Against round 2's `out-of-date.ts` (scratch copy, test unchanged) it is **8/10**: the two factChanges cases fail. The rule's test fails when the rule is removed.
+
+**Not re-run by me:** `check_b128_parents.ts` and qa's check on a fresh checkpoint. The machine's shared database cluster was stopped when I tried (`isolated.sh`: "start the demo database first"), and starting it is not mine to do. The coordinator reports 23/23 and 3/3 on bb92858. The API part of this diff is a schema swap I checked directly; the engine part is pure and covered above.
+
+**New Minor:** an out-of-date line still calls a parent "Sample Client R's parent 1", not "… mother" (`out-of-date.ts:40`, `relation.replace`). Scenario: a validated IMM 5645 copy, then the mother's name changes; the Prepare line names "parent 1" while her tab says "mother". This is wording only, not wrong data, and `check_b128_relatives.ts` pins the current words. Fix later: pass the case view's parent name through `words.person`.
+
+**Journey score, round 3:** 9/10, unchanged (no screen change).
+
+Verdict: Approve
