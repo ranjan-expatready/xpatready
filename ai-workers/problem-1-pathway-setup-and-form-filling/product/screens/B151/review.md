@@ -84,3 +84,30 @@ the field added); an fs.spouse group recorded (none is Ready to file on the chec
 **Verdict: Block** (commit d32eeaddfb39ae792d82e018e03cfa255e4c541c). To fix: (1) make the unpriced `not_filing[]` check able to fail
 (a real wp.lmia_inside case with a partner not applying, or a served view, plus `not_filing.length > 0`). Issues 2 and 3 are Minor and
 left to the builder's judgement.
+
+## Round 2 (diff only, 6420e49a2)
+**Reviewed:** `git diff d32eeaddf..6420e49a2 -- …/prototype/studio` on head 6420e49a24649cd8c8e5f42470f39cb45befd0ba (d3afb05cd only adds
+this review). It changes `tests/check_b151_unpriced_browser.ts` (+23) and one line of `fees.tsx:78`. **Ran:** `web-fresh.sh ensure`, then
+isolated `rev_b151` on :4445 (`--ttl 60`), stopped after. `check_b151_unpriced_browser.ts`: **26/26**. `check_c612_fees_browser.ts`: **58/58**.
+The screenshots the checks rewrote under `screens/C6.12/screenshots/` were restored with `git checkout --`. Live AI off, US$0.
+
+**M1 (the unpriced `not_filing[]` check could not fail): closed.** The check opens a real wp.lmia_inside case with the partner not
+applying. Its setup asserts `fees_worked_out === false && not_filing.length > 0`. It then asserts that each `not_filing` person is named
+exactly once with the server's why, and that the block shows no CAD (axe, ids and 1024 px included). **Spot-check without editing the
+tree:** I served the built bundle with `notFiling:[]` put back in the unpriced branch. The wp.lmia block then shows 0 no-filing lines
+where the check wants 1, so the check fails. Unmutated, it shows 1.
+**Minor 2 (a person declared on two filings shown twice): fixed.** The list is now de-duplicated by `subject` (`fees.tsx:78`); the
+priced table keeps one row per filing, as before. The new check serves the real fs.spouse view with the child added to the sponsor's
+filing and wants one line. With the de-duplication removed from the served bundle it shows 2, so the check fails. Unmutated, it shows 1.
+**Minor 3 (time zone of the recorded day):** left as listed, as the builder said; it cannot be reached until B152 lands. Still Minor.
+**New, Minor (Should, not blocking):** the duplicate check runs only `if (v.filings.length > 1)` and prints nothing otherwise
+(`check_b151_unpriced_browser.ts`, the "Review m" block). If fs.spouse ever had one filing, the line would vanish from the count
+instead of failing. Today fs.spouse always has the sponsorship filing (26 lines ran). An `else ok(…, false)` would make it explicit.
+
+**Scores changed:** D16 3→4 (both rules now have a check that fails when the rule is removed, spot-checked). D4 4→5 (the duplicate
+case is closed). The rest are unchanged. **Journey score (my one score for this check): 9.5 / 10, pass** (trust and sources ½→1; speed stays ½,
+the case page's own load).
+**Could not check:** as in round 1 (a real screen reader; "as recorded" on real data before B152; an intended user's walk).
+
+**Verdict: Approve** (commit 6420e49a24649cd8c8e5f42470f39cb45befd0ba). No Blocker or Major is open. Minor 3 and the new Minor are for the
+builder's judgement.
