@@ -35,27 +35,50 @@ B107 (#1231). `acceptance/lib/m3.ts` is not changed.
 * **(d) C11.6-8a:** the fixture's Sample accepts record (setup S4a) takes IMM 5257 as a PDF upload only on the APR
   Portal; release 2 accepts it Online, so "Online on IMM 5257 is refused" has nothing to refuse there.
 
+## The tech lead's answers (Lead 30, #1225, 7 Nov 15:30 IST)
+1. **Paper for the barcode form in C7.6 and C9.2**, under the founder's Q3 (P-380): a case officer may switch one
+   person's IMM 5257 to Paper only with a written accommodation reason; Sample until the immigration expert confirms;
+   Unconfirmed: no counsel. PDF upload is out (no IRCC quote; how it is signed is an immigration value we do not have,
+   AGENTS rule 4). The -6 wording "on Paper" is approved with the rest of the lines.
+2. **Gap (a) is its own runtime row, B132:** a PEN item's `print` and `sign_in_pen` recorded in order and read by
+   `paperLine`; it goes to the B3 lane after B129 (`sign-steps.ts` has one owner). C7.6-12 and -19 stay red on the
+   checkpoint until B132 lands, never passed inside the pack.
+3. **C7.6-4:** a required date is allowed where the release has no optional one, with the same rule (P-47 saved and
+   flagged, a CRITICAL `fact_problem` on that form); the line names which kind it used. Measured: on the checkpoint the
+   required `person.national_id_issue_date` given as 1990-13-45 is saved (status < 300) and flagged as a CRITICAL
+   `fact_problem` on IMM 5257, so -4 passes; the fixture takes the optional date.
+
+**Proposed bug line for qa (the PR proposes it; qa writes BUGS):** "A barcode form switched to Paper on a case keeps a
+CRITICAL 'signed in pen' warning that nothing can record: no route records a Paper line's print or sign-in-pen step
+(`sign-steps.ts` takes only hand-scanned items; `paperLine` writes `done: null`)." Gap · Major, C7.6, C8.1, C7.7. Row
+B132.
+
 ## C7.6 (this PR)
-| Run | main 9fd299219 (pack as it was) | branch |
+| Run | main (pack as it was) | branch (main 1e1ca443e merged in) |
 |---|---|---|
-| Checkpoint | 15/25 (baseline run 42357755876: 15/25) | **22/25**, exit 1 |
-| Fixture | 25/25 | **25/25, exit 0** |
+| Checkpoint | 15/25 (baseline run 42357755876 on 9dc77d1ac) | **22/25**, exit 1 (`runs/C7.6-checkpoint-branch.txt`) |
+| Fixture | 25/25 | **25/25, exit 0** (`runs/C7.6-fixture-branch.txt`) |
 
-Still red on the checkpoint: -5 (QA-300), -12 and -19 (QA-300 and gap (a)). Each waits for its fix; nothing is passed
-inside the pack.
+Still red on the checkpoint, each waiting for its fix and never passed inside the pack:
+* -5: QA-300 (B107, #1231).
+* -12 and -19: QA-300 (B107) and the Paper signature (B132).
 
-Changed lines (for the tech lead's approval, P-400):
-* The barcode, hand-signed and family forms come from `expectedLines`; IMM 5707 → IMM 5645 for -20a, -20 (the family
-  form's editions).
-* Where the release files the barcode form Online, the case officer files it for this person as a PDF upload, within
-  what the item accepts (a NOTE line, no step), for the principal's case and the solo case. On the fixture nothing is
-  changed (the line already is a PDF upload).
+The fixture's own setup (`setup_vv_m3.ts`) prints 44/46 on `main` and on this branch alike (S2w, S7a: `runs/fixture-setup_vv_m3.txt`); this PR does not touch it.
+An earlier trial filed the barcode form as a PDF upload instead (`runs/*pdf-upload-trial.txt`: checkpoint 22/25 with the same three red, fixture 25/25); the tech lead ruled Paper.
+
+Changed lines (for the tech lead's line approval, P-400), all in `acceptance/C7.6.test.ts`:
+* The barcode, hand-signed and family forms come from `expectedLines` (`linesOf`); IMM 5707 → IMM 5645 for -20a, -20
+  (the family form's editions, read as `${FAM}`).
+* `asPaper`: where the release files the barcode form Online, the case officer switches it to Paper for this one person
+  with an accommodation reason (founder Q3), for the principal's case and the solo case (-22). A NOTE line, no step. On
+  the fixture nothing is changed (its line is a PDF upload).
 * -4: an optional date where the release has one, else a required one (not the date of birth or an expiry date); its
-  earlier answer is put back after. The fixture still takes the optional one.
+  earlier answer is put back after; the line names the kind used.
+* -6 reads "on Paper" where the barcode form was switched, "on PDF upload" on the fixture.
 * Step labels name the forms they read (`${BC}`, `${HS}`, `${FAM}`); no step dropped or added (P-330 (7)).
 
-## Previews of the next PRs (measured here, committed with their own PRs)
+## Next PRs (measured here before their own PRs; each from a fresh `origin/main`)
 | Pack | Checkpoint | Fixture | Red on the checkpoint |
 |---|---|---|---|
-| C9.2 | 10/11 | 11/11 | -9 (c) |
+| C9.2 (PDF-upload trial; Paper next) | 10/11 | 11/11 | -9 (c) |
 | C11.6 | **14/14** | 14/14 | none |

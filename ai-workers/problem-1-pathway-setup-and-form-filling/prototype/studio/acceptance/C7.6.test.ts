@@ -24,14 +24,16 @@ async function linesOf(caseId: string, name: string) {
   return { barcode: all.find((l) => l.barcode), handSigned: all.find((l) => l.handSigned)?.form, family: all.find((l) => l.family)?.form };
 }
 /** Row C4: a barcode form the release files Online (release 2: IMM 5257) makes no copy for filing, so it has no Validate
- *  to wait for. Within what the line accepts (C11.6's accept record: IMM 5257 accepts PDF upload), the case officer
- *  files it for this person as a PDF upload, with a reason, so the steps below read the barcode form's own Validate as
- *  they do on the fixture (where the release line is already a PDF upload and nothing is changed). */
-async function asPdfUpload(caseId: string, subject: string, form: string | undefined, channel: string | undefined, actor: string) {
-  if (!form || channel === "PDF_UPLOAD") return;
+ *  to wait for. Under the founder's ruling Q3 (P-380; Sample until the immigration expert confirms; Unconfirmed: no
+ *  counsel), the case officer switches this one person's barcode form to Paper with a written accommodation reason, so
+ *  its copy is for filing and the steps below read its own Validate, as on the fixture, where the release line is
+ *  already a PDF upload and nothing is changed. Paper is signed in pen: until its "signed in pen" step can be recorded
+ *  (row B132), that CRITICAL signature stays on the checkpoint and C7.6-12 and -19 stay red; it is never passed here. */
+async function asPaper(caseId: string, subject: string, form: string | undefined, channel: string | undefined, actor: string) {
+  if (!form || channel !== "ONLINE") return;
   const q = (await prepare(caseId, actor)).p, it = itemsOf(q, subject, form)[0];
-  const r = await call("PATCH", `/runtime/items/${it?.id}/channel`, { channel: "PDF_UPLOAD", reason: "Filed as a PDF upload for this person (Sample)", version: q?.version }, actor);
-  console.log(`NOTE  ${form} is ${channel} on the release: filed as a PDF upload for this person (${r.status})`);
+  const r = await call("PATCH", `/runtime/items/${it?.id}/channel`, { channel: "PAPER", reason: "Cannot apply online: accommodation (Sample)", version: q?.version }, actor);
+  console.log(`NOTE  ${form} is Online on the release: switched to Paper for this person with an accommodation reason (founder Q3; ${r.status})`);
 }
 
 await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", async () => {
@@ -40,8 +42,8 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   const officer = f.officer ?? "user-O";
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [officer] });
   const P = c.subjects["Sample Client A"];
-  const L = await linesOf(c.id, "Sample Client A"), BC = L.barcode?.form, HS = L.handSigned, FAM = L.family;
-  await asPdfUpload(c.id, P, BC, L.barcode?.channel, officer);
+  const L = await linesOf(c.id, "Sample Client A"), BC = L.barcode?.form, HS = L.handSigned, FAM = L.family, BCC = L.barcode?.channel === "ONLINE" ? "PAPER" : L.barcode?.channel;
+  await asPaper(c.id, P, BC, L.barcode?.channel, officer);
   let p = (await prepare(c.id, officer)).p;
   const fid = filingOf(p, P)?.id;
   let rd = readinessOf(p, fid);
@@ -72,7 +74,7 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   await fillEverything(c.id);
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
   ok("C7.6-5 pass: with every fact confirmed, the fact warnings are gone", !!rd && ![...codes(rd?.blocks), ...codes(rd?.warns)].some((x) => ["missing_facts", "fact_problem", "open_check"].includes(x)), codes(rd?.warns));
-  ok(`C7.6-6 fail (P-144, VV-R18): ${BC} on PDF upload with no validated copy read back blocks`, codes(rd?.blocks).includes("barcode_not_validated") && (rd?.blocks ?? []).some((b) => b.code === "barcode_not_validated" && !!BC && b.words.includes(BC)));
+  ok(`C7.6-6 fail (P-144, VV-R18): ${BC} on ${BCC === "PAPER" ? "Paper" : "PDF upload"} with no validated copy read back blocks`, codes(rd?.blocks).includes("barcode_not_validated") && (rd?.blocks ?? []).some((b) => b.code === "barcode_not_validated" && !!BC && b.words.includes(BC)));
   r = await call("POST", `/runtime/filings/${fid}/warnings/barcode_not_validated/pass`, { reason: "Validated outside the case (Sample)" }, officer);
   ok("C7.6-6b fail (P-237): the barcode block cannot be passed, even with a reason (409, nothing recorded)", r.status === 409 && Number(sql(`select count(*) from readiness_pass where filing_id='${fid}'`) ?? 0) === 0, r.status);
   ok(`C7.6-7 fail (P-136, P-237): ${HS} (signed by hand and scanned) with no signed scan is a CRITICAL "missing signature" warning`, (rd?.warns ?? []).some((b) => b.code === "missing_signature" && b.severity === "critical" && !!HS && b.words.includes(HS)) && !codes(rd?.blocks).includes("missing_signature"), codes(rd?.warns));
@@ -119,7 +121,7 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   // Solo firm: "Self-reviewed".
   const solo = await openCase(vv, [{ role: "principal", name: "Sample Client S", dob: yearsAgo(30) }], { representative: f.soloRep, caseOfficers: [f.soloRep ?? ""] });
   const SL = await linesOf(solo.id, "Sample Client S");
-  await asPdfUpload(solo.id, solo.subjects["Sample Client S"], SL.barcode?.form, SL.barcode?.channel, f.soloRep ?? "");
+  await asPaper(solo.id, solo.subjects["Sample Client S"], SL.barcode?.form, SL.barcode?.channel, f.soloRep ?? "");
   const sp = (await prepare(solo.id, f.soloRep ?? "")).p, sf = sp?.filings[0]?.id;
   r = await call("POST", `/runtime/filings/${sf}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: readinessOf(sp, sf)?.facts_hash }, f.soloRep ?? "");
   ok("C7.6-21 pass: a solo representative's review is logged \"Self-reviewed\" with name, licence number and time, never as a second person", r.status === 200 && r.body?.kind === "self_reviewed" && !!r.body?.licence_number, r.body);
