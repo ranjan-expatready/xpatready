@@ -7,11 +7,12 @@
 # under 60 min ago (silent; one alert an hour while it stays stuck). Test: check-lead-heartbeat.sh.
 # Usage: bash product/tools/lead-heartbeat.sh [stamp file]
 STALL_MIN=40; REPEAT_MIN=60
+ist() { TZ=Asia/Kolkata date -r "$1" "$2" 2>/dev/null || TZ=Asia/Kolkata date -d "@$1" "$2"; }   # macOS -r, Linux -d @
 stamp="${1:-/private/tmp/claude-$(id -u)/lead-watch/last-check}"; sent="$stamp.alerted"
 [ -s "$stamp" ] || { echo "no Lead check stamp at $stamp yet"; exit 2; }
 now=$(date +%s); last=$(cat "$stamp"); age=$(( (now - last) / 60 ))
 [ "$age" -le "$STALL_MIN" ] && exit 0
 [ -s "$sent" ] && [ "$(cat "$sent")" -gt "$last" ] && [ $(( (now - $(cat "$sent")) / 60 )) -lt "$REPEAT_MIN" ] && exit 3
-echo "$now" > "$sent"
-echo "Lead check missed: last ran ${age} min ago at $(TZ=Asia/Kolkata date -r "$last" '+%H:%M IST %d %b') (alert after ${STALL_MIN} min, P-389)"
+echo "$now" > "$sent.$$" && mv -f "$sent.$$" "$sent"
+echo "Lead check missed: last ran ${age} min ago at $(ist "$last" '+%H:%M IST %d %b') (alert after ${STALL_MIN} min, P-389)"
 exit 1

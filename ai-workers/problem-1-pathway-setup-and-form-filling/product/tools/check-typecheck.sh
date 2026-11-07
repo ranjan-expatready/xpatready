@@ -10,7 +10,7 @@ ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT" || exit 2
 TC="$ROOT/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/typecheck.mjs"
 pass=0; fail=0
 ok() { if [ "$2" = 1 ]; then pass=$((pass + 1)); echo "PASS  $1"; else fail=$((fail + 1)); echo "FAIL  $1 — $3"; fi; }
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no temp dir: nothing was checked"; exit 2; }; trap 'rm -rf "$T"' EXIT
 mk() {  # $1 dir, $2 compilerOptions extra JSON, $3 include JSON, rest: "file:content" pairs
   local d="$T/$1"; mkdir -p "$d"; printf '{"compilerOptions":{"noEmit":true,"strict":true,"types":[]%s},"include":%s}\n' "$2" "$3" > "$d/tsconfig.json"; shift 3
   for fc in "$@"; do printf '%s\n' "${fc#*:}" > "$d/${fc%%:*}"; done

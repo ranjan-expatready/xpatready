@@ -18,9 +18,9 @@ say "time  $(TZ=Asia/Kolkata date '+%d %b %H:%M IST')"
 # founder at once. The standby's lead-heartbeat.sh reads the same stamp while this Lead is stuck.
 stamp="$STATE_DIR/last-check"; now=$(date +%s)
 if [ -s "$stamp" ]; then last=$(cat "$stamp"); gap=$(( (now - last) / 60 ))
-  [ "$gap" -gt 40 ] && ACT "previous check ran ${gap} min ago ($(TZ=Asia/Kolkata date -r "$last" '+%d %b %H:%M IST')): checks were missed; tell the founder at once (P-388, P-389)"
+  [ "$gap" -gt 40 ] && ACT "previous check ran ${gap} min ago ($(TZ=Asia/Kolkata date -r "$last" '+%d %b %H:%M IST' 2>/dev/null || TZ=Asia/Kolkata date -d "@$last" '+%d %b %H:%M IST')): checks were missed; tell the founder at once (P-388, P-389)"
 fi
-echo "$now" > "$stamp"
+echo "$now" > "$stamp.$$" && mv -f "$stamp.$$" "$stamp"   # atomic: the standby never reads a half-written stamp
 
 # 1. Disk and test databases (P-308 disk rule: under 10 GB the Lead frees space, under 4 GB Mac suites pause).
 free=$(df -g / | awk 'NR==2 {print $4}')

@@ -5,7 +5,8 @@
 # (case, spacing and a final full stop aside); what to watch lives in STATE "Start here", read fresh each time. Refused:
 # a prompt naming lead-watch, anywhere, that is not that line; and in the Lead's copy (lane.sh whoami = lead) any recurring
 # prompt that is not that line (the Lead's one recurring job is its check). One-shot reminders pass. Test: check-lead-cron.sh.
-# Also allowed (founder, 7 Nov, P-389): the first standby's watchdog line, exactly HEARTBEAT below.
+# Also allowed (founder, 7 Nov, P-389): the first standby's watchdog line, exactly HEARTBEAT below. The standby shares the
+# Lead's copy (lane.sh whoami = lead), so the line is allowed there too; a Lead running it on itself only watches itself.
 CANON="run lead-watch; read STATE Start here"
 HEARTBEAT="run lead-heartbeat; notify the founder if stale"
 input=$(cat)
