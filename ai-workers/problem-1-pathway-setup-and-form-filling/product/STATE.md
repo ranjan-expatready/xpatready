@@ -2,7 +2,7 @@
 
 current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 16:19 IST by **Lead 31** (took over 15:45 IST); weekly 14% at 16:17 IST (~10%/h; 85% ~23:20 IST at this rate) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1619-lead31.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-07 16:19 IST by **Lead 31** (took over 15:45 IST); weekly 14% at 16:17 IST (~10%/h; 85% ~23:20 IST at this rate) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-412 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1619-lead31.md` · this branch: `lead/2026-11-07-lead31`
 
 ## Lead 31 (from 15:45 IST): standing items
 Cron **4b7708bc** (:13/:43). Weekly 16% at 16:47 IST (~4%/h over the last 30 min). The hand-over block and 15:55 progress lines are word for word in `history/STATE-2026-11-07-1650-lead31.md`.
@@ -17,18 +17,13 @@ Cron **4b7708bc** (:13/:43). Weekly 16% at 16:47 IST (~4%/h over the last 30 min
 * Standbys: Lead 32 (watchdog), Lead 33.
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
-F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`).
+F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`). F9-F13 answered 18:25-18:36 IST, all as recommended (P-412; rows in `history/STATE-2026-11-07-1837-lead31.md`).
 
 | # | Question | Lead's recommendation | Blocks | Since | Status |
 |---|---|---|---|---|---|
 | F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open: qa's walk screenshots landed with #1199 |
 | F6 | A hard boundary for `.github/**` changes: a Mergify condition (a GitHub approving review or a founder-only label) or a CODEOWNERS ruleset (#1232's breaker Blocker 1) | after B134 lands, a Mergify condition | nothing now (B134 is the interim) | 7 Nov 15:25 | open |
 | F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 15:50 | open (P-408) |
-| F9 | B144 (C8.3, #1247) conflicts with the team's AG-7-29: F1, a fact change after approval **withdraws** the form's approval (team: keeps it, flags it); F2, only the **representative of record** decides (team: any review-approve holder) | withdraw (row B6); representative of record (P-155 (1)); built that way, PR unlabelled until he answers | #1247's label | 7 Nov 16:09 | open |
-| F10 | B145 (C9.5, #1252): one release move per case now, refused once any filing is recorded; per-filing pins with SH4 (departs from P-316 (2), P-246 (2)) | per case now (one combination, one release, one questionnaire; SH4's contract not agreed); reversible | #1252's label | 7 Nov 16:18 | open |
-| F11 | For the immigration expert: are IMM 5257 Schedule 1's military service, government positions and organisation answers "background answers" (P-244: the client re-confirms staff entries before signing)? | not until the expert says so (AGENTS rule 4); behaviour as on main; row B154 if yes | nothing | 7 Nov 16:50 | open |
-| F12 | B138 (C6.16, #1257) privacy: Q1 privacy on at the adult's first right code or a staff tick, kept after take back; Q2 only staff send an accepted adult's link to a new address | both as recommended; built that way, PR unlabelled until he answers | #1257's label | 7 Nov 16:50 | open |
-| F13 | B139 (C6.17 multi-stage, #1262), sources conflict: Q1 the team's route for every declared sequence, no new tree level; Q2 the deadline as a computed Sample date, no filing item or reminder; Q3 key details on the stage record, only the UCI also the client's answer | all three as recommended; built that way, PR unlabelled until he answers | #1262's label | 7 Nov 17:19 | open |
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
