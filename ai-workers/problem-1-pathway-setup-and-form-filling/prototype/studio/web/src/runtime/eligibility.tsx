@@ -70,7 +70,7 @@ export function outcomeTip(r: Result | undefined): string {
   if (r.outcome === "LIKELY_ELIGIBLE") return `${OUTCOME_WORDS.LIKELY_ELIGIBLE}: every rule is met on the answers on file.${few}`;
   if (r.outcome === "POSSIBLY_ELIGIBLE") {
     const parts = [r.missingInputs.length ? `${plural(r.missingInputs.length, "fact")} not answered yet` : "", r.reviewGates?.length ? "a rule the representative reviews is not met" : ""].filter(Boolean);
-    return `${OUTCOME_WORDS.POSSIBLY_ELIGIBLE}: no rule failed, but ${parts.join(" and ")}.`;
+    return `${OUTCOME_WORDS.POSSIBLY_ELIGIBLE}: no rule that disqualifies failed, but ${parts.join(" and ")}.`;
   }
   if (r.outcome === "NOT_ELIGIBLE") return `${OUTCOME_WORDS.NOT_ELIGIBLE}: a rule is not met on this application's rules as written; the representative reviews this, and IRCC decides.${few}`;
   return outcomeWord(r.outcome);
@@ -190,7 +190,7 @@ export function EligibilityPage() {
               {runError ? <Notice tone="danger" title="Nothing was run">{runError}</Notice> : null}
               {q.data?.has_rules === false && !latest ? <Notice title="No eligibility rules yet">This application's release has no eligibility rules yet. An author adds them and a reviewer releases them.</Notice>
                 : !latest ? <p className="text-sm">No case check yet for {person!.label}. It reads the answers on file against this application's rules; nothing is sent anywhere.</p>
-                : <Result caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
+                : <Result caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} asked={new Set((view.data?.sections ?? []).flatMap((s) => s.questions.map((x) => `${x.subjectId}|${x.fact}`)))} a={latest} r={result!} runs={runs.length} open={setDrawer} />}
             </div>
           </section>
         </div>
@@ -209,7 +209,7 @@ function RunButton({ caseId, person, first, onAgain, onError }: { caseId: string
   return <Button busy={run.isPending} onClick={() => { if (!run.isPending) run.mutate(undefined, { onError: (e) => onError(e.message) }); }}>Run {CASE_CHECK_SHORT}</Button>;
 }
 
-function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; caseSubject: string; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
+function Result({ caseId, caseSubject, asked, a, r, runs, open }: { caseId: string; caseSubject: string; asked: Set<string>; a: Assessment; r: Result; runs: number; open: (d: "override" | "review" | "history") => void }) {
   const o = outcomeWords(r), labels = new Map(r.gates.map((g) => [g.key, g.label])), resting = restingOn(r);
   const stamp = a.reviewStamp?.stamp === "Seen" ? "Seen by" : "Reviewed by";
   return (
@@ -226,8 +226,8 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
       <details data-how className="text-sm">
         <summary className="cursor-pointer text-text-link">How this result is worked out</summary>
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-muted">
-          <li>Every rule must be met. When a rule is not met, the result is “{OUTCOME_WORDS.NOT_ELIGIBLE}”, even if facts are still missing.</li>
-          <li>A fact not answered gives “{OUTCOME_WORDS.POSSIBLY_ELIGIBLE}”. A rule the representative reviews never gives “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own.</li>
+          <li>Every rule must be met. When a rule that disqualifies is not met, the result is “{OUTCOME_WORDS.NOT_ELIGIBLE}”, even if facts are still missing.</li>
+          <li>A fact not answered, or a rule for the representative's review that is not met, gives “{OUTCOME_WORDS.POSSIBLY_ELIGIBLE}”. A rule for the representative's review never gives “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own.</li>
           <li>When the result rests on answers not yet confirmed, it says so.</li>
           {r.judgement.length ? <li>The lines under Officer's judgement never change the result.</li> : null}
           <li data-score>{r.score === null || r.score === undefined ? "No points score on this application." : `Score: ${r.score}${r.maxScore ? ` of ${r.maxScore}` : ""}.`}</li>
@@ -257,7 +257,13 @@ function Result({ caseId, caseSubject, a, r, runs, open }: { caseId: string; cas
                 <span className="block [overflow-wrap:anywhere]">{g.label}</span>
                 <span className="block text-xs text-text-muted [overflow-wrap:anywhere]">{g.facts.map((f) => `${factWords(f)}: ${shown(g.values[f])}${g.unconfirmed?.includes(f) ? " (not confirmed yet)" : ""}`).join(" · ")}</span>
                 {g.state === "not_met" && g.whenNotMet === "needs_review" ? <span className="block text-xs font-medium text-text-warn">The representative reviews this: never “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own</span> : null}
-                {g.missing.length ? <Link to={`/cases/${caseId}#${lineId((a.inputs ?? []).find((i) => i.fact === g.missing[0])?.about === "case" || g.missing[0].startsWith("case.") ? caseSubject : a.person, g.missing[0])}`} data-missing-link className="text-xs text-text-link hover:underline">{g.missing.map(factWords).join(", ")} → Answer in the Agent view</Link> : null}
+                {g.missing.length ? <span className="block text-xs">{g.missing.map((f, k) => {
+                  // P-407 (BIC-02): one link per missing fact, to that person's question; a fact the Agent view does not
+                  // ask (no form or rule reads it there) opens the Agent view and says so, never a dead anchor.
+                  const who = (a.inputs ?? []).find((i) => i.fact === f)?.about === "case" || f.startsWith("case.") ? caseSubject : a.person;
+                  const there = asked.has(`${who}|${f}`);
+                  return <React.Fragment key={f}>{k ? ", " : ""}<Link to={`/cases/${caseId}#${there ? lineId(who, f) : "agent-view"}`} data-missing-link={there ? "line" : "agent-view"} className="text-text-link underline">{factWords(f)}</Link>{there ? null : <span className="text-text-muted"> (not asked in the Agent view yet)</span>}</React.Fragment>;
+                })} → Answer in the Agent view</span> : null}
               </span>
             </li>
           ))}

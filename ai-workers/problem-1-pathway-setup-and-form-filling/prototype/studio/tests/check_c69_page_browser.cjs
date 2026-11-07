@@ -74,17 +74,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page pass: the officer's judgement lines, the disclaimer and \"Run by Case officer\" are shown", /Officer's judgement, not checked by rules[\s\S]*Has enough money for the stay/.test(await text()) && /Disclaimer\s*Indicative only/.test(await text()) && /Run by Case officer/.test(await text()));
   // P-407 (screens/C6.9/concept-ux-2026-11-07.md): the scorecard revision.
   const how = p.locator("[data-how]");
-  step("C6.9 page pass (P-407 BIC-10): \"How this result is worked out\" holds the combining rule and the score's place", (await how.count()) === 1 && /When a rule is not met, the result is “Does not qualify”, even if facts are still missing/.test(await how.evaluate((e) => e.textContent)) && /No points score on this application/.test(await how.evaluate((e) => e.textContent)));
+  step("C6.9 page pass (P-407 BIC-10): \"How this result is worked out\" holds the combining rule and the score's place", (await how.count()) === 1 && /When a rule that disqualifies is not met, the result is “Does not qualify”, even if facts are still missing/.test(await how.evaluate((e) => e.textContent)) && /No points score on this application/.test(await how.evaluate((e) => e.textContent)));
   step("C6.9 page fail (P-407 BIC-19): no always-on \"Score: none\" line beside the outcome", !/Score: none/.test(await text()));
   await p.locator("[data-outcome] [data-help]").first().focus(); await p.waitForTimeout(400);
   const tipText = await p.locator("[role=tooltip]").first().innerText().catch(() => "");
-  step("C6.9 page pass (P-407 BIC-14): the outcome's help opens on keyboard focus and says what it means", /Can't tell yet: no rule failed, but 3 facts not answered yet/.test(tipText), tipText);
+  step("C6.9 page pass (P-407 BIC-14): the outcome's help opens on keyboard focus and says what it means", /Can't tell yet: no rule that disqualifies failed, but 3 facts not answered yet/.test(tipText), tipText);
   await p.keyboard.press("Escape");
   step("C6.9 page fail (P-407 BIC-20): the people list keeps one tab stop (no focusable help inside its options)", (await p.locator("[role=listbox] [tabindex='0'], [role=listbox] a, [role=listbox] button").count()) === 1);
   const roles = await p.locator("[role=option] [data-role]").allInnerTexts();
   step("C6.9 page pass (P-407 BIC-08): each traveller shows the case page's role words", roles.includes("Principal applicant") && roles.includes("Spouse or partner"), roles.join(", "));
-  const miss = await p.locator("[data-missing-link]").first().getAttribute("href");
-  step("C6.9 page pass (P-407 BIC-02): a missing fact links to that person's question, not the top of the Agent view", !!miss && !miss.endsWith("#agent-view") && miss.includes("#"), miss);
+  const misses = await p.locator("[data-missing-link=line]").evaluateAll((es) => es.map((e) => e.getAttribute("href")));
+  step("C6.9 page pass (P-407 BIC-02): each missing fact links to its own question in the Agent view (one link per fact)", misses.length === 3 && new Set(misses).size === 3 && misses.every((h) => /#a-[^#]+$/.test(h)), misses.join(" "));
+  step("C6.9 page fail (P-407 BIC-02): no missing-fact link points at a question the Agent view does not ask", (await p.locator("[data-missing-link=agent-view]").count()) === 0 || /not asked in the Agent view yet/.test(await text()));
   await state("cant-tell-yet");
 
   // The people listbox: ↑↓ moves between travellers.
