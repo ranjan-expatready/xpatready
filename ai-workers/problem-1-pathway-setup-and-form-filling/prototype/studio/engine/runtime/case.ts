@@ -10,6 +10,7 @@ import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { gatesInForce } from "../form-field-condition.ts";
+import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
@@ -27,7 +28,7 @@ const CLIENT_SOURCES = new Set(["client_questionnaire", "profile_record"]);
 const CLIENT_KINDS = new Set(["PERSON", "RELATIONSHIP", "CASE"]);
 
 /** The parts of a released placement and field this engine reads (the snapshot keeps them as loose JSON). */
-type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
+type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null; scope?: string };
 type FieldDef = { id: string; value_type?: string; meaning?: string; item_version?: number; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
@@ -257,6 +258,13 @@ export function hasChildrenOf(people: Participant[]): Map<string, true> {
   return new Map(people.filter((p) => p.role === "principal" || p.role === "spouse_or_partner").map((p) => [p.subjectId, true as const]));
 }
 
+/** C3.16: the tag and the people a household or employer question asked once on the case is read for. */
+function scopeTagOf(about: string, p: Placement | undefined, fills: Map<string, { person: string; subject: string }> | undefined) {
+  const mark = about === "case" && (p?.scope === "household" || p?.scope === "organisation") ? p.scope : null;
+  if (!mark) return {}; // unmarked questions keep their shape (every view without a scope stays as before)
+  return { scope_tag: SCOPE_TAG[mark], read_for: [...new Map([...(fills?.values() ?? [])].map((f) => [f.subject, { subjectId: f.subject, label: f.person }])).values()] };
+}
+
 /** Rows in their order; equal orders (never written by the API) fall back to the row id, so a form's first row is stable. */
 const byOrder = (a: Row, b: Row) => a.order - b.order || a.rowKey.localeCompare(b.rowKey);
 
@@ -334,6 +342,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       options,
       note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No fixed list for this answer yet: check it before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
+      // C3.16 BR-4: a household or employer fact asked once on the case says so, and names whom it is read for (each
+      // member's part shows it read-only from these, challenge M6).
+      ...scopeTagOf(q.about, p, fills.get(`${q.about}|${q.fact}`)),
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
   });
