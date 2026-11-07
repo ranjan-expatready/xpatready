@@ -22,9 +22,9 @@
 
 ## Checks (exit codes)
 * Engine `tsx tests/check_c95_release_update.ts`: 28/28, exit 0.
-* Pack `isolated.sh screens_c95 4442 start --ttl 60 && trap '… stop' EXIT && tsx acceptance/C9.5.test.ts 4442 xr_studio_screens_c95`: **28/28, exit 0** (fresh copy, started and stopped in the same command); also 28/28 on the lane copy :4441.
+* Pack `isolated.sh screens_c95 4442 start --ttl 60 && trap '… stop' EXIT && tsx acceptance/C9.5.test.ts 4442 xr_studio_screens_c95`: **29/29, exit 0** at 72bd31a6f (fresh copy, started and stopped in the same command); earlier runs 28/28 on fresh and lane copies after the D1 fix.
 * Walk `tsx tests/check_c95_release_update_browser.ts 4441 xr_studio_b145`: 32/32, exit 0; axe WCAG 2.2 A/AA clean in every state; no sideways scroll at 1024.
-* `run-suites.sh --changed origin/main..HEAD` selects ALL (shared contract): the 16 suites of the touched files ran by `--skip-green` (the rest left to the PR check): see the PR comment for the table and exit code.
+* `run-suites.sh --changed origin/main..HEAD` selects ALL (shared contract), so the suites of the touched files ran through it with `--skip-green` (the other 342 left to the PR check): **exit 0**, all PASS: c1112_prepare_api 30/30 · c64_storage_api 48/48 · c76_readiness 75/75 · c76_readiness_api 23/23 · c76_ready_browser 53/53 · c81_signing_api 13/13 · c82_record_api 56/56 · c92_out_of_date 29/29 · c92_out_of_date_browser 19/19 · c92_undo_api 27/27 · c95_release_update 28/28 · c95_release_update_browser 32/32 · contract_seams 98/98 · sh2_where_used 24/24 · case_engine 76/76 · runtime r1c 132/132, r1d 96/96, r1a 99/99.
 * `graph.mjs --check`: exit 0. `count-any.mjs --against origin/main`: exit 0, 418 before and after. `typecheck.mjs`: no new type error.
 
 ## Screenshots (`screenshots/`, deviceScaleFactor 1)
