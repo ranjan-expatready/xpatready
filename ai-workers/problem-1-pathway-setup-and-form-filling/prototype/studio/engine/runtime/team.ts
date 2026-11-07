@@ -103,9 +103,29 @@ export function representativeContact(firm: Firm, members: Member[], phoneParts:
   // C6.11 (tech lead's ruling on #1072, AGENTS rule 4): never also under the keys the configured checkpoint's maps read
   // (person.address_*, person.email, person.phone_*): its IMM 5475 map puts its designated individual on those, and IRCC
   // says that form is for "someone who will not act as your representative". Its IMM 5476 office block waits for a
-  // reviewed map change that gives IMM 5475's designated individual its own person.
+  // reviewed map change that gives IMM 5475's designated individual its own person. The names are the same keys on both
+  // forms, so they are kept off IMM 5475 by the form instead (QA-296, namesRepresentative below).
   return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== undefined && v !== null && v !== ""));
 }
+
+/** QA-296 (C6.11, C7.7): whether a form names the representative of record: one of its form fields reads one of the
+ *  library's representative.* facts (the licence part) about the person "representative", as IMM 5476 does. The firm
+ *  record fills only such a form. A form that reads only a name or contact about "representative" names someone else
+ *  (on the configured checkpoint, IMM 5475's designated individual: IRCC's "someone who will not act as your
+ *  representative"), so the firm record's facts never reach it and the tab never says they fill it. Read from the
+ *  form's map, never its number (P-319); the Prepare item's tag (api/src/case-prepare.ts, break M3) asks the same of the
+ *  form's confirmed facts instead (review nit). */
+export function namesRepresentative(entries: { outcome?: string; fact?: string | null; person?: string | null }[]): boolean {
+  return entries.some((e) => e.outcome === "mapped" && e.person === REPRESENTATIVE && !!e.fact?.startsWith("representative."));
+}
+/** The forms of a release that name the representative of record (namesRepresentative), by form number. */
+export function formsNamingRepresentative(fieldMaps: unknown): Set<string> {
+  const maps = (fieldMaps ?? []) as { form_number: string; entries?: Parameters<typeof namesRepresentative>[0] }[];
+  return new Set(maps.filter((m) => namesRepresentative(m.entries ?? [])).map((m) => m.form_number));
+}
+/** A known fact the firm record gives about the representative (runtime.ts state: channel "firm_record"); `key` is the
+ *  renderer's "about|fact[|row]". */
+export const firmRecordFact = (key: string, source: string | undefined) => key.startsWith(`${REPRESENTATIVE}|`) && !!source?.startsWith(`${FIRM_RECORD} `);
 
 /** The library's option key for a licence body (IMM 5476 Section B: CICC, a provincial or territorial law society, the
  *  Chambre des notaires du Québec); a body it does not know gives none, so the question stays asked (break m6). */
