@@ -8,9 +8,12 @@ import { AUTHOR, call, generateCopy, ok, sql } from "./m3.ts";
 /** The repository root: a copy's path is kept relative to it (api/src/core.ts ROOT). */
 const REPO = join(import.meta.dirname, "..", "..", "..", "..", "..", "..");
 
-/** Visitors › Visitor visa on the configured checkpoint (P-322): loaded on a blank copy when it is not released yet. */
+/** Visitors › Visitor visa on the configured checkpoint (P-322). The checkpoint is known by a combination only it releases
+ *  (With an LMIA – inside Canada, as acceptance/C1.3.test.ts reads it): a copy holding only the release-1 fixture (gate B
+ *  adds setup_visitor_visa.ts and setup_vv_m3.ts for a pack on lib/m3.ts) has Visitor visa without Schedule 1, so it is
+ *  reset and the checkpoint loaded through the Demo menu's own route. */
 export async function checkpointVisitorVisa(): Promise<string> {
-  const released = () => sql("select count(*) from config_release r join combination c on c.id=r.combination_id where c.combination_key='vv.single'") !== "0";
+  const released = () => sql("select count(*) from config_release r join combination c on c.id=r.combination_id where c.combination_key='wp.lmia_inside'") !== "0";
   if (!released()) {
     await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
     const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);

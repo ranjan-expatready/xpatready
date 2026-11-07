@@ -624,12 +624,14 @@ const fromFirm = (a: Answer | null | undefined) => a?.channel === FIRM_RECORD;
 /** QA-293: the representative's tab (the view's "representative" subject): their details come only from the firm record,
  *  so one it does not fill (on this release's keys, or not at all) says so and offers no Add (the route refuses it, 422). */
 const aboutRepresentative = (q: Question) => q.subjectId === "representative";
-/** `about`: whose answer it is (the person's name), for "Answered by the principal for <name>" (P-411 (1)). */
-function ConfirmPill({ a, about }: { a: Answer; about: string }) {
+/** `about`: whose answer it is (the person's name), for "Answered by the principal for <name>" (P-411 (1)). `value`: the
+ *  answer as shown; a declaration made reads "Declared" itself, so its pill never repeats the word (B150, check_c44). */
+function ConfirmPill({ a, about, value }: { a: Answer; about: string; value?: string }) {
   if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
   // P-242, P-411: every answer fills the forms at once; the pill says who gave it and whether it is still to confirm.
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
   const text = a.status === "VERIFIED" ? "Confirmed" : a.mark === "by_principal" ? `Answered by the principal for ${about}` : a.mark === "by_staff" ? "Entered by staff · to confirm" : a.confirmed ? "Declared" : "Declared · to confirm";
+  if (text === "Declared" && value === "Declared") return null;
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
 const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
@@ -734,7 +736,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} about={q.about_label} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} about={q.about_label} value={String(shown(q, a.value))} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
