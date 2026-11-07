@@ -26,6 +26,7 @@ ok("C3.16-7 (fail): CLIENT_LEVEL and CASE_LEVEL give no mark, so every snapshot 
 // ---- BR-2: the refusals
 ok("C3.16-2 pass: Household and Organisation on an unpublished single person field", scopeRefusal(facts(), "household") === null && scopeRefusal(facts(), "organisation") === null);
 ok("C3.16-2 fail: a published field (or a draft that supersedes one) refuses any change, 409", scopeRefusal(facts({ published: true }), "household")?.status === 409 && scopeRefusal(facts({ published: true }), "person")?.message === SCOPE_WORDS_REFUSED.published);
+ok("C3.16-2 fail (break round 2, m3): Household on an employer fact (organisation.) is 422 in words; Organisation is allowed", scopeRefusal(facts({ key: "organisation.employer_address" }), "household")?.status === 422 && scopeRefusal(facts({ key: "organisation.employer_address" }), "household")?.message === SCOPE_WORDS_REFUSED.employerHousehold && scopeRefusal(facts({ key: "organisation.employer_address" }), "organisation") === null);
 ok("C3.16-2 fail: Person on a case. field is 422; Filing on a case. field is allowed", scopeRefusal(facts({ key: "case.applied_for" }), "person")?.message === SCOPE_WORDS_REFUSED.caseKey && scopeRefusal(facts({ key: "case.applied_for" }), "filing") === null);
 ok("C3.16-2 fail (m1): Filing on a person's fact is 422", scopeRefusal(facts(), "filing")?.message === SCOPE_WORDS_REFUSED.filingKey);
 ok("C3.16-2 fail: a field placed per row refuses Household (a household list is not built)", scopeRefusal(facts({ placements: [{ repeats: "per_row", condition: false }] }), "household")?.message === SCOPE_WORDS_REFUSED.perRow);
@@ -75,7 +76,9 @@ ok("C3.16 (M4, fail): unmarked, nothing is added on the case", !documentFacts(sn
   const ec = { key: "sample-employer", firm: "sample-firm", label: "Sample Employer Ltd (Sample)", facts: { "organisation.employer_name": "Sample Employer Ltd (Sample)" } };
   const marked = carriedFacts(snap("organisation") as never, ec), unmarked = carriedFacts(snap(null) as never, ec), household = carriedFacts(snap("household") as never, ec);
   ok("C3.16 x #1051 pass: carriedFacts with { repeats: \"per_person\", scope: \"organisation\" } writes on the case (on: \"case\")", marked.length === 1 && marked[0].on === "case", marked);
-  ok("C3.16 x #1051 pass: a field marked Household is written on the case too", household.length === 1 && household[0].on === "case", household);
+  // Break round 2, m3: Household is refused on an employer fact (scopeRefusal), so an employer copy never carries it; the
+  // reader would still put a marked fact on the case, which is why the refusal is the guard.
+  ok("C3.16 x #1051 fail (break round 2, m3): Household cannot be set on the employer's fact, so no employer copy is Household", scopeRefusal(facts({ key: "organisation.employer_name" }), "household")?.status === 422 && household.length === 1);
   ok("C3.16 x #1051 fail: an unmarked organisation. fact stays on the principal (as before C3.16)", unmarked.length === 1 && unmarked[0].on === "principal", unmarked);
 }
 

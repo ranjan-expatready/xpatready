@@ -25,6 +25,7 @@ import { noFreeAdd } from "./library-sources.ts";
 import { ChangeSets } from "./change-sets.ts";
 import type { ChangeItem } from "../../contracts/change-set.ts";
 import { actorOf, ACTORS, Audit, Db, fail, need, revise, SOLUTION, strip, Workspace, type Actor } from "./core.ts";
+import { lockItem } from "./library-items.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { mergeScopeRefusal } from "../../engine/field-scope.ts"; // C3.16
 import type { z } from "zod";
@@ -445,6 +446,7 @@ export class Forms {
     const moved: Record<string, number> = {}; const touched = new Set<string>();
     const bump = (k: string, n = 1) => { moved[k] = (moved[k] ?? 0) + n; };
     await this.db.$transaction(async (tx) => {
+      await lockItem(tx, ws, "field", [from, to]); // break round 2, m2 on #1054: a scope save on either field waits, then the re-check below sees it
       const claimed = await tx.fieldMerge.updateMany({ where: { id, status: "PROPOSED" }, data: { status: "APPLIED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: b.note ?? null } });
       if (!claimed.count) conflict("This merge was decided at the same moment.");
       const fields = await tx.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: { in: [from, to] } }, orderBy: { version: "desc" } });

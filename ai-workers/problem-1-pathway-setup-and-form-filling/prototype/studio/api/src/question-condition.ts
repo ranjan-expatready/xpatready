@@ -11,6 +11,7 @@ import { Audit, Db, revise, strip, type Actor } from "./core.ts";
 import { checkCondition } from "../../engine/validate.ts";
 import { placementRefusal } from "../../engine/field-scope.ts";
 import { spreadOf } from "./form-field-condition.ts";
+import { lockItem } from "./library-items.ts";
 
 export const COND_KIND = "placement_condition", COND_ACTION = "SET_CONDITION";
 const OPEN = ["WAITING", "RETURNED", "APPROVED"];
@@ -70,8 +71,13 @@ export async function applyCondition(db: Db, audit: Audit, actor: Actor, c: Libr
   const { rows, current } = await placementOf(db, c.workspaceId, c.key);
   if (!current || !m.after) throw problem(409, "Not placed", "The question is no longer placed in the library, so nothing was changed. Return the change.");
   if (!sameTree(current.predicateJson, m.before)) throw problem(HttpStatus.CONFLICT, "Changed since", "When this question is asked changed after it was proposed, so nothing was changed. Return it; it can be drafted again.");
-  await refuseScoped(db, c.workspaceId, current.canonicalFieldKey); // C3.16: checked again at approval (the scope may have been set since)
-  await revise(db.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, c.proposedBy, strip); // B86 (break M1): approving is not authoring, or the second person could never release it (BR-14)
+  // C3.16: checked again at approval (the scope may have been set since), under the field's lock with the write, as the
+  // scope route takes it (break round 2, M1 on #1054: an approval racing "Household" left a waiting household question).
+  await db.$transaction(async (tx) => {
+    await lockItem(tx, c.workspaceId, "field", [current.canonicalFieldKey]);
+    await refuseScoped(tx, c.workspaceId, current.canonicalFieldKey);
+    await revise(tx.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, c.proposedBy, strip); // B86 (break M1): approving is not authoring, or the second person could never release it (BR-14)
+  });
   await audit.log(c.workspaceId, actor.id, "approved", "placement", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the question goes out with the next release.`);
 }
 

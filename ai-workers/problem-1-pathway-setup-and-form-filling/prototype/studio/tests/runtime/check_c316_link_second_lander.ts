@@ -65,6 +65,13 @@ ok("C3.16 x C1.3 pass: the link puts the employer name on the case subject once 
 ok("C3.16 x C1.3 fail: nothing is written on the principal's own record", onPrincipal === "0", onPrincipal);
 const q2 = ((await call("GET", `/runtime/cases/${c2}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []).flatMap((s: { questions: Q[] }) => s.questions).filter((q: Q) => q.fact === NAME);
 ok("C3.16 x C1.3 pass: the question is asked once, on the application, and shows the linked value", q2.length === 1 && q2[0].subjectId === filing2 && q2[0].answer?.channel === "linked_file", q2.map((q) => [q.subjectId === filing2 ? "case" : q.subjectId, q.answer?.channel]));
-ok("C3.16 x C1.3 pass: the principal's IMM 5710 box reads that one value", (q2[0]?.fills ?? []).some((f) => f.form === "IMM 5710" && (f.subject === principal2 || f.person === "Client B")), q2[0]?.fills);
+ok("C3.16 x C1.3 pass: the principal's IMM 5710 box reads that one value", (q2[0]?.fills ?? []).some((f) => f.form === "IMM 5710" && f.subject === principal2), q2[0]?.fills);
+
+// Review n1: the same value typed beforehand reads Same (the comparison is against the case's own record).
+const third = await call("POST", "/runtime/cases", { combinationId: wp, reference: `C316L3-${run}`, clientActor: CLIENT, principal: { displayName: "Client C" } }, REP);
+const c3 = third.body?.id as string, filing3 = ((third.body?.people ?? []) as { subject_id: string; role: string }[]).find((p) => p.role === "case")?.subject_id ?? "";
+await call("PUT", `/runtime/cases/${c3}/answers/${filing3}/${NAME}`, { value: "Sample Employer Ltd (Sample)", expectedId: null }, OFFICER);
+const same = (await call("GET", `/runtime/cases/${c3}/employer-cases`, undefined, OFFICER)).body?.employer_cases?.find((e: { key: string }) => e.key === EMPLOYER)?.facts?.find((f: { fact: string }) => f.fact === NAME);
+ok("C3.16 x C1.3 pass (BR-4, review n1): the same employer name typed on the application reads Same", same?.state === "same" && same?.subject_id === filing3, same);
 
 process.exit(summary() ? 1 : 0);

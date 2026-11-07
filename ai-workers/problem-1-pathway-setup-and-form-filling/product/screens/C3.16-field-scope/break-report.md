@@ -97,3 +97,86 @@
 * A document that supplies a household or employer fact (`engine/sources.ts`, M4): no document on either copy supplies one.
 * The AI condition proposal path, which would need a saved C4.11 replay. By reading only: `refuseScoped` runs at proposal and again at approval (`question-condition.ts`), but it reads the placement's lineage key, so it has Major 2's blind spot.
 * An Organisation fact on a real case: no combination releases on the six (B82).
+
+## Round 2 (merged head b13d0458e, 7 Nov)
+**Scope:** what the merge of main brought (B86, #1051, #1072, B120), the migration order, the scope route after the merge, the round-1 Majors, and `tests/runtime/check_c316_link_second_lander.ts`.
+**Copy:** `bra5` on 4447 only (`isolated.sh` refuses the name `brA5`: lower case only). It ran the configured checkpoint (Demo › Reset, then Load the configured checkpoint as user-A), then Reset to the six plus pack2 `needQuestions` on the LMIA work permit and Visitor visa, then the checkpoint again. Live AI off, US$0. The copy is stopped and its database dropped.
+**Code under test:** b13d0458e. Partway through, I ran a stray `git checkout` of main's files over the worktree. I restored it to HEAD at once (`git status` clean) and restarted the copy before any test below. During the run the branch moved to 23e70d7a7, which only adds `review-merge-2026-11-07.md` (notes only).
+
+### Breaks
+**Major 1: a condition approved at the same moment as Household leaves a household question that waits forever (BR-2, challenge M1).**
+* Setup: on the six after setup, `organisation.employer_address` is a draft, placed `per_person` with no condition, scope Person. The only source of question-condition proposals is saved AI runs, and the six has no conditions. So, as named scaffolding, I inserted in SQL one `library_change` (`kind` placement_condition, WAITING, proposed by user-A) with `after` = `{"op":"eq","field":"person.criminal_history","value":true}`.
+* Steps: send two requests together:
+  * POST `/api/library/changes/<id>/approve` `{}` as user-B;
+  * PUT `/api/library/fields/organisation.employer_address/scope` `{"scope":"household","expected":"person"}` as user-A.
+* Actual:
+  * started together: 3 of 5 rounds gave approve 201 and scope 200. Stored: `HOUSEHOLD`, and the draft placement holds the condition.
+  * approval 5 ms ahead: 1 of 5 rounds gave the same.
+  * approval 10–20 ms ahead: 0 of 10 (the scope save gets 422).
+  * scope save first: 0 of 13 (the approval gets 422 "A household question cannot depend on one person's answer yet.").
+* What follows from that state:
+  * Preview of the work permit (principal and spouse, each answering criminal history Yes, or each No) shows the question once on the case as `"Criminal history" is Yes (waiting for person.criminal_history)` in both runs. The case's own record never holds that person fact, so the question is never asked: a rule that can never be true.
+  * B86 then accepts a form-field condition on that Household field: POST `/api/library/form-field-conditions` for the IMM 5710 "Complete Address of Employer" box gave 201 WAITING.
+* Expected: one of the two is refused, as `placeField` has done since round 1's review m1.
+* Cause:
+  * `applyCondition` runs on `this.db` with no transaction and no field lock (`api/src/question-condition.ts:67-74`, called from `api/src/lifecycle.ts:468`).
+  * Its `refuseScoped` check (`:73`) reads the scope before `revise` (`:74`) writes the condition.
+  * The scope route takes the field's advisory lock (`api/src/field-scope.ts:101`), but the approval never takes it.
+
+**Minor 2: a merge approved at the same moment as Organisation puts representative boxes on an employer-scoped field (round-1 Major 1, by a race).**
+* Steps:
+  1. Propose a merge as user-A while both fields are Person: keep a field that no representative box reads; merge away one that a representative box reads.
+  2. Then send `POST /api/library/merges/:id/approve` as user-B and, 0.12–0.21 s later, PUT `…/<keep>/scope` `{"scope":"organisation","expected":"person"}` as user-A.
+* Actual: in 3 of 8 pairs both succeeded (201 and 200). Example: `person.health_details` became ORGANISATION with the 3 representative boxes of `person.given_names`. On the round-1 pair (`organisation.employer_name` ← `organisation.name`) the race was not hit in 2 tries; the save landed first and the approval got 409.
+* Cause: the scope re-check at approval (`api/src/forms.ts:453`) runs in the merge transaction (`:447`) without the field's advisory lock. Meanwhile the scope route counts representative boxes (`field-scope.ts:32`) before the merge has moved them.
+* Why only Minor: the resolver guard holds. In Preview those representative boxes read `about=representative` with no value, never the case's employer value (`engine/resolver.ts:98`).
+
+**Minor 3: Household is accepted on an employer fact, and the employer link then puts the principal's employer address on the spouse's IMM 5710.**
+* Steps (configured checkpoint):
+  1. Scaffolding (P-33), as the second-lander check does: `HOUSEHOLD` on `organisation.employer_address` in SQL; then submit (user-A), sign off (user-C) and approve (user-B) gave release 3 (marked).
+  2. Open a case as user-R (Client C), then add a spouse (Client D) as user-O.
+  3. Link `sample-employer-1` as user-O.
+* Actual:
+  * the link copies the employer's address onto the case's own record;
+  * the question reads "Read for: Client C, Client D";
+  * Preview fills the address on **both** people's IMM 5710 "Details of intended work" boxes (`about=case`), while the spouse's employer name box stays `about=null`. So one form now carries another person's employer address under a blank employer name.
+  * The new unit line asserts this copy as a pass: "a field marked Household is written on the case too" (`tests/check_c316_field_scope.ts:78`).
+* Cause:
+  * `scopeRefusal` does not refuse Household on an `organisation.` key (`engine/field-scope.ts:74-77`);
+  * `carriedFacts` skips only Person facts (`engine/runtime/employer.ts:55`).
+* Expected: an employer fact can only be Organisation (or Person), or the link carries only Organisation and filing facts. The concept names only Organisation for the link (BR-5).
+
+**Minor 4: the API part of the second-lander check never runs in CI** (also the merge review's n3).
+* `product/tools/run-suites.sh` picks `tests/check_*` and only two `tests/runtime` suites. Its usage line also needs a manual Demo load.
+* It does not hide a failure. A re-run on the same copy fails loudly: "Nothing has changed since the released version.", 11/12, exit 1. Its IMM 5710 line checks that the box is listed under `fills`, not the value, but Preview showed the value is right.
+
+### What held
+* **Migrations:**
+  * on a fresh copy, `migrate deploy` applied 61 migrations, with B86 (`…09:30:07.559`) before C3.16 (`…07.562`);
+  * a second deploy: "No pending migrations";
+  * the C3.16 SQL run again by hand: NOTICE "already exists, skipping", no error;
+  * a deploy up to B86 and then the rest: `{CLIENT_LEVEL,CASE_LEVEL}` then all four values;
+  * the schema diff names neither `FieldScope` nor `condition_rule`.
+* **Scope route after the merge:**
+  * GET: none 401, user-A/B/C 200, user-O/P/R 403, unknown actor 401;
+  * PUT: user-B/C/O/P/R 403, none and unknown 401;
+  * every checkpoint field, including `representative.*`, `representative.organization_name` and `case.uses_representative` (#1072), gives 409 "Published";
+  * a stale `expected` gives 409 with reload words.
+* **Round-1 Majors:**
+  * M1: a merge across scopes is refused in words, both ways (409);
+  * M3: placement and scope sent together, 0 of 22 broke (10 together, 12 with the placement first);
+  * M2: checked in the code only (`field-scope.ts:31` reads placements by lineage key or field key).
+* **#1051 with an Organisation mark:**
+  * the link writes the name on the case's own record, once, and never on the principal;
+  * Different keeps the typed value;
+  * saves: principal 422 "…for the employer…", spouse 422 "…for the household…", client 403, a stale save 409, the officer with `expectedId` 200;
+  * a link and a save sent together left one current answer in 10 of 10 rounds (the loser gets 409).
+* **A scope change racing a link is not a path:** a case pins its release, no route moves a case to a newer release, and scope reaches a case only through a release.
+* **B86:** a scoped field without a question condition gives 409 "No condition to hold" (`ruleInForce` needs the question's own condition).
+* **B120:** the configured checkpoint loads, and no release carries a mark until scaffolding sets one.
+* **Checks:** second lander 12/12 on a fresh checkpoint; `check_c316_field_scope` 33/33; `check_sh3_resolver` 85/85.
+* **UI:** the Agent view shows "About the employer · Read for: Client B" beside "To confirm" and "Employer case" at 1440, 1024 and 720 px (200 %), with no sideways scroll and no page errors.
+
+**Not tried:** a screen reader; M2 live; keyboard on the merged questionnaire (only import lines changed there).
+
+**Verdict (round 2, b13d0458e): Block.** One Major (1: the condition approval skips the field lock, so Household plus a condition is reachable). Minors 2–4 can follow.

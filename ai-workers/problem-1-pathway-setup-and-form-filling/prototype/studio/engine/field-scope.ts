@@ -45,6 +45,7 @@ export const SCOPE_WORDS_REFUSED = {
   representative: "A representative's box reads this field, so it stays about each person.",
   condition: "A household question cannot depend on one person's answer yet.",
   personOnly: "This fact is about one person and stays about each person.",
+  employerHousehold: "This is the employer's fact: choose Organisation, not Household.",
 } as const;
 
 /** Facts that are always about one person (challenge m2): the representative's own, date of birth, "has any children". */
@@ -72,6 +73,9 @@ export function scopeRefusal(f: ScopeFacts, scope: Scope): { status: 409 | 422; 
   if (scope === "filing") return caseKey ? null : { status: 422, message: SCOPE_WORDS_REFUSED.filingKey };
   // household or organisation
   if (f.key.startsWith("representative.") || PERSON_ONLY.has(f.key)) return { status: 422, message: SCOPE_WORDS_REFUSED.personOnly };
+  // Break round 2, m3 on #1054: an employer's fact ("organisation.") is never a household's: Household would copy the
+  // employer's value onto every adult's forms (the spouse's IMM 5710 read the principal's employer address).
+  if (scope === "household" && f.key.startsWith("organisation.")) return { status: 422, message: SCOPE_WORDS_REFUSED.employerHousehold };
   if (f.placements.some((p) => p.repeats === "per_row")) return { status: 422, message: SCOPE_WORDS_REFUSED.perRow };
   if (f.representativeBox) return { status: 422, message: SCOPE_WORDS_REFUSED.representative };
   if (f.placements.some((p) => p.condition)) return { status: 422, message: SCOPE_WORDS_REFUSED.condition };
