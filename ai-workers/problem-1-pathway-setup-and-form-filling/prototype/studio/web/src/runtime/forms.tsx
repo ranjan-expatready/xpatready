@@ -1,5 +1,6 @@
 // Case forms panel (runtime lane, R1d, plan §8 RT-13…RT-16): each PDF form for each person on the case, what a copy made
-// now would write, whether it can be filed (P-71: only missing or unconfirmed facts and the form's own Validate block),
+// now would write (every declared and confirmed answer, P-242, P-411), whether it can be filed (P-71: only missing or
+// unconfirmed facts and the form's own Validate block),
 // and every copy made: generating, generated, out of date (with the facts that changed), locked, stale. A new copy is
 // made only when the officer asks; a locked copy never changes (P-65). The page reads one list per case.
 import * as React from "react";
@@ -30,7 +31,7 @@ export function FormsPanel({ caseId }: { caseId: string }) {
     <section aria-labelledby="forms-h" className="rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
         <h2 id="forms-h" tabIndex={-1} className="text-base font-semibold outline-none">Prepare application</h2>
-        <p className="text-[13px] text-text-muted">The forms to file, filled from confirmed answers only. A new copy is made only when you ask; a locked copy never changes.</p>
+        <p className="text-[13px] text-text-muted">The forms to file, filled from declared and confirmed answers. A new copy is made only when you ask; a locked copy never changes.</p>
       </header>
       <OutOfDate caseId={caseId} />
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
@@ -145,7 +146,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         </Button>
       </div>
       {!f.applies ? <p className="text-[13px] text-text-muted">This form no longer applies to {f.person} (for example, not travelling); its copies are kept.</p> : null}
-      <p className="text-[13px] text-text-muted">Confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.unconfirmed ? `; ${f.draft.unconfirmed} answered but not confirmed ${f.draft.unconfirmed === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
+      <p className="text-[13px] text-text-muted" data-draft-words>Declared or confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.to_fix ? `; ${f.draft.to_fix} answered but needing a fix ${f.draft.to_fix === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
       {missing.length ? (
         <details className="text-[13px]">
           <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Facts to answer or confirm ({missing.length})</summary>
