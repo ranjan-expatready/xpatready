@@ -65,3 +65,82 @@ Journeys: J1 a case officer checks a two-person case and sees the spouse's resul
 A real screen reader. An intended user's unaided walk (D17 and D20 stay with the founder). An "or" gate and a `case.*` gate end to end in the browser: authoring and releasing one was out of scope for this review. Both Majors are shown by running the function and reading the code paths above. The filed (read-only) case state with the line showing. No separate journey-test file was written, because the brief allows only this file; the score is here.
 
 **Verdict: Block.** To fix: Major 1 (deciding facts for "or" and failed "and" gates, worked out in the engine, with a test) and Major 2 (link to the application-level question's holder, with a test). Minors 1–3 are welcome in the same PR.
+
+## Re-review (diff ca72fa195..06cc27a24)
+Same reviewer, 7 Nov, **commit 06cc27a24** (HEAD checked). Only `git diff ca72fa195..06cc27a24` was reviewed, with the builder's response (last section of `build-notes.md`). Read-only on the tree. My own copy ran on :4425 (`isolated.sh rev124b`, live AI off), started and stopped in the same command.
+
+### Evidence run
+* `tests/check_b124_unconfirmed_browser.cjs 4425 xr_studio_rev124b`: **18/18**. `walk/6-not-eligible-funds-1440.png` reads "Not eligible on this application's rules as written, on 1 answer not yet confirmed". The people list says "Not eligible · 1 not yet confirmed", and the line links "Funds available cad".
+* `npx tsx studio/tests/check_b124_rests_on.ts`: **8/8**.
+* Mutants of `restsOn` (scratch copies, the builder's test pointed at each one):
+  * `return unconfirmed`: 6/8 (the "or" pass line and the "and" fail line catch it).
+  * No guard for "removing them all changes nothing": 6/8.
+  * No "together" fallback: 7/8.
+  * Deleting `kkey(person, f)` instead of the holder's key: **8/8, not caught by the pure test.** Reading the code, the browser walk's funds steps catch it: the funds answer would never be deleted, so nothing would be named. The pure test has no `case.*` line.
+* On ca72fa195 the pure test cannot even load (there is no `restsOn`). Its lines encode Major 1 (a) and (b). The walk's funds-link `href` step fails on the old `lineId(a.person, f)`.
+* Probes of the real `restsOn` and `gateResult` (scratch script, results below).
+
+### Earlier findings
+* **Major 1: partly fixed, still open (narrowed).**
+  * Fixed: the moved rule is in `engine/`, and the two cases I reported are now right. An "or" gate met on a confirmed branch names nothing. An "and" gate failed on a confirmed fact names nothing.
+  * `case.*` facts are handled: the key is deleted from the holder through `aboutOf` on the original Known, so `case.funds_available_cad` is named. An "or" of a confirmed case fact and an unconfirmed person fact names nothing.
+  * Calculated facts cannot reach a gate: release refuses them (`eligibility-gates.ts:211-212`), and the `derived_fields` filter in `evalCondition` is untouched. Not a concern.
+  * Still open: the "together" fallback is wrong (see Major 1 below).
+* **Major 2: fixed.**
+  * The link uses `a.inputs[].about === "case"`. That is the run's own record of the holder ("case" is the Known key for application facts, `assessments.ts:43`). The link then goes to the case subject from `c.people` (role `case`), which is the same holder `checklist.tsx` uses.
+  * Tested end to end: the author adds a gate and others release it, the `href` ends `#a-<case subject>-case-funds_available_cad`, and the tab opens with that question.
+* **Minor 1: fixed, by reading the code.** An out-of-date or not-travelling run gets `"none"`, so `restsOn: []`. Because the web uses `??`, not `||`, the `[]` is kept and no line shows. The outcome keeps the band. No test covers it (Minor 4).
+* **Minor 2: fixed.** The walk asserts the Not eligible long words and the people-list pill.
+* **Minor 3: partly fixed, and the partial fix is reasonable.**
+  * The new words all say "not yet confirmed": pill, short pill, line.
+  * The per-gate mark "(not confirmed yet)" is C6.9's string, asserted by `check_c69_page_browser.cjs`. The two spellings still show on one screen (`walk/6`).
+  * Accepted as a carry-over for a C6.9 words pass, not a blocker for this row.
+
+### API wiring (`api/src/assessments.ts` `fresh`)
+* The release is read only when it is the same release: the `snapshotOf(c)` pin is the run's release, otherwise the result is null and then `"none"`. An out-of-date run gives nothing, and so does a person who is not travelling. Correct.
+* Cost: `snapshotOf` is a property read (`runtime.ts:72`), not a query.
+* `restsOn` runs `evalCondition` up to U+1+U times per gate, and copies Known each time. This only happens for the rows that are not out of date, which is usually the latest run per person. That is negligible at case sizes.
+* The web fallback to `unconfirmed` (when a gate key is missing or for an older server) is harmless. Every view that shows the words (people list, case card, Result, History, Override) reads the same list endpoint, so their counts agree.
+
+### Issues (ranked)
+**Major 1 (still open, narrowed): when no single answer flips the gate, `restsOn` names every unconfirmed answer, including ones that decide nothing. It also misses answers that decide only together, when another answer flips the gate on its own.** `engine/runtime/eligibility.ts:128-130` (`alone.length ? alone : unconfirmed`). I ran the real function on three gates.
+* (a) An "or" gate, which the simple editor builds ("any of these is true"). A = yes and B = yes are met, C = no, and all three are unconfirmed. Result: `restsOn = [a, b, c]`. C is answered "no" and decides nothing, which is the same defect as the first review's (a).
+* (b) An "and" gate, also built by the simple editor. It fails on A = no and B = no, C = yes passes, and all three are unconfirmed. Result: `restsOn = [a, b, c]`. The page would say "Not eligible rests on … A, B, C", and C passed: the same defect as the first review's (b).
+* (c) A nested gate `(A or B) and C`, all three met and unconfirmed (reachable through Edit as JSON). Result: `restsOn = [c]`. After C is confirmed, the line comes back naming A and B. That breaks the line's own promise: "this line goes once every deciding answer is confirmed".
+* Fix: name `f` when some set S of the other unconfirmed answers leaves the gate unchanged (`without(S) === state`) while removing `f` as well changes it (`without(S ∪ {f}) !== state`). A brute-force check over subsets is enough, because a gate reads a handful of facts; above about 12 unconfirmed answers, name them all. This gives `[a, b]`, `[a, b]` and `[a, b, c]` for (a)–(c), and keeps all eight current lines.
+* Add (a), (b) and (c) to `check_b124_rests_on.ts`, plus one `case.*` line so the holder key is tested without the browser.
+
+**Minor 4 (new): Minor 1's fix has no test.** Removing `o.out_of_date ||` from `fresh` fails nothing I can see. Fix: one walk step. Change an answer after a run and check that the band shows with no "rests on" line.
+
+Seen, not a finding (already true before this change):
+* `factWords` shows the test gate's fact as "Funds available cad" (lower-case "cad").
+* Browser Back loses the person you had open.
+
+### Journey test (reviewer, re-scored on this commit)
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | J1–J3 complete again on :4425; the new J9 (Not eligible on the application's funds) also completes |
+| Next step obvious | 1 | The case-fact link now opens the application's tab at the question; Back losing the person is older behaviour |
+| Plain words | ½ | Two spellings still on one screen (Minor 3 carry-over); "Funds available cad" |
+| Feedback and state | 1 | Pill, short pill and line agree; the line goes at 0 |
+| Correct data | ½ | Right for single-branch and shipped gates; over-names in (a)/(b), under-names in (c) (Major 1) |
+| Error recovery | 1 | An out-of-date run no longer asks for a confirm that cannot clear it |
+| Accessibility and sizes | 1 | Builder's axe step passed at 1440 px in my run; 1024 px with no sideways scroll |
+| Speed | 1 | Unchanged; the extra work is in memory |
+| Visual quality | 1 | `walk/6` calm and consistent |
+| Trust and sources | 1 | Test gate labelled Sample; P-393 cited |
+
+**Journey score 9/10, no criterion at 0: pass.**
+
+### Could not check
+* A real screen reader.
+* An unaided walk by an intended user.
+* Cases (a)–(c) in the browser: shown on the function only.
+* The out-of-date path in the browser: checked by reading the code.
+
+**Verdict: Block** (commit 06cc27a24). To fix:
+* Major 1: the "together" rule in `restsOn`, with tests (a)–(c).
+
+Welcome in the same PR:
+* Minor 4: a test for "out of date gives no line".
+* A `case.*` line in the pure test.

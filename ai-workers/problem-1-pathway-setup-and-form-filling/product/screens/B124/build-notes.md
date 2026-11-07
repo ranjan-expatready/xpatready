@@ -18,3 +18,7 @@ Seat B-2, 7 Nov. Row: BACKLOG B124 on `lead/2026-11-05-lead14b`; evidence `repor
 * **Minor 2 (fixed):** the Not eligible words are tested in the walk (the funds gate gives Not eligible on an unconfirmed answer).
 * **Minor 3 (partly):** the new words all say "not yet confirmed" (the short pill now "Likely · 3 not yet confirmed"); the per-fact mark "(not confirmed yet)" is C6.9's existing string, asserted by `check_c69_page_browser.cjs`, left as it is.
 * `tests/check_b124_unconfirmed_browser.cjs` 18/18.
+
+## After the re-review (Block on 06cc27a24)
+* **Major 1, narrower case (fixed):** the "together" fallback named every unconfirmed answer when no single one changed the gate (an "or" with a false branch, a failed "and" with a passing part, `(A or B) and C`). Now an answer is named when some set S of the other unconfirmed answers can be set aside with the gate unchanged while S and it together change it (every set is tried; past 10 unconfirmed answers in one gate, all are named). Tests added: those three cases and an application (`case.*`) fact (taking away the case's answer, not the person's): `check_b124_rests_on.ts` 12/12.
+* **Minor 4 (tested):** the walk changes an answer after the run: Out of date, and no "not yet confirmed" line.

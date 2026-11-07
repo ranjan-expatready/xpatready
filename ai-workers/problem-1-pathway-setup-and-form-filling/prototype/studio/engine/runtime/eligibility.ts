@@ -112,11 +112,13 @@ export function outOfDate(inputs: Input[], now: (fact: string) => unknown, sameR
 /** Today's value of a fact for this person, read the same way a run reads it (for outOfDate). */
 export const nowOf = (known: Known, person: string) => (fact: string) => valueOf(known, fact, person);
 
-/** B124 (P-393; review Major 1 on ca72fa195): the unconfirmed answers a gate's Met or Not met rests on. With them
- *  treated as missing (as a run treats an unanswered fact), the gate would no longer read the same: each one whose
- *  absence alone changes it is named; when only their absence together does (two "or" branches, each met on an
- *  unconfirmed answer), all of them are. An "or" branch met on a confirmed answer makes the other branch's answer not
- *  deciding; an "and" gate failed on a confirmed answer is not resting on its other, unconfirmed one. */
+/** B124 (P-393; review Major 1 on ca72fa195 and its re-review on 06cc27a24): the unconfirmed answers a gate's Met or
+ *  Not met rests on. An answer `f` is named when some set S of the other unconfirmed answers can be treated as missing
+ *  (as a run treats an unanswered fact) with the gate still reading the same, while S and `f` together change it: so
+ *  `f` matters once S is set aside. An "or" branch met on a confirmed answer, or a false branch of a met "or", decides
+ *  nothing; a passing part of a failed "and" decides nothing; `(A or B) and C` met on three unconfirmed answers rests on
+ *  all three, so confirming C alone never makes the line come back with A and B. Gates read few facts; past
+ *  RESTS_MAX unconfirmed answers every one is named rather than trying every set. */
 export function restsOn(s: Snapshot, known: Known, gate: Gate, person: string, state: GateState, unconfirmed: string[]): string[] {
   if (!unconfirmed.length || (state !== "met" && state !== "not_met")) return [];
   const without = (drop: string[]): GateState => {
@@ -126,9 +128,19 @@ export function restsOn(s: Snapshot, known: Known, gate: Gate, person: string, s
     return e.applies === true ? "met" : e.applies === false ? "not_met" : "not_answered";
   };
   if (without(unconfirmed) === state) return [];
-  const alone = unconfirmed.filter((f) => without([f]) !== state);
-  return alone.length ? alone : unconfirmed;
+  if (unconfirmed.length > RESTS_MAX) return unconfirmed;
+  const memo = new Map<string, GateState>();
+  const stateOf = (drop: string[]) => { const k = [...drop].sort().join("|"); if (!memo.has(k)) memo.set(k, without(drop)); return memo.get(k)!; };
+  return unconfirmed.filter((f) => {
+    const others = unconfirmed.filter((x) => x !== f);
+    for (let mask = 0; mask < 1 << others.length; mask++) {
+      const S = others.filter((_, i) => mask & (1 << i));
+      if (stateOf(S) === state && stateOf([...S, f]) !== state) return true;
+    }
+    return false;
+  });
 }
+const RESTS_MAX = 10;
 
 /** BR-9, worked out when read (review minor 6 on 2572b9b0): a fact the run read unconfirmed and that is confirmed now
  *  with the same value is no longer marked "not confirmed yet". Confirm section keeps a run up to date (BR-13), so

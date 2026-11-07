@@ -121,6 +121,15 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   await page.locator(`section[id^="s-${c3.cs}-"]`, { has: page.locator(`[id="a-${c3.cs}-case-funds_available_cad"]`) }).first().waitFor({ timeout: 60_000 });
   ok("Major 2: following it opens the application's tab with the funds question", await page.evaluate((id) => !!document.getElementById(`a-${id}-case-funds_available_cad`), c3.cs));
 
+  // Re-review minor 4: an out-of-date run rests on nothing here (its band says to run again), so no line asks to
+  // confirm an answer that has since changed.
+  const av = (await call("GET", `/runtime/cases/${c3.id}/questionnaire?mode=agent`)).body;
+  const fq = (av?.sections ?? []).flatMap((x) => x.questions).find((q) => q.subjectId === c3.cs && q.fact === "case.funds_available_cad");
+  const changed = await call("PUT", `/runtime/cases/${c3.id}/answers/${c3.cs}/case.funds_available_cad`, { value: "9000", expectedId: fq?.answer?.id ?? null });
+  await eligibility(page, c3.id);
+  const t5 = await body(page);
+  ok("minor 4: after an answer changes, the run is out of date and shows no 'not yet confirmed' line", changed.status < 300 && /Out of date/.test(t5) && (await resting(page).count()) === 0 && !/not yet confirmed/.test(t5), { changed: changed.body?.detail ?? changed.status, line: t5.match(/Not eligible[^\n]*/)?.[0] });
+
   ok("no page errors", errors.length === 0, errors);
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);
