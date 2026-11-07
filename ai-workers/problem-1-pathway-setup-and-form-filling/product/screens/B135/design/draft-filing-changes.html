@@ -37,31 +37,31 @@ label{display:block;font-weight:500;margin-top:10px}textarea{width:100%;box-sizi
 <p class="note">Replaces the people chips. Status words are the Prepare view's. The principal's row has no Remove: it says why. A recorded (submitted) filing has no menu: it says why, and where withdrawal lives.</p>
 <div class="card"><header><h3>People and filings</h3><span class="muted">Visitor visa · 3 filings · 1 submission</span><button class="btn">+ Add child</button></header>
 <table><thead><tr><th>Person</th><th>Role <span class="tip" title="The principal applicant carries the family's capped fees and answers the household questions. Change it with Make principal.">ⓘ</span></th><th>Filing</th><th>Status</th><th></th></tr></thead><tbody>
-<tr><td><b>Sample Client A</b></td><td>Principal applicant</td><td>Own application</td><td><span class="pill">In progress</span></td><td><span class="muted">Make someone else principal first to remove this filing</span> <button class="btn ghost" aria-label="Actions for Sample Client A">⋯</button></td></tr>
-<tr><td><b>Sample Client B</b></td><td>Spouse or partner</td><td>Own application</td><td><span class="pill">In progress</span></td><td><div class="menu"><button class="btn ghost" aria-expanded="true" aria-label="Actions for Sample Client B">⋯</button>
-<ul><li>Make principal<small>Swaps roles with Sample Client A. Answers stay with each person.</small></li><li>Remove filing…<small>Sample Client B stays on the case, not travelling.</small></li></ul></div></td></tr>
+<tr><td><b>Sample Client A</b></td><td>Principal applicant</td><td>Own application</td><td><span class="pill">In progress</span></td><td><div class="menu"><button class="btn ghost" aria-label="Actions for Sample Client A">⋯</button><ul><li>Remove filing<small>Refused: make someone else principal first.</small></li></ul></div></td></tr>
+<tr><td><b>Sample Spouse A</b></td><td>Spouse or partner</td><td>Own application</td><td><span class="pill">In progress</span></td><td><div class="menu"><button class="btn ghost" aria-expanded="true" aria-label="Actions for Sample Spouse A">⋯</button>
+<ul><li>Make principal<small>Swaps roles with Sample Client A. Answers stay with each person.</small></li><li>Remove filing…<small>Sample Spouse A stays on the case, not travelling.</small></li></ul></div></td></tr>
 <tr><td><b>Sample Child A2</b> <span class="muted">15</span></td><td>Child</td><td>Own application</td><td><span class="pill">Not started</span></td><td><button class="btn ghost" aria-label="Actions for Sample Child A2">⋯</button></td></tr>
 <tr><td><b>Sample Child A1</b> <span class="muted">10</span></td><td>Child</td><td><span class="muted">No filing: not travelling</span><br><span class="muted">Removed 7 Nov by the case officer: "Added by mistake"</span></td><td>—</td><td><button class="btn">Add filing back</button></td></tr>
 </tbody></table></div></div>
 
 <div class="frame"><h2>2 · Remove filing: what changes is named before anything happens</h2>
 <p class="note">Same derivation as Prepare application, run on the case as it would be. Every other filing that changes is named with the change. Reason required (as the C6.12 split). The button says the action.</p>
-<div class="grid2"><div class="dialog" role="dialog" aria-labelledby="d1"><div class="h"><h3 id="d1">Remove Sample Client B's filing?</h3></div><div class="b">
-<p>Sample Client B stays on the case, not travelling: asked only what the others' forms need about them. Their answers and uploads are kept.</p>
+<div class="grid2"><div class="dialog" role="dialog" aria-labelledby="d1"><div class="h"><h3 id="d1">Remove Sample Spouse A's filing?</h3></div><div class="b">
+<p>Sample Spouse A stays on the case, not travelling: asked only what the others' forms need about them. Their answers and uploads are kept.</p>
 <div class="warnbox"><b>2 other filings depend on this one and change:</b></div>
-<div class="chg"><b>Sample Client A's filing (principal)</b><ul><li>Biometrics: family maximum CAD 170 for 3 people → CAD 85 for one person</li><li>Marked Ready to file → back to In progress</li></ul></div>
+<div class="chg"><b>Sample Client A's filing (principal)</b><ul><li>Biometrics: family maximum CAD 170 for 3 people → CAD 85 for one person</li><li>Marked Ready to file → back to Not started</li><li>Signs for Sample Child A2: unchanged</li></ul></div>
 <div class="chg"><b>Sample Child A2's filing</b><ul><li>Biometrics: covered by the family maximum → CAD 85</li></ul></div>
-<div class="chg"><b>Sample Client B's own filing</b><ul><li>4 items stop applying (IMM 5257 filled 6 Nov, passport, photo, biometrics). Kept: they come back if the filing is added back.</li></ul></div>
+<div class="chg"><b>Sample Spouse A's own filing</b><ul><li>4 items stop applying (IMM 5257 filled 6 Nov, passport, photo, biometrics). Kept: they come back if the filing is added back.</li></ul></div>
 <p class="muted">Total for the submission: CAD 470 → CAD 370.</p>
 <label for="r1">Why are you removing it?</label><textarea id="r1" placeholder="For example: added by mistake, not travelling after all"></textarea><div class="err">Write a reason: it is kept with the change.</div>
 </div><div class="f"><button class="btn ghost">Cancel</button><button class="btn danger">Remove filing</button></div></div>
-<div><p class="muted">After: a toast with Undo (adds the filing back, same filing, same items and channels).</p><div class="toast">Sample Client B's filing removed. Fees worked out again. <a href="#">Undo</a></div>
+<div><p class="muted">After: a toast with Undo (adds the filing back, same filing, same items and channels).</p><div class="toast">Sample Spouse A's filing removed. Fees worked out again. <a href="#">Undo</a></div>
 <p class="muted" style="margin-top:14px">Conflict: someone changed the case after the dialog opened → "This case changed since you opened this (Sample Child A1 was added). Look again before removing." with "Look again"; nothing is changed.</p></div></div></div>
 
 <div class="frame"><h2>3 · Make principal: a swap, previewed</h2>
-<div class="grid2"><div class="dialog" role="dialog" aria-labelledby="d2"><div class="h"><h3 id="d2">Make Sample Client B the principal applicant?</h3></div><div class="b">
-<p>Sample Client B becomes principal applicant; Sample Client A becomes spouse or partner. Each person keeps their own answers and uploads.</p>
-<div class="chg"><b>Sample Client B's filing</b><ul><li>Now carries the family's capped fees: biometrics CAD 170 for 3 people</li><li>Household questions now asked of Sample Client B: 3 not answered yet</li></ul></div>
+<div class="grid2"><div class="dialog" role="dialog" aria-labelledby="d2"><div class="h"><h3 id="d2">Make Sample Spouse A the principal applicant?</h3></div><div class="b">
+<p>Sample Spouse A becomes principal applicant; Sample Client A becomes spouse or partner. Each person keeps their own answers and uploads. Sample Client A stays the client who answers the questionnaire: no answer becomes confirmed or unconfirmed.</p>
+<div class="chg"><b>Sample Spouse A's filing</b><ul><li>Now carries the family's capped fees: biometrics CAD 170 for 3 people</li><li>Household questions now asked of Sample Spouse A: 3 not answered yet</li><li>Signs for Sample Child A2 (a minor) instead of Sample Client A; IMM 5257 signed by hand by Sample Client A: to be signed again</li></ul></div>
 <div class="chg"><b>Sample Client A's filing</b><ul><li>Biometrics: covered by the family maximum</li><li>Reviewed by the representative 7 Nov → needs review again</li></ul></div>
 <label for="r2">Why? <span class="muted">(kept with the change)</span></label><textarea id="r2">The spouse holds the job offer; the firm files with her as principal.</textarea>
 </div><div class="f"><button class="btn ghost">Cancel</button><button class="btn primary">Make principal</button></div></div>
@@ -70,7 +70,7 @@ label{display:block;font-weight:500;margin-top:10px}textarea{width:100%;box-sizi
 <p class="muted" style="margin-top:10px">A person not travelling: "Add Sample Child A1's filing back first: the principal always files their own application."</p></div></div></div>
 
 <div class="frame"><h2>4 · Recorded as submitted: refused, and where it goes instead</h2>
-<p class="note">Withdrawing a submitted application is the team's case lifecycle (C8.4, stand-in SI-18). Our filing record shows the state; the row says it in words. The server refuses the same change with the same words (409).</p>
-<div class="card"><table><tbody><tr><td><b>Sample Client A</b></td><td>Principal applicant</td><td>Own application · V312345678</td><td><span class="pill ok">Submitted 3 Nov</span></td><td><span class="muted">Submitted to IRCC on 3 Nov: it is no longer changed here. To withdraw it, use Withdraw in the case's lifecycle (not built here yet).</span></td></tr></tbody></table></div>
-<div class="dangerbox" style="margin-top:10px">Server, for a forged request: 409 "Sample Client A's application was recorded as submitted to IRCC on 3 Nov 2026 (V312345678), so it is not removed here. Withdrawing a submitted application is done in the case's lifecycle."</div></div>
+<p class="note">Taking back a submitted application is the team's case lifecycle (C8.4, stand-in SI-18). Submissions are recorded per group, so once anything is recorded no person or filing of the case changes. Our filing record shows the state; the row says it in words. The server refuses the same change with the same words (409).</p>
+<div class="card"><table><tbody><tr><td><b>Sample Client A</b></td><td>Principal applicant</td><td>Own application · V312345678</td><td><span class="pill ok">Submitted 3 Nov</span></td><td><span class="muted">Submitted to IRCC on 3 Nov: it is no longer changed here. Nothing on this case changes now; taking back a submitted application is done in the case's lifecycle (not built here).</span></td></tr></tbody></table></div>
+<div class="dangerbox" style="margin-top:10px">Server, for a forged request: 409 "Sample Client A's application was recorded as submitted to IRCC on 3 Nov 2026 (V312345678), so the people and filings of this case are not changed here. Taking back a submitted application is done in the case's lifecycle (not built here)."</div></div>
 </div></body></html>
