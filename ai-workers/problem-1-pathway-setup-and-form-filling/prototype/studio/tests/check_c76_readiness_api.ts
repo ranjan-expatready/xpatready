@@ -94,7 +94,8 @@ ok("B10 fail (data): an unknown code, no keys, or a severity that does not go wi
 // B3: a form that cannot start yet (no date of birth) is named, never dropped.
 const fam = await openCase(vv, [{ role: "principal", name: "Sample Client F", dob: yearsAgo(44) }, { role: "spouse_or_partner", name: "Sample Spouse F", dob: null }], { representative: rep, caseOfficers: [officer] });
 const pf = (await prepare(fam.id, officer)).p, S = fam.subjects["Sample Spouse F"];
-const waiting = (pf?.items ?? []).filter((i) => i.subject === S && i.kind === "form" && i.state === "cannot_start");
+// Row C9 (QA-246): a form that cannot start yet is listed apart from the forms to fill, in /prepare's `waiting`.
+const waiting = ((pf as { waiting?: NonNullable<typeof pf>["items"] } | null)?.waiting ?? []).filter((i) => i.subject === S && i.kind === "form" && i.state === "cannot_start");
 const frd = readinessOf(pf, filingOf(pf, S)?.id);
 // N6 (round 2): a stored pass whose reason the rule refuses never takes its line: a real pass is still possible.
 const line = (frd?.warns ?? []).find((w) => w.code === "missing_facts" && w.key);
