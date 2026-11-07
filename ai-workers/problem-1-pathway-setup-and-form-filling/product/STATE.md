@@ -2,7 +2,7 @@
 
 current_lead: local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023 Lead 29 · 7 Nov 12:35 IST (new account after the switch, P-398)
 
-updated: 2026-11-07 13:33 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-399 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
+updated: 2026-11-07 13:40 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-400 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
 * **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
@@ -28,7 +28,7 @@ updated: 2026-11-07 13:33 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 **To-do, in order:**
 1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`, cron 2be371d8).
 2. **Lanes, counted only after a push:** B124 #1197, B126 #1212 (the Lead labels these two; their briefs say so), C9, C3, B3, A6, B127 (these label themselves after Approve, P-277). Read their PR comments each check. Label on an Approve line for the exact head + green CI.
-3. **qa:** nightly 42352179701 on main ecbd68301 read: C6.11 25/25, C8.1 14/14, both exit 0 "on the checkpoint". Fresh qa started; label its records PR after reading the diff (P-339, P-385).
+3. **qa:** #1220 (head 8f1d6193e, main ecbd68301): C6.11 and C8.1 Partial, P-339 met; QA-296 confirmed, new QA-299, QA-300. Label after reading the diff and CI, once the founder gives the OK. **B107 needs a lane at his next typed turn (P-400).** Then: dispatch C8.2 C6.9 on the checkpoint after B126 and B124 land.
 4. **P-388 measurement:** 2 failed of the first 10 batches after 09:19 IST (23113b92e5 the C1 and A3 clash; 0f532b98fc not read yet): 20%, over the 10% bar. `flow-measure.py` hit a rate limit today: read `actions/workflows/ci.yml/runs` directly. Trip-wire: P-399.
 5. **Hourly report** against `design/next-12-hours-2026-11-07.md` section 7 (P-399); halfway review 20:00 IST, block review 02:00 IST.
 6. **Records PR** from this branch, once a day (P-336): label after reading the diff, founder names it if the classifier refuses.
@@ -39,16 +39,17 @@ updated: 2026-11-07 13:33 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 * **C8.2** waits for B126 (QA-295); **C6.9** waits for B124 (P-393). Spend today US$0.
 
 ## In flight
+**qa's lane:** `local_0868d426-…`; QA-235 retest, QA-153 re-sort and the "entered" tick ruling sent. C6.9 and C8.2 go to it when they land.
 | Lane | Where | Row → next |
 |---|---|---|
 | A3 #1198 | Mergify, label on 4b3b343e1 | merges by itself; no lane |
 | B124 #1197 (cloud) | task_88bb8ba2, requested 13:09 IST | leave draft, full CI, Approve line |
 | B126 #1212 (cloud) | task_03fa773f, requested 13:09 IST | confirm 5/5 + C8.2 pack, Approve line |
-| C9 QA-246 (cloud) | task_d8efc678, requested 13:35 IST | C7.7 forms waiting on an answer |
-| C3 (cloud) | task_2f547abe, requested 13:35 IST | channel decides for filing → C4 pack moves → C10 |
-| B3 (cloud) | task_a61a35c9, requested 13:35 IST | sign and scan by screens, QA-251 |
-| A6 B102 (cloud) | task_818158fa, requested 13:35 IST | calculated age, C6.4, QA-226 |
-| B127 QA-296 (cloud) | task_d6a64bc5, requested 13:35 IST | representative's names on IMM 5475 |
+| C9 QA-246 (cloud) | task_d8efc678, requested ~13:32 IST | C7.7 forms waiting on an answer |
+| C3 (cloud) | task_2f547abe, requested ~13:32 IST | channel decides for filing → C4 pack moves → C10 |
+| B3 (cloud) | task_a61a35c9, requested ~13:32 IST | sign and scan by screens, QA-251 |
+| A6 B102 (cloud) | task_818158fa, requested ~13:32 IST | calculated age, C6.4, QA-226 |
+| B127 QA-296 (cloud) | task_d6a64bc5, requested ~13:32 IST | representative's names on IMM 5475 |
 | Canary (cloud) | task_acca4ca2 | pushed; ends by itself |
 | qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
 | Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | standby + watchdog |
