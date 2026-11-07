@@ -357,7 +357,10 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   u = await askNew(USCARD, "B83 supplied held");
   sk = keyOf("B83 supplied held");
   const heldOuter = sql(`select id from combination where combination_key = 'vv.single'`);
-  const vvDoc = sql(`select document_type_key from document_requirement where id = '${docLine}'`);
+  // The document is one the release always lists (B102, #1222: the checkpoint now also has conditional minor lines; a
+  // fact supplied only by a document asked in some cases stops Submit before release, which is another rule, so the line
+  // M7 attacks is an always-needed one, as it was when M7 was written).
+  const vvDoc = sql(`select document_type_key from document_requirement where combination_id = '${heldOuter}' and attach_mode = 'COMBINATION_MANDATORY' and status in ('DRAFT','PUBLISHED') order by lineage_key limit 1`) || sql(`select document_type_key from document_requirement where id = '${docLine}'`);
   const vvFacts = sql(`select array_to_string(supplies_facts, ',') from document_type where document_type_key = ${lit(vvDoc)} and status in ('DRAFT','PUBLISHED') order by version desc limit 1`).split(",").filter(Boolean);
   sup = await call("POST", `/library/document-types/${vvDoc}/supplies`, { facts: [...vvFacts.map((f) => citeOf(f)), citeOf(sk)], reason: "A B83 check of a held release." });
   ap = await approve(sup.body?.id);
