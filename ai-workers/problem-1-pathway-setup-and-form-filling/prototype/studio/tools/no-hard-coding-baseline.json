@@ -1,0 +1,123 @@
+{
+  "note": "IRCC form numbers and sample combination keys in live code (api/src, engine, contracts; comments not counted), by tools/no-hard-coding.mjs (P-319). The record per file for the cleanup; CI's gate is --against the base commit. Lower it with --write; never raise it.",
+  "total": {
+    "forms": 83,
+    "keys": 8
+  },
+  "files": {
+    "api/src/answer-keys.ts": {
+      "forms": {
+        "IMM 5257": 1
+      },
+      "keys": {}
+    },
+    "api/src/case-prepare.ts": {
+      "forms": {},
+      "keys": {
+        "vv.single": 1
+      }
+    },
+    "api/src/demo.ts": {
+      "forms": {
+        "IMM 5409": 5,
+        "IMM 5476": 14,
+        "IMM 5484": 4,
+        "IMM 5475": 3,
+        "IRM 0002": 4,
+        "IMM 5707": 6,
+        "IMM 5645": 5,
+        "IMM 5556": 3,
+        "IMM 5257": 4,
+        "IMM 5710": 1
+      },
+      "keys": {
+        "vv.single": 3,
+        "wp.lmia_inside": 3
+      }
+    },
+    "api/src/form-progress.ts": {
+      "forms": {
+        "IMM 5257": 1
+      },
+      "keys": {}
+    },
+    "api/src/form-redo.ts": {
+      "forms": {
+        "IMM 5257": 1
+      },
+      "keys": {}
+    },
+    "api/src/forms-demo.ts": {
+      "forms": {
+        "IMM 5257": 2,
+        "IMM 5707": 1,
+        "IMM 5476": 1,
+        "IMM 5484": 1,
+        "IMM 5881": 1,
+        "IMM 5409": 1
+      },
+      "keys": {}
+    },
+    "api/src/sources.ts": {
+      "forms": {
+        "IMM 5257": 2,
+        "IMM 1295": 1,
+        "IMM 5707": 1,
+        "IMM 5409": 1,
+        "IMM 5476": 1,
+        "IMM 5475": 1
+      },
+      "keys": {}
+    },
+    "api/src/team.ts": {
+      "forms": {
+        "IMM 5476": 4
+      },
+      "keys": {}
+    },
+    "contracts/form-library.ts": {
+      "forms": {
+        "IMM 5257": 1
+      },
+      "keys": {}
+    },
+    "contracts/forms.ts": {
+      "forms": {
+        "IMM 5257": 1,
+        "IMM 0008": 1,
+        "IMM 1344": 1,
+        "IMM 1295": 1,
+        "IMM 5669": 1,
+        "IMM 5406": 1
+      },
+      "keys": {}
+    },
+    "contracts/pdf-sections.json": {
+      "forms": {
+        "IMM 5257": 1,
+        "IMM 1295": 1,
+        "IMM 5707": 1,
+        "IMM 5476": 1
+      },
+      "keys": {}
+    },
+    "contracts/review-queue.ts": {
+      "forms": {
+        "IMM 5257": 1
+      },
+      "keys": {}
+    },
+    "engine/filing-modes.ts": {
+      "forms": {},
+      "keys": {
+        "vv.single": 1
+      }
+    },
+    "engine/runtime/team.ts": {
+      "forms": {
+        "IMM 5476": 1
+      },
+      "keys": {}
+    }
+  }
+}
