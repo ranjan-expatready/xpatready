@@ -17,7 +17,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { chromium, type Locator, type Page } from "playwright";
-import { CLIENT, FAMILY, PORT, call, fillEverything, filingOf, firms, itemsOf, needVisitorVisa, openCase, prepare, readinessOf, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { CLIENT, FAMILY, PORT, agent, answer, call, confirmAll, fillEverything, filingOf, firms, generateCopy, itemsOf, needVisitorVisa, openCase, prepare, readinessOf, signedScan, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const BASE = `http://localhost:${PORT}`, STUDIO = join(import.meta.dirname, "..");
 const SHOTS = join(STUDIO, "..", "..", "product", "screens", "C8.1", "screenshots"); mkdirSync(SHOTS, { recursive: true });
@@ -105,9 +105,28 @@ await stepEl("print").getByRole("button", { name: /^Printed: the copy of/ }).wai
 const copyId = sql(`select id from form_instance where case_id = '${c.id}' and subject_id = '${P}' and form_number = 'IMM 5476' and status = 'GENERATED' order by created_at desc limit 1`) ?? "";
 await press(stepEl("print").getByRole("button", { name: /^Printed: the copy of/ }));
 await block().locator('[data-step="print"][data-done="yes"]').waitFor({ timeout: 15_000 }).catch(() => null);
-ok("C8.1-6 / BR-4 pass: Printed is recorded with the copy printed (the newest generated copy), and the step names it, who and when", steps().join() === `print|${copyId}` && /Copy of .* · by /.test(await stepEl("print").innerText()) && (await stepEl("print").innerText()).includes(nameOf(officer)), { steps: steps(), copyId, text: await stepEl("print").innerText() });
+ok("C8.1-6 / BR-4 pass: Printed is recorded with the copy printed (the newest generated copy), and the step names it, who and when", steps().join() === `print|${copyId}` && /Copy of .* · recorded by /.test(await stepEl("print").innerText()) && (await stepEl("print").innerText()).includes(nameOf(officer)), { steps: steps(), copyId, text: await stepEl("print").innerText() });
 ok("keyboard: after Printed the focus is on the next step's button (Signed by hand)", await p.evaluate(() => document.activeElement?.getAttribute("data-step-action")) === "signed");
 await state("printed");
+
+// Challenge M1 (C9.2): a fact IMM 5476 reads changes after Printed: the printed copy is out of date, so Signed by hand
+// is not offered; a new copy is generated and printed; the server starts the signing again (earlier steps superseded).
+type Q = { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; fills: { form: string }[] };
+const q5476 = ((await agent(c.id))?.sections ?? []).flatMap((x: { questions: Q[] }) => x.questions)
+  .find((q: Q) => q.subjectId === P && !q.hidden && !q.group && q.value_type === "text" && q.fills.some((x) => x.form === "IMM 5476"));
+const changed = q5476 ? await answer(c.id, P, q5476.fact, "Sample Changed Value", officer) : null;
+if (q5476) await confirmAll(c.id, P);
+await open();
+ok("C8.1 BR-8 / challenge M1 fail: after a fact on the printed copy changed, Signed by hand is not offered; the block says the signed copy is out of date and the copy must be generated again",
+  !!q5476 && (changed?.status ?? 500) < 300 && (await block().locator('[data-step-action="signed"]').count()) === 0 && await block().locator("[data-sign-again]").isVisible() && /generate a new copy of IMM 5476/.test(await block().locator("[data-sign-again]").innerText()), { fact: q5476?.fact, status: changed?.status, text: await block().innerText().catch(() => "") });
+await state("printed-copy-out-of-date");
+await press(row5476.getByRole("button", { name: /^Generate a (new )?copy$/ }));
+await block().locator("[data-sign-again]").getByRole("button", { name: /^Printed: the new copy of/ }).waitFor({ timeout: 120_000 }).catch(() => null);
+const copy2 = sql(`select id from form_instance where case_id = '${c.id}' and subject_id = '${P}' and form_number = 'IMM 5476' and status = 'GENERATED' order by created_at desc limit 1`) ?? "";
+await press(block().locator("[data-sign-again]").getByRole("button", { name: /^Printed: the new copy of/ }));
+await block().locator('[data-step-action="signed"]').waitFor({ timeout: 15_000 }).catch(() => null);
+ok("C8.1 BR-8 / challenge M1 pass: the new copy is printed: the server starts the signing again (the earlier Printed superseded) and Signed by hand is the next step",
+  copy2 !== copyId && steps().join() === `print|${copy2}` && Number(sql(`select count(*) from sign_step where item_id = '${it?.id}' and superseded_at is not null`) ?? 0) >= 1 && (await block().locator("[data-sign-again]").count()) === 0, { steps: steps(), copy2, copyId });
 
 // A second tab, opened before the step: it still offers "Signed by hand" after the first tab recorded it.
 const p2 = await ctx.newPage(); watch(p2); await open(p2);
@@ -117,7 +136,7 @@ const stale = (await blockOn(p2).locator("[data-sign-refusal]").innerText().catc
 ok("C8.1 BR-3 / BR-9 fail (stale tab): the second \"Signed by hand\" is refused in the server's words; nothing recorded twice", /Not recorded/.test(stale) && /Signed by hand is already done for IMM 5476/.test(stale) && steps().filter((s) => s.startsWith("signed|")).length === 1, { stale, steps: steps() });
 ok("keyboard (stale tab): after the refusal the focus is on the block's heading", await blockOn(p2).locator("h4").evaluate((el) => el === document.activeElement));
 await p2.close();
-ok("C8.1-7 pass: Signed by hand is recorded with who and when", steps().map((s) => s.split("|")[0]).join() === "print,signed" && (await stepEl("signed").innerText()).includes(nameOf(officer)));
+ok("C8.1-7 pass / challenge m1: Signed by hand names the signers and who recorded it, and when", steps().map((s) => s.split("|")[0]).join() === "print,signed" && /Signed by Sample Client A and the representative of record/.test(await stepEl("signed").innerText()) && (await stepEl("signed").innerText()).includes(`recorded by ${nameOf(officer)}`), await stepEl("signed").innerText());
 await state("signed");
 
 // The scan: the upload button opens the file chooser (keyboard); a text file is refused on the upload by the server.
@@ -139,6 +158,9 @@ ok("C8.1-10 / BR-6 pass: the Sample PDF scan is received: stored with its checks
 const irccWhy = await whyOf("uploaded_to_ircc");
 const r409b = await call("POST", `/runtime/items/${it?.id}/sign-steps/uploaded_to_ircc`, {}, officer);
 ok("C8.1-11 / BR-7 fail: \"Uploaded to IRCC\" cannot start before the filing is Ready to file: no button, the server's words (409)", (await stepEl("uploaded_to_ircc").locator('[data-step-action]').count()) === 0 && irccWhy.startsWith(`Cannot start yet: ${r409b.body?.detail}`) && r409b.status === 409, { irccWhy, detail: r409b.body?.detail });
+const sumry = stepEl("scan_received").locator("summary", { hasText: "Checksum" });
+await press(sumry);
+ok("challenge m6 (keyboard): the scan's checksum opens from a focusable \"Checksum\" and equals the stored one", (await stepEl("scan_received").locator("details").innerText()).includes(sql(`select sha256 from signed_scan where item_id = '${it?.id}'`) ?? "-"));
 await state("scan-received");
 await press(stepEl("uploaded_to_ircc").getByRole("button", { name: "Go to Ready to file" }));
 ok("keyboard: \"Go to Ready to file\" moves the focus to the Ready to file panel", await p.evaluate(() => document.activeElement?.id) === "readiness-h");
@@ -183,6 +205,15 @@ await state("done");
 const recordBtn = p.locator("[data-submission]").getByRole("button", { name: /^Record the submission/ }).first();
 ok("C8.2 pass: \"Record the submission\" is enabled once the filing is Ready to file and IMM 5476 is uploaded", await recordBtn.isEnabled().catch(() => false));
 
+// ---------------------------------------------------------------- challenge M2: the submission recorded: read-only
+pv = await read();
+const g = pv?.groups.find((x) => x.filings.includes(fid));
+const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto" });
+const rec = await call("PATCH", `/runtime/groups/${g?.id}/record`, { filings: [{ filing: fid, our_reference: "SAMPLE-REF-B3", submitted_on: today, application_number: "V300000031", fee_receipt: "SAMPLE-RECEIPT" }], ucis: [{ subject: P, uci: "3333-3333" }], version: pv?.version }, officer);
+await open();
+ok("challenge M2 pass: once the submission is recorded, the block says the application is read-only and offers no step", rec.status < 300 && await block().locator("[data-sign-readonly]").isVisible() && (await block().locator("[data-step-action]").count()) === 0 && (await block().locator("[data-step-why]").count()) === 0, { rec: rec.status, detail: (rec.body as { detail?: string } | null)?.detail });
+await state("recorded-read-only");
+
 // ---------------------------------------------------------------- a FAMILY case: a parent signs for a child
 const fam = await openCase(vv, FAMILY);
 await as(p, officer); await open(p, fam.id);
@@ -190,6 +221,16 @@ const childWho = (await rowOf(p, "IMM 5257", "Sample Child A1").locator("[data-w
 const adultWho = (await rowOf(p, "IMM 5257", "Sample Client A").locator("[data-who-signs]").innerText().catch(() => "")).trim();
 ok("C8.1-1 / BR-1 pass (VV-R09): Child A1's IMM 5257 names a parent as signer; Client A's names Client A", /Who signs: a parent, for Sample Child A1 \(under 18\)/.test(childWho) && /Who signs: Sample Client A\b/.test(adultWho) && !/parent/.test(adultWho), { childWho, adultWho });
 await state("family-who-signs", "[data-who-signs]");
+// Challenge m7: each adult's IMM 5476 has its own block; a step on one leaves the other as it was.
+const fp = (await prepare(fam.id, officer)).p;
+const hand = (fp?.items ?? []).filter((x) => x.kind === "form" && x.signature === "HAND_SCANNED" && !(x as { record?: string }).record) as Item[];
+ok("challenge m7 pass: every hand-signed item of the family case has its own signing block", hand.length >= 2 && (await p.locator("[data-sign-block]").count()) === hand.length && (await Promise.all(hand.map((x) => p.locator(`[data-sign-block="${x.id}"]`).count()))).every((k) => k === 1), { hand: hand.map((x) => `${x.form}|${x.person}`), blocks: await p.locator("[data-sign-block]").count() });
+const [h1, h2] = hand;
+const fc = h1 ? await generateCopy(fam.id, h1.form!, (h1 as unknown as { subject: string }).subject) : null;
+const pr = await call("POST", `/runtime/items/${h1?.id}/sign-steps/print`, { copy: fc }, officer);
+await open(p, fam.id);
+const doneOf = async (id: string | undefined) => p.locator(`[data-sign-block="${id}"] [data-step="print"]`).getAttribute("data-done");
+ok("challenge m7 pass: Printed on one adult's IMM 5476 shows on that block only", pr.status === 200 && (await doneOf(h1?.id)) === "yes" && (await doneOf(h2?.id)) === "no", { pr: pr.status, a: await doneOf(h1?.id), b: await doneOf(h2?.id) });
 
 // ---------------------------------------------------------------- the client never reaches the block
 await as(p, CLIENT); await p.goto(`${BASE}/cases/${c.id}`); await p.waitForTimeout(1500);

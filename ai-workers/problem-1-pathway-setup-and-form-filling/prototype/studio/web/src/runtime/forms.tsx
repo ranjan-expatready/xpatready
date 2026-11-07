@@ -162,7 +162,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       ) : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
       {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
-      <SignSteps caseId={caseId} form={f.form} subject={f.subject_id} person={f.person} copies={f.copies} />
+      <SignSteps caseId={caseId} f={f} />
       {earlier.length ? (
         <details className="text-[13px]">
           <summary className="cursor-pointer text-text-link">Earlier copies ({earlier.length})</summary>

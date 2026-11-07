@@ -3,8 +3,9 @@
 // row: who signs it (every form, from GET /prepare's `signers`, never worked out here), and on a form signed by hand and
 // scanned its four steps in order: Printed (naming the copy) → Signed by hand → Signed scan received (by uploading the
 // scan) → Uploaded to IRCC (once the filing is Ready to file). Only the next step has a button; a later one says
-// "Cannot start yet" in the server's own words (as engine/runtime/signing.ts stepRefusal). A stale page's
-// refusal shows the server's words. Staff only. Types live here only (prepare-tab §2). US$0.
+// "Cannot start yet" in the server's own words (stepRefusal, the one rule in engine/runtime/sign-order.ts). A stale page's
+// refusal shows the server's words. Once the submission is recorded the block is read-only. Staff only. Types live here
+// only (prepare-tab §2). US$0.
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Circle, Upload } from "lucide-react";
@@ -13,28 +14,15 @@ import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SIGNATURE_WORDS, type Signature } from "../../../contracts/forms";
 import { MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB } from "../../../contracts/documents";
-import type { FormCopy } from "../../../contracts/runtime";
+import type { CaseForm } from "../../../contracts/runtime";
+import { SIGN_STEPS, stepRefusal, type SignStepKey, type StepsDone } from "../../../engine/runtime/sign-order";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 
-// The step keys and the waiting words of engine/runtime/signing.ts (SIGN_STEPS, stepRefusal). That file is not imported:
-// it reads engine/runtime/case.ts, which loads files from disk (node:fs) and cannot run in the browser. The step words
-// come from the server's own read (GET /runtime/items/:id), and the browser check proves the waiting words here equal
-// the server's refusal for the same step (tests/check_c81_sign_browser.ts).
-type SignStepKey = "print" | "signed" | "scan_received" | "uploaded_to_ircc";
-type StepsDone = Partial<Record<SignStepKey, { at: string; by: string; copy?: string | null }>>;
-const SIGN_STEPS: SignStepKey[] = ["print", "signed", "scan_received", "uploaded_to_ircc"];
-/** Why a step cannot be done yet, in the server's words (stepRefusal's order and Ready to file lines), or null. */
-function stepRefusal(key: SignStepKey, done: StepsDone, words: Record<string, string>, form: string, opts: { filingReady: boolean }): string | null {
-  const i = SIGN_STEPS.indexOf(key), before = SIGN_STEPS[i - 1];
-  if (before && !done[before]) return `${words[key]} comes after "${words[before]}": ${before === "print" ? `print ${form} first` : before === "signed" ? `mark ${form} signed by hand first` : `upload the signed scan of ${form} first`}.`;
-  if (key === "uploaded_to_ircc" && !opts.filingReady) return `${form} is uploaded to IRCC only once its filing is Ready to file.`;
-  return null;
-}
-
 type PrepItem = { id: string; kind: string; form?: string; subject: string; person: string; filing: string; signature?: Signature; signers?: string[];
   state: string; reason?: string; replaces?: string | null; record?: string };
-type PrepareView = { derived: boolean; filings: { id: string; label: string; status: string }[]; items: PrepItem[] };
+type Filing = { id: string; label: string; status: string; read_only?: boolean };
+type PrepareView = { derived: boolean; filings: Filing[]; items: PrepItem[] };
 type Step = { key: SignStepKey; words: string; done: { at: string; by: string; copy?: string | null } | null };
 type Scan = { id: string; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string };
 type ItemView = { id: string; form: string; sign_steps: Step[]; signed_scans: Scan[] };
@@ -54,12 +42,13 @@ const prepareKey = (caseId: string) => ["runtime", "view", caseId, "prepare"]; /
 /** BR-1: who signs, in words, from the server's `signers` (person · parent · principal · representative). */
 function whoSigns(signers: string[], person: string, rep: string | null): string {
   const words = signers.map((s) => s === "person" ? person : s === "parent" ? `a parent, for ${person} (under 18)` : s === "principal" ? "the principal applicant, for the family"
-    : s === "representative" ? `the representative of record${rep ? ` (${rep})` : ""}` : s);
+    : s === "representative" ? `the representative of record${rep ? ` (${rep})` : " (not chosen yet on the case team)"}` : s);
   return words.length <= 1 ? words.join("") : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 /** The signing part of one form's row: who signs (every form), and the steps of a form signed by hand and scanned. */
-export function SignSteps({ caseId, form, subject, person, copies }: { caseId: string; form: string; subject: string; person: string; copies: FormCopy[] }) {
+export function SignSteps({ caseId, f }: { caseId: string; f: CaseForm }) {
+  const { form, subject_id: subject, person } = f;
   const prep = useApi<PrepareView>(prepareKey(caseId), `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
   const team = useApi<TeamView>(["runtime", "team", caseId], `/runtime/cases/${caseId}/team`, { retry: noRetryOnRefusal });
   // C9.2: when the signed copy is out of date the view lists the old signed scan as its own record; the item is the other.
@@ -69,16 +58,17 @@ export function SignSteps({ caseId, form, subject, person, copies }: { caseId: s
   const signers = item.signers ?? [];
   const method = item.signature ? SIGNATURE_WORDS[item.signature] : null;
   return (<>
-    {signers.length || item.signature === "NONE" ? (
+    {item.signature ? (
       <p className="text-[13px]" data-who-signs={signers.join(",")}>
-        <span className="text-text-muted">Who signs: </span>{signers.length ? <span className="[overflow-wrap:anywhere]">{whoSigns(signers, person, rep)}</span> : "nobody"}{method ? <span className="text-text-muted"> · {method}</span> : null}
+        <span className="text-text-muted">Who signs: </span>{signers.length ? <span className="[overflow-wrap:anywhere]">{whoSigns(signers, person, rep)}</span> : item.signature === "NONE" ? "nobody" : "not set on this form's line yet (the release names who signs)"}{method ? <span className="text-text-muted"> · {method}</span> : null}
       </p>
     ) : null}
-    {item.signature === "HAND_SCANNED" ? <SignBlock caseId={caseId} item={item} copies={copies} filing={prep.data!.filings.find((f) => f.id === item.filing)} /> : null}
+    {item.signature === "HAND_SCANNED" ? <SignBlock caseId={caseId} item={item} f={f} who={signers.length ? whoSigns(signers, person, rep) : null} filing={prep.data!.filings.find((x) => x.id === item.filing)} /> : null}
   </>);
 }
 
-function SignBlock({ caseId, item, copies, filing }: { caseId: string; item: PrepItem; copies: FormCopy[]; filing: { id: string; label: string; status: string } | undefined }) {
+function SignBlock({ caseId, item, f, who, filing }: { caseId: string; item: PrepItem; f: CaseForm; who: string | null; filing: Filing | undefined }) {
+  const copies = f.copies;
   const qc = useQueryClient(), toast = useToast(), firm = useFirm();
   const team = useApi<TeamView>(["runtime", "team", caseId], `/runtime/cases/${caseId}/team`, { retry: noRetryOnRefusal }).data;
   const form = item.form ?? "";
@@ -115,22 +105,30 @@ function SignBlock({ caseId, item, copies, filing }: { caseId: string; item: Pre
 
   const st = STATE[item.state] ?? { words: item.state.replace(/_/g, " "), tone: "neutral" };
   const steps = q.data?.sign_steps ?? [];
-  const stepWords: Record<string, string> = Object.fromEntries(steps.map((s) => [s.key, s.words]));
   const done: StepsDone = Object.fromEntries(steps.filter((s) => s.done).map((s) => [s.key, s.done!]));
   const nextKey = SIGN_STEPS.find((k) => !done[k]) ?? null;
-  const latest = copies[0];
   const copyOf = (id: string | null | undefined) => copies.find((c) => c.id === id);
-  const current = latest && latest.status === "GENERATED" && !latest.out_of_date ? latest : null;
-  // BR-8 (C9.2): the signed copy is out of date and not yet uploaded to IRCC: a new print starts its signing again (the
-  // server supersedes the earlier steps, keeping the earlier scan). Once uploaded, nothing is signed again here (C8.2).
-  const again = !!done.print && !done.uploaded_to_ircc && (!!item.replaces || item.state === "out_of_date");
+  // BR-4 (challenge m2): the copy to print is the newest generated one, and only one the copy block would file: current,
+  // its file there, not stamped "Copy, not for filing", and the form's filling proven; otherwise the copy block's reason.
+  const latest = copies.find((c) => c.status === "GENERATED"), pending = copies[0] && (copies[0].status === "QUEUED" || copies[0].status === "RUNNING");
+  const notFiled = !f.for_filing ? `${form} is filed Online: a PDF copy is not for filing, so it is not printed to sign.` : latest?.copy_not_for_filing ? `This copy was made while ${form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy above and print that one.`
+    : !f.trial_passed ? (f.trial_why ?? `${form}: this form's filling is not proven yet, so its copy is for checking only, not for signing.`) : null;
+  const current = latest && !latest.out_of_date && latest.file_ok && !notFiled ? latest : null;
+  // BR-8 (C9.2; challenge M1): a new print starts the signing again exactly when the server allows it (sign-steps.ts
+  // `restart`): Printed done, Uploaded to IRCC not, and the printed copy's facts changed since (its copy reads Out of date,
+  // the same test), or the view asks for a new signed copy (`replaces`). Then Signed by hand and the upload are not
+  // offered. Once uploaded to IRCC nothing is signed again here: the reason only.
+  const printed = copyOf(done.print?.copy);
+  const again = !!done.print && !done.uploaded_to_ircc && (!!item.replaces || !!printed?.out_of_date);
   const ready = filing?.status.toLowerCase() === "ready_to_file";
+  // Challenge M2: once the submission is recorded the application is read-only: the steps done stay, no button.
+  const recorded = !!filing?.read_only || filing?.status.toLowerCase() === "submitted";
   const blockId = `sign-${item.id}`;
 
   /** The print action, or why it cannot be done yet (BR-4): the newest generated copy that is still current. */
   const printAction = (label: string) => current
     ? <Button size="sm" busy={busy} onClick={() => void run("print", { copy: current.id }, `${form}: Printed (copy of ${when(current.created_at)})`)} data-step-action="print">{label} {when(current.created_at)}</Button>
-    : <p className="text-[13px] text-text-muted" data-step-why>{latest && (latest.status === "QUEUED" || latest.status === "RUNNING") ? "The copy is being generated…" : latest?.out_of_date ? `This copy is out of date: generate a new copy of ${form} above and print that one.` : `Generate a copy of ${form} above first: the copy printed is named here.`}</p>;
+    : <p className="text-[13px] text-text-muted" data-step-why>{pending ? "The copy is being generated…" : notFiled ? notFiled : latest?.out_of_date ? `This copy is out of date: generate a new copy of ${form} above and print that one.` : latest && !latest.file_ok ? `The file of the newest copy of ${form} is missing: generate a new copy above.` : `Generate a copy of ${form} above first: the copy printed is named here.`}</p>;
 
   function action(key: SignStepKey) {
     if (key === "print") return <div className="space-y-1"><p className="text-[13px] text-text-muted">Download the copy above, print it, then record it here.</p>{printAction("Printed: the copy of")}</div>;
@@ -146,17 +144,21 @@ function SignBlock({ caseId, item, copies, filing }: { caseId: string; item: Pre
     );
     // BR-7: "Uploaded to IRCC" only once the filing is Ready to file (the server reads it again and refuses otherwise).
     return ready ? <Button size="sm" busy={busy} onClick={() => void run("uploaded_to_ircc", {}, `${form}: Uploaded to IRCC`)} data-step-action="uploaded_to_ircc">Uploaded to IRCC</Button>
-      : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {stepRefusal("uploaded_to_ircc", done, stepWords, form, { filingReady: false })}{" "}
+      : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {stepRefusal("uploaded_to_ircc", done, form, { viaUpload: true, filingReady: false })}{" "}
           <button type="button" className="text-text-link underline underline-offset-2" onClick={() => focusLater(() => document.getElementById("readiness-h"))}>Go to Ready to file</button></p>;
   }
 
   function detail(s: Step) {
     if (!s.done) return null;
-    const by = <span className="text-text-muted">by {nameOf(s.done.by)}, {when(s.done.at)}</span>;
+    // Challenge m1: the officer records a step; the signers sign (there is no signing for the client, C8.1-12).
+    const by = <span className="text-text-muted">recorded by {nameOf(s.done.by)}, {when(s.done.at)}</span>;
     if (s.key === "print") { const c = copyOf(s.done.copy); return <>{c ? <>Copy of {when(c.created_at)} · </> : null}{by}</>; }
+    if (s.key === "signed") return <>{who ? <>Signed by {who} · </> : null}{by}</>;
     if (s.key === "scan_received") {
       const x = q.data?.signed_scans[q.data.signed_scans.length - 1];
-      return <>{x ? <span title={`Checksum (SHA-256): ${x.sha256}`} data-scan-file><span className="[overflow-wrap:anywhere]">{x.file_name}</span> · {MEDIA_WORDS[x.media_type] ?? x.media_type} · {size(x.size_bytes)} · </span> : null}{by}</>;
+      return <>{x ? <span data-scan-file><span className="[overflow-wrap:anywhere]">{x.file_name}</span> · {MEDIA_WORDS[x.media_type] ?? x.media_type} · {size(x.size_bytes)} · </span> : null}{by}
+        {/* Challenge m6: the checksum reachable by keyboard, off the main line (EXPERIENCE §5: no hashes on the main path). */}
+        {x ? <details className="mt-0.5"><summary className="inline-flex min-h-6 cursor-pointer items-center text-text-link">Checksum</summary><span className="mono break-all text-text-muted">SHA-256 {x.sha256}</span></details> : null}</>;
     }
     return by;
   }
@@ -173,15 +175,16 @@ function SignBlock({ caseId, item, copies, filing }: { caseId: string; item: Pre
       {q.isLoading ? <><Skeleton className="h-16 w-full" /><span className="sr-only" role="status">Loading the signing steps of {form}…</span></>
         : q.isError ? <Notice tone="danger" title="The signing steps could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error).message}</Notice>
         : <>
-          {again ? (
+          {recorded ? <p className="text-[13px] text-text-muted" data-sign-readonly>The submission is recorded: this application is read-only.{done.uploaded_to_ircc ? "" : ` "Uploaded to IRCC" was not ticked for ${form} before it was recorded.`}</p> : null}
+          {again && !recorded ? (
             <div className="space-y-1 rounded-md border border-border px-2 py-1.5" data-sign-again>
               <p className="text-[13px] text-text-warn">The signed {form} is out of date: print a new copy, have it signed and upload the new scan. The earlier scan is kept.</p>
               {printAction("Printed: the new copy of")}
             </div>
           ) : null}
           <ol className="space-y-1.5">{steps.map((s, i) => {
-            const isNext = s.key === nextKey && !again;
-            const why = !s.done && !isNext && !again ? stepRefusal(s.key, done, stepWords, form, { filingReady: true }) : null;
+            const isNext = s.key === nextKey && !again && !recorded;
+            const why = !s.done && !isNext && !again && !recorded ? stepRefusal(s.key, done, form, { viaUpload: true, filingReady: true }) : null;
             return (
               <li key={s.key} className="flex flex-wrap items-start gap-x-3 gap-y-1 text-[13px]" data-step={s.key} data-done={s.done ? "yes" : "no"}>
                 <span className="flex min-w-48 items-center gap-1.5 font-medium">
