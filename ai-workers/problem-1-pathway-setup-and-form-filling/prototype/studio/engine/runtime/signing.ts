@@ -5,8 +5,8 @@ import { FILING } from "../../contracts/resolver.ts";
 import { formSigners, type Person } from "../resolver.ts";
 import { ageOn } from "./case.ts";
 // The steps, their words and the order rule live in sign-order.ts (no import), so the browser reads the same words (B3, M3).
-import { SIGN_STEPS, SIGN_STEP_WORDS, isSignStep, stepRefusal, type SignStepKey, type StepsDone } from "./sign-order.ts";
-export { SIGN_STEPS, SIGN_STEP_WORDS, isSignStep, stepRefusal, type SignStepKey, type StepsDone };
+import { PEN_STEPS, PEN_STEP_WORDS, SIGN_STEPS, SIGN_STEP_WORDS, isPenStep, isSignStep, penRefusal, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone } from "./sign-order.ts";
+export { PEN_STEPS, PEN_STEP_WORDS, SIGN_STEPS, SIGN_STEP_WORDS, isPenStep, isSignStep, penRefusal, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone };
 
 /** Devin on #617: whether a person is a minor (under 18) on `today`, from their own answered date of birth; undefined when
  *  it is not answered (R7 then keeps a child a minor, as before). VV-R09: a child under 18 is signed for by a parent. */
