@@ -2,7 +2,7 @@
 
 current_lead: local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3 Lead 32 · 7 Nov 18:55 IST (took over from Lead 31 at ~385k context, P-314)
 
-updated: 2026-11-07 19:05 IST by **Lead 32** (Lead 31's hand-over below) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-413 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1855-lead31.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-07 19:05 IST by **Lead 32** (Lead 31's hand-over below) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-414 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1855-lead31.md` · this branch: `lead/2026-11-07-lead31`
 
 ## Lead 32 (from 18:56 IST): first check done 19:05 IST
 * Check cron f50193b6 (:13/:43). Lead 33 told "start the watchdog" 18:57 IST. Standbys: Lead 33 (watchdog) and Lead 34 `local_309261d2-81b3-4957-93dd-bbcc0ef30be1` (started by Lead 31 at the founder's yes, ~19:50 IST).
@@ -11,6 +11,7 @@ updated: 2026-11-07 19:05 IST by **Lead 32** (Lead 31's hand-over below) · mile
 * Warm rows sent (P-413 (2)): the B3 lane takes B129 → B132 → B130; the B5 lane takes B133 → B152 → B151.
 * Waiting on a merge, to message then: UX lane builds C6.9 once #1250 merges; the forms lane B155 → B157 once #1256 merges; A5 takes B136 once #1054 merges (its own check-in reads Lead 31's ruling).
 * **Check 19:29 IST:** rulings on #1275 (row B160 to the CI-fixes lane after B134), #1252 (fresh Opus reviewer on the fix diff + breaker; migration approved on one condition: every pin read takes the newest revision), #1222 (A6's "worked-out value" on CONFIG_ENTITIES accepted). B160 and #1252's condition also typed into their sessions.
+* **P-414 finish first (founder ~19:55 IST):** no new rows or lanes. Stop told in the session at ~19:57-20:02 IST: concepts 1, concepts 2 (finish B145 #1252), B154 lane, B137 #1268, B155 (stops now), A5 (stops after #1054, no B136). **Live lanes (~11 + qa):** C4 packs, B150 (#1246 fix, #1251), B107 #1231, B128 #1256 (labelled), B3 lane (B129 → B132 → B130), B5 lane (B133 → B152 → B151), A6 #1222, B148/B149 #1261, UX on C6.9 #1255, CI fixes (B134 → B160), qa (Mac).
 * Queued: #1054, #1249, #1250; labelled not queued: #1246 (red, B150 lane fixing), #1251 (conflict), #1256 (B128, labelled itself ~18:59 IST).
 
 ## Hand-over to Lead 32 (18:55 IST): do first
