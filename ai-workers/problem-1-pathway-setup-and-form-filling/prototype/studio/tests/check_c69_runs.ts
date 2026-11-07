@@ -10,7 +10,7 @@ import { kkey, type Known } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { CLIENT, DB, PORT, OFFICER, answer, call, confirmAll, main, needVisitorVisa, ok, openCase, sql, yearsAgo, inDays } from "../acceptance/lib/m3.ts";
+import { CLIENT, DB, PORT, OFFICER, agent, answer, call, confirmAll, main, needVisitorVisa, ok, openCase, sql, yearsAgo, inDays } from "../acceptance/lib/m3.ts";
 
 const P = "subject-1";
 const GATES = [
@@ -174,6 +174,8 @@ await main("C6.9 part 2", "Eligibility runs (stand-in SI-1 adapter and routes)",
   const good = r.body;
   ok("C6.9 BR-9 pass: with every fact answered and valid, every gate is Met: Likely eligible", good?.results?.[0]?.outcome === "LIKELY_ELIGIBLE" && good?.results?.[0]?.gates?.every((g: { state: string }) => g.state === "met"), good?.results?.[0]);
 
+  // P-244 (B140): a background answer the officer recorded waits for the client; the client re-confirms it (as on their questionnaire, "This is right") before the officer confirms the section.
+  for (const s of (await agent(c.id))?.sections ?? []) for (const q of s.questions as { answer: { id: string; awaits_client?: boolean } | null; rows: { answer: { id: string; awaits_client?: boolean } | null }[] }[]) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${c.id}/answers/${a.id}/reconfirm`, {}, CLIENT);
   await confirmAll(c.id, A);
   let l = await list(`?person=${A}`);
   const marked = (x: { results?: { gates: { unconfirmed?: string[] }[] }[] } | undefined) => (x?.results?.[0]?.gates ?? []).flatMap((g) => g.unconfirmed ?? []);
