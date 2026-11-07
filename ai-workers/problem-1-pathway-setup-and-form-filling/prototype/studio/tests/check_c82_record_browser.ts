@@ -84,7 +84,9 @@ try {
   await p.keyboard.type("V300000201");
   await type(filingBox(fP).getByLabel("Submitted on"), "");
   await p.locator("[data-record-filing] input[type=date]").first().fill(inDays(2));
-  await type(filingBox(fP).getByLabel("Fee receipt (optional)"), "SAMPLE-RECEIPT-E");
+  await type(filingBox(fP).getByLabel("Fee receipt number (optional)"), "SAMPLE-RECEIPT-E");
+  // B149 (P-408; board agent-view frame 7): IRCC's "Transaction Approved" page as the fee receipt's evidence, chosen in the dialog.
+  await filingBox(fP).locator("[data-receipt-input]").setInputFiles({ name: "transaction-approved-E.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% SYNTHETIC SPECIMEN: IRCC Transaction Approved page (Sample)\n%%EOF\n", "latin1") });
   await type(dialog().getByLabel("Sample Client E’s UCI"), "1111-2222");
   await press(dialog().getByRole("button", { name: "Record the submission", exact: true }));
   await filingBox(fP).getByText(/after today/).waitFor({ timeout: 10_000 });
@@ -101,6 +103,11 @@ try {
   const text = await panel().innerText();
   ok("C8.2-6 (screen): recorded: the group reads Recorded · read-only, each filing Submitted with its own number", /Recorded · read-only/.test(text) && (await panel().locator('[data-status="submitted"]').count()) === 2 && /V300000201/.test(text) && /V300000202/.test(text), text);
   ok("C8.2-7 (screen): the record reads Prepared by · Reviewed by, the fee receipt and the UCI", /Prepared by · Reviewed by\s*Case officer · Representative/.test(text) && /SAMPLE-RECEIPT-E/.test(text) && /Sample Client E: 1111-2222/.test(text), text);
+  // B149: the page chosen in the dialog is stored with the record; the spouse's filing has none and offers the upload.
+  await panel().locator(`[data-submission-filing="${fP}"] [data-receipt-file]`).waitFor({ timeout: 15_000 });
+  const receiptP = await panel().locator(`[data-submission-filing="${fP}"] [data-fee-receipt]`).innerText(), receiptS = await panel().locator(`[data-submission-filing="${fS}"] [data-fee-receipt]`).innerText();
+  ok("B149 C8.2 (screen): the record shows the Transaction Approved page chosen in the dialog, with the typed number", /Transaction Approved page: transaction-approved-E\.pdf/.test(receiptP) && /Receipt number: SAMPLE-RECEIPT-E/.test(receiptP) && sql(`select count(*) from fee_receipt_file where filing_id='${fP}'`) === "1", receiptP);
+  ok("B149 C8.2 (screen): a filing without one says so and offers the upload; the typed number stays optional", /No Transaction Approved page uploaded/.test(receiptS) && /No receipt number typed/.test(receiptS) && (await panel().getByRole("button", { name: /Upload the Transaction Approved page for/ }).count()) === 1, receiptS);
   ok("C8.2-8 (screen): the button is gone once recorded (one record per group)", (await panel().getByRole("button", { name: "Record the submission…" }).count()) === 0);
   ok("a11y: focus is back on the panel after the dialog closes", await p.evaluate(() => !!document.activeElement?.closest("[data-submission]")));
   ok("data: the records under the screen: two filing rows, one UCI, Prepared by the officer, Reviewed by the representative",

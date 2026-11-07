@@ -113,7 +113,7 @@ const sha = createHash("sha256").update(receipt("client C")).digest("hex");
 ok("B149 pass: the officer uploads the Transaction Approved page on a recorded filing (200); the record lists it with who and when",
   u.status === 200 && files.length === 1 && files[0].file_name === "Transaction Approved.pdf" && files[0].media_type === "application/pdf" && !!files[0].uploaded_by && !!files[0].uploaded_at, { u, files });
 ok("B149 data: stored once, with the file's sha256, on that filing only", sql(`select sha256 || '|' || filing_id || '|' || uploaded_by from fee_receipt_file where case_id='${c.id}'`) === `${sha}|${fP}|${officer}`);
-ok("B149 pass: the typed receipt number stays optional: the spouse's filing has none typed and none uploaded", filingsOf(p).find((x) => x.id === fS)?.record?.fee_receipt === null && (filingsOf(p).find((x) => x.id === fS)?.record?.fee_receipt_files ?? []).length === 0);
+ok("B149 pass: the typed number and the upload are apart: the spouse's filing keeps its typed number and has no upload (the client's upload did not reach it)", filingsOf(p).find((x) => x.id === fS)?.record?.fee_receipt === "SAMPLE-RECEIPT" && (filingsOf(p).find((x) => x.id === fS)?.record?.fee_receipt_files ?? []).length === 0);
 u = await upload(fP, receipt("client C, again"), "approved-2.pdf");
 p = (await prepare(c.id, officer)).p;
 files = filingsOf(p).find((x) => x.id === fP)?.record?.fee_receipt_files ?? [];
