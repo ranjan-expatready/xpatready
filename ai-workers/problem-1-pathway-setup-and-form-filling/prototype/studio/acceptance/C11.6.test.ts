@@ -31,7 +31,7 @@ await main("C11.6", "Channel per form on the case, inside what IRCC accepts", as
   ok(`C11.6-5 pass: the signature value follows edition × channel: ${HS} signed by hand and scanned, ${FAM} as its line says (${FL?.signature})`, i5476?.signature === "HAND_SCANNED" && !!FL && i5707?.signature === FL.signature, [i5476?.signature, i5707?.signature]);
 
   let r = await call("PATCH", `/runtime/items/${i5476?.id}/channel`, { channel: "ONLINE", version: p?.version }, OFFICER);
-  ok(`C11.6-6 fail: Online on ${HS} is refused with IRCC's own line (422), nothing changed`, !!HS && r.status === 422 && /upload/i.test(r.body?.detail ?? "") && itemsOf((await prepare(c.id)).p, P, HS)[0]?.channel === "PDF_UPLOAD", r.body?.detail);
+  ok(`C11.6-6 fail: Online on ${HS} is refused with IRCC's own line (422), nothing changed`, !!HS && r.status === 422 && /upload/i.test(r.body?.detail ?? "") && !!HL && itemsOf((await prepare(c.id)).p, P, HS)[0]?.channel === HL.channel, r.body?.detail);
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "FAX", version: p?.version }, OFFICER);
   ok("C11.6-7 fail: an unknown channel is a 400 naming the four channels", !!i5257 && r.status === 400 && /Online|PDF upload|Paper|Not needed/.test(JSON.stringify(r.body)), r.status);
   ok("C11.6-8 fail: a client cannot change a channel (403)", !!i5257 && (await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "ONLINE", version: p?.version }, CLIENT)).status === 403);
@@ -44,7 +44,7 @@ await main("C11.6", "Channel per form on the case, inside what IRCC accepts", as
   ok(`C11.6-8a fail (r5c §6): a channel outside what the item accepts on the APR Portal is refused with the reason, nothing changed (422; here ${outside?.ch} on ${outside?.i.form}; the fixture's Sample accepts record, setup S4a: Online on IMM 5257)`, !!outside && r.status === 422 && /PDF upload|accept/i.test(r.body?.detail ?? "") && itemsOf((await prepare(c.id)).p, P, outside.i.form)[0]?.channel === outside.i.channel, r.body?.detail);
   const target = "PAPER";
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: target, version: p?.version }, OFFICER);
-  ok("C11.6-8b fail (FQ-3, recommended): Paper on a visitor visa needs a written accommodation reason (400 without one)", r.status === 400 && /reason|accommodation/i.test(JSON.stringify(r.body)), r.status);
+  ok("C11.6-8b fail (FQ-3, recommended): Paper on a visitor visa needs a written accommodation reason (400 without one)", !!i5257 && r.status === 400 && /reason|accommodation/i.test(JSON.stringify(r.body)), r.status);
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: target, reason: "Cannot apply online: accommodation (Sample)", version: p?.version }, OFFICER);
   const changed = r.status === 200;
   p = (await prepare(c.id)).p;
