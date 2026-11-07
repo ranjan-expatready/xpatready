@@ -1,6 +1,8 @@
-// C6.9 Staff eligibility page (M3-D; r5c BR-14; P-77, P-141, P-164 (1); stand-in SI-1). Visitor visa part: the gates
+// C6.9 Case check from confirmed facts (P-236, B148; was the staff eligibility page) (M3-D; r5c BR-14; P-77, P-141,
+// P-164 (1); stand-in SI-1). Visitor visa part: the gates
 // are rules as data on the release (lib/setup_vv_m3.ts S7, Sample values from canada.ca's eligibility list, VV-R01);
-// an adapter fills AG-03's result shape with three outcomes and no score; each run is a frozen snapshot with the rules
+// an adapter fills AG-03's result shape with three outcomes and no score (codes LIKELY_ELIGIBLE, POSSIBLY_ELIGIBLE,
+// NOT_ELIGIBLE, read as Qualifies · Can't tell yet · Does not qualify, P-236); each run is a frozen snapshot with the rules
 // version, a disclaimer and who ran it; only facts settle gates (travel document, convictions); money, health, ties
 // and leaving are the officer's judgement (FQ-5); override needs a reason; out of date when a fact changes. Rules only, no AI.
 // The judgement items on IRCC's list (ties, leaving at the end of the visit) are shown as the officer's judgement,
@@ -18,7 +20,7 @@ type Result = { programKey: string; outcome: string; score: number | null; maxSc
 type Assessment = { id: string; packId: string; packVersion: string | number; rulesAsOfByProgram: Record<string, string>; disclaimerText: string; createdBy: string; createdAt: string; source: string; out_of_date?: boolean; results: Result[] };
 const OUTCOMES = ["LIKELY_ELIGIBLE", "ELIGIBLE_BELOW_CUTOFF", "POSSIBLY_ELIGIBLE", "NOT_ELIGIBLE"];
 
-await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)", async () => {
+await main("C6.9", "Case check from confirmed facts (Visitor visa gates, stand-in SI-1)", async () => {
   const vv = needVisitorVisa();
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }]);
   const P = c.subjects["Sample Client A"];
@@ -30,7 +32,7 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   let r = await assess();
   let a = r.body as Assessment | undefined, res = vvResult(a);
   ok("C6.9-2 pass: a run returns AG-03's shape: pack id and version (our release pin), rules as at, disclaimer, who and when, source stand-in", r.status === 201 && !!a?.packId && a?.packVersion !== undefined && !!a?.rulesAsOfByProgram?.["vv.single"] && (a?.disclaimerText ?? "").length > 20 && a?.createdBy === OFFICER && a?.source === "stand-in", a);
-  ok("C6.9-3 pass: with passport and convictions unanswered: Possibly eligible, needs those facts (missing inputs named)", res?.outcome === "POSSIBLY_ELIGIBLE" && ["person.passport_number", "person.criminal_history"].every((f) => res!.missingInputs.includes(f)), res);
+  ok("C6.9-3 pass: with passport and convictions unanswered: Can't tell yet, needs those facts (missing inputs named)", res?.outcome === "POSSIBLY_ELIGIBLE" && ["person.passport_number", "person.criminal_history"].every((f) => res!.missingInputs.includes(f)), res);
   ok("C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads", (res?.gates ?? []).length === 2 && res!.gates.every((g) => ["met", "not_met", "not_answered"].includes(g.state) && g.facts.length > 0), res?.gates);
   ok("C6.9-5 pass: the officer's judgement items (money for the stay, good health, ties, leaving at the end) are listed, never gates (FQ-5)", (res?.judgement ?? []).length === 4 && !(res?.gates ?? []).some((g) => /money|funds|health|ties|leave/i.test(g.key)), res?.judgement);
   ok("C6.9-6 pass (SI-1 adapter): never below the cut-off, no score, no breakdown, no recommendations", OUTCOMES.includes(res?.outcome ?? "") && res?.outcome !== "ELIGIBLE_BELOW_CUTOFF" && res?.score === null && res?.maxScore === null && Object.keys(res?.breakdown ?? {}).length === 0 && (res?.recommendations ?? []).length === 0);
@@ -39,15 +41,18 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   await answer(c.id, c.caseSubject, "case.funds_available_cad", "8000");
   r = await assess(OFFICER, "Facts added");
   res = vvResult(r.body);
-  // P-230 (1) (BACKLOG R4): the background gate's "when not met" is needs_review (S7), so a Yes is never a hard Not
-  // eligible: Possibly eligible, the gate named for the representative's review (the outcome set is unchanged).
-  ok("C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Possibly eligible, never Not eligible (P-230 (1))", res?.outcome === "POSSIBLY_ELIGIBLE" && ((res as Result & { reviewGates?: string[] })?.reviewGates ?? []).includes("vv.no_convictions") && !(res?.failedGates ?? []).includes("vv.no_convictions") && res!.gates.find((g) => g.key === "vv.no_convictions")?.state === "not_met", res);
+  // P-230 (1) (BACKLOG R4): the background gate's "when not met" is needs_review (S7), so a Yes is never a hard Does
+  // not qualify: Can't tell yet, the gate named for the representative's review (the outcome set is unchanged).
+  ok("C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Can't tell yet, never Does not qualify (P-230 (1))", res?.outcome === "POSSIBLY_ELIGIBLE" && ((res as Result & { reviewGates?: string[] })?.reviewGates ?? []).includes("vv.no_convictions") && !(res?.failedGates ?? []).includes("vv.no_convictions") && res!.gates.find((g) => g.key === "vv.no_convictions")?.state === "not_met", res);
   await answer(c.id, P, "person.criminal_history", false);
   const first = a?.id;
   const firstJson = sql(`select result_json::text from assessment where id='${first}'`);
   r = await assess(OFFICER, "Conviction answer corrected");
   res = vvResult(r.body);
-  ok("C6.9-8 pass: every gate met gives Likely eligible", res?.outcome === "LIKELY_ELIGIBLE" && res!.gates.every((g) => g.state === "met"), res);
+  ok("C6.9-8 pass: every gate met gives Qualifies", res?.outcome === "LIKELY_ELIGIBLE" && res!.gates.every((g) => g.state === "met"), res);
+  // B148 (P-236): the history line of a run says the outcome in P-236's words, never the code lower-cased.
+  const said = sql(`select summary from audit_event where entity='assessment' and entity_key='${r.body?.id}' and action='created'`);
+  ok("C6.9-8b pass (B148, P-236): the run's history line names the case check and says Qualifies (not \"likely eligible\")", /ran the case check on case .*: Qualifies$/.test(said) && !/eligib/i.test(said), said);
   ok("C6.9-9 pass (AG-3-1): an earlier run is a frozen snapshot; it is unchanged and marked out of date after the facts changed", sql(`select result_json::text from assessment where id='${first}'`) === firstJson && !!firstJson
     && (await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, OFFICER)).body?.assessments?.find((x: Assessment) => x.id === first)?.out_of_date === true);
   await answer(c.id, P, "person.passport_number", "SAMPLEP13");
@@ -64,7 +69,7 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   ok("C6.9-14 pass: the page is rules only: no model call in any run", !!latest?.id && sql("select count(*) from ai_batch") === spend0);
   ok("C6.9-15 pass: the list says which stand-in fills it (SI-1, a row in STAND-INS.md)", (await call("GET", `/runtime/cases/${c.id}/assessments`, undefined, OFFICER)).body?.stand_in === "SI-1");
 
-  // B124 (M3 row A8, P-393): an outcome says when it rests on answers not confirmed yet; Possibly eligible unchanged.
+  // B124 (M3 row A8, P-393): an outcome says when it rests on answers not confirmed yet; Can't tell yet unchanged.
   // A new case; the officer answers the deciding facts (answers by the officer are not confirmed until Confirm section).
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client B124", dob: yearsAgo(40) }]);
   const P2 = c2.subjects["Sample Client B124"];
@@ -73,7 +78,7 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   const now2 = async () => vvResult(((await call("GET", `/runtime/cases/${c2.id}/assessments?person=${P2}`, undefined, OFFICER)).body?.assessments ?? [])[0]);
   let r2 = await now2();
   const deciding = ["person.passport_number", "person.passport_expiry_date", "person.criminal_history"];
-  ok("C6.9-16 pass (B124, none confirmed): Likely eligible rests on all three deciding answers, each named", r2?.outcome === "LIKELY_ELIGIBLE" && deciding.every((f) => restingOn(r2).includes(f)) && restingOn(r2).length === 3, { outcome: r2?.outcome, resting: restingOn(r2) });
+  ok("C6.9-16 pass (B124, none confirmed): Qualifies rests on all three deciding answers, each named", r2?.outcome === "LIKELY_ELIGIBLE" && deciding.every((f) => restingOn(r2).includes(f)) && restingOn(r2).length === 3, { outcome: r2?.outcome, resting: restingOn(r2) });
   // Confirm only the section that holds the passport number.
   type Sec = { subjectId: string; section: string; questions: { fact: string; answer?: { id: string } | null; rows: { answer?: { id: string } | null }[] }[] };
   const sec = ((await agent(c2.id))?.sections ?? []).find((s: Sec) => s.subjectId === P2 && s.questions.some((q) => q.fact === "person.passport_number")) as Sec | undefined;
@@ -85,10 +90,10 @@ await main("C6.9", "Staff eligibility page (Visitor visa gates, stand-in SI-1)",
   await confirmAll(c2.id, P2);
   r2 = await now2();
   ok("C6.9-18 pass (B124, all confirmed): nothing rests on an unconfirmed answer, so the line goes", r2?.outcome === "LIKELY_ELIGIBLE" && restingOn(r2).length === 0, restingOn(r2));
-  // Not eligible rests on the gates it fails, never on a "the representative reviews it" gate; Possibly eligible on nothing.
-  // (No Visitor visa gate can give Not eligible, so these read the rule as written; the page shows the same function.)
+  // Does not qualify rests on the gates it fails, never on a "the representative reviews it" gate; Can't tell yet on nothing.
+  // (No Visitor visa gate can give Does not qualify, so these read the rule as written; the page shows the same function.)
   const same = (a: string[], b: string[]) => JSON.stringify(a) === JSON.stringify(b);
   const g = (state: string, facts: string[], unconfirmed: string[], whenNotMet = "not_eligible") => ({ state, facts, unconfirmed, whenNotMet });
-  ok("C6.9-19 pass (B124): Not eligible names only its failed gates' unconfirmed answers; a review gate and a met gate do not decide it", same(restingOn({ outcome: "NOT_ELIGIBLE", gates: [g("not_met", ["a.x"], ["a.x"]), g("met", ["a.y"], ["a.y"]), g("not_met", ["a.z"], ["a.z"], "needs_review")] }), ["a.x"]));
-  ok("C6.9-19 fail (B124): Possibly eligible (can't tell yet) rests on nothing here, even with unconfirmed answers", restingOn({ outcome: "POSSIBLY_ELIGIBLE", gates: [g("met", ["a.y"], ["a.y"]), g("not_answered", ["a.w"], [])] }).length === 0);
+  ok("C6.9-19 pass (B124): Does not qualify names only its failed gates' unconfirmed answers; a review gate and a met gate do not decide it", same(restingOn({ outcome: "NOT_ELIGIBLE", gates: [g("not_met", ["a.x"], ["a.x"]), g("met", ["a.y"], ["a.y"]), g("not_met", ["a.z"], ["a.z"], "needs_review")] }), ["a.x"]));
+  ok("C6.9-19 fail (B124): Can't tell yet rests on nothing here, even with unconfirmed answers", restingOn({ outcome: "POSSIBLY_ELIGIBLE", gates: [g("met", ["a.y"], ["a.y"]), g("not_answered", ["a.w"], [])] }).length === 0);
 });
