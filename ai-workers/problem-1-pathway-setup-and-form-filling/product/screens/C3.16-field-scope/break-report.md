@@ -180,3 +180,30 @@
 **Not tried:** a screen reader; M2 live; keyboard on the merged questionnaire (only import lines changed there).
 
 **Verdict (round 2, b13d0458e): Block.** One Major (1: the condition approval skips the field lock, so Household plus a condition is reachable). Minors 2–4 can follow.
+
+## Round 2 re-check at 8e5197711 (7 Nov)
+**Copy:** `bra5r` on 4447, a fresh copy of the six, then pack2 `needQuestions` on the LMIA work permit and Visitor visa. Live AI off, US$0. The copy is stopped and its database dropped. The same scripts and the same SQL scaffolding as round 2: one waiting `placement_condition` change for each round.
+
+* **M1: fixed.**
+  * The field had to change: `organisation.employer_address` now refuses Household (m3), so the race ran on `relationship.current_union_start_date` (a draft, `per_person`, no condition).
+  * Approval and Household sent together, 15 rounds: in every round exactly one was refused in words. Either the approval got 422 "A household question cannot depend on one person's answer yet." or the save got 422.
+  * Approval 5 ms ahead, 5 rounds: the same.
+  * No round ended with Household and a condition (round 2: 3 of 5 and 1 of 5).
+* **m2: fixed.**
+  * The same 8 field pairs and delays, then 5 more rounds (0.10–0.22 s) on the merges still waiting.
+  * 0 of 13 ended with an Organisation field that a representative box reads.
+  * When the save came first, the merge got 409 in words and stays Proposed. When the merge came first, the save waited and got 422 "A representative's box reads this field…".
+* **m3: fixed.** By route:
+  * PUT Household on `organisation.employer_address` and on `organisation.employer_name` gives 422 "This is the employer's fact: choose Organisation, not Household.";
+  * GET shows those words under the Household choice;
+  * Organisation is still allowed (200), and so is going back to Person.
+* **m4:** unchanged, as the coordinator said.
+* **No deadlock or slowdown:**
+  * one approval alone: 201 in 19 ms (round 2: 19 ms);
+  * one scope save alone: 200 in 10 ms;
+  * one merge alone: 201 in 173 ms (round 2: 231 ms);
+  * the server log has no deadlock, lock-timeout or error line after all the races.
+* **Pure check:** `check_c316_field_scope.ts` 34/34.
+* **New:** none. Not re-run: the configured-checkpoint lines of round 2 (no code on that path changed).
+
+**Verdict (re-check, 8e5197711): Approve from the breaker.** Round 2's Major 1 and Minors 2 and 3 are fixed. Minor 4 stays open, as agreed.
