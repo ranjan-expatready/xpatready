@@ -130,4 +130,4 @@ const src = readFileSync(new URL("../engine/runtime/mrz.ts", import.meta.url), "
 const imports = [...src.matchAll(/\bfrom\s+["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']/g)].map((m) => m[1] ?? m[2]);
 ok("C6.5 (P-249, no AI): the reader imports only Node's zlib, p5's check-digit rules and the resolver contract", same(imports, ["node:zlib", "../../../p5/reader/mrz.ts", "../../contracts/resolver.ts"]));
 
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
