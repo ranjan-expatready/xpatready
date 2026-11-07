@@ -105,6 +105,7 @@ export function LibraryChangePage() {
           <p className="text-xs text-text-muted">Sample until the immigration expert confirms. Approving makes a draft of the document type; it goes out with each combination's next release.</p>
         </div>
       ) : null}
+      {(x as unknown as { sets?: SetsChange }).sets ? <SetsCompare v={(x as unknown as { sets: SetsChange }).sets} /> : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -402,6 +403,28 @@ export function FormFieldsPage() {
       {!q.data ? <Head title="Form fields" /> : undecided ? <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." /> : <Head title="Form fields" chip="Decided" tone="ok" sub="Every form field of this edition has a decision." />}
       {me.has("review") || !undecided ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
       <FormFieldDecisions editionId={id!} readOnly={!me.has("review")} />
+    </div>
+  );
+}
+
+/** C6.15 (row B137): what the second person compares before approving a document type's substitute sets: before → after,
+ *  each set with its members in order, the standard first and each alternative's "when acceptable" words. */
+type SetsChange = { document: string; uses: number; reason: string; before: SetRow[]; after: SetRow[] };
+type SetRow = { name: string; mode_words: string; members: { key: string; name: string; standard: boolean; when_client: string | null }[] };
+function SetsCompare({ v }: { v: SetsChange }) {
+  const list = (xs: SetRow[], label: string) => xs.length ? <ul className="space-y-1" aria-label={label}>{xs.map((s) => (
+    <li key={s.name} data-change-set={s.name}><span className="font-medium">{s.name}</span> · {s.mode_words}: {s.members.map((m, i) => <span key={m.key}>{i ? (s.mode_words === "All of" ? " and " : " or ") : ""}{m.name}{m.standard ? " (the standard)" : ""}{m.when_client ? <span className="text-text-muted"> (when acceptable: {m.when_client})</span> : null}</span>)}</li>))}</ul>
+    : <span>None: the document is its own only member</span>;
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-sets>
+      <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
+        <dt className="text-text-muted">Document type</dt><dd className="font-semibold">{v.document}</dd>
+        <dt className="text-text-muted">Sets now</dt><dd>{list(v.before, "Sets now")}</dd>
+        <dt className="text-text-muted">Proposed</dt><dd>{list(v.after, "Proposed sets")}</dd>
+        <dt className="text-text-muted">Used by</dt><dd>{v.uses} combination{v.uses === 1 ? "" : "s"}: their drafts change at approval</dd>
+        <dt className="text-text-muted">Reason</dt><dd>{v.reason}</dd>
+      </dl>
+      <p className="text-xs text-text-muted">Any one of: one member meets the checklist line; All of: every member is needed. Sample until the immigration expert confirms. Approving makes a draft of the document type; it goes out with each combination's next release.</p>
     </div>
   );
 }
