@@ -25,6 +25,8 @@ Owner: the Lead. **One sheet for the founder and the team:** every place where o
 | SI-15 | **Client list, case shell, case team and stages** | A thin stand-in shaped like AG-07; filings, groups, waits and the release pin are ours | AG-07 Case core and delivery (ch.1–3) | Stand-in | When AG-07 is available | P-169 |
 | SI-16 | **Case page frame and its other tabs** (notes, tasks, timeline, messages, billing) | Our M3 tabs (facts to filing) in a simple frame | AG-07 screens | Stand-in | Our tabs plug into AG-07's frame | P-169 |
 | SI-17 | **Deadlines and reminders after filing** | The filing record is ours; no deadline engine | AG-11 Minder, AG-07 ch.7–9 | Deferred | With the Minder | P-167 (share below half) |
+| SI-18 | **Withdraw a submitted application** | Our filing record shows the state; no withdrawal request built (C8.4) | AG-07 case lifecycle (with close and reopen) | Deferred | With the team's case lifecycle | P-406 (1) |
+| SI-19 | **Representative's stored signature on their own boxes** | Signed by hand and scanned (C8.1); no stored signature (C8.5) | The team's user accounts and security (SA-1B-30, SA1B-D106); Unconfirmed: no counsel | Deferred | With the team's accounts | P-406 (3) |
 
 ## Rules
 1. A new stand-in or deferral gets a row here **the same day** it is decided, with its source in the team's documents (newest `sources/drive-snapshot-*`, read, never guessed).
