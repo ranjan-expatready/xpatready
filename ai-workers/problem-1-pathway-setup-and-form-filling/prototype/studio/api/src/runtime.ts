@@ -9,7 +9,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { ConfirmSection, fillsText, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, pqrView, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
@@ -285,7 +285,9 @@ export class Runtime {
     // C6.11: so do its licence part and firm name, and "Uses a representative" for the application (the case has a
     // representative of record), which replaces any answer typed before.
     const f = firmByKey(c.firmKey), caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
-    const fromFirm = f ? representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] })), caseSubject) : [];
+    // QA-289: the office phone in the shape this release's question reads it (parts where a form writes it part by part).
+    const phoneParts = shapeOf(this.snapshotOf(c), "person.telephone_number").phone;
+    const fromFirm = f ? representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] })), caseSubject, phoneParts) : [];
     const firmGives = new Set(fromFirm.map((x) => `${x.subjectId}|${x.field}`));
     return { answers: [...a.filter((x) => !firmGives.has(`${x.subjectId}|${x.field}`)), ...fromFirm], rows: r, groups };
   }

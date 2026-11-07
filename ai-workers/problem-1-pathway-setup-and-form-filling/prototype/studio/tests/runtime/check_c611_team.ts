@@ -54,10 +54,10 @@ function pure() {
   ok("C6.11: IMM 5476's representative part fills from the representative of record (licence number and category)", f?.["representative.membership_id"] === "R000000" && f?.["representative.representative_category"] === "rcic");
   ok("C6.11 fail: no representative of record, nothing to fill", representativeFacts(firm, []) === null);
   // C7.7 (G25): IMM 5476's representative block (name, e-mail, office address and phone) from the firm record.
-  const rc = representativeContact(firm, one), ra = representativeAnswers(firm, one);
+  const rc = representativeContact(firm, one, true), ra = representativeAnswers(firm, one, undefined, true);
   ok("C7.7 pass: the representative's name, e-mail, office address and phone come from the firm record, as confirmed answers about the representative", rc?.["person.family_name"] === "Representative" && typeof rc?.["person.email_address"] === "string" && rc?.["person.mailing_address_city"] === "Toronto" && (rc?.["person.telephone_number"] as { country_code?: string })?.country_code === "1" && ra.length === Object.keys(rc ?? {}).length + Object.keys(representativeLicence(firm, one) ?? {}).length && ra.every((a) => a.subjectId === "representative" && a.status === "VERIFIED" && a.channel === "firm_record" && a.actor === REP));
   const bare: Firm = { ...firm, office: { ...firm.office, unit: null }, users: firm.users.map((u) => ({ ...u, email: undefined })) };
-  ok("C7.7 fail: no representative of record gives no answers; a value the firm record lacks is left out (asked as before), never blank", representativeAnswers(firm, []).length === 0 && representativeContact(firm, []) === null && !("person.email_address" in (representativeContact(bare, one) ?? {})) && !("person.mailing_address_unit" in (representativeContact(bare, one) ?? {})));
+  ok("C7.7 fail: no representative of record gives no answers; a value the firm record lacks is left out (asked as before), never blank", representativeAnswers(firm, [], undefined, true).length === 0 && representativeContact(firm, [], true) === null && !("person.email_address" in (representativeContact(bare, one, true) ?? {})) && !("person.mailing_address_unit" in (representativeContact(bare, one, true) ?? {})));
   // C6.11 (VV-R10, QA-152): IMM 5476's licence part and firm name from the representative of record, never typed per case.
   const lic = representativeLicence(firm, one);
   ok("C6.11 pass: IMM 5476's licence part (membership ID, category, licensing body as the library's key) and the firm's name come from the representative of record", lic?.["representative.membership_id"] === "R000000" && lic?.["representative.representative_category"] === "rcic" && lic?.["representative.licensing_body"] === "cicc" && lic?.["representative.organization_name"] === firm.name, lic);
@@ -65,15 +65,15 @@ function pure() {
   ok("C6.11 fail (break m6): a body the library does not know gives no key, so the question stays asked", licensingBodyKey("Sample board") === null && !("representative.licensing_body" in (representativeLicence({ ...firm, users: firm.users.map((u) => (u.id === REP ? { ...u, licence: { ...u.licence!, body: "Sample board" } } : u)) }, one) ?? {})));
   const unlic: Firm = { ...firm, users: firm.users.map((u) => (u.id === REP ? { ...u, licence: null } : u)) };
   ok("C6.11 fail: no representative of record gives no licence part; a value the record lacks is left out (asked as before), never blank", representativeLicence(firm, []) === null && !("representative.membership_id" in (representativeLicence(unlic, one) ?? {})) && representativeLicence(unlic, one)?.["representative.organization_name"] === firm.name);
-  const withCase = representativeAnswers(firm, one, "case-subject");
+  const withCase = representativeAnswers(firm, one, "case-subject", true);
   ok("C6.11 pass: a case with a representative of record answers \"Uses a representative\" Yes for the application, from the firm record", withCase.some((x) => x.subjectId === "case-subject" && x.field === USES_REPRESENTATIVE && x.value === true && x.channel === "firm_record" && x.actor === REP));
-  ok("C6.11 fail: without a representative of record nothing answers \"Uses a representative\"; without the case's subject it is not given", !representativeAnswers(firm, [], "case-subject").some((x) => x.field === USES_REPRESENTATIVE) && !ra.some((x) => x.field === USES_REPRESENTATIVE));
+  ok("C6.11 fail: without a representative of record nothing answers \"Uses a representative\"; without the case's subject it is not given", !representativeAnswers(firm, [], "case-subject", true).some((x) => x.field === USES_REPRESENTATIVE) && !ra.some((x) => x.field === USES_REPRESENTATIVE));
   // The firm record's e-mail passes IRCC's own e-mail check (engine/field-format.ts: 2 to 6 letters after the last dot),
   // so IMM 5476's representative section never shows "to fix" for a value nobody on the case can change.
   const email = (v: string) => FORMAT_CHECKS.email.test(v, {}, {}) === null;
   ok("C6.11 pass: every firm user's e-mail passes IRCC's e-mail check", FIRMS.every((x) => x.users.every((u) => !u.email || email(u.email))), FIRMS.flatMap((x) => x.users.map((u) => u.email)));
   ok("C6.11 fail: the old Sample address (7 letters after the last dot) does not", !email("representative@sample-firm.example"));
-  const rcKeys = representativeContact(firm, one) ?? {};
+  const rcKeys = representativeContact(firm, one, true) ?? {};
   ok("C6.11 pass (ruling on #1072): the firm record's office and e-mail stay under the library's mailing keys (person.mailing_address_*, person.email_address, person.telephone_number)", rcKeys["person.mailing_address_city"] === "Toronto" && typeof rcKeys["person.email_address"] === "string" && !!rcKeys["person.telephone_number"], Object.keys(rcKeys));
   ok("C6.11 fail (ruling on #1072): never under the keys IMM 5475's designated individual reads on the checkpoint (person.address_*, person.email, person.phone_*)", !Object.keys(rcKeys).some((k) => /^person\.(address_|phone_|email$)/.test(k)), Object.keys(rcKeys));
   ok("C6.11 fail: the first representative asks for no new IMM 5476", imm5476(one).new_needed === false);
