@@ -61,5 +61,16 @@ await main("C8.2", "Record the submission per group (Visitor visa)", async () =>
     sql(`select string_agg(distinct prepared_by || '|' || coalesce(reviewed_by, '-') || '|' || recorded_by, ',') from filing_record where case_id='${c2.id}'`));
   p2 = (await prepare(c2.id, officer)).p;
   const recs = (p2?.filings ?? []).map((x) => (x as { record?: { prepared_by?: { id: string }; reviewed_by?: { id: string; self: boolean } | null } }).record);
-  ok("C8.2-14 fail (QA-295): no filing the case officer prepared reads Self-reviewed", recs.length === 2 && recs.every((x) => x?.prepared_by?.id === officer && x?.reviewed_by?.id === f.rep && x?.reviewed_by?.self === false), recs);
+  ok("C8.2-15 fail (QA-295): no filing the case officer prepared reads Self-reviewed", recs.length === 2 && recs.every((x) => x?.prepared_by?.id === officer && x?.reviewed_by?.id === f.rep && x?.reviewed_by?.self === false), recs);
+  // QA-295 review M1: a filing made Ready to file with the review warning passed (no review): the representative records;
+  // the record names the case officer as preparer and nobody as reviewer, never "Representative · Self-reviewed".
+  const c3 = await openCase(vv, [{ role: "principal", name: "Sample Client C", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [officer] });
+  const ready3 = await readyToFile(c3.id, null);
+  let p3 = (await prepare(c3.id, officer)).p;
+  r = await call("PATCH", `/runtime/groups/${p3?.groups[0]?.id}/record`, { version: p3?.version, filings: (p3?.filings ?? []).map((x, i) => ({ filing: x.id, our_reference: `SAMPLE-REF-C${i + 1}`, submitted_on: inDays(0), application_number: `V30000002${i + 1}`, fee_receipt: "SAMPLE-RECEIPT" })), ucis: [] }, f.rep!);
+  const rec3 = sql(`select string_agg(distinct prepared_by || '|' || coalesce(reviewed_by, '-') || '|' || recorded_by, ',') from filing_record where case_id='${c3.id}'`);
+  ok("C8.2-16 fail (QA-295 review M1): with the review passed, not done, the record names the officer and no reviewer (never Self-reviewed)", ready3.length === 1 && r.status === 200 && rec3 === `${officer}|-|${f.rep}`, [ready3.length, r.status, rec3]);
+  p3 = (await prepare(c3.id, officer)).p;
+  const v3 = (p3?.filings ?? []).map((x) => (x as { record?: { prepared_by?: { id: string }; reviewed_by?: unknown } }).record);
+  ok("C8.2-17 pass (QA-295): its view names the officer as preparer and gives no reviewer", v3.length === 1 && v3[0]?.prepared_by?.id === officer && v3[0]?.reviewed_by === null, v3);
 });

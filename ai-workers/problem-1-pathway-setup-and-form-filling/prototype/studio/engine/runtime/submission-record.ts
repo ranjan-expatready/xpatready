@@ -51,21 +51,24 @@ export const filedEarlierWords = (form: string, owner: string, changed: { label:
   return `Filed with an earlier value: ${shown} changed after ${owner}'s ${form} was filed on ${day}. Re-sign it, or tell IRCC of the change (Unconfirmed: no counsel).`;
 };
 
-/** QA-295 (P-155 (1)): who the filing record names as having prepared and reviewed a filing. The reviewer is the one the
- *  filing's latest review names (readiness.ts), never whoever records it. A self-review (the representative was the
- *  case's officer, or a solo firm) names the reviewer as preparer too. A review by a second person names the case
- *  officer on the case team when the review was made (the earliest assigned, never the reviewer). With no review (a
- *  filing recorded before reviews existed), the one recording prepared it and the representative of record reviewed it,
- *  as before. */
+/** QA-295 (P-155 (1)): who the filing record names as having prepared and reviewed a filing, whoever records it.
+ *  `review` is the review that counts for Ready to file (readiness: by the representative of record, for the facts as
+ *  they are now; api/src/readiness-inputs.ts), or null when none counts (the review warning was passed with a reason).
+ *  Reviewer: that review's author, or nobody: a record never claims a review that did not happen (review M1).
+ *  Preparer: a self-review names the reviewer. Otherwise a case officer of the case team: one on the team when the review
+ *  was made (else now), never the reviewer; else the officer who left last; the one recording only when the case never
+ *  had a case officer. With two officers at once the earliest assigned stands in: the data holds no per-filing preparer
+ *  (review m2). */
 export function recordedPeople(
-  review: { reviewedBy: string; kind: string; reviewedAt: Date } | null,
+  review: { by: string; kind: string; at: string | Date } | null,
   team: { userId: string; role: string; assignedAt: Date; endedAt: Date | null; id: string }[],
-  recorder: string, representative: string | null,
+  recorder: string, now: Date = new Date(),
 ): { preparedBy: string; reviewedBy: string | null } {
-  if (!review) return { preparedBy: recorder, reviewedBy: representative };
-  if (review.kind === "self_reviewed") return { preparedBy: review.reviewedBy, reviewedBy: review.reviewedBy };
-  const at = review.reviewedAt.getTime();
-  const officer = team.filter((m) => m.role === "OFFICER" && m.userId !== review.reviewedBy && m.assignedAt.getTime() <= at && (!m.endedAt || m.endedAt.getTime() > at))
-    .sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id))[0];
-  return { preparedBy: officer?.userId ?? recorder, reviewedBy: review.reviewedBy };
+  if (review?.kind === "self_reviewed") return { preparedBy: review.by, reviewedBy: review.by };
+  const officers = team.filter((m) => m.role === "OFFICER" && m.userId !== review?.by);
+  const byAssigned = (a: (typeof team)[number], b: (typeof team)[number]) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id);
+  const activeAt = (t: number) => officers.filter((m) => m.assignedAt.getTime() <= t && (!m.endedAt || m.endedAt.getTime() > t)).sort(byAssigned)[0];
+  const lastLeft = [...officers].filter((m) => m.endedAt).sort((a, b) => b.endedAt!.getTime() - a.endedAt!.getTime() || a.id.localeCompare(b.id))[0];
+  const officer = (review ? activeAt(new Date(review.at).getTime()) : undefined) ?? activeAt(now.getTime()) ?? lastLeft;
+  return { preparedBy: officer?.userId ?? recorder, reviewedBy: review?.by ?? null };
 }

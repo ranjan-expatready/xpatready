@@ -111,6 +111,7 @@ export class Submission {
     // Break R2-M1: who is on the case and who is travelling, as the view above read them: checked again under the lock.
     const peopleRead = peopleKey(c.participants);
     const portal = (view as { portal?: string | null }).portal ?? null;
+    const reviewOf = new Map(((view as { readiness?: { filing: string; reviewed: { by: string; kind: string; at: string } | null }[] }).readiness ?? []).map((x) => [x.filing, x.reviewed]));
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) stale();
@@ -119,12 +120,11 @@ export class Submission {
       // Only while still Ready to file: a filing changed meanwhile leaves nothing recorded.
       const n = await tx.filing.updateMany({ where: { id: { in: want }, status: "READY_TO_FILE", active: true }, data: { status: "SUBMITTED" } });
       if (n.count !== want.length) refuse("filings", "A filing of this group is no longer Ready to file: Reload. Nothing was recorded.", HttpStatus.CONFLICT);
-      const rep = await tx.caseTeamMember.findFirst({ where: { caseId: c.id, role: "LEAD_REPRESENTATIVE", endedAt: null }, orderBy: [{ assignedAt: "desc" }, { id: "asc" }] });
       // QA-295 (P-155 (1)): who prepared and who reviewed are the ones the filing's review saw, whoever records it.
       const team = await tx.caseTeamMember.findMany({ where: { caseId: c.id }, select: { userId: true, role: true, assignedAt: true, endedAt: true, id: true } });
       for (const l of lines) {
-        const review = await tx.filingReview.findFirst({ where: { filingId: l.filing }, orderBy: [{ reviewedAt: "desc" }, { id: "desc" }], select: { reviewedBy: true, kind: true, reviewedAt: true } });
-        const who = recordedPeople(review, team, actor.id, rep?.userId ?? null);
+        // The review that counts for Ready to file, as the view read it (review m1: never a stale or earlier one).
+        const who = recordedPeople(reviewOf.get(l.filing) ?? null, team, actor.id);
         await tx.filing.update({ where: { id: l.filing }, data: { applicationNumber: l.application_number } });
         await tx.filingRecord.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: l.filing, submissionGroupId: g!.id, portal, ourReference: l.our_reference, submittedOn: new Date(`${l.submitted_on}T00:00:00Z`),
           applicationNumber: l.application_number, feeReceipt: l.fee_receipt, preparedBy: who.preparedBy, reviewedBy: who.reviewedBy, recordedBy: actor.id, filedFacts: formsOf(l.filing) as object } });
