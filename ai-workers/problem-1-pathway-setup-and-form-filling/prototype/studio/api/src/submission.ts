@@ -104,7 +104,8 @@ export class Submission {
     // The facts each form is filed with (BR-12), read as the view reads them.
     const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
     const { answers, rows } = await this.r.state(c);
-    const formsOf = (filing: string): FiledForm[] => (view.items as { id: string; kind: string; filing: string; subject: string; form?: string }[])
+    // C9 (QA-246, review m1): a form not yet known (in `waiting`, apart from the forms to fill) is recorded as filed too, as before.
+    const formsOf = (filing: string): FiledForm[] => ([...view.items, ...((view as { waiting?: unknown[] }).waiting ?? [])] as { id: string; kind: string; filing: string; subject: string; form?: string }[])
       .filter((i) => i.kind === "form" && i.filing === filing && i.form).map((i) => ({ item: i.id, form: i.form!, subject: i.subject, facts: currentValues(formCoverage(s, people, answers, rows, i.form!, i.subject)?.boxes ?? []) }));
     // Break R2-M2: what each form is filed with is read the way "now" is read later (currentValues: the answers as given,
     // confirmed or not), so an answer left unconfirmed at filing never reads as added after it.
