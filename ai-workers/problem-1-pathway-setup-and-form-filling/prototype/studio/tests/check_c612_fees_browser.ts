@@ -16,7 +16,7 @@ import { request } from "node:http";
 import { join } from "node:path";
 import { chromium, type Locator } from "playwright";
 import { cad, familyFee, FEE_TABLE } from "../engine/runtime/filings.ts";
-import { CLIENT, FAMILY, OFFICER, PORT, answer, call, filingOf, needVisitorVisa, openCase, prepare, yearsAgo } from "../acceptance/lib/m3.ts";
+import { CLIENT, FAMILY, OFFICER, PORT, answer, call, filingOf, needVisitorVisa, openCase, prepare, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const BASE = `http://localhost:${PORT}`, STUDIO = join(import.meta.dirname, "..");
 const SHOTS = join(STUDIO, "..", "..", "product", "screens", "C6.12", "screenshots"); mkdirSync(SHOTS, { recursive: true });
@@ -134,6 +134,8 @@ const sum = v.groups.reduce((s, g) => s + (g.total_cents ?? 0), 0);
 ok("C6.12-25 BR-3 pass (P-247): \"Total for the case\" is the two submissions' totals together, CAD 655, more than the CAD 570 before the split (the family maximum covers one submission only)", caseTotal === `Total for the case: ${cad(sum)} · 2 submissions, each priced on its own` && sum === 65500, caseTotal);
 ok("C6.12-25 BR-1 fail: after the split no line is shown twice, and none under the other submission", sameLines(await rows(v.groups[0].id), v.fees.filter((l) => v.groups[0].filings.includes(l.filing))) && sameLines(await rows(v.groups[1].id), v.fees.filter((l) => v.groups[1].filings.includes(l.filing))));
 ok("C6.12-25 BR-6 pass: the people with no filing are listed once, under the first submission only", (await panel().locator("[data-fee-not-filing]").count()) <= 1 && (await block(v.groups[1].id).locator("[data-fee-not-filing]").count()) === 0);
+const caps = await panel().locator("[data-fees] caption").allTextContents();
+ok("C6.12-25 BR-1 pass (break m4): each submission's table is named by its own filings, so two \"One submission\" groups are told apart", caps.length === 2 && new Set(caps).size === 2 && v.groups.every((g, i) => g.filings.every((id) => caps[i].includes(v.filings.find((f) => f.id === id)?.label ?? "?"))), caps);
 await state("split-two-submissions");
 
 // ---------------------------------------------------------------- BR-5: a child with no date of birth yet (G15)
@@ -145,6 +147,18 @@ ok("C6.12-25 BR-5 pass: the biometrics line waiting for the date of birth reads 
 ok("C6.12-25 BR-5 fail: no CAD amount in that row, although the server's line carries one (it is not counted)", !!wr && !/CAD/.test(wr.amount) && /CAD/.test(waitLine?.amount_words ?? ""), { amount: wr?.amount, server: waitLine?.amount_words });
 const so = await text(block(vd.groups[0].id).locator("[data-fee-total]"));
 ok("C6.12-25 BR-5 pass (challenge M2): while a fee waits the total says \"Total so far\" and how many fees are not counted (the server leaves the line out)", so === `Total so far: ${cad(vd.groups[0].total_cents ?? -1)} · 1 fee not counted yet`, { so, server: vd.groups[0].total_cents });
+const bioT = vd.groups[0].totals.find((t) => t.line === waitLine?.key);
+const lineSo = (await block(vd.groups[0].id).locator(`[data-fee-total-line="${waitLine?.key}"]`).innerText()).replace(/\s+/g, " ").trim();
+ok("C6.12-25 BR-5 pass (break m2): the waiting fee's own total says \"so far\" and how many are not counted", !!bioT && lineSo.startsWith(`${bioT.label}: ${cad(bioT.total_cents)} so far · 1 not counted yet`), lineSo);
+ok("C6.12-25 BR-5 fail (break m2): a fee with nobody waiting never says \"so far\"", (await block(vd.groups[0].id).locator("[data-fee-total-line]").allInnerTexts()).filter((t) => !t.includes(bioT?.label ?? "?")).every((t) => !/so far/.test(t)));
+// Review M1 (WCAG 1.4.4): 1024 px at 200 % zoom is 512 css px; "Not counted yet" wraps in its cell and never runs into the why.
+await p.setViewportSize({ width: 512, height: 800 }); await p.waitForTimeout(250);
+const wrow = block(vd.groups[0].id).locator(`[data-fee-line][data-fee-waiting]`).first(); await wrow.scrollIntoViewIfNeeded();
+const [ab, wb] = [await wrow.locator("[data-fee-amount]").evaluate((e) => { const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect(); return { right: b.right }; }), await wrow.locator("td").last().boundingBox()];
+await p.screenshot({ path: join(SHOTS, "B5-zoom-512-waiting.png") });
+ok("C6.12-25 BR-5 pass (review M1): at 512 css px (1024 px at 200 %) the waiting amount ends before its why begins (no overlap)", !!wb && ab.right <= wb.x + 0.5, { amountRight: ab.right, whyLeft: wb?.x });
+ok("512 css px: the fee block causes no sideways scroll of its own", await block(vd.groups[0].id).evaluate((e) => e.scrollWidth <= e.clientWidth + 1));
+await p.setViewportSize({ width: 1440, height: 900 }); await p.waitForTimeout(150);
 const kid9 = nd.subjects["Sample Child A9"];
 const dobSet = await answer(nd.id, kid9, "person.date_of_birth", yearsAgo(15));
 const vd2 = await viewOf(nd.id);
@@ -167,6 +181,13 @@ const serve = async (id: string, edit: (x: View) => View) => {
   await p.route(`**/api/runtime/cases/${id}/prepare*`, (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(edit(structuredClone(real))) }));
   await open(id, real.groups[0].id); return real;
 };
+// BR-4 on real data (review and break m5): the checkpoint's study permit combination has filing modes but no fee rule.
+const spId = sql("select c.id from combination c join config_release r on r.combination_id=c.id where c.combination_key='sp.outside' limit 1");
+const sp = spId ? await openCase(spId, [{ role: "principal", name: "Sample Student A", dob: yearsAgo(22) }]) : null;
+const vs = sp?.id ? await viewOf(sp.id) : null;
+if (sp && vs?.groups?.length) await open(sp.id, vs.groups[0].id);
+const spText = sp && vs?.groups?.length ? await text(panel()) : "";
+ok("C6.12-25 BR-4 pass (real data): a study permit case on the checkpoint shows the server's \"fees not worked out\" words once, and no amount", !!vs && vs.fees_worked_out === false && !!vs.fees_why && spText.split(vs.fees_why).length === 2 && !/CAD/.test(spText), { spId, worked: vs?.fees_worked_out, why: vs?.fees_why });
 const c2 = await openCase(vv, FAMILY.slice(0, 2));
 // BR-4: fees not worked out (C11.12 BR-10): the server's why, no amount, no total.
 let real = await serve(c2.id, (x) => ({ ...x, fees_worked_out: false, fees_why: "Fees not worked out yet for this combination (Sample words from the engine's notWorkedOut).", fees: [], groups: x.groups.map((g) => ({ ...g, totals: [], total_cents: null })) }));

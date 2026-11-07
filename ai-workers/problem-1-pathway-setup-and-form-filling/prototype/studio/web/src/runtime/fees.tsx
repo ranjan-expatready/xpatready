@@ -61,8 +61,10 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
   return (
     <div className="mt-3" data-fees={group.id}>
       <h4 id={h} className="text-[13px] font-semibold">Fees</h4>
-      <table aria-labelledby={h} className="mt-1 w-full table-fixed border-collapse text-left text-[13px]">
-        <caption className="sr-only">Fees for {name}</caption>
+      {/* Break m4: the table is named by its caption, which lists the submission's filings, so six split submissions
+          (each "One submission") are told apart by a screen reader. */}
+      <table className="mt-1 w-full table-fixed border-collapse text-left text-[13px]">
+        <caption className="sr-only">Fees for {name}: {filings.map((f) => f.label).join(", ")}</caption>
         <colgroup><col className="w-[34%]" /><col className="w-[16%]" /><col /></colgroup>
         <thead className="text-xs text-text-muted"><tr>
           <th scope="col" className="border-b border-border py-1.5 pr-3 font-medium">Fee</th>
@@ -81,7 +83,7 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
                     <th scope="row" className="border-b border-border py-1.5 pr-3 align-top font-normal [overflow-wrap:anywhere]">
                       {l.line}{other ? <span className="text-text-muted"> · for {other}</span> : null}
                     </th>
-                    <td className="border-b border-border py-1.5 pr-3 align-top whitespace-nowrap" data-fee-amount>{l.waiting ? <span className="text-text-muted">Not counted yet</span> : l.amount_words}</td>
+                    <td className="border-b border-border py-1.5 pr-3 align-top [overflow-wrap:anywhere]" data-fee-amount>{l.waiting ? <span className="text-text-muted">Not counted yet</span> : l.amount_words}</td>
                     <td className="border-b border-border py-1.5 align-top text-text-muted [overflow-wrap:anywhere]">{l.reason}</td>
                   </tr>
                 );
@@ -98,7 +100,7 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
         })}
       </table>
       {totals.length ? <ul className="mt-2 space-y-0.5 text-[13px]" data-fee-totals>
-        {totals.map((t) => { const basis = basisOf(t); return <li key={t.line} className="[overflow-wrap:anywhere]" data-fee-total-line={t.line}><span className="font-medium">{t.label}: {cadWords(t.total_cents)}</span>{basis ? <span className="text-text-muted"> · <span data-fee-basis>{basis}</span></span> : null} <span className="text-text-muted">· {t.why}</span></li>; })}
+        {totals.map((t) => { const basis = basisOf(t), w = lines.filter((l) => l.key === t.line && l.waiting).length; return <li key={t.line} className="[overflow-wrap:anywhere]" data-fee-total-line={t.line}><span className="font-medium">{t.label}: {cadWords(t.total_cents)}{w ? " so far" : ""}</span>{w ? <span className="text-text-muted"> · {w} not counted yet</span> : null}{basis ? <span className="text-text-muted"> · <span data-fee-basis>{basis}</span></span> : null} <span className="text-text-muted">· {t.why}</span></li>; })}
       </ul> : null}
       {/* Challenge M2: while a fee waits for a fact the total is not final, and says so (the server leaves the line out). */}
       {group.total_cents != null ? <p className="mt-1 text-sm font-semibold" data-fee-total>{waiting ? "Total so far" : "Total for this submission"}: {cadWords(group.total_cents)}{waiting ? <span className="font-normal text-text-muted" data-fee-waiting-count> · {waiting} fee{waiting === 1 ? "" : "s"} not counted yet</span> : null}</p> : null}
