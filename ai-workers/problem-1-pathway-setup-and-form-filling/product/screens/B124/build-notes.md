@@ -1,0 +1,24 @@
+# B124 (M3 row A8, P-393) build notes: the outcome says when it rests on unconfirmed answers
+
+Seat B-2, 7 Nov. Row: BACKLOG B124 on `lead/2026-11-05-lead14b`; evidence `reports/best-in-class-C6.9-A4-2026-11-07.md` improvement 7. No concept file: the row is wording on the built C6.9 page (the tech lead's brief, 08:52 IST); no new screen, route, record or migration. Unconfirmed: no counsel on the wording.
+
+## What
+* **Deciding facts** (`web/src/runtime/eligibility-unconfirmed.ts`, pure): Likely eligible rests on every gate (all met); Not eligible rests on the gates it fails, never on a "the representative reviews it" gate (it never gives Not eligible); Possibly eligible (can't tell yet) rests on nothing here. Of those gates' facts, the ones answered but not confirmed now (each gate's `unconfirmed`, already worked out when read by `withUnconfirmedNow`, engine/runtime/eligibility.ts) are named, in gate order, once each.
+* **Words** (`web/src/runtime/eligibility.tsx`): the outcome pill reads "Likely eligible, on 3 answers not yet confirmed" (or "Not eligible on this application's rules as written, on 1 answer not yet confirmed"); the short pill in the people list, the case card and History reads "Likely · 3 not confirmed". A line under it names each answer as a link to that person's question in the Agent view (`lineId`, the C6.4 deep link that opens the person's tab), where Confirm section confirms it. The line goes once every deciding answer is confirmed; no new run is needed (the count is read now). BR-9 unchanged: an unconfirmed answer still counts as answered.
+* Why the app's words, not "Qualifies": the page says Likely eligible / Possibly eligible / Not eligible (C6.9 concept §5); the brief's "Qualifies, on 3 answers not yet confirmed" is the pattern, kept as ", on N answers not yet confirmed".
+
+## Tests
+* `acceptance/C6.9.test.ts` C6.9-16 (none confirmed: 3 named), -17 (Confirm section on the passport section: only Criminal history left, outcome unchanged), -18 (all confirmed: none), -19 pass/fail (Not eligible rests on failed not-review gates only; Possibly on nothing; read on the function, since no Visitor visa gate gives Not eligible). **20/20 exit 0 on the configured checkpoint** (A1 on main) and on the fixture.
+* `tests/check_b124_unconfirmed_browser.cjs` **14/14**: Possibly unchanged; none / some (Confirm section by screen, via the link) / all; people-list pill; axe; 1440 and 1024 px. Screenshots `walk/`.
+
+## After the Opus review (Block on ca72fa195)
+* **Major 1 (fixed):** "deciding" named every unconfirmed fact of a deciding gate. Now the engine works it out (`engine/runtime/eligibility.ts` `restsOn`, when read, on the release the run read): with a gate's unconfirmed answers treated as missing it would no longer read the same; each answer whose absence alone changes it is named, and when only their absence together does (two "or" branches each met on an unconfirmed answer) all are. An "or" branch met on a confirmed answer leaves the other out; an "and" failed on a confirmed answer does not rest on its other answer. The API (`api/src/assessments.ts` fresh) adds `restsOn` per gate; the page uses it (falling back to every unconfirmed answer only for an older server). Test: `tests/check_b124_rests_on.ts` 8/8 (or/and, met/not met, not answered).
+* **Major 2 (fixed):** a `case.*` fact links to the application's tab (the case subject, as `checklist.tsx` does), read from the run's inputs. Test: the walk adds and releases a gate on the application's funds (Sample) and checks the link and the tab.
+* **Minor 1 (fixed):** an out-of-date run rests on nothing here (its band already says to run again), so the line never asks to confirm an answer that changed.
+* **Minor 2 (fixed):** the Not eligible words are tested in the walk (the funds gate gives Not eligible on an unconfirmed answer).
+* **Minor 3 (partly):** the new words all say "not yet confirmed" (the short pill now "Likely · 3 not yet confirmed"); the per-fact mark "(not confirmed yet)" is C6.9's existing string, asserted by `check_c69_page_browser.cjs`, left as it is.
+* `tests/check_b124_unconfirmed_browser.cjs` 18/18.
+
+## After the re-review (Block on 06cc27a24)
+* **Major 1, narrower case (fixed):** the "together" fallback named every unconfirmed answer when no single one changed the gate (an "or" with a false branch, a failed "and" with a passing part, `(A or B) and C`). Now an answer is named when some set S of the other unconfirmed answers can be set aside with the gate unchanged while S and it together change it (every set is tried; past 10 unconfirmed answers in one gate, all are named). Tests added: those three cases and an application (`case.*`) fact (taking away the case's answer, not the person's): `check_b124_rests_on.ts` 12/12.
+* **Minor 4 (tested):** the walk changes an answer after the run: Out of date, and no "not yet confirmed" line.
