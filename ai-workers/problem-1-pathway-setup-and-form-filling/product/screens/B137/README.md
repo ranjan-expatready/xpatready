@@ -21,10 +21,21 @@ Row B137 (requirement row B3; SA-1B-19, SA-1B-20; P-406). Pull request 1268. No 
 * The client's "I don't have this — I'll provide the alternative" (SA-1B-152) and "Alternative used" flag: client screen, not built (the officer uploads as a member now).
 * "When acceptable" **conditions** in the library's condition language (SA-1B-19 r3, optional): not built; words only.
 * A set member's own validity rule (a police certificate's 6 months, C6.4) is read for the line's own type only.
-* The release check's publish warning when a member is retired later (SA-1B-19 §12): the release check refuses a retired member at approval; the later-retire warning is not built.
+* The old per-line "Alternatives" (W1-15 slice 3) still sits above "Substitute sets" in the drawer (review S6; SA-1B-19 §3 knock-on says rows stop carrying them): moving them into sets is a follow-up row for the tech lead, not done here so no released line changes meaning.
+* A line's set pick is named on the expert's sign-off only as a changed document requirement (review S2, second half); the type's sets are named in words.
+* Retiring a member in use is now refused or warned by its uses (the set counts as a use), and a release whose line's set has a retired member is refused, named; a "publish lists the sets affected" warning (SA-1B-19 §12) is not built.
 
 ## Values
 The sets, members and words in the pack and the walk are **Sample** (Unconfirmed: expert; AGENTS rule 4): they show the mechanism, not what IRCC accepts for Proof of financial support.
 
 ## Walk at 1440 px (P-352), on a fresh copy loaded with the configured checkpoint
 `walk/01` drawer with no sets · `02` the editor filled (Standard any one of; Sponsor-funded all of) · `03` sent, waits · `04` the second person compares · `05` approved · `06` the drawer lists both, "This line uses it" on Standard · `07` the officer's line in words · `08` the ⋯ menu offers one upload per member · `09` the host's letter alone meets the line (Received) · `10` the author picks Sponsor-funded · `11` after the next release, a new case: "1 of 2 received; still to come: Host's bank statements (Sample)", Requested.
+
+## Round 1 findings and what changed (review.md M1–M4, S1–S8; break-report.md F1–F4)
+* **M1 / F1** a file counts on every line of the person whose set or own type has it: after an upload, each other such line not yet received is worked out again and becomes Received when met, with a history line ("… also meets …"). Pack step C6.15-26.
+* **M2 / F4** `SET_SETS` reads "Change": the heading is "Change a document's substitute sets: …". Pack step C6.15-5b.
+* **M3** "Use this set" sends the line's revision; a pick saved meanwhile is refused (409), never overwritten.
+* **M4** the migration records its rollback.
+* **F2 / S5** staff's "when acceptable" words are typed in the editor, kept on edit, and shown to the second person (before → after) and in the drawer. Pack step C6.15-5b.
+* **F3 / S1** a set member is a use of the type (Where used), so it is not retired unseen; the release names a retired member (never its key) and refuses the line using it. Pure check steps "break F3"; pack step C6.15-25.
+* **S2** the sign-off line names the type's sets in words. **S3** the drawer warns when the line picks a set its type no longer has. **S4** the editor's answer scrolls into view and takes focus on a refusal. **S7** the pack calls the sets routes by their own paths. **S8** the reason shows once.

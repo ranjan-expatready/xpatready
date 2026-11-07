@@ -12,11 +12,11 @@ import { MAX_MEMBERS, MAX_SETS, MODE_WORDS, STANDARD, type SetMode } from "../..
 type Member = { key: string; name: string; standard: boolean; when_client: string | null; when_staff: string | null };
 type View = { key: string; name: string; uses: number; sets: { name: string; mode: SetMode; mode_words: string; members: Member[] }[];
   open: { id: string; status: "WAITING" | "RETURNED" | "APPROVED"; by: string; reason: string; note: string | null } | null; types: { key: string; name: string }[] };
-type EditMember = { key: string; whenClient: string };
+type EditMember = { key: string; whenClient: string; whenStaff: string };
 type EditSet = { name: string; mode: SetMode; members: EditMember[] };
 const OPEN_WORDS = { WAITING: "waits for a second person on To review", RETURNED: "was returned", APPROVED: "is approved and goes out with the next release" } as const;
 
-export function SetsSection({ typeKey, typeName, combinationId, lineage, setName, canAuthor }: { typeKey: string; typeName: string; combinationId: string; lineage: string; setName: string | null; canAuthor: boolean }) {
+export function SetsSection({ typeKey, typeName, combinationId, lineage, revision, setName, canAuthor }: { typeKey: string; typeName: string; combinationId: string; lineage: string; revision?: string; setName: string | null; canAuthor: boolean }) {
   const qc = useQueryClient();
   const q = useApi<View>(["document-sets", typeKey], `/library/document-types/${encodeURIComponent(typeKey)}/sets`);
   const [pick, setPick] = React.useState(setName ?? STANDARD);
@@ -24,6 +24,8 @@ export function SetsSection({ typeKey, typeName, combinationId, lineage, setName
   const [reason, setReason] = React.useState("");
   const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const said = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => { if (msg) said.current?.scrollIntoView({ block: "nearest" }); if (msg?.tone === "danger") said.current?.focus(); }, [msg]); // review S4: the answer is seen
   React.useEffect(() => setPick(setName ?? STANDARD), [setName]);
   const v = q.data;
   const uses = setName ?? STANDARD;
@@ -33,15 +35,15 @@ export function SetsSection({ typeKey, typeName, combinationId, lineage, setName
     try { setMsg({ tone: "ok", text: await f() }); await refresh(); } catch (e) { setMsg({ tone: "danger", text: e instanceof ApiError ? e.message : "Something went wrong; nothing was saved." }); } finally { setBusy(false); }
   };
   const savePick = () => run(async () => {
-    await api(`/combinations/${combinationId}/requirements/${encodeURIComponent(lineage)}/set`, { method: "PUT", json: { setName: pick } });
+    await api(`/combinations/${combinationId}/requirements/${encodeURIComponent(lineage)}/set`, { method: "PUT", json: { setName: pick, ...(revision ? { baseRevision: revision } : {}) } }); // review M3: a pick saved meanwhile is refused, never overwritten
     return `This line now uses the set "${pick}" in the draft; it goes out with the next release.`;
   });
   const startEdit = () => {
-    const now = v?.sets.map((s) => ({ name: s.name, mode: s.mode, members: s.members.map((m) => ({ key: m.key, whenClient: m.when_client ?? "" })) })) ?? [];
-    setEdit(now.length ? now : [{ name: STANDARD, mode: "any_one", members: [{ key: typeKey, whenClient: "" }] }]); setReason(""); setMsg(null);
+    const now = v?.sets.map((s) => ({ name: s.name, mode: s.mode, members: s.members.map((m) => ({ key: m.key, whenClient: m.when_client ?? "", whenStaff: m.when_staff ?? "" })) })) ?? []; // break F2: staff's words kept
+    setEdit(now.length ? now : [{ name: STANDARD, mode: "any_one", members: [{ key: typeKey, whenClient: "", whenStaff: "" }] }]); setReason(""); setMsg(null);
   };
   const send = () => run(async () => {
-    const sets = (edit ?? []).map((s) => ({ name: s.name, mode: s.mode, members: s.members.map((m, i) => ({ key: m.key, ...(s.mode === "any_one" && i > 0 && m.whenClient.trim() ? { whenClient: m.whenClient } : {}) })) }));
+    const sets = (edit ?? []).map((s) => ({ name: s.name, mode: s.mode, members: s.members.map((m, i) => ({ key: m.key, ...(s.mode === "any_one" && i > 0 && m.whenClient.trim() ? { whenClient: m.whenClient } : {}), ...(s.mode === "any_one" && i > 0 && m.whenStaff.trim() ? { whenStaff: m.whenStaff } : {}) })) }));
     await api(`/library/document-types/${encodeURIComponent(typeKey)}/sets`, { method: "POST", json: { sets, reason } });
     setEdit(null);
     return "Sent: a second person approves it on To review; nothing changes before that.";
@@ -59,11 +61,12 @@ export function SetsSection({ typeKey, typeName, combinationId, lineage, setName
               <li key={s.name} className="rounded border border-border p-2" data-set={s.name}>
                 <p><span className="font-medium">{s.name}</span> · {s.mode_words}{s.name.toLowerCase() === uses.toLowerCase() ? <Pill tone="ok" className="ml-2">This line uses it</Pill> : null}</p>
                 <ol className="ml-5 list-decimal">
-                  {s.members.map((m) => <li key={m.key} data-set-member={m.key}>{m.name}{m.standard ? <span className="text-text-muted"> (the standard)</span> : null}{m.when_client ? <span className="block text-xs text-text-muted">When acceptable: {m.when_client}</span> : null}</li>)}
+                  {s.members.map((m) => <li key={m.key} data-set-member={m.key}>{m.name}{m.standard ? <span className="text-text-muted"> (the standard)</span> : null}{m.when_client ? <span className="block text-xs text-text-muted">When acceptable: {m.when_client}{m.when_staff ? ` · Staff's words: ${m.when_staff}` : ""}</span> : null}</li>)}
                 </ol>
               </li>))}
           </ul>
         ) : <p className="text-text-muted" data-sets-list>None: {typeName} is its own only member.</p>}
+        {setName && !v.sets.some((s) => s.name.toLowerCase() === setName.toLowerCase()) ? <Notice tone="warn" data-set-missing>This line picks the set "{setName}", which {typeName} no longer has: the release is refused until the line picks one of its sets{v.sets.length ? "" : " or the pick is cleared"}.</Notice> : null}
         {v.open ? <p className="text-xs" data-sets-open>A change of these sets by {v.open.by} {OPEN_WORDS[v.open.status]}{v.open.note ? `: ${v.open.note}` : ""}. <Link className="text-text-link underline" to="/review">To review</Link></p> : null}
         <p className="text-xs text-text-muted">Any one of: one of the members meets the line; All of: every member is needed. Set on the library document type for every combination (used by {v.uses}); a line only picks its set. Sample until the immigration expert confirms.</p>
         {canAuthor && v.sets.length ? (
@@ -93,11 +96,12 @@ export function SetsSection({ typeKey, typeName, combinationId, lineage, setName
                     </Select>
                     {s.mode === "any_one" && k === 0 ? <span className="text-xs text-text-muted">the standard</span> : null}
                     {s.mode === "any_one" && k > 0 ? <Input aria-label={`When ${v.types.find((t) => t.key === m.key)?.name ?? "this member"} is acceptable, in the client's words`} placeholder="When acceptable, in the client's words" value={m.whenClient} onChange={(e) => putMember(i, k, { whenClient: e.target.value })} className="min-w-64 flex-1" /> : null}
+                    {s.mode === "any_one" && k > 0 ? <Input aria-label={`When ${v.types.find((t) => t.key === m.key)?.name ?? "this member"} is acceptable, in staff's words (optional)`} placeholder="Staff's words (optional)" value={m.whenStaff} onChange={(e) => putMember(i, k, { whenStaff: e.target.value })} className="min-w-48 flex-1" /> : null}
                     {s.members.length > 1 ? <Button size="sm" variant="ghost" aria-label={`Remove member ${k + 1}`} onClick={() => put(i, { members: s.members.filter((_, n) => n !== k) })}>Remove</Button> : null}
                   </div>))}
-                {s.members.length < MAX_MEMBERS ? <Button size="sm" variant="ghost" onClick={() => put(i, { members: [...s.members, { key: "", whenClient: "" }] })}>Add a member</Button> : null}
+                {s.members.length < MAX_MEMBERS ? <Button size="sm" variant="ghost" onClick={() => put(i, { members: [...s.members, { key: "", whenClient: "", whenStaff: "" }] })}>Add a member</Button> : null}
               </fieldset>))}
-            {edit.length < MAX_SETS ? <Button size="sm" variant="ghost" onClick={() => setEdit((e) => [...e!, { name: "", mode: "all_together", members: [{ key: "", whenClient: "" }] }])} data-sets-add>Add another set</Button> : null}
+            {edit.length < MAX_SETS ? <Button size="sm" variant="ghost" onClick={() => setEdit((e) => [...e!, { name: "", mode: "all_together", members: [{ key: "", whenClient: "", whenStaff: "" }] }])} data-sets-add>Add another set</Button> : null}
             <label className="block text-xs">Why it changes, for every combination
               <Textarea aria-label="Why the sets change" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="mt-1" />
             </label>
@@ -106,7 +110,7 @@ export function SetsSection({ typeKey, typeName, combinationId, lineage, setName
               <Button size="sm" variant="ghost" onClick={() => { setEdit(null); setMsg(null); }}>Cancel</Button>
             </div>
           </div>) : null}
-        {msg ? <Notice tone={msg.tone}>{msg.text}</Notice> : null}
+        {msg ? <div ref={said} tabIndex={-1} data-sets-said><Notice tone={msg.tone}>{msg.text}</Notice></div> : null}
       </>}
     </section>
   );

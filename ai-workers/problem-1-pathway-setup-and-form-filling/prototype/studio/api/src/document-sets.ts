@@ -48,7 +48,7 @@ export async function openSetsChange(db: Pick<Db, "libraryChange">, workspaceId:
   return db.libraryChange.findFirst({ where: { workspaceId, kind: SETS_KIND, key, status: { in: OPEN } }, orderBy: { proposedAt: "desc" } });
 }
 const named = (sets: StoredSet[], name: (k: string) => string) => sets.map((s) => ({ name: s.name, mode: s.mode, mode_words: MODE_WORDS[s.mode],
-  members: s.members.map((m, i) => ({ key: m.key, name: name(m.key), standard: s.mode === "any_one" && i === 0, when_client: m.whenClient ?? null, when_staff: m.whenStaff ?? m.whenClient ?? null })) }));
+  members: s.members.map((m, i) => ({ key: m.key, name: name(m.key), standard: s.mode === "any_one" && i === 0, when_client: m.whenClient ?? null, when_staff: m.whenStaff ?? null })) })); // break F2: staff's own words, never the client's in their place
 export type NamedSet = ReturnType<typeof named>[number];
 
 @Injectable()
@@ -135,7 +135,7 @@ export function setsView(c: Pick<LibraryChange, "matches" | "reason">) {
 }
 /** The one line To review and History read. */
 export function setsWords(v: ReturnType<typeof setsView>) {
-  const one = (s: NamedSet) => `${s.name}: ${s.mode_words.toLowerCase()} ${s.members.map((m) => `${m.name}${m.when_client ? ` (when acceptable: ${m.when_client})` : ""}`).join(s.mode === "any_one" ? ", or " : ", and ")}`;
+  const one = (s: NamedSet) => `${s.name}: ${s.mode_words.toLowerCase()} ${s.members.map((m) => `${m.name}${m.when_client ? ` (when acceptable: ${m.when_client}${m.when_staff ? `; staff's words: ${m.when_staff}` : ""})` : ""}`).join(s.mode === "any_one" ? ", or " : ", and ")}`;
   const list = (xs: NamedSet[]) => (xs.length ? xs.map(one).join("; ") : "none (the document is its own only member)");
   return `Substitute sets of ${v.document}, for every combination: ${list(v.before)} → ${list(v.after)} (used by ${v.uses} combination${v.uses === 1 ? "" : "s"}: at approval it changes each one's draft, and goes out with each one's next release; Sample until the immigration expert confirms). Reason: ${v.reason}`;
 }

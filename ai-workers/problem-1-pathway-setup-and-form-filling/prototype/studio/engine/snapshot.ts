@@ -152,8 +152,11 @@ const byFilingOrder = (order: unknown) => {
 };
 /** C6.15 (SA-1B-19): a type's substitute sets travel with the release, each member named, only when it has some (so a
  *  type without sets keeps its fingerprint). */
-function docSets(t: { sets?: unknown }, effTypes: { documentTypeKey: string; name: string }[]) {
-  const sets = snapSets(t.sets, (k) => effTypes.find((x) => x.documentTypeKey === k)?.name);
+function docSets(t: { sets?: unknown }, effTypes: { documentTypeKey: string; name: string }[], all: { documentTypeKey: string; name: string; status: string; version: number }[]) {
+  // Break F3: a member is named from the library even when it is retired (never its key), and a retired one is marked so
+  // the release check refuses it (SA-1B-19 rule 6).
+  const newest = (k: string) => all.filter((x) => x.documentTypeKey === k).sort((a, b) => b.version - a.version)[0];
+  const sets = snapSets(t.sets, (k) => effTypes.find((x) => x.documentTypeKey === k)?.name ?? newest(k)?.name, (k) => newest(k)?.status === "RETIRED");
   return sets ? { sets } : {};
 }
 function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; entries?: SourceEntry[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
@@ -222,7 +225,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
       ...(f.minAge ? { min_age: f.minAge } : {}), ...(f.signedBy ? { signed_by: f.signedBy } : {}), ...(f.copies && f.copies > 1 ? { copies: f.copies } : {}) }; }),
     field_maps: fieldMaps,
     document_requirements: effReq.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((r) => { note("requirement", r.lineageKey, r); return { lineage: r.lineageKey, document_type: effTypes.find((t) => t.documentTypeKey === r.documentTypeKey)?.name ?? r.documentTypeKey, document_type_key: r.documentTypeKey, who: r.appliesToRoles, provided_by: r.providedBy, base_or_conditional: r.attachMode === "COMBINATION_MANDATORY" ? "base" : "conditional", condition: r.predicateJson, condition_plain: r.conditionPlain, source_quote: r.sourceQuote, source_file: r.sourceFile, note: r.note, ...(r.position != null ? { position: r.position } : {}), ...(Array.isArray(r.alternatives) && r.alternatives.length ? { alternatives: r.alternatives } : {}), ...(r.setName ? { set_name: r.setName } : {}), item_version: r.version, status: r.status, origin: r.origin }; }),
-    document_types: effTypes.filter((t) => effReq.some((r) => r.documentTypeKey === t.documentTypeKey)).sort((a, b) => a.documentTypeKey.localeCompare(b.documentTypeKey)).map((t) => ({ key: t.documentTypeKey, name: t.name, category: t.category, supplies_facts: t.suppliesFacts, ...(t.suppliesAbout && Object.keys(t.suppliesAbout).length ? { supplies_about: t.suppliesAbout } : {}), reader_profile: t.readerProfile, ...docSets(t, effTypes) })),
+    document_types: effTypes.filter((t) => effReq.some((r) => r.documentTypeKey === t.documentTypeKey)).sort((a, b) => a.documentTypeKey.localeCompare(b.documentTypeKey)).map((t) => ({ key: t.documentTypeKey, name: t.name, category: t.category, supplies_facts: t.suppliesFacts, ...(t.suppliesAbout && Object.keys(t.suppliesAbout).length ? { supplies_about: t.suppliesAbout } : {}), reader_profile: t.readerProfile, ...docSets(t, effTypes, rows.doctypes) })),
     rules: effRules.sort((a, b) => a.predicateKey.localeCompare(b.predicateKey)).map((r) => { note("rule", r.predicateKey, r); return { id: r.predicateKey, when: r.predicateJson, when_plain: r.whenPlain, then: r.thenPlain, for_whom: r.forWhom, source_quote: r.sourceQuote, item_version: r.version, status: r.status, origin: r.origin }; }),
     derived_fields: [...derived].sort((a, b) => a.derivedKey.localeCompare(b.derivedKey)).map((d) => ({ id: d.derivedKey, calculation: d.calculation, inputs: d.inputs, reference: d.reference, plain: d.plain, executable: d.executable })),
     checks: effChecks.sort((a, b) => a.checkKey.localeCompare(b.checkKey)).map((c) => ({ id: c.checkKey, group: c.checkGroup, applies_to: c.appliesTo, condition: c.predicateJson, severity: c.severity, message: c.message, source_quote: c.sourceQuote, illustrative: c.illustrative, item_version: c.version })),

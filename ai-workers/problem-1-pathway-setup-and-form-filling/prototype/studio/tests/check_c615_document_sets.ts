@@ -71,5 +71,13 @@ ok("SA-1B-20 r3 fail: the release check names the line and the missing set as an
 const fine = (() => { try { return validate({ ...snap, document_requirements: [{ ...(snap.document_requirements[0] as object), set_name: "Sponsor-funded" }] } as unknown as Snapshot, [], []).filter((x: { message: string }) => /names set/.test(x.message)); } catch (e) { return [(e as Error).message]; } })();
 ok("SA-1B-20 r3 pass: a set the type has raises no such error", fine.length === 0, fine);
 
+// Break F3: a retired member is named (never its key) and marked; the release check refuses the line using it.
+const ret = snapSets(FUNDS, (k) => (k === "school" ? "School record" : name(k)), (k) => k === "school");
+ok("break F3 pass: a retired member is marked retired and keeps its name", ret?.[0].members[1].retired === true && ret[0].members[1].name === "School record" && ret[0].members[0].retired === undefined, ret?.[0]);
+const retErr = (() => { try { return validate({ ...snap, document_types: [{ ...t, sets: ret }], document_requirements: [{ ...(snap.document_requirements[0] as object), set_name: null }] } as unknown as Snapshot, [], []).filter((x: { level: string; message: string }) => x.level === "error" && /is retired/.test(x.message)).map((x: { message: string }) => x.message); } catch (e) { return [(e as Error).message]; } })();
+ok("break F3 fail: the release check refuses a line whose set has a retired member, naming it", retErr.length === 1 && retErr[0].includes("School record is retired"), retErr);
+const otherSet = (() => { try { return validate({ ...snap, document_types: [{ ...t, sets: ret }], document_requirements: [{ ...(snap.document_requirements[0] as object), set_name: "Sponsor-funded" }] } as unknown as Snapshot, [], []).filter((x: { message: string }) => /is retired/.test(x.message)); } catch (e) { return [(e as Error).message]; } })();
+ok("break F3 pass: a line using another set (no retired member) is not refused", otherSet.length === 0, otherSet);
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

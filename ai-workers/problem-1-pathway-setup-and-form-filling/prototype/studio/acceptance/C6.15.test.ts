@@ -50,31 +50,33 @@ await main("C6.15", "Document substitute sets: any one of / all of; the combinat
   const letter = await newType(vv, LETTER), hostBank = await newType(vv, HOST_BANK);
   ok("C6.15-0 setup: two new library document types through the product's own path (named, then accepted by a second person)", !!letter && !!hostBank, { letter, hostBank });
   if (!letter || !hostBank) return;
-  const route = `/library/document-types/${FUNDS}/sets`;
   const WHEN = "Someone in Canada pays for your stay and writes to say so (Sample).";
-  const standard = { name: "Standard", mode: "any_one", members: [{ key: FUNDS }, { key: letter, whenClient: WHEN, whenStaff: "A host in Canada covers the stay (Sample)." }] };
+  const STAFF = "A host in Canada covers the stay (Sample).";
+  const standard = { name: "Standard", mode: "any_one", members: [{ key: FUNDS }, { key: letter, whenClient: WHEN, whenStaff: STAFF }] };
   const sponsored = { name: "Sponsor-funded", mode: "all_together", members: [{ key: letter }, { key: hostBank }] };
 
   // SA-1B-19 rule 6: the publish checks refuse, with the member named.
-  let r = await call("POST", route, { sets: [{ ...standard, members: [{ key: FUNDS }, { key: letter }] }], reason: "C6.15 pack: an alternative without words." }, AUTHOR);
+  let r = await call("POST", `/library/document-types/${FUNDS}/sets`, { sets: [{ ...standard, members: [{ key: FUNDS }, { key: letter }] }], reason: "C6.15 pack: an alternative without words." }, AUTHOR);
   ok("C6.15-1 fail (SA-1B-19 r3, r6): an alternative with no client wording is refused, naming it", r.status === 400 && words(r).includes(`Add the client wording for ${LETTER}.`), words(r));
-  r = await call("POST", route, { sets: [sponsored], reason: "C6.15 pack: first set not Standard." }, AUTHOR);
+  r = await call("POST", `/library/document-types/${FUNDS}/sets`, { sets: [sponsored], reason: "C6.15 pack: first set not Standard." }, AUTHOR);
   ok("C6.15-2 fail (SA-1B-19 r1): the first set must be named Standard", r.status === 400 && /first set is named "Standard"/.test(words(r)), words(r));
-  r = await call("POST", route, { sets: [standard, { ...sponsored, members: [{ key: letter, whenClient: WHEN }, { key: hostBank }] }], reason: "C6.15 pack: words in an all-of set." }, AUTHOR);
+  r = await call("POST", `/library/document-types/${FUNDS}/sets`, { sets: [standard, { ...sponsored, members: [{ key: letter, whenClient: WHEN }, { key: hostBank }] }], reason: "C6.15 pack: words in an all-of set." }, AUTHOR);
   ok("C6.15-3 fail (SA-1B-152 r2): an \"All of\" set has no alternatives, so no \"when acceptable\" words", r.status === 400 && /every member is needed/.test(words(r)), words(r));
-  r = await call("POST", route, { sets: [standard, sponsored], reason: "C6.15 pack: the examples of SA-1B-20 rule 5 (Sample)." }, CLIENT);
+  r = await call("POST", `/library/document-types/${FUNDS}/sets`, { sets: [standard, sponsored], reason: "C6.15 pack: the examples of SA-1B-20 rule 5 (Sample)." }, CLIENT);
   ok("C6.15-4 fail: someone without the author duty cannot propose sets", r.status === 403, r.status);
 
   // Proposed, then approved by a second person (never the proposer), then released with the next release.
-  r = await call("POST", route, { sets: [standard, sponsored], reason: "C6.15 pack: the examples of SA-1B-20 rule 5 (Sample)." }, AUTHOR);
+  r = await call("POST", `/library/document-types/${FUNDS}/sets`, { sets: [standard, sponsored], reason: "C6.15 pack: the examples of SA-1B-20 rule 5 (Sample)." }, AUTHOR);
   const id = r.body?.id;
   ok("C6.15-5 pass (SA-1B-19 r1-r3): the author proposes \"Standard\" (any one of: the proof, or the host's letter when acceptable) and \"Sponsor-funded\" (all of: the letter and the host's statements); it waits", r.status < 300 && sql(`select status from library_change where id = '${id}'`) === "WAITING", r.status >= 300 ? words(r) : r.body?.label);
+  const seen = (await call("GET", `/library/changes/${id}`, undefined, APPROVER)).body;
+  ok("C6.15-5b pass (break F2, F4): the second person reads staff's words too, and the change's heading says what it does in words", seen?.sets?.after?.[0]?.members?.[1]?.when_staff === STAFF && seen?.action_word === "Change" && seen?.kind_word === "a document's substitute sets", { staff: seen?.sets?.after?.[0]?.members?.[1]?.when_staff, action: seen?.action_word });
   r = await call("POST", `/library/changes/${id}/approve`, { note: "C6.15 pack: the proposer approves." }, AUTHOR);
   ok("C6.15-6 fail: the proposer cannot approve their own change", r.status === 403, r.status);
   r = await call("POST", `/library/changes/${id}/approve`, { note: "C6.15 pack: second person." }, APPROVER);
   const draft = sql(`select status || '|' || coalesce(jsonb_array_length(sets)::text, '0') from document_type where document_type_key = '${FUNDS}' order by version desc limit 1`);
   ok("C6.15-7 pass: at approval the type's draft carries both sets", r.status < 300 && draft === "DRAFT|2", { status: r.status, draft, why: r.status >= 300 ? words(r) : undefined });
-  const lib = (await call("GET", route, undefined, AUTHOR)).body;
+  const lib = (await call("GET", `/library/document-types/${FUNDS}/sets`, undefined, AUTHOR)).body;
   ok("C6.15-8 pass: the library shows the sets with members named, the standard first, the alternative's words", lib?.sets?.[0]?.members?.[0]?.standard === true && lib.sets[0].members[1]?.name === LETTER && lib.sets[0].members[1].when_client === WHEN && lib.sets[1]?.mode_words === "All of", lib?.sets);
 
   // SA-1B-20: the line picks a set; a name the type lacks is refused.
@@ -135,6 +137,25 @@ await main("C6.15", "Document substitute sets: any one of / all of; the combinat
   r = await up(l?.id, hostBank, "host statements");
   l = await get(c3.id, P3);
   ok("C6.15-23 pass (SA-1B-19 r1): with every member's file the line is Received", r.status < 300 && l?.state === "received" && l.set_status?.met === true && l.documents.filter((d) => d.current).length === 2, { state: l?.state, status: l?.set_status });
+  // Break F3: a set member is used by every line naming its type, so the library says so (it is not retired unseen).
+  const used = (await call("GET", `/library/document-types/${hostBank}/uses`, undefined, AUTHOR)).body;
+  ok("C6.15-25 pass (break F3): the member's uses name Visitor visa (it is used through the set)", JSON.stringify(used ?? {}).includes(vv) || /Visitor visa/.test(JSON.stringify(used ?? {})), JSON.stringify(used).slice(0, 200));
+  // Break F1: a file of a type that is its own line and a member of the set counts on both lines.
+  const PASSPORT = sql(`select document_type_key from document_requirement where combination_id = '${vv}' and document_type_key like 'passport%' and status <> 'RETIRED' order by version desc limit 1`);
+  r = await call("POST", `/library/document-types/${FUNDS}/sets`, { sets: [standard, { ...sponsored, members: [...sponsored.members, { key: PASSPORT }] }], reason: "C6.15 pack: the passport too (break F1, Sample)." }, AUTHOR);
+  const id3 = r.body?.id;
+  r = id3 ? await call("POST", `/library/changes/${id3}/approve`, { note: "C6.15 pack: second person." }, APPROVER) : r;
+  const three = await release(vv, "C6.15 pack: Sponsor-funded with the passport");
+  const c4 = await openCase(vv, [{ role: "principal", name: "Sample Client D", dob: yearsAgo(50) }]);
+  const P4 = c4.subjects["Sample Client D"];
+  const passLine = async () => ((await call("GET", `/runtime/cases/${c4.id}/checklist`, undefined, c4.officer)).body as Checklist)?.people?.find((p) => p.subject === P4)?.lines.find((x) => x.document.key === PASSPORT);
+  l = await get(c4.id, P4);
+  await up(l?.id, letter, "host letter"); await up(l?.id, hostBank, "host statements");
+  const pl = await passLine();
+  const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(pdf("passport"))]), "passport.pdf");
+  r = await fetch(`http://127.0.0.1:${process.argv[2] ?? 4440}/api/runtime/checklist-lines/${pl?.id}/documents`, { method: "POST", headers: { "x-actor": c.officer }, body: fd }).then(async (x) => ({ status: x.status, body: await x.json().catch(() => null) }));
+  l = await get(c4.id, P4);
+  ok("C6.15-26 pass (break F1): the passport sent on its own line also completes the all-of line: it says all received and is Received (never \"all received\" while Requested)", !!three.version && r.status < 300 && l?.set_status?.met === true && l.state === "received", { release: three, status: r.status, state: l?.state, set: l?.set_status });
   const audit = sql(`select summary from audit_event where entity = 'case document' and summary like '%${HOST_BANK.replace(/'/g, "''")}%' order by at desc limit 1`) ?? "";
   ok("C6.15-24 pass: the upload's history line names the member and the line it counts for", audit.includes(`in the set for`), audit);
 });

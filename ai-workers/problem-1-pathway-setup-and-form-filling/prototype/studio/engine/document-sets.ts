@@ -5,20 +5,20 @@
 import { MODE_WORDS, STANDARD, type SetMode, type StoredSet } from "../contracts/document-sets.ts";
 
 /** A set as the release carries it (document_types[].sets). */
-export type SnapSet = { name: string; mode: SetMode; members: { key: string; name: string; when_client: string | null; when_staff: string | null }[] };
+export type SnapSet = { name: string; mode: SetMode; members: { key: string; name: string; when_client: string | null; when_staff: string | null; retired?: true }[] };
 /** The set a checklist line uses: its members in order (any one of: the first is the standard), and the line's words. */
-export type LineSet = { name: string; mode: SetMode; members: { key: string; name: string; standard: boolean; when_client: string | null; when_staff: string | null }[]; words: string };
+export type LineSet = { name: string; mode: SetMode; members: { key: string; name: string; standard: boolean; when_client: string | null; when_staff: string | null; retired?: true }[]; words: string };
 
 /** The release's copy of a type's stored sets, each member named from the library (a name it cannot find stays its key). */
-export function snapSets(raw: unknown, nameOf: (key: string) => string | undefined): SnapSet[] | undefined {
+export function snapSets(raw: unknown, nameOf: (key: string) => string | undefined, retired: (key: string) => boolean = () => false): SnapSet[] | undefined {
   const sets = Array.isArray(raw) ? (raw as StoredSet[]) : [];
   if (!sets.length) return undefined;
-  return sets.map((s) => ({ name: s.name, mode: s.mode, members: s.members.map((m) => ({ key: m.key, name: nameOf(m.key) ?? m.key, when_client: m.whenClient ?? null, when_staff: m.whenStaff ?? m.whenClient ?? null })) }));
+  return sets.map((s) => ({ name: s.name, mode: s.mode, members: s.members.map((m) => ({ key: m.key, name: nameOf(m.key) ?? m.key, when_client: m.whenClient ?? null, when_staff: m.whenStaff ?? m.whenClient ?? null, ...(retired(m.key) ? { retired: true as const } : {}) })) }));
 }
 
 const list = (xs: string[], and: string) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} ${and} ${xs[xs.length - 1]}`);
 /** "Any one of: Birth certificate (the standard), Baptism record or School record." · "All of: Bank letter and Bank statements." */
-export function setWords(s: Pick<LineSet, "mode" | "members">): string {
+export function setWords(s: { mode: SetMode; members: { name: string }[] }): string {
   const names = s.members.map((m, i) => (s.mode === "any_one" && i === 0 && s.members.length > 1 ? `${m.name} (the standard)` : m.name));
   return `${MODE_WORDS[s.mode]}: ${list(names, s.mode === "any_one" ? "or" : "and")}.`;
 }

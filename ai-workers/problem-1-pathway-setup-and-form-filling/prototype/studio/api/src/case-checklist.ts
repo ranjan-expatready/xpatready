@@ -205,9 +205,24 @@ export class CaseChecklists {
           mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id, uploadedAt: now } });
       });
     } catch (e) { rmSync(abs, { force: true }); throw e; } // a refused upload leaves no file behind
+    await this.recount(actor, c, row.subjectId, member.key, id);
     await this.audit.log(c.workspaceId, actor.id, "uploaded", "case document", docId, `${actor.name} uploaded ${shown.set && member.key !== shown.document.key ? `${member.name} (in the set for ${shown.label})` : shown.label} for the ${person.role} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
     const line = await this.moved(c, id);
     return { ...line, document: line?.documents.find((x) => x.id === docId) ?? null };
+  }
+
+  /** C6.15 (break F1): a file of one type can count on several lines of the person (its own line, and any line whose set
+   *  has it as a member). After an upload, every other such line not yet received is worked out again: Received once its
+   *  set is met (a line with no set: its own type's file), so a line never says "All received" while it waits. */
+  private async recount(actor: Actor, c: Reached, subject: string, type: string, except: string) {
+    const list = await this.stored(c);
+    const person = list.derived ? list.people.find((p) => p.subject === subject) : undefined;
+    for (const l of person?.lines ?? []) {
+      if (l.id === except || !lineKeys(l).includes(type) || !["not_requested", "requested", "rejected"].includes(l.state)) continue;
+      if (l.set ? !l.set_status?.met : !l.documents.some((d) => d.current)) continue;
+      const n = await this.db.checklistLine.updateMany({ where: { id: l.id, version: l.version, state: l.state }, data: { state: "received", stateReason: null, stateBy: actor.id, stateAt: new Date(), version: { increment: 1 } } });
+      if (n.count === 1) await this.audit.log(c.workspaceId, actor.id, "received", "checklist line", l.id, `${actor.name}'s upload of ${l.set?.members.find((m) => m.key === type)?.name ?? l.document.name} also meets ${l.label} for the ${person!.role} on case ${short(c.id)} (${STATE_WORDS[l.state]} to Received)`);
+    }
   }
 
   /** A stored document's bytes, checked against its sha256 (for C6.5's reading; no route). */
