@@ -3,15 +3,21 @@
 // rule: the form's order, not the alphabet (M1); a part with no name at release keeps its key, title and tick when a
 // person names it on To review after the release (M2, M3: released means frozen); nothing it grouped moves to "Other
 // questions". Runs on a copy with the configured checkpoint loaded. US$0, no live AI.
-//   zsh studio/tools/isolated.sh runtime_c73p 4435 start && curl -s -XPOST localhost:4435/api/demo/reset -H 'x-actor: user-A' -H 'content-type: application/json' -d '{"confirm":"RESET"}' && curl -s -XPOST localhost:4435/api/demo/load -H 'x-actor: user-A' -H 'content-type: application/json' -d '{"sample":"configured"}' >/dev/null && tsx studio/tests/check_c73_parts_checkpoint.ts 4435 xr_studio_runtime_c73p
+//   zsh studio/tools/isolated.sh runtime_c73p 4435 start && tsx studio/tests/check_c73_parts_checkpoint.ts 4435 xr_studio_runtime_c73p
+// It resets its copy and loads the configured checkpoint itself (as check_b104_checkpoint.ts does), so the suite runner
+// (run-suites.sh, which reads only "isolated.sh … start && tsx …" usage lines) runs it on its own copy (CI on #1075, 7 Nov).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OFFICER, call, fillEverything, itemsOf, needVisitorVisa, ok, openCase, prepare, rec, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, OFFICER, PORT, call, fillEverything, itemsOf, needVisitorVisa, ok, openCase, prepare, rec, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 type Section = { key: string; title: string; named?: false; version: string; entered: { by: string } | null; out_of_date: boolean; answers: { fact: string }[]; waiting: unknown[] };
 type Sheet = { order_basis: string; sections: Section[] };
 const SOLUTION = join(import.meta.dirname, "..", "..", "..");
 
+if (PORT === 4400) { console.log("STOP  never the demo (:4400): this check resets its copy"); process.exit(2); }
+const reset = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
+const load = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
+if (reset.status >= 300 || load.status >= 300) { console.log(`STOP  the configured checkpoint did not load: reset ${reset.status}, load ${load.status} ${JSON.stringify(load.body?.detail ?? load.body?.message ?? "").slice(0, 300)}`); process.exit(2); }
 const vv = needVisitorVisa();
 const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }]);
 const P = c.subjects["Sample Client A"];
