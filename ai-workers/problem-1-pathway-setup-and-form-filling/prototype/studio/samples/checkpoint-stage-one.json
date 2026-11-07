@@ -85,7 +85,7 @@
           {
             "form": "IMM 5645",
             "signedBy": "person",
-            "cite": "Family information. canada.ca 'Family Information Form – Visitors, Students and Workers (IMM 5645)' (committed copy official-sources/ircc/canada/pages/imm5645.html, dcterms.modified 2024-06-21; canada.ca itself does not resolve from cloud sessions): \"This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada\"; and \"read “ Note 1 ”, then sign and date the declaration at the end of Section A\". IMM 5645 (official-sources/ircc/forms/imm5645e.pdf) has a \"Signature:\" box at the end of Sections A, B and C (prototype/p1/inventory/imm5645e.inventory.json). Each person signs their own copy. QA-228."
+            "cite": "Family information. canada.ca 'Family Information Form – Visitors, Students and Workers (IMM 5645)' (committed copy official-sources/ircc/canada/pages/imm5645.html, dcterms.modified 2024-06-21; canada.ca itself does not resolve from cloud sessions): \"This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada\"; and \"If you do not have a spouse or a common-law partner, read “ Note 1 ”, then sign and date the declaration at the end of Section A.\" (the same is said for Section B, children). IMM 5645 (official-sources/ircc/forms/imm5645e.pdf) has a \"Signature:\" box at the end of Sections A, B and C (prototype/p1/inventory/imm5645e.inventory.json). Each person signs their own copy. QA-228."
           }
         ],
         "signatures": [

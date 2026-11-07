@@ -50,7 +50,7 @@ export type StageOnePort = {
   account(): Promise<string | null>;
   setAccount(from: string | null, to: string): Promise<void>;
   /** The combination's form lines, newest version of each: its status, who signs it and its revision (the newest row's save time). */
-  lines(): Promise<{ form: string; retired: boolean; signedBy: string | null; revision: string; channel: string | null; signature: string }[]>;
+  lines(): Promise<{ form: string; retired: boolean; signedBy: string | null; revision: string; channel: string; signature: string }[]>;
   saveSigner(form: string, signedBy: string, revision: string): Promise<void>;
   /** As the Signature column sends it: the line's own channel kept, claimed on the channel and signature the author saw. */
   saveSignature(form: string, channel: string, from: string, to: string): Promise<void>;
@@ -90,7 +90,7 @@ export async function applyStageOne(port: StageOnePort, setup: StageOne | null, 
     const now = new Map((await port.lines()).map((l) => [l.form, l]));
     for (const s of setup.signatures) {
       const line = now.get(s.form);
-      if (!line || line.retired || !line.channel) { refused.push(`${s.form}: not a filed line of this combination, so how it is signed is not set`); continue; }
+      if (!line || line.retired) { refused.push(`${s.form}: not a filed line of this combination, so how it is signed is not set`); continue; }
       if (line.signature === s.signature) continue;
       try { await port.saveSignature(s.form, line.channel, line.signature, s.signature); done.push(`${s.form}: ${SIGNATURE_WORDS[s.signature as keyof typeof SIGNATURE_WORDS].toLowerCase()}`); }
       catch (e) { refused.push(`${s.form} signature: ${said(e)}`); }

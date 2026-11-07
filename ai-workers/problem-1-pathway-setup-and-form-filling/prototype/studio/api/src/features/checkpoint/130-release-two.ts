@@ -22,7 +22,7 @@ export default {
     const { db, workspaceId, author, sme, approver, vvId, said } = ctx;
     const visitor = releaseOne(ctx).visitor;
     let r2Why: string | null = visitor ? null : "Waits for the Visitor visa's release 1: its channels change for release 2.";
-    const r2Marks = new Map<string, number>(), r2Sections: string[] = [];
+    const r2Marks = new Map<string, number>(), r2Sections: string[] = [], r2Refused: string[] = [];
     if (visitor && vvId) await ctx.timed("release 2 (mixed channels)", async () => {
       const forms = ctx.get(Forms), studio = ctx.get(Studio), library = ctx.get(Screen02);
       let step: ReleaseTwoStep = "forms"; // review R2 m1: the words name the step that refused it
@@ -62,6 +62,7 @@ export default {
         await forms.setChannel(author, vvId, "IMM 5476", { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" });
         // Row A3: release 2's own lines (IMM 5645's signer, how IMM 5645 and Schedule 1 are signed), from samples/checkpoint-stage-one.json.
         const own = await setStageOne({ db, audit: ctx.audit, studio, forms }, author, vvId, "vv.single", said, releaseTwoOf("vv.single"));
+        r2Refused.push(...own.refused); // review (A3) m1: a refused line is said on row 9 too, not only in the log
         if (own.done.length || own.refused.length) ctx.log.push(`  vv.single release 2 lines: ${[...own.done, ...own.refused.map((x) => `refused: ${x}`)].join("; ")}`);
         await seedSampleSources(db, vvId);
         step = "submit";
@@ -81,6 +82,6 @@ export default {
     });
     const vvReleases = vvId ? await db.configRelease.count({ where: { combinationId: vvId } }) : 0;
     ctx.row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)", status: !r2Why && vvReleases >= 2 ? "done" : "waiting",
-      shows: !r2Why && vvReleases >= 2 ? `Visitor visa release 2: IMM 5257 Online, IMM 5645 as the family information form, IMM 5476 a PDF upload signed by hand and scanned (Forms tab, reviewed and approved)${r2Marks.size ? `; marked not on this form, Sample, Unconfirmed: expert: ${[...r2Marks].map(([label, n]) => `"${label}" on ${n} form field${n === 1 ? "" : "s"}`).join(", ")}` : ""}${r2Sections.length ? `; IMM 5645's sections left for a person: ${r2Sections.slice(0, 3).join(" · ")}${r2Sections.length > 3 ? ` · and ${r2Sections.length - 3} more` : ""}` : ""}` : "The channel route and the signed-scan lines are built (Forms tab)", why: r2Why });
+      shows: !r2Why && vvReleases >= 2 ? `Visitor visa release 2: IMM 5257 Online, IMM 5645 as the family information form, IMM 5476 a PDF upload signed by hand and scanned (Forms tab, reviewed and approved)${r2Marks.size ? `; marked not on this form, Sample, Unconfirmed: expert: ${[...r2Marks].map(([label, n]) => `"${label}" on ${n} form field${n === 1 ? "" : "s"}`).join(", ")}` : ""}${r2Sections.length ? `; IMM 5645's sections left for a person: ${r2Sections.slice(0, 3).join(" · ")}${r2Sections.length > 3 ? ` · and ${r2Sections.length - 3} more` : ""}` : ""}${r2Refused.length ? `; release 2's own lines not set: ${r2Refused.join(" · ")}` : ""}` : "The channel route and the signed-scan lines are built (Forms tab)", why: r2Why });
   },
 } satisfies CheckpointStep;

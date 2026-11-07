@@ -84,19 +84,20 @@ await (async () => {
   ok("A3-3 fail: a signature the product does not know is refused, naming the known ones", stageOneProblems({ signatures: [{ ...sig, signature: "INK" }] }).some((p) => /IMM 5645: signature "INK" is not one the product knows \(TYPED_NAME, HAND_SCANNED, PEN, NONE\)/.test(p)));
   ok("A3-4 fail: how a line is signed with no source quoted, or named twice, is refused",
     stageOneProblems({ signatures: [{ ...sig, cite: "Sample" }] }).includes("IMM 5645: how it is signed has no source quoted") && stageOneProblems({ signatures: [sig, sig] }).includes("IMM 5645: how it is signed is named twice"));
-  const draft2 = [{ form: "IMM 5257", channel: "ONLINE" }, { form: "IMM 5645" }, { form: "IMM 5257 SCH1" }, { form: "IMM 5707", retired: true }];
+  // IMM 5645 Online here (review (A3) m2), so a step that took any one channel for every line would fail.
+  const draft2 = [{ form: "IMM 5257", channel: "ONLINE" }, { form: "IMM 5645", channel: "ONLINE" }, { form: "IMM 5257 SCH1" }, { form: "IMM 5707", retired: true }];
   f = fake({ lines: draft2 });
   r = await applyStageOne(f.port, r2, said);
   ok("A3-5 pass: on release 2's draft, IMM 5645's signer, then each signature on the line's own channel over the signature seen, said in plain words",
-    f.writes.join(" · ") === "signer IMM 5645=person@rev-IMM 5645 · signature IMM 5645 PDF_UPLOAD NONE->TYPED_NAME · signature IMM 5257 SCH1 PDF_UPLOAD NONE->TYPED_NAME"
+    f.writes.join(" · ") === "signer IMM 5645=person@rev-IMM 5645 · signature IMM 5645 ONLINE NONE->TYPED_NAME · signature IMM 5257 SCH1 PDF_UPLOAD NONE->TYPED_NAME"
     && !r.refused.length && r.done.join("; ") === "IMM 5645 signed by the person the form is about; IMM 5645: typed name; IMM 5257 SCH1: typed name", { writes: f.writes, r });
   f = fake({ lines: [{ form: "IMM 5645", signedBy: "person", signature: "TYPED_NAME" }, { form: "IMM 5257 SCH1", retired: true }] });
   r = await applyStageOne(f.port, r2, said);
   ok("A3-6 fail: a removed line (Schedule 1) is said and never saved; what is already set is not saved again", !f.writes.length && r.refused.join() === "IMM 5257 SCH1: not a filed line of this combination, so how it is signed is not set", { writes: f.writes, r });
-  f = fake({ lines: draft2, refuse: { "IMM 5645 signature": "IMM 5645: \"Typed name\" does not fit a line filed as Paper." } });
+  f = fake({ lines: draft2, refuse: { "IMM 5645 signature": "Changed by Configuration author at 07:01:02 UTC while you were editing." } });
   r = await applyStageOne(f.port, r2, said);
   ok("A3-7 fail: a signature the service refuses is said in its own words, not counted as done; the next line is still saved",
-    r.refused.includes("IMM 5645 signature: IMM 5645: \"Typed name\" does not fit a line filed as Paper.") && !r.done.includes("IMM 5645: typed name") && f.writes.some((w) => /signature IMM 5257 SCH1/.test(w)), { writes: f.writes, r });
+    r.refused.includes("IMM 5645 signature: Changed by Configuration author at 07:01:02 UTC while you were editing.") && !r.done.includes("IMM 5645: typed name") && f.writes.some((w) => /signature IMM 5257 SCH1/.test(w)), { writes: f.writes, r });
 })();
 
 console.log(failed ? `\n${failed} failed` : "\nall passed");
