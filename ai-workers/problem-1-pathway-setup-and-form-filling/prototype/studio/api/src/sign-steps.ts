@@ -19,11 +19,14 @@ import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } fr
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts"; // C7.6: Ready to file is read now (case-prepare.ts imports signStepsOf: forwardRef below)
 import { refuseIfRecorded } from "./submission-record.ts"; // C8.2-9: a recorded application is read-only
+import { isBarcodeForm } from "../../contracts/forms.ts"; // B132: a barcode form is printed from its validated copy
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
 const SCANS = () => VAR(WORKSPACE_KEY);
 const short = (id: string) => id.slice(0, 8);
+/** The case's row lock, taken first in every write transaction here (review M2), as case-prepare.ts's writes take it. */
+const lockCase = (q: Db, caseId: string) => q.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
 /** The words of any recorded step (hand-signed and scanned, or signed in pen on Paper, B132). */
 const stepWords = (k: SignStepKey | PenStepKey) => (isSignStep(k) ? SIGN_STEP_WORDS[k] : PEN_STEP_WORDS[k as PenStepKey]);
 
@@ -91,15 +94,18 @@ export class SignSteps {
     const filingReady = key === "uploaded_to_ircc"
       ? ((await this.prepare.view(actor, c.id)) as { filings: { id: string; status: string }[] }).filings.find((x) => x.id === item.filingId)?.status === "ready_to_file"
       : item.filing.status.toLowerCase() === "ready_to_file";
-    // B132: on Paper a barcode form is printed only once its validated copy is read back for today's facts: the prepare
-    // view's own Validate step (paperLine), read now, never worked out again here.
-    let paper = { barcode: false, validated: false };
-    if (pen && key === "print") {
-      const v = (await this.prepare.view(actor, c.id)) as { items: { id: string; record?: string; steps?: { key: string; done: boolean | null }[] }[] };
-      const validate = v.items.find((x) => x.id === item.id && !x.record)?.steps?.find((x) => x.key === "validate");
-      paper = { barcode: !!validate, validated: validate?.done === true };
+    // B132: on Paper a barcode form (isBarcodeForm, review m1: never judged from a step that may be missing) is printed only
+    // from its validated copy read back for today's facts, as the prepare view's Paper line reads it (paperLine), on a
+    // first print and on a re-print after a fact changed alike (review M1).
+    const barcode = pen && isBarcodeForm(item.itemKey);
+    let validated: { copy: string; current: boolean } | null = null;
+    if (barcode && key === "print") {
+      const v = (await this.prepare.view(actor, c.id)) as { items: { id: string; record?: string; validated?: { copy: string; current: boolean } | null }[] };
+      validated = v.items.find((x) => x.id === item.id && !x.record)?.validated ?? null;
     }
-    const refusal = restart ? null : pen ? penRefusal(key as PenStepKey, done, item.itemKey, paper) : stepRefusal(key as SignStepKey, done, item.itemKey, { filingReady });
+    const paper = { barcode, validated: !!validated?.current };
+    const notValidated = barcode && key === "print" && !paper.validated ? penRefusal("print", {}, item.itemKey, paper) : null;
+    const refusal = notValidated ?? (restart ? null : pen ? penRefusal(key as PenStepKey, done, item.itemKey, paper) : stepRefusal(key as SignStepKey, done, item.itemKey, { filingReady }));
     if (refusal) fail(refusal, HttpStatus.CONFLICT);
     let copyId: string | null = null;
     if (key === "print") {
@@ -112,10 +118,13 @@ export class SignSteps {
       // Devin on #617 (a31b1dfe): and the repeating groups it reads ("none apply" taken back, an entry added), as `lock` does.
       const changed = await this.changedSince(c, item, copy!.id, copy!.snapshot?.factsJson);
       if (changed.length) fail(`This copy of ${item.itemKey} is out of date: ${changed.length} change${changed.length === 1 ? "" : "s"} since it was made. Generate a new copy and print that one. Nothing was recorded.`, HttpStatus.CONFLICT);
+      // B132 review M1: the copy printed is the validated one itself (it holds the barcode page), never another copy.
+      if (barcode && copy!.id !== validated?.copy) fail(`Print the validated copy of ${item.itemKey}: the copy read back after Validate in Adobe, which holds its barcode page, not another copy. Nothing was recorded.`, HttpStatus.CONFLICT);
       copyId = copy!.id;
     }
     if (restart) {
       await this.db.$transaction(async (tx) => {
+        await lockCase(tx as unknown as Db, c.id); // review M2: the case row first, as case-prepare.ts's writes take it
         await tx.signStep.updateMany({ where: { itemId: item.id, supersededAt: null }, data: { supersededAt: new Date() } });
         await this.save(c, item, key, actor, copyId, tx as unknown as Db);
       });
@@ -139,7 +148,7 @@ export class SignSteps {
     // B129 review Minor: the read-only lock is checked again under the case's row lock, as case-prepare.ts's writes do, so
     // a step never lands just after the submission is recorded.
     const write = async (q: Db) => {
-      await q.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await lockCase(q, c.id);
       await refuseIfRecorded(q, [item.filingId], `the signing of ${item.itemKey}`);
       try { await q.signStep.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, key, copyId, doneBy: actor.id } }); }
       catch (e) { if ((e as { code?: string }).code === "P2002") fail(`${stepWords(key)} was just done for ${item.itemKey} by someone else: read the item again.`, HttpStatus.CONFLICT); throw e; }
@@ -170,6 +179,7 @@ export class SignSteps {
     try {
       mkdirSync(dirname(abs), { recursive: true }); writeFileSync(abs, bytes);
       await this.db.$transaction(async (tx) => {
+        await lockCase(tx as unknown as Db, c.id); // review M2: before the insert (whose share lock on the case row deadlocked a second upload)
         await tx.signedScan.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, fileName: cleanName(utf8Name(f[0].originalname)), mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id } });
         await this.save(c, item, "scan_received", actor, null, tx as unknown as Db);
       });

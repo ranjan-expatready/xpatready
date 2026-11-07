@@ -166,5 +166,42 @@ else {
   const read6 = await call("GET", `/runtime/items/${i57?.id}`, undefined, officer);
   ok("B132 pass: the item read lists a pen form's own steps, Printed then Signed in pen, both done", JSON.stringify((read6.body?.sign_steps ?? []).map((x: { key: string; done: unknown }) => `${x.key}:${!!x.done}`)) === JSON.stringify(["print:true", "sign_in_pen:true"]), read6.body?.sign_steps);
 }
+// (7) B132 review M1, M2, m2: a Paper barcode form is printed from its validated copy only (also on a re-print after a
+// fact changed); two uploads of the same signed scan at once give one 201 and one 409 in words, never a 500 (lock order);
+// a hand-signed form refuses the pen step.
+{
+  const officer = f.officer ?? OFFICER;
+  const c7 = await openCase(vv, [{ role: "principal", name: "Sample Client V", dob: yearsAgo(37) }], { representative: f.rep, caseOfficers: [officer] });
+  const V = c7.subjects["Sample Client V"];
+  await fillEverything(c7.id);
+  let pv = (await prepare(c7.id, officer)).p;
+  const i57 = itemsOf(pv, V, "IMM 5257")[0], i76 = itemsOf(pv, V, "IMM 5476")[0];
+  const mv = await call("PATCH", `/runtime/items/${i57?.id}/channel`, { channel: "PAPER", reason: "Sample: on paper as an accommodation (B132 M1)", version: (pv as unknown as { version: string }).version }, officer);
+  const post = (id: string | undefined, key: string, body: unknown = {}) => call("POST", `/runtime/items/${id}/sign-steps/${key}`, body, officer);
+  const printed = () => sql(`select copy_id from sign_step where item_id='${i57?.id}' and key='print' and superseded_at is null`);
+  const vcopy = await validateRoundTrip(c7.id, "IMM 5257", V);
+  const plain = await generateCopy(c7.id, "IMM 5257", V); // the newest copy, current, never validated
+  let r = await post(i57?.id, "print", { copy: plain });
+  ok("B132 M1 fail: on Paper a barcode form is never printed from a copy that is not its validated copy, even a current one (409 in words), nothing recorded", mv.status === 200 && r.status === 409 && /validated copy/.test(r.body?.detail ?? "") && !printed(), [mv.status, r.status, r.body?.detail, printed()]);
+  r = await post(i57?.id, "print", { copy: vcopy });
+  ok("B132 M1 pass: the validated copy itself is printed", r.status === 200 && printed() === vcopy, [r.status, r.body?.detail]);
+  await post(i57?.id, "sign_in_pen");
+  await answer(c7.id, V, "person.family_name", "SAMPLEREPRINT", officer); await confirmAll(c7.id, V);
+  const plain2 = await generateCopy(c7.id, "IMM 5257", V);
+  r = await post(i57?.id, "print", { copy: plain2 });
+  ok("B132 M1 fail (re-print after a fact changed): a new print from a copy never validated is refused (409 in words); the signed one stays as it was", r.status === 409 && /validated copy/.test(r.body?.detail ?? "") && printed() === vcopy, [r.status, r.body?.detail, printed()]);
+  const v2 = await validateRoundTrip(c7.id, "IMM 5257", V);
+  r = await post(i57?.id, "print", { copy: v2 });
+  ok("B132 M1 pass (re-print): the newly validated copy is printed and its signing starts again (the earlier steps superseded)", !!v2 && r.status === 200 && printed() === v2 && sql(`select count(*) from sign_step where item_id='${i57?.id}' and superseded_at is null`) === "1", [r.status, r.body?.detail, printed()]);
+  // m2: a hand-signed form refuses the pen step.
+  r = await post(i76?.id, "sign_in_pen");
+  ok("B132 m2 fail: a form signed by hand and scanned refuses \"Signed in pen\", naming its own steps (409), nothing recorded", r.status === 409 && /signed by hand and scanned: its steps are Printed, Signed by hand/.test(r.body?.detail ?? "") && sql(`select count(*) from sign_step where item_id='${i76?.id}' and key='sign_in_pen'`) === "0", [r.status, r.body?.detail]);
+  // M2: two uploads of the same signed scan at once.
+  await post(i76?.id, "print", { copy: await generateCopy(c7.id, "IMM 5476", V) });
+  await post(i76?.id, "signed");
+  const both = await Promise.all([1, 2].map((n) => sendFile(`/runtime/items/${i76?.id}/signed-scan`, signedScan(`IMM 5476 (${n})`), `imm5476-twice-${n}.pdf`, officer)));
+  const codes = both.map((x) => x.status).sort();
+  ok("B132 M2 pass: two uploads of the signed scan at once give one 201 and one 409 in words, never a 500; one scan stored", JSON.stringify(codes) === JSON.stringify([201, 409]) && both.some((x) => x.status === 409 && /already done|just done/.test(x.body?.detail ?? "")) && sql(`select count(*) from signed_scan where item_id='${i76?.id}'`) === "1", { codes, details: both.map((x) => x.body?.detail) });
+}
 // B129: a red line fails the suite (run-suites.sh judges the exit code; before, this suite always exited 0).
 process.exit(summary() ? 1 : 0);
