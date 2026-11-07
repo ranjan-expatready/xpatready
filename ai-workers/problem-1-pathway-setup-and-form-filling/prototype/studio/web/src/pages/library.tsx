@@ -1,4 +1,5 @@
 import * as React from "react";
+import { MustVerifySection } from "@/pages/must-verify-panel";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, GitMerge, Pencil, Plus, Save, Search, Undo2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -116,6 +117,7 @@ export function FieldPage() {
   const actorId = useActorId();
   const session = useApi<any>(["session", actorId], "/session");
   const fields = useLibraryFields();
+  const canAuthorField = useCanAuthor(); // C7.9
   const cur = f.data?.current;
   const place = f.data?.placements?.[0];
   const [meaning, setMeaning] = React.useState(""), [type, setType] = React.useState("text"), [why, setWhy] = React.useState("");
@@ -175,6 +177,7 @@ export function FieldPage() {
       </div>
       <FieldScopePanel fieldKey={key} retired={retiredNow || !!cur.mergedIntoKey} />
       <OtherNames fieldKey={key} cur={cur} shown={shown} retiredNow={retiredNow} actors={session.data?.actors} invalidate={inv} />
+      <MustVerifySection fieldKey={key} canAuthor={canAuthorField} />
       <section data-format-panel className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Format</h2>
         <p className="mt-1 text-sm text-text-muted">Type: {TYPE_WORD[cur.valueType] ?? cur.valueType}. The format is read from the official forms that ask it (the PDF form field and the form's own checks, no AI) and the rules listed are checked on every answer; nobody types a rule here.</p>

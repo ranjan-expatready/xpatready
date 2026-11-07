@@ -105,6 +105,14 @@ export function LibraryChangePage() {
           <p className="text-xs text-text-muted">Sample until the immigration expert confirms. Approving makes a draft of the document type; it goes out with each combination's next release.</p>
         </div>
       ) : null}
+      {(x as unknown as { must_verify?: MustVerifyChange }).must_verify ? (() => { const m = (x as unknown as { must_verify: MustVerifyChange }).must_verify; return (
+        // C7.9 (SA-1B-1 r9): what the immigration expert decides: the field's flag before → after.
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-must-verify>
+          <dt className="text-text-muted">Field</dt><dd className="font-semibold">{m.field}</dd>
+          <dt className="text-text-muted">Now</dt><dd>{m.before ? "Must verify before filing" : "Not marked"}</dd>
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{m.after ? "Must verify before filing" : "Not marked"}</dd>
+          <dt className="text-text-muted">What it does</dt><dd>A value the client gave that no one on staff has checked raises a CRITICAL warning on Ready to file, passable with a reason; it never blocks, and the form still fills. Only the immigration expert approves. Sample until the expert confirms.</dd>
+        </dl>); })() : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -405,3 +413,6 @@ export function FormFieldsPage() {
     </div>
   );
 }
+
+/** C7.9: the must-verify change the immigration expert reads (api/src/must-verify.ts mustVerifyView). */
+type MustVerifyChange = { field: string; before: boolean; after: boolean; reason: string };
