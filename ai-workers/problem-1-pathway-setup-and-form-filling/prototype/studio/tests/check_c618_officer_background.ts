@@ -56,6 +56,7 @@ const S = { canonical_fields: [], placements: [{ fact: "person.crime", collected
 const P: Participant = { subjectId: "p1", role: "principal", label: "Sample Client A", applies: true };
 const waits = confirmation(S, ans({ status: "VERIFIED", channel: "confirm_section", awaitsClient: true }), P, null, new Date(at));
 ok("C6.18-R2c fail: waiting for the client is never confirmed, even VERIFIED by the officer, and says why", !waits.confirmed && /re-confirm/.test(waits.why), waits);
+ok("C6.18-R2c2 pass (P-411 with P-244, B150): waiting for the client, it still fills the draft forms at once, marked as staff's", waits.fills === true && waits.mark === "by_staff" && /fills the forms now/.test(waits.why), waits);
 const own = confirmation(S, ans({ channel: "client_reconfirm", actor: CLIENT }), P, null, new Date(at));
 ok("C6.18-R2d pass: the principal's re-confirmation counts as the client's own answer", own.confirmed, own);
 

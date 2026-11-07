@@ -541,7 +541,9 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
         {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{part.subjectId.includes("/") ? " (a parent, not on this application)" : person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
-      {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
+      {/* B150 (P-411): who gave this part's answers, each kind once (the principal's for an adult, staff's), so a mixed part still says it. */}
+      {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted" data-answer-words>{confirmWords[0]}.</p>
+        : confirmWords.length > 1 ? <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-text-muted" data-answer-words>{confirmWords.map((w) => <li key={w}>{w}.</li>)}</ul> : null}
 
       <form className="mt-4 space-y-5" onSubmit={(e) => { e.preventDefault(); void saveAndContinue(); }} noValidate>
         {single.map((q) => field(q))}
@@ -613,7 +615,7 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
   return (
     <section aria-labelledby="recorded-for-you" className="rounded-xl border-2 border-warn bg-surface-raised p-4" data-recorded-for-you>
       <h2 id="recorded-for-you" className="text-base font-semibold">Check what your case officer recorded ({items.length})</h2>
-      <p className="mt-1 text-sm text-text-muted">{items.length === 1 ? "Your case officer wrote down this answer for you. Check it before you sign: it goes on your forms only once you say it is right." : "Your case officer wrote down these answers for you. Check each one before you sign: each goes on your forms only once you say it is right."}</p>
+      <p className="mt-1 text-sm text-text-muted">{items.length === 1 ? "Your case officer wrote down this answer for you. It is on your draft forms now; check it: nothing is printed or signed until you say it is right." : "Your case officer wrote down these answers for you. They are on your draft forms now; check each one: nothing is printed or signed until you say each is right."}</p>
       <ul className="mt-3 divide-y divide-border">
         {items.map(({ q, a, i, s }) => (
           <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
@@ -655,7 +657,7 @@ function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: S
   }
   if (na?.value) return (
     <div className={cn("flex flex-wrap items-center gap-2", compact ? "text-[13px]" : "rounded-lg border border-border bg-surface-raised p-3 text-sm")}>
-      <Check className="size-4 text-text-ok" aria-hidden /><span className="font-medium">None apply</span><ConfirmPill a={na} />
+      <Check className="size-4 text-text-ok" aria-hidden /><span className="font-medium">None apply</span><ConfirmPill a={na} about={s.about_label} />
       {compact ? <span className="text-xs text-text-muted">{na.answered ? `${CHANNEL[na.answered.channel] ?? "answered"} · ${WHO[na.answered.by] ?? "someone"} · ${when(na.answered.at)} · confirmed by ${WHO[na.by] ?? "someone"} ${when(na.at)}` : `${CHANNEL[na.channel] ?? "answered"} · ${WHO[na.by] ?? "someone"} · ${when(na.at)}`}</span> : null}
       <span className="flex-1" />
       <Button ref={change} type="button" size="sm" variant="secondary" className={compact ? "" : "h-11"} busy={busy} onClick={() => void say(false)} aria-label={`Entries apply after all: ${whose}`}>Entries apply after all</Button>
@@ -691,19 +693,23 @@ const fromFirm = (a: Answer | null | undefined) => a?.channel === FIRM_RECORD;
 /** QA-293: the representative's tab (the view's "representative" subject): their details come only from the firm record,
  *  so one it does not fill (on this release's keys, or not at all) says so and offers no Add (the route refuses it, 422). */
 const aboutRepresentative = (q: Question) => q.subjectId === "representative";
-function ConfirmPill({ a }: { a: Answer }) {
+/** `about`: whose answer it is (the person's name), for "Answered by the principal for <name>" (P-411 (1)). `value`: the
+ *  answer as shown; a declaration made reads "Declared" itself, so its pill never repeats the word (B150, check_c44). */
+function ConfirmPill({ a, about, value }: { a: Answer; about: string; value?: string }) {
   if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
+  // P-242, P-411: every answer fills the forms at once; the pill says who gave it and whether it is still to confirm.
   // C6.18 (P-244): a background answer staff recorded waits for the client, whatever the officer did with it.
   if (a.awaits_client) return <Pill tone="warn" title={a.why}>Waits for the client</Pill>;
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
-  const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
+  const text = a.status === "VERIFIED" ? "Confirmed" : a.mark === "by_principal" ? `Answered by the principal for ${about}` : a.mark === "by_staff" ? "Entered by staff · to confirm" : a.confirmed ? "Declared" : "Declared · to confirm";
+  if (text === "Declared" && value === "Declared") return null;
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
 /** C6.18 (P-244): "Officer" on a background answer staff recorded (by phone or in person): who, when, and what follows. */
 function OfficerPill({ a }: { a: Answer }) {
   if (!a.officer) return null;
   const again = a.channel === "client_reconfirm" ? a.at : a.answered?.channel === "client_reconfirm" ? a.answered.at : null;
-  const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it goes on a form only once the client re-confirms it, before signing." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
+  const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it is on the draft forms now, and nothing is printed or signed until the client re-confirms it." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
   return <Pill tone="info" title={title}>Officer</Pill>;
 }
 const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
@@ -810,7 +816,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /><OfficerPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} about={q.about_label} value={String(shown(q, a.value))} /><OfficerPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
@@ -828,7 +834,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <h2 id={`h-${s.subjectId}-${s.section}`} className="text-base font-semibold">{s.title}</h2>
         <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>
         <span className="flex flex-wrap gap-1.5">
-          <Pill title="Answers given, and how many of them the officer has confirmed">{s.answered} answered · {s.confirmed} confirmed</Pill>
+          {/* QA-301 (B150): a declared answer is never counted as "confirmed"; the pill says what is still on the Confirm list. */}
+          <Pill title="Answers given (each fills the forms at once), and how many still wait for the officer's Confirm section">{s.answered} answered · {s.answered - s.confirmed} to confirm</Pill>
           {s.missing.length ? <Pill tone="warn" title={`Required and not answered: ${s.missing.join("; ")}`}>{s.missing.length} missing</Pill> : null}
           {s.invalid ? <Pill tone="danger" title="Answers that do not pass their checks">{s.invalid} to fix</Pill> : null}
           {checks.length ? <Pill tone="warn" title={checks.map((c) => c.message).join(" ")}>{checks.length} to check</Pill> : null}
@@ -895,7 +902,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />
         {a ? <p className="mt-3 text-xs text-text-muted">Now: {shown(q, a.value)} ({a.why}).</p> : null}
-        {q.background ? <Notice tone="info" className="mt-3" title="The client's background answer">Record only what the client told you (by phone or in person). It is marked Officer with your name and the time, and goes on a form only once the client re-confirms it, before signing.</Notice> : null}
+        {q.background ? <Notice tone="info" className="mt-3" title="The client's background answer">Record only what the client told you (by phone or in person). It is marked Officer with your name and the time. It is on the draft forms at once, and nothing is printed or signed until the client re-confirms it.</Notice> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>
