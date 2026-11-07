@@ -94,8 +94,8 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
   }, [focusTo, busy]);
   const after = async () => { await refresh(); setFocusTo("next"); };
   /** Break M2: before Signed by hand or the scan, the copies are read again; a printed copy whose facts changed since (a
-   *  change made in another tab or by the client) is refused here in words, nothing sent. The server checks only the
-   *  order (a follow-up row asks it to check the printed copy too). True when refused. */
+   *  change made in another tab or by the client) is refused here in words, nothing sent. The server also refuses a step
+   *  naming a copy that is not the one printed now (B130), so a tab read before a new print never signs it. True when refused. */
   async function printedCopyStale(): Promise<boolean> {
     const key = ["runtime", "view", caseId, "forms"];
     await qc.refetchQueries({ queryKey: key });

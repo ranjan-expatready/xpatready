@@ -161,7 +161,7 @@ export class SignSteps {
       await refuseIfRecorded(q, [item.filingId], `the signing of ${item.itemKey}`);
       if (signs !== undefined) {
         const now = await q.signStep.findFirst({ where: { itemId: item.id, key: "print", supersededAt: null }, select: { copyId: true } });
-        if (now?.copyId !== signs) fail(`${stepWords(key)} names a printed copy of ${item.itemKey} that is not the one printed now: it was printed again since this page was read. Read the item again and sign the copy printed now. Nothing was recorded.`, HttpStatus.CONFLICT);
+        if (now?.copyId !== signs) fail(`${stepWords(key)} names a printed copy of ${item.itemKey} that is not the one printed now: it was printed again since this page was read. Read the item again and sign the copy printed now. ${key === "scan_received" ? "Nothing was stored." : "Nothing was recorded."}`, HttpStatus.CONFLICT);
       }
       try { await q.signStep.create({ data: { workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, key, copyId, doneBy: actor.id } }); }
       catch (e) { if ((e as { code?: string }).code === "P2002") fail(`${stepWords(key)} was just done for ${item.itemKey} by someone else: read the item again.`, HttpStatus.CONFLICT); throw e; }

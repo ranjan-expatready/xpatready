@@ -124,7 +124,7 @@ await state("printed");
 const pOld = await ctx.newPage(); watch(pOld); await open(pOld);
 // Challenge M1 (C9.2): a fact IMM 5476 reads changes after Printed: the printed copy is out of date, so Signed by hand
 // is not offered; a new copy is generated and printed; the server starts the signing again (earlier steps superseded).
-type Q = { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; fills: { form: string }[] };
+type Q = { subjectId: string; fact: string; required: boolean; hidden: boolean; group: string | null; value_type: string; fills: { form: string }[]; answer?: { value: unknown } | null };
 const q5476 = ((await agent(c.id))?.sections ?? []).flatMap((x: { questions: Q[] }) => x.questions)
   .find((q: Q) => q.subjectId === P && !q.hidden && !q.group && q.value_type === "text" && q.fills.some((x) => x.form === "IMM 5476"));
 const changed = q5476 ? await answer(c.id, P, q5476.fact, "Sample Changed Value", officer) : null;
@@ -146,10 +146,15 @@ await press(block().locator("[data-sign-again]").getByRole("button", { name: /^P
 await block().locator('[data-step-action="signed"]').waitFor({ timeout: 15_000 }).catch(() => null);
 ok("C8.1 BR-8 / challenge M1 pass: the new copy is printed: the server starts the signing again (the earlier Printed superseded) and Signed by hand is the next step",
   copy2 !== copyId && steps().join() === `print|${copy2}` && Number(sql(`select count(*) from sign_step where item_id = '${it?.id}' and superseded_at is not null`) ?? 0) >= 1 && (await block().locator("[data-sign-again]").count()) === 0, { steps: steps(), copy2, copyId });
+// B130 review m1: the fact goes back for a moment, so the old tab's copy is current again and the screen's own guard lets
+// the press through: only the server's check of the copy printed now can refuse it. Then the change is made again.
+const original = q5476?.answer?.value;
+if (q5476 && original !== undefined) { await answer(c.id, P, q5476.fact, original, officer); await confirmAll(c.id, P); }
 await press(blockOn(pOld).locator('[data-step-action="signed"]'), pOld);
 const oldTab = (await blockOn(pOld).locator("[data-sign-refusal]").innerText().catch(() => "")).trim();
-ok("B130 fail (two tabs): a tab read before the new print presses Signed by hand: refused in words, nothing recorded (the new print stays the only step)", /Not recorded/.test(oldTab) && /out of date|not the one printed now/.test(oldTab) && steps().join() === `print|${copy2}`, { oldTab, steps: steps() });
+ok("B130 fail (two tabs): a tab read before the new print presses Signed by hand on its (current) old copy: refused in the server's words, nothing recorded (the new print stays the only step)", original !== undefined && /Not recorded/.test(oldTab) && /not the one printed now/.test(oldTab) && steps().join() === `print|${copy2}`, { original, oldTab, steps: steps() });
 await pOld.close();
+if (q5476) { await answer(c.id, P, q5476.fact, "Sample Changed Value", officer); await confirmAll(c.id, P); }
 
 // A second tab, opened before the step: it still offers "Signed by hand" after the first tab recorded it.
 const p2 = await ctx.newPage(); watch(p2); await open(p2);
