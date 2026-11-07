@@ -2,7 +2,7 @@
 
 current_lead: local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023 Lead 29 · 7 Nov 12:35 IST (new account after the switch, P-398)
 
-updated: 2026-11-07 13:52 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-401 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
+updated: 2026-11-07 14:17 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-401 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
 * **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
@@ -42,13 +42,13 @@ updated: 2026-11-07 13:52 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 **qa's lane:** `local_0868d426-…`; #1226 (head c237fef9f, QA-235 closed, QA-153 rewritten) gets the P-401 wording, then the Lead reads and labels. QA-228's retest goes with C8.2 and C6.9. C6.9 and C8.2 go to it when they land.
 | Lane | Where | Row → next |
 |---|---|---|
-| B124 #1197 (cloud) | task_88bb8ba2, requested 13:09 IST | leave draft, full CI, Approve line |
-| B126 #1212 (cloud) | task_03fa773f, requested 13:09 IST | confirm 5/5 + C8.2 pack, Approve line |
-| C9 QA-246 (cloud) | task_d8efc678, requested ~13:32 IST | C7.7 forms waiting on an answer |
-| C3 (cloud) | task_2f547abe, requested ~13:32 IST | channel decides for filing → C4 pack moves → C10 |
-| B3 (cloud) | task_a61a35c9, requested ~13:32 IST | sign and scan by screens, QA-251 |
-| A6 B102 (cloud) | task_818158fa, requested ~13:32 IST | calculated age, C6.4, QA-226 |
-| B127 QA-296 (cloud) | task_d6a64bc5, requested ~13:32 IST | representative's names on IMM 5475 |
+| B124 #1197 | Labelled 14:16 IST on Approve e3a7d5522, C6.9 20/20 | queue; lane done |
+| B126 #1212 | Labelled 14:16 IST on Approve 708eae6ba, C8.2 17/17 | queue; lane done |
+| C9 QA-246 (cloud) | #1223 | C7.7 forms waiting on an answer |
+| C3 (cloud) | #1225 | channel decides for filing → C4 pack moves → C10 |
+| B3 (cloud) | #1221 | sign and scan by screens, QA-251 |
+| A6 B102 (cloud) | #1222; concept approved 14:17 IST | calculated age, C6.4, QA-226 |
+| B127 QA-296 (cloud) | #1224 | representative's names on IMM 5475 |
 | Canary (cloud) | task_acca4ca2 | pushed; ends by itself |
 | qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
 | Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | standby + watchdog |
@@ -68,3 +68,4 @@ updated: 2026-11-07 13:52 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 * A label claimed in notes is not a review on the PR: check for the `Reviewer: Approve <sha>` line before labelling (6 Nov). The reverse also holds: read the PR before starting a lane; A3's Approve was already there (7 Nov).
 * In this copy `git checkout -b <new> origin/main` can die on tracking after moving the files, leaving HEAD on the old branch with main's files staged: use `--no-track` and read the branch name after (7 Nov).
 * `lane-preflight.sh` prints "load unreadable" from the sandbox (`sysctl` is refused); `uptime` reads the load. The start hook passed for the standbys, so this is the Bash sandbox only (7 Nov).
+* **Burn 7 Nov:** weekly 2% at 13:45 IST, 4% at 14:15 IST: about 4%/h with 7 lanes, qa and a 350k Lead; the Lead's size matters, so hand over near 400k rather than at it.
