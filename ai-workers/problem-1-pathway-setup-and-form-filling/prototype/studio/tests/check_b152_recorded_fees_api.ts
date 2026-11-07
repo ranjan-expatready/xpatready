@@ -4,10 +4,11 @@
 // clock and answers are append-only (a trigger), so the child's date of birth is moved three days earlier through the
 // answers route, which is what three days passing does to "age as at today" (the child is 14 now). GET /prepare still shows the recorded amounts on the recorded group, while an
 // unrecorded case with the same move is priced again (control). Fail-first: before B152 the recorded group's
-// biometrics total rose from CAD 85 to CAD 170 (total CAD 285 → CAD 370). No model call (US$0).
-//   zsh studio/tools/isolated.sh rt_b152 4436 start, then Demo › Reset and Demo › Load the configured checkpoint as the author, then
-//   tsx studio/tests/check_b152_recorded_fees_api.ts 4436 xr_studio_rt_b152
-import { answer, call, firms, inDays, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo, OFFICER } from "../acceptance/lib/m3.ts";
+// biometrics total rose from CAD 85 to CAD 170 (total CAD 285 → CAD 370). It loads the configured checkpoint itself
+// (Demo › Reset, then Demo › Load the configured checkpoint, as the author), as the browser checks do. No model call (US$0).
+//   zsh studio/tools/isolated.sh rt_b152 4436 start && tsx studio/tests/check_b152_recorded_fees_api.ts 4436 xr_studio_rt_b152
+import { request } from "node:http";
+import { answer, call, firms, inDays, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo, OFFICER, PORT } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -21,7 +22,20 @@ const BIO = (v: View) => v.groups[0]?.totals.find((t) => /biometric/i.test(t.lin
  *  (the person is that much older as at today), as the calendar passing would. */
 const ageBy = async (caseId: string, subject: string, dob: string, days: number, actor: string) => (await answer(caseId, subject, "person.date_of_birth", new Date(Date.parse(`${dob}T12:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10), actor)).status;
 
+// Demo › Reset, then Demo › Load the configured checkpoint, as the author (node:http: the load can outlast fetch's wait).
+const post = (path: string, body: unknown) => new Promise<{ status: number; detail?: string }>((done) => {
+  const data = JSON.stringify(body);
+  const rq = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, method: "POST", timeout: 1_200_000, headers: { "content-type": "application/json", "x-actor": "user-A", "content-length": Buffer.byteLength(data) } }, (r) => {
+    let t = ""; r.setEncoding("utf8"); r.on("data", (c) => (t += c)); r.on("end", () => { let d: string | undefined; try { d = JSON.parse(t)?.detail; } catch { /* not JSON */ } done({ status: r.statusCode ?? 0, detail: d }); });
+  });
+  rq.on("timeout", () => rq.destroy(new Error("no answer in 20 minutes"))); rq.on("error", (e) => done({ status: 0, detail: e.message })); rq.end(data);
+});
+
 (async () => {
+  const reset = await post("/demo/reset", { confirm: "RESET" });
+  const load = reset.status < 300 ? await post("/demo/load", { sample: "configured" }) : reset;
+  if (load.status >= 300) { console.log(`STOP  the configured checkpoint did not load: ${load.status} ${load.detail ?? ""}`); process.exit(2); }
+  ok("setup: Demo › Load the configured checkpoint (after Reset)", true);
   const vv = needVisitorVisa(), f = await firms(), officer = f.officer ?? OFFICER;
   const people = [{ role: "principal" as const, name: "Sample Client F", dob: yearsAgo(40) }, { role: "child" as const, name: "Sample Child F1", dob: yearsAgo(14, -2) }];
   const c = await openCase(vv, people, { representative: f.rep, caseOfficers: [officer] });
