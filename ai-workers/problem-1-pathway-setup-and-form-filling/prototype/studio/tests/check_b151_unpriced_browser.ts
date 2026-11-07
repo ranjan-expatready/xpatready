@@ -81,6 +81,29 @@ if (fs && v) {
   ok("B151 pass (1024 px): the same people and words at 1024 px", at1024 === words, { at1024, words });
 } else ok("B151: the fs.spouse case could not be opened on the checkpoint", false, { fsId });
 
+// Review M1: a real case where /prepare names a person with no filing while the fees are not worked out: With an LMIA
+// (wp.lmia_inside) with the partner not applying. The check fails if the unpriced block drops not_filing[].
+const wpId = sql("select c.id from combination c join config_release r on r.combination_id=c.id where c.combination_key='wp.lmia_inside' limit 1");
+const wp = wpId ? await openCase(wpId, [{ role: "principal", name: "Sample Worker L", dob: yearsAgo(31) }, { role: "spouse_or_partner", name: "Sample Partner L", dob: yearsAgo(30), applies: false }]) : null;
+const wv = wp ? await viewOf(wp.id) : null;
+ok("setup (review M1): the With an LMIA case's fees are not worked out and /prepare names at least one person with no filing", !!wv && wv.fees_worked_out === false && wv.not_filing.length > 0, { wpId, worked: wv?.fees_worked_out, not_filing: wv?.not_filing });
+if (wp && wv) {
+  await open(wp.id);
+  const wb = p.locator('[data-fees][data-fees-worked-out="false"]');
+  const wnf = await wb.locator("[data-fee-no-filing]").evaluateAll((els) => els.map((e) => [e.getAttribute("data-fee-no-filing"), (e.textContent ?? "").replace(/\s+/g, " ").trim()]));
+  ok("B151 pass (review M1, real data): with the fees not worked out, each person with no filing is named once with the server's why (the partner not applying)", wv.not_filing.length > 0 && wnf.length === wv.not_filing.length && wv.not_filing.every((x) => wnf.filter(([s, t]) => s === x.subject && t === `${x.label}: no fee. ${x.why}`).length === 1), { wnf, server: wv.not_filing });
+  ok("B151 fail (review M1): no amount in that block either", !/CAD/.test(await text(wb)));
+  await state("unpriced-wp-lmia-partner");
+}
+// Review m: a person declared only on two filings is named once (the real view, served with the child on both filings).
+if (fs && v && v.filings.length > 1) {
+  const kid = declared[0];
+  await p.route(`**/api/runtime/cases/${fs.id}/prepare*`, async (rt) => { const real = (await (await rt.fetch()).json()) as View; rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...real, filings: real.filings.map((x) => x.applicants.some((a) => a.subject === kid.subject) ? x : { ...x, applicants: [...x.applicants, kid] }) }) }); });
+  await open(fs.id);
+  ok("B151 pass (review m): a person declared only on two filings is named once", (await p.locator(`[data-fee-declared="${kid.subject}"]`).count()) === 1);
+  await p.unroute(`**/api/runtime/cases/${fs.id}/prepare*`);
+}
+
 // A Visitor visa case: no "declared only" line where nobody is declared only (the priced branch is B5's, unchanged).
 const vv = needVisitorVisa(), f = await firms();
 const c = await openCase(vv, [{ role: "principal", name: "Sample Client T", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse T", dob: yearsAgo(38) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });

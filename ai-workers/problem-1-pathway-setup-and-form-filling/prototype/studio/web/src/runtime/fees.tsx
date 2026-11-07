@@ -75,7 +75,7 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
     <div className="mt-3" data-fees={group.id} data-fees-worked-out="false">
       <h4 id={h} className="text-[13px] font-semibold">Fees</h4>
       <p className="mt-1 text-[13px] text-text-muted [overflow-wrap:anywhere]">{view.fees_why ?? "The fees are not worked out for this case."}</p>
-      <NoFee notFiling={view.not_filing ?? []} declared={view.filings.flatMap((f) => f.applicants.filter((a) => a.mode === "declared_only"))} />
+      <NoFee notFiling={view.not_filing ?? []} declared={view.filings.flatMap((f) => f.applicants.filter((a) => a.mode === "declared_only")).filter((a, i, all) => all.findIndex((x) => x.subject === a.subject) === i)} />
     </div>
   );
   if (!view.fees) return null;
