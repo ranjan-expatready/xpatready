@@ -74,6 +74,18 @@ const route = async (method, p, actor, body) => {
     const p = await route("GET", `/runtime/cases/${caseId}/prepare`, "user-O");
     const i5476 = (p.body?.items ?? []).find((i) => i.form === "IMM 5476");
     ok("B107 walk: the IMM 5476 item still names the representative of record", i5476?.representative === "user-R", i5476?.representative);
+    // To review (as the Approver): what the second person read for a gate and for "filled by hand" (review M1: plain words, the source).
+    const changes = (await route("GET", "/library/changes?status=RELEASED", "user-A")).body ?? [];
+    for (const [action, name] of [["SET_FORM_FIELD_GATE", "gate"], ["SET_FORM_FIELD_BY_HAND", "by-hand"]]) {
+      const ch = changes.find((x) => x.action === action && (action !== "SET_FORM_FIELD_GATE" || /ICCRCMember/.test(x.key)));
+      await r.evaluate(() => localStorage.setItem("xr-actor", "user-B")); // the approver, the second person
+      await r.goto(`${BASE}/review/change/${ch?.id}`);
+      const card = r.locator("[data-change-form-field]");
+      await card.waitFor(T);
+      const t = (await r.locator("main").innerText()).replace(/\s+/g, " ");
+      ok(`B107 walk (review M1): the ${name} change reads in plain words, with its source, and no action code`, !/SET_FORM_FIELD|filled only when filled|Filled only when filled/i.test(t) && /Source/.test(t) && (name === "gate" ? /Filled only when the representative is/.test(t) : /Filled by hand/.test(t)), t.slice(0, 500));
+      await shot(`review-${name}-change`);
+    }
     ok("B107 walk: no page errors", errors.length === 0, errors);
   } catch (e) {
     ok("B107 walk: ran to the end", false, String(e.message ?? e).slice(0, 400));

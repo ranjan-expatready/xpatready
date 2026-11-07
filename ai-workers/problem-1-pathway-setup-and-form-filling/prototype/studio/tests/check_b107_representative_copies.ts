@@ -2,7 +2,7 @@
 // configured checkpoint, read field by field from the PDFs the case makes (the XFA data the filler wrote, read with the
 // proven E5 reader, p1/e5_roundtrip.py). The gates and "filled by hand" come from the forms' own words
 // (samples/form-field-gates.json), proposed by the author and approved by a second person when the checkpoint loads
-// (api/src/features/checkpoint/085-form-field-gates.ts). Each rule with a passing and a failing case. Sample data
+// (api/src/features/checkpoint/045-form-field-gates.ts). Each rule with a passing and a failing case. Sample data
 // (samples/firms.json), US$0, no model call.
 //   zsh studio/tools/isolated.sh fb107 4450 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
 //   tsx studio/tests/check_b107_representative_copies.ts 4450 xr_studio_fb107
@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answer, call, CLIENT, copyBytes, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { answer, APPROVER, AUTHOR, call, CLIENT, copyBytes, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
@@ -105,4 +105,33 @@ await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — c
   ok("B107-C17 pass: the gates and filled by hand were each approved by a second person and released (To review › form fields)", /SET_FORM_FIELD_BY_HAND:RELEASED:\d+/.test(changes) && /SET_FORM_FIELD_GATE:RELEASED:13/.test(changes) && !/WAITING|RETURNED/.test(changes), changes);
   const proposer = sql(`select string_agg(distinct proposed_by || '>' || coalesce(decided_by, '?'), ',') from library_change where kind = 'form_field_condition' and action in ('SET_FORM_FIELD_GATE', 'SET_FORM_FIELD_BY_HAND')`);
   ok("B107-C18 fail: nobody approved their own proposal", !!proposer && proposer.split(",").every((x) => { const [a, b] = x.split(">"); return a !== b && b !== "?"; }), proposer);
+
+  // ---- What the second person reads (review M1): plain words, never the action's code, and the decision as it is.
+  const listed = ((await call("GET", "/library/changes?status=RELEASED", undefined, AUTHOR)).body ?? []) as { action: string; action_word: string; form_field?: { sentence: string; words: string; decided?: { kind: string; cite: string } | null } }[];
+  const ours = listed.filter((x) => x.action === "SET_FORM_FIELD_GATE" || x.action === "SET_FORM_FIELD_BY_HAND");
+  ok("B107-C19 fail (review M1): no change names its action by a code, and each says gate or by hand with its source", ours.length === 26 && ours.every((x) => !/^[A-Z_]+$/.test(x.action_word) && !!x.form_field?.decided?.cite && x.form_field.decided.kind === (x.action === "SET_FORM_FIELD_GATE" ? "gate" : "by_hand")), ours.slice(0, 2).map((x) => [x.action_word, x.form_field?.decided]));
+  ok("B107-C20 fail (review M1): a gate's sentence is the rest of \"Filled only when …\", never \"filled only when filled …\"", ours.every((x) => !/^filled\b/i.test(x.form_field?.sentence ?? "")), ours.map((x) => x.form_field?.sentence).filter((t) => /^filled\b/i.test(t ?? "")).slice(0, 2));
+  ok("B107-C21 fail (review m7): no source shows an escaped quote", ours.every((x) => !(x.form_field?.decided?.cite ?? "").includes("\\")));
+
+  // ---- The door at approval (review m1), through the real approve route: a WAITING gate change shaped as the door writes it.
+  const BOX = `${Q6}questionII[0].ICCRCMember[0]`, ed = sql(`select id from form_edition where edition_label = 'IMM 5476 (11-2021)' and channel <> 'ONLINE' limit 1`);
+  const row = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' order by version desc limit 1`);
+  const ws = sql(`select workspace_id from form_edition where id = '${ed}'`);
+  const changeId = sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, matches, meaning_checked, status, proposed_by, proposed_at, version, applied_by)
+    select gen_random_uuid(), '${ws}', 'form_field_condition', '${ed}:${BOX}', 'IMM 5476 · B107 check gate', 'SET_FORM_FIELD_GATE', 'B107 check, Sample',
+      jsonb_build_object('formEditionId', '${ed}', 'dataPath', '${BOX}', 'form', 'IMM 5476', 'edition', 'IMM 5476 (11-2021)', 'caption', coalesce(m.caption, ''), 'words', 'B107 check words', 'sentence', 'B107 check words', 'cite', 'IMM 5476 (11-2021) p. 1, B107 check source',
+        'before', jsonb_build_object('outcome', m.outcome, 'fact', m.canonical_field_key, 'person', m.person, 'transform', m.transform, 'rule', m.condition_rule),
+        'after', jsonb_build_object('gate', m.condition_rule->'gate', 'words', 'B107 check words', 'cite', 'IMM 5476 (11-2021) p. 1, B107 check source'), 'byHand', false, 'reason', 'x', 'replaces', '[]'::jsonb),
+      false, 'WAITING', '${AUTHOR}', now(), 1, '${AUTHOR}' from form_field_map m where m.id = '${row}' returning id`)?.split("\n")[0] ?? null;
+  const approve = (actor: string) => call("POST", `/library/changes/${changeId}/approve`, { note: "B107 check (Sample)" }, actor);
+  const self = await approve(AUTHOR);
+  ok("B107-C22 fail: the author cannot approve their own gate change", !!changeId && self.status === 403, [self.status, self.body?.detail ?? self.body?.message]);
+  const was = sql(`select transform from form_field_map where id = '${row}'`);
+  sql(`update form_field_map set transform = 'as_is (max 20 chars)' where id = '${row}'`);
+  const stale = await approve(APPROVER);
+  sql(`update form_field_map set transform = ${was === null || was === "" ? "null" : `'${was.replace(/'/g, "''")}'`} where id = '${row}'`);
+  ok("B107-C23 fail: a form field changed since the proposal is refused at approval, nothing applied (409 \"Changed since\")", stale.status === 409 && /changed after this was proposed/i.test(JSON.stringify(stale.body ?? {})), [stale.status, stale.body?.detail]);
+  const good = await approve(APPROVER);
+  const drafted = sql(`select updated_by || ':' || (condition_rule->>'words') from form_field_map where form_edition_id = '${ed}' and data_path = '${BOX}' and status = 'DRAFT'`);
+  ok("B107-C24 pass: unchanged, a second person's approval writes a draft of the form field holding the gate, by the proposer", good.status < 300 && drafted === `${AUTHOR}:B107 check words`, [good.status, good.body?.detail, drafted]);
 });

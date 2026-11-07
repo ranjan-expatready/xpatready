@@ -59,7 +59,7 @@ export function gatesInForce(s: Snapshot, form: string, edition: string | null |
 export const gateFields = (tree: unknown) => [...new Set([...JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))];
 
 /** Why a proposal cannot be made, in words (empty: it can). Pure, so the cited data is checked before anything is written
- *  (api/src/features/checkpoint/085-form-field-gates.ts) and by tests/check_b107_form_field_gates.ts. */
+ *  (api/src/features/checkpoint/045-form-field-gates.ts) and by tests/check_b107_form_field_gates.ts. */
 export function gateProblems(p: { words?: unknown; cite?: unknown; gate?: unknown; byHand?: boolean }, known: (fact: string) => boolean): string[] {
   const out: string[] = [];
   if (typeof p.words !== "string" || p.words.trim().length < 8) out.push("the form's own words are missing (at least 8 characters)");

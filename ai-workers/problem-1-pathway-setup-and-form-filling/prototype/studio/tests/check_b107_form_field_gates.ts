@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { evaluate, type PredicateNode } from "../../contracts/rules.ts";
 import { boxGate, gateProblems, rulesInForce } from "../engine/form-field-condition.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import { runTransform } from "../../p5/transforms.ts";
 
 let failed = 0;
 const ok = (label: string, cond: boolean, detail: unknown = "") => { if (!cond) failed++; console.log(`${cond ? "PASS" : "FAIL"}  ${label}${cond ? "" : ` — ${JSON.stringify(detail).slice(0, 400)}`}`); };
@@ -59,6 +60,14 @@ ok("B107-19 pass: every membership box of question 6 has a gate (4), each cited 
 ok("B107-20 pass: every entry of the data passes the guard (words, a source, a runnable gate)", data.editions.every((e) => [...(e.gates ?? []), ...(e.byHand ?? []).map((b) => ({ ...b, byHand: true }))].every((x) => gateProblems(x, () => true).length === 0)));
 // QA-296: IMM 5475's designated individual is written by hand, from IRCC's own words.
 ok("B107-21 pass (QA-296): IMM 5475's part 5 is filled by hand, quoting IRCC (\"someone who will not act as your representative\")", i5475.byHand?.[0]?.under === "IMM_5475[0].Page1[0].Five[0]." && /someone who will not act as your representative/.test(i5475.byHand[0].cite));
+
+// ---- The filler runs the 11-2021 map's own steps for question 7 (review m2): a length check and digits only.
+const run = (t: string, v: unknown) => runTransform(t, v, {}) as { ok: boolean; value?: unknown; hand?: boolean; reason?: string };
+ok("B107-22 pass: \"as_is; max 30 characters\" writes a value of 30 characters or fewer as it is", run("as_is; max 30 characters", "Toronto").value === "Toronto");
+ok("B107-23 fail: a longer value is written by hand, never cut", run("as_is; max 10 characters", "Example Street 12345").hand === true && /never truncated/.test(run("as_is; max 10 characters", "Example Street 12345").reason ?? ""));
+ok("B107-24 pass: \"digits_only\" writes the digits (\"+1\" → \"1\")", run("digits_only", "+1").value === "1" && run("digits_only", "1").value === "1");
+ok("B107-25 fail: a value with no digits is written by hand", run("digits_only", "abc").hand === true);
+ok("B107-26 pass: a step that ran before still runs the same (as_is with its own max, a date)", run("as_is (max 5 chars)", "abcdef").hand === true && run("date:YYYY-MM-DD", "1990-04-12").value === "1990-04-12");
 
 console.log(failed ? `\n${failed} failed` : "\nall passed");
 process.exit(failed ? 1 : 0);

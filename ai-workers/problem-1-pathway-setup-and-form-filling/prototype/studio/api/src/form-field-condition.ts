@@ -59,9 +59,11 @@ export async function spreadOf(db: Client, workspaceId: string, fact: string, tr
 
 /** What the second person compares on To review. */
 export function formFieldView(c: Pick<LibraryChange, "matches" | "reason"> & { action?: string }) {
-  const m = (c.matches ?? {}) as { form?: string; edition?: string; caption?: string; words?: string; sentence?: string; clear?: boolean; spread?: string | null; printed?: string; deciding?: string; writes?: string };
+  const m = (c.matches ?? {}) as { form?: string; edition?: string; caption?: string; words?: string; sentence?: string; clear?: boolean; spread?: string | null; printed?: string; deciding?: string; writes?: string; byHand?: boolean; cite?: string };
   const ask = (c as { action?: string }).action === ASK_ACTION ? { printed: m.printed ?? "", deciding: m.deciding ?? "", writes: m.writes ?? "" } : null; // B88
-  return { form: m.form ?? "", edition: m.edition ?? "", caption: m.caption ?? "", words: m.words ?? "", sentence: m.sentence ?? "", clear: !!m.clear, spread: m.spread ?? null, reason: c.reason ?? "", ask };
+  // B107 (review M1): a gate or "filled by hand" (api/src/form-field-gates.ts) says which, with its source.
+  const decided = c.action === "SET_FORM_FIELD_GATE" || c.action === "SET_FORM_FIELD_BY_HAND" ? { kind: c.action === "SET_FORM_FIELD_GATE" ? "gate" as const : "by_hand" as const, cite: m.cite ?? "" } : null;
+  return { form: m.form ?? "", edition: m.edition ?? "", caption: m.caption ?? "", words: m.words ?? "", sentence: m.sentence ?? "", clear: !!m.clear, spread: m.spread ?? null, reason: c.reason ?? "", ask, decided };
 }
 
 /** BR-7 (found by B88): only one WAITING or APPROVED change per form field may exist (index library_change_one_open), so a

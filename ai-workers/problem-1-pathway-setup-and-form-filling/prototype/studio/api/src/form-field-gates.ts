@@ -5,7 +5,7 @@
 // case does not hold). The same door as B86 (api/src/form-field-condition.ts): an author proposes one library change per
 // form field, a second person approves it on To review, and only then the form field gets a draft version (checked again
 // first); the next release carries it. No route: the configured checkpoint proposes them from cited data
-// (samples/form-field-gates.json, P-319; api/src/features/checkpoint/combination/410-form-field-gates.ts). Every gate and
+// (samples/form-field-gates.json, P-319; api/src/features/checkpoint/045-form-field-gates.ts). Every gate and
 // every decision is Sample, Unconfirmed: expert (AGENTS rule 4).
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { Prisma, type LibraryChange } from "@prisma/client";
@@ -61,8 +61,9 @@ export class FormFieldGates implements OnModuleInit {
     const after: BoxGate | null = p.gate ? { gate: p.gate, words: p.words.trim(), cite: p.cite.trim() } : null;
     if (after && canonical(cur.conditionRule ?? null) === canonical(after)) throw problem(409, "Nothing changes", "This form field already holds this gate.");
     const field = cur.caption || p.dataPath, words = p.words.trim();
-    const sentence = after ? `filled only when ${words.replace(/[.\s]+$/, "")}` : `filled by hand: ${words.replace(/[.\s]+$/, "")}`;
-    const label = `${ed.form.formKey} · ${field}: ${sentence}`.slice(0, 300);
+    // The sentence is the rest of "Filled only when …" (as B86's), or why it is filled by hand; the label says which.
+    const sentence = words.replace(/[.\s]+$/, "");
+    const label = `${ed.form.formKey} · ${field}: ${after ? `filled only when ${sentence}` : `filled by hand (${sentence})`}`.slice(0, 300);
     const key = `${ed.id}:${p.dataPath}`;
     return this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `form_field_condition:${workspaceId}:${key}`);
@@ -90,7 +91,7 @@ export class FormFieldGates implements OnModuleInit {
   private async apply(actor: Actor, c: LibraryChange) {
     const m = c.matches as unknown as Matches, rows = await this.recheck(c);
     const changes = m.byHand
-      ? { outcome: "by_hand", canonicalFieldKey: null, person: null, transform: null, confidence: null, optionMap: Prisma.DbNull, conditionRule: Prisma.DbNull, origin: "HUMAN" as const, reason: `${m.sentence} (${m.cite})`.slice(0, 500) }
+      ? { outcome: "by_hand", canonicalFieldKey: null, person: null, transform: null, confidence: null, optionMap: Prisma.DbNull, conditionRule: Prisma.DbNull, origin: "HUMAN" as const, reason: `Filled by hand: ${m.sentence} (${m.cite})`.slice(0, 500) }
       : { conditionRule: m.after as unknown as Prisma.InputJsonValue };
     await revise(this.db.formFieldMap, rows, changes, c.proposedBy, strip);
     await this.audit.log(c.workspaceId, actor.id, "approved", "form field", m.form, `${actor.name} approved: ${c.label ?? c.key}. It goes out with the next release that carries ${m.edition}.`, undefined, c.combinationId ?? undefined);

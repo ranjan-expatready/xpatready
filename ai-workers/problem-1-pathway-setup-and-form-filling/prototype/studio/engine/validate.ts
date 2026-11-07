@@ -301,7 +301,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const ruleWords = (k: string, e: { caption?: string | null; fact: string; condition_rule?: unknown }, had: boolean) => {
     // B107: a gate says, in the form's own words, which box takes the answer.
     const gate = !had && e.condition_rule && typeof e.condition_rule === "object" && "gate" in e.condition_rule ? String((e.condition_rule as { words?: unknown }).words ?? "") : null;
-    return `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : gate ? `is filled only when ${gate.replace(/[.\s]+$/, "")}, as the form prints it` : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
+    return `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : gate ? `is filled only when ${gate.replace(/[.\s]+$/, "")} (the form's words, summarised)` : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
   };
   for (const [k, e] of b) {
     const was = a.get(k), rule = e.condition_rule ?? null, wasRule = was?.condition_rule ?? null;
