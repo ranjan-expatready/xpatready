@@ -2,7 +2,7 @@
 
 current_lead: local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023 Lead 29 · 7 Nov 12:35 IST (new account after the switch, P-398)
 
-updated: 2026-11-07 14:17 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-401 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
+updated: 2026-11-07 14:30 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 13 M3 rows merged, 2 of 17 Works (C1.3, C11.5); 13 Partial; 2 Not built (C3.16 = A5 #1054, C10.2)** · rules: **`RULES.md`** + DECISIONS P-354 to P-402 · **this block's plan: `design/next-12-hours-2026-11-07.md`** · earlier page: `history/STATE-2026-11-07-1153-lead26.md` · this branch: `lead/2026-11-07-lead29`
 
 ## Account switch (P-394, P-396, P-397, P-398): done 12:35-13:11 IST
 * **Weekly 0% at 12:35 IST** on the new account (Ultra; resets 13 Nov 04:29 IST; extra usage off). Context 12%.
@@ -22,7 +22,7 @@ updated: 2026-11-07 14:17 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
-**Permission check (7 Nov):** the auto-mode classifier refuses a Lead label or a workflow dispatch until the founder names it in a typed turn or a question's answer. Never route a refused write through a lane, and never split a refused command to retry it (12:39 IST: refused as a bypass).
+**Standing OK (P-402, 14:30 IST):** the Lead labels approved green PRs and dispatches re-tests on main without naming each. **Still refused:** the Lead's Approve and label on its own records PR (Self-Approval): the founder names it ("label <n>"). **Permission check (7 Nov):** never route a refused write through a lane. Never route a refused write through a lane, and never split a refused command to retry it (12:39 IST: refused as a bypass).
 **Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 30).
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
 **To-do, in order:**
@@ -48,7 +48,9 @@ updated: 2026-11-07 14:17 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 | C3 (cloud) | #1225 | channel decides for filing → C4 pack moves → C10 |
 | B3 (cloud) | #1221 | sign and scan by screens, QA-251 |
 | A6 B102 (cloud) | #1222; concept approved 14:17 IST | calculated age, C6.4, QA-226 |
-| B127 QA-296 (cloud) | #1224 | representative's names on IMM 5475 |
+| B127 QA-296 (cloud) | #1224 |
+| B107 (cloud) | task_fb1531a2, started ~14:28 IST | QA-296, QA-299, QA-300: C6.11's path |
+| Lead 32 (Mac) | `local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3` | standby | representative's names on IMM 5475 |
 | Canary (cloud) | task_acca4ca2 | pushed; ends by itself |
 | qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
 | Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | standby + watchdog |
@@ -57,7 +59,7 @@ updated: 2026-11-07 14:17 IST by **Lead 29** · milestone: **M2 60/60 holds; M3 
 **Held, wait for the founder's OK (P-394, founder's resume note 7 Nov):** A5 (#1054), B5, C2 (#1075), the kind-job write-token fix, the b78 hang row. Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
 
 ## Leads, in order (highest = current)
-**Lead 29** `local_ef20bc85-…` (from 12:35 IST 7 Nov) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 30 (watchdog), Lead 31.
+**Lead 29** `local_ef20bc85-…` (from 12:35 IST 7 Nov) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 30 (watchdog), Lead 31, Lead 32.
 
 ## Lessons (7 Nov, Leads 25-29)
 * A run said "checkpoint" but gate B used fixtures: read the pack lines ("on the checkpoint" vs "fixture only"), not the input (fixed by B125).
