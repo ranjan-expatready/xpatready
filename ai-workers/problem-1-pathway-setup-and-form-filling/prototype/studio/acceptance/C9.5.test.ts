@@ -7,8 +7,11 @@
 // or the step FAILS, never skips (P-319: forms picked by state at run time, never a fixed number). AI off, US$0.
 // Runs on a FRESH isolated copy (the checkpoint loads its own configuration):
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C9.5.test.ts 4440 xr_studio_accept
-import { createHash } from "node:crypto";
-import { AUTHOR, CLIENT, OFFICER, call, firms, generateCopy, itemsOf, main, ok, openCase, prepare, readinessOf, readyToFile, sendFile, signByHand, sql, until, yearsAgo, inDays } from "./lib/m3.ts";
+import { spawn } from "node:child_process";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+import { openCasesByRelease } from "../api/src/where-used.ts";
+import { AUTHOR, CLIENT, DB, OFFICER, call, firms, generateCopy, itemsOf, main, ok, openCase, prepare, readinessOf, readyToFile, sendFile, signByHand, sql, until, yearsAgo, inDays } from "./lib/m3.ts";
 import { sampleRelease } from "./lib/sample-release.ts";
 
 type Line = { id: string; what: string; who: string; why: string; form?: string; subject?: string };
@@ -22,6 +25,11 @@ const move = (id: string, b: Record<string, unknown>, actor = OFFICER) => call("
 const words = (r: { body: { detail?: string } | null }) => String(r.body?.detail ?? "");
 const pins = (id: string) => n(`select count(*) from pack_work_pin where case_id='${id}'`);
 const has = (ls: Line[] | undefined, re: RegExp, who?: string) => (ls ?? []).some((l) => re.test(l.what) && (!who || l.who === who));
+/** SQL in its own session, not waited for (a lock held while the API is called); resolves with psql's exit code. */
+const sqlAsync = (q: string) => new Promise<number>((done) => { const ps = spawn("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atqc", q], { stdio: "ignore" }); ps.on("exit", (code) => done(code ?? 1)); ps.on("error", () => done(1)); });
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** A statement the database must refuse (its trigger or check): psql fails, so sql() answers null. */
+const refused = (q: string) => sql(q) === null;
 const pdf = (label: string) => Buffer.from(`%PDF-1.4\n% SYNTHETIC SPECIMEN: ${label} (Sample)\n%%EOF\n`, "latin1");
 
 await main("C9.5", "Adopt a published update on an open case (Visitor visa)", async () => {
@@ -93,6 +101,15 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   ok("C9.5-6 pass: the move writes pin revision 2 on release 2 with the reason; revision 1 is kept as it was; the case reads release 2",
     moved.status === 200 && moved.body?.revision === 2 && pins(fam) === 2 && sql(`select config_release_id from pack_work_pin where case_id='${fam}' and revision=1`) === r1 && r2 !== r1
     && sql(`select reason from pack_work_pin where case_id='${fam}' and revision=2`) === body.reason && caseNow?.pin?.revision === 2 && caseNow?.pin?.release_version === body.target_version && /^Moved to /.test(moved.body?.words ?? ""), { status: moved.status, words: moved.body?.words ?? words(moved) });
+  // Review F1 (round 1): the same request again, from the panel read before the move: the case is on the newest release
+  // now, and the answer is the conflict ("read the list again"), never "newest" over a stale list.
+  const staleAfter = await move(fam, body);
+  ok("C9.5-5b fail (review F1): a move sent from a list read before the case was moved answers 409 \"read the list again\" (stale), not \"newest\"; nothing changed", staleAfter.status === 409 && staleAfter.body?.code === "stale" && /read the list again/i.test(words(staleAfter)) && pins(fam) === 2, { code: staleAfter.body?.code, words: words(staleAfter) });
+  // Review m7 (round 1): where-used on the database: the moved case is counted once, on its newest release.
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: `postgresql://xr_studio@127.0.0.1:54329/${DB}` }) } as never);
+  const byRelease = await openCasesByRelease(prisma as never, [vv]).catch((err: Error) => [{ error: err.message }] as never[]);
+  const openVv = n(`select count(*) from runtime_case where combination_id='${vv}' and status='OPEN'`);
+  ok("C9.5-6 pass (where-used, challenge M1): on the database the moved case is counted once, on release 2, and no case is counted on release 1", JSON.stringify(byRelease) === JSON.stringify([{ combinationId: vv, release: body.target_version, cases: openVv }]), byRelease);
   p = (await prepare(fam)).p;
   const i5257 = itemsOf(p, P.subject_id, "IMM 5257")[0] as { channel?: string; release_note?: string } | undefined;
   const rdP = readinessOf(p, filingOfP);
@@ -129,8 +146,14 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   const xp = (await prepare(x.id)).p;
   const rec = await call("PATCH", `/runtime/groups/${xp?.groups[0]?.id}/record`, { filings: [{ filing: xp?.filings[0]?.id, our_reference: "SAMPLE-C95", submitted_on: inDays(0), application_number: "V300000095", fee_receipt: "SAMPLE-RECEIPT" }], ucis: [{ subject: x.subjects["Sample Client R"], uci: "9595-9595" }], version: xp?.version }, f.officer ?? OFFICER);
   ok("setup (stage 2): a second case on release 2, Ready to file and recorded as submitted (C8.2)", xReady.length === 1 && rec.status < 300 && n(`select count(*) from filing_record where case_id='${x.id}'`) === 1, { ready: xReady.length, record: rec.status, words: words(rec) });
-  const three = await sampleRelease(vv, { map: "IMM 5476", removeLine: "marriage_certificate_copy:couple_once", typeOf: { field: "organisation.name", to: "date" } });
-  ok("setup (stage 2): a later Sample release made through the author's routes: IMM 5476's form fields filled differently, the marriage certificate line removed, the organisation's name now a date", !!three.version, three.steps);
+  // Break B1 (round 1): a case on release 2, Ready to file, for the pass of the release warning; break m3: a case nobody
+  // prepared yet, for "the list writes nothing".
+  const y = await openCase(vv, [{ role: "principal", name: "Sample Client Y", dob: yearsAgo(36) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
+  const yReady = await readyToFile(y.id, f.rep);
+  const q = await openCase(vv, [{ role: "principal", name: "Sample Client Q", dob: yearsAgo(33) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
+  ok("setup (stage 2): a case on release 2 Ready to file (Y) and one never prepared (Q)", yReady.length === 1 && !!q.id, { yReady });
+  const three = await sampleRelease(vv, { map: ["IMM 5476", "IMM 5257 SCH1"], removeLine: "marriage_certificate_copy:couple_once", typeOf: { field: "organisation.name", to: "date" } });
+  ok("setup (stage 2): a later Sample release made through the author's routes: IMM 5476's and IMM 5257 SCH1's form fields filled differently, the marriage certificate line removed, the organisation's name now a date", !!three.version, three.steps);
   if (!three.version) return;
 
   // ---------------------------------------------------------------- C9.5-2 (to fill again), -8, -10, -11 on the later release
@@ -143,6 +166,22 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   ok("C9.5-8 pass (BR-8, challenge M6): only touched filings carry the release warning: the spouse's does, the young child's (no IMM 5476, no marriage certificate) does not; the spouse's review is listed as withdrawn, the child's is not",
     touchedIds.includes(fS) && !touchedIds.includes(fC1) && (readinessOf(rd, fS)?.warns ?? []).some((w) => w.code === "release_update") && !(readinessOf(rd, fC1)?.warns ?? []).some((w) => w.code === "release_update")
     && (e3?.withdrawn ?? []).some((l) => l.id === fS) && !(e3?.withdrawn ?? []).some((l) => l.id === fC1), { race: race.map((y) => y.status), touched: touchedIds, fS, fC1, withdrawn: e3?.withdrawn.map((l) => l.what), reviewed: [fS, fC1].map((fl) => !!(readinessOf(rd, fl) as { reviewed?: unknown } | null)?.reviewed) });
+  // Break B1 (round 1): the release warning is passed with a reason like any warning (P-237), and the filing is Ready to
+  // file again on its release ("later is normal").
+  let yp = (await prepare(y.id)).p;
+  const yf = yp?.filings[0]?.id ?? "", yWarn = readinessOf(yp, yf)?.warns.find((w) => w.code === "release_update");
+  const yPass = await call("POST", `/runtime/filings/${yf}/warnings/release_update/pass`, { reason: "Later: the client files this week on the current release (Sample)" }, f.officer ?? OFFICER);
+  const yOk = await call("POST", `/runtime/filings/${yf}/ready`, {}, f.officer ?? OFFICER);
+  yp = (await prepare(y.id)).p;
+  ok("C9.5-8b pass (break B1): the release warning on a touched filing is passed with a reason (stored, who and when), and the filing is Ready to file again on release 2",
+    !!yWarn && yPass.status < 300 && n(`select count(*) from readiness_pass where filing_id='${yf}' and code='release_update'`) === 1 && yOk.status === 200 && yp?.filings[0]?.status === "ready_to_file" && pins(y.id) === 1, { warn: yWarn?.words, pass: yPass.status, passWords: words(yPass), ready: yOk.status, readyWords: words(yOk) });
+  // Break m3 (round 1): the list on a case nobody prepared writes no filing, item or group.
+  const qRows = () => ["filing", "filing_item", "submission_group"].map((t) => n(`select count(*) from ${t} where case_id='${q.id}'`)).join(",");
+  const qBefore = qRows(), qList = await ru(q.id), qAfter = qRows();
+  ok("C9.5-1b pass (break m3): the list on a case Prepare never read writes no filing, item or group row", qList.status === 200 && !!(qList.body as View)?.target && qBefore === "0,0,0" && qAfter === qBefore, { qBefore, qAfter, status: qList.status });
+  // Break m2 (round 1): a recorded filing carries no release warning (it stays on its release; nothing to pass or move).
+  const xRead = readinessOf((await prepare(x.id)).p, (await prepare(x.id)).p?.filings[0]?.id);
+  ok("C9.5-10b pass (break m2): a filing recorded as submitted carries no release warning", !!xRead && !(xRead.warns ?? []).some((w) => w.code === "release_update"), xRead?.warns.map((w) => w.code));
   const xv = (await ru(x.id)).body as View, xPins = pins(x.id);
   const xr = await move(x.id, { target_version: three.version, from_revision: 1, reason: "Adopting the current release" });
   ok("C9.5-10 fail: a case with a filing recorded as submitted cannot move: 409 naming the person and the release it stays on; nothing changed", xv?.refused?.code === "recorded" && xr.status === 409 && /recorded as submitted/.test(words(xr)) && /Sample Client R/.test(words(xr)) && pins(x.id) === xPins && xPins === 1, words(xr));
@@ -175,5 +214,51 @@ await main("C9.5", "Adopt a published update on an open case (Visitor visa)", as
   ok("C9.5-12 fail: on the newest release there is nothing to move to: no target (no notice), and a move is refused 409; nothing changed", newest?.target === null && again.status === 409 && again.body?.code === "newest" && pins(fam) === 3, { target: newest?.target, status: again.status });
   const audit = (sql(`select summary from audit_event where action='moved_release' and entity_key='${fam}' order by at`) ?? "").split("\n").filter(Boolean);
   ok("C9.5-14 pass: each move is one audit line (who, from and to, with the pin revisions; \"reason given\", the reason itself kept on the pin)", audit.length === 2 && audit.every((a) => /moved case .* from Release \d+ \(pin revision \d\) to Release \d+ \(pin revision \d\)/.test(a) && !/Adopting the current release/.test(a)), audit);
+  ok("C9.5-14b pass (break m8): the move's audit line is written in the move's own transaction (the same transaction id as the pin)", n(`select count(*) from audit_event a join pack_work_pin w on w.case_id=a.entity_key::uuid where a.action='moved_release' and a.entity_key='${fam}' and w.revision > 1 and a.xmin::text = w.xmin::text`) === 2);
+
+  // ---------------------------------------------------------------- the database's own rules (break m4, m5)
+  const famPins = pins(fam);
+  const otherCombo = sql(`select r.combination_id || '|' || r.id || '|' || r.sha256 from config_release r where r.combination_id <> '${vv}' order by r.version limit 1`)?.split("|") ?? [];
+  const insertPin = (o: { combination?: string; release?: string; hash?: string; revision?: number; reason?: string; caseId?: string }) =>
+    `insert into pack_work_pin (id, workspace_id, case_id, combination_id, party_id, config_release_id, content_hash, revision, actor_id, reason) select gen_random_uuid(), workspace_id, case_id, ${o.combination ? `'${o.combination}'` : "combination_id"}, party_id, ${o.release ? `'${o.release}'` : "config_release_id"}, ${o.hash ? `'${o.hash}'` : "content_hash"}, ${o.revision ?? 2}, 'c95-pack', ${o.reason === undefined ? "null" : o.reason} from pack_work_pin where case_id='${o.caseId ?? q.id}' and revision=1`;
+  const r3id = sql(`select id from config_release where combination_id='${vv}' and version=${three.version}`) ?? "", r3sha = sql(`select sha256 from config_release where id='${r3id}'`) ?? "";
+  ok("C9.5 data (break m4): a case's pin is never deleted on its own (only with its case)", refused(`delete from pack_work_pin where case_id='${fam}' and revision=3`) && pins(fam) === famPins);
+  ok("C9.5 data (break m5): the database refuses a reason of white space only (tabs, new lines), a content hash that is not the release's, and a first pin of another combination on a case",
+    refused(insertPin({ release: r3id, hash: r3sha, reason: "E'\\t\\n\\t'" })) && refused(insertPin({ release: r3id, hash: "deadbeef", reason: "'Sample reason'" }))
+    && otherCombo.length === 3 && refused(`insert into pack_work_pin (id, workspace_id, case_id, combination_id, party_id, config_release_id, content_hash, revision, actor_id) select gen_random_uuid(), workspace_id, '${q.id}', '${otherCombo[0]}', party_id, '${otherCombo[1]}', '${otherCombo[2]}', 1, 'c95-pack' from pack_work_pin where case_id='${q.id}' limit 1`)
+    && pins(q.id) === 1 && !refused(`select 1`), { otherCombo });
+
+  // ---------------------------------------------------------------- races against a move: Fill (M2), record (m9), review (m10)
+  const w = await openCase(vv, [{ role: "principal", name: "Sample Client W", dob: yearsAgo(39) }], { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
+  const wReady = await readyToFile(w.id, f.rep);
+  const wp = (await prepare(w.id)).p, wVersion = wp?.version, wRd = readinessOf(wp, wp?.filings[0]?.id);
+  const four = await sampleRelease(vv, { map: "IRM 0002" }); // a release that does not touch W's filing (IRM 0002 does not apply to W)
+  const r4id = sql(`select id from config_release where combination_id='${vv}' and version=${four.version}`) ?? "", r4sha = sql(`select sha256 from config_release where id='${r4id}'`) ?? "";
+  const wForm = (wp?.items ?? []).find((i) => i.kind === "form" && i.channel === "PDF_UPLOAD" && i.subject === w.subjects["Sample Client W"])?.form ?? "";
+  ok("setup (races): a case on the later release Ready to file (W), and a release that does not touch its filing", wReady.length === 1 && !!four.version && !!wForm && !!wVersion, { wReady, four: four.steps, wForm });
+  // Review m5 (round 1): the move goes first (it holds the case's row lock and writes revision 2), Fill is pressed while
+  // it holds it: Fill must answer 409, never make a copy on the release the case left.
+  const wCopies = n(`select count(*) from form_instance where case_id='${w.id}'`);
+  const holder = sqlAsync(`begin; select id from runtime_case where id='${w.id}' for update; ${insertPin({ caseId: w.id, release: r4id, hash: r4sha, reason: "'Sample: moved by the pack, lock held'" })}; select pg_sleep(1.5); commit;`);
+  await wait(400);
+  const wFill = await call("POST", `/runtime/cases/${w.id}/forms/${encodeURIComponent(wForm)}/${w.subjects["Sample Client W"]}/generate`, { idempotencyKey: `c95m5${Date.now()}` }, f.officer ?? OFFICER);
+  const holderExit = await holder;
+  ok("C9.5-13b fail (review m5, challenge M2): with the move holding the case's lock, Fill answers 409 once the move commits; no copy is made on the release the case left",
+    holderExit === 0 && pins(w.id) === 2 && wFill.status === 409 && /moved to another release/i.test(words(wFill)) && n(`select count(*) from form_instance where case_id='${w.id}'`) === wCopies, { holderExit, fill: wFill.status, words: words(wFill) });
+  // Break m9 (round 1): recording from the view read before the move is refused under the case's lock (its version carries
+  // the pin revision), even though the move left the filing Ready to file.
+  const wRec = await call("PATCH", `/runtime/groups/${wp?.groups[0]?.id}/record`, { filings: [{ filing: wp?.filings[0]?.id, our_reference: "SAMPLE-C95-W", submitted_on: inDays(0), application_number: "V300000096", fee_receipt: "SAMPLE-RECEIPT" }], ucis: [{ subject: w.subjects["Sample Client W"], uci: "9696-9696" }], version: wVersion }, f.officer ?? OFFICER);
+  ok("C9.5-10c fail (break m9): a record sent from the view read before the move is refused 409 (reload), nothing recorded", wRec.status === 409 && n(`select count(*) from filing_record where case_id='${w.id}'`) === 0, { status: wRec.status, words: words(wRec) });
+  // Break m10 (round 1): a review sent from a screen read before the move is refused.
+  const wRev = await call("POST", `/runtime/filings/${wp?.filings[0]?.id}/review`, { note: "Reviewed (Sample)", facts_hash: wRd?.facts_hash, pin_revision: 1 }, f.rep ?? "");
+  ok("C9.5-8c fail (break m10): a review sent from a screen read before the move (pin revision 1) is refused 409, nothing recorded", wRev.status === 409 && /moved to another release/i.test(words(wRev)), { status: wRev.status, words: words(wRev) });
+  // Break m7 (round 1): a move that waits too long for the case's row lock answers a worded 503, never a 500; nothing changed.
+  const famNow = pins(fam), famTarget = (await view(fam))?.target?.version;
+  const hold = sqlAsync(`begin; select id from runtime_case where id='${fam}' for update; select pg_sleep(17); commit;`);
+  await wait(500);
+  const busy = await move(fam, { target_version: famTarget, from_revision: famNow, reason: "Adopting the current release" });
+  await hold;
+  ok("C9.5-6b fail (break m7): while another session holds the case for too long, the move answers 503 in words, nothing changed", busy.status === 503 && /being changed by someone else/.test(words(busy)) && pins(fam) === famNow, { status: busy.status, words: words(busy), target: famTarget });
+  await prisma.$disconnect();
   ok("C9.5 (US$0): no model call at any step", n("select count(*) from ai_batch where mode = 'LIVE'") <= 0 && n("select count(*) from drafting_job where mode = 'LIVE'") <= 0);
 });

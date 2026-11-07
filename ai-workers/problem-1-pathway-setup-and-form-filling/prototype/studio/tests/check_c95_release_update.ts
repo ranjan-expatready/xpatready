@@ -6,6 +6,7 @@ import { draftNote, effectsOf, moveRefusal, pinChain, releaseDiff, releaseOutOfD
 import { ReleaseMove } from "../contracts/runtime.ts";
 import { recorder } from "./runtime/api.ts";
 import { openCasesByRelease } from "../api/src/where-used.ts";
+import { waitingFactsKey } from "../api/src/readiness-inputs.ts";
 
 const { ok, summary } = recorder();
 const entry = (path: string, fact: string | null, extra: Record<string, unknown> = {}) => ({ data_path: path, fact, outcome: fact ? "mapped" : "not_a_fact", item_version: 1, status: "PUBLISHED", ...extra });
@@ -77,7 +78,7 @@ ok("C9.5 BR-6 pass: a copy made on an earlier release whose form changed is out 
   !!words && /because of the release/.test(words) && /Release 1/.test(words) && /Release 2 files IMM A as Online/.test(words) && !/changed from/.test(words), words);
 ok("C9.5 BR-6 fail: a copy of a form the release does not touch (or only adds) is not out of date because of it", releaseOutOfDate(undefined, { from: "Release 1", to: "Release 2" }, "copy") === null && releaseOutOfDate(d.forms.get("IMM E"), { from: "Release 1", to: "Release 2" }, "copy") === null);
 ok("C9.5 BR-6 pass (challenge B1): a draft made on the earlier release is marked to fill again or filed another way, and the officer presses Fill (the move fills nothing)",
-  /^To fill again: the draft copy was made on Release 1/.test(draftNote(d.forms.get("IMM C"), { from: "Release 1", to: "Release 2" }) ?? "") && /^Filed another way now: .*Online.*is not filed/.test(draftNote(d.forms.get("IMM A"), { from: "Release 1", to: "Release 2" }) ?? ""));
+  /^To fill again: the copy was made on Release 1/.test(draftNote(d.forms.get("IMM C"), { from: "Release 1", to: "Release 2" }) ?? "") && /^Filed another way now: .*Online.*is not filed/.test(draftNote(d.forms.get("IMM A"), { from: "Release 1", to: "Release 2" }) ?? ""));
 ok("C9.5 BR-6 fail: no mark on a draft of a form the release does not change, or one it removes (that is No longer required)", draftNote(undefined, { from: "Release 1", to: "Release 2" }) === null && draftNote(d.forms.get("IMM B"), { from: "Release 1", to: "Release 2" }) === null);
 
 const rf = (o: Partial<Parameters<typeof moveRefusal>[0]>) => moveRefusal({ recorded: [], running: [], mismatches: [], current: "Release 1", ...o });
@@ -109,5 +110,16 @@ ok("C9.5 BR-5 pass: the pre-filled reason is accepted with the revision and rele
 ok("C9.5 BR-5 fail: no reason, a blank or 2-character reason, a 501-character reason, or no revision read is refused",
   !ReleaseMove.safeParse({ target_version: 2, from_revision: 1 }).success && !ReleaseMove.safeParse({ target_version: 2, from_revision: 1, reason: "   " }).success && !ReleaseMove.safeParse({ target_version: 2, from_revision: 1, reason: "ok" }).success
   && !ReleaseMove.safeParse({ target_version: 2, from_revision: 1, reason: "x".repeat(501) }).success && !ReleaseMove.safeParse({ target_version: 2, reason: "Adopting the current release" }).success);
+
+// Break m1 (round 1): a copy of a form neither release asks of the person (an earlier move dropped it) is in no group.
+const gone = effectsOf(d, x, [{ id: "w9", kind: "copy", form: "IMM Z", label: "IMM Z draft", subject: "pA", finished: false }], [], touched, { to: "Release 2" });
+ok("C9.5 BR-4 fail (break m1): a copy of a form an earlier move already dropped is not listed again as no longer required, nor counted", !Object.values(gone).some((g) => Array.isArray(g) && g.length) && gone.unchanged.count === 0, gone);
+ok("C9.5 BR-4 pass (review m9): a draft to fill again, and one filed another way on a PDF line, have Fill as their next step; an Online one does not",
+  e.fill_again.every((l) => l.fillable) && e.filed_another_way.filter((l) => l.form === "IMM A").every((l) => !l.fillable && /IRCC account/.test(l.why)));
+// Review m1 (round 1), build discovery D1: the order the answers are read in never changes the facts fingerprint.
+const miss = [{ fact: "person.name", about: "pA", reason: "not confirmed" }];
+const ans = [{ field: "person.name", subjectId: "pA", rowKey: null, value: "A" }, { field: "person.name", subjectId: "pB", rowKey: null, value: "B" }];
+ok("C9.5 D1 pass: the same answers read in another order give the same waiting-facts key", waitingFactsKey(miss, ans) === waitingFactsKey(miss, [...ans].reverse()));
+ok("C9.5 D1 fail: a changed answer gives another key", waitingFactsKey(miss, ans) !== waitingFactsKey(miss, [ans[0], { ...ans[1], value: "C" }]));
 
 process.exit(summary() ? 1 : 0);
