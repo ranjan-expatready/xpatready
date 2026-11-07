@@ -57,6 +57,13 @@ const STATUS_WORDS: Record<string, string> = { not_started: "not started", ready
 type View = Awaited<ReturnType<CasePrepare["view"]>>;
 type ViewFiling = View["filings"][number] & { label?: string };
 
+/** B152 (FQ-7): what a group is recorded with, from the prepare view the record read: its line totals, its total, the
+ *  fee lines of its filings, whether fees were worked out, and when. Read back by api/src/case-prepare.ts. */
+export function recordedFeesOf(view: { groups: { id: string; totals?: unknown[]; total_cents?: number | null }[]; fees?: { filing: string }[]; fees_worked_out?: boolean; fees_why?: string | null }, groupId: string, filings: string[]) {
+  const group = view.groups.find((x) => x.id === groupId);
+  return { at: new Date().toISOString(), totals: group?.totals ?? [], total_cents: group?.total_cents ?? null, fees: (view.fees ?? []).filter((f) => filings.includes(f.filing)), fees_worked_out: view.fees_worked_out ?? true, fees_why: view.fees_why ?? null };
+}
+
 @Injectable()
 export class Submission {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(CasePrepare) private readonly prepare: CasePrepare) {}
@@ -130,6 +137,8 @@ export class Submission {
         await tx.filingRecord.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: l.filing, submissionGroupId: g!.id, portal, ourReference: l.our_reference, submittedOn: new Date(`${l.submitted_on}T00:00:00Z`),
           applicationNumber: l.application_number, feeReceipt: l.fee_receipt, preparedBy: who.preparedBy, reviewedBy: who.reviewedBy, recordedBy: actor.id, filedFacts: formsOf(l.filing) as object } });
       }
+      // B152 (FQ-7): the group's fees as this view showed them, frozen with the record; /prepare reads them back.
+      await tx.submissionGroup.update({ where: { id: g!.id }, data: { recordedFees: recordedFeesOf(view, g!.id, want) as object } });
       if (b.ucis.length) await tx.filingPersonRecord.createMany({ data: b.ucis.map((u) => ({ workspaceId: c.workspaceId, filingId: filingOfSubject.get(u.subject)!, subjectId: u.subject, uci: u.uci, recordedBy: actor.id })) });
       // AG-7-95 safety: no application number or UCI in the summary; the detail says which filings.
       await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, "recorded", "submission group", g!.id,
