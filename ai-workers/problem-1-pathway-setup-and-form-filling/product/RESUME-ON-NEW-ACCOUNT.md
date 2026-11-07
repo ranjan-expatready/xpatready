@@ -49,7 +49,7 @@ Every Claude session, Mac and cloud. **Assume none carries over**; a session tha
 2. In the Code tab open this folder (`Desktop/Xpatready` in the founder's home folder) and type `/lead`.
 
 ## The new Lead, in order
-0. **Start the watcher (P-354) as soon as the connection checklist passes,** in a turn the founder typed; its brief is P-354 (2) word for word.
+0. **No watcher:** the P-354 trial lapsed and was not restarted (P-370 (5)). Before starting a lane, read its PR's comments and check runs: on 7 Nov, A3's Approve line was already on the PR, so it needed a label, not a lane (P-398).
 1. **Connection checklist (P-326 (5)):** no "Connect GitHub" on claude.ai/code; `gh auth status`; Mergify sees the repo; Drive read works; the nightly ran. A cloud canary that cloned and pushed comes before any cloud lane is counted as running (20 of 20 cloud lanes died unseen on 4 Nov because this was missed).
 2. Read `RULES.md`, the newer `DECISIONS.md` rows, `STATE.md`, per the `lead` skill.
 3. Create the 30-minute check; start two standby Leads in the founder's typed turn (P-286).
