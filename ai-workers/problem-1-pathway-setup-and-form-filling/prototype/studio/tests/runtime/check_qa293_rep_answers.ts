@@ -6,7 +6,7 @@
 // saves. Each rule with a passing and a failing case, on the configured checkpoint. Sample data, US$0, no model call.
 //   zsh studio/tools/isolated.sh rt293 4441 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
 //   tsx studio/tests/runtime/check_qa293_rep_answers.ts 4441 xr_studio_rt293
-import { call, firms, needVisitorVisa, ok, openCase, sql, yearsAgo, main } from "../../acceptance/lib/m3.ts";
+import { call, CLIENT, firms, needVisitorVisa, ok, openCase, sql, yearsAgo, main } from "../../acceptance/lib/m3.ts";
 
 await main("QA-293", "The representative's tab — details from the firm record only", async () => {
   const f = await firms(), officer = f.officer!;
@@ -17,14 +17,25 @@ await main("QA-293", "The representative's tab — details from the firm record 
   ok("QA-293 setup: the representative's tab holds details the firm record does not give (the ones that offered Add)", missing.includes("person.address_city") && missing.includes("representative.licensing_province"), missing);
   ok("QA-293 pass: the firm record still gives the representative's membership ID", repQs.some((q: { fact: string; answer: { channel: string } | null }) => q.fact === "representative.membership_id" && q.answer?.channel === "firm_record"));
 
-  const rows = () => sql(`select count(*) from client_canonical_answer a join case_participant p on p.subject_id = a.subject_id where p.case_id = '${c.id}'`);
+  // Review m4: every answer row of the workspace (not only the case's people), so a row written anywhere would show.
+  const ws = sql(`select workspace_id from runtime_case where id = '${c.id}'`);
+  const rows = () => sql(`select (select count(*) from client_canonical_answer where workspace_id = '${ws}') + (select count(*) from client_fact_record where workspace_id = '${ws}') + (select count(*) from client_group_answer where workspace_id = '${ws}')`);
   const before = rows();
   for (const fact of ["person.address_city", "representative.licensing_province"]) {
     const r = await call("PUT", `/runtime/cases/${c.id}/answers/representative/${fact}`, { value: fact === "person.address_city" ? "Hamilton" : "ON", expectedId: null }, officer);
     const words = String(r.body?.detail ?? "");
     ok(`QA-293 fail: saving the representative's ${fact} is refused in words (422, the firm record), never 404 "not on this case"`, r.status === 422 && /firm record/.test(words) && !/not on this case/i.test(words), [r.status, words]);
   }
-  ok("QA-293 fail: the refused saves write no answer on the case", rows() === before, [before, rows()]);
+  // Review M1: the words are true for a detail the firm record does fill too (the membership ID), and promise nothing.
+  const filled = await call("PUT", `/runtime/cases/${c.id}/answers/representative/representative.membership_id`, { value: "R999999", expectedId: null }, officer);
+  ok("QA-293 fail (review M1): saving a detail the firm record fills (membership ID) is refused with the same true words, never \"not in the firm record\"", filled.status === 422 && /only from the firm record/.test(String(filled.body?.detail ?? "")) && !/not in the firm record|yet/i.test(String(filled.body?.detail ?? "")), [filled.status, filled.body?.detail]);
+  const byClient = await call("PUT", `/runtime/cases/${c.id}/answers/representative/person.address_city`, { value: "Hamilton", expectedId: null }, CLIENT);
+  ok("QA-293 fail (review m4): a client's save about the representative is refused too (403 or 422), never 404", (byClient.status === 422 || byClient.status === 403) && byClient.status !== 404, [byClient.status, byClient.body?.detail]);
+  // Review m3: the repeating-group routes answer in the same words, never "not on this case".
+  const addRow = await call("POST", `/runtime/cases/${c.id}/groups/representative/rows`, { group: "employment" }, officer);
+  const none = await call("PUT", `/runtime/cases/${c.id}/groups/representative/employment/none-apply`, { noneApply: true, expectedId: null }, officer);
+  ok("QA-293 fail (review m3): adding a row or \"none apply\" for the representative is refused in the same words (422)", addRow.status === 422 && none.status === 422 && /only from the firm record/.test(String(addRow.body?.detail ?? "")), [addRow.status, addRow.body?.detail, none.status]);
+  ok("QA-293 fail: the refused saves write no answer, row or group answer anywhere in the workspace", rows() === before, [before, rows()]);
 
   // A person's own answer still saves (the refusal is for the representative only).
   const own = await call("PUT", `/runtime/cases/${c.id}/answers/${c.subjects["Sample Client A"]}/person.address_city`, { value: "Hamilton", expectedId: null }, officer);

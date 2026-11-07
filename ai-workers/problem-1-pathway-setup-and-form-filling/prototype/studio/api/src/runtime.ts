@@ -42,11 +42,13 @@ const roleWords = (p: Pick<PeopleLine, "role" | "label">) => p.label ?? p.role.r
 /** B115 (P-319): who a person may add to a case: every role the pinned release lists with a maximum above 0, never the
  *  principal applicant or the application itself. One list for the case page's Add buttons and addPerson's check. */
 export const addableRoles = (s: Snapshot) => linesOf(s).filter((p) => p.role !== "principal" && p.role !== "case" && (p.max ?? 0) > 0);
+/** QA-293: why no detail of the representative is saved on a case: the firm record of the representative of record is
+ *  their only source (C7.7, C6.11), and IMM 5475's designated individual, read by some of these keys, is not the
+ *  representative (tech lead's ruling on #1072). True for a detail the firm record fills and for one it does not. */
+export const REPRESENTATIVE_NOT_TYPED = "The representative's details come only from the firm record of the representative of record, so they are not saved on a case.";
 /** B115 review M1 (C7.7): the case page's Add buttons. The representative is the case team's representative of record,
  *  read from the firm record (engine/runtime/team.ts: "A case has no representative participant"), so the screen never
  *  offers to add one as a person; every other role comes from the release (P-319). */
-/** QA-293: why a representative's detail cannot be added on a case (the firm record is its only source). */
-export const REPRESENTATIVE_NOT_TYPED = "The representative's details come only from the firm record of the representative of record, so they are not added on a case. This one is not in the firm record yet.";
 export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
@@ -374,6 +376,7 @@ export class Runtime {
   /** Who may write a repeating group of a person on this case: the group exists, belongs to that kind of subject, and
    *  the client writes it only when it holds a client field. */
   private groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string) {
+    if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY); // QA-293 review m3
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     const s = this.snapshotOf(c);
