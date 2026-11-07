@@ -11,15 +11,16 @@
 // file the visitor visa application Online on the case, inside what IRCC accepts (C11.6; VV-R02 "You must apply
 // online"), until release 2's channels land (DEMO.md row 9). The sheet's sections are then the form's own parts as the
 // release's configuration names them (order_basis "form_parts"), else the twin's (fixture). The 13 rules are unchanged.
+// Row C2 (M3 sprint plan): which form is the Online line, and which is the application filed Online when there is none,
+// come from row C1's expectedFor (the case's pinned release as configured and the pack's own people), never from
+// /prepare's answer; /prepare must then hold that very item.
 //   tsx studio/acceptance/C7.3.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CLIENT, OFFICER, call, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll } from "./lib/m3.ts";
+import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll } from "./lib/m3.ts";
 
 type Sheet = { order_basis: string; form?: string; sections: { key: string; title: string; entered: { at: string; by: string } | null; out_of_date?: boolean; answers: { label: string; fact: string; value: unknown; copy_text: string; source: string; subject?: string }[]; waiting?: { fact: string }[] }[] };
 const TWINS = JSON.parse(readFileSync(join(import.meta.dirname, "..", "contracts", "pdf-sections.json"), "utf8")) as Record<string, Record<string, string>>;
-/** The application form a visitor visa case files Online when its release has no Online line (VV-R02). */
-const APPLICATION = "IMM 5257";
 /** The form's own parts as the database held them when the case's release was released, in the order the form's own
  *  field list prints them (review M4 on #1075: read apart from the route, from the field list, not the field map's
  *  order): each part's title is the release's own title for its library key, else its proposal's name; `facts` is
@@ -45,9 +46,16 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }]);
   const P = c.subjects["Sample Client A"];
   let p = (await prepare(c.id)).p;
-  // The case's Online form line for the principal; none on the release: the officer files the application Online (C11.6).
-  let item = itemsOf(p, P).find((i) => (i as { channel?: string }).channel === "ONLINE");
-  if (!item) {
+  // Row C2: the principal's expected lines from the case's own release (row C1). An unreadable release stops the pack:
+  // it is not a C7.3 result, and no form number written here stands in for it.
+  const mine = (await expectedFor(c.id))?.["Sample Client A"];
+  if (!mine) { console.log("STOP  setup: the case's expected lines could not be read (expectedFor, row C1)"); process.exit(2); }
+  // The release's Online form line for the principal; none on the release: the officer files the application, the
+  // release's barcode form (VV-R04), Online on the case (C11.6; VV-R02).
+  const online = mine.forms.find((l) => l.online), APPLICATION = mine.forms.find((l) => l.barcode)?.form;
+  let item = online ? itemsOf(p, P, online.form)[0] : undefined;
+  if (!online) {
+    if (!APPLICATION) { console.log("STOP  setup: the release gives the principal neither an Online line nor an application form (expectedFor)"); process.exit(2); }
     const app = itemsOf(p, P, APPLICATION)[0];
     const moved = await call("PATCH", `/runtime/items/${app?.id}/channel`, { channel: "ONLINE", version: (p as { version?: string } | null)?.version }, OFFICER);
     // Challenge m9: the setup step is asserted, never only logged: a refused change stops the pack (not a C7.3 result).
@@ -56,10 +64,11 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
     p = (await prepare(c.id)).p;
     item = itemsOf(p, P, APPLICATION)[0];
   }
+  console.log(`      expected (row C1): the principal's Online form is ${online?.form ?? `${APPLICATION}, filed Online on the case`}`);
   const FORM = item?.form ?? "";
   const sheet = async (actor = OFFICER) => { const r = await call("GET", `/runtime/items/${item?.id}/answer-sheet`, undefined, actor); return { r, s: r.status === 200 ? r.body as Sheet : null }; };
   let { r, s } = await sheet();
-  ok("C7.3-1 pass: an Online form item has an answer sheet for the officer", r.status === 200 && item?.channel === "ONLINE", r.status);
+  ok("C7.3-1 pass: an Online form item has an answer sheet for the officer", r.status === 200 && item?.channel === "ONLINE" && item.form === (online?.form ?? APPLICATION), { status: r.status, form: item?.form, channel: item?.channel });
   ok("C7.3-2 fail: a client cannot read the answer sheet (403)", (await sheet(CLIENT)).r.status === 403);
   // Until W6: the form's own parts as the release held them, in the order the form's field list prints them (required
   // whenever the release holds parts for the form: review M4), else the twin's (the fixture).
