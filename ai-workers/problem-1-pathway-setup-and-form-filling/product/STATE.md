@@ -1,16 +1,17 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_f37a22d1-8132-4984-bf1a-8433da2ad65e Lead 30 · 7 Nov 14:47 IST (took over from Lead 29 at ~409k context, P-314)
+current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 15:35 IST by **Lead 30** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-406 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1525-lead30.md` · this branch: `lead/2026-11-07-lead30`
+updated: 2026-11-07 15:45 IST by **Lead 30, at the hand-over to Lead 31** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-406 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1545-lead30.md` · this branch: `lead/2026-11-07-lead30`
 
-## Hand-over to Lead 30 (14:47 IST): do first
-1-3. **Done** (#1221, #1225 answered; baseline counts in the plan; C8.2/C6.9 re-test 42360278263): word for word in `history/STATE-2026-11-07-1525-lead30.md`.
-4. **#1226 (qa records):** read, Approve line posted, **labelled 15:24 IST with no refusal: the auto-mode rule works for labels (P-405).** qa is on C6.9/C8.2 gate A and QA-228 on 9fd299219.
-8. **C6.9 and C8.2 Works (qa, #1238, head 6221a4f54, stacked on #1226):** run 42360278263 C6.9 20/20, C8.2 17/17 on the checkpoint; gate A PASS; QA-295 and QA-228 closed. Lead 30 posted the Approve line; **label when green.** M3 Works now 4 of 17 (C1.3, C11.5, C6.9, C8.2), on qa's merge. qa_c81w on :4470 stopped (Terminal tab c1).
-7. **Check 15:24 IST, answered on the PRs:** #1233 B5 concept approved, HELD lines for -22/-23 approved (self-releasing, P-284 guard), new row B133; #1225 C4: Paper for the barcode form (P-380 Q3), the Paper sign gap is row B132 for the B3 lane after B129, C7.6-4 may use a required date if P-47 holds; #1232: next row B134 (label guard on a schedule), the hard `.github/**` boundary goes to the founder (F6); label #1232 when green on 61841540f. C2 (#1075) waits for #1223 and #1225.
-5. **Watchdog:** Lead 30's watchdog deleted; Lead 32 messaged "start the watchdog" 14:50 IST. Lead 30's check: cron c0793609 (:13/:43). Lead 31 stays a spare. At the founder's next typed turn, start one more standby.
-6. **Report hourly** against `design/next-12-hours-2026-11-07.md` section 7. Trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. Weekly 5% at 14:46 IST.
+## Hand-over to Lead 31 (15:45 IST): do first
+**The founder is away until about 18:45 IST** (P-407): ask only if urgent; no call that can wait on a prompt (no writes under `.claude/`, no settings). He reads from his phone: report hourly in plain words against `design/next-12-hours-2026-11-07.md` §7, and say proactively what you need from him.
+1. **#1238 (qa: C6.9 and C8.2 Works)**: Lead 30 posted `Reviewer: Approve 6221a4f54…`; **label when its CI is green** (records, P-385; the founder's auto-mode rule allows it, P-405: #1226 labelled 15:24 IST with no refusal). Then M3 Works = 4 of 28 (P-406).
+2. **Drift audit (Lead 30's read-only subagent):** result file m3-screens-vs-boards (7 Nov) in the notes folder `~/Library/Application Support/Claude/side-session-notes/local_ef20bc85-3aec-48f2-8cb7-46a6f1a34023/`. Lead 30 forwards its summary when it lands. Post it on the UX lane's PR 1 and tell the founder in one line (verdict, and only real drifts).
+3. **New lanes (P-407), cloud; read their PRs each check:** UX lane task_f4b1c488 (study → scorecard in EXPERIENCE.md and the screen-concept/screen-review skills → each M3 screen revised; **you approve each UX revision on its PR**, P-316 (3)); concepts lane task_9975ca96 (B135 → B144 → B141; **you approve each concept**); build lane task_404185d0 (B140 → B137 → B142). Also C4 task_3a2d7beb (**you approve each pack's changed lines**, P-400) and B131 task_32589e77 (may merge ahead, P-214).
+4. **B3 #1221:** its lane takes B129 then B132 after its label (comment posted 15:43 IST). **C2 #1075** restarts only in a new session after #1223 and #1225 merge: at the founder's next typed turn.
+5. **Burn:** weekly 9% at 15:42 IST, about 4%/h, up to about 5%/h with the new lanes; trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. At about 4-5%/h the week's plan lasts about a day (resets 13 Nov 04:29 IST): tell the founder at his return, with options.
+6. **Standbys:** Lead 32 (watchdog, first standby), Lead 33 (spare). Two standbys, so no new one is needed until the next hand-over.
 
 ## Account switch (P-394 to P-398): done 12:35-13:11 IST
 Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly 0% at 12:35 IST on the new account (Ultra; resets 13 Nov 04:29 IST); curl with `gh auth token` for GitHub (P-363).
@@ -29,7 +30,7 @@ Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
 **Auto-mode rule (P-405, ~15:15 IST):** `~/.claude/settings.json` `autoMode` now allows the Lead's labels on Approve + green CI, its own records-only PR approval and label, and nightly.yml dispatch on main. First use is the test: on a refusal, ask the founder in one line as before and note it in DECISIONS. **Standing OK (P-402, 14:30 IST):** the Lead labels approved green PRs and dispatches re-tests on main without naming each. **Was refused before P-405:** the Lead's Approve and label on its own records PR (Self-Approval); try under P-405 first, then the founder names it ("label <n>"). **Permission check (7 Nov):** never route a refused write through a lane. Never route a refused write through a lane, and never split a refused command to retry it (12:39 IST: refused as a bypass).
-**Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 30).
+**Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 32).
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
 **To-do, in order:**
 1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`, cron 2be371d8).
@@ -39,10 +40,8 @@ Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly
 5. **Hourly report** against `design/next-12-hours-2026-11-07.md` section 7 (P-399); halfway review 20:00 IST, block review 02:00 IST.
 6. **Records:** #1229 labelled 14:32 IST (records queue). **Do not push to `lead/2026-11-07-lead29` while #1229 is queued** (a push drops the label); later commits go on a new lead branch after it merges.
 
-## Where we are (13:11 IST)
-* **M3 rows merged (13):** B120, B2 (night); A2 #1072, B1 #1073, A4 #1172, A1 #1084 (08:41-08:43); B117 #1148, B122 #1145, B121 #1149 (09:18-09:19); C1 #1180, B125 #1202 (10:31); QA-293 #1204 (11:34), A7 #1201 (11:42). Also merged: F6 #1188, records #1199, #1208 (11:51). A3 #1198 landed 13:49 IST (main 9dc77d1ac).
-* **qa (#1216, main 7bf128b33):** C6.11 Partial, ready for Works except P-339 (Mac C6.11 25/25, C8.1 14/14). Closed QA-152, QA-245, QA-283, QA-293. QA-289 narrowed to Minor. New: QA-296 Major (representative's names fill IMM 5475, holds C7.7), QA-297, QA-298 Minor.
-* **C8.2** waits for B126 (QA-295); **C6.9** waits for B124 (P-393). Spend today US$0.
+## Where we are (15:45 IST)
+* M3: 28 capabilities (P-406); Works 4 on qa's #1238 (C1.3, C11.5, C6.9, C8.2). Merged since 13:11 IST: A3 #1198, B124 #1197, B126 #1212, records #1229. Queued: C3 #1225, B127 #1224, qa #1226. Spend today US$0. The 13:11 IST page is word for word in `history/STATE-2026-11-07-1545-lead30.md`.
 
 ## In flight
 **qa's lane:** `local_0868d426-…`; #1226 (head c237fef9f, QA-235 closed, QA-153 rewritten) gets the P-401 wording, then the Lead reads and labels. QA-228's retest goes with C8.2 and C6.9. C6.9 and C8.2 go to it when they land.
@@ -63,13 +62,15 @@ Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly
 | Lead 32 (Mac) | `local_e0d03eb0-39dc-4371-abd7-d2a23216aaf3` | standby + watchdog (after Lead 30 messages it) | representative's names on IMM 5475 |
 | Canary (cloud) | task_acca4ca2 | pushed; ends by itself |
 | qa (Mac) | `local_0868d426-cf53-4883-b60b-59389b349a35`, started 13:13 IST | re-score C6.11, C8.1 on nightly 42352179701 |
-| Lead 30 (Mac) | `local_f37a22d1-8132-4984-bf1a-8433da2ad65e` | **current Lead** |
-| Lead 31 (Mac) | `local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e` | standby |
+| Lead 31 (Mac) | `local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e` | **current Lead** from 15:45 IST |
+| UX lane (cloud) | task_f4b1c488 (P-407) | study → scorecard → M3 screens |
+| New-rows concepts (cloud) | task_9975ca96 | B135 → B144 → B141 |
+| New-rows build (cloud) | task_404185d0 | B140 → B137 → B142 |
 
 **Released 14:34 IST (P-403), cloud lanes:** A5 #1054 (task_91f8e1f6), C2 #1075 (task_142d777f, after #1223 and #1225), B5 (task_909c403b), CI fixes kind token then b78 (task_11a034e6). Old, not on the critical path: #1074 C6.12, #1086, #945, #417, #1140, #671, #669.
 
 ## Leads, in order (highest = current)
-**Lead 30** `local_f37a22d1-…` (from 14:48 IST 7 Nov) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 31.
+**Lead 31** `local_f02fdadd-…` (from 15:45 IST 7 Nov) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 31.
 
 ## Lessons (7 Nov, Leads 25-29)
 * A run said "checkpoint" but gate B used fixtures: read the pack lines ("on the checkpoint" vs "fixture only"), not the input (fixed by B125).
