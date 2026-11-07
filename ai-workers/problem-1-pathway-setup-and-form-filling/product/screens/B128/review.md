@@ -67,3 +67,34 @@ Journeys walked:
 * `graph.mjs` was not run (it rewrites `qa/GRAPH.md`, and I may write only this file). The new route `PUT …/answers/:subject/:relation/:field` is exercised by B128-6.
 
 **Verdict: Block** — fix #1 (Major) with a failing test; fix Minors #2-#7 or list them in the PR.
+
+## Round 2 (diff only, `c0fcfae..f6ca02e`; last round under P-293 (3))
+**Copy:** `rv_b128` on :4455, fresh database, configured checkpoint (117 s); stopped after. US$0, Sample only.
+
+**Ran:** `check_b128_parents.ts` **23/23**; qa's `check_qa153_imm5645_parents.ts` **3/3**; my own probe on a family case (principal 40, spouse 38, child 19, child 10); a browser walk (officer at 1440, 1024 and 720; client at 400). axe clean on every state; no sideways scroll; no page errors; parent tab 75 ms.
+
+**Each finding:**
+* **Major 1, resolved.** `engine/runtime/relatives.ts` `parentWord`/`relativeLabel` name a parent from the box paths of the forms that apply to that person. `case.ts` puts that name on each parent question's `about_label`.
+  * Seen live: tabs, client regions and "Answering for" read "Sample Client R's mother" and "… father" (release 2: Mother → `parent_1`, Father → `parent_2`, as written to the PDF by B128-12).
+  * Readiness "about" says "'s mother" or "'s father" (B128-9).
+  * The words "parent 1" or "parent 2" appear nowhere in the case, forms or prepare responses.
+  * Boxes that name no parent fall back to "first/second parent" (B128-2d; r1c's fixture).
+  * The name comes from the release's own box paths, not a form number, so P-319 holds. Removing `labelOf` turns B128-4a red; the rule has a pass and a fail test (2c, 2d).
+* **m2, mostly resolved.** A fact no map reads about that parent is now 404, with nothing stored (B128-8a; `runtime.ts:105-106`). Still open (Minor, not a blocker): the check does not ask whether a form *applying to that person* reads the fact. In the probe, PUT `<child of 10>/parent_1/person.full_name` returned 200 "Saved.", and nothing shows it.
+* **m3:** the comment is corrected (lowest id). The database check is raised as a question for the tech lead (needs a migration). Accepted.
+* **m4, m5:** deferred in the PR with reasons (the screens lane's files; resolver R4's contract). Not hidden, so accepted as follow-ups. Seen live: the 19-year-old child is still asked "Sample Child R's mother/father" although both are on the case.
+* **m6, resolved.** A parent's answer waits "for the officer's "Confirm section" (a parent has no link of their own)" (B128-9a). This is presentation only; `confirmation()` and `knownOf()` are untouched (no B150 overlap). The overview adds ", and for the parents its forms ask about".
+* **m7, resolved.** `ASKED_RELATIONS` has one home (`contracts/runtime.ts:95`), and the confirm pattern is built from it.
+
+**New in this diff:** nothing blocking. Tests are not weakened: r1c and c44 tab locators moved from `(?!:)` to `(?!'s )`, and r1c still asserts the exact tab list. The release's section titles over a parent's questions ("Your parent 1 (mother or father)" on the father's tab, "Statutory declaration of common-law union" over a name) are configuration. They are a question in the PR, and now sit next to an unambiguous name ("… for Sample Client R's father").
+
+**Journey score, round 2: 9/10.** Plain words ½ (the configuration titles above). Correct data 1. Accessibility ½ (keyboard reach of the tab list still not shown). Everything else is as in round 1.
+
+**Open Minors for the PR's follow-up list:**
+* m2 remainder: a form that applies to the person (`runtime.ts:105`).
+* m3: database check.
+* m4: Preview, Questionnaires and counts.
+* m5: a child's parents who are on the case.
+* The configuration titles.
+
+Verdict: Approve
