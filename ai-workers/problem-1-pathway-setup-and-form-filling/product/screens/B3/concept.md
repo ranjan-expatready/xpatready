@@ -56,7 +56,7 @@ The next step carries the one primary button ("Printed: the copy of 7 Nov, 10:42
 **How it saves effort and prevents errors:** one row, no new page; the copy to print is picked for you (the newest generated, current one), never typed; a step out of order or on an out-of-date copy cannot be pressed, and says why; the size is checked the moment the file is chosen and its type by the server from the file's own bytes (the picker only filters); who and when are recorded, never typed. **Seen, not taken (no scope added):** a page-count check of the scan against the printed copy (DocuSign) and a signature-date age warning (IRCC's 90-day point, Unverified) are follow-up suggestions for the tech lead, not this row.
 
 ## 5. Copy
-* Done steps: "recorded by {name}, {when}"; Signed by hand: "Signed by {who signs} · recorded by …" (challenge m1). The scan's checksum behind a focusable "Checksum" (m6).
+* Done steps: "recorded by {name}, {when}" (challenge m1). A done "Signed by hand" names no signers: the record holds who recorded it, not who signed, and today's signers change with the case team (break M1 overturned "Signed by {who signs}"). The scan's checksum behind a focusable "Checksum" (m6).
 * Block heading: "Sign and scan". Hint: "Signed by hand and scanned: print the copy, have it signed, upload the scan. Each step is recorded with who and when."
 * Steps: the engine's words (`SIGN_STEP_WORDS`). Waiting: the engine's `stepRefusal` words. Out-of-date copy: "This copy is out of date: generate a new copy and print that one."
 * Upload field label: "Signed scan of {form} (PDF, JPEG or PNG, up to 20 MB)". Too large: "The file is larger than 20 MB. Nothing was stored."
@@ -86,3 +86,8 @@ Acceptance: `acceptance/C8.1.test.ts` (unchanged) + `tests/check_c81_sign_browse
 * **M2** accepted on the screen (BR-10, checked after recording the submission). The server line (`refuseIfRecorded` on `step` and `scan`) is the runtime lane's file: asked as a question for the tech lead, recommended as a one-line follow-up row. Founder Q1 of the challenge (tick after recording) kept, recommendation (a).
 * **M3** accepted: `engine/runtime/sign-order.ts` (moved unchanged, `signing.ts` re-exports; `check_c81_signing` 18/18). The browser check still compares the shown words with the 409 for the same step.
 * **m2** accepted except the fill trial: warned, not blocked (build discovery: the checkpoint's IMM 5476 has no fill trial, so a block stopped the walk). **m1, m4, m6, m7** accepted (copy, BR-4, BR-1, Checksum disclosure, FAMILY blocks). **m3, m8** are records for the tech lead (J-B3 / J7 5.7 wording "cannot be pressed; says why in the server's words"; QA-228 retest). **m5** Not built: a follow-up row (steps carry the printed copy's id).
+
+## Build discoveries (7 Nov)
+* The engine's order rule could not be imported by the browser (`signing.ts` reads `case.ts`, which loads files from disk): split into `sign-order.ts` (challenge M3).
+* The checkpoint's IMM 5476 has no fill trial recorded: Print is warned, not blocked (BR-4).
+* Break M1: a done "Signed by hand" no longer names signers. Break M2: before Signed by hand or the scan the screen re-reads the copies and refuses on an out-of-date printed copy; the server half (the steps carry the printed copy, `refuseIfRecorded`) is a runtime-lane follow-up.

@@ -64,3 +64,25 @@ A real screen reader. Real browser zoom (I used a 720 px viewport). Mac Chrome (
 Side effect: my copy's runs rewrote tracked evidence files (`prototype/p2/runs/stub-pass/*`, `p2/screening/canary-digest.json`, `studio/evidence/ai-orchestration/check_ai_orchestration.json`) and the committed B3 screenshots. I restored all of them with `git checkout`.
 
 **Verdict: Block** on `d7837f605`. To fix: Major 1 (a) and (b), then three green runs of `check_c81_sign_browser.ts`. The Minors can be fixed or listed in the PR.
+
+## Round 2 (diff only, P-293): `d7837f605..29f605b05`, 7 Nov ~15:30 IST
+Reviewed: `git diff d7837f605..29f605b05`. `b145f0e79` only puts the allow-list file back to main's version. Its two lines are the tech lead's to remove (asked on the PR), so `route-has-screen.mjs` exits 1 until then; this is not counted against the row. `29f605b05` adds only screenshots.
+**Runs (my copy `rev_b3` :4444, at `29f605b05`, stopped afterwards; the screenshots it rewrote were restored):** `check_c81_sign_browser.ts` three runs in a row: **57/57, 57/57, 57/57 (exit 0 each)**. `web` `tsc --noEmit` exit 0.
+* **Major 1 (a), closed.** `settle()` also waits until there is no `[data-sign-block] .animate-pulse`. `open()` waits for `[data-sign-block] [data-step]`. `[data-sign-again]` and `[data-sign-readonly]` are each waited for before they are asserted (`check:67,71-74,135,230`).
+* **Major 1 (b), closed.** All focus moves now go through one `focusTo` effect, which runs only once `busy` is false (`sign-steps.tsx:89-94`). That covers each step, each refusal, the browser's size and empty checks, and the server's file refusal. "Focus back on the upload button after the refusal" passed in all three runs.
+* **Breaker M1, closed.** The done "Signed by hand" line no longer names today's signers. It shows only who recorded it, which is all the record holds. The fail-guard is at `check:155`.
+* **Breaker M2, closed on the screen.** `printedCopyStale()` runs before "Signed by hand" and before the scan. It refetches the forms query (prefix `["runtime","view",caseId,"forms"]`, which matches `forms.tsx:27`'s key). On an out-of-date printed copy it refuses in words and sends nothing. Tested at `check:129-133` (nothing recorded), and the screen matches. `refetchOnWindowFocus` is set on the item read. The server half (STANDARDS §3.4, "checked twice") is the runtime lane's follow-up, together with breaker M3. Both are asked on the PR and are not this row's file.
+* **Minors 1, 2, 4, 5, 6, 7, closed.**
+  * 1: "The printed copy of IMM 5476 is out of date: a fact on it changed. Print a new copy and have that one signed." when there is no scan (seen in my run's B3-03).
+  * 2: the Download hint shows only when there is a current copy.
+  * 4: the client check waits for the page to render.
+  * 5: pass and fail for the fill-trial warning (`check:112,117-118`).
+  * 6: no raw id.
+  * 7: `sm:min-w-48`.
+  * Also: once recorded, the reason line is hidden (breaker m7).
+  * 3 and 8 are follow-ups listed in the PR.
+* **New, Minor (Should):** while the team or firm list is still loading, `nameOf` shows "a person no longer on the firm's list" (`:84`), which is wrong for that moment. Show nothing until the lists have loaded. Not gating.
+* **Not changed by this round:** the concept's §5 still says "Signed by {who signs} · recorded by …". Breaker M1 overturns that line, so it belongs in `concept.md`'s build discoveries (never deviate silently). This is a records step for the builder; it does not gate.
+**Scores changed:** D5 4 (reload, double click, stale tab and stale page all hold; the check is repeatable). D13 4 (the focus race is gone). D16 4 (pass and fail per BR; 3 of 3 green, run by someone other than the maker). Journey score 9.5/10: accessibility is now 1, plain words stay ½ (the loading-name Minor).
+
+**Verdict: Approve** on `29f605b054d65fff25990552fa2129f68438b969`. No open Blocker or Major in this row's code. The server-side halves (breaker M2 server, M3, refusals on a recorded application) are runtime-lane follow-ups on the PR.
