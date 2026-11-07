@@ -95,8 +95,10 @@ export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly"
   return n >= REASON_MIN ? null : n ? CASE_OFFICER_REASON_SHORT : CASE_OFFICER_NEEDS_REASON;
 }
 
-const AGENT_FROM = new Set(["staff_working_view", "existing_record"]);
-const isAgentFact = (fact: string) => fact.startsWith("representative.") || fact.startsWith("organisation.");
+/** Placements the case officer fills (the Agent view or an existing record); B154 reads them too. */
+export const AGENT_FROM = new Set(["staff_working_view", "existing_record"]);
+/** The case officer's or representative's own details (never the client's); B154 reads them too. */
+export const isAgentFact = (fact: string) => fact.startsWith("representative.") || fact.startsWith("organisation.");
 
 /** Every fact the combination's forms need, per person role, with where its answer comes from. The people are the
  *  combination's preview family (as the coverage gate uses), so a role the forms name is always present. */
