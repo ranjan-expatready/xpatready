@@ -4,23 +4,14 @@ current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 
 
 updated: 2026-11-07 16:19 IST by **Lead 31** (took over 15:45 IST); weekly 14% at 16:17 IST (~10%/h; 85% ~23:20 IST at this rate) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-411 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1619-lead31.md` · this branch: `lead/2026-11-07-lead30`
 
-## Lead 31 progress (15:55 IST)
-* Check cron **4b7708bc** (:13/:43, prompt exactly `run lead-watch; read STATE Start here`). Weekly **10% at 15:53 IST**; Lead 31 context 142k.
-* **#1238 labelled 15:46 IST** (Approve 6221a4f54, green). **#1221 (B3) labelled ~15:48 IST** (Approve 40319be52, green; P-402); its lane then takes B129, B132.
-* **#1222 (A6) answered 15:52 IST:** round 3 diff-only by the same reviewer after CI is green; two code-cause reds: `check_case_feed` ("worked-out value" on neither audit list) and `check_b83_undo_withdraw` (C4.11 M7 now refused on 3 problems; likely the PR's conditional-documents sample).
-* **#1054 (A5):** Approve 65069b4b6 (notes-only head), CI on 714f5d77a still queued; schema change (P-278): the Lead reads the diff before any label.
-* **Drift audit landed** (`reports/m3-screens-vs-boards-2026-11-07.md`): verdict **"Not yet"**. Real drifts: (1) C7.7's two-stage Prepare application tab (P-122) not built, the case is one stacked page; (2) C6.9 keeps "Eligibility / Likely" though P-236's words were released by P-316 (1), BACKLOG still says held; (3) C11.6 channel in its own panel, each form listed twice; (4) C7.6 "Nothing reaches IRCC unreviewed" beside a "Pass with a reason" button; (5) C8.2 fee receipt typed, not the IRCC page uploaded. Also: only C6.9 has a best-in-class study; B1, A2/QA-293, B124, B126 not on "For the founder" (P-392). **Ruled P-408 (~15:50 IST): rows B147 (the tab, UX lane first), B148 (C6.9 words), B149 (C7.6 words, C8.2 upload); F8 below.** Post the audit and B147 on the UX lane's PR 1 when it opens; give B148/B149 to the next free lane.
-* New lanes (UX, concepts, build): no push yet at 15:55 IST. C4 pushed `claude/zen-fermi-poiqv8` 15:34 IST, no PR yet.
-
-## Hand-over to Lead 31 (15:45 IST): do first
-**The founder is away until about 18:45 IST** (P-407): ask only if urgent; no call that can wait on a prompt (no writes under `.claude/`, no settings). He reads from his phone: report hourly in plain words against `design/next-12-hours-2026-11-07.md` §7, and say proactively what you need from him.
-1. **#1238**: labelled 15:46 IST (done).
-2. **Drift audit:** ruled P-408 (rows B147-B149); post on the UX lane's PR 2 (its PR 1 is #1245, records).
-3. **New lanes (P-407), cloud; read their PRs each check:** UX lane task_f4b1c488 (study → scorecard in EXPERIENCE.md and the screen-concept/screen-review skills → each M3 screen revised; **you approve each UX revision on its PR**, P-316 (3)); concepts lane task_9975ca96 (B135 → B144 → B141; **you approve each concept**); build lane task_404185d0 (B140 → B137 → B142). Also C4 task_3a2d7beb (**you approve each pack's changed lines**, P-400) and B131 task_32589e77 (may merge ahead, P-214).
-4. **B3 #1221:** its lane takes B129 then B132 after its label (comment posted 15:43 IST). **C2 #1075** restarts only in a new session after #1223 and #1225 merge: at the founder's next typed turn.
-5. **Burn:** weekly 9% at 15:42 IST, about 4%/h, up to about 5%/h with the new lanes; trip-wires (P-399, P-403): 3 of the next 10 batches fail, or weekly over 50% by 22:00 IST → back to 7 builders. At about 4-5%/h the week's plan lasts about a day (resets 13 Nov 04:29 IST): tell the founder at his return, with options.
-6. **#1240**: the founder named it (P-410, ~15:50 IST); Approve posted; label on green at the final head.
-7. **Standbys:** Lead 32 (watchdog, first standby), Lead 33 (spare). Two standbys, so no new one is needed until the next hand-over.
+## Lead 31 (from 15:45 IST): standing items
+Cron **4b7708bc** (:13/:43). Weekly 16% at 16:47 IST (~4%/h over the last 30 min). The hand-over block and 15:55 progress lines are word for word in `history/STATE-2026-11-07-1650-lead31.md`.
+* **Lanes to read each check (PR comments):** UX (task_f4b1c488: #1245 study, #1255 C6.9 revision approved; the Lead approves each revision, P-316 (3)); concepts 1 (B135 #1242, B144 #1247, B141 #1248); concepts 2 (B145 #1252, B138 #1257, B139); C4 (task_3a2d7beb, pack lines, P-400); B150 #1251; B128; B148 #1250 → B149; C2 #1075; B3 lane (B129 → B132 → B130); A5 #1054 → B136; B5 #1233 → B133 → B152 → B151.
+* **The build lane (B140) stopped at its label (#1246); B137 and B142 need a new runtime lane** at the founder's next typed turn (card offered).
+* **#1222 (A6):** round 3 after the two code-cause reds are fixed. **#1054 (A5):** schema; the Lead reads the diff before the label.
+* **#1240:** its CI failed on G2 "C6.17 cites P-13": `tools/graph.mjs` read only a row's first P-id; fixed to read every id in the first cell (graph exit 0). Label on green at the final head (P-410).
+* **Order (16:48 IST):** B148 #1250 before the UX C6.9 revision #1255; B140 #1246 before B150 #1251 (B150 adapts: staff background answers fill at once, signing waits, P-244 + P-411).
+* Standbys: Lead 32 (watchdog), Lead 33.
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`).
@@ -32,6 +23,8 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 | F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 15:50 | open (P-408) |
 | F9 | B144 (C8.3, #1247) conflicts with the team's AG-7-29: F1, a fact change after approval **withdraws** the form's approval (team: keeps it, flags it); F2, only the **representative of record** decides (team: any review-approve holder) | withdraw (row B6); representative of record (P-155 (1)); built that way, PR unlabelled until he answers | #1247's label | 7 Nov 16:09 | open |
 | F10 | B145 (C9.5, #1252): one release move per case now, refused once any filing is recorded; per-filing pins with SH4 (departs from P-316 (2), P-246 (2)) | per case now (one combination, one release, one questionnaire; SH4's contract not agreed); reversible | #1252's label | 7 Nov 16:18 | open |
+| F11 | For the immigration expert: are IMM 5257 Schedule 1's military service, government positions and organisation answers "background answers" (P-244: the client re-confirms staff entries before signing)? | not until the expert says so (AGENTS rule 4); behaviour as on main; row B154 if yes | nothing | 7 Nov 16:50 | open |
+| F12 | B138 (C6.16, #1257) privacy: Q1 privacy on at the adult's first right code or a staff tick, kept after take back; Q2 only staff send an accepted adult's link to a new address | both as recommended; built that way, PR unlabelled until he answers | #1257's label | 7 Nov 16:50 | open |
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
