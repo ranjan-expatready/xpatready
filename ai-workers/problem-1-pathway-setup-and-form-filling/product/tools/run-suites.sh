@@ -93,13 +93,12 @@ SKIP="check_catalogue_scale.cjs"
 # in each PR's own check and locally. It uses no server or database and ends with process.exit, so the hang is in the
 # runner or the shard, not in the suite's checks. The nightly full set still runs it. Fix row: B122 (#1145, flaky-test
 # handling) diagnoses the hang, and takes it off this list in that PR with a fail test.
-# Back on 7 Nov (the b78 row, P-214 fix to the checks): the runner handed every suite its own stdin and a plain
-# `timeout 1200`, so a suite, its tsx parent or a child left waiting on an open stdin, or one ignoring the TERM, could
-# outlive its checks with nothing in its log. guarded() (above run()) now gives each suite /dev/null, timeout -k, and
-# writes a hung suite's processes, their state, wait channel and open files to its log before the TERM. Fail tests:
-# tools/check-flaky.sh section 7b (on a copy of the old runner, a stdin-waiting suite runs into the limit and a
-# TERM-ignoring one never ends; on this runner both end, with a row). Not reproduced here: the 6 Nov runs' own cause
-# (b78 passes cold, with stdin an open pipe, in 0.5 s on Linux); if it hangs again its log now says where.
+# Back on 7 Nov (the b78 row, P-214 fix to the checks), on evidence, not on a found cause: it passed 3 runs in a row in
+# CI on the guarded runner (#1236), and locally cold in 0.5 s even with stdin an open pipe. The 6 Nov cause is still
+# open: the rows said exit 124, so the TERM did end it (not a TERM-ignoring hang), and GitHub's runner gives a step no
+# open stdin. What changed (guarded(), above run()): /dev/null as stdin, timeout -k, and, at the limit, the hung suite's
+# processes (state, wait channel, open files) in its log, so a recurrence says where it waits. If it hangs again, it
+# comes back on this list with that log.
 QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs"
 # Automatic quarantine (B122): only well-formed entries; anything else is named and ignored, never run blind.
 AUTOQ=" "
@@ -240,11 +239,11 @@ why() { (grep -m1 -E '^(FAIL|STOP)' "$1" || grep -m1 -E 'Error: ' "$1" || grep -
 # The first try's api.log is kept beside its suite log (stop moves it to isolated-logs, where the retry would replace it).
 recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1
   cp "$S/var/isolated-logs/$1-api.log" "$OUT/${RF%.*}.try1-api.log" 2>/dev/null; zsh "$S/tools/isolated.sh" "$@" >/dev/null 2>&1; }
-# One suite, guarded (b78 hang, 6 Nov: check_b78_section_names.ts printed "11 passed" and then did not end until the
-# 1200 s limit, twice, as the first suite of merge-queue part 2; the runner gave each suite the caller's stdin and a plain
-# `timeout 1200`):
-#   * stdin is /dev/null: a suite, its tsx parent or anything they start never waits on the stdin the runner was handed
-#     (an open pipe: `... | bash run-suites.sh`, a lane's terminal, a CI step's input);
+# One suite, guarded. Hardening and diagnostics after the b78 hang (6 Nov: check_b78_section_names.ts printed "11 passed"
+# and then did not end until the 1200 s limit, twice, as the first suite of merge-queue part 2; its cause is not found,
+# see QUARANTINE above). Before, each suite got the caller's stdin and a plain `timeout 1200`:
+#   * stdin is /dev/null: a suite, its tsx parent or anything they start never waits on a stdin the runner was handed
+#     (an open pipe: `... | bash run-suites.sh`, a lane's terminal; GitHub's runner already gives a step none);
 #   * timeout -k: a suite (or tsx, which relays the TERM to its child) that ignores the TERM at the limit is killed
 #     SUITES_KILL_AFTER (30) s later; a plain timeout waits for it for ever, until the part's 45-minute job limit, with no
 #     row and no log;
@@ -258,8 +257,10 @@ timedout() { [ "$1" = 124 ] || { [ "$1" = 137 ] && [ "$2" -ge "$LIMIT" ]; }; }  
 hangdump() {  # hangdump <timeout's pid>: the suite's processes while they still run
   kill -0 "$1" 2>/dev/null || return 0
   local p fd fds
-  echo "STOP still running at $(lim) (the limit): its processes below (timeout's group $1); TERM next, KILL ${KILL_AFTER} s later"
-  ps -A -o pid=,ppid=,pgid=,stat=,wchan=,etime=,args= 2>/dev/null | awk -v g="$1" '$3 == g' | cut -c1-300
+  echo "STOP still running at the $(lim) limit; its processes below, then TERM (KILL ${KILL_AFTER} s later)"
+  # Linux (procps) cuts the wait channel to 6 letters unless given a width; BSD ps (the Mac) takes no width.
+  local wc=wchan=; [ -d /proc/self/fd ] && wc=wchan:32=
+  ps -A -o pid=,ppid=,pgid=,stat=,"$wc",etime=,args= 2>/dev/null | awk -v g="$1" '$3 == g' | cut -c1-300
   [ -d /proc/self/fd ] || return 0
   for p in $(ps -A -o pid=,pgid= 2>/dev/null | awk -v g="$1" '$2 == g { print $1 }'); do
     fds=""; for fd in /proc/"$p"/fd/*; do [ -e "$fd" ] || [ -L "$fd" ] || continue; fds="$fds ${fd##*/}:$(readlink "$fd" 2>/dev/null)"; done
@@ -272,7 +273,7 @@ guarded() {  # guarded <log> <command...>: the exit code is timeout's (124 timed
   : > "$log"; "$TIMEOUT" -k "$KILL_AFTER" "$LIMIT" "$@" < /dev/null >> "$log" 2>&1 &
   pid=$!
   ( s=""; trap '[ -n "$s" ] && kill "$s" 2>/dev/null; exit 0' TERM
-    sleep "$(( LIMIT > 2 ? LIMIT - 1 : 1 ))" & s=$!; wait "$s"; hangdump "$pid" >> "$log" ) < /dev/null &
+    sleep "$(( LIMIT > 2 ? LIMIT - 1 : 1 ))" > /dev/null 2>&1 & s=$!; wait "$s"; hangdump "$pid" >> "$log" ) < /dev/null &
   w=$!
   wait "$pid"; code=$?
   kill "$w" 2>/dev/null; wait "$w" 2>/dev/null
@@ -352,7 +353,7 @@ RT="$S/tests/runtime"; [ -n "${SUITES_TESTS_DIR:-}" ] && RT=/nonexistent; RN=$(i
 if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 # The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
 if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn check_runtime_r1a.ts; then
-  if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
+  if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && guarded "$OUT/setup_visitor_visa.log" $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN"; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     # Never retried one by one (review M2): the three share one copy, so a retry would start from the first try's data.
     [ -f "$RT/check_runtime_r1c.cjs" ] && NORETRY="the R1 suites share one copy" && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"

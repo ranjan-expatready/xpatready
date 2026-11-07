@@ -226,7 +226,7 @@ c2=$(SUITES_QUARANTINE_AUTO="$AQ" rs sh --retry --skip-quarantined --shard 2/2)
 ran=$(cat "$W/sh1.out" "$W/sh.out" | grep -E '^\| check_fx_ok_[a-d]\.cjs \| PASS' | cut -d'|' -f2 | sort | tr -d ' ' | tr '\n' ' ')
 ok "B122: two parts with the same automatic quarantine run every other suite exactly once and skip the quarantined one" "$([ "$ran" = "check_fx_ok_a.cjs check_fx_ok_b.cjs check_fx_ok_c.cjs check_fx_ok_d.cjs " ] && [ "$(tries sh check_fx_broken.cjs)" = 0 ] && [ "$c1$c2" = 00 ] && echo 1)" "exits $c1 $c2; ran: $ran"
 
-# 7b. The b78 hang (6 Nov): the runner gives every suite /dev/null as stdin and timeout -k, and writes a hung suite's
+# 7c. The b78 hang (6 Nov): the runner gives every suite /dev/null as stdin and timeout -k, and writes a hung suite's
 # processes to its log. Each case runs under an outer limit, on this runner and on a copy with main's old plain
 # `timeout <limit> "$@" > "$log"` (the suite inherits the runner's stdin, no -k): the old one fails, this one passes.
 OLD="$W/run-suites.plain.sh"
@@ -244,10 +244,11 @@ ok "b78: this runner gives the suite /dev/null, so it ends at once and passes" "
 fx term_old check_fx_termproof.cjs; code=$(rsx "$OLD" term_old 15)
 ok "b78 fail test: on the old runner a suite ignoring the TERM never ends (the outer limit stops the whole run, no row)" "$([ "$code" = 124 ] && ! row term_old check_fx_termproof.cjs >/dev/null && echo 1)" "exit $code; $(row term_old check_fx_termproof.cjs)"
 fx term check_fx_termproof.cjs; t0=$SECONDS; code=$(rsx "$T/run-suites.sh" term 30)
-ok "b78: this runner kills a suite ignoring the TERM (-k), gives its row and fails the run" "$(row term check_fx_termproof.cjs | grep -q '| FAIL |.*exit 137: STOP still running at 4 s' && [ "$code" = 1 ] && [ $((SECONDS - t0)) -lt 12 ] && echo 1)" "exit $code in $((SECONDS - t0)) s; $(row term check_fx_termproof.cjs)"
-ok "b78: the hung suite's log names its processes (pid, state, wait channel, command) under the STOP line" "$(grep -A3 '^STOP still running at 4 s' "$W/term/out/check_fx_termproof.log" | grep -q 'check_fx_termproof.cjs' && echo 1)" "$(head -8 "$W/term/out/check_fx_termproof.log" 2>&1)"
+ok "b78: this runner kills a suite ignoring the TERM (-k), gives its row and fails the run" "$(row term check_fx_termproof.cjs | grep -q '| FAIL |.*exit 137: STOP still running at the 4 s limit' && [ "$code" = 1 ] && [ $((SECONDS - t0)) -lt 12 ] && echo 1)" "exit $code in $((SECONDS - t0)) s; $(row term check_fx_termproof.cjs)"
+ok "b78: the hung suite's log names its processes (pid, state, wait channel, command) under the STOP line" "$(grep -A3 '^STOP still running at the 4 s limit' "$W/term/out/check_fx_termproof.log" | grep -q 'check_fx_termproof.cjs' && echo 1)" "$(head -8 "$W/term/out/check_fx_termproof.log" 2>&1)"
 fx termr check_fx_termproof.cjs; code=$(rsx "$T/run-suites.sh" termr 30 --retry)
 ok "b78: a suite killed at the limit (exit 137) counts as timed out: not retried" "$(row termr check_fx_termproof.cjs | grep -q 'timed out at 4 s, not retried' && [ ! -e "$W/termr/out/retries.tsv" ] && echo 1)" "$(row termr check_fx_termproof.cjs)"
+ok "b78 (review minor 2): R1's set-up script runs guarded too" "$(grep -q 'guarded "\$OUT/setup_visitor_visa.log" \$TSX' "$T/run-suites.sh" && echo 1)" "$(grep -n setup_visitor_visa "$T/run-suites.sh")"
 ok "b78: run-suites.sh never runs a suite under a plain timeout" "$(! grep -nE '"\$TIMEOUT" ' "$T/run-suites.sh" | grep -vE -- '"\$TIMEOUT" (-k |\])' | grep -q . && echo 1)" "$(grep -nE '"\$TIMEOUT" ' "$T/run-suites.sh")"
 
 # 8. Wiring: CI's PR and queue checks pass --retry and the rule's list; the nightly never retries.
