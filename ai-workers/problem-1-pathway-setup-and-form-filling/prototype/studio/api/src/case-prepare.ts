@@ -40,7 +40,7 @@ import { CaseForms, copyNotForFiling, formPassed } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
-import { readinessOfCase, type PreparedForm } from "./readiness-inputs.ts";
+import { readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
@@ -117,7 +117,13 @@ export class CasePrepare {
   }
 
   /** Derives, stores what changed (under the case's row lock, so two reads never make two family groups), and answers. */
-  private async build(actor: Actor, c: Reached) {
+  /** C9.5 (break m3): the view as stored, for a read that must write nothing (GET …/release-update): null when the
+   *  stored filings and items are not the derived ones yet (only a Prepare read stores them). */
+  async peek(actor: Actor, c: Reached) { return this.compose(actor, c, true); }
+
+  private async build(actor: Actor, c: Reached) { return (await this.compose(actor, c, false))!; }
+
+  private async compose(actor: Actor, c: Reached, noWrite: boolean) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // The release must describe the case's own combination (as case-filings.ts): never another combination's filings.
     const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true, portalKey: true } });
@@ -210,10 +216,12 @@ export class CasePrepare {
       if (gone.length || back.length) items = await tx.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       return { groups, filings, items: items.filter((i) => i.active) };
     };
-    const stored = (await sync(this.db, false)) ?? await this.db.$transaction(async (tx) => {
+    const ready = await sync(this.db, false);
+    if (!ready && noWrite) return null;
+    const stored = ready ?? await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       return (await sync(tx, true))!;
-    }, { timeout: 15_000, maxWait: 10_000 });
+    }, { timeout: 15_000, maxWait: 10_000 }));
 
     // Fees per stored group: a split filing is priced on its own.
     const groupOfSubject = new Map(stored.filings.map((f) => [f.subjectId, f.submissionGroupId]));
@@ -452,16 +460,23 @@ export class CasePrepare {
     // change warn, naming what it changes (passable with a reason, never a block).
     const st = { people, answers, rows, groups: groupAnswers }, forTouch = filings.map((f) => ({ id: f.id, people: f.applicants.map((a) => a.subject) }));
     const prev = pins[1];
-    let movedTouch: Map<string, string[]> | null = null;
-    const touchedByMove = () => (movedTouch ??= touchedFilings(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s), caseInputs(prev.snapshot, s, own!.combinationKey, st, today, true), forTouch, { to: curLabel }));
+    // Review m4 (round 1): every move made after the review counts, not only the newest: a review withdrawn by one move
+    // never comes back with a later move that leaves its filing alone. Moves are read newest first (pins is ordered).
+    const movedTouch = new Map<number, Map<string, string[]>>();
+    const touchedBy = (k: number) => { if (!movedTouch.has(k)) { const to = pins[k], from = pins[k + 1]; movedTouch.set(k, touchedFilings(diffOf(from.id, from.snapshot, to.id, to.snapshot), caseInputs(from.snapshot, to.snapshot, own!.combinationKey, st, today, true), forTouch, { to: to.label })); } return movedTouch.get(k)!; };
     const reviewAfterMove = prev ? (filing: string, reviewedAt: Date) => {
-      const t = reviewedAt.getTime() > pin.pinnedAt.getTime() ? [] : touchedByMove().get(filing) ?? [];
-      return reviewCounts({ hashEqual: true, reviewedAt, pinnedAt: pin.pinnedAt, revision: pin.revision, touched: t.length > 0 }) ? null : `The case moved to ${curLabel}, which changes this filing (${t.slice(0, 2).join("; ")}${t.length > 2 ? ` and ${t.length - 2} more` : ""})`;
+      for (let k = 0; k < pins.length - 1 && pins[k].pinnedAt.getTime() >= reviewedAt.getTime(); k++) {
+        const t = touchedBy(k).get(filing) ?? [];
+        if (!reviewCounts({ hashEqual: true, reviewedAt, pinnedAt: pins[k].pinnedAt, revision: pins[k].revision, touched: t.length > 0 }))
+          return `The case moved to ${pins[k].label}, which changes this filing (${t.slice(0, 2).join("; ")}${t.length > 2 ? ` and ${t.length - 2} more` : ""})`;
+      }
+      return null;
     } : undefined;
     const target = await targetRelease(this.db, c);
     const pending = target ? touchedFilings(diffOf(pin.configReleaseId, s, target.id, target.snapshot), caseInputs(s, target.snapshot, own!.combinationKey, st, today, true), forTouch, { to: target.label }) : null;
+    const recordedFiling = new Set(stored.filings.filter((f) => f.status === "SUBMITTED").map((f) => f.id));
     const releaseUpdate = pending ? (filing: string) => {
-      const w = pending.get(filing) ?? [];
+      const w = recordedFiling.has(filing) ? [] : pending.get(filing) ?? []; // break m2: a recorded filing stays on its release
       return w.length ? { key: String(target!.version), words: `${target!.label} of ${s.combination.label} is out and changes this filing: ${w.slice(0, 2).join("; ")}${w.length > 2 ? ` and ${w.length - 2} more` : ""}. This filing is on ${curLabel}. Move the case from the notice under its header, or pass this warning with a reason.` } : null;
     } : undefined;
     // C9.5 (BR-4, BR-6): a form whose newest copy was made on the release the case left, and which the move changed,
@@ -473,8 +488,12 @@ export class CasePrepare {
       for (const i of items) {
         if (i.kind !== "form" || !("form" in i) || !i.form || i.state === "out_of_date") continue;
         const x = newest.get(`${i.form}|${i.subject}`), old = x && x.configReleaseId !== pin.configReleaseId ? pins.find((p) => p.id === x.configReleaseId) : undefined;
-        const note = old ? draftNote(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: old.label, to: curLabel }) : null;
-        if (note) Object.assign(i, { release_note: note });
+        let note = old ? draftNote(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: old.label, to: curLabel }) : null;
+        // Review m3 (round 1): sections entered in the portal before the move, on a form the move changed, are marked by
+        // the release too (no fact lines, no Undo; the entries themselves are never changed).
+        const entered = "channel" in i && i.channel === "ONLINE" ? (enteredBy.get(i.id) ?? []).filter((e) => e.enteredAt.getTime() < pin.pinnedAt.getTime()) : [];
+        if (!note && entered.length) note = releaseOutOfDate(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: prev.label, to: curLabel }, "entry in the IRCC account");
+        if (note) Object.assign(i, { release_note: note, ...(entered.length && !old ? { release_out_of_date_entered: true } : {}) });
       }
     }
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
@@ -486,15 +505,14 @@ export class CasePrepare {
         // answer as given now (an unconfirmed change is a change the representative did not review).
         // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
         // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
-        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))]);
-        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${JSON.stringify(waiting)}`).digest("hex");
+        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${waitingFactsKey(formReadiness(view, form, subject).missing, answers)}`).digest("hex");
       }, today });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
     // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".
     const statusOf = new Map(stored.filings.map((f) => [f.id, f.status]));
     for (const f of filings) {
-      if (statusOf.get(f.id) === "READY_TO_FILE" && readiness.find((x) => x.filing === f.id)?.ready === false) {
+      if (!noWrite && statusOf.get(f.id) === "READY_TO_FILE" && readiness.find((x) => x.filing === f.id)?.ready === false) {
         const n = await this.db.filing.updateMany({ where: { id: f.id, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
         if (n.count) await this.audit.log(c.workspaceId, actor.id, "ready_to_file_reopened", "filing", f.id, `A filing on case ${short(c.id)} is no longer Ready to file: something changed after it was marked (C7.6).`);
         statusOf.set(f.id, "NOT_STARTED");
@@ -503,17 +521,19 @@ export class CasePrepare {
     }
     // Review r3 m1: the version from the very rows this view shows (never a later read), so a write from it is checked
     // against what the officer saw.
-    const version = versionOf(stored.filings, stored.items);
+    // C9.5 (break m9): the pin revision is part of the version, so a write from a screen read before a move (record, split,
+    // channel) is refused under the case's row lock, as Fill is.
+    const version = withRevision(versionOf(stored.filings, stored.items), pin.revision);
     const peopleView = people.filter((p) => p.role !== "case").map((p) => { const f = filings.find((x) => x.applicants.some((a) => a.subject === p.subjectId) || x.owner?.subject === p.subjectId); const nf = done.not_filing.find((x) => x.subject === p.subjectId); return { subject: p.subjectId, label: p.label, role: p.role, applies: p.applies, age: ages.get(p.subjectId) ?? null, filing: f?.id ?? null, why: nf?.why ?? null }; });
     // C8.2 (BR-12, BR-15): a recorded filing reads "submitted" with its record; a form filed with a fact changed since reads
     // "Filed with an earlier value" and opens its task (api/src/submission-record.ts).
     const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
-    const tasks = await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
+    const tasks = noWrite ? [] : await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
       nowOf: (form, subject) => currentValues(formCoverage(s, people, answers, rows, form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
-      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
+      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map((x) => ({ ...x, pin_revision: pin.revision })), pin_revision: pin.revision, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
@@ -677,11 +697,23 @@ type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
  *  checks it under the case's row lock exactly as the view computed it. */
 export async function storedVersion(tx: Tx | Db, caseId: string) {
-  const [filings, items] = await Promise.all([
+  const [filings, items, pin] = await Promise.all([
     tx.filing.findMany({ where: { caseId, active: true }, select: { id: true, submissionGroupId: true } }),
     tx.filingItem.findMany({ where: { caseId, active: true }, select: { id: true, channel: true, version: true } }),
+    tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } }),
   ]);
-  return versionOf(filings, items);
+  return withRevision(versionOf(filings, items), pin?.revision ?? 1);
+}
+/** C9.5: a case never moved keeps the version it had (revision 1); after a move the revision is part of it. */
+const withRevision = (v: string, revision: number) => (revision > 1 ? `${v}~r${revision}` : v);
+/** C9.5 (break m7): a transaction that waited too long for the case's row lock answers a worded 503, never a 500. */
+export async function busyWords<T>(f: () => Promise<T>): Promise<T> {
+  try { return await f(); } catch (e) {
+    const code = (e as { code?: string }).code, msg = String((e as Error).message ?? "");
+    if (code === "P2028" || code === "P2034" || /expired transaction|Transaction already closed|Unable to start a transaction/i.test(msg))
+      throw new HttpException({ type: "https://expatready.local/problems/busy", title: "Busy", status: 503, detail: "This case is being changed by someone else right now: nothing was changed. Try again in a moment." }, HttpStatus.SERVICE_UNAVAILABLE);
+    throw e;
+  }
 }
 /** The version of a set of current filings and items (the same rule for the view and for a write's check). */
 function versionOf(filings: { id: string; submissionGroupId: string }[], items: { id: string; channel?: string | null; version: number }[]) {

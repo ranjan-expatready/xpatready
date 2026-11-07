@@ -218,6 +218,7 @@ function OpenLine({ caseId, f, l, canPass, onRefused, onPassed }: { caseId: stri
  *  themself, the server asks them to confirm it is self-reviewed; the box appears then. */
 function ReviewButton({ f, r, onRefused, onDone }: { f: Filing; r: Readiness; onRefused: OnRefused; onDone: () => void }) {
   const toast = useToast();
+  const [pinRead, setPinRead] = React.useState<number | undefined>(undefined); // C9.5 (break m10): the pin revision this review reads
   const [read, setRead] = React.useState<string | null>(null), [note, setNote] = React.useState(""), [self, setSelf] = React.useState<boolean | null>(null), [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<{ note?: string; self?: string }>({});
   const opener = React.useRef<HTMLButtonElement>(null), box = React.useRef<HTMLFormElement>(null);
@@ -227,7 +228,7 @@ function ReviewButton({ f, r, onRefused, onDone }: { f: Filing; r: Readiness; on
   async function review(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr({});
     try {
-      const done = await api<{ words: string }>(`/runtime/filings/${f.id}/review`, { method: "POST", json: { facts_hash: read, ...(note.trim() ? { note } : {}), ...(self ? { self: true } : {}) } });
+      const done = await api<{ words: string }>(`/runtime/filings/${f.id}/review`, { method: "POST", json: { facts_hash: read, ...(pinRead !== undefined ? { pin_revision: pinRead } : {}), ...(note.trim() ? { note } : {}), ...(self ? { self: true } : {}) } });
       toast.push({ tone: "ok", text: done.words });
       close(); onDone();
     } catch (x) {
@@ -239,7 +240,7 @@ function ReviewButton({ f, r, onRefused, onDone }: { f: Filing; r: Readiness; on
       } else { close(); await onRefused("Not reviewed", x); }
     } finally { setBusy(false); }
   }
-  if (!read) return <Button ref={opener} size="sm" variant="secondary" onClick={() => setRead(r.facts_hash)} data-review-filing>Review the filing</Button>;
+  if (!read) return <Button ref={opener} size="sm" variant="secondary" onClick={() => { setRead(r.facts_hash); setPinRead((r as { pin_revision?: number }).pin_revision); }} data-review-filing>Review the filing</Button>;
   return (
     <form ref={box} onSubmit={(e) => void review(e)} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); cancel(); } }} className="basis-full space-y-2 rounded-lg border border-border bg-surface px-3 py-2" aria-label={`Review ${f.label}`} data-review-form>
       <p className="text-[13px]">You review this filing as the representative of record, for its facts as they are on this page now. A later change reopens the review.</p>

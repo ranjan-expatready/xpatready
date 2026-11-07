@@ -125,7 +125,9 @@ export function whatChanges(diff: ReleaseDiff, x: CaseInputs): Changes {
  *  portal or locked (filed); otherwise a draft copy. */
 export type Work = { id: string; kind: "copy" | "signed_scan" | "entered" | "upload"; form?: string; document?: string; label: string; subject: string; finished: boolean; release?: string };
 export type Review = { filing: string; label: string; counts: boolean };
-export type EffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string };
+export type EffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string;
+  /** Fill (a new copy on the new release) is the next step: to fill again, or filed another way on a PDF line. */
+  fillable?: boolean };
 export type Effects = { fill_again: EffectLine[]; filed_another_way: EffectLine[]; no_longer_required: EffectLine[]; withdrawn: EffectLine[]; kept_out_of_date: EffectLine[]; unchanged: { count: number; words: string } };
 export const EFFECT_KEYS = ["fill_again", "filed_another_way", "no_longer_required", "withdrawn", "kept_out_of_date"] as const;
 
@@ -134,7 +136,7 @@ export function effectsOf(diff: ReleaseDiff, x: CaseInputs, work: Work[], review
   const e: Effects = { fill_again: [], filed_another_way: [], no_longer_required: [], withdrawn: [], kept_out_of_date: [], unchanged: { count: 0, words: "" } };
   const person = (id: string) => x.people.find((p) => p.id === id)?.label ?? "Someone on the case";
   for (const w of work) {
-    const line = (why: string): EffectLine => ({ id: w.id, what: w.label, who: person(w.subject), why, ...(w.form ? { form: w.form, subject: w.subject } : {}) });
+    const line = (why: string, fillable = false): EffectLine => ({ id: w.id, what: w.label, who: person(w.subject), why, ...(w.form ? { form: w.form, subject: w.subject } : {}), ...(fillable ? { fillable } : {}) });
     if (w.kind === "upload") {
       if (w.document && x.from.documents.get(w.subject)?.has(w.document) && !x.to.documents.get(w.subject)?.has(w.document)) e.no_longer_required.push(line(`${labels.to} no longer asks for it: the upload is kept and listed.`));
       else e.unchanged.count++;
@@ -142,12 +144,20 @@ export function effectsOf(diff: ReleaseDiff, x: CaseInputs, work: Work[], review
     }
     const d = w.form ? diff.forms.get(w.form) : undefined;
     const stillNeeded = !!w.form && (x.to.forms.get(w.subject)?.has(w.form) ?? false);
+    // Break m1 (round 1): only a form this release asked of the person and the new one does not is "no longer required";
+    // a copy of a form neither asks for (an earlier move dropped it) is history, not a cost of this move.
+    const neededBefore = !!w.form && (x.from.forms.get(w.subject)?.has(w.form) ?? false);
+    if (w.form && !stillNeeded && !neededBefore) continue;
     if (w.form && (d?.kinds.includes("removed") || !stillNeeded)) { e.no_longer_required.push(line(`${labels.to} no longer asks ${person(w.subject)} for ${w.form}: it is kept and listed, never filed.`)); continue; }
     if (!d) { e.unchanged.count++; continue; }
-    if (d.kinds.includes("channel") || d.kinds.includes("signing")) { e.filed_another_way.push(line(`${labels.to} files ${w.form} as ${d.after}${w.finished ? `; this ${w.kind === "signed_scan" ? "signed scan" : "copy"} is kept and is not what you file` : ""}.`)); continue; }
+    if (d.kinds.includes("channel") || d.kinds.includes("signing")) {
+      const online = d.after.startsWith(CHANNEL_WORDS.ONLINE);
+      e.filed_another_way.push(line(`${labels.to} files ${w.form} as ${d.after}${w.finished ? `; this ${w.kind === "signed_scan" ? "signed scan" : "copy"} is kept and is not what you file` : ""}.${online ? " Enter it in the IRCC account from the answer sheet." : ` Press Fill to make it on ${labels.to}.`}`, !online && w.kind === "copy"));
+      continue;
+    }
     if (d.kinds.includes("map") || d.kinds.includes("edition")) {
       if (w.finished) e.kept_out_of_date.push(line(`Never changed: marked out of date because ${labels.to} ${d.kinds.includes("edition") ? `files ${w.form} on ${d.after}` : `fills ${w.form}'s form fields differently`}.`));
-      else e.fill_again.push(line(`Its form changed in ${labels.to}: press Fill to make it on ${labels.to} (the move fills nothing); this copy stays in the history.`));
+      else e.fill_again.push(line(`Its form changed in ${labels.to}: press Fill to make it on ${labels.to} (the move fills nothing); this copy stays in the history.`, true));
       continue;
     }
     e.unchanged.count++; // a change of who needs it, for a person who still needs it, leaves the work as it is
@@ -235,7 +245,7 @@ export function targetOf<R extends { version: number }>(releases: readonly R[], 
  *  the move changed: made on the earlier release; the officer presses Fill (never filled again by the move itself). */
 export function draftNote(d: FormDiff | undefined, labels: { from: string; to: string }): string | null {
   if (!d || d.kinds.every((k) => k === "rule" || k === "added" || k === "removed")) return null;
-  if (d.kinds.includes("channel") && d.after.startsWith("Online")) return `Filed another way now: the draft copy was made on ${labels.from}; ${labels.to} files ${d.form} Online, typed into the IRCC account from the answer sheet. The copy is kept and is not filed.`;
-  if (d.kinds.includes("channel") || d.kinds.includes("signing")) return `Filed another way now: the draft copy was made on ${labels.from}; ${labels.to} files ${d.form} as ${d.after}. Press Fill to make it on ${labels.to}; the old copy stays in the history.`;
-  return `To fill again: the draft copy was made on ${labels.from} and ${labels.to} ${d.kinds.includes("edition") ? `files ${d.form} on ${d.after}` : `fills ${d.form}'s form fields differently`}. Press Fill to make it on ${labels.to}; the old copy stays in the history.`;
+  if (d.kinds.includes("channel") && d.after.startsWith("Online")) return `Filed another way now: the copy was made on ${labels.from}; ${labels.to} files ${d.form} Online, typed into the IRCC account from the answer sheet. The copy is kept and is not filed.`;
+  if (d.kinds.includes("channel") || d.kinds.includes("signing")) return `Filed another way now: the copy was made on ${labels.from}; ${labels.to} files ${d.form} as ${d.after}. Press Fill to make it on ${labels.to}; the old copy stays in the history.`;
+  return `To fill again: the copy was made on ${labels.from} and ${labels.to} ${d.kinds.includes("edition") ? `files ${d.form} on ${d.after}` : `fills ${d.form}'s form fields differently`}. Press Fill to make it on ${labels.to}; the old copy stays in the history.`;
 }

@@ -51,6 +51,13 @@ export type ReadinessView = { filing: string; ready: boolean; status_rule: strin
   /** The filing's facts fingerprint now (the review route stores it) and the representative of record now. */
   facts_hash: string; representative: string | null };
 
+/** Breaker N1 (#861 round 2) with C9.5's build discovery D1: the part of a form's facts fingerprint that holds every fact
+ *  it still waits for, with each answer given to it now. The answers are sorted, so the order a read returns them in
+ *  never changes the fingerprint (a review was withdrawn with no fact changed, 2 of 4 pack runs). */
+export function waitingFactsKey(missing: { fact: string; about: string; reason: string }[], answers: { field: string; subjectId: string; rowKey: string | null; value: unknown }[]): string {
+  return JSON.stringify(missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value]).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))]));
+}
+
 /** Every filing's readiness on one case, from the prepare view's own items and the stored reviews, passes, findings,
  *  checklist lines and accepted-until dates. */
 export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<ReadinessView[]> {

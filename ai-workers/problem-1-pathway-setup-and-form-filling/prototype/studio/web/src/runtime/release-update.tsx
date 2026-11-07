@@ -12,12 +12,11 @@ import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Field, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tip, TipProvider } from "@/components/status";
-import type { ReleaseChangeLine, ReleaseEffectLine, ReleaseMoved, ReleaseUpdate } from "../../../contracts/runtime";
+import type { ReleaseChangeLine, ReleaseEffectLine, ReleaseLastMove, ReleaseMoved, ReleaseUpdate } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
 
 type Effects = ReleaseUpdate["effects"];
-type LastMove = { from: { label: string }; to: { label: string }; at: string; reason: string | null; effects: Effects };
-type View = ReleaseUpdate & { last_move: LastMove | null };
+type View = ReleaseUpdate & { last_move: ReleaseLastMove | null };
 
 const RELEASE_TIP = "A release is a frozen set of the combination's forms, documents and questions. A case keeps its release until someone moves it, so nothing changes under your client.";
 /** The work groups, in the board's order, with what each counts and its tooltip (concept §5). */
@@ -46,12 +45,14 @@ export function ReleaseNotice({ caseId }: { caseId: string }) {
   const [open, setOpen] = React.useState(false);
   const opener = React.useRef<HTMLButtonElement>(null);
   const v = q.data;
+  // Review m8 (round 1): the notice's place is held while the list is read, so the page does not jump when it appears.
+  if (q.isLoading) return <Skeleton className="h-[46px] w-full rounded-lg" aria-hidden data-release-notice-loading />;
   if (!v?.target) return null;
   return (
     <TipProvider>
       <Notice tone="info" className="py-2.5" action={<Button ref={opener} size="sm" variant="secondary" data-release-open onClick={() => setOpen(true)}>What changes for this case</Button>}>
         <p className="text-text" data-release-notice>
-          <span className="font-semibold">{v.target.label} of {v.combination} is out</span> (released {day(v.target.released_at)}). This case stays on {v.current.label} until you move it.{" "}
+          <span className="font-semibold">{v.target.label} of {v.combination} is out</span>{v.target.demo ? <> <Pill tone="warn" title="Sample content released as a Demo release: never a real publish (G3)">Demo release</Pill></> : null} (released {day(v.target.released_at)}). This case stays on {v.current.label} until you move it.{" "}
           <Tip tip={RELEASE_TIP}><button type="button" className="inline-flex translate-y-0.5 rounded-sm text-text-muted outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="What a release is"><Info className="size-3.5" aria-hidden /></button></Tip>
         </p>
       </Notice>
@@ -100,7 +101,7 @@ export function EffectGroups({ effects, fill, empty }: { effects: Effects; fill?
               {g.title}
               <Tip focusable tip={g.tip}><span className="inline-flex rounded-md bg-text/8 px-1.5 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`${rows.length} ${rows.length === 1 ? "item" : "items"}`}>{rows.length}</span></Tip>
             </h4>
-            {rows.length ? <Rows rows={rows} name="items" render={(l) => <EffectRow key={`${g.key}|${l.id}`} l={l} fill={g.key === "fill_again" ? fill?.(l) : undefined} />} />
+            {rows.length ? <Rows rows={rows} name="items" render={(l) => <EffectRow key={`${g.key}|${l.id}`} l={l} fill={l.fillable ? fill?.(l) : undefined} />} />
               : <p className="text-[13px] text-text-muted">None on this case.</p>}
           </div>
         );
@@ -129,9 +130,14 @@ function ReleasePanel({ caseId, close, returnFocus }: { caseId: string; close: (
       close();
       requestAnimationFrame(() => document.getElementById("release-moved-h")?.focus());
     } catch (e) {
+      // Review F1 (round 1): every 409 reads the list again behind the panel (the case, its notice and Prepare); a stale
+      // read or a case already moved to the newest release is the conflict state, any other 409 a named refusal.
+      const code = e instanceof ApiError ? (e.problem as { code?: string }).code : undefined;
       if (e instanceof ApiError && e.status === 400) setError(e.field("reason") ?? e.message);
-      else if (e instanceof ApiError && e.status === 409 && /read the list again/i.test(e.message)) setProblem({ kind: "conflict", words: e.message });
-      else setProblem({ kind: "refused", words: (e as Error).message });
+      else if (e instanceof ApiError && e.status === 409) {
+        setProblem(code === "stale" || code === "newest" || /read the list again/i.test(e.message) ? { kind: "conflict", words: e.message } : { kind: "refused", words: e.message });
+        void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+      } else setProblem({ kind: "refused", words: (e as Error).message });
     } finally { setBusy(false); }
   }
   const footer = (
@@ -148,11 +154,13 @@ function ReleasePanel({ caseId, close, returnFocus }: { caseId: string; close: (
   );
   return (
     <Panel open onOpenChange={(o) => { if (!o) close(); }} returnFocus={returnFocus} title="What changes for this case"
-      description={v?.target ? `${v.current.label} → ${v.target.label} of ${v.combination}. Nothing changes until you move.` : "Reading the releases…"} footer={footer}>
+      description={v?.target ? `${v.current.label} → ${v.target.label} of ${v.combination}${v.target.demo ? " (a Demo release)" : ""}. Nothing changes until you move.` : "Reading the releases…"} footer={footer}>
       <div className="space-y-5" data-release-panel>
         {q.isLoading ? <div className="space-y-2" data-release-loading><Skeleton className="h-5 w-1/3" /><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
           : q.isError ? <Notice tone="danger" title="The list could not be worked out">{(q.error as Error).message}</Notice>
-          : !v?.target ? <Notice tone="ok" title="This case is on the newest release">Nothing to move to.</Notice> : <>
+          : !v?.target ? <>
+            {problem?.kind === "conflict" ? <Notice tone="warn" title="Nothing was changed" className="mb-3"><span data-release-conflict>This case was moved while you read the list: it is on {v?.current.label} now.</span></Notice> : null}
+            <Notice tone="ok" title="This case is on the newest release">Nothing to move to.</Notice></> : <>
           {refused ? <Notice tone="danger" title="Nothing was changed"><span data-release-refused>{refused}</span></Notice> : null}
           {problem?.kind === "conflict" ? <Notice tone="warn" title="Nothing was changed" action={<Button size="sm" variant="secondary" onClick={() => { setProblem(null); void q.refetch(); }} data-release-reread><RefreshCw aria-hidden />Read the list again</Button>}>
             <span data-release-conflict>This case or its release changed while you read the list.</span></Notice> : null}
@@ -201,7 +209,7 @@ export function MovedGroups({ caseId }: { caseId: string }) {
     <TipProvider>
       <section aria-labelledby="release-moved-h" className="border-b border-border bg-surface px-4 py-3" data-release-moved>
         <h3 id="release-moved-h" tabIndex={-1} className="text-sm font-semibold outline-none">Moved to {m.to.label} on {day(m.at)}</h3>
-        <p className="mb-2 text-[13px] text-text-muted">From {m.from.label}{m.reason ? ` · reason: ${m.reason}` : ""}. Nothing finished was changed; this list empties as you make each copy again.</p>
+        <p className="mb-2 text-[13px] text-text-muted">From {m.from.label}{m.reason ? ` · reason: ${m.reason}` : ""}. Nothing finished was changed. A form leaves this list once you make its copy on {m.to.label}; the other lines stay as the record of what the move did.</p>
         <EffectGroups effects={m.effects} fill={(l) => l.form && l.subject ? <Button size="sm" variant="secondary" busy={busy === l.id} onClick={() => void fill(l)} data-release-fill={l.id} aria-label={`Fill ${l.form} for ${l.who} on ${m!.to.label}`}>Fill</Button> : null} />
       </section>
     </TipProvider>

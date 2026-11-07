@@ -49,7 +49,10 @@ export class FilingReadinessRoutes {
     const everyone = await this.db.caseTeamMember.findMany({ where: { caseId: c.id } });
     const rep = everyone.find((m) => m.role === "LEAD_REPRESENTATIVE" && !m.endedAt)?.userId ?? null;
     if (!rep || rep !== actor.id) fail("Only the representative of record reviews this filing (P-155). A case officer prepares it; the representative reviews it.", HttpStatus.FORBIDDEN);
-    const b = (body ?? {}) as { note?: unknown; self?: unknown; facts_hash?: unknown };
+    const b = (body ?? {}) as { note?: unknown; self?: unknown; facts_hash?: unknown; pin_revision?: unknown };
+    // C9.5 (break m10): a review sent from a screen read before the case moved to another release is refused (the screen
+    // sends the pin revision it read); the representative reviews what the case files now.
+    if (b.pin_revision !== undefined && b.pin_revision !== c.pins[0].revision) fail("This case moved to another release after you opened the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
     // Break N1 (#861 round 2): the review is of the facts the representative read: the view's `facts_hash` is sent back
     // and a filing changed since is refused (409, Reload), never stamped as reviewed for facts nobody saw.
     if (typeof b.facts_hash !== "string" || !/^[0-9a-f]{64}$/.test(b.facts_hash)) problem(400, "Some details need fixing", "Send facts_hash: the filing's facts_hash from the prepare view you reviewed.", { errors: [{ field: "facts_hash", message: "The facts_hash you read (Reload)." }] });

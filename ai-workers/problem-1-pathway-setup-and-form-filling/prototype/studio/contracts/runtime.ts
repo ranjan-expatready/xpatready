@@ -279,7 +279,8 @@ export const ReleaseMove = z.object({
   reason: text("Say why this case moves to the new release (at least 3 characters).", 3, 500).refine((x) => /[\p{L}\p{N}]/u.test(x), "Say why this case moves to the new release, in words."),
 });
 export type ReleaseChangeLine = { what: string; kind: string; who: string[]; before: string; after: string };
-export type ReleaseEffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string };
+/** `fillable`: Fill (a new copy on the new release) is the next step for this line. */
+export type ReleaseEffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string; fillable?: boolean };
 /** GET /runtime/cases/:id/release-update (computed, writes nothing). `target` null: the case is on the newest release. */
 export type ReleaseUpdate = {
   case_id: string;
@@ -296,6 +297,8 @@ export type ReleaseUpdate = {
   can_move: boolean;
   reason_default: string;
 };
+/** After a move (pin revision 2 on): what it did to the work made before it that still waits (Prepare's groups). */
+export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
 /** POST …/release-update: the new pin and what the move did, for the toast. */
 export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
   counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
