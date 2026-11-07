@@ -2,7 +2,7 @@
 
 current_lead: local_efdbee17-934f-4f7e-9b28-dff5e035313c Lead 25 · 7 Nov ~07:35 IST (took over from Lead 24 at ~385k context, P-314)
 
-updated: 2026-11-07 07:35 IST by **Lead 24** (hand-over to Lead 25) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 2 M3 rows merged, 2 of 17 Works; 8 more PRs labelled 07:29-07:31 and in the queue** · rules: **`RULES.md`** + DECISIONS P-354 to P-386 · earlier page: `history/STATE-2026-11-06-2358-lead24.md`
+updated: 2026-11-07 08:27 IST by **Lead 25** (P-387 to P-391 added; hand-over block below is Lead 24's) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: 2 M3 rows merged, 2 of 17 Works; 8 more PRs labelled 07:29-07:31 and in the queue** · rules: **`RULES.md`** + DECISIONS P-354 to P-386 · earlier page: `history/STATE-2026-11-06-2358-lead24.md`
 
 ## Morning 7 Nov (Lead 24, 07:35 IST): read first
 * **Lead 24 stalled ~00:04-07:28 IST** on one Terminal-tab call that waited on an approval prompt; no check fired; nothing merged after 00:00. Never make a call that can prompt while the founder is away (memory rule).
@@ -13,7 +13,7 @@ updated: 2026-11-07 07:35 IST by **Lead 24** (hand-over to Lead 25) · milestone
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 | # | Question | Lead's recommendation | Blocks | Since | Status |
 |---|---|---|---|---|---|
-| F1 | C1.3: "Follows" is only a suggestion and nothing on main suggests a next application. Build a real suggestion? | Not in M3: keep as a recorded limit; a backlog row after M3, with follow rules cited from IRCC | nothing now (C1.3 Works) | 6 Nov 23:52 IST | open |
+| F1 | C1.3: "Follows" is only a suggestion and nothing on main suggests a next application. Build a real suggestion? | Not in M3: keep as a recorded limit; a backlog row after M3, with follow rules cited from IRCC | nothing now (C1.3 Works) | 6 Nov 23:52 IST | **answered 7 Nov ~08:26 IST: "After M3"** (P-391; BACKLOG L-follow) |
 
 ## Start here (next Lead)
 **Branch** `lead/2026-11-05-lead14b`, records PR **#1128** (the Lead labels records PRs itself, P-385). **Once #1128 merges: a fresh `lead/<today>` branch from `origin/main` every day; never merge `main` into an old lead branch (P-388).** **Stall guard (P-388):** while the founder is away, no call that can wait on a prompt; `lead-watch.sh` prints an ACT line when the previous check ran over 40 min ago: tell the founder at once. **Watchdog (P-389):** the first standby runs `lead-heartbeat.sh` every 15 min and pushes the founder a notification when the Lead's check is over 40 min old; on take-over the standby deletes its watchdog and the new first standby starts one. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Working notes, every id and ruling: the file lead24-pending in Lead 19's side-session notes folder (`.../side-session-notes/local_8acced9f-…`); CURRENT-LEAD.md there names the current Lead.

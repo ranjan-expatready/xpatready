@@ -31,6 +31,7 @@ One owner per row and per shared file; never build another owner's rows. Under t
 | R3 | runtime | **A minor's travel answers** (P-230 (3)): "travels with" per child plus custody, five conditional document lines (with QA-149) | pass and fail tests for each case; FQ-4 closed | P-230 |
 | R4 | runtime | **An eligibility rule's own outcome** (P-230 (1)): a gate carries "when not met" (Not eligible or needs review) as data; the background gate is needs review | C6.9 tests cover both; copy says the representative reviews | P-230 |
 | L-doc | later | **Document rules fields** (P-230 (8)): copy kind, certified translation, validity window on document requirements (schema) | after the M2 gate | P-230 |
+| L-follow | later | **Suggest the next application on a case** (C1.3's "Follows"): from follow rules per program, each cited from canada.ca with page, quote and date (AGENTS rule 4); concept first (screen-concept). Done when a case shows the next applications its program can lead to, with the source, and qa walks it | after M3's 48-hour sprint | P-391 |
 
 ## M3 wave after the weekly-plan reset (founder, 2 Nov: "After the reset"; start 5 Nov 23:00 UTC)
 C7.7 deliverables list (take over #357, part 1) · C8.1 signed scans and entered ticks · C8.2 filing record · C6.5 document reader (passport by rules first, then OCR through the STANDARDS §1 gate; P-256 brings "Fill this from my documents" with it) · C7.5 independent AI review (paid runs within P-225). Held rows (P-251) stay held. The tech lead shapes each row's "Done when" before the reset.
