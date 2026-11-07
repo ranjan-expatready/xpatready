@@ -870,6 +870,9 @@ model DocumentType {
   /// A fact not listed is about the holder (the person the checklist line names).
   suppliesAbout   Json?            @map("supplies_about")
   readerProfile   Json?            @map("reader_profile")
+  /// C6.15 (SA-1B-19): named substitute sets, [{ name, mode: "any_one" | "all_together", members: [{ key, when? }] }];
+  /// null = the type is its own only member. Set only through a second person's approval (api/src/document-sets.ts).
+  sets            Json?
   version         Int
   status          DefinitionStatus
   supersedesId    String?          @map("supersedes_id") @db.Uuid
@@ -897,6 +900,8 @@ model DocumentRequirement {
   position        Int?
   /// W1-15 slice 3: library document type keys that count instead of this one ("any one counts")
   alternatives    Json?
+  /// C6.15 (SA-1B-20): the named set of this document type the line picks; null = the set named "Standard".
+  setName         String?          @map("set_name")
   sourceQuote     String?          @map("source_quote")
   sourceFile      String?          @map("source_file")
   note            String?

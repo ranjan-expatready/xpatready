@@ -11,6 +11,8 @@ import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { actionVerb, changeView } from "./library-changes.ts";
 import { applyFills } from "./who-fills.ts";
 import { applySupplies } from "./document-supplies.ts";
+import { applySets } from "./document-sets.ts";
+import { SETS_KIND } from "../../contracts/document-sets.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 import { applyCondition, COND_KIND } from "./question-condition.ts";
 import { applyFormFieldCondition, FORM_FIELD_KIND } from "./form-field-condition.ts";
@@ -469,6 +471,7 @@ export class Lifecycle {
     if (c.kind === FORM_FIELD_KIND) return applyFormFieldCondition(this.db, this.audit, actor, c); // B86: a draft form field holding the condition
     if (c.kind === "placement_fills") return applyFills(this.db, this.audit, actor, c); // C4.9 (runtime lane): a draft placement
     if (c.kind === SUPPLIES_KIND) return applySupplies(this.db, this.audit, actor, c); // C4.5: a draft document type with its facts
+    if (c.kind === SETS_KIND) return applySets(this.db, this.audit, actor, c); // C6.15: a draft document type with its substitute sets
     // QA-64, P-116 amended (28 Oct): a library retire or restore takes effect at approval (a structure name or a
     // combination waits for the release). The same check as at a release: a draft listing the form again hands it back.
     if (c.kind === "library_form" && (c.action === "RETIRE" || c.action === "RESTORE")) {
