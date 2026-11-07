@@ -18,6 +18,7 @@ import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts"; // C7.6: Ready to file is read now (case-prepare.ts imports signStepsOf: forwardRef below)
+import { refuseIfRecorded } from "./submission-record.ts"; // C8.2-9: a recorded application is read-only
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -69,6 +70,9 @@ export class SignSteps {
     if (!isSignStep(keyIn)) fail(`No such step: the steps are ${SIGN_STEPS.map((k) => SIGN_STEP_WORDS[k]).join(", ")}.`, HttpStatus.NOT_FOUND);
     const key = keyIn as SignStepKey;
     const { c, item, handScanned } = await this.item(actor, itemId);
+    // B129 (B3 challenge M2, break M3 on #1221): once the submission is recorded nothing on it is signed again, not even a
+    // new print after a fact changed (the restart below); the read-only words come first, as for the channel and "entered".
+    await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`);
     if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it has no signing steps. Nothing was recorded.`, HttpStatus.CONFLICT);
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
     // C9.2 (BR-12, BR-20): a form printed from a copy whose facts changed since (the representative of record among them)
@@ -126,6 +130,7 @@ export class SignSteps {
    *  checksum, never changed in place; it marks "Signed scan received". */
   async scan(actor: Actor, itemId: string, files: Upload[] | undefined) {
     const { c, item, handScanned } = await this.item(actor, itemId);
+    await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`); // B129: before the file is stored
     if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it takes no signed scan. Nothing was stored.`, HttpStatus.CONFLICT);
     const f = (files ?? []).filter((x) => x.buffer);
     if (f.length !== 1 || f[0].fieldname !== "file") fail(`Send one file, in the field "file". Nothing was stored.`);
