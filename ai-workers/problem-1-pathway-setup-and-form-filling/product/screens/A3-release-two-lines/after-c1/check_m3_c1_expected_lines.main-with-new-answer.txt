@@ -1,0 +1,15 @@
+PASS  C1-0 acceptance/lib/m3.ts exports expectedLines, releaseLines and expectedFor (row C1)
+PASS  C1-1 fixture: adults three forms (IMM 5257 barcode PDF, IMM 5707 Online family form, IMM 5476 hand-signed), each child one (IMM 5257, a parent signs), nothing waits — []
+PASS  C1-2 release 2: adults IMM 5257 Online, Schedule 1 and IMM 5645 (family form); children IMM 5257 only, signed by a parent; IMM 5409, IMM 5475, IRM 0002 wait for every person, IMM 5476 (person and representative) for the adults only — []
+PASS  C1-3 release 2: a principal of 16 still fills Schedule 1 (the age gates dependent children only) and no IMM 5645 (from 18) — ["IMM 5257","IMM 5257 SCH1"]
+PASS  C1-4 a person on the case who is not travelling (applies: false) is expected no form — {"name":"Sample Spouse A","role":"spouse_or_partner","age":38,"forms":[],"waiting":[]}
+PASS  C1-4b IMM 5257 signed "a parent for a minor": a child with no date of birth is signed by a parent; a principal of 16 signs their own — {"child":"parent","principal":"person"}
+PASS  C1-5 setup: the copy has the fixture's Visitor visa release 2 (the pack's setup) — 2
+PASS  C1-6 fixture, live: expectedLines of a family case on its pinned release (GET /combinations/:id/config?mode=published, checked against the case's pin) equals the hand-worked answer — []
+PASS  C1-7 Demo › Reset, then Load the configured checkpoint — [201,201]
+FAIL  C1-8 checkpoint, live: a new family case opens on release 2 and expectedLines equals the hand-worked answer (seven lines for adults, four for children) — ["Sample Client A forms: IMM 5257 ONLINE/NONE by person [online,barcode]; IMM 5257 SCH1 PDF_UPLOAD/NONE by person; IMM 5645 PDF_UPLOAD/NONE by person [family]","Sample Spouse A forms: IMM 5257 ONLINE/NONE by person [online,barcode]; IMM 5257 SCH1 PDF_UPLOAD/NO
+PASS  C1-9 checkpoint: filled the packs' way, stage 1 is exactly 17 to confirm for each adult's filing (IMM 5476's representative facts no route fills before B107) and 0 for each child's (the UCI was the one other fact left) — {"Sample Client A":17,"Sample Spouse A":17,"Sample Child A1":0,"Sample Child A2":0}
+PASS  C1-9b checkpoint: the only forms not ready are the two adults' IMM 5476, each missing exactly those 17 facts about the representative — ["IMM 5476/Sample Client A: 17","IMM 5476/Sample Spouse A: 17"]
+PASS  C1-10 no "fact with a problem" warning on the UCI: the helper's Sample UCI is one the release's own checks accept — []
+
+12/13 passed
