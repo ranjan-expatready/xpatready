@@ -63,6 +63,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const card = p.locator("section[aria-labelledby=eligibility]");
   await card.locator("li").first().waitFor({ timeout: 15000 }); // the card reads its own list after the case page
   step("C6.9 page pass: the case page shows the card \"Case check from confirmed facts (staff only)\" with one line per traveller and the SI-1 chip", (await card.count()) === 1 && /Case check from confirmed facts \(staff only\)/.test(await card.innerText()) && /Sample Client A[\s\S]*Not run[\s\S]*Sample Spouse A/.test(await card.innerText()) && (await card.locator('[data-stand-in="SI-1"]').count()) === 1);
+  // A tall window, so focus does not scroll the pill (the shared Tip closes on scroll: a cross-screen follow-up row).
+  await p.setViewportSize({ width: 1440, height: 2400 }); const cardHelp = card.locator("[data-help]").first(); await cardHelp.focus(); await p.waitForTimeout(400);
+  step("C6.9 page pass (P-407 BIC-14): the case card's outcome help opens on keyboard focus", /^No case check has run for this person yet\./.test(await p.locator("[role=tooltip]").first().innerText().catch(() => "")));
+  await p.keyboard.press("Escape"); await p.evaluate(() => (document.activeElement)?.blur()); await p.setViewportSize({ width: 1440, height: 900 });
   await tabTo(/^Open case check/); await p.keyboard.press("Enter"); await settle();
   step("C6.9 page pass: Open case check (keyboard) opens /cases/:id/eligibility with the trail Cases › reference › Case check from confirmed facts", p.url().endsWith(`/cases/${c.id}/eligibility`) && /Cases\s*›\s*C69P-[\s\S]*›\s*Case check from confirmed facts/.test(await p.locator("nav[aria-label=Path]").innerText()));
   step("C6.9 page pass: empty state in words: \"No case check yet … nothing is sent anywhere\"", /No case check yet for Sample Client A\. It reads the answers on file against this application's rules; nothing is sent anywhere\./.test(await text()));
@@ -81,6 +85,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.9 page pass (P-407 BIC-14): the outcome's help opens on keyboard focus and says what it means", /Can't tell yet: no rule that disqualifies failed, but 3 facts not answered yet/.test(tipText), tipText);
   await p.keyboard.press("Escape");
   step("C6.9 page fail (P-407 BIC-20): the people list keeps one tab stop (no focusable help inside its options)", (await p.locator("[role=listbox] [tabindex='0'], [role=listbox] a, [role=listbox] button").count()) === 1);
+  const desc = await p.locator("[role=option][aria-selected=true]").evaluate((e) => document.getElementById(e.getAttribute("aria-describedby") ?? "")?.textContent ?? "");
+  step("C6.9 page pass (P-407 BIC-14): the selected person's option describes its outcome (aria-describedby), not in its name", /^Can't tell yet: no rule that disqualifies failed/.test(desc) && !/no rule that disqualifies/.test(await p.locator("[role=option][aria-selected=true]").innerText()), desc);
+  step("C6.9 page pass (P-407 BIC-14): the officer's judgement help is visible text under its heading", /Officer's judgement, not checked by rules\s*IRCC's officer decides these; they never change the result\./.test(await text()));
   const roles = await p.locator("[role=option] [data-role]").allInnerTexts();
   step("C6.9 page pass (P-407 BIC-08): each traveller shows the case page's role words", roles.includes("Principal applicant") && roles.includes("Spouse or partner"), roles.join(", "));
   const misses = await p.locator("[data-missing-link=line]").evaluateAll((es) => es.map((e) => e.getAttribute("href")));
@@ -130,6 +137,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("review-drawer");
   await tabTo(/^Mark reviewed$/); await p.keyboard.press("Enter"); await p.waitForSelector("[role=dialog]", { state: "detached" }); await settle();
   step("C6.9 page pass (review M1): after Mark reviewed (now off), focus is on the result's heading", await focusIs() === "#result", await focusIs());
+  step("C6.9 page pass (P-407 BIC-14): once marked, \"Already marked reviewed\" shows as text beside the switched-off button", /Already marked reviewed/.test(await text()));
   step("C6.9 page pass (BR-16): marked: \"Seen by Case officer\" on the result; Mark reviewed is then off", /Seen by Case officer/.test(await text()) && await p.getByRole("button", { name: /^Mark reviewed/ }).isDisabled());
   const latest = (await api(`/runtime/cases/${c.id}/assessments?person=${A}`)).body.assessments[0];
   const again = await api(`/runtime/assessments/${latest.id}/review`, { method: "POST", data: {}, actor: "user-R" });

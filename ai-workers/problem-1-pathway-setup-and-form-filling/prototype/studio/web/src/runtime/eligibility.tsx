@@ -173,11 +173,11 @@ export function EligibilityPage() {
               {travellers.map((p) => {
                 const a = latestOf(q.data?.assessments, p.subject_id), o = outcomeWords(a?.results[0]), on = p.subject_id === person?.subject_id;
                 return (
-                  <li key={p.subject_id} role="option" aria-selected={on} tabIndex={on ? 0 : -1} onClick={() => { setChosen(p.subject_id); setRunError(null); }}
+                  <li key={p.subject_id} role="option" aria-selected={on} aria-describedby={`help-${p.subject_id}`} tabIndex={on ? 0 : -1} onClick={() => { setChosen(p.subject_id); setRunError(null); }}
                     className={cn("flex min-h-11 cursor-pointer flex-col justify-center rounded-lg px-3 py-1.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", on ? "bg-primary/10" : "hover:bg-text/5")}>
                     <span className="flex flex-wrap items-center gap-2"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><Pill tone={o.tone}>{o.short}</Pill>{a?.out_of_date ? <Pill tone="warn">Out of date</Pill> : null}</span>
                     <span className="text-xs text-text-muted" data-role>{roleOf(p)}</span>
-                    <span className="sr-only">{outcomeTip(a?.results[0])}{a?.out_of_date ? ` ${OUT_OF_DATE_TIP}` : ""}</span>
+                    <span id={`help-${p.subject_id}`} hidden>{outcomeTip(a?.results[0])}{a?.out_of_date ? ` ${OUT_OF_DATE_TIP}` : ""}</span>
                     {a?.results[0]?.missingInputs.length ? <span className="text-xs text-text-muted">needs {a.results[0].missingInputs.map(factWords).join(", ")}</span> : null}
                   </li>
                 );
