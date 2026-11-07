@@ -24,6 +24,7 @@ import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { keptOnMacWords } from "./sample-validated.ts";
+import { busyWords } from "./busy.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
 import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
@@ -236,9 +237,14 @@ export class CaseForms implements OnModuleInit {
     const stored: Stored = { facts: cov!.facts, boxes: markNothingRecorded(cov!.boxes, view, s.placements as GatePlacement[]), groups: groupFacts(view, form, subjectId) };
     let copy;
     try {
-      copy = await this.db.$transaction(async (tx) => {
+      // C9.5 (breaker R2-m1): a long wait for the case's row lock (a move holding it) answers a worded 503, never a 500.
+      copy = await busyWords(() => this.db.$transaction(async (tx) => {
         // The cap is counted under a lock on the case row, so simultaneous requests are counted one after another (PR #12 review 3).
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+        // C9.5 (BR-7, challenge M2): the pin was read before this lock; a move to another release made meanwhile (it takes
+        // the same lock) is seen here, so no copy is ever made on the release the case just left.
+        const newest = await tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } });
+        if (newest?.revision !== c.pins[0].revision) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Changed by someone else", status: 409, detail: "This case moved to another release while you pressed Fill: nothing was made. Press Fill again to make the copy on the case's release now." }, HttpStatus.CONFLICT);
         const active = await tx.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
         // C11.6: the person's channel read under the same lock the channel change takes, and frozen with the facts.
@@ -247,7 +253,7 @@ export class CaseForms implements OnModuleInit {
         if (frozen === "NOT_NEEDED") throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not needed", status: 422, detail: `${form} is Not needed for this person: the IRCC account asks it itself, so nothing is filled.` }, HttpStatus.UNPROCESSABLE_ENTITY);
         const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, inputHash: inputHash(cov!.facts), factsJson: { ...stored, channel: frozen } as object } });
         return tx.formInstance.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, configReleaseId: c.pins[0].configReleaseId, snapshotId: snap.id, idempotencyKey: b.idempotencyKey ?? null, createdBy: actor.id } });
-      });
+      }));
     } catch (e) {
       if (!unique(e) || !b.idempotencyKey) throw e;
       const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); // a simultaneous press won

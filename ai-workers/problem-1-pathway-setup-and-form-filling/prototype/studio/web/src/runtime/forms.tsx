@@ -12,6 +12,7 @@ import { inSentence, LOCK_KINDS, notReady, ONLINE_LATER_WAVE, type CaseForm, typ
 import { noRetryOnRefusal } from "./questionnaire";
 import { openLines } from "../../../engine/runtime/open-lines";
 import { OutOfDate } from "./out-of-date";
+import { MovedGroups } from "./release-update"; // C9.5: what a move to a newer release did, until each copy is made again
 import { ReadinessPanel } from "./readiness"; // C7.6 (B2): the filings' readiness from /prepare, right after the forms
 import { SignSteps } from "./sign-steps"; // C8.1 (B3): who signs, and the steps of a form signed by hand and scanned
 
@@ -33,6 +34,7 @@ export function FormsPanel({ caseId }: { caseId: string }) {
         <h2 id="forms-h" tabIndex={-1} className="text-base font-semibold outline-none">Prepare application</h2>
         <p className="text-[13px] text-text-muted">The forms to file, filled from confirmed answers only. A new copy is made only when you ask; a locked copy never changes.</p>
       </header>
+      <MovedGroups caseId={caseId} />
       <OutOfDate caseId={caseId} />
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The forms could not be loaded">{(q.error as Error).message}</Notice></div>

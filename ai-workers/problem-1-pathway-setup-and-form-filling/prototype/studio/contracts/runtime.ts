@@ -267,3 +267,38 @@ export type CaseFilings =
 /** G13 (QA-140): a release in the same words in the studio and on a case: "Release N", N being the content pack release
  *  the studio shows (else the combination's released version). */
 export const releaseLabel = (r: { version: number; packVersion?: { version: number } | null }) => `Release ${r.packVersion?.version ?? r.version}`;
+
+// ------------------------------------------------------------------ C9.5 adopt a newer release (B145)
+
+/** C9.5 (BR-5): move a case to the newest release of its combination: the release and pin revision the person read, and
+ *  one reason (pre-filled "Adopting the current release", 3 to 500 characters). */
+export const RELEASE_MOVE_REASON = "Adopting the current release";
+export const ReleaseMove = z.object({
+  target_version: z.number({ message: "Send the release you read (Read the list again)." }).int().positive(),
+  from_revision: z.number({ message: "Send the pin revision you read (Read the list again)." }).int().positive(),
+  reason: text("Say why this case moves to the new release (at least 3 characters).", 3, 500).refine((x) => /[\p{L}\p{N}]/u.test(x), "Say why this case moves to the new release, in words."),
+});
+export type ReleaseChangeLine = { what: string; kind: string; who: string[]; before: string; after: string };
+/** `fillable`: Fill (a new copy on the new release) is the next step for this line. */
+export type ReleaseEffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string; fillable?: boolean };
+/** GET /runtime/cases/:id/release-update (computed, writes nothing). `target` null: the case is on the newest release. */
+export type ReleaseUpdate = {
+  case_id: string;
+  current: { version: number; label: string; revision: number; pinned_at: string };
+  target: { version: number; label: string; released_at: string; demo: boolean } | null;
+  combination: string;
+  changes: { forms: ReleaseChangeLine[]; documents: ReleaseChangeLine[]; questions: ReleaseChangeLine[]; eligibility: ReleaseChangeLine[] };
+  fees: string;
+  effects: { fill_again: ReleaseEffectLine[]; filed_another_way: ReleaseEffectLine[]; no_longer_required: ReleaseEffectLine[]; withdrawn: ReleaseEffectLine[]; kept_out_of_date: ReleaseEffectLine[]; unchanged: { count: number; words: string } };
+  /** Filings the difference touches, with what it touches (the Ready to file warning reads the same). */
+  touched: { filing: string; label: string; words: string[] }[];
+  refused: { code: string; reason: string; item?: string } | null;
+  /** Whether this person may move the case (case staff of its firm); the list is shown either way. */
+  can_move: boolean;
+  reason_default: string;
+};
+/** After a move (pin revision 2 on): what it did to the work made before it that still waits (Prepare's groups). */
+export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
+/** POST …/release-update: the new pin and what the move did, for the toast. */
+export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
+  counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
