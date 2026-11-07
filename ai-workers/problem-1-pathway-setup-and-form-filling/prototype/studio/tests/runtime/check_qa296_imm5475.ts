@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as team from "../../engine/runtime/team.ts";
-import { call, copyBytes, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo } from "../../acceptance/lib/m3.ts";
+import { answer, call, CLIENT, copyBytes, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo } from "../../acceptance/lib/m3.ts";
 
 const STUDIO = join(import.meta.dirname, "..", ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
@@ -39,6 +39,7 @@ await main("QA-296", "IMM 5475's designated individual is never the representati
   ok("QA-296 pass: a form whose map reads a representative.* fact about the representative names them (IMM 5476's licence part)", names([{ outcome: "mapped", fact: "person.family_name", person: "representative" }, { outcome: "mapped", fact: "representative.membership_id", person: "representative" }]) === true);
   ok("QA-296 fail: a form that reads only a name and contact about \"representative\" does not (IMM 5475's designated individual)", names([{ outcome: "mapped", fact: "person.family_name", person: "representative" }, { outcome: "mapped", fact: "person.address_city", person: "representative" }]) === false);
   ok("QA-296 fail: a representative.* fact about someone else, or not mapped, names nobody", names([{ outcome: "mapped", fact: "representative.membership_id", person: "form_subject" }, { outcome: "unresolved", fact: "representative.membership_id", person: "representative" }]) === false);
+  ok("QA-296 fail (review m3): an entry with no outcome, or one left to write by hand, names nobody either", names([{ fact: "representative.membership_id", person: "representative" }, { outcome: "by_hand", fact: "representative.membership_id", person: "representative" }]) === false);
 
   const vv = needVisitorVisa(), f = await firms();
   const rec = (JSON.parse(readFileSync(join(STUDIO, "samples", "firms.json"), "utf8")) as { firms: { users: { id: string; family_name?: string; given_names?: string }[] }[] }).firms.flatMap((x) => x.users).find((u) => u.id === f.rep);
@@ -61,6 +62,16 @@ await main("QA-296", "IMM 5475's designated individual is never the representati
   const v5476 = Object.values(pdfValues(await copyBytes(c5476 ?? "", officer)));
   ok("QA-296 pass: the filled IMM 5476 still holds the representative of record's family name and given names", v5476.includes(rec?.family_name ?? "?") && v5476.includes(rec?.given_names ?? "?"), v5476.slice(0, 12));
   ok("QA-296 pass: and its licence number", v5476.some((v) => /\d{3,}/.test(v) && JSON.stringify(f.firm?.users.find((u) => u.actor === f.rep)?.licence ?? "").includes(v)), v5476.slice(0, 12));
+
+  // Review m3: the applicant's own confirmed names still reach IMM 5475 (its applicant part); only the designated
+  // individual's stay blank. Client A answers their own names (P-78: a client's own answer counts as confirmed).
+  const own = { family: "Applicantfamily", given: "Applicantgiven" };
+  const typed = [await answer(c.id, P, "person.family_name", own.family, CLIENT), await answer(c.id, P, "person.given_names", own.given, CLIENT)];
+  ok("QA-296 setup (review m3): Client A saves their own family name and given names", typed.every((x) => x.status < 300), typed.map((x) => [x.status, x.body?.detail]));
+  const again = await generateCopy(c.id, "IMM 5475", P);
+  const bAgain = boxesOf(again), vAgain = Object.values(pdfValues(await copyBytes(again ?? "", officer)));
+  ok("QA-296 pass (review m3): a new IMM 5475 copy writes the applicant's own names, once each (the applicant's boxes)", !!again && vAgain.includes(own.family) && vAgain.includes(own.given) && NAMES.every((n) => bAgain.filter((b) => b.fact === n && b.result === "written").length === 1), NAMES.map((n) => bAgain.filter((b) => b.fact === n).map((b) => `${b.box.split(".").slice(-2).join(".")}=${b.result}`)));
+  ok("QA-296 fail (review m3): and still neither of the representative's names", !!again && !vAgain.includes(rec?.family_name ?? "?") && !vAgain.includes(rec?.given_names ?? "?"), vAgain);
 
   // The representative's tab says truthfully which forms the names fill.
   const view = (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, officer)).body;

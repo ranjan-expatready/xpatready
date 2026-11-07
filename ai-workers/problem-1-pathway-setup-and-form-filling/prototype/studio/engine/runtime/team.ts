@@ -113,7 +113,8 @@ export function representativeContact(firm: Firm, members: Member[], phoneParts:
  *  record fills only such a form. A form that reads only a name or contact about "representative" names someone else
  *  (on the configured checkpoint, IMM 5475's designated individual: IRCC's "someone who will not act as your
  *  representative"), so the firm record's facts never reach it and the tab never says they fill it. Read from the
- *  form's map, never its number (P-319); the same test as the Prepare item's tag (api/src/case-prepare.ts, break M3). */
+ *  form's map, never its number (P-319); the Prepare item's tag (api/src/case-prepare.ts, break M3) asks the same of the
+ *  form's confirmed facts instead (review nit). */
 export function namesRepresentative(entries: { outcome?: string; fact?: string | null; person?: string | null }[]): boolean {
   return entries.some((e) => e.outcome === "mapped" && e.person === REPRESENTATIVE && !!e.fact?.startsWith("representative."));
 }
