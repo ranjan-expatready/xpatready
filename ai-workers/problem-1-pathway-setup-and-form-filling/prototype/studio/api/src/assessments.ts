@@ -172,7 +172,10 @@ export class Assessments {
     const o = outOfDate(env.inputs ?? [], nowOf(known, x.subjectId), c.pins[0].configReleaseId === x.configReleaseId);
     // Break m3 on fd26c492: a person no longer travelling (or removed) makes the run out of date, said in words.
     const travelling = c.participants.some((p) => p.subjectId === x.subjectId && p.applies);
-    return { ...env, results: (env.results ?? []).map((r) => withUnconfirmedNow(r, known, x.subjectId)), ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
+    // B124 (P-393): what each gate rests on, on the release the run read; nothing for an out-of-date run.
+    const same = c.pins[0].configReleaseId === x.configReleaseId, s = same ? this.r.snapshotOf(c) : null;
+    const rests = o.out_of_date || !travelling || !s ? "none" as const : { s, gates: (s.eligibility as SnapshotEligibility | undefined)?.gates ?? [] };
+    return { ...env, results: (env.results ?? []).map((r) => withUnconfirmedNow(r, known, x.subjectId, rests)), ...o, ...(travelling ? {} : { out_of_date: true, not_travelling: true }) };
   }
 
   private view(x: Row, overrides: AssessmentOverride[], review: AssessmentReview | null, env: Envelope & ReturnType<typeof outOfDate>) {
