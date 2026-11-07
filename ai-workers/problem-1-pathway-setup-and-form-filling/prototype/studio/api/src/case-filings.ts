@@ -7,7 +7,8 @@ import { checkValue } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
-import { Runtime } from "./runtime.ts";
+import { Runtime, type Reached } from "./runtime.ts";
+import type { Participant } from "../../engine/runtime/case.ts";
 
 type H = string | undefined;
 
@@ -17,6 +18,12 @@ export class CaseFilings {
 
   async list(actor: Actor, caseId: string) {
     const c = await this.r.reach(actor, caseId, "officer");
+    return this.deriveFor(c, this.r.peopleOf(c));
+  }
+
+  /** C6.13 (M7): the one derivation, for the case's people as they are or as a filing change would make them, so the
+   *  change's preview and this view never price a case differently. */
+  async deriveFor(c: Reached, people: Participant[]) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // Money follows the combination: the release's snapshot must name the case's own combination (break report M2: a
     // release row edited underneath would otherwise price the case as another combination).
@@ -24,7 +31,7 @@ export class CaseFilings {
     if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; no filing or fee was worked out. Ask the Lead.", HttpStatus.CONFLICT);
     // C6.12 (prepare view): the same ages, filing modes and stored submission groups as GET …/prepare, so the two never
     // price a case differently (read only: the prepare view stores the filings).
-    const people = this.r.peopleOf(c), today = new Date();
+    const today = new Date();
     const { answers } = await this.r.state(c);
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
     const modes = releaseModes(s.combination.participants ?? []); // C11.12: the same reading as GET …/prepare

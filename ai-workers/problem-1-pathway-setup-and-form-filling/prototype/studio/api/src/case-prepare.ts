@@ -168,7 +168,8 @@ export class CasePrepare {
       const live = new Map([...onFiling].filter(([, o]) => liveOwner.has(o)).map(([subject, o]) => [subject, liveOwner.get(o)!]));
       const wantKeys = new Set(wanted.filter((w) => live.has(w.subject)).map((w) => `${live.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
       // C11.12 (challenge M1): the applicant rows are compared too (who is on it, and applying or declared only).
-      const sameApplicants = (row: (typeof filings0)[number], want: { subject: string; mode: string }[]) => row.applicants.length === want.length && want.every((a) => row.applicants.some((x) => x.subjectId === a.subject && x.mode === a.mode));
+      // C6.13 (m2): and their role, so Make principal (a swap of roles only) refreshes the stored applicant rows.
+      const sameApplicants = (row: (typeof filings0)[number], want: { subject: string; mode: string; role: string }[]) => row.applicants.length === want.length && want.every((a) => row.applicants.some((x) => x.subjectId === a.subject && x.mode === a.mode && x.role === a.role));
       const has = new Set(items0.map((i) => `${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`));
       const changes = !groups.some((g) => g.kind === "FAMILY")
         || first.filings.some((f) => { const row = filings0.find((x) => x.subjectId === f.owner!.subject); return !row || !row.active || row.mode !== f.mode || !sameApplicants(row, f.applicants); })
