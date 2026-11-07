@@ -125,7 +125,10 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
     await o.getByRole("tab", { name: /^Sample Applicant A/ }).click();
     const sec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Personal details" }) }).first();
-    step("officer: the answers read as a person writes them (labels, the name, the periods)", await shows(sec.getByText("Tourism, Visit family")) && await shows(sec.getByText("Sampled (no given name)")) && await shows(sec.getByText(/Jun 2014 to Jan 2019: Sample work; Jun 2020 to today: Sample study/)) && await shows(sec.getByText("Declared", { exact: true })));
+    // B150 (P-242, QA-301): every client answer now carries a "Declared" mark, so the declaration's own value is read on its
+    // own row (lineId in web/src/runtime/questionnaire.tsx), where it reads "Declared" once (its mark is not repeated).
+    const declRow = o.locator(`[id="a-${P}-${F.decl.replace(/[^a-z0-9_]/gi, "-")}"]`);
+    step("officer: the answers read as a person writes them (labels, the name, the periods)", await shows(sec.getByText("Tourism, Visit family")) && await shows(sec.getByText("Sampled (no given name)")) && await shows(sec.getByText(/Jun 2014 to Jan 2019: Sample work; Jun 2020 to today: Sample study/)) && await shows(declRow.getByText("Declared", { exact: true })));
     step("officer (review M1): the declaration reads \"Declared\" with no Edit: only the client makes it", await shows(sec.getByText("Only the client makes this declaration")) && (await sec.getByRole("button", { name: /^(Edit|Add) Declaration/ }).count()) === 0);
     // C4.4 part 2: the fired check is also listed (collapsed) under the forms' "Facts to answer or confirm", earlier on the page, so look in the sections.
     step("officer (tier 2): the 10-year history check fires on the gap, held as data", await shows(o.locator("section[id^='s-']").getByText(GAP_CHECK).first()));

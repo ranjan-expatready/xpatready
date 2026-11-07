@@ -603,14 +603,21 @@ export class CasePrepare {
   }
 }
 
-/** C7.3: one Online form item's answer sheet: the person's boxes for that form (confirmed facts only, P-72), in the PDF
- *  twin's sections, with each entered tick compared against the answers it froze. */
+/** C7.3: one Online form item's answer sheet: the person's boxes for that form (every declared or confirmed answer, each
+ *  with its mark and "to confirm", P-242, P-411), in the PDF twin's sections, with each entered tick compared against the
+ *  answers it froze. */
 function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[]): Sheet {
   const cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId);
   const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
   const origin = (subject: string, fact: string) => { const a = answers.find((x) => x.subjectId === subject && x.field === fact); return a?.origin?.channel ?? a?.channel; };
   const sections = (PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[item.itemKey] ?? {};
-  return answerSheet(sections, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])));
+  // P-411 (B150 review M2): the officer types from this sheet, so each answer carries who gave it and whether it is still to confirm.
+  const qs = view.sections.flatMap((x) => x.questions), filing = people.find((p) => p.role === "case")?.subjectId;
+  const markOf = (about: string, fact: string, row: number | null) => {
+    const q = qs.find((x) => x.subjectId === (about === "case" ? filing : about) && x.fact === fact), a = q ? (q.group ? q.rows[row ?? 0]?.answer : q.answer) : null;
+    return a ? { mark: a.mark, confirmed: a.confirmed, why: a.why } : undefined;
+  };
+  return answerSheet(sections, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf);
 }
 
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];

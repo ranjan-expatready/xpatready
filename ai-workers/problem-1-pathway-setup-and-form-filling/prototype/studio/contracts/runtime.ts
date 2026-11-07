@@ -98,18 +98,28 @@ export const ConfirmSection = z.object({
 export const Address = z.object({ po_box: z.string().optional(), apt_unit: z.string().optional(), street_number: z.string().optional(), street_name: z.string().optional(), city: z.string().optional(), district: z.string().optional(), province: z.string().optional(), postal_code: z.string().optional(), country: z.string().optional() });
 export const Phone = z.object({ type: z.string().optional(), country_code: z.string().optional(), number: z.string().optional(), extension: z.string().optional() });
 
-/** Words shown for an answer's confirmation (P-72). */
+/** Words shown for an answer's confirmation (P-72, P-78, as P-242 and P-411 amend them: every declared answer fills the
+ *  forms at once, marked by who gave it; "confirmed" says only whether it is still on the officer's Confirm list). */
 export const CONFIRM_WORDS = {
   officer: "Confirmed by the officer",
-  client_own: "Counts as confirmed: the client's own answer",
+  client_own: "Declared: the client's own answer; it fills the forms now",
   waits: "Waits for the officer's \"Confirm section\"",
-  by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  staff: "Declared: entered by staff; it fills the forms now and waits for the officer's \"Confirm section\"",
+  by_principal: "Answered by the principal for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
 } as const;
+/** P-411 (1): the principal's answer for an adult spouse or adult child, marked with that person's name. */
+/** P-411 (1) also says the adult sees and confirms it before signing; that person's own confirmation is not built yet
+ *  (B150 review m4), so the words name only what happens today: the officer's Confirm section before filing. */
+export const byPrincipalFor = (name: string) => `Answered by the principal for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
+/** Who gave the current answer (P-242, P-411): the mark shown beside it. Every mark fills the forms at once. */
+export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
-export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string };
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** P-242, P-411: whether the answer is written to the forms now (every current answer is), and who gave it. */
+  fills: boolean; mark: AnswerMark };
 export type ViewQuestion = {
   subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
   shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
@@ -176,7 +186,9 @@ export type FormCopy = {
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
 export type CaseForm = {
-  form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
+  form: string; title: string; subject_id: string; person: string; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
+   *  answered form fields left blank because the answer needs a fix (QA-122, or a Yes/No contradicting a recorded detail). */
+  draft: { written_now: number; mapped: number; to_fix: number };
   readiness: Readiness; copies: FormCopy[];
   /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
   trial_passed: boolean;

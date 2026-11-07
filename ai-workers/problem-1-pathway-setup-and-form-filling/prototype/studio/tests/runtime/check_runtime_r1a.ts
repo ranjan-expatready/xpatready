@@ -136,10 +136,10 @@ async function main() {
   // ── RT-10 confirmation (P-72, founder question 1 as recommended)
   const conf = async (subject: string, field: string) => qs(await agent()).find((q) => q.subjectId === subject && q.fact === field)!.answer;
   let a = await conf(principal, "person.marital_status");
-  ok("RT-10 pass: the client's own answer on a client field counts as confirmed", a?.confirmed === true && /client's own/.test(a.why), a?.why);
+  ok("RT-10 pass (P-242, QA-301): the client's own answer on a client field is Declared and needs no officer confirmation", a?.confirmed === true && /^Declared: the client's own answer/.test(a.why) && a.mark === "declared", a?.why);
   await check(spouse, "person.marital_status", "married");
   a = await conf(spouse, "person.marital_status");
-  ok("RT-10 fail (P-78): the principal's answer for the adult spouse shows \"answered by the principal\" and is not confirmed", a?.confirmed === false && /^Answered by the principal for an adult/.test(a.why), a?.why);
+  ok("RT-10 fail (P-78, P-411 (1)): the principal's answer for the adult spouse shows \"answered by the principal for\" the spouse's name and is not confirmed", a?.confirmed === false && /^Answered by the principal for Sample Spouse/.test(a.why) && a.mark === "by_principal", a?.why);
   await check(child, "person.marital_status", "single");
   const before = (await conf(child, "person.marital_status"))?.confirmed;
   await check(child, "person.date_of_birth", "2015-05-01", OFFICER);

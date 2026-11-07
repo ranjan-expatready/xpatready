@@ -128,12 +128,13 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   for (const f of x.forms) {
     if (f.channel === "NOT_NEEDED") continue;   // the portal asks it itself: shown greyed, never a block
     const at = { item: f.item, subject: f.subject, form: f.form };
-    // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line.
+    // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line. An unconfirmed answer
+    // already fills the form (P-411, B150 review M1), so the words never say it is blank.
     const missing = f.readiness.missing.filter((m) => m.reason !== "needs a fix"), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), m.label]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.
-    for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
+    for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). An answer fills the form as soon as it is given (P-242, P-411); each is confirmed before filing.` });
     for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
     // BR-9 1: out of date, or a required signature missing.
     if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
