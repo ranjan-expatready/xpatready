@@ -2,14 +2,14 @@
 
 current_lead: local_f02fdadd-e9b5-4e80-8dc0-b0bb01dda46e Lead 31 · 7 Nov 15:45 IST (took over from Lead 30 at ~395k context, P-314)
 
-updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-406 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1545-lead30.md` · this branch: `lead/2026-11-07-lead30`
+updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-406 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1555-lead31.md` · this branch: `lead/2026-11-07-lead30`
 
 ## Lead 31 progress (15:55 IST)
 * Check cron **4b7708bc** (:13/:43, prompt exactly `run lead-watch; read STATE Start here`). Weekly **10% at 15:53 IST**; Lead 31 context 142k.
 * **#1238 labelled 15:46 IST** (Approve 6221a4f54, green). **#1221 (B3) labelled ~15:48 IST** (Approve 40319be52, green; P-402); its lane then takes B129, B132.
 * **#1222 (A6) answered 15:52 IST:** round 3 diff-only by the same reviewer after CI is green; two code-cause reds: `check_case_feed` ("worked-out value" on neither audit list) and `check_b83_undo_withdraw` (C4.11 M7 now refused on 3 problems; likely the PR's conditional-documents sample).
 * **#1054 (A5):** Approve 65069b4b6 (notes-only head), CI on 714f5d77a still queued; schema change (P-278): the Lead reads the diff before any label.
-* **Drift audit landed** (notes folder, `m3-screens-vs-boards-2026-11-07.md`): verdict **"Not yet"**. Real drifts: (1) C7.7's two-stage Prepare application tab (P-122) not built, the case is one stacked page; (2) C6.9 keeps "Eligibility / Likely" though P-236's words were released by P-316 (1), BACKLOG still says held; (3) C11.6 channel in its own panel, each form listed twice; (4) C7.6 "Nothing reaches IRCC unreviewed" beside a "Pass with a reason" button; (5) C8.2 fee receipt typed, not the IRCC page uploaded. Also: only C6.9 has a best-in-class study; B1, A2/QA-293, B124, B126 not on "For the founder" (P-392). To post on the UX lane's PR 1 when it opens.
+* **Drift audit landed** (`reports/m3-screens-vs-boards-2026-11-07.md`): verdict **"Not yet"**. Real drifts: (1) C7.7's two-stage Prepare application tab (P-122) not built, the case is one stacked page; (2) C6.9 keeps "Eligibility / Likely" though P-236's words were released by P-316 (1), BACKLOG still says held; (3) C11.6 channel in its own panel, each form listed twice; (4) C7.6 "Nothing reaches IRCC unreviewed" beside a "Pass with a reason" button; (5) C8.2 fee receipt typed, not the IRCC page uploaded. Also: only C6.9 has a best-in-class study; B1, A2/QA-293, B124, B126 not on "For the founder" (P-392). To post on the UX lane's PR 1 when it opens.
 * New lanes (UX, concepts, build): no push yet at 15:55 IST. C4 pushed `claude/zen-fermi-poiqv8` 15:34 IST, no PR yet.
 
 ## Hand-over to Lead 31 (15:45 IST): do first
@@ -22,8 +22,8 @@ updated: 2026-11-07 15:55 IST by **Lead 31** (took over 15:45 IST) · milestone:
 6. **Records PR #1240 (Lead 30, head b88aad693):** the Approve line on its own records PR was **refused as Self-Approval at 15:43 IST even under P-405**: the rule covers labels and dispatches, not self-approval. Do not approve or label it for Lead 30 (that would route a refused write); the founder names it ("label 1240") at his return. Until then add records on this same branch (it is not labelled), or start `lead/2026-11-07-lead31` from `origin/main` after it merges.
 7. **Standbys:** Lead 32 (watchdog, first standby), Lead 33 (spare). Two standbys, so no new one is needed until the next hand-over.
 
-## Account switch (P-394 to P-398): done 12:35-13:11 IST
-Details moved word for word to `history/STATE-2026-11-07-1525-lead30.md`. Weekly 0% at 12:35 IST on the new account (Ultra; resets 13 Nov 04:29 IST); curl with `gh auth token` for GitHub (P-363).
+## Account switch, lessons of 7 Nov
+Word for word in `history/STATE-2026-11-07-1555-lead31.md` (account switch done 12:35-13:11 IST; Lessons, Leads 25-29).
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403); rows word for word in `history/STATE-2026-11-07-1545-lead30.md`.
@@ -78,14 +78,3 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403); rows word for word in `his
 
 ## Leads, in order (highest = current)
 **Lead 31** `local_f02fdadd-…` (from 15:45 IST 7 Nov) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 32 (watchdog), Lead 33.
-
-## Lessons (7 Nov, Leads 25-29)
-* A run said "checkpoint" but gate B used fixtures: read the pack lines ("on the checkpoint" vs "fixture only"), not the input (fixed by B125).
-* A test suite run from the sandbox in the main copy damaged it (mktemp failed): suites only in a scratch clone.
-* zsh does not split `$var` in `for d in $list`: use `${(f)list}` or xargs.
-* Pushing to a queued PR's branch removes its label (label guard): put new records on a new lead branch.
-* The permission check refuses a write the founder has not named; ask him to name it in one line, never route it through a lane.
-* A label claimed in notes is not a review on the PR: check for the `Reviewer: Approve <sha>` line before labelling (6 Nov). The reverse also holds: read the PR before starting a lane; A3's Approve was already there (7 Nov).
-* In this copy `git checkout -b <new> origin/main` can die on tracking after moving the files, leaving HEAD on the old branch with main's files staged: use `--no-track` and read the branch name after (7 Nov).
-* `lane-preflight.sh` prints "load unreadable" from the sandbox (`sysctl` is refused); `uptime` reads the load. The start hook passed for the standbys, so this is the Bash sandbox only (7 Nov).
-* **Burn 7 Nov:** weekly 2% at 13:45 IST, 4% at 14:15 IST: about 4%/h with 7 lanes, qa and a 350k Lead; the Lead's size matters, so hand over near 400k rather than at it.
