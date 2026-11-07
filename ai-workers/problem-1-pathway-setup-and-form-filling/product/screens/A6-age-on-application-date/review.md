@@ -97,3 +97,37 @@ Scope: my M1 and M2 checked against the diff, plus the code that fixes the break
 * **No Blocker or Major remains open.**
 
 Verdict: Approve
+
+## Round 3 (diff-only, `dfc87cef1..9760a1b9b`, 7 Nov 2026, about 15:30 IST)
+Scope: the move of the breaker's MA2 and MA3 fix out of `api/src/proposals.ts` (now equal to main), `case-feed.ts`, and the two test changes. Copies :4471 and :4472, both stopped. US$0.
+
+| Check at `9760a1b9b` | Result |
+|---|---|
+| `tests/check_b102_worked_out.ts`, fresh copy | **39/39** (MA2: five rounds, one winner each; MA3 fail and pass) |
+| `tests/check_case_feed.ts` | **27/27** |
+| `tests/check_b83_undo_withdraw.ts`, fresh configured checkpoint | **173/173** |
+| My probe script (scratchpad), fresh sample copy | the two findings below |
+
+* **M7, not weakened.** Only the choice of document changed (`check_b83_undo_withdraw.ts:360-363`: an always-needed Visitor visa line, falling back to the old one). The assertion is word for word the same: 409, names "B83 supplied held", no key. It passed.
+* **Case feed: right choice.** A worked-out value is shared configuration: its line carries a combination, never a case, and its words name no client. So it belongs with "rule fact" in CONFIG_ENTITIES (`case-feed.ts:30-31`). The fail line proves that a line naming another firm's case is still hidden.
+* **The lock serialises the two routes only within one combination.** That case holds: 0 of 8 rounds both accepted in my probe, and the builder's test shows 5 of 5. A fact is shared by the whole workspace, so the cross-combination case fails (R3-M1 (b)).
+
+### Major
+**R3-M1 (Must). BR-5 ("never both asked and worked out") is broken again, without a race, because the landing check left `proposals.ts`.**
+* **(a) No race needed.** On a fresh copy:
+  1. C3.6's add by name for rule B made a proposal "Rvn other" (key `person.rvn_other`, 201).
+  2. "Work it out instead" for `person.rvn_years` was accepted (201).
+  3. The content reviewer edited the proposal's name to "Rvn years" and accepted it: `landedAs: "person.rvn_years"`.
+
+  The database then held both a `canonical_field` and a `derived_field` for `person.rvn_years`, with its library change WAITING for the Approver, who is given no warning.
+* **Why.** The new refusal is checked only when the proposal is made (`rule-facts.ts:249-253`). The lander rebuilds the key from the name as decided, against `taken()`, which holds library fields only (`proposals.ts:284`, `:600`). The round-2 lander lines that counted worked-out keys are gone.
+* **(b) Cross-combination race.** The lock is `rule-fact:${combinationId}:${fact}` (`rule-facts.ts:197`, `worked-out.ts:139`), but worked-out values and library fields are shared by the workspace. Combination A's add for a rule's key, raced against combination B's "Work it out" for the same fact: **both accepted in 6 of 8 rounds**.
+* **Fix (for the tech lead to choose, keeping `proposals.ts` closed):**
+  * (b): lock on `rule-fact:${workspaceId}:${fact}` in both routes.
+  * (a): count worked-out keys as taken where the key is built at landing, outside `proposals.ts`. For example, `freeKey` in `api/src/library-changes.ts:234` treats a `derived_field` key as taken, which is round 2's behaviour (another key). Or `landField` refuses a worked-out key with 409.
+  * Or allow the round-2 lines back into `proposals.ts` as a named exception to the hot-file rule.
+  * Add one fail test each: an edit at accept that renames to a worked-out key; parallel rounds across two combinations.
+
+Round 2's other closures still hold; r2-m1 is now closed for one combination and lives on only as R3-M1 (b).
+
+Verdict: Block

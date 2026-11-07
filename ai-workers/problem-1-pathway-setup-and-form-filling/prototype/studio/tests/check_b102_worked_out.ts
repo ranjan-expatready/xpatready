@@ -142,6 +142,20 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? r.body);
   }
   ok("B102 break MA2 fail: asked and worked out at the same moment, exactly one of the two is accepted (five rounds)", twice === 0 && one === 5, { twice, one });
 
+  // ─────────────────── review R3-M1 (b): the same fact asked on one combination and worked out on another at the same
+  // moment: fields and worked-out values belong to the whole library, so exactly one wins (the lock is per workspace).
+  const combo2 = sql(`select id from combination where workspace_id=${ws} and id <> '${combo}' and retired_at is null order by label limit 1`);
+  let twice2 = 0, one2 = 0;
+  for (let i = 0; i < 6; i++) {
+    const f = `person.b102_cross_${i}`;
+    rule(`r_b102_cross_${i}`, `{"field":"${f}","op":"lt","value":18}`, "cross");
+    sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, when_plain, then_plain, for_whom, version, status, origin, updated_by) values (gen_random_uuid(), ${ws}, '${combo2}', 'r_b102_cross_${i}', '{"field":"${f}","op":"lt","value":18}', 'when the test says so', 'cross', 'principal', 1, 'PUBLISHED', 'HUMAN', 'user-A')`);
+    const [ask, work] = await Promise.all([call("POST", `/combinations/${combo2}/rule-facts`, { fact: f, rule: `r_b102_cross_${i}`, label: `B102 cross ${i}`, meaning: "A fact asked on one combination and worked out on another, for the B102 check.", valueType: "number" }), call("POST", url(f), good)]);
+    const wins = [ask, work].filter((x) => x.status === 201).length;
+    if (wins === 2) twice2++; if (wins === 1) one2++;
+  }
+  ok("B102 review R3-M1 (b) fail: asked on one combination and worked out on another at the same moment, exactly one is accepted (six rounds)", !!combo2 && twice2 === 0 && one2 === 6, { combo2, twice2, one2 });
+
   console.log(`\n${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

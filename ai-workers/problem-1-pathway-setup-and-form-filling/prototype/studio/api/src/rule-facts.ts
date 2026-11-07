@@ -194,7 +194,8 @@ export class RuleFacts {
     // M2 (review c36): parallel adds of one fact make one proposal. The waiting check and the write run under one lock
     // per combination and fact, so a second add waits, then sees the first and is refused (409).
     const { proposalId } = await this.db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${b.fact}`}))`;
+    // B102 (A6, review R3-M1 (b)): per workspace, as the library's fields and worked-out values are (it was per combination).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.workspaceId}:${b.fact}`}))`;
     if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
       fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
     // B102 (A6, break MA2): "Work it out instead" takes the same lock (api/src/worked-out.ts), so a fact is never both.

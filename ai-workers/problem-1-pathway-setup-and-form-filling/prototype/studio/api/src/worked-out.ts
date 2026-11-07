@@ -136,7 +136,8 @@ export class WorkedOut {
     try {
       // Break MA2: under C3.6's lock for this fact (rule-facts.ts add), with the ask and the library checked again inside.
       await this.db.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${fact}`}))`;
+        // Review R3-M1 (b): one lock per fact for the whole workspace (fields and worked-out values are the library's).
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.workspaceId}:${fact}`}))`;
         if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", OR: [{ work: { path: ["ruleFact"], equals: fact } }, { work: { path: ["keyPreview"], equals: fact } }] }, select: { id: true } }))
           fail(`A proposal to ask ${fact} is waiting on To review › Proposals: decide it there first (a fact is asked or worked out, not both).`, HttpStatus.CONFLICT);
         if (await tx.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fact }, select: { id: true } }))
