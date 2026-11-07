@@ -115,6 +115,10 @@ ok("C7.6 words pass: every block says it unblocks \"Ready to file and Record\"; 
 // BR-9 4 (P-155, BR-21): the representative's review.
 r = filingReadiness(done({ reviewed: false }));
 ok("C7.6 BR-9 4 fail (P-155): the representative's review not done is a CRITICAL warning (P-237), owed by the representative", codes(crit(r)).join() === "representative_review" && crit(r)[0].owes === "representative" && r.owes.representative === 1, r);
+// B149 (P-342, P-408): any firm staff may pass this warning with a reason, so its words say what happens; they never
+// promise "Nothing reaches IRCC unreviewed" beside a "Pass with a reason" that lets it through.
+ok("B149 C7.6 pass (P-342): the review warning says passing it needs a reason, kept in the history", crit(r)[0].words === "CRITICAL: The representative of record has not reviewed this filing. Passing it needs a reason, which is kept in the history.", crit(r)[0].words);
+ok("B149 C7.6 fail: no readiness line says \"Nothing reaches IRCC unreviewed\"", ![...r.blocks, ...r.warns].some((l) => /Nothing reaches IRCC unreviewed/i.test(l.words)), crit(r)[0].words);
 
 // Warnings and passes (AG-07 BR-26).
 r = filingReadiness(done({ documents: [{ item: "d-pass", label: "Passport", subject: "s-P", person: "Sample Client A", required: true, received: false }] }));

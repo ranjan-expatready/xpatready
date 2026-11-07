@@ -84,7 +84,18 @@ try {
   await p.keyboard.type("V300000201");
   await type(filingBox(fP).getByLabel("Submitted on"), "");
   await p.locator("[data-record-filing] input[type=date]").first().fill(inDays(2));
-  await type(filingBox(fP).getByLabel("Fee receipt (optional)"), "SAMPLE-RECEIPT-E");
+  await type(filingBox(fP).getByLabel("Fee receipt number (optional)"), "SAMPLE-RECEIPT-E");
+  // B149 (P-408; board agent-view frame 7): IRCC's "Transaction Approved" page as the fee receipt's evidence, chosen in the dialog.
+  // Review M2: a file that is not a PDF, JPEG or PNG by its bytes is refused on its own field at once, and nothing is recorded.
+  await filingBox(fP).locator("[data-receipt-input]").setInputFiles({ name: "receipt.pdf", mimeType: "application/pdf", buffer: Buffer.from("MZ not a page", "latin1") });
+  await filingBox(fP).getByText(/not a PDF, JPEG or PNG/).waitFor({ timeout: 10_000 });
+  await press(dialog().getByRole("button", { name: "Record the submission", exact: true }));
+  ok("B149 C8.2 fail (screen, review M2): a chosen file that is not a page is refused on its field before anything is saved", /not a PDF, JPEG or PNG/.test(await filingBox(fP).innerText()) && (await dialog().count()) === 1 && sql(`select count(*) from filing_record where case_id='${c.id}'`) === "0" && await p.evaluate(() => !!document.activeElement?.matches("[data-receipt-input]")));
+  await filingBox(fP).locator("[data-receipt-input]").setInputFiles({ name: "transaction-approved-E.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% SYNTHETIC SPECIMEN: IRCC Transaction Approved page (Sample)\n%%EOF\n", "latin1") });
+  // Review M2: a page refused by the server after the record is saved (here a refusal put in place by the walk) is named in
+  // a notice that stays, never only a toast.
+  await filingBox(fS).locator("[data-receipt-input]").setInputFiles({ name: "spouse-page.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% SYNTHETIC SPECIMEN (Sample)\n%%EOF\n", "latin1") });
+  await p.route(`**/api/runtime/filings/${fS}/record/fee-receipt`, (r) => r.fulfill({ status: 409, contentType: "application/problem+json", body: JSON.stringify({ title: "Refused", status: 409, detail: "The page could not be stored just now. Nothing was stored." }) }), { times: 1 });
   await type(dialog().getByLabel("Sample Client E’s UCI"), "1111-2222");
   await press(dialog().getByRole("button", { name: "Record the submission", exact: true }));
   await filingBox(fP).getByText(/after today/).waitFor({ timeout: 10_000 });
@@ -101,6 +112,23 @@ try {
   const text = await panel().innerText();
   ok("C8.2-6 (screen): recorded: the group reads Recorded · read-only, each filing Submitted with its own number", /Recorded · read-only/.test(text) && (await panel().locator('[data-status="submitted"]').count()) === 2 && /V300000201/.test(text) && /V300000202/.test(text), text);
   ok("C8.2-7 (screen): the record reads Prepared by · Reviewed by, the fee receipt and the UCI", /Prepared by · Reviewed by\s*Case officer · Representative/.test(text) && /SAMPLE-RECEIPT-E/.test(text) && /Sample Client E: 1111-2222/.test(text), text);
+  // B149: the page chosen in the dialog is stored with the record; the spouse's filing has none and offers the upload.
+  await panel().locator(`[data-submission-filing="${fP}"] [data-receipt-file]`).waitFor({ timeout: 15_000 });
+  const receiptP = await panel().locator(`[data-submission-filing="${fP}"] [data-fee-receipt]`).innerText(), receiptS = await panel().locator(`[data-submission-filing="${fS}"] [data-fee-receipt]`).innerText();
+  ok("B149 C8.2 (screen): the record shows the Transaction Approved page chosen in the dialog, with the typed number", /Transaction Approved page: transaction-approved-E\.pdf/.test(receiptP) && /Receipt number: SAMPLE-RECEIPT-E/.test(receiptP) && sql(`select count(*) from fee_receipt_file where filing_id='${fP}'`) === "1", receiptP);
+  ok("B149 C8.2 (screen): a filing without one says so and offers the upload; the typed number stays optional", /No Transaction Approved page uploaded/.test(receiptS) && /No receipt number typed/.test(receiptS) && (await panel().getByRole("button", { name: /^Upload the Transaction Approved page… for / }).count()) === 1, receiptS);
+  const missed = await panel().locator("[data-receipt-missed]").innerText().catch(() => "");
+  ok("B149 C8.2 fail (screen, review M2): the spouse's page refused after recording is named in a notice that stays, saying where to upload it again", /Recorded, but a fee receipt page was not stored/.test(missed) && /Sample Spouse E’s Transaction Approved page: The page could not be stored just now/.test(missed) && /Upload it again/.test(missed), missed);
+  await p.waitForTimeout(10_000); // longer than a toast stays
+  ok("B149 C8.2 (screen): the notice is still there after the toasts have gone", (await panel().locator("[data-receipt-missed]").count()) === 1);
+  // Review M1 (WCAG 2.4.3): an upload from the filing leaves focus on its button.
+  await panel().locator(`[data-submission-filing="${fS}"] input[type=file]`).setInputFiles({ name: "spouse-page-2.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% SYNTHETIC SPECIMEN (Sample)\n%%EOF\n", "latin1") });
+  await panel().locator(`[data-submission-filing="${fS}"] [data-receipt-file]`).waitFor({ timeout: 15_000 });
+  await p.waitForTimeout(300);
+  ok("B149 C8.2 pass (screen, review M1): after an upload from the filing, the page is listed and focus is on its upload button", sql(`select count(*) from fee_receipt_file where filing_id='${fS}'`) === "1" && await p.evaluate((id) => !!document.activeElement?.closest(`[data-submission-filing="${id}"]`) && !!document.activeElement?.matches("[data-receipt-upload]"), fS));
+  await press(panel().getByRole("button", { name: "Dismiss" }));
+  await p.waitForTimeout(200);
+  ok("B149 C8.2 (screen, WCAG 2.4.3): Dismiss removes the notice and puts focus on the panel's heading", (await panel().locator("[data-receipt-missed]").count()) === 0 && await p.evaluate(() => document.activeElement?.id === "submission-h"));
   ok("C8.2-8 (screen): the button is gone once recorded (one record per group)", (await panel().getByRole("button", { name: "Record the submission…" }).count()) === 0);
   ok("a11y: focus is back on the panel after the dialog closes", await p.evaluate(() => !!document.activeElement?.closest("[data-submission]")));
   ok("data: the records under the screen: two filing rows, one UCI, Prepared by the officer, Reviewed by the representative",
