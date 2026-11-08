@@ -96,4 +96,39 @@ N/A: this diff changes no case-side screen. The finished story dialog was checke
 1. M1 (a), (b) and (c): a failing test for each rule.
 2. Commit m3's C10.2-6b assertion. m1 and m2 are recommended, or go to a qa row.
 
-Verdict: Block
+Round 1 verdict (on 7b3e7b39e): Block
+
+## Round 2: diff-only re-review of `git diff 7b3e7b39e..4c08dc52e` (P-293), 8 Nov 2026 (IST)
+Reran on 4c08dc52e on my copy `rv_q309` (:4438, stopped after). Evidence is in `…/scratchpad/rv/` (`qa309-round2.txt`, `r2-probe*.txt`, `c102-round2.txt`).
+
+**Results**
+* `tests/check_vv_answer_sheet.ts` 44/44. `tests/check_qa309_online_done.ts` 12/12 on a freshly loaded checkpoint. Pack C10.2 14/14, with C10.2-6b now a counted `ok`.
+* `tsc`: no error in the touched files.
+* The builder's mutant log (`qa309/suite3-mutant.txt`) shows M1 (a) and (b) FAIL with `&& !rd.missing.length` and the case subject removed.
+
+**Each finding**
+* **M1 (a) closed.** `check_qa309_online_done.ts` adds a step after Done: the officer changes `case.intended_stay_to` and re-ticks the
+  section. Every section is entered and current with nothing waiting, yet the item is To do, and its reason names the one unconfirmed fact.
+  After `confirmAll` it is Done again.
+* **M1 (b) closed.** There is an API fail case before the fill: a section waits on a `case.*` fact whose subject is `"case"`.
+  `waitsOf(view, missing, subjectId, caseSubject)` now lives in `engine/runtime/answer-sheet.ts:132`, with pure pass and fail cases (without
+  the case subject, a "case" box never matches).
+* **M1 (c) closed.** A pure pass case: a fired check makes its fact wait for the same person. A pure fail case: the same fact of another person does not.
+* **m1 closed.** `formHoldsBack` (`engine/runtime/forms.ts:219-225`) maps a "case" box to its question's subject. It still adds the form's own key
+  to `said`, so the "left empty" lines below are decided exactly as before.
+  * Probe: a 200-character `case.visit_contact_name` now gives "Waiting for 1 fact … (The application)", one readiness line (was two, the second about the principal).
+  * Pure fail and pass tests cover it.
+* **m2 closed.** Readiness's group and check lines carry `subject` (`forms.ts:187`, `:194`). `waitsOf` matches them by id and falls back to the label only
+  when a line has no subject. A pure test covers two people shown by the same name.
+* **m3 closed.** C10.2-6b was committed at 35eced192 as an `ok`, and 14/14 above.
+
+**New in the diff**
+* `waitsOf` and `sheetWords` moved to the pure engine module, with word tests. `sheetOf` in `api/src/case-prepare.ts` now takes `missing`.
+  The item (`:346`) and the route (`:658`) still pass the same `formReadinessOf(…, cov).missing.filter(blocksLock)`.
+* No new findings.
+* Observation only: the `about` of a case fact's fix line now reads "The application" (was the principal), and its duplicate is gone. The waiting-facts key in
+  `factsHash` therefore changes once, and only for a case holding a case fact that needs a fix. Such a case is not ready to file anyway.
+
+The round 1 journey score stands: 9/10, pass. The "plain words" half point came from m1, which is now fixed.
+
+Verdict: Approve 4c08dc52e992f4f82b46a324e547352f3626e7d8
