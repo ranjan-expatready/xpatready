@@ -1,0 +1,25 @@
+pack C7.3.test.ts on 234322702 (tree = main e4d63f396), NOLOAD=no, copy qa_r73b :4472, start Sun Nov  8 05:20:13 IST 2026
+NOTICE:  database "xr_studio_qa_r73b" does not exist, skipping
+isolated qa_r73b on http://localhost:4472 (xr_studio_qa_r73b), stops itself in 50 min
+reset 201
+load 201
+loaded Sun Nov  8 05:21:21 IST 2026
+C7.3 — Answer sheet for an Online line
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+      expected (row C1): the principal's Online form is IMM 5257
+PASS  C7.3-1 pass: an Online form item has an answer sheet for the officer — {"status":200,"form":"IMM 5257","channel":"ONLINE"}
+PASS  C7.3-2 fail: a client cannot read the answer sheet (403)
+PASS  C7.3-3 pass: the sheet follows the form's own sections in order (the release's parts, else the PDF twin's) until W6 — {"basis":"form_parts","shown":["Personal details","National identity document","US PR card","Contact information","Details of visit to Canada","Education","Employment","Background information","Signature"],"want":["Personal details","National identity document
+FAIL  C7.3-4 pass (P-411 (2), B150): before confirmation the sheet already shows the officer-typed dates of birth, each marked "entered by staff" and to confirm — [{"label":"The person's date of birth","fact":"person.date_of_birth","subject":"3401b943-f868-41a5-beb9-0984a5c19bec","person":"Sample Client A","row":null,"value":"1986-11-07","copy_text":"1986-11-07","source":"Case officer","mark":"by_staff","to_confirm":tru
+PASS  C7.3-4b fail: an unanswered fact is never shown as a value, only waited for
+PASS  C7.3-5 pass: the first section (Section A on the twin) lists the applicant's confirmed answers with their source and the text to copy, no longer to confirm — {"label":"Family name (surname) as shown on the person's passport or travel document","fact":"person.family_name","subject":"3401b943-f868-41a5-beb9-0984a5c19bec","person":"Sample Client A","row":null,"value":"SAMPLE","copy_text":"SAMPLE","source":"Client","ma
+PASS  C7.3-6 pass: the first section also carries the spouse's answers (the form includes the spouse, VV-R07), labelled by person
+PASS  C7.3-7 pass: a date is offered to copy as the portal takes it (YYYY-MM-DD)
+PASS  C7.3-8 fail: a client cannot tick "Entered in the portal" (403) — 403
+PASS  C7.3-9 pass: "Entered in the portal" ticks the first section with who and when — {"created":true,"section":"personal_details","entered":{"at":"2026-11-07T23:51:48.290Z","by":"user-O"}}
+PASS  C7.3-10 pass (data): the tick freezes the answers it showed (an answer snapshot)
+PASS  C7.3-11 pass: ticking again changes nothing (one tick, 200 not 201)
+PASS  C7.3-12 pass (P-65): a changed fact marks the entered section out of date, the frozen answers unchanged, the new value shown
+PASS  C7.3-13 pass: the Online form item reads Out of date; it warns only (an entered Online section, BR-9 and P-168; P-136 also said "entered": FQ-6)
+13/14 passed
+pack exit 1  end Sun Nov  8 05:21:50 IST 2026
