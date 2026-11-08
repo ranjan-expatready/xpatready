@@ -79,6 +79,10 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: S }, OFFICER);
   ok("C6.5 D4 fail: Confirm & use on another person's document is refused (422)", r.status === 422, r.status);
   await answer(c.id, P, "person.passport_number", "SAMPLEP99", OFFICER); // a typed value that differs
+  const before = ((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}`, undefined, OFFICER)).body?.proposals ?? []) as (Prop & { differs: boolean; current: { value: unknown } | null; left_why: string | null })[];
+  const pn = before.find((x) => x.fact === "person.passport_number"), exp = before.find((x) => x.fact === "person.passport_expiry_date"), cit = before.find((x) => x.fact === "person.citizenship");
+  ok("C6.5 D12 pass: before Confirm & use, a proposal says it differs from the typed answer and shows that answer", pn?.differs === true && pn?.current?.value === "SAMPLEP99", pn);
+  ok("C6.5 D12 fail: a proposal with no answer yet does not differ, and a country code says before the click why it will be left for a person", exp?.differs === false && exp?.current === null && /country code/.test(cit?.left_why ?? "") && pn?.left_why === null, { exp, cit });
   r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P }, OFFICER);
   const conf = r.body;
   ok("C6.5 D4 pass: Confirm & use writes, opens a check for the typed difference and leaves a bare country code for a person", r.status === 200 && conf?.checks?.some((x: { fact: string }) => x.fact === "person.passport_number") && conf?.left?.some((x: { fact: string }) => x.fact === "person.citizenship") && !conf?.used?.includes("person.citizenship"), conf);

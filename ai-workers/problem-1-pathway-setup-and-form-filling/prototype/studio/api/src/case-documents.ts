@@ -198,7 +198,7 @@ export class CaseDocuments {
     const read = docs.map((d) => ({ d, by: readerOf({ key: d.documentType, name: this.typeName(c, d.documentType) }) }));
     const inScope = read.filter((x) => x.by && x.by.supplies.some((f) => facts.has(f)));
     // An identity document a person reads (P-134) is named, so the officer knows why nothing was proposed from it.
-    const byPerson = read.filter((x) => !x.by).map((x) => ({ document: x.d.id, document_name: this.typeName(c, x.d.documentType), why: "Read by a person: an identity document is never sent to AI, and this one has no coded lines the rules read (P-134)." }));
+    const byPerson = read.filter((x) => !x.by).map((x) => ({ document: x.d.id, document_name: this.typeName(c, x.d.documentType), why: "Read by a person: an identity document is never sent to AI, and this one has no coded lines the rules can read." }));
     return { s, facts, who, docs: inScope.map((x) => ({ ...x.d, reader: x.by!.reader })), byPerson };
   }
 
@@ -215,7 +215,7 @@ export class CaseDocuments {
       estimate: { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: live.basis },
       // A live read needs live AI on and the founder's Go for this run (P-295); this copy never makes one (P-175).
       live_allowed: false,
-      live_why: aiLive() ? "A live document read needs the founder's Go for this run, with this cost stated first (P-295); the live reader is not built here (C6.5 part 3)." : "Live AI is off on this copy (the founder's switch). Nothing is sent; a saved read replays at US$0.",
+      live_why: aiLive() ? "A live read needs the founder's go-ahead for this run, with its cost shown first, and is not built yet. A saved read replays at no cost." : "Live AI is off on this copy. Nothing is sent; a saved read replays at no cost.",
       replay_available: ai.length > 0 && replay.every((x) => x.replay_available), replay };
   }
 
@@ -233,10 +233,10 @@ export class CaseDocuments {
         return { fact: p.fact, value: w.value, page: p.source.page, confidence: p.confidence, review: p.review, checked: p.checked, ...(note ? { note } : {}) }; });
       unreadable = r.unreadable;
     } else {
-      if (mode === "live") problem(409, "live_refused", "Not possible now", aiLive() ? "A live document read needs the founder's Go for this run, with its cost stated first (P-295); it is not built here (C6.5 part 3). Nothing was read: US$0." : "Live AI is off on this copy (the founder's switch). Nothing was read: US$0.");
-      if (mode !== "replay") problem(409, "cost_first", "See the cost first", `${this.typeName(c, d.documentType)} is read by AI: see its cost first (…/fill-from-documents/plan), then replay a saved read at US$0. Nothing was read.`);
+      if (mode === "live") problem(409, "live_refused", "Not possible now", aiLive() ? "A live read needs the founder's go-ahead for this run, with its cost shown first, and is not built yet. Nothing was read; no cost." : "Live AI is off on this copy. Nothing was read; no cost.");
+      if (mode !== "replay") problem(409, "cost_first", "See the cost first", `${this.typeName(c, d.documentType)} is read by AI: see its cost first, then replay a saved read at no cost. Nothing was read.`);
       const saved = savedRead(d.sha256);
-      if (!saved) problem(409, "no_saved_read", "No saved read", `There is no saved read of this ${this.typeName(c, d.documentType)} (FQ-10: one live read with the founder's Go is saved first). Nothing was read: US$0.`);
+      if (!saved) problem(409, "no_saved_read", "No saved read", `There is no saved read of this ${this.typeName(c, d.documentType)} yet. Nothing was read; no cost.`);
       const supplies = new Set(readerOf({ key: d.documentType, name: this.typeName(c, d.documentType) })?.supplies ?? []);
       proposals = saved!.proposals.filter((p) => supplies.has(p.fact)).map((p) => ({ fact: p.fact, value: p.value, page: Math.max(1, Math.trunc(Number(p.page ?? 1)) || 1), confidence: Math.min(1, Math.max(0, Number(p.confidence ?? 0.5) || 0)), review: "expanded" as const, checked: false, ...(p.note ? { note: String(p.note).slice(0, 300) } : {}) }));
       unreadable = (saved!.unreadable ?? []).filter((u) => supplies.has(u.fact)).map((u) => ({ fact: u.fact, reason: String(u.reason).slice(0, 300) }));
@@ -270,12 +270,20 @@ export class CaseDocuments {
     const current = await this.db.caseDocument.findMany({ where: { subjectId, current: true, ...(documents ? { id: { in: documents } } : {}) }, select: { id: true, documentType: true, fileName: true } });
     const ids = current.map((d) => d.id);
     const reviews = ids.length ? await this.db.documentReview.findMany({ where: { documentId: { in: ids } }, include: { values: { orderBy: [{ fact: "asc" }] } }, orderBy: [{ readAt: "asc" }, { id: "asc" }] }) : [];
+    const facts = [...new Set(reviews.flatMap((r) => r.values.map((v) => v.fact)))];
+    const answers = facts.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: facts } }, select: { id: true, canonicalFieldKey: true, valueJson: true } }) : [];
+    const answerOf = new Map(answers.map((a) => [a.canonicalFieldKey, a]));
     const order = (f: string) => { const i = (MRZ_FACTS as readonly string[]).indexOf(f); return i < 0 ? 100 : i; };
     const proposals = reviews.flatMap((r) => [...r.values].sort((a, b) => order(a.fact) - order(b.fact) || a.fact.localeCompare(b.fact)).map((v) => ({
       id: v.id, fact: v.fact, label: labelOf(s, v.fact), value: v.valueJson, subject: v.subjectId,
       source: { document: v.documentId, page: v.page, reader: v.reader as Reader }, confidence: v.confidence, state: v.state as ReadState,
       review: v.review as "collapsed" | "expanded", checked: v.checked, replayed: r.replayed, ...(v.note ? { note: v.note } : {}),
-      asked: placementsOf(s).some((p) => p.fact === v.fact), answer_id: v.answerId })));
+      asked: placementsOf(s).some((p) => p.fact === v.fact), answer_id: v.answerId,
+      // What the person has now, whether this value differs from it (Confirm & use would open a check), and why Confirm &
+      // use would leave it for a person: the server's own rules, so a screen never repeats them.
+      current: answerOf.has(v.fact) ? { answer_id: answerOf.get(v.fact)!.id, value: answerOf.get(v.fact)!.valueJson } : null,
+      differs: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
+      left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null })));
     return {
       proposals,
       reviews: reviews.map((r) => { const d = current.find((x) => x.id === r.documentId)!; return {
@@ -291,11 +299,21 @@ export class CaseDocuments {
     const c = await this.r.reach(actor, caseId, "officer");
     const b = parse(SubjectBody, body);
     const { docs, byPerson, who } = await this.scope(c, section, b.subjectId);
-    let fresh = 0;
-    for (const d of docs) { const had = await this.db.documentReview.count({ where: { documentId: d.id } }); await this.readOnce(actor, c, d, b.mode); if (!had) fresh++; }
-    if (fresh) await this.audit.log(c.workspaceId, actor.id, "read", "case document", section, `${actor.name} read ${fresh} document${fresh === 1 ? "" : "s"} for the ${who.role.replace(/_/g, " ")} in ${section} on case ${short(c.id)} (${[...new Set(docs.map((d) => d.reader))].join(", ")}; US$0)`);
-    const out = await this.shown(c, who.subjectId, docs.map((d) => d.id));
+    // Documents read by rules first (US$0), so a letter refused below never undoes or hides a passport's read. Without a
+    // mode, a letter beside them is not read: it waits for its cost card (a letter alone answers 409 cost_first).
+    const rules = docs.filter((d) => d.reader !== "ai_vision"), ai = docs.filter((d) => d.reader === "ai_vision");
+    const readAll = async (list: typeof docs) => {
+      let fresh = 0;
+      for (const d of list) { const had = await this.db.documentReview.count({ where: { documentId: d.id } }); await this.readOnce(actor, c, d, b.mode); if (!had) fresh++; }
+      if (fresh) await this.audit.log(c.workspaceId, actor.id, "read", "case document", section, `${actor.name} read ${fresh} document${fresh === 1 ? "" : "s"} for the ${who.role.replace(/_/g, " ")} in ${section} on case ${short(c.id)} (${[...new Set(list.map((d) => d.reader))].join(", ")}; US$0)`);
+    };
+    await readAll(rules);
+    const readBefore = new Set((ai.length ? await this.db.documentReview.findMany({ where: { documentId: { in: ai.map((d) => d.id) } }, select: { documentId: true } }) : []).map((x) => x.documentId));
+    const waiting = !b.mode && rules.length ? ai.filter((d) => !readBefore.has(d.id)) : [];
+    await readAll(ai.filter((d) => !waiting.includes(d)));
+    const out = await this.shown(c, who.subjectId, docs.filter((d) => !waiting.includes(d)).map((d) => d.id));
     return { section, subject: who.subjectId, ...out, not_read: byPerson, cost_usd: 0,
+      waiting_for_cost: waiting.map((d) => ({ document: d.id, document_name: this.typeName(c, d.documentType), why: "Read by AI: see its cost first, then replay a saved read at no cost." })),
       message: docs.length ? `${out.proposals.length} value${out.proposals.length === 1 ? "" : "s"} proposed from ${docs.length} document${docs.length === 1 ? "" : "s"}: nothing is an answer until you Confirm & use each document.` : "No document of this person can give a fact of this section yet: upload it on the person's checklist line." };
   }
 
@@ -359,7 +377,7 @@ export class CaseDocuments {
     });
     await this.audit.log(c.workspaceId, actor.id, "confirmed and used", "case document", doc!.id, `${actor.name} confirmed and used ${this.typeName(c, doc!.documentType)} for the ${who.role.replace(/_/g, " ")} on case ${short(c.id)}: ${out.used.length} written, ${out.agreed.length} agreed, ${out.checks.length} check${out.checks.length === 1 ? "" : "s"} opened (${out.checks.map((x) => x.fact).join(", ") || "none"}), ${out.left.length} left for a person (${out.left.map((x) => x.fact).join(", ") || "none"})`);
     return { document: doc!.id, confirmed: { by: actor.id, at: at.toISOString() }, ...out,
-      message: `Confirmed and used: ${out.used.length + out.agreed.length} value${out.used.length + out.agreed.length === 1 ? "" : "s"} now fill the forms.${out.checks.length ? ` ${out.checks.length} differ${out.checks.length === 1 ? "s" : ""} from a typed answer: resolve ${out.checks.length === 1 ? "that check" : "those checks"} (the typed answer is kept until then).` : ""}${out.left.length ? ` ${out.left.length} value${out.left.length === 1 ? " is" : "s are"} left for you to answer by hand (${out.left.map((x) => x.fact).join(", ")}).` : ""}` };
+      message: `Confirmed and used: ${out.used.length + out.agreed.length} value${out.used.length + out.agreed.length === 1 ? "" : "s"} now fill the forms.${out.checks.length ? ` ${out.checks.length} differ${out.checks.length === 1 ? "s" : ""} from a typed answer: resolve ${out.checks.length === 1 ? "that check" : "those checks"} (the typed answer is kept until then).` : ""}${out.left.length ? ` ${out.left.length} value${out.left.length === 1 ? " is" : "s are"} left for you to answer by hand (${out.left.map((x) => labelOf(s, x.fact)).join(", ")}).` : ""}` };
   }
 
   private checkOut(s: Snapshot, x: Awaited<ReturnType<Db["answerCheck"]["findMany"]>>[number], current?: { id: string; valueJson: unknown } | null) {
