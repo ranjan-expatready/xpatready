@@ -75,10 +75,16 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const own = ownParts(c.id, FORM), shown = s?.sections.map((x) => x.title) ?? [];
   const want = own.length ? own.filter((x) => x.facts).map((x) => x.title) : Object.values(TWINS[FORM] ?? {});
   ok("C7.3-3 pass: the sheet follows the form's own sections in order (the release's parts, else the PDF twin's) until W6", shown.length > 0 && (own.length ? s?.order_basis === "form_parts" : s?.order_basis === "pdf_twin") && JSON.stringify(shown.filter((t) => t !== "Other questions")) === JSON.stringify(want), { basis: s?.order_basis, shown, want });
-  // P-411 (B150 review M2): the officer typed both dates of birth (openCase), not confirmed yet: they are on the sheet at once,
-  // marked entered by staff and to confirm; what nobody answered yet is what the sheet waits for.
-  const typed = (s?.sections ?? []).flatMap((x) => x.answers as { fact: string; subject?: string; mark?: string | null; to_confirm?: boolean }[]).filter((x) => x.fact === "person.date_of_birth");
-  ok("C7.3-4 pass (P-411 (2), B150): before confirmation the sheet already shows the officer-typed dates of birth, each marked \"entered by staff\" and to confirm", typed.length >= 2 && typed.every((x) => x.mark === "by_staff" && x.to_confirm === true), typed);
+  // P-411 (B150 review M2; QA-305): the officer typed each person's date of birth (openCase), not confirmed yet. Each
+  // person's sheet shows that person's own date of birth at once, marked entered by staff and to confirm: on the checkpoint
+  // each adult has their own IMM 5257 sheet; on the fixture the principal's IMM 5707 sheet also carries the spouse's (VV-R07).
+  type SA = { fact: string; subject?: string; value?: unknown; mark?: string | null; to_confirm?: boolean };
+  const S = c.subjects["Sample Spouse A"];
+  const dobOn = (sh: Sheet | null, subject: string) => (sh?.sections ?? []).flatMap((x) => x.answers as SA[]).find((x) => x.fact === "person.date_of_birth" && x.subject === subject);
+  const spouseItem = itemsOf(p, S, FORM).find((x) => x.channel === "ONLINE");
+  const spouseSheet = spouseItem ? (await call("GET", `/runtime/items/${spouseItem.id}/answer-sheet`, undefined, OFFICER)).body as Sheet : s;
+  const typed = [{ who: "Sample Client A", a: dobOn(s, P), dob: yearsAgo(40) }, { who: "Sample Spouse A", a: dobOn(spouseSheet, S), dob: yearsAgo(38) }];
+  ok("C7.3-4 pass (P-411 (2), B150, QA-305): before confirmation each person's sheet already shows that person's own officer-typed date of birth, marked \"entered by staff\" and to confirm", typed.every((t) => t.a?.value === t.dob && t.a.mark === "by_staff" && t.a.to_confirm === true), { spouse_sheet: spouseItem ? "own" : "shared", typed });
   ok("C7.3-4b fail: an unanswered fact is never shown as a value, only waited for", (s?.sections ?? []).some((x) => (x.waiting ?? []).length > 0) && !(s?.sections ?? []).some((x) => x.answers.some((y) => y.fact === "person.family_name")));
 
   await fillEverything(c.id);
