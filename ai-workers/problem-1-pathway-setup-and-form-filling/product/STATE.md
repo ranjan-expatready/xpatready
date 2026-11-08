@@ -1,8 +1,25 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_b49efef4-ce4b-4e6d-b821-507aac4b653b Lead 33 · 7 Nov 23:28 IST (took over from Lead 32 at ~350k context, P-314)
+current_lead: local_309261d2-81b3-4957-93dd-bbcc0ef30be1 Lead 34 · 8 Nov 09:55 IST (took over from Lead 33 at ~446k context, P-314)
 
 updated: 2026-11-07 23:28 IST by **Lead 32, at the hand-over to Lead 33** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-414 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-07-1958-lead32.md` · this branch: `lead/2026-11-07-lead31`
+
+## Hand-over to Lead 34 (8 Nov 09:55 IST): do first
+Weekly 45% at 09:53 IST (about 3%/h with 8 lanes; 50% about 11:30, 55% about 13:00 IST). **Account switch (P-416 D11, softened by the founder ~09:30 IST): when every lane has pushed and nothing would be lost; no hurry, stretching past 55% is fine.** At the switch: open the Lead records PR from `lead/2026-11-07-lead31` (P-412 to P-419 are not on main yet) and **label it: the founder pre-approved it ("Yes, both", ~09:25 IST)**. Then update `RESUME-ON-NEW-ACCOUNT.md`.
+1. **Watchdog:** Lead 35 `local_24059eca-30b1-42f7-81bd-d294abc4a8e1` is now the only standby. Send it "start the watchdog" after you delete your own watchdog cron (13ee8546). Top up to two standbys at the founder's next typed turn.
+2. **M3 is 12 of 29 Works on main** (C1.3, C6.4, C6.9, C6.11, C6.12, C6.15, C6.18, C8.1, C8.2, C9.5, C11.5, C11.6; C6.19 added by P-419). Target today about 17 (P-418 pick order). The founder is present and approves fast. Ask only what is his; batch session starts and own-PR labels while he is here.
+3. **Cloud lanes (claude.ai; reply in the prompt box; Cmd+Return sends):**
+   * QA-165 forms #1318 (C7.2/C7.3).
+   * #1242 B135 merge (C6.13).
+   * C7.7 #1317: pack lines approved; then G25 (`check_if_no`) and BR-9 (`hand_write`) PRs; branches already pushed.
+   * QA-300/C7.6 (-12/-19 red; check then fix).
+   * CI P-416 #1323 (+ throwaway #1324; PR 2 = packs by diff, all Works pooled).
+   * Packs #1327 C3.16 + C9.2: C3.16 lines approved 09:54 IST; C9.2's BR-3 step next.
+   * C10.2 finished story phase 1 (channel ruling sent 09:44 IST: release 2 as is, lines from the release, one IMM 5257 to Paper for Validate, PENDING on QA-165).
+4. **qa (Mac, `local_0868d426-…`):** re-scores after merges. It knows D7 (browser checks by GitHub dispatch only) and adds C6.19. Dispatch nightly.yml for it on request (standing OK, P-402).
+5. **Plans:** `design/e2e-seed-plan-2026-11-08.md` (Fable plan, reviewed: 7 seeded cases through the product's routes). DECISIONS P-415 to P-419 tell this morning's story.
+6. **Refused, so don't retry:** dropping test databases (disk 9 GB). Own CI or test-file PR labels and PR closes need the founder to name them.
+7. **Lesson:** run `TZ=Asia/Kolkata date` before typing any time; Lead 33 and qa typed times 5-30 min ahead several times.
 
 ## Lead 33 log, 8 Nov (rewritten at the hand-over)
 * 00:36 IST founder "Yes, clear it" → #1304 emptied the M2-hot list (P-415); #1270 requeued. Landed since: #1268 (C6.15), #1290 (C8.1), #1246 (C6.18), #1222 (C6.4), #1252 (C9.5), #1251 (B150), #1314 (QA-305 test fix).
@@ -58,4 +75,4 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 See the Lead 32 block at the top (live lanes under P-414). The 16:19 IST snapshot and the earlier in-flight table: `history/STATE-2026-11-07-1958-lead32.md`.
 
 ## Leads, in order (highest = current)
-**Lead 33** `local_b49efef4-…` (from 23:28 IST 7 Nov) · Lead 32 `local_e0d03eb0-…` (18:56-23:28 IST, ended) · Lead 31 `local_f02fdadd-…` (15:45-18:55 IST, ended) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 34 `local_309261d2-…` (watchdog, cron 13ee8546), Lead 35 `local_24059eca-…` (started 8 Nov ~07:57 IST).
+**Lead 34** `local_309261d2-…` (from 09:55 IST 8 Nov) · Lead 33 `local_b49efef4-…` (23:29 IST 7 Nov-09:55 IST 8 Nov, ended) · Lead 32 `local_e0d03eb0-…` (18:56-23:28 IST, ended) · Lead 31 `local_f02fdadd-…` (15:45-18:55 IST, ended) · Lead 30 `local_f37a22d1-…` (14:48-15:45 IST, ended) · Lead 29 `local_ef20bc85-…` (12:35-14:47 IST, ended) · Lead 26 `local_ab55f159-…` ended ~12:30 IST; Leads 27 and 28 were standbys on the old account, never led, deleted (P-396) · Lead 25 ended · Leads 1-24 earlier. Standbys: Lead 34 `local_309261d2-…` (watchdog, cron 13ee8546), Lead 35 `local_24059eca-…` (started 8 Nov ~07:57 IST).
