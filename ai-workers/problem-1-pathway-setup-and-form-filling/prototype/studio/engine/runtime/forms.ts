@@ -196,6 +196,11 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
   return { ready: missing.length === 0, missing };
 }
 
+/** QA-165 (#1318 review M2): what holds a copy's lock back: every readiness line but a mandatory form field left empty. Those
+ *  are the person's own steps in Adobe, or a configuration gap no screen of the case can close; they stay on the forms card
+ *  and as a CRITICAL line on Ready to file (passed with a reason, or fixed, P-315), so locking is never a dead end. */
+export const blocksLock = (m: { reason: string }) => m.reason !== "left empty on the form";
+
 /** QA-165 (P-71: a fact that would be written wrong blocks; "Ready" is never said over a mandatory form field that will be
  *  empty). Beside the questions: (1) each form field formCoverage refuses with a fix ("…is answered No, but … is recorded",
  *  a confirmed answer with a problem), as "needs a fix" in the fix's own words; (2) each field IRCC's form marks mandatory

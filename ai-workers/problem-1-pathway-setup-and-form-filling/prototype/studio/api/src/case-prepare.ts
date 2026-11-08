@@ -25,7 +25,7 @@ import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
-import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { partsInFormOrder, sectionHash, sheetOf as layOut, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
@@ -443,7 +443,7 @@ export class CasePrepare {
     const waiting = items.filter(notYetKnown).map((i) => Object.assign(i, { waits_on: asksOf(wanted.find((x) => x.subject === i.subject && x.kind === "form" && x.key === ("form" in i ? i.form : null))?.missing ?? []) }));
     const notNeeded = notNeededForms(s, renderPeople, known, r.forms as RenderedForm[], lines, new Set(filers), ages, people.find((p) => p.role === "case")?.subjectId ?? null, clean, words.label, label);
     // Stage 1 (C7.7): the facts each filing's forms to fill still wait for, counted before any item.
-    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReady(i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
+    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReady(i.form, i.subject).missing.filter(blocksLock).map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
     // The edition a form is filled on: the release's PDF edition in use (pdfMapInUse, P-32: the newest, as the fill picks
     // it; review M2 on #861); on a line filed Online, its online version, else the PDF edition its answer sheet follows

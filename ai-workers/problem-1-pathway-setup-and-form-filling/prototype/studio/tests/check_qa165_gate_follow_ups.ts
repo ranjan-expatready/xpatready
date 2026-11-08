@@ -11,7 +11,9 @@
 //      field sits inside the box's block.
 //   tsx studio/tests/check_qa165_gate_follow_ups.ts
 import { caseView, type Answer, type Participant } from "../engine/runtime/case.ts";
-import { formCoverage, markNothingRecorded, readiness, type OnForm } from "../engine/runtime/forms.ts";
+import { blocksLock, formCoverage, markNothingRecorded, readiness, type OnForm } from "../engine/runtime/forms.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { formValues } from "../engine/form-values.ts";
 import { mandatoryOpen } from "../engine/runtime/mandatory.ts";
 import { filingReadiness, type FormItem } from "../engine/runtime/readiness.ts";
@@ -101,4 +103,22 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
   const alias = { data_path: "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", fact: "person.has_used_other_name", transform: "derived:any(person.other_family_name, person.other_given_names) recorded -> yes_no_code:Y/N" };
   ok("C7.2 R3 pass: both names in IMM 5257's other-name step are tied to it, and the person's own name is not", !!followUpGround(alias, [alias], "person.other_given_names") && !!followUpGround(alias, [alias], "person.other_family_name") && followUpGround(alias, [alias], "person.family_name") === null);
 }
+// ---------------------------------------------------------------- R4 (#1318 review M1): a requirement the form's own script makes conditional
+{
+  const COUNTRY = "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]";
+  const data = JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "form-script-requirements.json"), "utf8")) as { basis: string; editions: { inventory: string; fields: { box: string; requiredWhen: { box: string; equals: string[] } }[] }[] };
+  const rw = new Map(data.editions.find((e) => e.inventory === "imm5257e.inventory.json")!.fields.map((x) => [x.box, x.requiredWhen]));
+  const script = readFileSync(join(import.meta.dirname, "..", "..", "expected", "source-text", "imm5257e.xfa-template.txt"), "utf8");
+  const own = (code: string, req: string, unreq: string) => new RegExp(`rawValue == "${code}"\\)[^]*?markRequired\\(${req}\\.No\\)[^]*?markUnRequired\\(${unreq}\\.No\\)`).test(script);
+  ok("C7.2 R4 (grounding, P-170): the data is the form's own script: code 203 requires the Taiwan PIN box and not the Israel one, 206 the other way round, any other code neither", rw.get(TAIWAN)?.box === COUNTRY && rw.get(TAIWAN)?.equals.join() === "203" && rw.get(ISRAEL)?.equals.join() === "206" && own("203", "TaiwanPIN", "IsraelPassportIndicator") && own("206", "IsraelPassportIndicator", "TaiwanPIN") && /CR 330212/.test(data.basis), { taiwan: rw.get(TAIWAN), israel: rw.get(ISRAEL) });
+  const fields = { fields: [TAIWAN, ISRAEL].map((p) => ({ data_path: p, required: true, ui: "exclGroup", options: yn })) } as never;
+  const open = (code: string) => mandatoryOpen(fields, [TAIWAN, ISRAEL].map((p) => ({ data_path: p, outcome: "by_hand", fact: null })) as never, [], { [COUNTRY]: code }, {}, rw).map((o) => o.box);
+  ok("C7.2 R4 pass: an Indian passport (the form's code 205): neither box is mandatory, so neither is open", open("205").length === 0, open("205"));
+  ok("C7.2 R4 fail: a passport the form codes 203 makes the Taiwan PIN box mandatory (open while empty), not the Israel one", JSON.stringify(open("203")) === JSON.stringify([TAIWAN]), open("203"));
+  ok("C7.2 R4 fail: code 206 makes the Israel passport box mandatory, not the Taiwan one", JSON.stringify(open("206")) === JSON.stringify([ISRAEL]), open("206"));
+  ok("C7.2 R4 fail guard: without the data the field list's own `required` stands (both open, as before)", mandatoryOpen(fields, [TAIWAN, ISRAEL].map((p) => ({ data_path: p, outcome: "by_hand", fact: null })) as never, [], { [COUNTRY]: "205" }).length === 2);
+}
+// ---------------------------------------------------------------- R6 (#1318 review M2): a box left empty never holds a lock back
+ok("C7.2 R6 pass: a mandatory box left empty does not hold a copy's lock back (it is said on the card and on Ready to file)", !blocksLock({ reason: "left empty on the form" }));
+ok("C7.2 R6 fail: a fact to answer, to confirm or to fix, or a fired check, holds it back", ["not answered", "not confirmed", "needs a fix", "waits for the client to re-confirm", "a check fired"].every((reason) => blocksLock({ reason })));
 process.exitCode = summary() ? 1 : 0;

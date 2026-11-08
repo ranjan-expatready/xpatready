@@ -18,7 +18,7 @@ import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseO
 import { problemFromZod } from "../../contracts/programs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, type FormFact, type GatePlacement, type GroupFact, type OnForm } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, blocksLock, type FormFact, type GatePlacement, type GroupFact, type OnForm } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -26,7 +26,7 @@ import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT,
 import { keptOnMacWords } from "./sample-validated.ts";
 import { busyWords } from "./busy.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
-import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
+import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -108,12 +108,15 @@ export const inventoryOf = (file: string): Inventory | null => {
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
+/** QA-165 (#1318 review M1): the form-script requirements by field, for the field list a map names (by its file name). */
+const SCRIPT_REQUIREMENTS = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "form-script-requirements.json"), "utf8")) as { editions: { inventory: string; fields: { box: string; requiredWhen: { box: string; equals: string[] } }[] }[] }).editions;
+const requiredWhenOf = (inventoryFile: string): RequiredWhen => new Map((SCRIPT_REQUIREMENTS.find((e) => inventoryFile.split("/").pop() === e.inventory)?.fields ?? []).map((f) => [f.box, f.requiredWhen]));
 export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
   const map = pdfMapInUse(s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[], form); // P-32: the edition in use
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
   if (!map || !inv) return [];
   const { boxes: results, values } = formValues(s as unknown as Parameters<typeof formValues>[0], map, inv, boxes);
-  return mandatoryOpen(inv, map.entries, results, values, words);
+  return mandatoryOpen(inv, map.entries, results, values, words, requiredWhenOf(map.inventory_file!));
 }
 /** QA-165 part 2 (review M-1, M-2 on #592): the case's own question words, and the groups settled as "none apply". */
 export function caseWordsOf(s: Snap, view: ReturnType<typeof caseView>): CaseWords {
@@ -360,8 +363,10 @@ export class CaseForms implements OnModuleInit {
     const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(lockView, x.formNumber, x.subjectId))];
     if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made); generate a new copy and lock that one.`);
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
-    const ready = readiness(lockView, x.formNumber, x.subjectId, onFormOf(this.runtime.snapshotOf(c), x.formNumber, cov, lockView)); // QA-165: never over a box left empty
-    if (!ready.ready) conflict(notReady(ready.missing.length));
+    // QA-165: the one readiness GET …/forms and Ready to file use (a box refused with a fix holds the lock back); a mandatory
+    // box left empty does not (blocksLock, review M2 on #1318): it is said on the card and on Ready to file.
+    const ready = formReadinessOf(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, lockView, x.formNumber, x.subjectId).missing.filter(blocksLock);
+    if (ready.length) conflict(notReady(ready.length));
     const trial = trialOf(this.runtime.snapshotOf(c), x.formNumber);
     if (!trial.passed) conflict(trial.why!);
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since

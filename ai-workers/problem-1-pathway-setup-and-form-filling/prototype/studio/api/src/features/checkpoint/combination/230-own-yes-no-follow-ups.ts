@@ -34,6 +34,8 @@ async function confirmReaders(ctx: Ctx, combinationId: string) {
     const q = await door.list(combinationId, fact).catch(() => null); // this combination's forms do not read it: nothing to hold
     for (const r of q?.rows ?? []) {
       if (r.state === "confirmed" || r.state === "asked") continue;
+      // Review m2 on #1318: the door's own warning (the field's words name another question) is a person's call, never the loader's.
+      if (r.warning) { out.refused.push(`${r.form} ${r.caption || r.data_path}: ${r.warning} Left for a person on To review › Form fields.`); continue; }
       const ask = !r.can_confirm && r.can_ask;
       if (!r.can_confirm && !ask) { out.refused.push(`${r.form} ${r.caption || r.data_path}: cannot hold "${q!.sentence}" (${r.why ?? r.state}), so it is left for a person on To review › Form fields`); continue; }
       try {
