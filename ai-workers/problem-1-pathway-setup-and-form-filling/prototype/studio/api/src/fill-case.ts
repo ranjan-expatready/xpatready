@@ -192,6 +192,9 @@ export class CaseForms implements OnModuleInit {
         const applies = !!cov && cov.applies !== false;
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
+        // QA-246: a form whose rule waits for an answer (it "cannot tell" yet: a marital status, a case answer not given)
+        // is not a form to fill yet, as /prepare lists it: it is listed once its rule says it applies, or while it has copies.
+        if (cov!.applies === "cannot_tell" && !mine.length) continue;
         if (chosen(s, items, form, p.subjectId) === "NOT_NEEDED" && !mine.length) continue; // C11.6 (Devin on #1056): nothing to fill or file
         const channel = chosen(s, items, form, p.subjectId);
         const onForm = onFormOf(s, form, cov, view, caseWords); // QA-165: readiness and the open fields read the same copy
