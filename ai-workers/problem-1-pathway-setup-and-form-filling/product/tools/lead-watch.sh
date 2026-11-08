@@ -35,6 +35,9 @@ say "disk  ${free} GB free · test databases ${dbs:-?} · idle at two checks: ${
 [ "$free" -lt 4 ] && ACT "disk under 4 GB: tell Mac builders to pause suite runs, then free space"
 [ "$free" -lt 10 ] && [ "$both" -gt 0 ] && ACT "disk under 10 GB: drop the ${both} test databases idle at two checks (lead-watch skill, step 3)"
 
+# 1b. Local lanes (founder, 8 Nov, P-420): a Mac lane that stops, or whose messages are paused, makes no GitHub signal.
+ll=$(bash "$TOOLS/local-lanes.sh"); llrc=$?; [ -n "$ll" ] && echo "$ll"; act=$((act + llrc))
+
 # 2. Merges and the queue.
 since=$(date -u -v-"${SINCE}"M '+%Y-%m-%dT%H:%M:%SZ')
 merged=$(gh pr list --state merged --search "merged:>=$since" --json number,title -q '.[]|"#\(.number) \(.title[0:55])"')
