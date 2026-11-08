@@ -25,7 +25,7 @@ import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "
 import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
 import { pinChain } from "../../engine/runtime/release-update.ts";
-import { ASKED_RELATIONS, isListRelation, listWords, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
+import { ASKED_RELATIONS, cellAsked, isListRelation, listWords, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -434,6 +434,16 @@ export class Runtime {
     const listRel = relativeOf(subjectId), groupKey = listRel && isListRelation(listRel.relation) ? listRel.relation : place!.repeats === "per_row" ? place!.section_id : null;
     if (!groupKey && b.row) fail("This question has one answer, not rows.", HttpStatus.UNPROCESSABLE_ENTITY);
     if (groupKey && !b.row) fail("Name the row this answer belongs to (add a row first).", HttpStatus.UNPROCESSABLE_ENTITY);
+    // B155 (break m2 on #1367): an entry of a list relative that has a row on the form takes only what that row has a box for
+    // (IMM 5645 maps "accompanies" on its seventh row only): an answer nobody is asked for there is refused, never kept hidden.
+    if (listRel && isListRelation(listRel.relation) && b.row) {
+      const held = (await this.subjectFor(c, subjectId, false, fieldKey)).stored;
+      const live = held ? (await this.db.clientFactRecord.findMany({ where: { subjectId: held, groupKey: listRel.relation, supersededById: null, tombstone: false }, select: { rowKey: true, order: true } })).sort((x, y) => x.order - y.order || x.rowKey.localeCompare(y.rowKey)) : [];
+      const at = live.findIndex((x) => x.rowKey === b.row);
+      const boxes = (s.field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null; row?: number | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.person === `subject_${listRel.relation}` && typeof e.row === "number"));
+      const rowsOf = (f?: string) => new Set(boxes.filter((e) => !f || e.fact === f).map((e) => e.row!));
+      if (at >= 0 && rowsOf().has(at) && !rowsOf(fieldKey).has(at)) fail(`The form has no box for this in entry ${at + 1}: it is asked in entr${rowsOf(fieldKey).size === 1 ? "y" : "ies"} ${[...rowsOf(fieldKey)].sort((x, y) => x - y).map((r) => r + 1).join(", ")} only.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });
     if (!def) fail(`The library has no version ${field!.item_version} of ${fieldKey}.`, HttpStatus.CONFLICT);
     const rowKey = b.row ?? null;
@@ -464,8 +474,10 @@ export class Runtime {
     const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
+    // B155 (break m3 on #1367): an entry of a list with no row on the form fills no form field: it goes on an extra sheet.
+    const offForm = !!listRel && isListRelation(listRel.relation) && !!rowKey && q?.rows.find((x) => x.row === rowKey)?.fits === false;
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
-      message: `${fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved."}${recordedForClient ? " Marked Officer: the client re-confirms it before signing." : ""}` };
+      message: `${offForm ? "Saved. This entry has no row on the form: write it on an extra sheet." : fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved."}${recordedForClient ? " Marked Officer: the client re-confirms it before signing." : ""}` };
   }
 
   /** C6.18 (P-244): the client re-confirms one background answer their case officer recorded (by phone or in person),
@@ -616,8 +628,11 @@ export class Runtime {
     // never be seen on screen, so its stored answer is neither asked as seen nor confirmed: it never blocks the section.
     const { answers: now, rows: nowRows, groups: nowGroups } = await this.state(c);
     const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
-    const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
-      .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
+    const shownSections = caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections.filter((x) => x.subjectId === b.subjectId && x.section === section);
+    const listed = new Set(shownSections.flatMap((x) => x.questions.map((q) => q.fact)));
+    // B155 (break m2 on #1367): a list's entry shows only the cells it asks (cellAsked); an answer in a cell it does not show
+    // (left there when an earlier entry was removed) is never seen, so it neither blocks nor is confirmed.
+    const shownCells = listOf ? new Set(shownSections.flatMap((x) => { const g = x.questions.filter((q) => q.group); return g.flatMap((q) => q.rows.filter((_, i) => cellAsked(g, q, i)).map((r) => `${q.fact}|${r.row}`)); })) : null;
     const bg = this.backgroundOf(c);
     let waiting = 0;
     const confirmed = await this.db.$transaction(async (tx) => {
@@ -627,7 +642,7 @@ export class Runtime {
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: storedId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
       // C6.11 (review M1): a fact the firm record gives (the representative's part, "Uses a representative") shows the
       // firm's answer, never a stored one, so a stored one can never be seen: it neither blocks nor is confirmed.
-      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey) && !firmGives.has(a.canonicalFieldKey));
+      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey) && !firmGives.has(a.canonicalFieldKey) && (!shownCells || a.rowKey === null || shownCells.has(`${a.canonicalFieldKey}|${a.rowKey}`)));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
       // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
       const entries = await tx.clientFactRecord.count({ where: { subjectId: storedId, groupKey: section, supersededById: null, tombstone: false } });

@@ -446,7 +446,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const asked = part.questions.filter((q) => !q.hidden);
   const single = asked.filter((q) => !q.group), grouped = asked.filter((q) => q.group);
   const rows = grouped[0]?.rows ?? [];
-  const cells = React.useMemo(() => { const entries = part.questions.find((q) => !q.hidden && q.group)?.rows ?? []; return part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.filter((r) => inEntry(q, r.row, entries)).map((r) => ({ q, row: r.row })) : [{ q }])); }, [part]);
+  const cells = React.useMemo(() => { const group = part.questions.filter((q) => !q.hidden && q.group); return part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.filter((r) => inEntry(q, r.row, group)).map((r) => ({ q, row: r.row })) : [{ q }])); }, [part]);
   const [adding, setAdding] = React.useState(false);
   const d = useDrafts(cells);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -569,7 +569,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
                   ) : <Button type="button" size="sm" variant="ghost" onClick={() => setRemoving(r.row)}><Trash2 aria-hidden />Remove</Button>}
                 </div>
                 {!r.fits ? <Notice tone="warn" title="This entry does not fit on the form">The form has room for {grouped[0].capacity} entries. Keep it here: your officer adds it on an extra sheet.</Notice> : null}
-                {grouped.filter((q) => inEntry(q, r.row, rows)).map((q) => field(q, r.row))}
+                {grouped.filter((q) => inEntry(q, r.row, grouped)).map((q) => field(q, r.row))}
               </section>
             ))}
             {rows.length ? <Button type="button" variant="secondary" className="h-11" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
@@ -648,9 +648,9 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
  *  entry itself fits (a brother or sister's "accompanies you" Yes/No is on one row of IMM 5645's Section C only). An entry
  *  that does not fit at all keeps every question (it goes on an extra sheet). Groups whose questions share their rows
  *  (every other group) are unchanged. */
-function inEntry(q: Question, row: string, entries: { row: string; fits: boolean }[]) {
-  const own = q.rows.find((x) => x.row === row)?.fits, entry = entries.find((x) => x.row === row)?.fits;
-  return own !== false || entry === false;
+function inEntry(q: Question, row: string, group: Question[]) {
+  const own = q.rows.find((x) => x.row === row)?.fits, entry = group.some((x) => x.rows.find((r) => r.row === row)?.fits);
+  return own !== false || !entry;
 }
 
 /** A repeating group with no entries (Lead, break M3, P-71/P-72): add an entry, or say none apply; "none apply" is an
@@ -805,9 +805,11 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   // With entries, the group's earlier answer is not shown, so it is not sent as seen (review m6).
   const shownGroup = s.group && s.group.rows === 0 ? s.group.none_apply : null;
   // C7.7: firm-record answers are never sent as seen (they are not the case's to confirm).
-  const seen = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
+  // B155 (break m2 on #1367): only the cells an entry shows (inEntry) are sent as seen: a hidden answer is never confirmed unseen.
+  const shownAnswers = (q: Question) => (q.group ? q.rows.filter((r) => inEntry(q, r.row, grouped)).map((r) => r.answer) : [q.answer]);
+  const seen = [...s.questions.flatMap(shownAnswers).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
   // Review m2 on #1246: an answer waiting for the client is not the officer's to confirm, so it never makes this the main action.
-  const open = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
+  const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   async function confirm() {
@@ -884,7 +886,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {rows.map((r) => (
             <div key={r.row} className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
               <p className="flex items-center gap-2 border-b border-border px-4 py-1.5 text-xs font-medium">Entry {r.index + 1}{!r.fits ? <Pill tone="warn" title={`The form has room for ${grouped[0].capacity} entries`}>Does not fit on the form</Pill> : null}</p>
-              {grouped.filter((q) => inEntry(q, r.row, rows)).map((q) => line(q, r.row))}
+              {grouped.filter((q) => inEntry(q, r.row, grouped)).map((q) => line(q, r.row))}
             </div>
           ))}
           {rows.length ? <Button size="sm" variant="secondary" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}

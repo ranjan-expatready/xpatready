@@ -32,6 +32,12 @@ export const isAskedRelative = (about: string) => relativeOf(about) !== null;
 export const isListRelation = (relation: string) => (LIST_RELATIONS as readonly string[]).includes(relation);
 /** B155: a relative's key that stands for a list (`<person>/sibling`). */
 export const isListRelative = (about: string) => { const r = relativeOf(about); return !!r && isListRelation(r.relation); };
+/** B155 (break M1, m2 on #1367): whether entry `i` of a list asks question `q`: when the form has a box for it in that row,
+ *  or when the entry has no row on the form at all (it goes on an extra sheet, so all of it is asked and waited for).
+ *  An entry that fits leaves out what its row has no box for (IMM 5645 maps "accompanies" on row 7 only). */
+export const cellAsked = (questions: { rows: { fits: boolean }[] }[], q: { rows: { fits: boolean }[] }, i: number) => !!q.rows[i]?.fits || !questions.some((x) => x.rows[i]?.fits);
+/** B155 (break M1): the entries of a list that have no row on the form (0 first). */
+export const entriesOffForm = (questions: { rows: { fits: boolean }[] }[]) => [...Array(Math.max(0, ...questions.map((q) => q.rows.length))).keys()].filter((i) => !questions.some((q) => q.rows[i]?.fits));
 /** The key a relative's answers are read under, as the resolver names it. */
 export const relativeKey = (owner: string, relation: Relation) => `${owner}/${relation}`;
 

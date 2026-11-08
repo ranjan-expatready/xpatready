@@ -13,7 +13,7 @@ import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { openLines } from "./open-lines.ts";
-import { isListRelative } from "./relatives.ts";
+import { cellAsked, entriesOffForm, isListRelative } from "./relatives.ts";
 export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -193,8 +193,10 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
   const optional = (a: { problems: string[] } | null | undefined) => (a && a.problems.length ? "needs a fix" as const : null);
   const missing: Readiness["missing"] = reads.flatMap((q) => {
     const why = q.required ? reason : optional;
-    // B155: an entry of a list relative (a brother or sister) waits only for what the form has a box for in its row.
-    const r = q.group ? q.rows.filter((x) => !isListRelative(q.subjectId) || x.fits).map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
+    // B155: an entry of a list relative (a brother or sister) waits only for what it asks (cellAsked: its row's boxes, or
+    // everything when the entry has no row on the form).
+    const grouped = isListRelative(q.subjectId) ? view.sections.find((s) => s.subjectId === q.subjectId && s.section === q.section)?.questions.filter((x) => x.group) ?? [q] : [];
+    const r = q.group ? q.rows.filter((_, i) => !grouped.length || cellAsked(grouped, q, i)).map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
     return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r, subject: q.subjectId }] : [];
   });
   const read = new Set(reads.map((q) => `${q.subjectId}|${q.section}`));
@@ -202,6 +204,14 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
     if (!sec.group?.required || sec.group.rows > 0 || !read.has(`${sec.subjectId}|${sec.section}`)) continue;
     const na = sec.group.none_apply, r = !na || !na.value ? "not answered" as const : !na.confirmed ? "not confirmed" as const : null;
     if (r) missing.push({ fact: `group:${sec.section}`, label: groupLabel(sec.title), about: sec.about_label, reason: r });
+  }
+  // B155 (break M1 on #1367): an entry of a list relative with no row on the form (an eighth brother or sister on IMM 5645's
+  // seven rows) is never filed silently: one line each, "left empty on the form" (it never holds a copy's lock back and is
+  // passed with a reason on Ready to file, as a by-hand field is), saying it goes on an extra sheet.
+  for (const sec of view.sections) {
+    if (!sec.group || !isListRelative(sec.subjectId) || !read.has(`${sec.subjectId}|${sec.section}`)) continue;
+    const qs = sec.questions.filter((q) => q.group), room = qs.find((q) => q.capacity)?.capacity ?? 0;
+    for (const i of entriesOffForm(qs)) missing.push({ fact: `entry:${sec.section}:${i + 1}`, label: `Entry ${i + 1} of ${sec.about_label}`, about: sec.about_label, reason: "left empty on the form", why: `the form has room for ${room} entries: write this one on an extra sheet`, subject: sec.subjectId });
   }
   // P-47 tier 2 (C4.4 part 2): a section check (a conflict in the answers) that fired on a fact this form reads for this
   // person blocks filing too, named by its own words (it never blocks saving, P-71). Advice, readiness warnings, official

@@ -152,4 +152,35 @@ await main("B155", "IMM 5645's brothers and sisters are asked as a list, stored 
   await confirmAll(c.id, SIB);
   mine = (await formsOf(c.id, officer)).find((x) => x.form === FORM && x.subject_id === P);
   ok("B155-12b pass: Confirm section on the brothers and sisters' section clears it", !mine?.readiness.missing.some((m) => /brothers/.test(m.about)), mine?.readiness.missing.filter((m) => /brothers/.test(m.about)));
+
+  // ---- Break M1 on #1367: an eighth brother or sister (IMM 5645 has seven rows) is asked in full and never filed silently. ----
+  const big = await openCase(vv, [{ role: "principal", name: "Sample Client E", dob: "1980-01-01" }], { representative: f.rep, caseOfficers: [officer] });
+  const PE = big.subjects["Sample Client E"];
+  const entry = async () => (await call("POST", `/runtime/cases/${big.id}/groups/${PE}/sibling/rows`, { group: "sibling" }, officer)).body?.row as string;
+  const eight: string[] = []; for (let i = 0; i < 8; i++) eight.push(await entry());
+  const say = (fact: string, row: string, value: unknown, actor = officer) => call("PUT", `/runtime/cases/${big.id}/answers/${PE}/sibling/${fact}`, { value, expectedId: null, row }, actor);
+  const r8 = await say("person.full_name", eight[7], "Sample Eighth E"), r1 = await say("person.full_name", eight[0], "Sample First E");
+  ok("B155-13 pass: entry 8's save says it has no row on the form (an extra sheet); entry 1's says what it fills", /no row on the form: write it on an extra sheet/.test(r8.body?.message ?? "") && /fills IMM 5645/.test(r1.body?.message ?? ""), [r8.body?.message, r1.body?.message]);
+  let bigForm = (await formsOf(big.id, officer)).find((x) => x.form === FORM && x.subject_id === PE);
+  const offLine = bigForm?.readiness.missing.find((m) => m.fact === "entry:sibling:8");
+  ok("B155-13a pass: IMM 5645 names entry 8 as left off the form, to write on an extra sheet (a by-hand line, never \"ready\" in silence)", !!offLine && offLine.reason === "left empty on the form" && offLine.label === "Entry 8 of Sample Client E's brothers and sisters" && /room for 7 entries: write this one on an extra sheet/.test((offLine as { why?: string }).why ?? "") && bigForm?.readiness.ready === false, offLine);
+  ok("B155-13b fail: entries 1 to 7 are never named as off the form", !bigForm?.readiness.missing.some((m) => /^entry:sibling:[1-7]$/.test(m.fact)), bigForm?.readiness.missing.filter((m) => m.fact.startsWith("entry:")).map((m) => m.fact));
+  const secE = (await sectionsOf(big.id)).find((x) => x.subjectId === `${PE}/sibling`);
+  const dobE = secE?.questions.find((q) => q.fact === "person.date_of_birth");
+  ok("B155-13c pass: entry 8 is asked in full (its date of birth is missing in the section), as any group's entry past the form's room", !!dobE && dobE.rows[7] && !dobE.rows[7].fits && secE!.missing.includes(dobE.label), { fits: dobE?.rows.map((r) => r.fits), missing: secE?.missing });
+
+  // ---- Break m2 on #1367: an answer the form has no box for in that entry is refused, and a hidden one is never confirmed unseen. ----
+  const acc = "relationship.accompanies_subject_to_canada", accRows = rowsOf(acc);
+  if (accRows.length === 1) {
+    const onFirst = await say(acc, eight[0], true), onIts = await say(acc, eight[accRows[0]], true);
+    ok("B155-14 fail: \"accompanies\" on entry 1 is refused (422, in words: the form asks it in entry 7 only); on entry 7 it is saved", onFirst.status === 422 && new RegExp(`entry 1: it is asked in entry ${accRows[0] + 1} only`).test(onFirst.body?.detail ?? "") && onIts.status === 200, [onFirst.status, onFirst.body?.detail, onIts.status]);
+    // Remove entry 1: entry 7's "accompanies" moves to the sixth entry, where the form has no box: hidden, so never confirmed.
+    await call("DELETE", `/runtime/cases/${big.id}/groups/${PE}/sibling/rows/${eight[0]}`, undefined, officer);
+    const sec2 = (await sectionsOf(big.id)).find((x) => x.subjectId === `${PE}/sibling`)!;
+    const g = sec2.questions.filter((q) => q.group), shown = g.flatMap((q) => q.rows.filter((r, i) => r.fits || !g.some((x) => x.rows[i]?.fits)).map((r) => r.answer?.id)).filter((x): x is string => !!x);
+    const hidden = sec2.questions.find((q) => q.fact === acc)?.rows.find((r) => r.answer && !r.fits && g.some((x) => x.rows[r.index]?.fits));
+    const conf = await call("POST", `/runtime/cases/${big.id}/sections/sibling/confirm`, { subjectId: `${PE}/sibling`, seen: shown }, officer);
+    const after = sql(`select status from client_canonical_answer where id = '${hidden?.answer?.id}'`);
+    ok("B155-14a pass: Confirm section with only the answers the entries show succeeds, and the hidden \"accompanies\" (moved to entry 6) is not confirmed", !!hidden && conf.status < 300 && after === "DECLARED", [conf.status, conf.body?.detail, hidden?.index, after]);
+  } else ok("B155-14 setup: \"accompanies\" is mapped on one row only on this release", false, accRows);
 });

@@ -137,7 +137,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       if (!about) { boxes.push({ ...base, coverage: "unresolved", detail: "that person is not part of this combination; the form field stays blank" }); continue; }
       // B155 (QA-153 probe 2, 8 Nov): a `subject_child` box's row picks the child (R4: the case's n-th child), so the
       // child's own answer, which has no row, is what it reads: the second child's boxes read the second child's facts.
-      const factRow = e.person === "subject_child" ? null : e.row;
+      // Review m2 on #1367: only for a fact the child answers once; a repeating one keeps the map's row (IMM 5562's trips).
+      const factRow = e.person === "subject_child" && p?.repeats !== "per_row" ? null : e.row;
       const k = kkey(about, e.fact, factRow), n = needs.get(`${about}|${e.fact}`) ?? { fact: e.fact, about, rows: new Set<number>(), forms: new Set<string>(), boxes: 0, maybe: false };
       if (factRow !== null && factRow !== undefined) n.rows.add(factRow);
       n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);

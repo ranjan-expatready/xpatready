@@ -121,6 +121,26 @@ ok("B155 fail: a third sibling entry does not fit a form with two sibling rows (
   return JSON.stringify(q?.rows.map((r) => r.fits)) === "[true,true,false]";
 })());
 
+// ── B155 (QA-153 probe 2; review m2 on #1367): a family form's child rows. Row n of `subject_child` picks the case's n-th
+// child; a fact the child answers once is read from the child's own answer (no row), a repeating one keeps the map's row.
+{
+  const C = { ...S, placements: [...(S as unknown as { placements: unknown[] }).placements, { fact: "person.trip_country", section_id: "personal", repeats: "per_row", collected_from: "client_questionnaire" }],
+    canonical_fields: [...(S as unknown as { canonical_fields: unknown[] }).canonical_fields, { id: "person.trip_country", meaning: "Trip country", value_type: "text" }],
+    field_maps: [{ form_number: "F 2", form_edition: "F 2 (01-2026)", official_file: "f2.pdf", entries: [
+      { data_path: "F2[0].B[0].Child[0].Name[0]", outcome: "mapped", fact: "person.family_name", person: "subject_child", row: 0, transform: "as_is" },
+      { data_path: "F2[0].B[0].Child[1].Name[0]", outcome: "mapped", fact: "person.family_name", person: "subject_child", row: 1, transform: "as_is" },
+      { data_path: "F2[0].B[0].Child[1].Trip[0]", outcome: "mapped", fact: "person.trip_country", person: "subject_child", row: 1, transform: "as_is" },
+    ] }] } as unknown as Snapshot;
+  const people: Participant[] = [{ subjectId: "case", role: "case", label: "The application", applies: true }, { subjectId: "p0", role: "principal", label: "Sample Person 0", applies: true },
+    { subjectId: "k1", role: "child", label: "Sample Child 1", applies: true }, { subjectId: "k2", role: "child", label: "Sample Child 2", applies: true }];
+  const a = (id: string, subjectId: string, field: string, value: string) => ({ id, subjectId, field, rowKey: null, value, status: "VERIFIED" as const, channel: "confirm_section", actor: "user-O", at: TODAY.toISOString() });
+  const answers = [a("d0", "p0", "person.date_of_birth", "1980-05-01"), a("n1", "k1", "person.family_name", "ONE"), a("n2", "k2", "person.family_name", "TWO")];
+  const qs = caseView(C, people, answers, [], "agent", TODAY).sections.flatMap((x) => x.questions);
+  const name2 = qs.find((q) => q.subjectId === "k2" && q.fact === "person.family_name"), trip2 = qs.find((q) => q.subjectId === "k2" && q.fact === "person.trip_country");
+  ok("B155 pass: the second child's once-only fact (row 1 of the child rows) is read from that child's own answer", name2?.answer?.value === "TWO" && name2.capacity === null, { answer: name2?.answer?.value, capacity: name2?.capacity });
+  ok("B155 fail (review m2): a child's repeating fact keeps the map's row, so its group still holds one row on the form", trip2?.group === "personal" && trip2.capacity === 1, { group: trip2?.group, capacity: trip2?.capacity });
+}
+
 // ── factChanges (Devin on #1256): a parent's newest saved value is read by the parent's own key.
 const saved = new Map<string, unknown>([["p0/parent_1|person.family_name", "JANE"]]);
 const words = (store: Map<string, unknown>): ChangeWords => ({ label: (f) => f, person: (a) => (a === "p0" ? "Sample Person 0" : a), at: (a, f) => (store.has(`${a}|${f}`) ? "2026-11-07T10:00:00Z" : null), saved: (a, f) => store.get(`${a}|${f}`) ?? null });

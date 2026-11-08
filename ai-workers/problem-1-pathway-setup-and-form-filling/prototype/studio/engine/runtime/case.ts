@@ -13,7 +13,7 @@ import { gatesInForce } from "../form-field-condition.ts";
 import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { CLIENT_RECONFIRM } from "./background.ts";
-import { isAskedRelative, isListRelative, listWords, relativeLabel, relativeOf } from "./relatives.ts";
+import { cellAsked, isAskedRelative, isListRelative, listWords, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, byClientFor, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
@@ -430,9 +430,10 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const qs = questions.filter((q) => q.subjectId === sec.subjectId && q.section === sec.section);
     const answered = qs.flatMap((q) => (q.group ? q.rows.map((x) => x.answer) : [q.answer])).filter((a): a is NonNullable<typeof a> => !!a);
     // A repeating group may have no rows (no previous country, no job); a started row needs all its required answers.
-    // B155: an entry of a list relative asks only what the form has a box for in that row (its other rows are not asked).
-    const listed = isListRelative(sec.subjectId);
-    const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x) => (!listed || x.fits) && !x.answer) : !q.answer)).map((q) => q.label);
+    // B155: an entry of a list relative asks only what the form has a box for in its row; an entry with no row on the form
+    // asks everything (it goes on an extra sheet; break M1 on #1367).
+    const listed = isListRelative(sec.subjectId), grouped = qs.filter((q) => q.group);
+    const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x, i) => (!listed || cellAsked(grouped, q, i)) && !x.answer) : !q.answer)).map((q) => q.label);
     // A required group with no entries is answered by "none apply" (Lead, break M3): until then the part is not done
     // (review r1d-none-apply M1); "none apply" counts as an answer of the part.
     const group = groupOf(qs), na = group && group.rows === 0 ? group.none_apply : null;
