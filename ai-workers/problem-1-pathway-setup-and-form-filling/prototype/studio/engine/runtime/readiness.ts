@@ -64,8 +64,9 @@ export type FormItem = {
   edition?: { label: string; superseded: boolean; acceptedUntil: string | null } | null;
   /** Online lines: the "Download PDF copy" is older than the facts (P-145); an entered section is out of date (C7.3). */
   copyStale?: boolean; enteredOutOfDate?: string[];
-  /** C7.7 (BR-9): the boxes its newest copy leaves "To write by hand" (the copy's own list: the box, its label, why). */
-  byHand?: { box: string; label: string; why: string }[];
+  /** C7.7 (BR-9): the boxes its newest copy leaves "To write by hand" (the copy's own list: the copy, the box, its label,
+   *  why). The copy is part of each line's key (review M1), so a pass written for one copy never covers the next. */
+  byHand?: { copy: string; box: string; label: string; why: string }[];
 };
 export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
@@ -166,7 +167,9 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // C7.7 (BR-9, C7.7-18; the tech lead's ruling on #1317): each box a form filed as a PDF leaves "To write by hand" is
     // its own line, in the box's own words, so a pass for one box never covers another found later. An Online line's PDF
     // copy is not for filing, so it raises none.
-    if (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") for (const b of f.byHand ?? []) warn({ code: "hand_write", ...at, part: b.box, owes: "staff", words: `${ofWho(f)}: "${b.label}" is written by hand on the form before filing. ${b.why}` });
+    // Review M1: the key holds the copy and the box, so a new copy's box needs its own pass. Review m2: the words say the
+    // box is still to be written; the reason follows in brackets when there is one.
+    if (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") for (const b of f.byHand ?? []) { const why = (b.why ?? "").trim().replace(/[.\s]+$/, ""); warn({ code: "hand_write", ...at, part: `${b.copy}|${b.box}`, owes: "staff", words: `${ofWho(f)}: "${b.label}" is still to be written by hand on the form before filing${why ? ` (${why})` : ""}.` }); }
     if (f.channel === "ONLINE") for (const sec of f.enteredOutOfDate ?? []) warn({ code: "entered_out_of_date", ...at, part: sec, owes: "staff", words: `${ofWho(f)}: "${sec}" was entered in the portal before a fact changed. Enter it again.` });
   }
   for (const c of x.openChecks ?? []) critical({ code: "open_check", subject: c.subject, part: c.fact, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });

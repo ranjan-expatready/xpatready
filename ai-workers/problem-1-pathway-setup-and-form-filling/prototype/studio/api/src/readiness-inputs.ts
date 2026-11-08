@@ -34,7 +34,7 @@ export type ReadinessInputs = {
   /** The edition each form is filed on (the release's), by form number and channel. */
   editionOf: (form: string, channel: string) => string | null;
   /** C7.7 (BR-9): the boxes the newest copy of a form leaves "To write by hand", in the copy's own words. Left out: none. */
-  byHand?: (form: string, subject: string) => { box: string; label: string; why: string }[];
+  byHand?: (form: string, subject: string) => { copy: string; box: string; label: string; why: string }[];
   /** Online sections entered before a fact changed (C7.3), per item. */
   enteredStale: Map<string, string[]>;
   barcode: (form: string) => boolean;

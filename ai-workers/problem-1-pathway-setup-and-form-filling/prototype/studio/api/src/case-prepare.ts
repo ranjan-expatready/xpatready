@@ -514,14 +514,18 @@ export class CasePrepare {
     }
     // C7.7 (BR-9, C7.7-18): the boxes the newest copy of each form on this release leaves "To write by hand", in the
     // copy's own words (the question's label, else "A form field"; why, without engine words: fill-case.ts plainWhy).
-    // The newest copy, current or not, is the one that would be filed, so a stale copy never hides its by-hand boxes.
+    // The newest copy, current or not, is the one that would be filed, so a stale copy never hides its by-hand boxes; a
+    // newest copy that is "Copy, not for filing" (made while the line was Online) raises none (review m4). Review m5: the
+    // newest copy per form and person is picked first, and only those copies' results are read.
     const askedAs = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
-    const handOf = new Map<string, { box: string; label: string; why: string }[]>();
-    for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: pin.configReleaseId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { formNumber: true, subjectId: true, resultJson: true } })) {
-      const k = `${x.formNumber}|${x.subjectId}`;
-      if (handOf.has(k)) continue;
+    const newestCopy = new Map<string, string>();
+    for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: pin.configReleaseId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true } }))
+      if (!newestCopy.has(`${x.formNumber}|${x.subjectId}`)) newestCopy.set(`${x.formNumber}|${x.subjectId}`, x.id);
+    const handOf = new Map<string, { copy: string; box: string; label: string; why: string }[]>();
+    for (const x of newestCopy.size ? await this.db.formInstance.findMany({ where: { id: { in: [...newestCopy.values()] } }, select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } }) : []) {
+      if (copyNotForFiling(s, x)) continue;
       const boxes = ((x.resultJson as { boxes?: { box: string; fact: string | null; result: string; why: string | null }[] } | null)?.boxes ?? []);
-      handOf.set(k, boxes.filter((b) => b.result === "by hand").map((b) => ({ box: b.box, label: (b.fact && askedAs.get(b.fact)) || "A form field", why: plainWhy(b.why) })));
+      handOf.set(`${x.formNumber}|${x.subjectId}`, boxes.filter((b) => b.result === "by hand").map((b) => ({ copy: x.id, box: b.box, label: (b.fact && askedAs.get(b.fact)) || "A form field", why: plainWhy(b.why) })));
     }
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
