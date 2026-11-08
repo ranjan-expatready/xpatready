@@ -46,3 +46,42 @@ D1 Requirement fit 4: BR-4/5/7, P-242 and P-243 met by the API; the Major below 
 **Could not check:** a real screen reader; an unaided user (D17 and D20); the letter replay (FQ-10). Breaker report: not read, to keep this review independent.
 
 **Verdict: Block** on `ab717fdbd550616e41bd17eb3d147bf26413b819`. Fix M1 and M2, each with a fail test. Fix m1–m4 or list them in the PR. Re-review covers the diff since `ab717fdbd`.
+
+## Re-review on f7ce78bc9 (diff only, P-293: `git diff ab717fdbd..f7ce78bc94dc8b48217adc681b5bdb23c2dc2923`)
+Re-run on my copy `rv_c65` (:4434), stopped after, US$0. Results:
+* **Fixture:** pack C6.5 **30/32** (red only 19b and 20, FQ-10). `check_c65_documents_api` **55/55**.
+* **Configured checkpoint:** reset and load ran with the new triggers in place. Pack **30/32**; API check **55/55**.
+* **No database or server needed:** `check_c65_document_rules` 17/17; `check_c76_readiness` 83/83; `check_prisma_schema` 5/5.
+* **Typecheck:** `tsc`, no error in a changed file.
+* **Rollback:** the header's rollback, now with the three `DROP FUNCTION`s, ran cleanly inside a transaction (ROLLBACK after).
+* **Triggers:** they refuse undoing a Confirm & use and rewriting a resolved reason. The database stores a Hindi reason.
+
+| Earlier finding | Now | Evidence (my probes and the builder's tests) |
+|---|---|---|
+| **M1** replaced file's value kept | **Fixed** | Before the new file is confirmed, `keep: document` on the old check gives 409 `not_current`; the check stays open and the answer is unchanged. Confirming the new file closes the old check ("Its file was replaced…", typed answer kept) and opens its own check with `SAMPLEP13`. Keeping that check's document value writes `SAMPLEP13`, VERIFIED, with the new file as source (`case-documents.ts:384-391`, `:468`; test "C6.5 B1"). |
+| **M2** case-level upload around the line | **Fixed** | Only `CASE_KINDS` are accepted (`:178`). The client's passport upload gets 422 "has its own line on the person's checklist: upload it there", with 0 rows stored (test "C6.5 B-M5"). |
+| m1 guards outside the transaction | Fixed | Confirm section (`runtime.ts:601-605`) and checked-against (`:497`) now read open checks inside their transaction. |
+| m2 no parallel test | Fixed | 5 parallel Confirm & use calls and 5 parallel resolves each give one 200 (tests "R-m2"). |
+| m3 keys and codes in texts | Fixed (server words) | Messages use labels ("citizenship, passport country of issue"); no "P-134" or "FQ-10" in `why`. Audit lines keep fact keys (internal). |
+| m4 plan basis | Fixed | With no letter in scope: "No document here is read by AI…", US$0 (`:231-232`). |
+
+Also checked in the diff:
+* **New file route `GET /runtime/documents/:id/file`:**
+  * Answers: officer 200; client 403; author 403; another firm 404 with the same words as an unknown id.
+  * Headers: `nosniff`, CSP `default-src 'none'; sandbox`, `no-store`.
+  * Each view is audited as "viewed", with no file name.
+* **Proposals now carry `current`, `differs` and `left_why`.** The sex value is written as `f_female`.
+* **Two documents that differ on one fact now open two checks.** After one is resolved, the other gives 409 `changed` until the current answer is sent. No 500.
+* **A check on the application's own facts now warns on every filing** (test "B-M4").
+
+New, all Minor (fix or list in the PR):
+* **n1 (Should, the tech lead's condition on BR-6):** when a check in another section blocks a section, the 409 still says "An answer in this section differs from a document". It names neither the check's section nor the check in words.
+  * Probe: confirming `personal_details` was blocked by the passport-number check in `travel_document`.
+  * The tech lead kept both halves of the rule "on one condition: the 409 and the screen name the open check and the section it sits in" (`runtime.ts:604`).
+  * Fix: name the check's question and its section in `detail`, and add `section` to `checks[]`.
+* **n2 (Should):** the closure of a replaced file's check is returned only as `closed: [ids]`. The officer's `message` and the "confirmed and used" audit line do not mention it (`case-documents.ts:426-428`). Add "1 earlier check closed (its file was replaced)" to both.
+* **n3 (note for the concept, not a defect):** BR-7 reads "one check per person and fact". The index is now per person, fact **and** document (break M2's fail test allowed either form). Record it in the concept or the PR as a decision.
+
+Journey re-score on f7ce78bc9: correct data ½ → 1 and plain words ½ → 1. Next step stays ½, because the resolve screen comes with the drawer, PR 2b. **9.5/10.**
+
+**Verdict: Approve** on `f7ce78bc94dc8b48217adc681b5bdb23c2dc2923`. No Blocker or Major is open; n1 to n3 are fixed or listed in the PR.

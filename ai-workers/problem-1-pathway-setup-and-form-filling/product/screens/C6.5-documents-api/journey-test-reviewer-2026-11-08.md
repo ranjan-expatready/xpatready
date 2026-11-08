@@ -49,3 +49,9 @@ PR #1369, commit `ab717fdbd`. Isolated copy `rv_c65` on :4434 (runtime ports), s
 **8.5 / 10, pass (no 0).** The journey score passes, but the two Majors still block (see `review.md`). To raise the score: fix the two Majors (correct data); plain words in the API texts; the next step arrives with the drawer.
 
 **Not tested:** a real screen reader; 200 % zoom on a desktop browser; an intended user's unaided walk (D17 and D20 stay with the founder); the letter replay (no saved read, FQ-10). Screenshots are in the reviewer's scratchpad, not committed: `j1-1440-before.png`, `j1-1440-received.png`, `j3-1024.png`, `j3-400.png`, `j4-readiness.png`, `j6-hostile.png`.
+
+**Re-score on f7ce78bc9 (reviewer, diff only):** the two Majors are fixed. Probes:
+* the replaced file's check is closed and the newer file's own check keeps `SAMPLEP13`;
+* the case-level upload of a line's type gives 422 with nothing stored.
+
+Server words now use labels. Score changes: correct data 1, plain words 1, next step still ½ (the drawer). **9.5/10.** Details in `review.md`, "Re-review on f7ce78bc9".
