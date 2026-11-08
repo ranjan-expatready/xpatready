@@ -251,7 +251,9 @@ export type Readiness = { ready: boolean; missing: { fact: string; label: string
   subject?: string;
   /** QA-165 (P-71): why, in the form's own words, when a form field holds it back: the fix a box refused with ("…is answered
    *  No, but … is recorded"), or why a field IRCC's form marks mandatory would be left empty ("filled by hand: …"). */
-  why?: string }[] };
+  why?: string;
+  /** QA-165 (#1318): for "left empty on the form", every form field the line covers (a date's parts are one line). */
+  boxes?: string[] }[] };
 /** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
  *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
  *  even one starting with "The", is kept as it is. */

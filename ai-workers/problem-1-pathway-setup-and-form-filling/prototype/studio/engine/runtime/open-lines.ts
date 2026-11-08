@@ -2,7 +2,8 @@
 // the forms card. Pure and import-free, so the page and its check share it.
 
 export type OpenFieldIn = { box: string; label: string; reason: string; why: string };
-export type OpenLine = OpenFieldIn & { key: string; n: number };
+/** `boxes`: every form field the line covers (a date's year, month and day are one line), its first one first. */
+export type OpenLine = OpenFieldIn & { key: string; n: number; boxes: string[] };
 
 /** Only the parts of one question merge: boxes under the same parent whose names differ by a date part (a date's year,
  *  month and day are one "Date of birth"); never two fields that merely share words (Devin on #592: IMM 5257's Taiwan
@@ -21,7 +22,7 @@ export function openLines(open: OpenFieldIn[]): OpenLine[] {
   for (const o of open) {
     const parts = segs(o.box), leaf = bare(parts.pop() ?? "").replace(DATE_PART, "");
     const key = `${parts.join(".")}|${leaf}|${o.label}|${o.reason}|${o.why}`;
-    const x = by.get(key); if (x) x.n++; else by.set(key, { ...o, key, n: 1 });
+    const x = by.get(key); if (x) { x.n++; x.boxes.push(o.box); } else by.set(key, { ...o, key, n: 1, boxes: [o.box] });
   }
   const lines = [...by.values()];
   // Lines that read the same are told apart, in words (Devin on #592: by the caption alone, whatever their reasons): first

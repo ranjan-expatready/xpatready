@@ -56,7 +56,7 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   const facts = (sch1?.readiness.missing ?? []).filter((m) => m.reason !== "left empty on the form"), empty = (sch1?.readiness.missing ?? []).filter((m) => m.reason === "left empty on the form");
   ok("C7.2 R6 setup: IMM 5257 SCH1 is filed as a PDF, waits on no fact, and a copy leaves mandatory boxes empty", !!sch1 && sch1.channel !== "ONLINE" && sch1.for_filing && !facts.length && empty.length > 0 && !sch1.readiness.ready, { channel: sch1?.channel, facts, empty: empty.length });
   // R5 (#1318 M3): for that PDF form, Ready to file's CRITICAL line names the same boxes, in the words GET …/forms gives them.
-  const sch1Line = warns.filter((w) => w.code === "missing_facts" && /IMM 5257 SCH1 for Sample Client P: .*would be left empty/.test(w.words));
+  const sch1Line = warns.filter((w) => w.code === "fields_left_empty" && /IMM 5257 SCH1 for Sample Client P: .*would be left empty/.test(w.words));
   ok("C7.6 R5 pass (#1318 M3): Ready to file's CRITICAL line for IMM 5257 SCH1 counts its empty boxes and names the first in GET …/forms' own words", sch1Line.length === 1 && sch1Line[0].words.includes(`${empty.length} form field`) && !!empty[0] && sch1Line[0].words.includes(empty[0].label), { line: sch1Line.map((w) => w.words), first: empty[0]?.label });
   const g = await call("POST", `/runtime/cases/${c.id}/forms/IMM%205257%20SCH1/${P}/generate`, { idempotencyKey: `qa165p-${Date.now()}` }, OFFICER);
   const copy = String(g.body?.copy?.id ?? g.body?.id ?? "");

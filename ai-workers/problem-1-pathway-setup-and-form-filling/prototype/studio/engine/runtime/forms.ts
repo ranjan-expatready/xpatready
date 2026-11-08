@@ -226,7 +226,7 @@ function formHoldsBack(view: QuestionnaireView, subjectId: string, onForm: OnFor
   const left = onForm.open.filter((o) => { const b = boxOf.get(o.box); return !b?.fix && !(b?.fact && said.has(`${b.about ?? subjectId}|${b.fact}`)); });
   for (const o of openLines(left)) {
     const b = boxOf.get(o.box);
-    out.push({ fact: `box:${o.box}`, label: o.label, about: aboutOf(b?.about ?? null), reason: "left empty on the form", why: `${o.reason}: ${o.why}`, subject: b?.about ?? subjectId });
+    out.push({ fact: `box:${o.box}`, label: o.label, about: aboutOf(b?.about ?? null), reason: "left empty on the form", why: `${o.reason}: ${o.why}`, subject: b?.about ?? subjectId, boxes: o.boxes });
   }
   return out;
 }

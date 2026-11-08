@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { formValues } from "../engine/form-values.ts";
 import { mandatoryOpen } from "../engine/runtime/mandatory.ts";
-import { filingReadiness, type FormItem } from "../engine/runtime/readiness.ts";
+import { CODE_WORDS, filingReadiness, isCritical, type FormItem } from "../engine/runtime/readiness.ts";
 import { followUpGround, yesGate } from "../api/src/own-yes-no.ts";
 import type { BoxRow } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -96,13 +96,20 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
   // hand_write line only; a mandatory box with no writer still makes the CRITICAL "would be left empty" line.
   const hand = (boxes: string[]) => filingReadiness({ filing: "f4", forms: [{ ...item0(h.ready), byHand: boxes.map((b) => ({ copy: "copy-1", box: b, label: "A form field", why: "the form's own code list" })) }], reviewed: true, today: "2026-11-08" });
   const both = hand([TAIWAN, ISRAEL]), one = hand([TAIWAN]);
-  const lineOf = (x: ReturnType<typeof hand>) => x.warns.filter((w) => w.code === "missing_facts" && /would be left empty/.test(w.words));
+  const lineOf = (x: ReturnType<typeof hand>) => x.warns.filter((w) => w.code === "fields_left_empty" && /would be left empty/.test(w.words));
   ok("C7.6 R2 pass (#1318, P-294): mandatory boxes the copy lists by hand make the hand_write lines only, never also the CRITICAL \"left empty\" line", lineOf(both).length === 0 && both.warns.filter((w) => w.code === "hand_write").length === 2, both.warns.map((w) => `${w.code}: ${w.words}`));
   ok("C7.6 R2 fail (#1318, P-294): a mandatory box with no writer (not in the copy's by-hand list) still makes the CRITICAL line, for that box alone", lineOf(one).length === 1 && /: 1 form field IRCC's form marks mandatory would be left empty/.test(lineOf(one)[0].words) && /Israel Passport Indicator/.test(lineOf(one)[0].words) && one.warns.filter((w) => w.code === "hand_write").length === 1, one.warns.map((w) => `${w.code}: ${w.words}`));
   ok("C7.6 R2 pass (Devin on #1318): a form filed Online (its PDF a copy, not for filing) has no \"left empty\" line on Ready to file for its PDF's boxes", !online.warns.some((w) => /would be left empty/.test(w.words)), online.warns.map((w) => w.words));
   const onlineFix = filingReadiness({ filing: "f3", forms: [{ ...item0(r.ready), channel: "ONLINE" }], reviewed: true, today: "2026-11-08" });
   ok("C7.6 R2 fail guard (Devin on #1318): filed Online, a fact that would be written wrong still stands before Ready to file", onlineFix.warns.some((w) => w.code === "fact_problem" && /is answered No, but/.test(w.words)), onlineFix.warns.map((w) => w.words));
-  ok("C7.6 R2 pass: Ready to file says the fix in its own words, and names the mandatory boxes a copy would leave empty", !fr.ready && fr.warns.some((w) => w.code === "fact_problem" && /is not written: .*is answered No, but/.test(w.words)) && fr.warns.some((w) => w.code === "missing_facts" && /2 form fields IRCC's form marks mandatory would be left empty/.test(w.words)), fr.warns.map((w) => w.words));
+  ok("C7.6 R2 pass: Ready to file says the fix in its own words, and names the mandatory boxes a copy would leave empty", !fr.ready && fr.warns.some((w) => w.code === "fact_problem" && /is not written: .*is answered No, but/.test(w.words)) && fr.warns.some((w) => w.code === "fields_left_empty" && w.severity === "critical" && /2 form fields IRCC's form marks mandatory would be left empty/.test(w.words)), fr.warns.map((w) => w.words));
+  // Tech lead on #1318 (option 1): its own CRITICAL code, so "missing facts" stays about facts.
+  ok("C7.6 R2 fail guard (#1318 option 1): the empty form fields are never a \"Missing facts\" line", !fr.warns.some((w) => w.code === "missing_facts" && /would be left empty/.test(w.words)) && isCritical("fields_left_empty") && CODE_WORDS.fields_left_empty === "Mandatory form fields left empty", fr.warns.map((w) => `${w.code}: ${w.words.slice(0, 60)}`));
+  // Review on #1318 (the date Minor): a line covering a date's parts leaves the count only when every part is by hand.
+  const YEAR = "form1[0].Page1[0].Sample[0].DOBYear[0]", MONTH = "form1[0].Page1[0].Sample[0].DOBMonth[0]";
+  const dated = (byHand: string[]) => filingReadiness({ filing: "f5", forms: [{ ...item0({ ready: false, missing: [{ fact: `box:${YEAR}`, label: "Date of birth", about: "Client A", reason: "left empty on the form", why: "no question asks it yet: nothing in this release fills it", subject: "p1", boxes: [YEAR, MONTH] }] }), byHand: byHand.map((b) => ({ copy: "copy-1", box: b, label: "Date of birth", why: "the form's own step" })) }], reviewed: true, today: "2026-11-08" });
+  ok("C7.6 R2 fail (#1318, the date Minor): a date whose first part only is by hand stays on the CRITICAL line (its other part has no writer)", lineOf(dated([YEAR])).length === 1, dated([YEAR]).warns.map((w) => `${w.code}: ${w.words.slice(0, 80)}`));
+  ok("C7.6 R2 pass (#1318, the date Minor): a date whose every part is by hand leaves the CRITICAL line (its hand_write lines say it)", lineOf(dated([YEAR, MONTH])).length === 0 && dated([YEAR, MONTH]).warns.filter((w) => w.code === "hand_write").length === 2, dated([YEAR, MONTH]).warns.map((w) => `${w.code}: ${w.words.slice(0, 80)}`));
 }
 
 // ---------------------------------------------------------------- R3: the gate-to-detail pairs are the form's own
