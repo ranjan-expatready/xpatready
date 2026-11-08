@@ -134,8 +134,9 @@ export function onFormOf(s: Snap, form: string, cov: ReturnType<typeof formCover
 }
 /** P-71 readiness of one form for one person, with what the form itself would write (QA-165): the one rule GET …/forms,
  *  locking a copy and the case's prepare view (Ready to file) share. */
-export function formReadinessOf(s: Snap, people: Parameters<typeof formCoverage>[1], answers: Parameters<typeof formCoverage>[2], rows: Parameters<typeof formCoverage>[3], view: ReturnType<typeof caseView>, form: string, subjectId: string) {
-  return readiness(view, form, subjectId, onFormOf(s, form, formCoverage(s, people, answers, rows, form, subjectId), view));
+/** `cov`: the coverage already worked out for this form and person (the prepare view shares one with its fingerprint). */
+export function formReadinessOf(s: Snap, people: Parameters<typeof formCoverage>[1], answers: Parameters<typeof formCoverage>[2], rows: Parameters<typeof formCoverage>[3], view: ReturnType<typeof caseView>, form: string, subjectId: string, cov?: ReturnType<typeof formCoverage>) {
+  return readiness(view, form, subjectId, onFormOf(s, form, cov === undefined ? formCoverage(s, people, answers, rows, form, subjectId) : cov, view));
 }
 const needsValidate = (form: string, channel: Channel) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channel);
 const OUT_OF_DATE = "Out of date: validate again";

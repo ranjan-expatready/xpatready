@@ -23,12 +23,20 @@ const placementOf = async (db: Ctx["db"], workspaceId: string, fact: string) =>
     .sort((a, b) => (a.status === "DRAFT" ? -1 : 0) - (b.status === "DRAFT" ? -1 : 0))[0] ?? null;
 /** Every detail any combination's data names, wherever its Yes/No question is. */
 const ALL_FOLLOW_UPS = [...new Set(Object.values(OWN_YES_NO).flatMap((c) => c.boxes.flatMap((b) => b.followUps ?? [])))];
+/** Each detail's siblings: the other details of the same Yes/No question. */
+const SIBLINGS = new Map(Object.values(OWN_YES_NO).flatMap((c) => c.boxes.flatMap((b) => (b.followUps ?? []).map((f) => [f, (b.followUps ?? []).filter((x) => x !== f)] as [string, string[]]))));
+/** The door's words for a fact (engine/sources.ts factWords: its meaning, capitalised, no full stop). */
+const wordsOf = (meaning: string | null | undefined, fact: string) => { const m = (meaning ?? fact).trim().replace(/\.$/, ""); return m.charAt(0).toUpperCase() + m.slice(1); };
 
 /** Each form field of one combination that reads a conditioned detail holds the same condition (B86) or asks its deciding
  *  question (B88), proposed by the author and approved by the approver. A field already doing so is left as it is. */
 async function confirmReaders(ctx: Ctx, combinationId: string) {
   const { db, workspaceId, author, approver, said } = ctx, out = formSetup(ctx), door = ctx.get(FormFieldConditions), library = ctx.get(Screen02);
   for (const fact of ALL_FOLLOW_UPS) {
+    // Review round 2 on #1318: a field whose words name a sibling detail ("Only when "National identity document number" …",
+    // IMM 1294's and IMM 5710's national ID country) is filled only when that detail is recorded, which is asked only after the
+    // same Yes: the same condition. Words naming anything else stay a person's call.
+    const siblingWords = new Set((await db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: SIBLINGS.get(fact) ?? [] } }, select: { canonicalFieldKey: true, meaning: true } })).map((f) => wordsOf(f.meaning, f.canonicalFieldKey)));
     const p = await placementOf(db, workspaceId, fact);
     if (!p?.predicateJson || p.conditionEffect !== "SHOW") continue;
     const q = await door.list(combinationId, fact).catch(() => null); // this combination's forms do not read it: nothing to hold
@@ -36,9 +44,10 @@ async function confirmReaders(ctx: Ctx, combinationId: string) {
       if (r.state === "confirmed" || r.state === "asked") continue;
       const ask = !r.can_confirm && r.can_ask;
       // Review m2 on #1318: a field to confirm whose words name another question (the door's warning) is a person's call, never
-      // the loader's. A worked-out Yes/No asked as its deciding question carries the door's advice ("its own words also say…")
-      // instead: that one is asked, as the 9 reviewed asks are.
-      if (r.warning && !ask) { out.refused.push(`${r.form} ${r.caption || r.data_path}: ${r.warning} Left for a person on To review › Form fields.`); continue; }
+      // the loader's, unless that question is a sibling detail of the same Yes/No (above). A worked-out Yes/No asked as its
+      // deciding question carries the door's advice ("its own words also say…") instead: that one is asked, as the 9 reviewed asks are.
+      const named = /^Its words name "([^"]+)", not this condition's deciding question/.exec(r.warning ?? "")?.[1];
+      if (r.warning && !ask && !(named && siblingWords.has(named))) { out.refused.push(`${r.form} ${r.caption || r.data_path}: ${r.warning} Left for a person on To review › Form fields.`); continue; }
       if (!r.can_confirm && !ask) { out.refused.push(`${r.form} ${r.caption || r.data_path}: cannot hold "${q!.sentence}" (${r.why ?? r.state}), so it is left for a person on To review › Form fields`); continue; }
       try {
         const ch = await door.propose(author, { combinationId, fact, formEditionId: r.form_edition_id, dataPath: r.data_path, ...(ask ? { ask: true } : {}), reason: "QA-165: the form asks this only after a Yes; its own words say so (Sample, Unconfirmed: expert)" });

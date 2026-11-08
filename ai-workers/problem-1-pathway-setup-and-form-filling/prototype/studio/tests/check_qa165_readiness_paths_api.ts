@@ -40,12 +40,14 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   const r = await answer(c.id, P, "person.passport_country_of_issue", "TWN", CLIENT);
   await confirmAll(c.id, P);
   f = await forms();
-  ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required and empty, so readiness lists it (not the Israel box), with why", r.status < 300 && !f.readiness.ready && boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && f.readiness.missing.some((m) => /Taiwan PIN/.test(m.label) && /^no question asks it yet: /.test(m.why ?? "")), { status: r.status, missing: f.readiness.missing });
+  ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required and empty, so readiness lists it (not the Israel box), with why", r.status < 300 && !f.readiness.ready && boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && f.readiness.missing.some((m) => m.fact === `box:${TAIWAN}` && /^no question asks it yet: /.test(m.why ?? "")), { status: r.status, missing: f.readiness.missing });
+  const taiwanLabel = f.readiness.missing.find((m) => m.fact === `box:${TAIWAN}`)?.label ?? "";
 
   // R5: the prepare view's Ready to file names the same form field, from the same readiness.
   const { p } = await prepare(c.id);
   const lines = (p?.readiness ?? []).flatMap((x) => x.warns).filter((w) => w.code === "missing_facts" && /IMM 5257 for Sample Client P: .*form field.*would be left empty/.test(w.words));
-  ok("C7.6 R5 pass (#1318 M3): Ready to file names the Taiwan PIN box on IMM 5257's CRITICAL line, as GET …/forms does", lines.length === 1 && /Taiwan PIN/.test(lines[0].words) && !/Israel/.test(lines[0].words), lines.map((w) => w.words));
+  // The box's words are the form field list's caption (a neighbour's question, pre-existing: review m4), the same on both.
+  ok("C7.6 R5 pass (#1318 M3): Ready to file names the Taiwan PIN box on IMM 5257's CRITICAL line, in the words GET …/forms gives it", lines.length === 1 && !!taiwanLabel && lines[0].words.includes(taiwanLabel) && /: 1 form field IRCC's form marks mandatory would be left empty/.test(lines[0].words), { lines: lines.map((w) => w.words), taiwanLabel });
 
   // R6: the lock is never a dead end over a box left empty.
   const g = await call("POST", `/runtime/cases/${c.id}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `qa165p-${Date.now()}` }, OFFICER);

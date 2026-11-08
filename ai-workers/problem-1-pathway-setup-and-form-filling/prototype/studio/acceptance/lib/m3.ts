@@ -150,14 +150,17 @@ const rowNeeded = (forms: { subject_id: string; readiness: { missing: { reason: 
  *  digits, once; the release's answer decides, no fact name is assumed. Sample, not a real UCI. */
 const SAMPLE_DIGITS = "0000000001";
 /** Answers and confirms every required fact the case's forms read, with Sample values; "none apply" on required
- *  repeating groups. BR-6, P-97, P-155 (3): a client's own facts are answered by the client (`user-P`) for the principal
+ *  repeating groups (a first row where the form requires one, QA-165). BR-6, P-97, P-155 (3): a client's own facts are answered by the client (`user-P`) for the principal
  *  and minors (P-78: they count as confirmed); for another adult the officer enters them on the person's behalf with a
- *  reason (FQ-12). Returns true when GET …/forms says every form is ready (the built P-71 readiness). */
+ *  reason (FQ-12). Returns true when GET …/forms says no form waits on a fact (the built P-71 readiness, less the mandatory
+ *  boxes a copy leaves empty that no answer fills: QA-165, #1318). */
 export async function fillEverything(caseId: string): Promise<boolean> {
   const who = PEOPLE.get(caseId) ?? new Map<string, Person>(), officer = officerOf(caseId);
   for (let pass = 0; pass < 4; pass++) {
     const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, officer)).body?.forms ?? [];
-    if (forms.length && forms.every((f: { applies: boolean; readiness: { ready: boolean } }) => !f.applies || f.readiness.ready)) return true;
+    // QA-165 (#1318): done when no form waits on a fact. A mandatory box a copy leaves empty that no answer can fill (IMM 5257
+    // SCH1's by-hand boxes) is said on Ready to file and holds no lock back (blocksLock); one a first row would fill is not done.
+    if (forms.length && !rowNeeded(forms).size && forms.every((f: { applies: boolean; readiness: { missing: { reason: string }[] } }) => !f.applies || f.readiness.missing.every((m) => m.reason === "left empty on the form"))) return true;
     // QA-165 (#1256 D): a group the form needs a first row of (IMM 5257's current activity) takes back "none apply" and gets one row.
     const needRow = rowNeeded(forms);
     for (const s of ((await agent(caseId))?.sections ?? []).filter((x: { subjectId: string; title: string; group: { rows: number } | null }) => x.group && x.group.rows === 0 && needRow.has(`${x.subjectId}|${x.title}`))) {

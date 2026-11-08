@@ -253,8 +253,10 @@ export class CasePrepare {
     const view = caseView(s, people, answers, rows, "agent", today, groupAnswers);
     // QA-165 (P-71; #1256 cause 2): each form's readiness also reads what a copy made now would write (a box refused with a
     // fix, a mandatory box left empty), as GET …/forms does; worked out once per form and person in this view.
-    const readyOf = new Map<string, ReturnType<typeof formReadiness>>();
-    const formReady = (form: string, subject: string) => { const k = `${form}|${subject}`; if (!readyOf.has(k)) readyOf.set(k, formReadinessOf(s, people, answers, rows, view, form, subject)); return readyOf.get(k)!; };
+    const readyOf = new Map<string, ReturnType<typeof formReadiness>>(), covs = new Map<string, ReturnType<typeof formCoverage>>();
+    // One coverage per form and person, shared by readiness and the filing's facts fingerprint (factsHash below).
+    const covOf = (form: string, subject: string) => { const k = `${form}|${subject}`; if (!covs.has(k)) covs.set(k, formCoverage(s, people, answers, rows, form, subject)); return covs.get(k)!; };
+    const formReady = (form: string, subject: string) => { const k = `${form}|${subject}`; if (!readyOf.has(k)) readyOf.set(k, formReadinessOf(s, people, answers, rows, view, form, subject, covOf(form, subject))); return readyOf.get(k)!; };
     const accepts = await acceptsOf(this.db, c.workspaceId);
     const lines = new Map((s.forms as FormLine[]).map((l) => [l.form_number, l]));
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
@@ -527,7 +529,7 @@ export class CasePrepare {
         // answer as given now (an unconfirmed change is a change the representative did not review).
         // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
         // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
-        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${waitingFactsKey(formReady(form, subject).missing, answers)}`).digest("hex");
+        return createHash("sha256").update(`${inputHash(covOf(form, subject)?.facts ?? [])}|${waitingFactsKey(formReady(form, subject).missing, answers)}`).digest("hex");
       }, today });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
