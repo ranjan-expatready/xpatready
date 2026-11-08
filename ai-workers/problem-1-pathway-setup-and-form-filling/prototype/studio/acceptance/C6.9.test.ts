@@ -88,6 +88,12 @@ await main("C6.9", "Case check from confirmed facts (Visitor visa gates, stand-i
   r2 = await now2();
   ok("C6.9-17 pass (B124, some confirmed): after Confirm section, only the deciding answers still unconfirmed are named, and the outcome is unchanged", conf.status < 300 && r2?.outcome === "LIKELY_ELIGIBLE" && restingOn(r2).length > 0 && restingOn(r2).length < 3 && restingOn(r2).every((f) => !inSec.has(f)), { confirm: conf.status, resting: restingOn(r2), section: [...inSec] });
   await confirmAll(c2.id, P2);
+  // QA-312 (C6.18, P-244, since #1246): a background answer the officer recorded (person.criminal_history) still waits for
+  // the client's re-confirm after Confirm section; the client re-confirms each one through the product's own route, as
+  // lib/m3.ts fillEverything does.
+  type Ans = { id: string; awaits_client?: boolean } | null | undefined;
+  for (const q of ((await agent(c2.id))?.sections ?? []).flatMap((s: { questions: { answer?: Ans; rows: { answer?: Ans }[] }[] }) => s.questions))
+    for (const a of [q.answer, ...q.rows.map((x) => x.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${c2.id}/answers/${a.id}/reconfirm`, {}, CLIENT);
   r2 = await now2();
   ok("C6.9-18 pass (B124, all confirmed): nothing rests on an unconfirmed answer, so the line goes", r2?.outcome === "LIKELY_ELIGIBLE" && restingOn(r2).length === 0, restingOn(r2));
   // Does not qualify rests on the gates it fails, never on a "the representative reviews it" gate; Can't tell yet on nothing.
