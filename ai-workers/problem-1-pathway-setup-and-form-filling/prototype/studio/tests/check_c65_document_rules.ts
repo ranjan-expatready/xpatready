@@ -56,4 +56,4 @@ try {
   ok("C6.5 R7 (fail): a file naming one checksum but holding another's read, a malformed fact, a bad checksum or no folder: nothing replays", savedRead(other, dir) === null && savedRead("c".repeat(64), dir) === null && savedRead("../x", dir) === null && savedRead(sha, join(dir, "none")) === null);
 } finally { rmSync(dir, { recursive: true, force: true }); }
 
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code)
