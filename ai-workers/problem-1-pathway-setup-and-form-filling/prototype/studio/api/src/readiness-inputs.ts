@@ -3,7 +3,7 @@
 // reviews, passes, open findings, checklist lines and accepted-until dates. Read only; the routes are api/src/readiness.ts.
 // Not here yet: open checks between an answer and a document (C6.5's checks), a fee's valid-until date (no dated fee
 // table yet), out-of-date signed items (C9.2) and Express Entry's police and medical block (P-172).
-import { filingReadiness, WARN_CODES, type DocumentItem, type Finding, type FilingReadiness, type FormItem, type Owes, type Pass, type WarnCode } from "../../engine/runtime/readiness.ts";
+import { filingReadiness, WARN_CODES, type DocumentItem, type Finding, type FilingReadiness, type FormItem, type OpenCheck, type Owes, type Pass, type WarnCode } from "../../engine/runtime/readiness.ts";
 import type { Channel, Signature } from "../../contracts/forms.ts";
 import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
@@ -71,6 +71,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
   const reviews = rows.flatMap((f) => f.reviews), passes = rows.flatMap((f) => f.passes);
   const findings = ids.length ? await db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: "open" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }) : [];
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
+  // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
+  const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
   const lines = x.documents.length ? await db.checklistLine.findMany({ where: { caseId: x.caseId }, select: { subjectId: true, documentType: true, state: true } }) : [];
   // P-151 (1): the newest accepted-until row of each edition the case's forms are filed on.
   const labels = [...new Set(x.forms.map((f) => x.editionOf(f.form, f.channel)).filter((l): l is string => !!l))];
@@ -119,7 +121,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const withdrawn = latest && latest.reviewedBy === rep ? x.reviewAfterMove?.(filing, latest.reviewedAt) ?? null : null;
     const review = sameFacts && !withdrawn ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
-    const r = filingReadiness({ filing, forms, documents, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });
+    const personOf = new Map(mineForms.map((f) => [f.subject, f.person]));
+    const checks: OpenCheck[] = openChecks.filter((k) => personOf.has(k.subjectId)).map((k) => ({ fact: k.fact, label: k.fact.split(".").pop()!.replace(/_/g, " "), subject: k.subjectId, person: personOf.get(k.subjectId)! }));
+    const r = filingReadiness({ filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });
     return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });
