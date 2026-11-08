@@ -14,6 +14,8 @@ type Story = { state: "idle" | "running" | "done" | "failed"; started_at?: strin
 type Status = { programsExist: boolean; checkpoint: string | null; story: Story };
 const TONE: Record<Stage["status"], string> = { done: "ok", partial: "warn", waiting: "warn" };
 const WORD: Record<Stage["status"], string> = { done: "Done", partial: "Partly", waiting: "Waiting" };
+/** Review m5: what each status means, on hover and focus. */
+const TIP: Record<Stage["status"], string> = { done: "Every part of this step is done.", partial: "Done in part: what still waits, and why, is said under the step.", waiting: "Not done: why is said under the step." };
 
 /** The words of the Demo menu item's tooltip (plain words, what it loads and that it empties the demo first). */
 export const FINISHED_STORY_TIP = "Loads the Visitor visa family case all the way through: moved to release 2, facts answered, forms filled, IMM 5476 signed, every filing Ready to file and the submission recorded, plus a second case left on release 1. Empties the demo first. All Sample, US$0.";
@@ -22,17 +24,22 @@ export function FinishedStoryDialog({ open, onOpenChange }: { open: boolean; onO
   const qc = useQueryClient();
   const [confirm, setConfirm] = React.useState("");
   const [started, setStarted] = React.useState(false);
+  // Review m1: the last story's result shows in any tab and after a reload (the status holds it); "Load again" goes on.
+  const [again, setAgain] = React.useState(false);
   const status = useApi<Status>(["demo-status", "finished-story", open], open ? "/demo/status" : null, { refetchInterval: (q) => (q.state.data?.story?.state === "running" ? 3000 : false) });
   const story = status.data?.story, running = story?.state === "running";
   const needsReset = !!status.data?.programsExist && !running;
   const load = useAction(() => api("/demo/checkpoints/finished-story", { method: "POST", json: needsReset ? { confirm } : {} }), { invalidate: [["demo-status"]], onDone: () => { setStarted(true); setConfirm(""); } });
+  // Break m: "Load again" keeps the form until the new run shows as running, so the old result never flashes back.
+  React.useEffect(() => { if (running) setAgain(false); }, [running]);
   React.useEffect(() => { if (started && story?.state === "done") void qc.invalidateQueries(); }, [started, story?.state, qc]);
-  const finished = started && (story?.state === "done" || story?.state === "failed");
-  const close = () => { if (!running && !load.isPending) { setStarted(false); onOpenChange(false); } };
+  const finished = !again && ((story?.state === "done" && status.data?.checkpoint === "finished_story") || (started && story?.state === "failed"));
+  // The job runs on the server: closing the dialog while it runs leaves it running; opening it again shows its state.
+  const close = () => { if (!load.isPending) { setStarted(false); setAgain(false); onOpenChange(false); } };
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} wide={finished} title={finished ? (story?.state === "done" ? "Finished story loaded" : "The finished story stopped") : "Load the finished story?"}
       description={finished ? "Each step of the family case, done through the same screens' rules by the people who act. No live AI call was made (US$0)." : "The configured checkpoint, then the Visitor visa family case taken to a recorded submission by the people who act. US$0: no live AI call."}
-      footer={finished ? <Button onClick={close}>Continue</Button> : <><Button variant="ghost" disabled={running || load.isPending} onClick={close}>Cancel</Button><Button busy={running || load.isPending} disabled={needsReset && confirm !== "RESET"} onClick={() => load.mutate(undefined)} data-finished-story-load>Load the finished story</Button></>}>
+      footer={finished ? <><Button variant="ghost" onClick={() => setAgain(true)} data-finished-story-again>Load again…</Button><Button onClick={close}>Continue</Button></> : <><Button variant="ghost" disabled={load.isPending} onClick={close}>{running ? "Close (it keeps loading)" : "Cancel"}</Button><Button busy={running || load.isPending} disabled={status.isPending || (needsReset && confirm !== "RESET")} onClick={() => load.mutate(undefined)} data-finished-story-load>Load the finished story</Button></>}>
       {finished ? <StoryResult story={story!} onOpen={close} /> : (
         <div className="space-y-3 text-sm" data-finished-story-brings>
           <ul className="list-disc space-y-1 pl-5">
@@ -43,7 +50,7 @@ export function FinishedStoryDialog({ open, onOpenChange }: { open: boolean; onO
             <li>A second, thin case stays on release 1</li>
           </ul>
           <p className="text-text-muted">A step a rule refuses stays where it is and says why; nothing is faked. This takes a few minutes.</p>
-          {running ? <Notice tone="info" title="Loading the finished story…"><span className="inline-flex items-center gap-2" data-finished-story-running><Spinner /> Started {story?.started_at ? new Date(story.started_at).toLocaleTimeString() : ""}. You can keep this open.</span></Notice> : null}
+          {running ? <Notice tone="info" title="Loading the finished story…"><span className="inline-flex items-center gap-2" data-finished-story-running><Spinner /> Started {story?.started_at ? new Date(story.started_at).toLocaleTimeString() : ""}. You can close this: it keeps loading, and Demo › Load the finished story shows its result.</span></Notice> : null}
           {needsReset ? (
             <label className="block space-y-1">
               <span>The demo has content: it is emptied first. Type <b>RESET</b> to confirm.</span>
@@ -65,7 +72,7 @@ function StoryResult({ story, onOpen }: { story: Story; onOpen: () => void }) {
         <tbody>{(story.stages ?? []).map((s) => (
           <tr key={s.key} className="border-b border-border align-top" data-story-stage={s.key} data-status={s.status}>
             <td className="break-words py-1.5 pr-3"><div className="font-medium">{s.title}</div><div className="text-text-muted">{s.shows}</div>{s.why ? <div className="mt-0.5 text-text-muted" data-story-why>Still waits: {s.why}</div> : null}</td>
-            <td className="py-1.5"><Pill tone={TONE[s.status]}>{WORD[s.status]}</Pill></td>
+            <td className="py-1.5"><Pill tone={TONE[s.status]} title={TIP[s.status]}>{WORD[s.status]}</Pill></td>
           </tr>))}</tbody>
       </table>
       <p>{story.cases?.family ? <Link className="text-text-link underline" to={`/cases/${story.cases.family}`} onClick={onOpen} data-story-open-case>Open the family case</Link> : null}{story.cases?.thin ? <> · <Link className="text-text-link underline" to={`/cases/${story.cases.thin}`} onClick={onOpen}>Open the case left on release 1</Link></> : null}</p>

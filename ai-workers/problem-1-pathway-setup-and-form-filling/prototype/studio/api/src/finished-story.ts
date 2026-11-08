@@ -15,7 +15,7 @@ import { STUDIO } from "./core.ts";
 export type StorySample = {
   move_reason: string; answers: { facts: Record<string, unknown> };
   by_kind: { text: string; digits: string; yes_no: boolean; date: string; month: string; expiry: string; number: string; email: string; phone: unknown; address: unknown };
-  on_behalf_reason: string; passport: { document_type: string; words: string }; signed_scan_words: string; review_note: string; pass_reason: string;
+  passport: { document_type: string; words: string }; signed_scan_words: string; review_note: string; pass_reason: string;
   record: { our_reference_prefix: string; application_number_prefix: string; uci_prefix: string; fee_receipt: string };
   thin_case: { reference: string; principal: string; client: string };
   paper_line: { person: string; form: string; reason: string; split_reason: string };
@@ -39,6 +39,8 @@ type SheetView = { sections: { key: string; version: string; entered: unknown; o
 type ChecklistView = { today: string; people: { label: string; lines: { id: string; document_type: string; state: string }[] }[] };
 export type Routes = { call: (actor: string, method: string, path: string, body?: unknown) => Promise<Reply>; upload: (actor: string, path: string, file: Buffer, name: string) => Promise<Reply> };
 
+/** How long one route call may take (a copy's fill takes about a second; a busy server a few). */
+const CALL_MS = 120_000;
 /** The app's own routes on this server (STUDIO_PORT, as main.ts listens), called as a simulated person (x-actor). */
 export function routesAt(port = Number(process.env.STUDIO_PORT ?? 4400)): Routes {
   const call = (actor: string, method: string, path: string, body?: unknown) => new Promise<Reply>((resolve, reject) => {
@@ -47,11 +49,13 @@ export function routesAt(port = Number(process.env.STUDIO_PORT ?? 4400)): Routes
       const chunks: Buffer[] = []; res.on("data", (c: Buffer) => chunks.push(c));
       res.on("end", () => { const t = Buffer.concat(chunks).toString("utf8"); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ } resolve({ status: res.statusCode ?? 0, body: j }); });
     });
+    // Review m4: a call that hangs ends in words, so the load fails and its one-at-a-time claim is released.
+    req.setTimeout(CALL_MS, () => req.destroy(new Error(`${method} ${path} did not answer within ${CALL_MS / 1000} s`)));
     req.on("error", reject); if (data) req.write(data); req.end();
   });
   const upload = async (actor: string, path: string, file: Buffer, name: string) => {
     const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)], { type: "application/pdf" }), name);
-    const res = await fetch(`http://127.0.0.1:${port}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+    const res = await fetch(`http://127.0.0.1:${port}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd, signal: AbortSignal.timeout(CALL_MS) });
     return { status: res.status, body: await res.json().catch(() => null) };
   };
   return { call, upload };
@@ -66,7 +70,7 @@ const specimen = (text: string) => Buffer.from(`%PDF-1.4\n% ${text}\n%%EOF\n`, "
 
 /** The open bugs and rules a stage of this story waits on, named in its words (never faked around). */
 export const HELD = {
-  sheet: "QA-165 (1): the answer sheet keeps waiting on IMM 5257's Yes/No gates (other names, national identity document, US PR card) and on facts the case holds as rows or as \"none apply\", and release 2 never asks the visit contact (case.visit_contact_*), so the Online item cannot read Done",
+  sheet: "QA-165 (1): the answer sheet keeps waiting on IMM 5257's Yes/No gates (other names, national identity document, US PR card) and on facts the case holds as rows or as \"none apply\", and on the contact in Canada (name, relationship, address), which release 2 never asks (qa logs that part as its own row), so the Online item cannot read Done",
   family: "QA-153: IMM 5645's parents and brothers and sisters are not asked, so their boxes stay empty on the copy",
   followUps: "QA-165 (1): the follow-up questions of a No (national identity document, US PR card) stay required, so they carry Sample values by kind of answer",
   paper: "IMM 5257's copy leaves 16 of its 46 mandatory boxes empty today, so Adobe's Validate would refuse it (QA-165, #1318); and Validate is a person's step, never simulated (P-46, P-171)",
@@ -97,7 +101,7 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     if (!view.target) { release = view.current?.version ?? null; if ((release ?? 0) < 2) throw new Stop(`No newer release to move to: ${view.combination} is on ${view.current?.label} (release 2 is row 9 of the configured checkpoint)`); return { status: "done", shows: `Already on ${view.current.label}`, why: null }; }
     const moved = must<Moved>(await r.call(officer, "POST", `/runtime/cases/${caseId}/release-update`, { target_version: view.target.version, from_revision: view.current.revision, reason: s.move_reason }), "Move to the newer release");
     release = moved.version;
-    return { status: "done", shows: `The case officer moved the case from ${moved.from.label} to ${moved.label} (release ${moved.version}) with a reason. ${moved.words}`, why: null };
+    return { status: "done", shows: `The case officer moved the case from ${moved.from.label} to ${moved.label}, the Visitor visa's release ${moved.version}, with a reason. ${moved.words}`, why: null };
   });
 
   // C6.1–C6.3, C6.18: each fact the new release asks is answered by its person: the client for themselves and the minor
@@ -116,8 +120,10 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     let answered = 0, byClient = 0, onBehalf = 0, reconfirmed = 0, confirmed = 0;
     const put = async (q: Q, value: unknown, row: string | null) => {
       const p = people.get(q.subjectId.split("/")[0]), own = q.collected_from === "client_questionnaire";
+      // Break M1: the answer route takes no "on behalf" or reason; an answer the officer types for another adult's own fact
+      // is marked for that person to re-confirm (C6.18), which the client does below, as the product records it.
       const asClient = own && (!p || p.role === "principal" || (p.age ?? 0) < 18), behalf = own && !asClient;
-      const body = { value, expectedId: row ? null : q.answer?.id ?? null, ...(row ? { row } : {}), ...(behalf ? { onBehalfOf: q.subjectId, reason: s.on_behalf_reason } : {}) };
+      const body = { value, expectedId: row ? null : q.answer?.id ?? null, ...(row ? { row } : {}) };
       const path = `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`;
       let a = await r.call(asClient ? client : officer, "PUT", path, body);
       // A text Sample the release's own checks refuse (a UCI is digits only) is given again as digits, once.
@@ -148,7 +154,7 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       }
     }
     const left = (await get<FormsView>(`/runtime/cases/${caseId}/forms`)).forms.filter((f) => f.applies && !f.readiness.ready);
-    const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer on an adult's behalf with a reason`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
+    const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer for another adult, each marked for the client to re-confirm (C6.18)`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
     const kinds = [...byKindLabels];
     const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmed} re-confirmed by the client, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
     if (left.length) throw new Stop(`Still not ready after ${said}: ${left.slice(0, 3).map((f) => `${f.form} for ${f.person} (${f.readiness.missing.slice(0, 2).map((m) => m.label).join(", ")})`).join("; ")}`);
@@ -185,7 +191,7 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     p = await prepare();
     const notDone = p.items.filter((i) => i.kind === "form" && i.channel === "ONLINE" && i.state !== "done");
     const toValidate = p.items.filter((i) => i.kind === "form" && /Validate/.test(i.reason ?? ""));
-    const forms = [...new Set(p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && i.signature !== "HAND_SCANNED").map((i) => i.form))];
+    const forms = [...new Set(p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && i.signature !== "HAND_SCANNED").map((i) => i.form ?? ""))].sort();
     const why = [notDone.length ? `${notDone.length} of ${online.length} Online IMM 5257 items stay To do: ${HELD.sheet}.` : "", toValidate.length ? `${toValidate.length} barcode PDF${toValidate.length === 1 ? "" : "s"} not read back: ${HELD.validate}.` : "", forms.includes("IMM 5645") ? `${HELD.family}.` : ""].filter(Boolean).join(" ");
     return { status: notDone.length || toValidate.length ? "partial" : "done", shows: `${online.length} Online IMM 5257 answer sheet${online.length === 1 ? "" : "s"}, ${ticked} section${ticked === 1 ? "" : "s"} ticked "Entered in the portal" by the case officer; ${copies} PDF cop${copies === 1 ? "y" : "ies"} filled from the confirmed facts (${forms.join(", ")})`, why: why || null };
   });
@@ -262,7 +268,9 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       filings: group.filings.map((id, n) => ({ filing: id, our_reference: `${k.our_reference_prefix}-${n + 1}`, submitted_on: today, application_number: `${k.application_number_prefix}${n + 1}`, fee_receipt: k.fee_receipt })),
       ucis: group.filings.map((id, n) => ({ subject: subjectOf(id), uci: `${k.uci_prefix}${n + 1}` })), version: p.version }), "Record the submission");
     recorded = (done.recorded ?? []).length;
-    return { status: split.length ? "partial" : "done", shows: `${recorded} filings recorded as submitted on ${today} (${p.portal_words ?? p.portal}), one action for the family's submission group (BR-11): each Ready to file first, each with our reference, its own Sample application number and each person's Sample UCI; the filings are read-only now${split.length ? `; split out with a reason, to file on its own later: ${split.join(", ")}` : ""}`, why: split.length ? `Split out and not recorded yet: ${split.join(", ")} waits for its validated copy (${HELD.paper}).` : null };
+    // Break M2: Done only when every filing of the case is recorded; any other, however it came apart, is named.
+    const left = (await prepare()).filings.filter((f) => f.status !== "submitted").map((f) => `${f.label} (${f.status.replace(/_/g, " ")})`);
+    return { status: left.length ? "partial" : "done", shows: `${recorded} filings recorded as submitted on ${today} (${p.portal_words ?? p.portal}), one action for the family's submission group (BR-11): each Ready to file first, each with our reference, its own Sample application number and each person's Sample UCI; the filings are read-only now${split.length ? `; split out with a reason, to file on its own later: ${split.join(", ")}` : ""}`, why: left.length ? `Not recorded yet: ${left.join(", ")}${split.length ? `; split out by the story, waiting for its validated copy (${HELD.paper})` : ""}.` : null };
   });
   return { stages, release, recorded };
 }

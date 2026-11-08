@@ -101,7 +101,7 @@ export class Demo implements OnModuleInit {
     const started_at = new Date().toISOString();
     this.story = { state: "running", started_at, by: actor.id };
     void this.runStory(actor, wipeFirst, started_at).finally(() => { this.loading = false; });
-    return { state: "running", started_at, emptied_first: wipeFirst, words: "Loading the finished story: the configured checkpoint, then the family case to a recorded submission. This takes a few minutes; Demo › status shows when it is done." };
+    return { state: "running", started_at, emptied_first: wipeFirst, words: "Loading the finished story: the configured checkpoint, then the family case to a recorded submission. This takes a few minutes; Demo › Load the finished story shows when it is done." };
   }
   private story: StoryJob = { state: "idle" };
   private storyAsked = false;
@@ -119,7 +119,8 @@ export class Demo implements OnModuleInit {
       const said = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string } | string) : null;
       const error = typeof said === "string" ? said : said?.detail ?? said?.message ?? "an unexpected error on the server (the details are in the server log)";
       if (!said) console.error("[demo] the finished story stopped", e);
-      this.story = { state: "failed", started_at, finished_at: new Date().toISOString(), by: actor.id, seconds: (Date.now() - t0) / 1000, error: String(error).slice(0, 600) };
+      // Break m: the story's own words first, then the refusal (a load's "Reset the demo first" alone misleads here).
+      this.story = { state: "failed", started_at, finished_at: new Date().toISOString(), by: actor.id, seconds: (Date.now() - t0) / 1000, error: `The finished story stopped: ${String(error)}`.slice(0, 600) };
     } finally { this.storyAsked = false; }
   }
 
