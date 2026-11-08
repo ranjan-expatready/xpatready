@@ -851,7 +851,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     <section id={`s-${s.subjectId}-${s.section}`} aria-labelledby={`h-${s.subjectId}-${s.section}`} className="scroll-mt-4 overflow-hidden rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id={`h-${s.subjectId}-${s.section}`} className="text-base font-semibold">{s.title}</h2>
-        <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>
+        {/* B155: a list's section ("Brothers and sisters") is already named by its tab ("…'s brothers and sisters"): no "for" twice. */}
+        {s.about_label.toLowerCase().endsWith(s.title.toLowerCase()) ? null : <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>}
         <span className="flex flex-wrap gap-1.5">
           {/* QA-301 (B150): a declared answer is never counted as "confirmed"; the pill says what is still on the Confirm list. */}
           <Pill title="Answers given (each fills the forms at once), and how many still wait for the officer's Confirm section">{s.answered} answered · {s.answered - s.confirmed} to confirm</Pill>
