@@ -5,6 +5,7 @@
 // Pure: the API passes what the item read then and what the case says now. No model call (US$0).
 import { createHash } from "node:crypto";
 import type { FormFact } from "./forms.ts";
+import { isListRelation, listBoxWords, type Relation } from "./relatives.ts";
 
 /** One fact that reads differently now from when the item was made: whose, which, the value then and now, and when. */
 /** `confirmed`: false when the new value is saved but not confirmed yet (since P-411 the form reads it at once; it still
@@ -31,14 +32,15 @@ export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "val
   for (const k of [...new Set([...a.keys(), ...b.keys()])]) {
     const x = a.get(k), y = b.get(k), f = (y ?? x)!;
     if (x && y && same(x.value, y.value)) continue;
-    const about = subjectOf(f.about), relation = f.about.includes("/") ? f.about.split("/").slice(1).join("/") : null, id = `${f.about}|${f.fact}`;
+    // B155: a list relative's entries (brothers and sisters) are different people: a change is one line per entry.
+    const about = subjectOf(f.about), relation = f.about.includes("/") ? f.about.split("/").slice(1).join("/") : null, list = !!relation && isListRelation(relation), id = `${f.about}|${f.fact}${list ? `|${f.row ?? ""}` : ""}`;
     if (out.has(id)) continue;
     // B128 (Devin on #1256): a parent's answers are kept under the parent's own key (`<id>/parent_1`), so their newest saved
     // value and its time are read by that whole key; a person's, by the person (the same key).
     const pending = !y ? words.saved?.(f.about, f.fact) ?? null : null;
     // C8.2 break M4: the same value typed again (left unconfirmed) is no change.
     if (x && !y && pending !== null && same(pending, x.value)) continue;
-    const person = relation ? `${words.person(about)}'s ${relation.replace(/_/g, " ")}` : words.person(about);
+    const person = list ? listBoxWords(words.person(about), relation as Relation, f.row) : relation ? `${words.person(about)}'s ${relation.replace(/_/g, " ")}` : words.person(about);
     out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));

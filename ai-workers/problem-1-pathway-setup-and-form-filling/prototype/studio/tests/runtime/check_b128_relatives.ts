@@ -7,7 +7,7 @@
 import fc from "fast-check";
 import { caseView, type Answer, type Participant } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
-import { ASKED_RELATIONS, parentWord, relativeKey, relativeLabel, relativeOf, SUBJECT_OR_RELATIVE } from "../../engine/runtime/relatives.ts";
+import { ASKED_RELATIONS, ONE_PERSON_RELATIONS, parentWord, relativeKey, relativeLabel, relativeOf, SUBJECT_OR_RELATIVE } from "../../engine/runtime/relatives.ts";
 import { factChanges, type ChangeWords } from "../../engine/runtime/out-of-date.ts";
 import { familyPeople, previewFamily } from "../../engine/runtime/preview.ts";
 import { recorder } from "./api.ts";
@@ -17,7 +17,7 @@ const prop = (name: string, p: fc.IProperty<never>, numRuns: number) => { try { 
 const TODAY = new Date("2026-11-07T12:00:00Z");
 
 /** A family form "F 2" for applicants of 18 or more: the subject's name and birth date, each parent's name and birth date
- *  (boxes named Mother and Father, as IMM 5645's are), and two siblings' names (a list, not asked yet). */
+ *  (boxes named Mother and Father, as IMM 5645's are), and two siblings' names (a list, asked since B155). */
 const S = {
   contract_version: "combination-config/v0", mode: "release",
   combination: { key: "t", label: "Test", program: "p", pathway: null, participants: [{ role: "principal", min: 1, max: 1 }, { role: "spouse_or_partner", min: 0, max: 1 }, { role: "child", min: 0, max: 4 }] },
@@ -77,14 +77,14 @@ ok("fail: a parent word inside another word (Grandmother, StepFather) names no p
 const ageArb = fc.array(fc.constantFrom<Age>("adult", "minor", "unknown"), { minLength: 1, maxLength: 5 });
 prop("property: for any household, each adult's two parents are asked (both facts, filling that adult's family form), named mother and father", fc.property(ageArb, (ages) => {
   const secs = sections(ages);
-  return ages.every((a, i) => a !== "adult" || ASKED_RELATIONS.every((rel) => {
+  return ages.every((a, i) => a !== "adult" || ONE_PERSON_RELATIONS.every((rel) => {
     const mine = secs.filter((x) => x.subjectId === `p${i}/${rel}`), qs = mine.flatMap((x) => x.questions);
     const facts = new Set(qs.map((q) => q.fact));
     return facts.has("person.family_name") && facts.has("person.date_of_birth") && qs.every((q) => q.fills.length > 0 && q.fills.every((x) => x.form === "F 2" && x.subject === `p${i}`))
       && mine.every((x) => x.about_label === `Sample Person ${i}'s ${rel === "parent_1" ? "mother" : "father"}`);
   }));
 }), 150);
-prop("property (fail): no parent is asked for a minor or a person whose age is unknown, no sibling for anyone, none for the application", fc.property(ageArb, (ages) => {
+prop("property (fail): no relative (parent or, since B155, sibling) is asked for a minor or a person whose age is unknown, none for the application", fc.property(ageArb, (ages) => {
   const keys = new Set(sections(ages).map((x) => x.subjectId));
   return [...keys].every((k) => { if (!k.includes("/")) return true; const r = relativeOf(k); const i = r ? Number(r.owner.slice(1)) : -1; return !!r && r.owner !== "case" && ages[i] === "adult"; });
 }), 150);
@@ -96,6 +96,31 @@ prop("property: a parent's answer stays the parent's: it never shows on the pers
   return own?.answer === null && mother?.answer?.value === name;
 }), 100);
 
+// ── B155: each adult's siblings are one repeating group on the sibling key, holding the form's rows; nobody else's.
+prop("property (B155): for any household, each adult's siblings are asked as one group (\"sibling\", two rows, named \"…'s brothers and sisters\"), filling that adult's family form", fc.property(ageArb, (ages) => {
+  const secs = sections(ages);
+  return ages.every((a, i) => {
+    const mine = secs.filter((x) => x.subjectId === `p${i}/sibling`);
+    if (a !== "adult") return mine.length === 0;
+    const q = mine[0]?.questions[0];
+    return mine.length === 1 && mine[0].section === "sibling" && mine[0].about_label === `Sample Person ${i}'s brothers and sisters` && !!mine[0].group?.required && q?.group === "sibling" && q.capacity === 2 && q.fills.every((x) => x.form === "F 2" && x.subject === `p${i}`);
+  });
+}), 150);
+prop("property (B155, fail): a sibling's entry answer stays in its row and its sibling key: never on the person, never in another entry", fc.property(fc.stringMatching(/^[A-Z]{2,10}$/), fc.stringMatching(/^[A-Z]{2,10}$/), (one, two) => {
+  const h = household(["adult"]);
+  const rows = [{ rowKey: "r1", subjectId: "p0/sibling", group: "sibling", order: 0 }, { rowKey: "r2", subjectId: "p0/sibling", group: "sibling", order: 1 }];
+  const at = (id: string, row: string, value: string) => ({ id, subjectId: "p0/sibling", field: "person.family_name", rowKey: row, value, status: "VERIFIED" as const, channel: "confirm_section", actor: "user-O", at: TODAY.toISOString() });
+  const qs = caseView(S, h.people, [...h.answers, at("s1", "r1", one), at("s2", "r2", two)], rows, "agent", TODAY).sections.flatMap((x) => x.questions);
+  const sib = qs.find((q) => q.subjectId === "p0/sibling" && q.fact === "person.family_name"), own = qs.find((q) => q.subjectId === "p0" && q.fact === "person.family_name");
+  return own?.answer === null && sib?.rows.map((r) => r.answer?.value).join("|") === `${one}|${two}` && !!sib?.rows.every((r) => r.fits);
+}), 100);
+ok("B155 fail: a third sibling entry does not fit a form with two sibling rows (it goes on an extra sheet)", (() => {
+  const h = household(["adult"]);
+  const rows = ["r1", "r2", "r3"].map((rowKey, order) => ({ rowKey, subjectId: "p0/sibling", group: "sibling", order }));
+  const q = caseView(S, h.people, h.answers, rows, "agent", TODAY).sections.flatMap((x) => x.questions).find((x) => x.subjectId === "p0/sibling");
+  return JSON.stringify(q?.rows.map((r) => r.fits)) === "[true,true,false]";
+})());
+
 // ── factChanges (Devin on #1256): a parent's newest saved value is read by the parent's own key.
 const saved = new Map<string, unknown>([["p0/parent_1|person.family_name", "JANE"]]);
 const words = (store: Map<string, unknown>): ChangeWords => ({ label: (f) => f, person: (a) => (a === "p0" ? "Sample Person 0" : a), at: (a, f) => (store.has(`${a}|${f}`) ? "2026-11-07T10:00:00Z" : null), saved: (a, f) => store.get(`${a}|${f}`) ?? null });
@@ -103,6 +128,13 @@ const then = [{ fact: "person.family_name", about: "p0/parent_1", row: null, val
 ok("pass: the same parent value typed again (not confirmed yet) is no change to a copy", factChanges(then, [], words(saved)).length === 0, factChanges(then, [], words(saved)));
 const ch = factChanges(then, [], words(new Map([["p0/parent_1|person.family_name", "JANET"]])));
 ok("fail: a new parent value (not confirmed yet) is a change to that value, not confirmed, named for that person's parent", ch.length === 1 && ch[0].now === "JANET" && ch[0].confirmed === false && ch[0].relation === "parent_1" && ch[0].person === "Sample Person 0's parent 1" && ch[0].at !== null, ch);
+// B155: two brothers or sisters are two people: a change to each entry is its own line, named by entry.
+const sibThen = [{ fact: "person.family_name", about: "p0/sibling", row: 0, value: "ANN" }, { fact: "person.family_name", about: "p0/sibling", row: 1, value: "BEN" }];
+const sibNow = [{ fact: "person.family_name", about: "p0/sibling", row: 0, value: "ANNA" }, { fact: "person.family_name", about: "p0/sibling", row: 1, value: "BENJAMIN" }];
+const sibCh = factChanges(sibThen, sibNow, words(new Map()));
+ok("B155 pass: changes to two sibling entries are two lines, each named by its entry", sibCh.length === 2 && sibCh.map((x) => x.person).join("|") === "Sample Person 0's brothers and sisters, entry 1|Sample Person 0's brothers and sisters, entry 2", sibCh);
+const parentsCh = factChanges([{ fact: "person.family_name", about: "p0/parent_1", row: null, value: "A" }], [{ fact: "person.family_name", about: "p0/parent_1", row: null, value: "B" }], words(new Map()));
+ok("B155 fail (control): a parent's change stays one line, named as before", parentsCh.length === 1 && parentsCh[0].person === "Sample Person 0's parent 1", parentsCh);
 const none = factChanges(then, [], words(new Map()));
 ok("fail: a parent value no longer read and not saved again is a change to no answer", none.length === 1 && none[0].now === null && none[0].confirmed === true, none);
 

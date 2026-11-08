@@ -355,6 +355,13 @@ export function Questionnaire({ caseId, mode }: { caseId: string; mode: Mode }) 
   return mode === "sqr" ? <Sqr view={byPerson(view.data!)} /> : <AgentView view={byPerson(view.data!)} />;
 }
 
+/** B128, B155: whom else the client answers for: the parents, and the brothers and sisters, the forms ask about. */
+function relativesWords(view: View) {
+  const rel = view.sections.filter((x) => x.subjectId.includes("/"));
+  const parents = rel.some((x) => !x.group), lists = rel.some((x) => x.group);
+  return parents || lists ? `, and for the ${[parents ? "parents" : null, lists ? "brothers and sisters" : null].filter(Boolean).join(", ")} its forms ask about` : "";
+}
+
 /** Parts person by person, in the case's order (the application, the principal, then the family), each person's
  *  sections in the release's order: the client finishes one person before "answering for" the next. */
 function byPerson(v: View): View {
@@ -399,7 +406,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
     <div className="mx-auto max-w-xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Client questionnaire</h1>
-        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application{view.sections.some((x) => x.subjectId.includes("/")) ? ", and for the parents its forms ask about" : ""}. Each answer is saved when you press Save; you can stop and come back at any time.</p>
+        <p className="mt-1 text-sm text-text-muted">Case {view.case.reference}. You answer for everyone travelling on this application{relativesWords(view)}. Each answer is saved when you press Save; you can stop and come back at any time.</p>
       </div>
       <RecordedForYou view={view} open={open} />
       <div className="rounded-xl border border-border bg-surface-raised p-4">
@@ -439,7 +446,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const asked = part.questions.filter((q) => !q.hidden);
   const single = asked.filter((q) => !q.group), grouped = asked.filter((q) => q.group);
   const rows = grouped[0]?.rows ?? [];
-  const cells = React.useMemo(() => part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.map((r) => ({ q, row: r.row })) : [{ q }])), [part]);
+  const cells = React.useMemo(() => { const entries = part.questions.find((q) => !q.hidden && q.group)?.rows ?? []; return part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.filter((r) => inEntry(q, r.row, entries)).map((r) => ({ q, row: r.row })) : [{ q }])); }, [part]);
   const [adding, setAdding] = React.useState(false);
   const d = useDrafts(cells);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -541,7 +548,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{part.subjectId.includes("/") ? " (a parent, not on this application)" : person && !(person.client ?? person.role === "principal") ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
+        {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{part.subjectId.includes("/") ? (part.group ? " (not on this application)" : " (a parent, not on this application)") : person && !(person.client ?? person.role === "principal") ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
       {/* B150 (P-411): who gave this part's answers, each kind once (the principal's for an adult, staff's), so a mixed part still says it. */}
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted" data-answer-words>{confirmWords[0]}.</p>
@@ -562,7 +569,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
                   ) : <Button type="button" size="sm" variant="ghost" onClick={() => setRemoving(r.row)}><Trash2 aria-hidden />Remove</Button>}
                 </div>
                 {!r.fits ? <Notice tone="warn" title="This entry does not fit on the form">The form has room for {grouped[0].capacity} entries. Keep it here: your officer adds it on an extra sheet.</Notice> : null}
-                {grouped.map((q) => field(q, r.row))}
+                {grouped.filter((q) => inEntry(q, r.row, rows)).map((q) => field(q, r.row))}
               </section>
             ))}
             {rows.length ? <Button type="button" variant="secondary" className="h-11" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
@@ -635,6 +642,15 @@ function RecordedForYou({ view, open }: { view: View; open: (i: number) => void 
       </ul>
     </section>
   );
+}
+
+/** B155: whether an entry asks this question: always, unless the form has no box for it in that entry's row while the
+ *  entry itself fits (a brother or sister's "accompanies you" Yes/No is on one row of IMM 5645's Section C only). An entry
+ *  that does not fit at all keeps every question (it goes on an extra sheet). Groups whose questions share their rows
+ *  (every other group) are unchanged. */
+function inEntry(q: Question, row: string, entries: { row: string; fits: boolean }[]) {
+  const own = q.rows.find((x) => x.row === row)?.fits, entry = entries.find((x) => x.row === row)?.fits;
+  return own !== false || entry === false;
 }
 
 /** A repeating group with no entries (Lead, break M3, P-71/P-72): add an entry, or say none apply; "none apply" is an
@@ -867,7 +883,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {rows.map((r) => (
             <div key={r.row} className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
               <p className="flex items-center gap-2 border-b border-border px-4 py-1.5 text-xs font-medium">Entry {r.index + 1}{!r.fits ? <Pill tone="warn" title={`The form has room for ${grouped[0].capacity} entries`}>Does not fit on the form</Pill> : null}</p>
-              {grouped.map((q) => line(q, r.row))}
+              {grouped.filter((q) => inEntry(q, r.row, rows)).map((q) => line(q, r.row))}
             </div>
           ))}
           {rows.length ? <Button size="sm" variant="secondary" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
