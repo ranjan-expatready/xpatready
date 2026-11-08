@@ -27,6 +27,8 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { costUsd } from "../../../p2/ledger.ts";
 import { editionContextKey, printedEditionParts } from "../../engine/rounds.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
+import { formValues, type Inventory } from "../../engine/form-values.ts";
+import { inventoryOf } from "./fill-case.ts";
 import { aiFingerprint, findingsFromRounds, reviewSheet, reviewShapeOk, sheetText, stillQuoted, type ReviewAnswer, type ReviewSheet, type ReviewedFinding } from "../../engine/runtime/form-review.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, SOLUTION, VAR_ROOT, type Actor } from "./core.ts";
 import { MODEL, pairOf, roundJob, RUNS, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
@@ -43,9 +45,11 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 /** The AI step: a first round and a blind checker round over the review sheet (p2/prompts/form-review*.v1). */
 export const FORM_REVIEW: AiStep = {
   kind: "form_review", jobBase: "studio-form-review", configurationVersion: "c75-form-review",
-  template: "form-review.v1.md", check: "form-review-check.v1.md", schema: "form-review-output.v1.schema.json", effort: "medium", max_output_tokens: 8000,
-  // The run cap of one round, which the ledger enforces (P-232: the two rounds stay under the US$5 job cap). Measured on the
-  // stub pass of IMM 5257 (8 Nov): the request is about 239 KB, so one attempt reserves about US$1.13 and both fit.
+  template: "form-review.v1.md", check: "form-review-check.v1.md", schema: "form-review-output.v1.schema.json", effort: "low", max_output_tokens: 10_000,
+  // Challenge M3: effort low and 10,000 output tokens, as the like job (the IMM 5257 read of 3 Nov used 10,504 at effort low),
+  // so the one paid attempt is not lost at the limit. The run cap of one round, which the ledger enforces (P-232: the two
+  // rounds stay under the US$5 job cap). Measured on the stub pass of IMM 5257 (8 Nov): the request is about 239 KB, so one
+  // attempt reserves about US$1.17 and both fit.
   budget_usd: 2.4,
   shapeOk: reviewShapeOk,
   words: {
@@ -78,6 +82,8 @@ export const ReviewRunPlanBody = z.object({
 export const ReviewRunBody = ReviewRunPlanBody.extend({
   mode: z.enum(["replay", "live"], { error: "Choose Saved or Live." }),
   planSha256: z.string().regex(/^[0-9a-f]{64}$/, "Look at the run card again.").optional(),
+  /** The page names the run before it starts, so its Stop can reach it while the request runs (P-110). */
+  runId: z.string().uuid("The run id is not an id.").optional(),
 });
 const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => {
   const r = schema.safeParse(input ?? {});
@@ -85,21 +91,8 @@ const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => {
   return r.data;
 };
 
-/** One form of the run card. */
-export type PlannedForm = { form: string; edition: string; boxes: number; sheet: string; sheet_sha256: string;
-  saved: { available: boolean; why: string | null; files: string[]; made_up: boolean }; live_usd: number; live_worst_usd: number };
-/** POST …/review-runs/plan → the run card. */
-export type ReviewRunPlan = {
-  case_id: string; subject: string; person: string; forms: PlannedForm[];
-  estimate: { live_usd: number; live_worst_usd: number; replay_usd: 0; remaining_usd: number; job_cap_usd: number };
-  stand_in: typeof STAND_IN; stand_in_words: string; live_allowed: boolean; live_why: string | null;
-  replay_available: boolean; replay_why: string | null; made_up: boolean; made_up_words: string | null;
-  steps: { n: number; label: string; uses_ai: boolean }[]; plan_sha256: string;
-};
-/** One form's outcome in a run. */
-export type RunForm = { form: string; edition: string; from: "live" | "replay" | null; run_files: string[]; cost_usd: number; added: number; kept: number; resolved: number; dropped: { field: string; why: string }[]; note: string | null };
-/** POST …/review-runs → what the run did. */
-export type ReviewRunResult = { run_id: string; mode: "replay" | "live"; made_up: boolean; cost_usd: number; cancelled: boolean; forms: RunForm[]; added: number; note: string };
+export type { PlannedForm, ReviewRunPlan, RunForm, ReviewRunResult } from "./review-run-shapes.ts";
+import type { PlannedForm, ReviewRunPlan, RunForm, ReviewRunResult } from "./review-run-shapes.ts";
 
 const STEPS = [
   { n: 1, label: "Read what each box of the form would print (rules, US$0)", uses_ai: false },
@@ -116,7 +109,7 @@ type Prepared = { form: string; edition: string; sheet: ReviewSheet; ctx: RoundC
 export class ReviewRuns {
   private readonly runner: StepRunner;
   /** The runs going now (live rounds): Stop reads this before each live call (P-110). */
-  private readonly going = new Map<string, { caseId: string; stopped: boolean }>();
+  private readonly going = new Map<string, { caseId: string; stopped: boolean; live: boolean }>();
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {
     this.runner = new StepRunner(sources, reviewRunsDir());
   }
@@ -135,16 +128,38 @@ export class ReviewRuns {
       // The edition in use (P-32), as the release's field map prints it: "IMM 5257 (09-2023)".
       const printed = cov!.edition ?? "", parts = printedEditionParts(printed);
       if (!parts || parts.code !== form) fail(`${form} has no printed edition in this case's release, so it cannot be reviewed.`, HttpStatus.UNPROCESSABLE_ENTITY);
-      const sheet = reviewSheet(printed, cov!.boxes);
-      if (!sheet.fields.length) fail(`Nothing is filled on ${form} for ${who!.label} yet: answer and confirm its questions first.`, HttpStatus.UNPROCESSABLE_ENTITY);
       // The form's own text (its official inventory, as the release's field map names it) is read first: the rounds see the
       // form's instructions and choices beside the answers, and the launcher's screen admits a value the form itself prints.
-      const map = (s.field_maps as { form_number: string; form_edition?: string | null; inventory_file?: string | null }[]).find((m) => m.form_number === form && m.form_edition === printed);
-      const inventory = map?.inventory_file && /^prototype\/p1\/inventory\/[a-z0-9._-]+\.inventory\.json$/.test(map.inventory_file) ? (() => { try { return { file: map.inventory_file!, sha256: sha(readFileSync(join(SOLUTION, map.inventory_file!))) }; } catch { return null; } })() : null;
+      const map = (s.field_maps as { form_number: string; form_edition?: string | null; inventory_file?: string | null; entries: { data_path: string; fact?: string | null }[] }[]).find((m) => m.form_number === form && m.form_edition === printed);
+      const inv = map?.inventory_file && /^prototype\/p1\/inventory\/[a-z0-9._-]+\.inventory\.json$/.test(map.inventory_file) ? inventoryOf(map.inventory_file) : null;
+      const inventory = inv ? (() => { try { return { file: map!.inventory_file!, sha256: sha(readFileSync(join(SOLUTION, map!.inventory_file!))) }; } catch { return null; } })() : null;
       if (!inventory) fail(`The official text of ${printed} is not on this computer, so it cannot be reviewed here.`, HttpStatus.UNPROCESSABLE_ENTITY);
+      // What each box prints: the filler's own value step (engine/form-values.ts, as a copy writes it), a coded choice
+      // shown by its words on the form; never the raw answer (a date split over DD, MM and YYYY reads as each part).
+      const sheet = reviewSheet(printed, printedBoxes(s, map!, inv!, cov!.boxes));
+      if (!sheet.fields.length) fail(`Nothing is filled on ${form} for ${who!.label} yet: answer and confirm its questions first.`, HttpStatus.UNPROCESSABLE_ENTITY);
       prepared.push({ form, edition: printed, sheet, ctx: { trail: printed, contextKey: editionContextKey(parts!.code, parts!.edition), inputs: [inventory!, writeSheet(sheet)], mode: "replay", wanted: async () => true } });
     }
     return { person: who!.label, prepared };
+  }
+
+  /** Challenge M6: an open or acknowledged AI finding whose quoted words are no longer in its fact's value is resolved by the
+   *  rules when the findings are read (US$0, no model call), as a rules finding is; no new run is needed for that. */
+  async resolveMoved(c: Reached) {
+    const live = await this.db.reviewFinding.findMany({ where: { caseId: c.id, source: "ai", state: { in: ["open", "acknowledged", "waived"] } } });
+    if (!live.length) return 0;
+    const gone: string[] = [];
+    for (const k of [...new Set(live.map((x) => `${x.subjectId}|${x.form}`))]) {
+      const [subject, form] = k.split("|");
+      const sheet = await this.prepare(c, subject, [form]).then((x) => x.prepared[0]?.sheet ?? null).catch(() => null);
+      // A form that cannot be read now (it no longer applies, its file is missing) leaves its findings as they are.
+      if (!sheet) continue;
+      for (const x of live.filter((y) => y.subjectId === subject && y.form === form)) if (!stillQuoted(sheet, x.field, x.quote)) gone.push(x.id);
+    }
+    if (!gone.length) return 0;
+    const n = (await this.db.reviewFinding.updateMany({ where: { id: { in: gone }, state: { in: ["open", "acknowledged", "waived"] } }, data: { state: "resolved", resolvedBy: "rules", resolvedAt: new Date() } })).count;
+    if (n) await this.audit.log(c.workspaceId, "rules", "resolved", "case", c.id, `The rules resolved ${n === 1 ? "1 AI finding" : `${n} AI findings`} on case ${c.id.slice(0, 8)}: the form no longer says what they quoted`, { findings: gone });
+    return n;
   }
 
   /** The two saved rounds of ONE live run of this sheet: the newest usable checker round, then the first round of the same
@@ -153,6 +168,9 @@ export class ReviewRuns {
     const k = await this.runner.round<ReviewAnswer>(FORM_REVIEW, true, { ...ctx, mode: "replay" });
     if (!k.ok) return { d: k, k: null };
     const d = await this.runner.round<ReviewAnswer>(FORM_REVIEW, false, { ...ctx, mode: "replay", replayPair: pairOf(FORM_REVIEW, true, k.runFile), replayPrompt: k.earlier ?? "" });
+    // Challenge M4: a run a test made up (its record says test_fixture) is never Saved in the product, wherever it lies.
+    if (!madeUpRuns() && d.ok && [d.runFile, k.runFile].some((f) => { try { return "test_fixture" in JSON.parse(readFileSync(join(SOLUTION, f), "utf8")); } catch { return true; } }))
+      return { d: { ok: false, costUsd: 0, reason: "The saved review found was made up by a test, so it is never used as a checked result." }, k: null };
     return { d: d.ok ? d : { ok: false, costUsd: 0, reason: "The newest saved checker round has no first round from the same run, so it is not used." }, k };
   }
 
@@ -173,7 +191,7 @@ export class ReviewRuns {
       const worst = [false, true].reduce((n, isCheck) => n + roundJob(FORM_REVIEW, isCheck, p.ctx).settings.budget_usd, 0);
       forms.push({ form: p.form, edition: p.edition, boxes: p.sheet.fields.length, sheet: p.ctx.inputs[1].file, sheet_sha256: p.ctx.inputs[1].sha256,
         saved: { available: ok, why: ok ? null : (!d.ok ? d.reason : null) ?? FORM_REVIEW.words.noSaved, files: ok ? [d.ok ? this.runFile(d.runFile) : "", k?.ok ? this.runFile(k.runFile) : ""] : [], made_up: madeUpRuns() && ok },
-        live_usd: round2(Math.max(0.01, usual)), live_worst_usd: round2(worst) });
+        live_usd: round2(Math.max(0.01, usual)), live_worst_usd: round2(worst), lines: p.sheet.fields });
     }
     const live_usd = round2(forms.reduce((n, f) => n + f.live_usd, 0)), live_worst_usd = round2(forms.reduce((n, f) => n + f.live_worst_usd, 0));
     const missing = forms.filter((f) => !f.saved.available);
@@ -195,19 +213,24 @@ export class ReviewRuns {
     if (b.planSha256 && b.planSha256 !== plan.plan_sha256) problem(409, "Look at the run card again", "The form's values, its saved review or the cost changed since you looked: nothing ran (US$0). Look at the run card again.", { plan });
     if (b.mode === "live") {
       if (!aiLive()) problem(409, "Live is off", LIVE_WAITING);
+      // Challenge m5: two or more forms are always over the job cap (2 × US$2.40 each), so Live reviews one form at a time.
+      if (b.forms.length > 1) problem(409, "One form at a time", "Live reviews one form at a time (the job cap of US$5 holds one form's two rounds). Nothing ran (US$0).");
+      // Challenge M5: one live review per case at a time (a second press, another tab).
+      if ([...this.going.values()].some((g) => g.caseId === c.id && g.live)) problem(409, "Already running", "A live review of this case is running now: wait for it to end, or stop it. Nothing ran (US$0).");
       if (b.planSha256 !== plan.plan_sha256) problem(409, "Look at the run card again", "A live review starts only from the run card you read (its cost first): nothing ran (US$0).", { plan });
       if (plan.estimate.live_worst_usd > JOB_CAP_USD + 1e-9) problem(409, "Over the job cap", `Not started: the worst case (US$${plan.estimate.live_worst_usd.toFixed(2)}) is above the job cap of US$${JOB_CAP_USD.toFixed(2)} (P-232). Review fewer forms at once.`);
       if (plan.estimate.live_worst_usd > plan.estimate.remaining_usd + 1e-9) problem(409, "Over the spending cap", `Not started: the worst case (US$${plan.estimate.live_worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.estimate.remaining_usd.toFixed(2)}).`);
     } else if (!plan.replay_available) problem(409, "No saved review", `Nothing ran and nothing changed (US$0). ${plan.replay_why ?? FORM_REVIEW.words.noSaved}`, { plan });
     const { prepared } = await this.prepare(c, b.subject, b.forms);
-    const runId = randomUUID();
-    this.going.set(runId, { caseId: c.id, stopped: false });
+    const runId = b.runId ?? randomUUID();
+    if (this.going.has(runId) || (b.runId && await this.db.reviewFinding.findFirst({ where: { runId }, select: { id: true } }))) problem(409, "Already run", "This review run was started already: run it again from the run card.");
+    this.going.set(runId, { caseId: c.id, stopped: false, live: b.mode === "live" });
     const wanted = async () => !this.going.get(runId)?.stopped;
     const out: RunForm[] = [];
     let cancelled = false;
     try {
       for (const p of prepared) {
-        const f: RunForm = { form: p.form, edition: p.edition, from: null, run_files: [], cost_usd: 0, added: 0, kept: 0, resolved: 0, dropped: [], note: null };
+        const f: RunForm = { form: p.form, edition: p.edition, from: null, run_files: [], cost_usd: 0, added: 0, kept: 0, resolved: 0, dropped: [], unreadable: [], note: null };
         out.push(f);
         if (cancelled) { f.note = "Not run: the run was stopped."; continue; }
         const safe = async (isCheck: boolean): Promise<RoundOut<ReviewAnswer>> => {
@@ -227,14 +250,14 @@ export class ReviewRuns {
         }
         f.from = d.from === "live" || k.from === "live" ? "live" : "replay";
         const reviewed = findingsFromRounds(p.sheet, d.output, k.output);
-        f.dropped = reviewed.dropped;
+        f.dropped = reviewed.dropped; f.unreadable = reviewed.unreadable;
         Object.assign(f, await this.store(actor, c, b.subject, p, reviewed.findings, f.from === "replay", runId));
       }
     } finally { this.going.delete(runId); }
     const cost = round2(out.reduce((n, f) => n + f.cost_usd, 0)), added = out.reduce((n, f) => n + f.added, 0);
     const how = b.mode === "replay" ? (madeUpRuns() ? "Saved (made-up test run)" : "Saved") : "Live";
     const note = out.some((f) => f.note) && !out.some((f) => f.from) ? out.map((f) => `${f.form}: ${f.note}`).join(" ")
-      : `${how}: ${added ? `${added} new finding${added === 1 ? "" : "s"}` : "no new finding"}${out.reduce((n, f) => n + f.kept, 0) ? `, ${out.reduce((n, f) => n + f.kept, 0)} already on the case` : ""}${out.reduce((n, f) => n + f.resolved, 0) ? `, ${out.reduce((n, f) => n + f.resolved, 0)} resolved (the form no longer says what they quoted)` : ""}. US$${cost.toFixed(2)}. Each finding warns; none blocks Ready to file.`;
+      : `${how}: ${added ? `${added} new finding${added === 1 ? "" : "s"}` : "no new finding"}${out.reduce((n, f) => n + f.kept, 0) ? `, ${out.reduce((n, f) => n + f.kept, 0)} already on the case` : ""}${out.reduce((n, f) => n + f.resolved, 0) ? `, ${out.reduce((n, f) => n + f.resolved, 0)} resolved (the form no longer says what they quoted)` : ""}. US$${cost.toFixed(2)}. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.`;
     // Audit (STANDARDS §5): the case, the forms, the mode, the cost and the counts; never a value, a quote or a reason.
     await this.audit.log(c.workspaceId, actor.id, "reviewed", "case", c.id, `${actor.name} ran the independent review of ${out.map((f) => f.form).join(", ")} on case ${c.id.slice(0, 8)} (${how}, US$${cost.toFixed(2)}): ${added} new finding${added === 1 ? "" : "s"}`,
       { run: runId, mode: b.mode, made_up: madeUpRuns(), forms: out.map((f) => ({ form: f.form, edition: f.edition, from: f.from, run_files: f.run_files, added: f.added, kept: f.kept, resolved: f.resolved, dropped: f.dropped.length })), cost_usd: cost });
@@ -288,6 +311,16 @@ function writeSheet(sheet: ReviewSheet): { file: string; sha256: string } {
   const current = (() => { try { return sha(readFileSync(file)) === h; } catch { return false; } })();
   if (!current) { mkdirSync(SHEETS, { recursive: true }); const tmp = join(SHEETS, `.${name}.${process.pid}.tmp`); writeFileSync(tmp, text); renameSync(tmp, file); }
   return { file: `prototype/p2/review-sheets/${name}`, sha256: h };
+}
+/** Each box with the value a copy prints in it (engine/form-values.ts, the filler's own step), a coded choice shown by its
+ *  words on the form (the inventory's resolved options); a box the filler does not write is not on the sheet. */
+function printedBoxes(s: unknown, map: { entries: { data_path: string; fact?: string | null }[] }, inv: Inventory, boxes: Parameters<typeof formValues>[3]) {
+  const { values } = formValues(s as Parameters<typeof formValues>[0], map, inv, boxes);
+  // The inventory lists a choice as [its words, its code] (IMM 5257: ["Afghanistan", "252"]).
+  const options = new Map(inv.fields.filter((x) => x.data_path && Array.isArray(x.options_resolved)).map((x) => [x.data_path!, new Map(x.options_resolved!.map(([label, code]) => [String(code), String(label)]))]));
+  const typed = new Set(inv.fields.filter((x) => x.data_path && (x.ui === "textEdit" || x.ui === "dateTimeEdit" || x.ui === "numericEdit")).map((x) => x.data_path!));
+  const words = (box: string, v: string) => options.get(box)?.get(v) || (!typed.has(box) && v === "Y" ? "Yes" : !typed.has(box) && v === "N" ? "No" : v);
+  return boxes.filter((b) => values[b.box] !== undefined && values[b.box] !== "").map((b) => ({ ...b, value: words(b.box, values[b.box]) }));
 }
 const promptBytes = (t: string) => { try { return readFileSync(join(PROTOTYPE, "p2", "prompts", t)).length; } catch { return 0; } };
 

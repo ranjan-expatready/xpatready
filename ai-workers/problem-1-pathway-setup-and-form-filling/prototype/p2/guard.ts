@@ -164,7 +164,8 @@ function admitReviewSheet(rel: string, bytes: Buffer, h: string): AdmittedInput 
   if (env.contract !== "review-sheet/v1") no("not a review-sheet/v1 record");
   if (typeof env.form_edition !== "string" || !/^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(env.form_edition)) no("its form edition is not a printed edition such as IMM 0000 (MM-YYYY)");
   if (!Array.isArray(env.fields) || !env.fields.length || env.fields.length > 2000) no("it holds no box, or more than 2,000");
-  const line = (v: unknown, max: number) => typeof v === "string" && !!v.trim() && Array.from(v).length <= max && !LABEL_BAD.test(v);
+  // "|" is the column mark of a sheet line in the prompt (p2/prompt.ts), so no text carries it (C7.5 challenge m1).
+  const line = (v: unknown, max: number) => typeof v === "string" && !!v.trim() && Array.from(v).length <= max && !LABEL_BAD.test(v) && !v.includes("|");
   const seen = new Set<string>();
   for (const f of env.fields as unknown[]) {
     closed(f, ["box", "caption", "fact", "value"], [], "box", no);
@@ -173,6 +174,8 @@ function admitReviewSheet(rel: string, bytes: Buffer, h: string): AdmittedInput 
     if (!line(caption, 300)) no(`the caption of ${String(box)} is not one plain line of at most 300 characters`);
     if (fact !== null && (typeof fact !== "string" || fact.length > 120 || !/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(fact))) no(`the fact of ${String(box)} is not a library key`);
     if (typeof fact === "string" && fact.startsWith("representative.")) no(`${String(box)} holds the representative's (the firm's) fact, which a review sheet never carries`);
+    // C7.5 challenge m1: no contact detail (email, telephone, fax) is sent, as the studio's sheet already leaves them out.
+    if (typeof fact === "string" && /(^|[._])(e_?mail|phone|telephone|fax|mobile)([._]|$)/.test(fact)) no(`${String(box)} holds a contact detail (${fact}), which a review sheet never carries`);
     if (!line(value, 500)) no(`the value of ${String(box)} is not one plain line of at most 500 characters`);
     if (seen.has(box as string)) no(`${String(box)} appears twice`);
     seen.add(box as string);

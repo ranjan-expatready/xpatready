@@ -24,7 +24,8 @@ export type SheetBox = { box: string; caption?: string | null; fact?: string | n
 /** The launcher's own rule for a line sent to the AI (p2/guard.ts LABEL_BAD): no control, format, line or paragraph
  *  separator, no angle bracket of any kind, so nothing in a value can forge a line or close the input it is sent in. */
 const BAD = /[\p{C}\p{Zl}\p{Zp}<>＜＞‹›«»〈〉〈〉⟨⟩]+/gu;
-const plain = (t: string, max: number) => Array.from(t.replace(BAD, " ").replace(/\s+/g, " ").trim()).slice(0, max).join("").trim();
+/** One plain line: no BAD character, and no "|" (the column mark of the sheet's lines in the prompt, challenge m1). */
+const plain = (t: string, max: number) => Array.from(t.replace(BAD, " ").replace(/\|/g, "/").replace(/\s+/g, " ").trim()).slice(0, max).join("").trim();
 export const SHEET_LIMITS = { rows: 2000, box: 200, caption: 300, value: 500, fact: 120 } as const;
 const FACT = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 
@@ -90,41 +91,49 @@ export function findingRule(sheet: ReviewSheet, f: AiFinding): string | null {
 
 /** A finding the two rounds and the rules give for one fact. */
 export type ReviewedFinding = { field: string; box: string; caption: string; severity: Severity; quote: string; agreement: "high" | "low"; reasons: string[] };
-export type Reviewed = { findings: ReviewedFinding[]; dropped: { field: string; why: string }[] };
+export type Reviewed = { findings: ReviewedFinding[]; dropped: { field: string; why: string }[]; unreadable: { box: string; why: string; round: string }[] };
 const RANK: Record<Severity, number> = { CRITICAL: 0, MAJOR: 1, MINOR: 2, INFO: 3 };
 export const ROUND_WORDS = { draft: "Round 1", check: "Round 2 (blind checker)" } as const;
 
 /** P-121 on the two rounds of one form: one finding per fact (a round's first finding on a fact counts; any later one on
  *  the same fact is listed as dropped). High when both rounds raise the fact with the same severity and the rules pass for
- *  both; Low otherwise, at the more serious of the two severities, with both rounds' reasons. */
+ *  both; Low otherwise, at the more serious of the two severities. Every finding carries both rounds' reasons (challenge
+ *  M7): what each round said, that it raised nothing on the fact, or that its finding failed the rules and why. Low first
+ *  (BIC-06: what needs a person's look comes first), then by severity. */
 export function findingsFromRounds(sheet: ReviewSheet, draft: ReviewAnswer, check: ReviewAnswer): Reviewed {
   const dropped: Reviewed["dropped"] = [];
-  const once = (a: ReviewAnswer): RoundAnswer<AiFinding>[] => {
-    const seen = new Set<string>(), out: RoundAnswer<AiFinding>[] = [];
+  type Tagged = AiFinding & { round: "draft" | "check" };
+  const once = (a: ReviewAnswer, round: "draft" | "check"): RoundAnswer<Tagged>[] => {
+    const seen = new Set<string>(), out: RoundAnswer<Tagged>[] = [];
     for (const f of a.findings) {
       const field = plain(f.field, SHEET_LIMITS.fact);
-      if (seen.has(field)) { dropped.push({ field, why: "The same round raised this fact twice: the first finding is kept." }); continue; }
+      if (seen.has(field)) { dropped.push({ field, why: `${ROUND_WORDS[round]} raised this fact twice: its first finding is kept.` }); continue; }
       seen.add(field);
-      out.push({ key: field, reading: f.severity, item: { ...f, field, box: plain(f.box, SHEET_LIMITS.box), quote: plain(f.quote, SHEET_LIMITS.value), reason: plain(f.reason, 600) } });
+      out.push({ key: field, reading: f.severity, item: { ...f, field, box: plain(f.box, SHEET_LIMITS.box), quote: plain(f.quote, SHEET_LIMITS.value), reason: plain(f.reason, 600), round } });
     }
     return out;
   };
-  const cmp = compareRounds(once(draft), once(check), (a) => findingRule(sheet, a.item));
-  for (const d of cmp.dropped) dropped.push({ field: d.key, why: d.why });
+  const failed = new Map<string, string>();
+  const cmp = compareRounds(once(draft, "draft"), once(check, "check"), (a) => { const why = findingRule(sheet, a.item); if (why) failed.set(`${a.key}|${a.item.round}`, why); return why; });
+  for (const [k, why] of failed) { const [field, round] = k.split("|"); dropped.push({ field, why: `${ROUND_WORDS[round as "draft" | "check"]}: ${why}` }); }
   const rowOf = (f: AiFinding) => sheet.fields.find((r) => r.fact === f.field && norm(r.value).includes(norm(f.quote))) ?? sheet.fields.find((r) => r.fact === f.field)!;
+  const said = (x: AiFinding | null, round: "draft" | "check", field: string) => x ? `${ROUND_WORDS[round]}: ${x.severity} · ${x.reason}`
+    : failed.has(`${field}|${round}`) ? `${ROUND_WORDS[round]}: its finding on this fact failed the rules (${failed.get(`${field}|${round}`)!.replace(/\.$/, "")}).`
+    : `${ROUND_WORDS[round]}: raised nothing on this fact.`;
   const out: ReviewedFinding[] = [];
   for (const a of cmp.agreed) {
+    const other = check.findings.find((x) => plain(x.field, SHEET_LIMITS.fact) === a.key) ?? null;
     const r = rowOf(a.item);
-    out.push({ field: a.item.field, box: r.box, caption: r.caption, severity: a.item.severity, quote: a.item.quote, agreement: "high", reasons: [a.item.reason] });
+    out.push({ field: a.item.field, box: r.box, caption: r.caption, severity: a.item.severity, quote: a.item.quote, agreement: "high", reasons: [said(a.item, "draft", a.key), said(other && { ...other, reason: plain(other.reason, 600) }, "check", a.key)] });
   }
   for (const d of cmp.decide) {
     const first = (d.draft ?? d.check)!, r = rowOf(first);
-    const sev = [d.draft, d.check].filter((x): x is AiFinding => !!x).map((x) => x.severity).sort((x, y) => RANK[x] - RANK[y])[0];
-    const why = (x: AiFinding | null, who: string) => x ? `${who}: ${x.severity} · ${x.reason}` : `${who}: raised nothing on this fact.`;
-    out.push({ field: first.field, box: r.box, caption: r.caption, severity: sev, quote: first.quote, agreement: "low", reasons: [why(d.draft, ROUND_WORDS.draft), why(d.check, ROUND_WORDS.check)] });
+    const sev = [d.draft, d.check].filter((x): x is Tagged => !!x).map((x) => x.severity).sort((x, y) => RANK[x] - RANK[y])[0];
+    out.push({ field: first.field, box: r.box, caption: r.caption, severity: sev, quote: first.quote, agreement: "low", reasons: [said(d.draft, "draft", d.key), said(d.check, "check", d.key)] });
   }
-  out.sort((a, b) => RANK[a.severity] - RANK[b.severity] || (a.box < b.box ? -1 : a.box > b.box ? 1 : 0));
-  return { findings: out, dropped };
+  out.sort((a, b) => Number(a.agreement === "high") - Number(b.agreement === "high") || RANK[a.severity] - RANK[b.severity] || (a.box < b.box ? -1 : a.box > b.box ? 1 : 0));
+  const unreadable = ([["draft", draft], ["check", check]] as const).flatMap(([round, a]) => a.unreadable.map((u) => ({ box: plain(u.box, SHEET_LIMITS.box), why: plain(u.why, 300), round: ROUND_WORDS[round] })));
+  return { findings: out, dropped, unreadable };
 }
 
 /** How one AI finding is known again on a later run: the person, the form, the fact and the words it quotes. */

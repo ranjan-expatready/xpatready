@@ -61,7 +61,7 @@ function answersFor(plan: Plan) {
   const fa = { field: a.fact!, box: a.box, severity: "MAJOR", quote: a.value.slice(0, 20), reason: `Made-up test finding on ${a.caption} (Sample).` };
   const fb = { field: b.fact!, box: b.box, severity: "MINOR", quote: b.value.slice(0, 20), reason: `Made-up test finding on ${b.caption} (Sample).` };
   const edition = plan.forms[0].edition;
-  return { a, b, draft: { form_edition: edition, findings: [fa, fb], unreadable: [] }, check: { form_edition: edition, findings: [{ ...fa, reason: "Made-up checker reason (Sample)." }, { field: d.fact!, box: d.box, severity: "INFO", quote: "words that are not on this form", reason: "Made up (Sample)." }], unreadable: [] } };
+  return { a, b, draft: { form_edition: edition, findings: [fa, fb], unreadable: [] }, check: { form_edition: edition, findings: [{ ...fa, reason: "Made-up checker reason (Sample)." }, { field: d.fact!, box: d.box, severity: "INFO", quote: "words that are not on this form", reason: "Made up (Sample)." }], unreadable: [{ box: "Made-up unreadable box", why: "Made up (Sample)." }] } };
 }
 /** The pack's own case, made the same way (acceptance/C7.5.test.ts up to its plan), so its plan names the same sheet. */
 async function packLikeCase() {
@@ -90,7 +90,9 @@ async function packLikeCase() {
   ok("C7.5 the made-up run is in the copy's own folder, never in p2/runs", readdirSync(MADE_UP).length === 2 && !readdirSync(RUNS).some((f) => f.includes("c75fixture")));
   const pack = tsx("acceptance/C7.5.test.ts");
   const lines = pack.stdout.split("\n").filter((l) => /^(PASS|FAIL) +C7\.5-/.test(l));
-  ok("C7.5 pack on the made-up saved run: all 16 steps pass, exit 0 (the replay path end to end; the real run is the tech lead's)", pack.status === 0 && lines.length === 16 && lines.every((l) => l.startsWith("PASS")), lines.filter((l) => l.startsWith("FAIL")).join("\n") || pack.stdout.slice(-600));
+  const failing = lines.filter((l) => l.startsWith("FAIL"));
+  ok("C7.5 pack on the made-up saved run: every step but C7.5-6b passes (the replay path end to end: -7 to -15 read the replayed findings)", lines.length === 16 && failing.length === 1, failing.join("\n") || pack.stdout.slice(-600));
+  ok("C7.5 pack fail: C7.5-6b stays red on a made-up run (it never counts as the saved run; the real one is the tech lead's paid run)", failing.length === 1 && failing[0].startsWith("FAIL  C7.5-6b ") && /"made_up":true/.test(failing[0]), failing[0]);
 
   // ── who, the body, the person and the form ──
   const f = await m3.firms(), officer = f.officer ?? m3.OFFICER;
@@ -123,9 +125,10 @@ async function packLikeCase() {
   let fs = await findings();
   const fa = fs.find((x) => x.field === a.fact), fb = fs.find((x) => x.field === b.fact);
   ok("C7.5 pass: a Saved run adds the saved findings at US$0, each Replayed, on the person's filing, with its run id", r.status === 201 && r.body?.cost_usd === 0 && r.body?.added === 2 && fs.length === 2 && fs.every((x) => x.replayed && x.source === "ai" && x.form === "IMM 5257" && !!x.filing) && Number(sql(`select count(distinct run_id) from review_finding where case_id='${c.id}' and source='ai' and run_id is not null`)) === 1, { body: r.body, fs });
-  ok("C7.5 P-121 pass: the fact both rounds raised with one severity is High, with its reason", fa?.agreement === "high" && fa.severity === "MAJOR" && fa.reasons.length === 1, fa);
+  ok("C7.5 P-121 pass: the fact both rounds raised with one severity is High, with both rounds' reasons", fa?.agreement === "high" && fa.severity === "MAJOR" && fa.reasons.length === 2 && /^Round 1: MAJOR/.test(fa.reasons[0]) && /^Round 2 \(blind checker\): MAJOR · Made-up checker reason/.test(fa.reasons[1]), fa);
   ok("C7.5 P-121 fail: the fact only one round raised is Low, with both rounds' reasons", fb?.agreement === "low" && fb.reasons.length === 2 && /^Round 1: MINOR/.test(fb.reasons[0]) && /^Round 2 \(blind checker\): raised nothing/.test(fb.reasons[1]), fb);
   ok("C7.5 AG-11-70 fail: the checker's finding whose quote is not on the form is dropped, with the reason, never added", (r.body?.forms?.[0]?.dropped ?? []).some((d: { why: string }) => /not in what the form says/.test(d.why)) && !fs.some((x) => x.quote.includes("not on this form")), r.body?.forms?.[0]?.dropped);
+  ok("C7.5 AG-11-70: a box a round could not judge is listed with why and the round, never guessed", (r.body?.forms?.[0]?.unreadable ?? []).some((u: { box: string; round: string }) => u.box === "Made-up unreadable box" && /Round 2/.test(u.round)), r.body?.forms?.[0]?.unreadable);
   ok("C7.5 no ai_batch row and no model call (US$0)", sql("select count(*) from ai_batch") === spend0);
 
   // ── dismiss, again, at once ──
@@ -141,11 +144,20 @@ async function packLikeCase() {
   await m3.answer(c.id, P, a.fact!, newValue); await m3.confirmAll(c.id, P);
   const plan2 = (await planOf({ forms: ["IMM 5257"], subject: P })).body as Plan;
   r = await runAs({ mode: "replay" });
-  ok("C7.5 fail: changed values have no saved run: Saved is refused (409) in words, US$0, nothing changed", plan2.replay_available === false && plan2.forms[0].sheet_sha256 !== plan.forms[0].sheet_sha256 && r.status === 409 && /No saved review/.test(JSON.stringify(r.body)) && (await findings()).filter((x) => x.state === "open").length === 1, r.body);
+  ok("C7.5 fail: changed values have no saved run: Saved is refused (409) in words, US$0, nothing changed", plan2.replay_available === false && plan2.forms[0].sheet_sha256 !== plan.forms[0].sheet_sha256 && r.status === 409 && /No saved review/.test(JSON.stringify(r.body)) && Number(sql(`select count(*) from review_finding where case_id='${c.id}' and source='ai'`)) === 2, r.body);
   writeMadeUp("b", inputsOf(plan2), { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] }, { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] });
   r = await runAs({ mode: "replay" });
   fs = await findings();
-  ok("C7.5 pass: the next run resolves, by the rules, the finding whose quoted words left the form; the dismissed one stays dismissed", r.status === 201 && r.body?.forms?.[0]?.resolved === 1 && fs.find((x) => x.id === fa!.id)?.state === "resolved" && fs.find((x) => x.id === fb!.id)?.state === "dismissed", { body: r.body, fs: fs.map((x) => [x.field, x.state]) });
+  ok("C7.5 pass: the finding whose quoted words left the form is resolved by the rules (on read, before this run), the dismissed one stays dismissed, and a run of the new values adds nothing", r.status === 201 && r.body?.added === 0 && fs.find((x) => x.id === fa!.id)?.state === "resolved" && sql(`select resolved_by from review_finding where id='${fa!.id}'`) === "rules" && fs.find((x) => x.id === fb!.id)?.state === "dismissed", { body: r.body, fs: fs.map((x) => [x.field, x.state]) });
+
+  // ── a stale AI finding resolves on read (challenge M6): the quoted value changes, no run needed ──
+  const { c: c3, P: P3 } = await packLikeCase();
+  const plan3 = (await call("POST", `/runtime/cases/${c3.id}/review-runs/plan`, { forms: ["IMM 5257"], subject: P3 })).body as Plan;
+  r = await call("POST", `/runtime/cases/${c3.id}/review-runs`, { forms: ["IMM 5257"], subject: P3, mode: "replay", planSha256: plan3.plan_sha256 });
+  const f3 = ((await call("GET", `/runtime/cases/${c3.id}/findings?source=ai`)).body?.findings ?? []) as F[];
+  await m3.answer(c3.id, P3, a.fact!, newValue); await m3.confirmAll(c3.id, P3);
+  const after3 = ((await call("GET", `/runtime/cases/${c3.id}/findings?source=ai`)).body?.findings ?? []) as F[];
+  ok("C7.5 pass (challenge M6): once the form no longer says what an AI finding quoted, reading the findings resolves it by the rules (US$0); the others stay", r.status === 201 && f3.length === 2 && after3.find((x) => x.field === a.fact)?.state === "resolved" && after3.find((x) => x.field === b.fact)?.state === "open", after3.map((x) => [x.field, x.state]));
 
   // ── audit, stop (readiness: pack step C7.5-9 above) ──
   const audit = sql(`select string_agg(summary || ' ' || coalesce(detail::text, ''), ' | ') from audit_event where entity_key='${c.id}' and action='reviewed'`) ?? "";

@@ -400,7 +400,7 @@ export class Runtime {
     await this.reach(actor, caseId, "read");
     if (!isOfficer(actor)) fail("The independent review is run by the case officer.", HttpStatus.FORBIDDEN);
     if (!aiLive()) refused("The independent review is an AI run, and live AI is off on this copy (the founder's switch). Nothing was run and nothing changed: US$0.");
-    return refused("The independent review run is not built yet (C7.5, M3-E). Nothing was run and nothing changed: US$0.");
+    return refused("The independent review runs from the case's Review page, one person's form at a time (POST /api/runtime/cases/:id/review-runs, C7.5). Nothing was run and nothing changed: US$0.");
   }
 
   /** Saves one answer: append-only (the old row is stamped superseded by the new one, in one transaction). A client

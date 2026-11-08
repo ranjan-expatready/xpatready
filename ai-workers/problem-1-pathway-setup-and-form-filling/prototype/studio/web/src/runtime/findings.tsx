@@ -4,6 +4,7 @@
 // fact resolves its finding by itself. Every move needs a reason. Findings warn; they never block "Ready to file"
 // (P-71, P-168). The AI review (part 2) is replayed from its saved run; until then the chip says what runs today.
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { api, ApiError, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Textarea } from "@/components/ui/controls";
@@ -27,8 +28,10 @@ const MOVE_WORDS: Record<Move["to"], { title: string; button: string; done: stri
   waive: { title: "Waive this CRITICAL finding", button: "Waive", done: "Finding waived", hint: "As the representative of record, say why it may go ahead. It resolves itself when its facts are fixed." },
 };
 
-/** The case's findings. Under the questionnaire view's query key, so an answer change re-runs the rules. */
-export function FindingsPanel({ caseId, people }: { caseId: string; people: CasePerson[] }) {
+/** The case's findings. Under the questionnaire view's query key, so an answer change re-runs the rules. On the case page
+ *  (`openLink`): per person, with a link to the Review page. On the Review page (`filings`, C7.5 part 2, BR-19): per
+ *  filing, then person; a finding read before Prepare made the filings is listed under "Not on a filing yet". */
+export function FindingsPanel({ caseId, people, filings, title = "Review", openLink }: { caseId: string; people: CasePerson[]; filings?: { id: string; label: string }[]; title?: string; openLink?: string }) {
   const q = useApi<Findings>(["runtime", "view", caseId, "findings"], `/runtime/cases/${caseId}/findings`, { retry: noRetryOnRefusal });
   const [all, setAll] = React.useState(false);
   const [move, setMove] = React.useState<Move | null>(null);
@@ -41,14 +44,26 @@ export function FindingsPanel({ caseId, people }: { caseId: string; people: Case
   const fs = [...(q.data?.findings ?? [])].sort((a, b) => Number(LIVE.has(b.state)) - Number(LIVE.has(a.state)) || SEV_ORDER[a.severity] - SEV_ORDER[b.severity]
     || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
   const shown = all ? fs : fs.filter((f) => LIVE.has(f.state));
-  const groups = people.map((p) => ({ p, rows: shown.filter((f) => f.subject === p.subject_id) })).filter((g) => g.rows.length);
+  const byPerson = (rows: Finding[]) => people.map((p) => ({ p, rows: rows.filter((f) => f.subject === p.subject_id) })).filter((g) => g.rows.length);
+  const groups = byPerson(shown);
+  const known = new Set((filings ?? []).map((x) => x.id));
+  const byFiling = filings ? [...filings.map((x) => ({ key: x.id, label: x.label, rows: shown.filter((f) => f.filing === x.id) })), { key: "none", label: "Not on a filing yet", rows: shown.filter((f) => !f.filing || !known.has(f.filing)) }].filter((g) => g.rows.length) : null;
+  const personGroups = (gs: ReturnType<typeof byPerson>, level: "h3" | "h4") => gs.map(({ p, rows }) => {
+    const H = level;
+    return (
+      <section key={p.subject_id} aria-labelledby={`review-${level}-${rows[0].id}`} data-findings-person={p.label}>
+        <H id={`review-${level}-${rows[0].id}`} className="border-b border-border bg-surface px-4 py-2 text-[13px] font-semibold [overflow-wrap:anywhere]">{p.label}<span className="ml-2 font-normal text-text-muted">{p.role === "case" ? "the application's own facts, on the principal's filing" : `${rows.length} finding${rows.length === 1 ? "" : "s"}`}</span></H>
+        <ul>{rows.map((f) => <FindingRow key={f.id} f={f} mayWaive={q.data!.may_waive} onMove={(to, from) => { back.current = from; setMove({ f, to }); }} />)}</ul>
+      </section>);
+  });
   const c = q.data?.counts;
   return (
     <section aria-labelledby="review-h" className="rounded-xl border border-border bg-surface-raised" data-findings>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
-        <h2 id="review-h" tabIndex={-1} className="text-base font-semibold outline-none">Review</h2>
+        <h2 id="review-h" tabIndex={-1} className="text-base font-semibold outline-none">{title}</h2>
         <StandIn id="SI-6" today="rules checks on every form (US$0); the AI review runs live on the Visitor visa forms only and is replayed elsewhere." later="other form families one at a time (team AG-11 AI Doers)." />
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">Checks across the facts and forms. Findings warn: they never stop Ready to file.</p>
+        {openLink ? <Link to={openLink} className="text-[13px] font-medium text-text-link hover:underline" data-open-review>Open Review</Link> : null}
         <Button size="sm" variant="secondary" onClick={(e) => { back.current = e.currentTarget; setAdding(true); }}><Plus aria-hidden />Add finding</Button>
       </header>
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
@@ -61,11 +76,11 @@ export function FindingsPanel({ caseId, people }: { caseId: string; people: Case
             </div>
             <p className="px-4 pt-1 text-[12px] text-text-muted">{q.data!.ai.words}</p>
             {!shown.length ? <p className="px-4 py-3 text-sm text-text-muted">{fs.length ? "Nothing open: every finding is resolved, waived or dismissed." : "No findings: the facts and forms agree so far."}</p>
-              : <TipProvider><div className="mt-2 border-t border-border">{groups.map(({ p, rows }) => (
-                  <section key={p.subject_id} aria-labelledby={`review-${p.subject_id}`} data-findings-person={p.label}>
-                    <h3 id={`review-${p.subject_id}`} className="border-b border-border bg-surface px-4 py-2 text-[13px] font-semibold [overflow-wrap:anywhere]">{p.label}<span className="ml-2 font-normal text-text-muted">{p.role === "case" ? "the application's own facts, on the principal's filing" : `${rows.length} finding${rows.length === 1 ? "" : "s"}`}</span></h3>
-                    <ul>{rows.map((f) => <FindingRow key={f.id} f={f} mayWaive={q.data!.may_waive} onMove={(to, from) => { back.current = from; setMove({ f, to }); }} />)}</ul>
-                  </section>))}</div></TipProvider>}
+              : <TipProvider><div className="mt-2 border-t border-border">{byFiling ? byFiling.map((g) => (
+                  <section key={g.key} aria-labelledby={`review-filing-${g.key}`} data-findings-filing={g.label}>
+                    <h3 id={`review-filing-${g.key}`} className="border-b border-border px-4 py-2 text-sm font-semibold [overflow-wrap:anywhere]">{g.label}<span className="ml-2 font-normal text-text-muted">{g.rows.length} finding{g.rows.length === 1 ? "" : "s"}</span></h3>
+                    {personGroups(byPerson(g.rows), "h4")}
+                  </section>)) : personGroups(groups, "h3")}</div></TipProvider>}
           </>}
       {move ? <MoveDialog caseId={caseId} move={move} close={done} /> : null}
       {adding ? <AddDialog caseId={caseId} people={people} close={done} /> : null}
@@ -81,9 +96,15 @@ function FindingRow({ f, mayWaive, onMove }: { f: Finding; mayWaive: boolean; on
         <Pill tone={SEV_TONE[f.severity]}>{f.severity}</Pill>
         {f.rule ? <Tip focusable tip={<>Rule (Sample): {f.rule}<br /><span className="text-text-muted">The rule and its severity are Sample until the immigration expert confirms them</span></>}><span><Pill>{SOURCE_WORDS[f.source]}</Pill></span></Tip> : <Pill tone={f.source === "ai" ? "ai" : "neutral"}>{SOURCE_WORDS[f.source]}</Pill>}
         {f.replayed ? <Pill tone="ai">Replayed</Pill> : null}
+        {f.agreement === "high" ? <Pill tone="ok" title="Both AI rounds raised it with the same severity, and the rules found its quote on the form (P-121)">High</Pill>
+          : f.agreement === "low" ? <Pill tone="warn" title="The two AI rounds did not agree: a person decides, with both rounds' reasons (P-121)">Low</Pill> : null}
       </div>
       <div className="min-w-0 flex-1 basis-80">
-        <p className="text-sm [overflow-wrap:anywhere]">{f.quote}</p>
+        {f.source === "ai" ? <>
+          {f.agreement === "low" ? <p className="text-sm">The two AI rounds disagree; a person decides:</p> : <p className="text-sm [overflow-wrap:anywhere]">{f.reasons[0] ?? ""}</p>}
+          {f.agreement === "low" ? <ul className="mt-0.5 list-disc pl-5 text-sm" data-finding-reasons>{f.reasons.map((x, i) => <li key={i} className="[overflow-wrap:anywhere]">{x}</li>)}</ul> : null}
+          <p className="mt-0.5 text-[13px] [overflow-wrap:anywhere]" data-finding-quote>The form says “{f.quote}”</p>
+        </> : <p className="text-sm [overflow-wrap:anywhere]">{f.quote}</p>}
         <p className="mt-0.5 text-[12px] text-text-muted [overflow-wrap:anywhere]">{where || "\u00a0"}</p>
         {f.state_reason && f.state_at ? <p className="mt-1 text-[12px] text-text-muted [overflow-wrap:anywhere]">{STATE_WORDS[f.state === "resolved" ? (f.severity === "CRITICAL" ? "waived" : "acknowledged") : f.state]} by {f.state_by_name} on {when(f.state_at)}: “{f.state_reason}”</p> : null}
         {f.state === "resolved" && f.resolved_at ? <p className="mt-1 text-[12px] text-text-muted">Resolved by {f.resolved_by_name} on {when(f.resolved_at)}{f.resolved_by === "rules" ? ": the facts it quoted changed" : ""}</p> : null}
