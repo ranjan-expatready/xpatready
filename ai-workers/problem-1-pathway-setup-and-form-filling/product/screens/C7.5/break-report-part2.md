@@ -63,3 +63,17 @@ Commit 8346005d7 (branch claude/determined-maxwell-f33ogl). Scope: concept-part2
 - **Run card:** cost first, with US$1.06 usual, US$4.80 worst and the US$5 cap; the Live copy is word for word.
 - **Page:** axe (WCAG 2.2 AA) is clean and there is no sideways scroll at 1440, 1024, 400 and 720 px (200 % zoom), after a run and after "Show on the form". The tab order is logical with a visible focus ring. "Show on the form" highlights the quoted line.
 - **Speed:** plan in about 25 ms, findings read in 40 to 100 ms.
+
+## Re-check on 4d5ce44
+Tested on a fresh `brk_c75a` copy on :4438, set up as before with the made-up switch; the copy is stopped now. No Live run was made. The pack-like case already held its 2 findings.
+- **M1: fixed.**
+  - *Run:* a Saved run with `runId: X` that adds nothing (`added:0, kept:2`) gave 201. The same X twice more gave 409 "Already run" both times. There is 1 `reviewed` audit line for X.
+  - *Run:* 6 parallel requests with one new run id gave one 201 and five 409.
+  - *Gap (Minor):* the upper-case spelling of a used X gives 201 and runs again. The claim (`claimRefusal`) and the audit lookup compare the string exactly as sent; zod accepts upper case.
+- **M2: fixed by reading the code, not by a test (Live cannot be switched on).** `run()` claims the run in `going` before any wait (`api/src/review-runs.ts:211-217`), with no `await` in between. The 6-at-once test above runs through that same claim.
+  - *Gap (Minor):* the per-case key is the raw `:id`. `POST …/cases/<UPPER-CASE id>/review-runs/plan` answers 200 for the same case, so a hand-made request with the case id in upper case would not see a live run claimed under the lower-case id.
+  - The page always sends the lower-case `c.id` and a fresh lower-case id, so neither gap is reachable from the page. Lower-casing both ids at `:211-214` closes them.
+- **Minors re-checked:**
+  - Minor 4 is fixed: plans and Saved runs wrote no sheet file into `p2/review-sheets`.
+  - Minor 7 is fixed: Stop on a running Saved run now gives 409 "Not a live run" (a client still gets 403).
+- **Still holds:** Live is off (409); a client gets 403; another firm gets 404.
