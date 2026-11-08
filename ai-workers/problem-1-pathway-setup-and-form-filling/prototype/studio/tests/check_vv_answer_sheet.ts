@@ -102,4 +102,32 @@ ok("C7.3: the source says Document for a document read, Client for the questionn
   ok("C7.3 (review m1): a form field whose data path is longer than the 120 characters the rules pass keeps still goes in its part", cut.sections[0].key === "applicant" && cut.sections[0].answers.length === 1 && !cut.sections.some((x) => x.key === OTHER_PART));
 }
 
+// QA-309 (C7.3, C10.2; P-401): a section waits only for what the form's readiness still names (`waits`): a fact held
+// as "none apply", a row fact that is answered (the form's spare rows stay empty) or a fact the release never asks is
+// not waited for, so an all-ticked sheet can read Done. Without `waits` every empty box waits, as before.
+{
+  const F = "IMM_5257[0].page1[0].";
+  const qb = (path: string, fact: string, row: number | null = null, coverage: BoxRow["coverage"] = "answered on screen", value: unknown = null): BoxRow =>
+    ({ box: `${F}${path}`, caption: fact, fact, meaning: null, about: "p", about_label: "Client A", row, coverage, detail: "", value });
+  const parts: FormPart[] = [
+    { key: "education", title: "Education", named: true, fieldKeys: [`${F}Edu[0].School[0]`, `${F}Edu[0].From[0]`] },
+    { key: "employment", title: "Employment", named: true, fieldKeys: [`${F}Emp[0].Title[0]`, `${F}Emp[1].Title[0]`, `${F}Emp[2].Title[0]`] },
+    { key: "visit", title: "Details of visit", named: true, fieldKeys: [`${F}Visit[0].Purpose[0]`, `${F}Visit[0].Contact[0]`] },
+  ];
+  const qbs = [
+    qb("Edu[0].School[0]", "person.education_school_name", 0), qb("Edu[0].From[0]", "person.education_from_date", 0), // "none apply"
+    qb("Emp[0].Title[0]", "person.occupation_title", 0, "confirmed fact", "Sample analyst"), qb("Emp[1].Title[0]", "person.occupation_title", 1), qb("Emp[2].Title[0]", "person.occupation_title", 2), // one row answered
+    qb("Visit[0].Purpose[0]", "case.visit_purpose", null, "confirmed fact", "tourism"), qb("Visit[0].Contact[0]", "case.visit_contact_name", null, "unresolved"), // never asked
+  ];
+  const before = sheetOf({ basis: "form_parts", parts }, qbs, origin, labels, new Map());
+  const after = sheetOf({ basis: "form_parts", parts }, qbs, origin, labels, new Map(), undefined, () => false);
+  const waitsOf = (sh: typeof after, key: string) => sh.sections.find((x) => x.key === key)?.waiting.length ?? -1;
+  ok("QA-309 (fail, without readiness): every empty box waits: \"none apply\" education, the spare employment rows, the never-asked contact", waitsOf(before, "education") === 2 && waitsOf(before, "employment") === 1 && waitsOf(before, "visit") === 1);
+  ok("QA-309 pass: with nothing readiness names, no section waits (\"none apply\", an answered row fact, a never-asked fact)", after.sections.every((x) => x.waiting.length === 0), after.sections.map((x) => [x.key, x.waiting.length]));
+  ok("QA-309 pass: a section the form asks of the person stays on the sheet to tick, though nothing in it waits (Education, held as \"none apply\")", after.sections.map((x) => x.key).join() === "education,employment,visit" && after.sections.every((x) => x.version !== ""));
+  const one = sheetOf({ basis: "form_parts", parts }, qbs, origin, labels, new Map(), undefined, (subject, fact) => subject === "p" && fact === "person.education_school_name");
+  ok("QA-309 (fail): a fact readiness still names waits, and only it", waitsOf(one, "education") === 1 && one.sections.find((x) => x.key === "education")?.waiting[0]?.fact === "person.education_school_name" && waitsOf(one, "employment") === 0 && waitsOf(one, "visit") === 0);
+  ok("QA-309: `waits` never changes a section's fingerprint (a tick is about the values shown)", JSON.stringify(after.sections.map((x) => x.version)) === JSON.stringify(before.sections.map((x) => x.version)));
+}
+
 process.exitCode = summary() ? 1 : 0;
