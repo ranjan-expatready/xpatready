@@ -3,7 +3,7 @@
 //      Taiwan PIN and Israel passport boxes, by the passport's country of issue; samples/form-script-requirements.json) holds
 //      readiness back only when that answer is given: an Indian passport lists neither, a Taiwanese passport the Taiwan PIN.
 //   R5 (M3) GET …/forms and the case's prepare view (Ready to file) read the same readiness (formReadinessOf, which locking a
-//      copy also calls): the same form fields, on both.
+//      copy also calls): the same form fields, on both; a form filed Online keeps its PDF's empty boxes on its card only (Devin).
 //   R6 (M2) a mandatory box left empty never makes locking a dead end: the lock is refused for its own reasons (the form's
 //      trial, Validate), never as "facts to answer"; the card counts facts and empty form fields apart.
 //   zsh studio/tools/isolated.sh qa165_paths 4452 start && tsx studio/tests/check_qa165_readiness_paths_api.ts 4452 xr_studio_qa165_paths
@@ -43,18 +43,26 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required and empty, so readiness lists it (not the Israel box), with why", r.status < 300 && !f.readiness.ready && boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && f.readiness.missing.some((m) => m.fact === `box:${TAIWAN}` && /^no question asks it yet: /.test(m.why ?? "")), { status: r.status, missing: f.readiness.missing });
   const taiwanLabel = f.readiness.missing.find((m) => m.fact === `box:${TAIWAN}`)?.label ?? "";
 
-  // R5: the prepare view's Ready to file names the same form field, from the same readiness.
+  // R5: GET …/forms and the prepare view's Ready to file read the same readiness (formReadinessOf).
+  // Devin on #1318: IMM 5257 is filed Online on the checkpoint, so its PDF's empty box is named on its card (above) and never
+  // stands before Ready to file.
   const { p } = await prepare(c.id);
-  const lines = (p?.readiness ?? []).flatMap((x) => x.warns).filter((w) => w.code === "missing_facts" && /IMM 5257 for Sample Client P: .*form field.*would be left empty/.test(w.words));
-  // The box's words are the form field list's caption (a neighbour's question, pre-existing: review m4), the same on both.
-  ok("C7.6 R5 pass (#1318 M3): Ready to file names the Taiwan PIN box on IMM 5257's CRITICAL line, in the words GET …/forms gives it", lines.length === 1 && !!taiwanLabel && lines[0].words.includes(taiwanLabel) && /: 1 form field IRCC's form marks mandatory would be left empty/.test(lines[0].words), { lines: lines.map((w) => w.words), taiwanLabel });
+  const warns = (p?.readiness ?? []).flatMap((x) => x.warns);
+  ok("C7.6 R5 pass (Devin on #1318): IMM 5257 is filed Online here, so Ready to file has no line for its PDF's empty Taiwan PIN box", !!taiwanLabel && !warns.some((w) => /IMM 5257 for Sample Client P: .*would be left empty/.test(w.words)), warns.map((w) => w.words));
 
-  // R6: the lock is never a dead end over a box left empty.
-  const g = await call("POST", `/runtime/cases/${c.id}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `qa165p-${Date.now()}` }, OFFICER);
+  // R6: the lock is never a dead end over a box left empty. Review m5 on #1318: IMM 5257 is filed Online on the checkpoint, so
+  // its lock is refused as Online before readiness is read; IMM 5257 SCH1 is a PDF form whose by-hand boxes a copy leaves empty.
+  const sch1 = ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, OFFICER)).body.forms as (FormRow & { channel: string; for_filing: boolean })[]).find((x) => x.form === "IMM 5257 SCH1" && x.subject_id === P);
+  const facts = (sch1?.readiness.missing ?? []).filter((m) => m.reason !== "left empty on the form"), empty = (sch1?.readiness.missing ?? []).filter((m) => m.reason === "left empty on the form");
+  ok("C7.2 R6 setup: IMM 5257 SCH1 is filed as a PDF, waits on no fact, and a copy leaves mandatory boxes empty", !!sch1 && sch1.channel !== "ONLINE" && sch1.for_filing && !facts.length && empty.length > 0 && !sch1.readiness.ready, { channel: sch1?.channel, facts, empty: empty.length });
+  // R5 (#1318 M3): for that PDF form, Ready to file's CRITICAL line names the same boxes, in the words GET …/forms gives them.
+  const sch1Line = warns.filter((w) => w.code === "missing_facts" && /IMM 5257 SCH1 for Sample Client P: .*would be left empty/.test(w.words));
+  ok("C7.6 R5 pass (#1318 M3): Ready to file's CRITICAL line for IMM 5257 SCH1 counts its empty boxes and names the first in GET …/forms' own words", sch1Line.length === 1 && sch1Line[0].words.includes(`${empty.length} form field`) && !!empty[0] && sch1Line[0].words.includes(empty[0].label), { line: sch1Line.map((w) => w.words), first: empty[0]?.label });
+  const g = await call("POST", `/runtime/cases/${c.id}/forms/IMM%205257%20SCH1/${P}/generate`, { idempotencyKey: `qa165p-${Date.now()}` }, OFFICER);
   const copy = String(g.body?.copy?.id ?? g.body?.id ?? "");
   for (let i = 0; i < 90; i++) { const st = (await call("GET", `/runtime/form-copies/${copy}`, undefined, OFFICER)).body?.status; if (st === "GENERATED" || st === "FAILED") break; await new Promise((x) => setTimeout(x, 1000)); }
   const lock = await call("POST", `/runtime/form-copies/${copy}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
   const said = String(lock.body?.detail ?? lock.body?.message ?? "");
-  ok("C7.2 R6 pass (#1318 M2): locking the copy is not refused as \"facts to answer\" over the empty Taiwan PIN box (it is said on the card and on Ready to file)", !/facts? to answer or confirm/.test(said), { status: lock.status, said });
+  ok("C7.2 R6 pass (#1318 M2): locking that copy is never refused as \"facts to answer\" over its empty boxes (they are said on the card and on Ready to file), and not as Online", g.status < 300 && !/facts? to answer or confirm/.test(said) && !/filed Online/.test(said), { generate: g.status, status: lock.status, said });
   process.exitCode = rec.summary() ? 1 : 0;
 })().catch((e) => { console.error(e); process.exit(1); });
