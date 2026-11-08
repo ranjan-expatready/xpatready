@@ -40,3 +40,18 @@ I did not run the configured checkpoint ("the six"); only the fixture. There is 
 **Verdict: Block** `c774e63b6b17c6b2809accb5649d9efc22aab59b`. To fix: **M1** (Major), with its pass and fail steps. m1 to m4 are Should and do not block on their own; m3 is a quick restore.
 
 Verdict: Block c774e63b6b17c6b2809accb5649d9efc22aab59b
+
+## Re-review on 3448cdeec
+Diff only: `git diff c774e63b6..3448cdeec` (`document-review-counts.ts`, `C6.5-counts.test.ts`, the 25 PNGs, and my two files committed). Re-run on my copy `rv_c65c`, :4434, with the fixture (setups 15/15, 44/46 as before). Copy stopped afterwards; US$0.
+* **Pack C6.5-counts 12/12** (engine 7/7). The builder's figure is confirmed.
+* **M1, fixed.** Values `notWritable` refuses are neither `read` nor `corrected`; they are counted apart in `by_mode.<mode>.left`. This is the same function Confirm & use and `left_why` use, so it agrees with what the drawer shows. Re-run of my main-path probe L (answer citizenship and country of issue by hand): **expanded 0 corrected of 3, left 2**, where it was 2 of 5. Tests: engine C6.5-21e fail; server C6.5-22 fail (citizenship "India" is not a correction and `left` ≥ 1). C6.5-21 now ties `read`/`left` to the proposals' `left_why`. Each test fails if the rule is removed.
+* **m1, fixed.** A replaced file's read counts only staff answers saved before `case_document.superseded_at`. Probe A (renewal typed by hand) now gives **0**, where it was 1 collapsed. Engine C6.5-22e has a pass (an answer before the replacement still counts) and a fail.
+* **m2, fixed for the replaced-check rule.** The `REPLACED` filter moved into `countCorrections` (`kept[].reason`). Engine C6.5-22e fail covers it, and probe R still gives 0. The `kept: "answer"` query filter (`:65`) still has no step: no step resolves a check keeping the document. That stays Minor (Should), because the filter is one literal next to the rule it serves.
+* **m3, fixed.** `git diff --name-only origin/claude/runtime-c65-drawer...3448cdeec | grep screenshots` is empty.
+* **Unchanged and still holding** (probes C, D, E): one value counts once (staff answer + kept + second answer = 1); row counts identical before and after the GETs; client 403, author 403, another firm 404, no actor 401, bad or unknown id 404. There is one more query input (the document's `supersededAt`, through the include) and still no per-row request.
+* **Still for the tech lead, not findings:** the rule text and "kept the answer" (Q1). Denominators now exclude left values; they still include a replaced file's reads, which is fair as separate reads.
+* **Journey score on 3448cdeec:** correct data 0 → 1 and task completed ½ → 1. **7/8 applicable = 8.75/10, Pass**, with no 0.
+
+No open Blocker or Major. Open Minor: the `kept: "answer"` filter has no step (Should).
+
+Verdict: Approve 3448cdeec6eb312a00f572d3e18d7fc49bb7b5c7

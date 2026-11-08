@@ -68,6 +68,18 @@ await main("C6.5", "Staff corrections of document values, counted per review mod
   await answer(c.id, P, "person.citizenship", "India", OFFICER);
   const left = (await counts()).body as Counts;
   ok("C6.5-22 fail (review M1): answering a value left for a person (the country, given only as a code) is not counted as a correction", left?.by_mode?.expanded?.corrected === 1 && !left.corrections.some((x) => x.fact === "person.citizenship") && (left.by_mode.expanded.left ?? 0) >= 1, left);
+  // Review m2 on 3448cdeec: a check resolved by keeping the document's value is no correction (only "kept the answer" is).
+  const S = c.subjects["Sample Spouse A"];
+  await answer(c.id, S, "person.family_name", "SAMPLESX", OFFICER); // typed before the read: not itself a correction
+  const sLine = (((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people ?? []).find((x: { subject: string }) => x.subject === S)?.lines ?? []).find((x: { label: string }) => /passport/i.test(x.label) && !/absent|parent/i.test(x.label))?.id;
+  const sDoc = (await upload(PORT, `/runtime/checklist-lines/${sLine}/documents`, passportPdf({ surname: "SAMPLES", given: "SPOUSE A", number: "SAMPLES34", nationality: "IND", dob: FAMILY[1].dob!, sex: "F", expiry: FIXED.expiry }), "spouse.pdf", OFFICER)).body?.document?.id as string;
+  await call("POST", `/runtime/cases/${c.id}/sections/${passSec}/fill-from-documents`, { subjectId: S }, OFFICER);
+  const sTicks = ((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${S}`, undefined, OFFICER)).body?.proposals ?? []).filter((p: Prop) => p.source.document === sDoc && p.needs_look).map((p: Prop) => p.id);
+  const used = await call("POST", `/runtime/cases/${c.id}/documents/${sDoc}/confirm-and-use`, { subjectId: S, checked: sTicks }, OFFICER);
+  const sCheck = (used.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name")?.id;
+  const kept = await call("POST", `/runtime/checks/${sCheck}/resolve`, { keep: "document", reason: "Matches the passport page (Sample)" }, OFFICER);
+  const afterKeep = (await counts()).body as Counts;
+  ok("C6.5-22 fail (review m2): a check resolved by keeping the document's value is not a correction", kept.status === 200 && !afterKeep.corrections.some((x) => x.fact === "person.family_name"), { kept: kept.status, corrections: afterKeep?.corrections });
   const [client, other] = [await counts(CLIENT), await counts("user-S")];
   ok("C6.5-23 fail: the counts are staff only: the client is refused (403) and another firm finds no such case (404)", client.status === 403 && other.status === 404, [client.status, other.status]);
 });
