@@ -69,3 +69,63 @@ D1–D20 and BIC-01–20 are N/A apart from these: **D2 Data integrity: improved
 ## What I could not check
 * The Mac's :4400 demo database, which is not reachable from here. The demo update runs `migrate deploy` on existing data. By the lock-history argument above it cannot hold twins, but only the founder's Mac can run the one-line twin query in `migration.sql`'s spirit before merge: `select party_id, subject_kind, count(*) from answer_subject where subject_kind in ('parent_1','parent_2','sibling') group by 1,2 having count(*)>1`.
 * CI on this head: the PR is a draft, so only the guard ran (success).
+
+---
+
+# Round 2 (diff only, P-293 (3))
+
+**Reviewed commit:** `20daf89b373f020f9671d9b1ccfa7d37ea473dee`, the pushed head. I was first given `786a835b1e907ce9684d7ea26cdccd551c80df94`, but the push guard refused it (a name in `break-report.md`). Its tree is the same as `20daf89b` apart from that one `break-report.md` line (`git diff 786a835b 20daf89b`). The diff reviewed is `git diff aae6c833..20daf89b`, and its code part is two files: the migration's comment (`migration.sql:6-16`; the SQL statement at `:17` is unchanged) and `tests/check_b157_relative_subject_unique.ts` (B157-1 at `:38`, and the new B157-9 at `:67-75`). No `api/`, `engine/`, `web/` or `schema.prisma` change. The rest of the diff is the round-1 `review.md` and `break-report.md`.
+**Copy:** isolated `rev157b` on :4479, with a fresh database and `migrate deploy`. It is stopped now; the cluster was left running.
+
+## Verdict: **Approve** on `20daf89b` (no open Blocker or Major). Round-1 m1–m3 and the breaker's m1–m3 are closed. One new Minor (r2-m1) is optional.
+
+## What I ran
+* `check_b157_relative_subject_unique.ts 4479 xr_studio_rev157b`: **11/11 four times in a row**. B157-7's 200 came at a different position each run (index 0, 7 and 1), so the race is real.
+* **B157-9 really goes through the fallback.** I sampled `pg_stat_activity` every 50 ms during a run:
+  * The held psql session was already in `PgSleep` by the first sample (its insert was done).
+  * About 0.7 s later, the API's Prisma `INSERT INTO "public"."answer_subject"` waited on `Lock/transactionid` for **2.25 s**. It was released when psql committed.
+  * Then came the 200.
+  * So the 200 comes from P2002 → `.catch` → `held()` (`runtime.ts:145`), not from `relativesOf` finding a committed row. This agrees with the builder's mutation result (with the `.catch` removed, 409).
+* **The recovery steps, run for real** in rolled-back transactions on my copy:
+  * Drop the index, insert a twin `parent_1` subject with a higher id, and copy one answer onto it. `CREATE UNIQUE INDEX` is then refused with "… is duplicated".
+  * Then `DELETE FROM answer_subject WHERE id = <twin>` deletes the twin's answer by cascade (0 left), no trigger refuses it, and the same `CREATE UNIQUE INDEX` succeeds. `ROLLBACK`.
+
+## The recovery text (`migration.sql:9-16`)
+* **"Every read takes the lowest id": true.** `relativesOf` (`runtime.ts:120`) orders by `id asc` and keeps the first one per key. `held()` and the in-lock re-read (`:140,143`) order the same way. No other code in `api/` or `engine/` reads a relative subject by kind (grep for `subjectKind` and `ASKED_RELATIONS`). So deleting the higher-id twin removes nothing that was ever shown, and "re-enter on the lowest-id subject" is what the API does anyway.
+* **"Append-only (their triggers refuse moving them)": true, and those triggers do not block the delete.**
+  * `trg_answer_append_only`, `trg_fact_record_append_only` and `trg_group_answer_append_only` are `BEFORE UPDATE` only (live `tgtype` 19).
+  * So `UPDATE … SET subject_id` (a move) is refused, while the cascade `DELETE` passes.
+* **Cascades: as stated, and slightly more.** On the live database every foreign key into `answer_subject` is `ON DELETE CASCADE` (`confdeltype = c`, matching `schema.prisma:1460,1482,1505,1533,1875,1903`). That covers answers, records and group answers, as the comment says, and also `case_participant`, `checklist_line` and `case_document`.
+  * The comment lists only the first three. In practice that is complete: a relative subject is never a participant ("never a person on the case"), and checklist lines are made only for `peopleOf` subjects (`case-checklist.ts:87`). Documents hang on those lines.
+  * The superseded chains are `CASCADE` within the twin's own rows. Nothing else has a foreign key to the answer tables (grep of the migrations), so the frozen `answer_snapshot` and `validated_copy` cannot block the delete or lose anything through it.
+  * Not a finding.
+* **Prisma steps: correct.**
+  * A failed apply is recorded and blocks later deploys (P3009). `migrate resolve --rolled-back <name>` followed by deploy is Prisma's documented way out.
+  * The rollback note's `DELETE FROM "_prisma_migrations" …` is what makes a later deploy apply the migration again after a manual `DROP INDEX`.
+* **The checksum note is right.** Editing the comment changes the file's checksum only for local databases that applied the first version. CI and every real database apply it fresh, because it is not merged anywhere yet.
+
+## Soundness of B157-9 (`tests/check_b157_relative_subject_unique.ts:67-75`)
+* **When it is slow, it fails rather than passing falsely.**
+  * Suppose psql takes longer than the 0.7 s head start plus the request's own latency to connect and insert. Then the API creates and commits first, psql's insert hits the index, `ON_ERROR_STOP=1` makes psql exit non-zero, and `await hold` (`:73`) rejects. The check goes red.
+  * The hold is 3 s, so the API's wait inside its interactive transaction stays well under Prisma's default 5 s transaction timeout.
+* **It can only pass falsely in one narrow case.** If the PUT reaches `subjectFor` more than about 3 s after the hold starts, psql has already committed. `relativesOf` then finds the row, and the check gets 200 without touching the fallback. That needs a stall of about 2.3 s beyond the 0.7 s head start: unlikely, and it would only make one run vacuous, not wrong. See r2-m1.
+* **Its assertions are sound.**
+  * Exactly one `parent_2` subject.
+  * The new answer is the current (not superseded) answer on that subject.
+  * The status is 200 and nothing else. A 409 (the fallback removed) or a 500 fails it.
+* **Nothing weakened.**
+  * B157-1 now takes its kinds from `ASKED_RELATIONS` (`:38`). It asserts that every one is in the index definition and that the number of quoted literals equals `ASKED_RELATIONS.length`. That pins the exact set, and it covers the old `!/'case'|'principal'/` check.
+  * An index that is missing gives an empty definition and fails.
+  * No other check changed (the diff touches only `:13`, `:36-38` and `:67-75`).
+
+## Findings, round 2
+**Blocker:** none. **Major:** none.
+
+**Minor**
+* **r2-m1 (optional): B157-9 does not prove it waited.**
+  * Where: `tests/check_b157_relative_subject_unique.ts:71-75`.
+  * Failure scenario: on a stalled runner the PUT arrives after psql commits, and the check passes through `relativesOf`, not through the fallback it exists for.
+  * Fix: time the PUT and also assert that it took at least about 1 s (it waited on the index). Or assert that psql's `hold` resolved *after* the PUT started. Either makes a vacuous pass a red one.
+
+## Journey test (reviewer role)
+**Not scored, as in round 1.** No `web/` file changed, and on every normal path the API answers the same. No journey-test report is written for this schema row.
