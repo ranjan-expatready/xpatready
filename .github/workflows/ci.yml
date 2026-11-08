@@ -102,8 +102,10 @@ jobs:
       ctx: ${{ steps.m.outputs.ctx }}
       base: ${{ steps.b.outputs.base }}
       battempt: ${{ steps.b.outputs.battempt }}
+      dpacks: ${{ steps.d.outputs.dpacks }}
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0, filter: "blob:none" }
@@ -147,6 +149,19 @@ jobs:
           else q=""; cat flaky.err; echo "::warning::flaky.mjs could not read the retry records: no automatic quarantine this run"; fi
           echo "autoq=$q" >> "$GITHUB_OUTPUT"
           [ -z "$q" ] || { echo "**Quarantined automatically (B122):**"; sed 's/^/- /' flaky.err; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-node@v4
+        if: steps.k.outputs.kind == 'code' && steps.k.outputs.queue != 'true'
+        with: { node-version-file: .nvmrc }
+      - id: d
+        name: packs this change touches (D2, gate-b.mjs --diff-groups 5; run by job "packs")
+        # A pack the PR changes (its row if built) and every Works row whose pack reads a changed file, minus the named
+        # capabilities (part 1 runs those), in at most 5 groups. Reads files only: no packages, no server.
+        if: steps.k.outputs.kind == 'code' && steps.k.outputs.queue != 'true'
+        env: { KIND: code, PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}" }
+        run: |
+          g=$(node "$S/tools/gate-b.mjs" --diff-groups 5) || exit 1
+          [[ "$g" == \[* ]] || { echo "gate-b.mjs --diff-groups printed no JSON: $g"; exit 1; }
+          echo "dpacks=$g" >> "$GITHUB_OUTPUT"; echo "by diff: $g"
       - id: m
         name: memory (P-371 (3)) — this head already judged on this base? suites green earlier with unchanged inputs?
         # Never for a merge-queue batch or a fork. Reads only this PR's own earlier runs of this workflow.
@@ -272,8 +287,10 @@ jobs:
         # P-214, founder 4 Nov: a code PR's "Claims Works: C<n.n>" capabilities have no open Major or worse in qa/BUGS.md
         # unless it names the bug it fixes; the named capabilities' acceptance packs pass (on the six where the pack's
         # run allows, else "fixture only"). Title and body come in as environment values, never pasted into the script.
+        # D2 (P-416, 8 Nov): the named capabilities run here, each on its scoring data (works-set.mjs); the ones the change
+        # touches run in job "packs" (GATE_B_NO_DIFF here).
         if: matrix.shard == 1 && env.KIND == 'code'
-        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
+        env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}", GATE_B_NO_DIFF: "1" }
         run: node "$S/tools/gate-b.mjs"
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --retry --shard; US$0 model spend)
         if: env.KIND == 'code'
@@ -322,6 +339,47 @@ jobs:
           if-no-files-found: ignore
           overwrite: true
           retention-days: 14
+  packs:
+    # D2 (P-416, 8 Nov; review of #1337): the packs this change touches (kind's gate-b.mjs --diff-groups 5), one machine a
+    # group, gate B's 3 slots, each row on its scoring data; a red group is run once more (a flaky pack is retried once).
+    needs: kind
+    if: ${{ needs.kind.outputs.mode != 'same' && needs.kind.outputs.dpacks != '' && needs.kind.outputs.dpacks != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions: { contents: read }
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(needs.kind.outputs.dpacks) }}
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: the test merge on kind's main (D6, tools/pr-base.sh; always pinned, so the plan, its data and holds match the tree)
+        # Devin on #1337: "Re-run failed jobs" keeps kind's plan, so this job keeps kind's base too; "Re-run all jobs"
+        # re-plans on today's main.
+        env: { HEAD_SHA: "${{ github.event.pull_request.head.sha }}", KBASE: "${{ needs.kind.outputs.base }}" }
+        run: |
+          range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" "$KBASE") || exit 1
+          echo "RANGE=$range" >> "$GITHUB_ENV"; echo "tested: $range"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser packs need)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: packs by diff ${{ matrix.group.caps }} (${{ matrix.group.packs }} packs, gate B's 3 slots; live AI off, US$0)
+        env: { CAPS: "${{ matrix.group.caps }}", GATE_B_DATA_OF: "${{ matrix.group.data }}", GATE_B_SKIP_PACKS: "${{ matrix.group.skip }}", GATE_B_NO_DIFF: "1", GATE_B_JOBS: "3", KIND: code, QUEUE: "", PR_TITLE: "", PR_BODY: "" }
+        run: |
+          r=0; node "$S/tools/gate-b.mjs" --title "$CAPS" --kind code || r=$?
+          case "$r" in 0) exit 0;; 1|2) ;; *) exit "$r";; esac
+          echo "red (exit $r): once more (a flaky pack is retried once; red twice is red)"
+          GATE_B_NAME=gatebr GATE_B_PORT=4600 node "$S/tools/gate-b.mjs" --title "$CAPS" --kind code
   types:
     # P-291: tsc --noEmit for api and web, beside the parts (no added wall time); records and code, never notes.
     needs: kind
@@ -352,13 +410,16 @@ jobs:
       - name: type check, api and web (typecheck.mjs; only errors not in typecheck-known.txt fail)
         run: node "$P/tools/typecheck.mjs" | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}
   regression-plan:
-    # P-320 (b): a merge-queue batch re-runs every M2 Works capability's acceptance pack (qa/CAPABILITIES.md at the base).
+    # P-320 (b): a merge-queue batch re-runs every Works capability's acceptance pack (qa/CAPABILITIES.md at the base).
+    # D3 + D4 (P-416, founder 8 Nov): every milestone's Works rows (was --milestone M2), each on its scoring data, pooled
+    # onto at most 5 machines that each run gate B's 3 job slots (was one machine per pack: 40+ jobs a batch, beyond the
+    # 20 machines GitHub gives at once, so batches waited for machines).
     needs: kind
     if: ${{ needs.kind.outputs.queue == 'true' && needs.kind.outputs.kind == 'code' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: { contents: read }
-    outputs: { caps: "${{ steps.p.outputs.caps }}" }
+    outputs: { groups: "${{ steps.p.outputs.groups }}" }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
@@ -372,20 +433,21 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version-file: .nvmrc }
       - id: p
-        name: the protected set (M2 Works rows with a pack, read at the base)
+        name: the protected set (every Works row with a pack, all milestones, read at the base), in at most 5 groups
         run: |
-          node "$S/tools/works-set.mjs" --list
-          echo "caps=$(node "$S/tools/works-set.mjs" --json)" >> "$GITHUB_OUTPUT"
+          node "$S/tools/works-set.mjs" --list --milestone all
+          g=$(node "$S/tools/works-set.mjs" --list --milestone all --groups 5) || exit 1
+          echo "groups=$g" >> "$GITHUB_OUTPUT"
   regression:
     needs: regression-plan
-    if: ${{ needs.regression-plan.outputs.caps != '[]' }}
+    if: ${{ needs.regression-plan.outputs.groups != '' && needs.regression-plan.outputs.groups != '[]' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     permissions: { contents: read }
     strategy:
-      fail-fast: false   # every protected row reports, one red never hides another
+      fail-fast: false   # every group reports, one red never hides another
       matrix:
-        cap: ${{ fromJSON(needs.regression-plan.outputs.caps) }}
+        group: ${{ fromJSON(needs.regression-plan.outputs.groups) }}
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
@@ -405,12 +467,13 @@ jobs:
         run: bash "$P/tools/cloud-setup.sh"
       - name: Playwright's own Chromium
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: ${{ matrix.cap }} pack, retried once if red (works-set.mjs --run; US$0)
-        run: node "$S/tools/works-set.mjs" --run "${{ matrix.cap }}"
+      - name: Works packs ${{ matrix.group.caps }} (${{ matrix.group.packs }} packs pooled on gate B's 3 slots, a red row retried once; works-set.mjs --pool; US$0)
+        env: { CAPS: "${{ matrix.group.caps }}", GATE_B_JOBS: "3" }
+        run: node "$S/tools/works-set.mjs" --pool "$CAPS"
   ci:
     # The one check Mergify reads. Notes: the two notes checks here, on a GitHub machine. Records and code: only reports
     # the parts' result (the Mac path is gone, D1).
-    needs: [kind, shard, types, regression-plan, regression]
+    needs: [kind, shard, packs, types, regression-plan, regression]
     if: "${{ !cancelled() && (!github.event.pull_request.draft || startsWith(github.event.pull_request.head.ref, 'mergify/')) }}"
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -458,12 +521,18 @@ jobs:
         if: env.MODE != 'same' && (env.KIND != 'notes')
         run: |
           echo "parts: ${{ needs.shard.result }}"; [ "${{ needs.shard.result }}" = success ]
+      - name: the packs this change touches (D2, job "packs"; pull requests of code)
+        if: env.MODE != 'same' && (needs.kind.outputs.queue != 'true' && env.KIND == 'code')
+        run: |
+          echo "packs by diff: ${{ needs.packs.result }} · groups: ${{ needs.kind.outputs.dpacks }}"
+          [ "${{ needs.packs.result }}" = success ] || { [ "${{ needs.packs.result }}" = skipped ] && [ '${{ needs.kind.outputs.dpacks }}' = '[]' ]; }
       - name: the protected regression set's result (merge-queue batches of code, P-320 (b))
         if: env.MODE != 'same' && (needs.kind.outputs.queue == 'true' && env.KIND == 'code')
         run: |
-          echo "plan: ${{ needs.regression-plan.result }} · packs: ${{ needs.regression.result }} · set: ${{ needs.regression-plan.outputs.caps }}"
+          echo "plan: ${{ needs.regression-plan.result }} · packs: ${{ needs.regression.result }} · groups: ${{ needs.regression-plan.outputs.groups }}"
           [ "${{ needs.regression-plan.result }}" = success ] || exit 1
-          [ "${{ needs.regression.result }}" = success ] || { [ "${{ needs.regression.result }}" = skipped ] && [ '${{ needs.regression-plan.outputs.caps }}' = '[]' ]; }
+          # Every protected row held: an empty set, the job skipped, never a jam of every batch (review of #1337, m6).
+          [ "${{ needs.regression.result }}" = success ] || { [ "${{ needs.regression.result }}" = skipped ] && [ '${{ needs.regression-plan.outputs.groups }}' = '[]' ]; }
       # ---- P-371 (3): a green verdict, so a later run on the same head, base, title and body (ready again) reuses it.
       # Only green: a red head is always tested again.
       - name: remember the green verdict (pull requests only, never a batch)
