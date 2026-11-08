@@ -109,6 +109,8 @@ export const CONFIRM_WORDS = {
   waits: "Waits for the officer's \"Confirm section\"",
   staff: "Declared: entered by staff; it fills the forms now and waits for the officer's \"Confirm section\"",
   by_principal: "Answered by the principal for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
+  /** C6.13: the principal is not the client (after Make principal): the client answered for them. */
+  by_client: "Answered by the client for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
   // C6.18 (P-244) with P-411: a background answer staff recorded (by phone or in person) fills the forms at once and
   // waits for the client, never for the officer.
   awaits_client: "Recorded by the case officer: it fills the forms now and waits for the client to re-confirm it before signing",
@@ -117,6 +119,8 @@ export const CONFIRM_WORDS = {
 /** P-411 (1) also says the adult sees and confirms it before signing; that person's own confirmation is not built yet
  *  (B150 review m4), so the words name only what happens today: the officer's Confirm section before filing. */
 export const byPrincipalFor = (name: string) => `Answered by the principal for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
+/** C6.13 (BR-3b, break M1): after Make principal the client is not the principal; the client answered for this adult. */
+export const byClientFor = (name: string) => `Answered by the client for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
 /** Who gave the current answer (P-242, P-411): the mark shown beside it. Every mark fills the forms at once. */
 export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
 

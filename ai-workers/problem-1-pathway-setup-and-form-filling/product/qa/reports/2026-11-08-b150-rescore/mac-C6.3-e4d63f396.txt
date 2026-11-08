@@ -1,0 +1,22 @@
+pack C6.3.test.ts on 234322702 (tree = main e4d63f396), NOLOAD=1, copy qa_r63 :4472, start Sun Nov  8 05:17:01 IST 2026
+NOTICE:  database "xr_studio_qa_r63" does not exist, skipping
+web bundle does not match web/, contracts/, engine/ (missing, unstamped or built from other code; QA-181): rebuilding
+isolated qa_r63 on http://localhost:4472 (xr_studio_qa_r63), stops itself in 50 min
+loaded Sun Nov  8 05:17:05 IST 2026
+C6.3 — Agent view: one fact per person, source and status; an edit updates every form it fills (P-411)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+PASS  setup: Demo › Load the configured checkpoint — 201
+PASS  setup: Visitors › Visitor visa is released on the checkpoint
+PASS  setup: a Visitor visa case with the principal and an adult spouse — {"id":"87de13fa-2538-41e4-92ed-fb6094a63b48","team":{"firm":{"key":"sample-firm","name":"Sample immigration firm","solo":false},"stand_in":{"id":"SI-9","words":"Today: one Sample firm and one Sample solo firm, seeded. Later: the team's AG-01 firm setup and use
+PASS  C6.3-1 pass: the Agent view lists every fact once per person (no fact twice for one person) — 311
+PASS  C6.3-2 pass: the client's answer shows its source (questionnaire, the client) and its status (Declared) — {"id":"ff6ea8b8-138a-418b-b462-c0a77da447ab","value":"DECLAREDFAM","status":"DECLARED","channel":"questionnaire","by":"user-P","at":"2026-11-07T23:48:11.837Z","answered":null,"problems":[],"confirmed":true,"why":"Declared: the client's own answer; it fills the
+PASS  setup: the family name fills more than one of the principal's forms on the checkpoint (IMM 5257 and its Schedule 1 at least) — ["IMM 5257","IMM 5257 SCH1","IMM 5475","IMM 5476"]
+PASS  C6.3-3 pass (P-242): before any edit, every form the family name fills writes the client's answer — {"IMM 5257":"Personal details | written","IMM 5257 SCH1":"written","IMM 5475":"written","IMM 5476":"written | written"}
+PASS  C6.3-4 fail: an edit from an out-of-date view (the answer changed since it was opened) is refused (409) and changes nothing — 409
+PASS  C6.3-5 pass (P-411 (2)): the correction shows its source (Agent view, the case officer) and its status: Declared, entered by staff, to confirm — {"id":"e402db4a-f3d5-47f8-a41c-b3ccb16833da","value":"OFFICERFAM","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-07T23:48:13.632Z","answered":null,"problems":[],"confirmed":false,"why":"Declared: entered by staff; it fills the forms now
+PASS  C6.3-6 pass: one current answer, with the client's answer kept in its history
+PASS  C6.3-7 pass (P-411 (2), QA-303): the edit updates every form the fact fills at once; no box goes empty — {"IMM 5257":"Personal details | written","IMM 5257 SCH1":"written","IMM 5475":"written","IMM 5476":"written | written"}
+PASS  C6.3-8 pass: the copies made before the edit are out of date, and the new copies are current — [{"form":"IMM 5257","copies":[["GENERATED",false],["GENERATED",true]]},{"form":"IMM 5257 SCH1","copies":[["GENERATED",false],["GENERATED",true]]},{"form":"IMM 5475","copies":[["GENERATED",false],["GENERATED",true]]},{"form":"IMM 5476","copies":[["GENERATED",fa
+PASS  C6.3-9 fail (P-411 (2)): the correction stays on the Confirm list: the principal's forms list the family name "not confirmed" before filing
+13/13 passed
+pack exit 0  end Sun Nov  8 05:18:15 IST 2026

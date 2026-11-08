@@ -1,0 +1,11 @@
+pack C9.5.test.ts on b9ee39760, copy qa_r95 :4473, start Sun Nov  8 04:26:09 IST 2026
+NOTICE:  database "xr_studio_qa_r95" does not exist, skipping
+isolated qa_r95 on http://localhost:4473 (xr_studio_qa_r95), stops itself in 50 min
+reset 201
+load 201
+loaded Sun Nov  8 04:27:29 IST 2026
+C9.5 — Adopt a published update on an open case (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+FAIL  setup: the configured checkpoint loads the family case on Visitor visa release 1 while release 2 is out (fails, never skips, when either is missing) — {"load":500,"fam":"","newest":-1}
+0/1 passed
+pack exit 1  end Sun Nov  8 04:28:19 IST 2026
