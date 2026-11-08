@@ -1,20 +1,20 @@
 // C3.16 acceptance (qa/CAPABILITIES.md C3.16; L-SA4; SA-1B-130, SA-1B-134; concept product/screens/C3.16-field-scope/
 // concept.md r4, approved by the tech lead on #1054): "a shared field carries a scope (person · filing · household ·
 // organisation) and list entries keep stable ids; an organisation- or filing-scoped fact resolves once per organisation
-// or filing on a case". Two parts (tech lead Q3 on #1054: Partial until the case part runs on the six):
-//  * six (default): on a fresh copy of the six, through people's steps (P-322): Visitor visa and the LMIA work permit set
-//    up from their forms (fields are drafts), the author's "Asked about" choice and its refusals, Preview's simulated
-//    case asking an employer fact once, unchanged fingerprints, and (after Demo › Reset to the six and Demo › Start With
-//    an LMIA, which load published fields) the published-field refusal.
-//  * case (4th argument "case"): on a copy where tests/runtime/setup_visitor_visa.ts made Visitor visa's release 1. Named
-//    scaffolding (P-33), never counted as Works: the scope of the released "date of the union" field is set in SQL (a
-//    published field refuses it through the product, rule 4), then the release's own steps (submit, sign off, approve)
-//    release it again, and a real case asks the date once. It moves to the six when Visitor visa releases there (B82).
+// or filing on a case". Two parts, both on the six through people's steps (P-322: a library row counts on the six), in one
+// run (the case part used to be scaffolding on a set-up copy; B82 moved it to the six, founder 8 Nov):
+//  * six: on a fresh copy of the six: Visitor visa and the LMIA work permit set up from their forms (fields are drafts),
+//    the author's "Asked about" choice and its refusals, Preview's simulated case asking an employer fact once, unchanged
+//    fingerprints, and (after Demo › Reset to the six and Demo › Start With an LMIA, which load published fields) the
+//    published-field refusal.
+//  * case: after Demo › Reset to the six: Visitor visa's people and questions from its forms (the "date of the union" a
+//    draft field), the author's Household on that draft by the author's own route (a published field refuses it, rule 4),
+//    release 1 through the release's own steps (the checklist, sources, submit, the SME's sign-off, a different person
+//    approves), then a real case asks the date once. No SQL write.
 // Every value is Sample (IMM 5257's "Date" of the current union is the form's own box, read through the partner). US$0.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C3.16.test.ts 4440 xr_studio_accept
-// The case part runs on its own fresh copy, never after the six part on the same copy (gate B reads the run above alone):
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept && tsx studio/acceptance/C3.16.test.ts 4440 xr_studio_accept case
-import { AUTHOR, APPROVER, REVIEWER, pack2, run } from "./lib/pack2.ts";
+// The case part alone (it starts with Demo › Reset to the six itself): add a 4th argument "case".
+import { AUTHOR, APPROVER, REVIEWER, VV_PEOPLE, pack2, run } from "./lib/pack2.ts";
 
 const T = pack2("C3.16");
 const { call, sql, ok, words } = T;
@@ -163,29 +163,50 @@ async function sixPart() {
 }
 
 async function casePart() {
-  const { needVisitorVisa, openCase, agent, answer, confirmAll, sql: msql } = await import("./lib/m3.ts");
-  const vv = needVisitorVisa();
+  // B82 (P-322): the case part runs on the six, after Demo › Reset to the six, with every step a person's: Visitor visa's
+  // people and questions from its forms (fields are drafts), the author's Household on the draft field by the author's own
+  // route, then the release's own steps (submit, the SME's sign-off, a different person approves). No SQL write.
+  const { openCase, agent, answer, confirmAll, sql: msql } = await import("./lib/m3.ts");
+  await T.ready();
+  let r = await call("POST", "/demo/reset-to-six", { confirm: "RESET" }, AUTHOR);
+  ok("setup (P-322, B82): Demo › Reset to the six; the case part starts from the six", r.status < 300, words(r));
+  const vv = T.combo("vv.single");
+  // Each person applying files their own application (Sample, as setup_vv_m3.ts sets it; G5256: "Family members must
+  // complete their own application forms"): a new release needs every role's filing (Forms › Who can be in this application).
+  r = await T.people(vv, VV_PEOPLE.map((p) => ({ ...p, ...(p.applies ? { filingMode: "files_own" } : {}) })));
+  ok("setup (P-322): Visitor visa's people (a principal, a spouse or partner, children, each filing their own) set on its Questionnaires tab", r.status < 300, words(r));
+  await T.needQuestions(vv);
   const UNION_KEY = unionKey();
-  if (!UNION_KEY) { console.log("STOP  setup missing: Visitor visa's release has no date of the union on this copy"); process.exit(2); }
-  // Named scaffolding (P-33): the field is published by release 1, so the product refuses the scope (rule 4, -2 above);
-  // the test sets it in SQL, then releases again through the release's own steps, so the release carries the mark. The
-  // setup places the date once per case and has the officer collect it (review m7 on #1054): the scaffolding also makes it
-  // a client question asked for each person, as the six place it, so the mark is what asks it once.
-  sql(`update section_question set repeats='per_person', collected_from='client_questionnaire' where lineage_key='${UNION_KEY}' and status in ('DRAFT','PUBLISHED')`);
+  ok("setup (P-322): Visitor visa's \"date of the union\" is a draft field asked of each person on the client's questionnaire, after the people's steps (no release yet)",
+    !!UNION_KEY && stored(UNION_KEY) === "CLIENT_LEVEL" && sql(`select status from canonical_field where canonical_field_key='${UNION_KEY}' order by version desc limit 1`) === "DRAFT"
+    && sql(`select string_agg(distinct repeats||'/'||collected_from, ',') from section_question where lineage_key='${UNION_KEY}' and status in ('DRAFT','PUBLISHED')`) === "per_person/client_questionnaire"
+    && sql(`select count(*) from config_release where combination_id='${vv}'`) === "0", UNION_KEY);
+  if (!UNION_KEY) return;
   const draftQs = async () => ((await preview(vv, { principal: 1, spouse_or_partner: 1, child: 1 }))?.questions ?? [] as PQ[]).filter((q: PQ) => q.fact === UNION_KEY).map((q: PQ) => q.about).sort();
   const unmarked = await draftQs();
   ok("C3.16-3 fail (review m7): without the mark, the draft asks the date of each person (answers that can differ)", unmarked.includes("principal") && unmarked.includes("spouse_or_partner") && !unmarked.includes("case"), unmarked);
-  sql(`update canonical_field set scope='HOUSEHOLD' where canonical_field_key='${UNION_KEY}'`);
+  r = await setScope(UNION_KEY, "household", "person");
+  ok("setup (B82): the author sets Household on the draft field by the author's own route (200), stored on the draft", r.status === 200 && r.body?.scope === "household" && stored(UNION_KEY) === "HOUSEHOLD", [r.status, words(r)]);
   const marked = await draftQs();
   ok("C3.16-3 pass: with the Household mark, the same draft asks it once, for the application", marked.length === 1 && marked[0] === "case", marked);
+  // Release 1 through people's steps, as C4.11's pack does on the six: the checklist (author, then a second person), every
+  // published number answered on the Source panel (P-279), submit, the SME's sign-off, a different person approves.
+  const docs = await T.documentsBySteps(vv);
+  await T.sourceGate(vv);
   const before = Number(sql(`select coalesce(max(version),0) from config_release where combination_id='${vv}'`));
-  let r = await call("POST", `/combinations/${vv}/submit`, { note: "C3.16 case part: release again with the household scope (scaffolding, P-33)" }, AUTHOR);
-  const items = ((r.body?.changeSummary ?? []) as { kind: string; key: string }[]).map((c) => `${c.kind}|${c.key}`);
-  if (r.status < 300 && items.length) await call("POST", `/combinations/${vv}/signoff`, { items, action: "signed", note: "C3.16 case part: signed as the SME (test)" }, REVIEWER);
-  const ap = r.status < 300 ? await call("POST", `/combinations/${vv}/approve`, {}, APPROVER) : r;
+  r = await call("POST", `/combinations/${vv}/submit`, { note: "C3.16 case part: release 1 with the household scope (B82)" }, AUTHOR);
+  const refusedBy = r.status >= 300 ? ((r.body?.errors ?? []) as { message?: string }[]).map((e) => String(e.message ?? "").slice(0, 160)) : [];
+  let ap = r;
+  if (r.status < 300) {
+    const sub = (await call("GET", `/combinations/${vv}/review`, undefined, REVIEWER)).body?.submission;
+    await call("POST", `/combinations/${vv}/signoff`, { items: ((sub?.changeSummary ?? sub?.change_summary ?? []) as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`), action: "signed", note: "C3.16 case part: signed as the SME (test)" }, REVIEWER);
+    ap = await call("POST", `/combinations/${vv}/approve`, {}, APPROVER);
+  }
   const rel = Number(sql(`select coalesce(max(version),0) from config_release where combination_id='${vv}'`));
-  ok("setup (scaffolding): Visitor visa released again through submit, sign off and approve", rel === before + 1, [r.status, words(r).slice(0, 200), ap.status, words(ap).slice(0, 200)]);
+  const who = sql(`select submitter_id||' '||approver_id from config_release where combination_id='${vv}' and version=${rel}`);
+  ok("setup (P-322, B82): Visitor visa released through people's steps: submitted by the author, signed by the SME, approved by a different person", rel === before + 1 && who === `${AUTHOR} ${APPROVER}` && docs.refused.length === 0, [r.status, refusedBy.length ? refusedBy : words(r).slice(0, 200), ap.status, words(ap).slice(0, 200), who, docs.refused]);
   ok("C3.16-3 data: the new release marks the union date's placement Household", Number(sql(`select count(*) from config_release where combination_id='${vv}' and version=${rel} and snapshot->'placements' @> '[{"fact":"${UNION_KEY}","scope":"household"}]'`)) === 1);
+  if (rel !== before + 1) return;
 
   const c = await openCase(vv, [{ role: "principal", name: "Client A", dob: "1986-04-13" }, { role: "spouse_or_partner", name: "Client B", dob: "1987-05-20" }, { role: "child", name: "Child C", dob: "2016-03-01" }]);
   let v = await agent(c.id);
@@ -215,11 +236,16 @@ async function casePart() {
   const caseQ = (v?.sections ?? []).flatMap((s: { questions: { subjectId: string; fact: string }[] }) => s.questions).filter((q: { fact: string }) => q.fact.startsWith("case."));
   ok("C3.16-4 pass: case. facts are asked once, for the application", caseQ.length > 0 && caseQ.every((q: { subjectId: string }) => q.subjectId === c.caseSubject), caseQ.length);
   const personQ = (v?.sections ?? []).flatMap((s: { questions: { subjectId: string; fact: string }[] }) => s.questions).filter((q: { fact: string }) => q.fact === "person.date_of_birth");
-  ok("C3.16-4 fail: a Person fact is still asked of each person", personQ.length === 3, personQ.length);
+  // On the six, IMM 5707 also asks each adult's parents' dates of birth (their own records, subject/parent_n), so the step
+  // counts the case's three people by their records: one question each, none on the case's own record.
+  const three = [c.subjects["Client A"], c.subjects["Client B"], c.subjects["Child C"]];
+  const own = personQ.filter((q: { subjectId: string }) => three.includes(q.subjectId));
+  ok("C3.16-4 fail: a Person fact is still asked of each person (once on each of the three people's own records, never on the case's)", own.length === 3 && new Set(own.map((q: { subjectId: string }) => q.subjectId)).size === 3 && !personQ.some((q: { subjectId: string }) => q.subjectId === c.caseSubject), personQ.map((q: { subjectId: string }) => q.subjectId));
 
   // ------------------------------------------------------------------ C3.16-6: list entries keep their ids (SA-1B-134)
   // RT-9 (tests/runtime/check_runtime_r1a.ts) proves stable rows and tombstones; this adds "a correction keeps the id".
-  const principal = c.subjects["Client A"], GROUP = "employment_history", JOB = "person.employment_employer_name";
+  // The six's employment history: section "employment", the employer's name person.occupation_employer, asked per row.
+  const principal = c.subjects["Client A"], GROUP = "employment", JOB = "person.occupation_employer";
   const add = await call("POST", `/runtime/cases/${c.id}/groups/${principal}/rows`, { group: GROUP }, "user-P");
   const row = add.body?.row as string | undefined;
   const f1 = row ? await call("PUT", `/runtime/cases/${c.id}/answers/${principal}/${JOB}`, { value: "Sample Employer 1", row, expectedId: null }, "user-P") : add;
@@ -229,6 +255,7 @@ async function casePart() {
 }
 
 run(async () => {
-  if (CASE_PART) await casePart(); else await sixPart();
+  if (!CASE_PART) await sixPart();
+  await casePart();
   T.done();
 });

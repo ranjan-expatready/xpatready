@@ -3,7 +3,9 @@
 // date and stale after a change); new here on the case's items: the item's state, the words (fact, old and new value,
 // date), the block on "Ready to file", Undo, the scope (only items that use the fact, the spouse's facts on the
 // principal's IMM 5707), and the representative change on a signed IMM 5476 (BR-20).
-// Breadth, after Visitor visa: an employer-case change reaching the worker's items (C1.3).
+// Breadth (BR-3, "Copies, not live links", #1051; QA-306, founder 8 Nov): a change to a copied employer fact on the worker's
+// case marks the worker's items that read it out of date, and never changes them (C1.3). Steps C9.2-12 to -18, on the
+// configured checkpoint's With an LMIA – inside Canada release (qa's probe, 11/11, #1322).
 //   tsx studio/acceptance/C9.2.test.ts 4440 xr_studio_accept
 import { createHash } from "node:crypto";
 import { OFFICER, call, confirmAll, copyBytes, firms, fillEverything, filingOf, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, validateRoundTrip, yearsAgo, answer, signByHand, expectedFor } from "./lib/m3.ts";
@@ -90,4 +92,49 @@ await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)
   p = (await prepare(c.id, officer)).p;
   ok(`C9.2-10 pass: a new representative of record marks the signed ${HS} out of date and asks for a new one`, !!HS && itemsOf(p, P, HS).some((i) => i.state === "out_of_date") && itemsOf(p, P, HS).some((i) => i.state === "to_do"), itemsOf(p, P, HS).map((i) => i.state));
   ok("C9.2-11 pass (data): an answer is never changed in place: the old value stays on record", Number(sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name'`) ?? 0) >= 3);
+
+  // ------------------------------------------------------------------ Breadth (BR-3, QA-306): a copied employer fact
+  // On the configured checkpoint's With an LMIA – inside Canada release: a worker's case linked to the Sample employer case
+  // (C1.3) copies the employer facts in. Once the worker's form that prints the employer name is validated and read back,
+  // the officer corrects the copied name on the worker's case. The forms are the case's own (the questionnaire's "fills"
+  // for the fact and the case's items, row C4), never a form number written here.
+  const NAME = "organisation.employer_name", NEW_NAME = "Sample Employer Limited (Sample)";
+  const wp = sql("select c.id from combination c where c.combination_key='wp.lmia_inside' and exists (select 1 from config_release r where r.combination_id=c.id)");
+  ok("C9.2-12 setup: With an LMIA – inside Canada is released (the configured checkpoint)", !!wp, wp);
+  if (!wp) return;
+  const w = await openCase(wp, [{ role: "principal", name: "Sample Worker W", dob: yearsAgo(35) }]);
+  const W = w.subjects["Sample Worker W"], wOfficer = w.officer || officer;
+  const ec = (await call("GET", `/runtime/cases/${w.id}/employer-cases`, undefined, wOfficer)).body?.employer_cases?.[0];
+  const seen = Object.fromEntries(((ec?.facts ?? []) as { fact: string; current: { answer_id: string } | null }[]).map((x) => [x.fact, x.current?.answer_id ?? null]));
+  const link = await call("POST", `/runtime/cases/${w.id}/employer-link`, { employerCase: ec?.key, seen }, wOfficer);
+  await fillEverything(w.id);
+  const nameQ = async () => ((await call("GET", `/runtime/cases/${w.id}/questionnaire?mode=agent`, undefined, wOfficer)).body?.sections ?? [])
+    .flatMap((x: { questions: unknown[] }) => x.questions).find((q: { fact: string; subjectId: string }) => q.fact === NAME && q.subjectId === W) as { fills?: { form: string }[]; answer?: { id: string; value: unknown; channel?: string; answered?: { channel?: string } | null } } | undefined;
+  const q0 = await nameQ(), copied = q0?.answer?.value;
+  const readers = [...new Set((q0?.fills ?? []).map((x) => x.form))];
+  let wp0 = (await prepare(w.id, wOfficer)).p;
+  const others = itemsOf(wp0, W).filter((i) => i.kind === "form" && !readers.includes(i.form ?? "")).map((i) => ({ form: i.form, state: i.state }));
+  const EF = readers.find((f) => itemsOf(wp0, W, f).length > 0) ?? "";
+  ok(`C9.2-12 setup (C1.3): the worker's case relies on the Sample employer case; the employer name is copied in and printed by ${EF || "a form"}; other forms (${others.map((o) => o.form).join(", ")}) do not print it`,
+    [200, 201].includes(link.status) && (link.body?.copied ?? []).includes(NAME) && (q0?.answer?.channel === "linked_file" || q0?.answer?.answered?.channel === "linked_file") && !!EF && others.length > 0, { link: link.status, copied: link.body?.copied, value: copied, readers, others });
+  const ecopy = EF ? await validateRoundTrip(w.id, EF, W) : null;
+  const ebefore = ecopy ? sql(`select sha256 from validated_copy where form_instance_id='${ecopy}' order by read_at desc limit 1`) : null;
+  ok(`C9.2-13 setup: the worker's ${EF} is validated and read back`, !!ecopy && !!ebefore, ecopy);
+  wp0 = (await prepare(w.id, wOfficer)).p;
+  const othersBefore = itemsOf(wp0, W).filter((i) => i.kind === "form" && !readers.includes(i.form ?? "")).map((i) => ({ form: i.form, state: i.state }));
+  const fix = await answer(w.id, W, NAME, NEW_NAME, wOfficer); await confirmAll(w.id, W);
+  let wq = (await prepare(w.id, wOfficer)).p;
+  const eit = itemsOf(wq, W, EF)[0];
+  ok(`C9.2-14 pass (BR-3): the officer corrects the copied employer name on the worker's case; the validated ${EF} is Out of date, naming the fact, the old and new value and the date`,
+    fix.status < 300 && eit?.state === "out_of_date" && /employer/i.test(eit?.reason ?? "") && (eit?.reason ?? "").includes(String(copied)) && (eit?.reason ?? "").includes(NEW_NAME) && /\d{1,2} \w{3} \d{4}|\d{4}-\d{2}-\d{2}/.test(eit?.reason ?? ""), { fix: fix.status, state: eit?.state, reason: eit?.reason });
+  const eafter = ecopy ? sql(`select sha256 from validated_copy where form_instance_id='${ecopy}' order by read_at desc limit 1`) : null;
+  ok(`C9.2-15 pass (BR-3: never changes them): ${EF}'s validated copy keeps its checksum (one append-only row)`, !!ebefore && eafter === ebefore && sql(`select count(*) from validated_copy where form_instance_id='${ecopy}'`) === "1", { before: ebefore?.slice(0, 12), now: eafter?.slice(0, 12) });
+  const wr = readinessOf(wq, filingOf(wq, W)?.id) as { ready?: boolean; blocks?: { code: string; words: string }[]; warns?: { code: string; words: string; severity?: string }[] } | null;
+  ok(`C9.2-16 fail (P-136, P-237): the out-of-date ${EF} is a CRITICAL warning that holds Ready to file`, wr?.ready === false && [...(wr?.blocks ?? []), ...(wr?.warns ?? []).filter((x) => x.severity === "critical")].some((b) => b.code === "out_of_date" && b.words.includes(EF)), (wr?.warns ?? []).filter((x) => x.code === "out_of_date").map((x) => `${x.severity}: ${x.words}`));
+  const othersAfter = itemsOf(wq, W).filter((i) => i.kind === "form" && !readers.includes(i.form ?? "")).map((i) => ({ form: i.form, state: i.state }));
+  ok(`C9.2-17 pass (scope): the worker's ${othersBefore.map((o) => o.form).join(" and ")}, which do not print the employer name, are untouched`, othersBefore.length > 0 && JSON.stringify(othersAfter) === JSON.stringify(othersBefore) && !othersAfter.some((i) => i.state === "out_of_date"), { before: othersBefore, after: othersAfter });
+  const wu = await call("POST", `/runtime/cases/${w.id}/changes/undo`, { subjectId: W, fact: NAME }, wOfficer);
+  wq = (await prepare(w.id, wOfficer)).p;
+  const back = (await nameQ())?.answer?.value;
+  ok(`C9.2-18 pass: Undo restores the copied employer name; ${EF} is no longer out of date`, wu.status === 200 && JSON.stringify(back) === JSON.stringify(copied) && itemsOf(wq, W, EF)[0]?.state !== "out_of_date", { undo: wu.status, back, state: itemsOf(wq, W, EF)[0]?.state });
 });
