@@ -8,7 +8,7 @@
 // off, no model call (US$0).
 //   zsh studio/tools/isolated.sh rt_q246 4446 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
 //   tsx studio/tests/runtime/check_qa246_forms_waiting.ts 4446 xr_studio_rt_q246
-import { FAMILY, answer, call, expectedFor, main, needVisitorVisa, ok, openCase, sql } from "../../acceptance/lib/m3.ts";
+import { FAMILY, answer, call, expectedFor, generateCopy, main, needVisitorVisa, ok, openCase, sql } from "../../acceptance/lib/m3.ts";
 
 type Listed = { form: string; subject_id: string; person: string; applies: boolean };
 const REP = "case.uses_representative";
@@ -46,4 +46,16 @@ await main("QA-246", "GET …/forms lists a form once its rule says it applies, 
   const no = caseRule ? await answer(c.id, c.caseSubject, caseRule.cond!.field!, !caseRule.cond!.value, c.officer) : { status: 0 };
   all = await listed();
   ok(`QA-246 fail: a case rule answered so ${caseRule?.form ?? "its form"} does not apply keeps it off the list for everyone`, !!caseRule && no.status === 200 && names.every((n) => !formsOf(all, n).includes(caseRule.form)), { form: caseRule?.form, put: no.status });
+  // Review B1, m5: a waiting form that already has a copy stays in view (break M4), and a person marked not travelling
+  // with copies still answers 200 with their copies listed (no new copy is offered: applies false).
+  const K = names.find((n) => /Child/.test(n))!, kForm = waiting(K)[0];
+  const kCopy = kForm ? await generateCopy(c.id, kForm, c.subjects[K]) : null;
+  all = await listed();
+  ok(`QA-246 pass (review m5): a form still waiting for ${K}'s answer that already has a copy stays in view for ${K} (${kForm ?? "none read"}; break M4)`, !!kCopy && formsOf(all, K).includes(kForm), formsOf(all, K));
+  const S = names.find((n) => /Spouse/.test(n))!, sForm = want(S)[0];
+  const sCopy = sForm ? await generateCopy(c.id, sForm, c.subjects[S]) : null;
+  const gone = await call("PATCH", `/runtime/cases/${c.id}/people/${c.subjects[S]}`, { applies: false }, c.officer);
+  const r = await call("GET", `/runtime/cases/${c.id}/forms`, undefined, c.officer), sRows = ((r.body?.forms ?? []) as Listed[]).filter((f) => f.subject_id === c.subjects[S]);
+  ok(`QA-246 fail (review B1): ${S} marked not travelling with a copy of ${sForm ?? "a form"}: GET …/forms still answers 200, listing that form with its copy as no longer applying`, !!sCopy && gone.status < 300 && r.status === 200 && sRows.some((f) => f.form === sForm && f.applies === false), { status: r.status, rows: sRows.map((f) => [f.form, f.applies]) });
+  await call("PATCH", `/runtime/cases/${c.id}/people/${c.subjects[S]}`, { applies: true }, c.officer);
 });
