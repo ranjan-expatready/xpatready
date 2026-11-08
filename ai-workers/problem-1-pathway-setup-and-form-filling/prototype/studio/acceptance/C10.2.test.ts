@@ -20,6 +20,9 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   ok("C10.2-2 pass: loading the finished story is a job (202)", r.status === 202, r.status);
   const done = r.status === 202 && await until(async () => (await call("GET", "/demo/status", undefined, AUTHOR)).body?.checkpoint === "finished_story", 600_000);
   ok("C10.2-3 pass: the demo status says Finished story", done);
+  const stagesOf = async () => ((await call("GET", "/demo/status", undefined, AUTHOR)).body?.story?.stages ?? []).map((x: { key: string; status: string }) => `${x.key}:${x.status}`).join(" ");
+  const firstStages = await stagesOf();
+  console.log(`NOTE  the story's stages: ${firstStages}`);
   // Found in the data (GET /runtime/cases returns the combination's label, not its key, and no people).
   const vvCases = (sql(`select k.id || ':' || (select count(*) from case_participant p where p.case_id=k.id and p.role <> 'case') from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single' order by k.created_at`) ?? "").split("\n").filter(Boolean).map((x) => ({ id: x.split(":")[0], people: Number(x.split(":")[1]) }));
   const fam = vvCases.find((x) => x.people === 4);
@@ -50,9 +53,13 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   // #C10.2 phase 1: the checkpoint's saved AI answers are replayed as ai_batch rows of mode REPLAY (DEMO.md), so the line
   // counts the batches that are not replays, as C10.1 does.
   ok("C10.2-9 pass: no model call (US$0); every AI result in the story is a replay", done && sql("select count(*) from ai_batch where mode <> 'REPLAY'") === "0" && sql("select count(*) from drafting_job where mode = 'LIVE'") === "0");
-  r = await call("POST", "/demo/checkpoints/finished-story", {}, AUTHOR);
+  // #C10.2 phase 1: the demo has content now, so the load empties it first only with RESET typed (as Reset does).
+  r = await call("POST", "/demo/checkpoints/finished-story", { confirm: "RESET" }, AUTHOR);
+  ok("C10.2-10a pass: loading again is a job too (202, the demo emptied first)", r.status === 202, r.status);
+  if (r.status === 202) await until(async () => (await call("GET", "/demo/status", undefined, AUTHOR)).body?.story?.state !== "running", 600_000);
   if (r.status === 202) await until(async () => (await call("GET", "/demo/status", undefined, AUTHOR)).body?.checkpoint === "finished_story", 600_000);
-  ok("C10.2-10 pass: loading again keeps one story (still the two Visitor visa cases)", sql(`select count(*) from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single'`) === "2");
+  const againStages = await stagesOf();
+  ok("C10.2-10 pass: loading again keeps one story (still the two Visitor visa cases, the same stages)", sql(`select count(*) from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single'`) === "2" && againStages === firstStages, againStages);
   r = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
   ok("C10.2-11 pass: Reset removes the story (no cases left)", done && r.status < 300 && sql("select count(*) from runtime_case") === "0", r.status);
 });

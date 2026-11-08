@@ -71,7 +71,7 @@ export const HELD = {
   validate: "Validate is a person's step in Adobe Reader (P-46, P-171): never simulated, so a barcode PDF waits for a person",
 } as const;
 
-type Q = { subjectId: string; fact: string; group: string | null; value_type: string; collected_from: string; required: boolean; hidden: boolean; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean } | null }[] };
+type Q = { subjectId: string; fact: string; label?: string; group: string | null; value_type: string; collected_from: string; required: boolean; hidden: boolean; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean } | null }[] };
 type Section = { subjectId: string; section: string; questions: Q[]; group: { required: boolean; rows: number; none_apply: { id: string } | null } | null };
 type Person = { subject: string; label: string; role: string; age: number | null; applies: boolean };
 
@@ -101,12 +101,12 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
   // C6.1–C6.3, C6.18: each fact the new release asks is answered by its person: the client for themselves and the minor
   // (P-78), the case officer on another adult's behalf with a reason, then the client re-confirms; the officer confirms
   // each section.
-  const byKind: string[] = [];
+  const byKind: string[] = [], byKindLabels = new Set<string>();
   await stage("facts", "Facts answered and confirmed by the right people (C6.1–C6.3, C6.18)", async () => {
     const people = new Map<string, Person>((await prepare()).people.map((p) => [p.subject, p]));
     const valueOf = (q: Q): unknown => {
       if (q.fact in s.answers.facts) return s.answers.facts[q.fact];
-      byKind.push(q.fact);
+      byKind.push(q.fact); byKindLabels.add(q.label ?? q.fact);
       const k = s.by_kind;
       return q.options?.length ? q.options[0].key : q.shape.phone ? k.phone : q.value_type === "yes_no" ? k.yes_no : /expiry/.test(q.fact) ? k.expiry
         : q.value_type === "date" ? (q.shape.datePrecision === "month" ? k.month : k.date) : q.value_type === "number" ? k.number : q.value_type === "address" ? k.address : /email/.test(q.fact) ? k.email : k.text;
@@ -146,7 +146,9 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       }
     }
     const left = (await get<FormsView>(`/runtime/cases/${caseId}/forms`)).forms.filter((f) => f.applies && !f.readiness.ready);
-    const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${byClient} by the client, ${onBehalf} by the case officer on an adult's behalf with a reason, ${answered - byClient - onBehalf} by the case officer), ${reconfirmed} re-confirmed by the client, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${byKind.length ? `; Sample values by kind of answer for ${[...new Set(byKind)].join(", ")}` : ""}`;
+    const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer on an adult's behalf with a reason`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
+    const kinds = [...byKindLabels];
+    const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmed} re-confirmed by the client, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
     if (left.length) throw new Stop(`Still not ready after ${said}: ${left.slice(0, 3).map((f) => `${f.form} for ${f.person} (${f.readiness.missing.slice(0, 2).map((m) => m.label).join(", ")})`).join("; ")}`);
     const followUps = byKind.some((f) => /national_id_|us_green_card_/.test(f));
     return { status: "done", shows: `Every form of release 2 reads ready for every person: ${said}.${followUps ? ` ${HELD.followUps}.` : ""}`, why: null };
@@ -217,7 +219,9 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       must(await r.call(officer, "POST", `/runtime/filings/${f.id}/ready`, {}), `Ready to file: ${f.label}`);
     }
     const filings = (await prepare()).filings, ready = filings.filter((f) => f.status === "ready_to_file").length;
-    return { status: ready === filings.length ? "done" : "partial", shows: `${ready} of ${filings.length} filings Ready to file: each reviewed by the representative of record, its open warnings (documents not collected) passed by the case officer with a reason`, why: null };
+    // C7.5: the rules checks' findings warn and never stop Ready to file; any still open is said, never hidden.
+    const open = (await get<{ findings: { state: string; quote: string }[] }>(`/runtime/cases/${caseId}/findings`)).findings.filter((x) => x.state === "open");
+    return { status: ready === filings.length ? "done" : "partial", shows: `${ready} of ${filings.length} filings Ready to file: each reviewed by the representative of record, its open warnings (documents not collected) passed by the case officer with a reason; ${open.length ? `${open.length} open Review finding${open.length === 1 ? "" : "s"}` : "no open Review finding"}`, why: open.length ? open.slice(0, 2).map((x) => x.quote).join(" ") : null };
   });
 
   // C8.2 (BR-11): one "Record the submission" records the whole submission group: the family's filings go together.
