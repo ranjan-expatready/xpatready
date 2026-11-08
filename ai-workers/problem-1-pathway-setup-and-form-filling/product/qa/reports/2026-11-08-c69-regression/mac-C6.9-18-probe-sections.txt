@@ -1,0 +1,71 @@
+C6.9 + probe on 1fc089151 (product code = main f18fb0e66), copy qa_c69 :4470, start Sun Nov  8 14:15:11 IST 2026
+NOTICE:  database "xr_studio_qa_c69" does not exist, skipping
+web bundle does not match web/, contracts/, engine/ (missing, unstamped or built from other code; QA-181): rebuilding
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c69 on http://localhost:4470 (xr_studio_qa_c69), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 14:16:31 IST 2026
+C6.9 — Case check from confirmed facts (Visitor visa gates, stand-in SI-1)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.9-1 fail: a client cannot run or read an assessment (403); the client never sees a verdict
+PASS  C6.9-2 pass: a run returns AG-03's shape: pack id and version (our release pin), rules as at, disclaimer, who and when, source stand-in — {"id":"7bb80049-4049-4d7b-aaf1-9f2f7e4ce8db","caseId":"8d3cf192-1ec1-4136-954b-436aac3dddca","releaseId":"1cac14b3-1fbf-494f-982d-b0635f938773","packId":"f222ebee-d36f-4351-9cc6-7804a047ba4a","packVersion":2,"rulesAsOfByProgram":{"vv.single":"2026-11-08"},"dis
+PASS  C6.9-3 pass: with passport and convictions unanswered: Can't tell yet, needs those facts (missing inputs named) — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"POSSIBLY_ELIGIBLE","failedGates":[],"missingInputs":["person.passport_number","person.passport_expiry_date","person.criminal_history"],"reviewGates":[],"score":null,"maxScore":null,"passMark":n
+PASS  C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads — [{"key":"vv.travel_document","label":"Passport number and expiry date answered (Sample)","state":"not_answered","facts":["person.passport_number","person.passport_expiry_date"],"values":{"person.passport_number":null,"person.passport_expiry_date":null},"missin
+PASS  C6.9-5 pass: the officer's judgement items (money for the stay, good health, ties, leaving at the end) are listed, never gates (FQ-5) — ["Has enough money for the stay","Is in good health","Ties that will take the person back home","Will leave Canada at the end of the visit"]
+PASS  C6.9-6 pass (SI-1 adapter): never below the cut-off, no score, no breakdown, no recommendations
+PASS  C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Can't tell yet, never Does not qualify (P-230 (1)) — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"POSSIBLY_ELIGIBLE","failedGates":[],"missingInputs":[],"reviewGates":["vv.no_convictions"],"score":null,"maxScore":null,"passMark":null,"selectionModel":null,"competitivenessBand":null,"gapToPa
+PASS  C6.9-8 pass: every gate met gives Qualifies — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"LIKELY_ELIGIBLE","failedGates":[],"missingInputs":[],"reviewGates":[],"score":null,"maxScore":null,"passMark":null,"selectionModel":null,"competitivenessBand":null,"gapToPass":null,"breakdown":
+PASS  C6.9-8b pass (B148, P-236): the run's history line names the case check and says Qualifies (not "likely eligible") — "Case officer ran the case check on case 8d3cf192 for person 6f472588 (run again): Qualifies"
+PASS  C6.9-9 pass (AG-3-1): an earlier run is a frozen snapshot; it is unchanged and marked out of date after the facts changed
+PASS  C6.9-10 fail (AG-3-28): running again after a change without a reason is refused (400) — 400
+PASS  C6.9-11 fail: an override without a reason is refused on the field (400) — 400
+PASS  C6.9-12 pass: an override with a reason is kept beside the result (AssessmentOverride), the result itself unchanged
+PASS  C6.9-13 pass: Mark reviewed records reviewer, time and note — {"reviewedBy":"user-O","reviewedAt":"2026-11-08T08:46:33.346Z","reviewNote":"Seen (Sample)","name":"Case officer (Sample)","duty":"Case officer","licence":null,"stamp":"Seen","outOfDate":true}
+PASS  C6.9-14 pass: the page is rules only: no model call in any run
+PASS  C6.9-15 pass: the list says which stand-in fills it (SI-1, a row in STAND-INS.md)
+PASS  C6.9-16 pass (B124, none confirmed): Qualifies rests on all three deciding answers, each named — {"outcome":"LIKELY_ELIGIBLE","resting":["person.passport_number","person.passport_expiry_date","person.criminal_history"]}
+PASS  C6.9-17 pass (B124, some confirmed): after Confirm section, only the deciding answers still unconfirmed are named, and the outcome is unchanged — {"confirm":201,"resting":["person.criminal_history"],"section":["person.family_name","person.given_names","person.marital_status","person.other_family_name","person.other_given_names","person.has_used_other_name","person.citizenship","person.applying_from_coun
+FAIL  C6.9-18 pass (B124, all confirmed): nothing rests on an unconfirmed answer, so the line goes — ["person.criminal_history"]
+PASS  C6.9-19 pass (B124): Does not qualify names only its failed gates' unconfirmed answers; a review gate and a met gate do not decide it
+PASS  C6.9-19 fail (B124): Can't tell yet rests on nothing here, even with unconfirmed answers
+
+20/21 passed
+pack exit 1
+C6.9-18 probe — which section keeps criminal_history unconfirmed
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+ANSWER person.passport_number 200 {"answer":{"id":"78408603-83a3-4925-af3f-d6287a7bf4a4","value":"SAMPLEP24","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-08T08:46:34.384Z","answered":null,"problems":[],"confirmed":false,"why":"Declared: entered by staff; it fills the forms now and waits for the officer's \"
+ANSWER person.passport_expiry_date 200 {"answer":{"id":"5636754c-8364-437f-96ce-60e515b3c316","value":"2029-11-07","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-08T08:46:34.455Z","answered":null,"problems":[],"confirmed":false,"why":"Declared: entered by staff; it fills the forms now and waits for the officer's \
+ANSWER person.criminal_history 200 {"answer":{"id":"e51081fa-6bd6-4718-b4e2-525fb35672a3","value":false,"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-08T08:46:34.529Z","answered":null,"problems":[],"confirmed":false,"why":"Recorded by the case officer: it fills the forms now and waits for the client to re-con
+SKIP (nothing seen) national_identity_document
+SKIP (nothing seen) signature
+SKIP (nothing seen) government_positions
+SKIP (nothing seen) membership_or_association_with_organizations
+SKIP (nothing seen) employment
+SKIP (nothing seen) education
+SKIP (nothing seen) statutory_declaration_of_common_law_union
+SKIP (nothing seen) military_service
+SKIP (nothing seen) previous_travel
+SKIP (nothing seen) contact_information
+SKIP (nothing seen) applicant
+SKIP (nothing seen) other_documentary_evidence
+SKIP (nothing seen) us_pr_card
+CH-SECTION-BEFORE {"section":"background_information","title":"Background information","nq":12,"seen":1,"ch":{"subjectId":"5bf873ee-a268-4bea-8d1a-af47bd405210","about_label":"Sample Client B124","fact":"person.criminal_history","label":"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence","meaning":"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence","value_type":"yes_no","shape":{"maxLength":500,"datePrecision":"day","phone":false,"money":false,"choices":null},"section":"background_information","section_title":"Background information","collected_from":"client_questionnaire","required":true,"hidden":false,"why":"read by IMM 5257 (1 form field)","group":null,"capacity":null,"answer":{"id":"e51081fa-6bd6-4718-b4e2-525fb35672a3","value":false,"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-08T08:46:34.529Z","answered":null,"problems":[],"confirmed":false,"why":"Recorded by the case officer: it fills the forms now and waits for the client to re-confirm it before signing","fills":true,"mark":"by_staff","officer":{"by":"user-O","at":"2026-11-08T08:46:34.529Z"},"awaits_client":true},"rows":[],"options":null,"note":null,"fills":[{"form":"IMM 5257","person":"Sample Client B124","subject":"5bf873ee-a268-4bea-8d1a-af47bd405210","boxes":1}],"background":true,"countries":null}}
+CONFIRM {"section":"background_information","title":"Background information","seen":1,"status":201,"body":{"confirmed":0,"section":"background_information","missing":["Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).","Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada","Free-text details of overstay, refusal, removal or previous Canadian applications","Whether the person previously applied to enter or remain in Canada","Whether the person ever remained beyond status, or studied or worked without authorization, in Canada","Whether the person was ever refused a
+CONFIRM {"section":"personal_details","title":"Personal details","seen":3,"status":201,"body":{"confirmed":3,"section":"personal_details","missing":["Family name (surname) as shown on the person's passport or travel document","Given name(s) as shown on the person's passport or travel document","Current marital status","Family name the person has otherwise used (nickname, maiden name, alias)","Given name(s) the person has otherwise used (nickname, alias)","Whether the person has ever used another name (nickname, maiden name, alias)","Country of citizenship","Country or territory from which the person is submitting the application","Start date of the status in the applying-from country","Description of the status in the applying-from country when it is 'other'","Immigration status in the country fro
+SKIP (nothing seen) your_parent_1_mother_or_father
+SKIP (nothing seen) request_for_a_change_of_sex_or_gender_identifier
+CH-SECTION-AFTER {"section":"background_information","ch":{"subjectId":"5bf873ee-a268-4bea-8d1a-af47bd405210","about_label":"Sample Client B124","fact":"person.criminal_history","label":"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence","meaning":"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence","value_type":"yes_no","shape":{"maxLength":500,"datePrecision":"day","phone":false,"money":false,"choices":null},"section":"background_information","section_title":"Background information","collected_from":"client_questionnaire","required":true,"hidden":false,"why":"read by IMM 5257 (1 form field)","group":null,"capacity":null,"answer":{"id":"e51081fa-6bd6-4718-b4e2-525fb35672a3","value":false,"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-08T08:46:34.529Z","answered":null,"problems":[],"confirmed":false,"why":"Recorded by the case officer: it fills the forms now and waits for the client to re-confirm it before signing","fills":true,"mark":"by_staff","officer":{"by":"user-O","at":"2026-11-08T08:46:34.529Z"},"awaits_client":true},"rows":[],"options":null,"note":null,"fills":[{"form":"IMM 5257","person":"Sample Client B124","subject":"5bf873ee-a268-4bea-8d1a-af47bd405210","boxes":1}],"background":true,"countries":null}}
+ASSESS {"stand_in":"SI-1","stand_in_words":"Today: our own checks on this application's rules, three outcomes and no score. Later: the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice.","has_rules":true,"assessments":[]}
+PASS  probe ran
+
+1/1 passed
+probe exit 0  end Sun Nov  8 14:16:34 IST 2026
+stopped qa_c69 (database and files removed; log in var/isolated-logs/qa_c69-api.log)
