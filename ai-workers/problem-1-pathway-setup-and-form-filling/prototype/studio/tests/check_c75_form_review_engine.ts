@@ -138,7 +138,7 @@ ok("C7.5 choice fail: a code no list names gives nothing (the value is shown as 
 // ── review M2 (b): every money guard before a live run, each with a passing and a failing case (US$0, no live call) ──
 const ok5 = { live: true, forms: 1, planMatches: true, worstUsd: 4.8, remainingUsd: 60 };
 ok("C7.5 live guards pass: switch on, one form, the run card's checksum, US$4.80 under the US$5 job cap and the budget → may start", liveRefusal(ok5) === null);
-ok("C7.5 live guard fail: the switch off (no founder's Go) → refused first, in words", liveRefusal({ ...ok5, live: false })?.title === "Live is off" && /founder's Go/.test(liveRefusal({ ...ok5, live: false })!.detail));
+ok("C7.5 live guard fail: the switch off (no founder's Go) → refused first, in words", liveRefusal({ ...ok5, live: false })?.title === "Live is off" && /needs approval first, with its cost stated/.test(liveRefusal({ ...ok5, live: false })!.detail));
 ok("C7.5 live guard fail: two forms in one live run → refused (over the job cap together)", liveRefusal({ ...ok5, forms: 2 })?.title === "One form at a time");
 ok("C7.5 live guard fail: not the run card the person read (its cost) → refused", liveRefusal({ ...ok5, planMatches: false })?.title === "Look at the run card again");
 ok("C7.5 live guard fail: a worst case over the US$5 job cap → refused; exactly US$5 may start", liveRefusal({ ...ok5, worstUsd: 5.01 })?.title === "Over the job cap" && liveRefusal({ ...ok5, worstUsd: 5 }) === null);

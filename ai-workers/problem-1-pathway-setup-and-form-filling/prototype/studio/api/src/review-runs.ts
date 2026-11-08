@@ -53,7 +53,7 @@ export const FORM_REVIEW: AiStep = {
   budget_usd: 2.4,
   shapeOk: reviewShapeOk,
   words: {
-    noSaved: "No saved review of this form edition with these values yet: it is recorded once, in a Live run the tech lead approves.",
+    noSaved: "No saved review of this form edition with these values yet.",
     badSaved: "The saved review could not be read, so it is not used.",
     nothingUsed: "Nothing of it is added to the findings.",
   },
@@ -66,7 +66,7 @@ const USUAL_OUTPUT_TOKENS = 4_000;
 const BYTES_PER_TOKEN = 3.4;
 export const STAND_IN = "SI-6";
 export const STAND_IN_WORDS = "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.";
-export const LIVE_WAITING = "Live is off on this copy: a live review is not allowed without the founder's Go, approved by the tech lead with its cost stated first. Use Saved (US$0).";
+export const LIVE_WAITING = "Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0).";
 export const MADE_UP_WORDS = "Made-up test runs: this isolated test copy reads saved reviews from its own folder of runs a test wrote. Never a real answer; never counted.";
 const SHEETS = join(PROTOTYPE, "p2", "review-sheets");
 
@@ -95,7 +95,7 @@ export type { PlannedForm, ReviewRunPlan, RunForm, ReviewRunResult } from "./rev
 import type { PlannedForm, ReviewRunPlan, RunForm, ReviewRunResult } from "./review-run-shapes.ts";
 
 const STEPS = [
-  { n: 1, label: "Read what each box of the form would print (rules, US$0)", uses_ai: false },
+  { n: 1, label: "Read what each form field would print (rules, US$0)", uses_ai: false },
   { n: 2, label: "AI reads the filled form and lists what disagrees, each with its quote", uses_ai: true },
   { n: 3, label: "A second AI round reads it without seeing the first answer", uses_ai: true },
   { n: 4, label: "Rules keep findings that quote the form; High when both rounds agree, Low with both reasons", uses_ai: false },
@@ -340,7 +340,7 @@ function printedBoxes(s: unknown, map: { entries: { data_path: string; fact?: st
   // Review M1: a box about someone else on the person's form (IMM 5707's parents, spouse, children) says whose it is.
   const whose = (b: (typeof boxes)[number]) => b.about && b.about !== subject && b.about !== "case" && b.about_label && b.about_label !== "—" ? `${b.about_label}: ` : "";
   // A box with no printed caption is named by its fact's meaning and the box's own short name, so the line says what it is.
-  const named = (b: (typeof boxes)[number]) => (field.get(b.box)?.caption ?? b.caption ?? "").trim() ? boxWords(b) : `${boxWords(b)} (form box "${b.box.replace(/\[\d+\]/g, "").split(".").pop()}")`;
+  const named = (b: (typeof boxes)[number]) => (field.get(b.box)?.caption ?? b.caption ?? "").trim() ? boxWords(b) : `${boxWords(b)} (form field "${b.box.replace(/\[\d+\]/g, "").split(".").pop()}")`;
   return boxes.filter((b) => values[b.box] !== undefined && values[b.box] !== "").map((b) => ({ ...b, caption: `${whose(b)}${named(b)}`, meaning: null, value: words(b.box, values[b.box]) }));
 }
 /** Review M2 (b): the refusals before a live run, pure so each is tested at US$0 (a live call is never made by a test). In

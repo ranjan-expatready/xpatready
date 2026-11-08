@@ -91,11 +91,11 @@ function SourcePanel({ person, form, plan, loading, shown }: { person: string; f
     <section aria-labelledby="source-h" className="min-w-0 rounded-xl border border-border bg-surface-raised" data-source-panel>
       <header className="border-b border-border px-4 py-3">
         <h2 id="source-h" className="text-base font-semibold">What the form says</h2>
-        <p className="text-[12px] text-text-muted">{form ? `${plan?.forms[0]?.edition ?? form} for ${person}: each box as a copy prints it, which is what the AI rounds read. Contact details are not sent.` : "Choose a person and a form above."}</p>
+        <p className="text-[12px] text-text-muted">{form ? `${plan?.forms[0]?.edition ?? form} for ${person}: each form field as a copy prints it, which is what the AI rounds read. Contact details are not sent.` : "Choose a person and a form above."}</p>
       </header>
       {loading ? <div className="p-4"><Skeleton className="h-32 w-full" /></div>
         : !lines.length ? <p className="px-4 py-3 text-sm text-text-muted">{form ? "Nothing to show for this form yet." : ""}</p>
-        : <ol tabIndex={0} className="max-h-[560px] overflow-y-auto py-1 text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" aria-label={`Boxes of ${form}`}>{lines.map((l) => {
+        : <ol tabIndex={0} className="max-h-[560px] overflow-y-auto py-1 text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" aria-label={`Form fields of ${form}`}>{lines.map((l) => {
             const on = hit(l), mark = on && first; if (on) first = false;
             return (
               <li key={l.box} ref={mark ? ref : undefined} className={cn("grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border/60 px-4 py-1.5 last:border-b-0", on && "bg-warn/15 outline outline-2 -outline-offset-2 outline-warn")} data-source-line={l.fact ?? ""} data-source-shown={on ? "true" : undefined}>
@@ -157,7 +157,7 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
               <fieldset className="space-y-2" data-run-modes>
                 <legend className="mb-1 text-[13px] font-medium">How to run it · cost first</legend>
                 <ModeRow value="replay" chosen={chosen} on={setMode} disabled={!can.replay || phase === "running"} price="US$0.00" title="Saved"
-                  words={can.replay ? `Replays the checked saved review of ${p.forms[0].edition}${recordedOn(p.forms[0].saved.files[0])} for exactly these answers (${p.forms[0].boxes} boxes). Nothing is sent.` : p.replay_why ?? ""} />
+                  words={can.replay ? `Replays the checked saved review of ${p.forms[0].edition}${recordedOn(p.forms[0].saved.files[0])} for exactly these answers (${p.forms[0].boxes} form fields). Nothing is sent.` : p.replay_why ?? ""} />
                 <ModeRow value="live" chosen={chosen} on={setMode} disabled={!can.live || phase === "running"} price={`about ${usd(p.estimate.live_usd)}, at most ${usd(p.estimate.live_worst_usd)}`} title="Live"
                   words={can.live ? `Two AI rounds read the form now; the worst case stays under the job cap of ${usd(p.estimate.job_cap_usd)} and what is left of the AI budget (${usd(p.estimate.remaining_usd)}).` : p.live_why ?? ""} />
               </fieldset>
@@ -183,7 +183,7 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
               <p>{result.note}</p>
               {dropped.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{dropped.length} AI finding{dropped.length === 1 ? "" : "s"} left out by the rules</summary>
                 <ul className="mt-1 list-disc pl-5">{dropped.map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></details> : null}
-              {unreadable.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{unreadable.length} box{unreadable.length === 1 ? "" : "es"} the AI could not judge (for a person)</summary>
+              {unreadable.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{unreadable.length} form field{unreadable.length === 1 ? "" : "s"} the AI could not judge (for a person)</summary>
                 <ul className="mt-1 list-disc pl-5">{unreadable.map((u, i) => <li key={i} className="[overflow-wrap:anywhere]">{u.round}: {u.box}: {u.why}</li>)}</ul></details> : null}
             </Notice> : null}
           </div>

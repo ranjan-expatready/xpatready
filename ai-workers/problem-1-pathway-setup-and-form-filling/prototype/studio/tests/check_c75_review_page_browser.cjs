@@ -71,7 +71,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const t1 = await card();
     step("run card: Saved at US$0.00 is offered first and chosen", /Saved\s*US\$0\.00/.test(t1) && await p.locator('[data-mode="replay"] input').isChecked(), t1.slice(0, 400));
     step("run card (P-110): Live shows its usual and worst cost before anything runs", /Live\s*about US\$\d+\.\d\d, at most US\$4\.80/.test(t1), t1.slice(0, 600));
-    step("run card (P-227, P-295): Live is disabled, saying it needs the founder's Go", await p.locator('[data-mode="live"]').getAttribute("data-mode-disabled") === "true" && /not allowed without the founder's Go/.test(t1));
+    step("run card (P-227, P-295): Live is disabled, saying it needs approval first with its cost, in a firm's words (no internal role)", await p.locator('[data-mode="live"]').getAttribute("data-mode-disabled") === "true" && /A live review needs approval first, with its cost stated/.test(t1) && !/tech lead|founder/i.test(t1));
     step("run card: the SI-6 stand-in chip and the four steps", await p.locator('[data-run-card] [data-stand-in="SI-6"]').count() === 1 && await p.locator("[data-run-steps] li").count() === 4);
     step("run card: a made-up run says so (test copy only)", /Made-up test runs/.test(t1));
     step("run card: one primary action, named with its mode and price", /Run review \(Saved, US\$0\.00\)/.test(t1) && await p.locator("[data-run-review]").count() === 1);
@@ -86,7 +86,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await until(async () => /Review run/.test(await p.locator("[data-run-result]").innerText()), "the run's result");
     const res = await p.locator("[data-run-result]").innerText();
     step("result: Saved (made-up test run): 2 new findings, US$0.00, warnings decided here or passed with a reason", /Saved \(made-up test run\): 2 new findings/.test(res) && /US\$0\.00/.test(res) && /pass it with a reason on Ready to file/.test(res), res);
-    step("result: the AI finding the rules dropped and the box the AI could not judge are listed for a person", /1 AI finding left out by the rules/.test(res) && /1 box the AI could not judge/.test(res), res);
+    step("result: the AI finding the rules dropped and the box the AI could not judge are listed for a person", /1 AI finding left out by the rules/.test(res) && /1 form field the AI could not judge/.test(res), res);
     await until(async () => (await p.locator('[data-findings] [data-finding]').count()) >= 2, "the findings");
     const list = await p.locator("[data-findings]").innerText();
     step("steps (review M2 c): when the run ends each step says what the run reported (all four done for a Saved run)", (await p.locator('[data-run-steps] [data-step-state="done"]').count()) === 4 && (await p.locator("[data-run-running]").count()) === 0);

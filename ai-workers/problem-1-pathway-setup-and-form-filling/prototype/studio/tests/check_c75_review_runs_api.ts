@@ -74,7 +74,7 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const findings = async (q = "?source=ai") => ((await call("GET", `/runtime/cases/${c.id}/findings${q}`, undefined, officer)).body?.findings ?? []) as F[];
   const runAs = (body: Record<string, unknown>, actor = officer) => call("POST", `/runtime/cases/${c.id}/review-runs`, { forms: ["IMM 5257"], subject: P, ...body }, actor);
   r = await runAs({ mode: "live", planSha256: plan.plan_sha256 });
-  ok("C7.5 fail (P-227, P-295): Live is refused while live AI is off (409), in words, nothing added", r.status === 409 && /not allowed without the founder's Go/.test(JSON.stringify(r.body)) && (await findings()).length === 0, r.body);
+  ok("C7.5 fail (P-227, P-295): Live is refused while live AI is off (409), in words, nothing added", r.status === 409 && /A live review needs approval first, with its cost stated/.test(JSON.stringify(r.body)) && (await findings()).length === 0, r.body);
   r = await runAs({ mode: "replay", planSha256: "0".repeat(64) });
   ok("C7.5 fail: a run on a run card that is not the one now (another checksum) is refused (409), nothing added", r.status === 409 && /Look at the run card again/.test(JSON.stringify(r.body)) && (await findings()).length === 0, r.body);
   r = await runAs({ mode: "replay", planSha256: plan.plan_sha256 });
@@ -116,7 +116,7 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   await m3.answer(c.id, P, a.fact!, newValue); await m3.confirmAll(c.id, P);
   const plan2 = (await planOf({ forms: ["IMM 5257"], subject: P })).body as Plan;
   r = await runAs({ mode: "replay" });
-  ok("C7.5 fail: changed values have no saved run: Saved is refused (409) in words, US$0, nothing changed", plan2.replay_available === false && plan2.forms[0].sheet_sha256 !== plan.forms[0].sheet_sha256 && r.status === 409 && /No saved review/.test(JSON.stringify(r.body)) && Number(sql(`select count(*) from review_finding where case_id='${c.id}' and source='ai'`)) === 2, r.body);
+  ok("C7.5 fail: changed values have no saved run: Saved is refused (409) in words (No saved review of this form edition with these values yet.), US$0, nothing changed", plan2.replay_available === false && plan2.forms[0].sheet_sha256 !== plan.forms[0].sheet_sha256 && r.status === 409 && /No saved review/.test(JSON.stringify(r.body)) && Number(sql(`select count(*) from review_finding where case_id='${c.id}' and source='ai'`)) === 2, r.body);
   writeMadeUp("b", inputsOf(plan2), { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] }, { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] });
   r = await runAs({ mode: "replay" });
   fs = await findings();
@@ -136,7 +136,7 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const l5707 = (p5707.body?.forms?.[0]?.lines ?? []) as { box: string; caption: string; fact: string | null; value: string }[];
   ok("C7.5 review M1 pass: IMM 5707's choices read as their words (marital status, Yes/No), never a bare code", p5707.status === 200 && l5707.some((x) => x.fact === "person.marital_status" && /[A-Za-z]{4}/.test(x.value)) && !l5707.some((x) => /^\d$/.test(x.value)), l5707.filter((x) => /^\d$/.test(x.value) || x.fact === "person.marital_status"));
   ok("C7.5 review M1 pass: a row about a relative names whose it is; the person's own rows do not", l5707.some((x) => /parent 1: Date of birth/.test(x.caption)) && l5707.some((x) => x.caption === "Date of birth"), l5707.filter((x) => x.fact === "person.date_of_birth").map((x) => x.caption));
-  ok("C7.5 review M1: a tick box reads Ticked or Not ticked, and a box with no printed caption names itself", l5707.filter((x) => /form box "/.test(x.caption)).every((x) => /^(Not )?[Tt]icked$|^[^0-9]/.test(x.value)), l5707.filter((x) => /form box/.test(x.caption)));
+  ok("C7.5 review M1: a tick box reads Ticked or Not ticked, and a box with no printed caption names itself", l5707.filter((x) => /form field "/.test(x.caption)).every((x) => /^(Not )?[Tt]icked$|^[^0-9]/.test(x.value)), l5707.filter((x) => /form field "/.test(x.caption)));
 
   // ── audit, stop (readiness: pack step C7.5-9 above) ──
   const audit = sql(`select string_agg(summary || ' ' || coalesce(detail::text, ''), ' | ') from audit_event where entity_key='${c.id}' and action='reviewed'`) ?? "";
