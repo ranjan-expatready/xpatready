@@ -81,3 +81,67 @@ BIC (§6, case-side): BIC-04 Met (on No, the details are not asked). BIC-12 Part
 - The full `run-suites.sh --changed`.
 
 **Verdict: Block** (commit bc9080638). To fix: Blocker 1 (suites green on the new head, without enshrining Major 1), Major 1, Major 2, Major 3. Fix the Minors or list them in the PR.
+
+## Round 2: diff-only re-review (`git diff bc9080638..8c80d94c6`, head 8c80d94c6, last round under P-293)
+
+### What I ran on 8c80d94c6 (live AI off, US$0, my own copies on 4456–4458, each stopped after)
+- Pure suites, all green:
+  - `check_qa165_gate_follow_ups` 22/22
+  - `check_qa165_mandatory` 40/40
+  - `check_qa165_form_validation` 30/30
+  - `check_c76_readiness` 77/77
+  - `check_forms_b86_fill` 35/35
+  - `check_forms_b88_fill` 34/34
+  - `check_contract_seams` 107/0
+- On isolated copies, all green:
+  - `check_qa165_readiness_paths_api` 6/6 (it loads the configured checkpoint itself)
+  - `check_c72_imm5257_fill` 57/57
+  - `tests/runtime/check_runtime_r1d.ts` 97/97 (after `setup_visitor_visa.ts`)
+- Not run: `check_b52_own_yes_no`, `check_runtime_r1c.cjs` and its speed budget, and the full `--changed` set. CI decides those. The builder's r1c figure of 1008 ms against a 1 s budget at load 1.8 is unverified by me. If CI's r1c is red, it is fixed before merge as usual.
+
+### Round 1 findings
+- **Blocker 1: closed.**
+  - `check_c72_imm5257_fill` is green.
+  - Its rewritten checks no longer enshrine the false not-ready. For the Indian passport it now expects only the consent box ("not a fact", fill in Adobe) to be open and listed.
+- **Major 1: closed.**
+  - `samples/form-script-requirements.json` cites IMM 5257's own script (CR 330212). It is data, not a constant.
+  - `mandatoryOpen` skips a box whose `requiredWhen` value is not met (`mandatory.ts:60-61`).
+  - `check_qa165_gate_follow_ups` R4 has pure pass and fail checks for codes 205, 203 and 206. It also re-reads the script text, so the data cannot drift from the form.
+  - The API test R4 also passes and fails end to end: an IND passport lists neither box; TWN lists only the Taiwan PIN.
+  - An unanswered passport country lists neither box, which matches the script (it acts on the value).
+- **Major 2: closed.**
+  - `blocksLock` (`forms.ts:192`) leaves out only "left empty on the form" lines. Lock (`fill-case.ts:367-370`), the prepare item state and the paper line (`case-prepare.ts:339`) all use it.
+  - The empty boxes stay a CRITICAL line on Ready to file, which can be passed with a reason. So "Ready to file" is still never said over them.
+  - The card keeps the facts pill and list for facts only. It adds a separate warn pill "N mandatory form fields left empty". Each box is listed once, under "Marked mandatory…" (`forms.tsx:128-160`).
+  - The 409 now counts facts only.
+- **Major 3: closed.**
+  - Lock and prepare call the same `formReadinessOf`. Prepare shares one coverage per form and person with its fingerprint (`case-prepare.ts:256-259, 532`).
+  - Prepare agrees with GET …/forms: API R5 checks that the same Taiwan PIN words appear on both.
+  - Lock is proven by r1d. "RT-16 pass: the officer locks an up-to-date generated copy" runs while that fixture's readiness still has left-empty lines. This passing is only possible with the `blocksLock` filter, and the 409 case ("38 facts to answer…") still fails as expected.
+- **Minor 1: still open.** The PR body is still the draft (1,172 characters): no checks, no section B wording, no walk, no questions. Brief item 4 asks for the cited wording in the PR. Fill the body before marking it ready.
+- **Minor 2: closed, and the exception is sound.**
+  - Step 230 now refuses any field whose door warning names another question. The one exception is a sibling detail of the same Yes/No (`230-own-yes-no-follow-ups.ts:99-113`).
+  - The exception covers IMM 1294's and IMM 5710's national ID country, whose rendered words name "National identity document number". In round 1 I read those two rows' map `rawWords`, and both say "Only when natIDIndicator = Y": the same gate.
+  - The 9 B88 asks carry advice, not a warning. They are still asked, as I reviewed in round 1.
+- **Minor 3: closed.** Stage 1 counts facts only (`case-prepare.ts:450`).
+- **Minor 4: still open, pre-existing.** The Taiwan and Israel caption is still a neighbour's question. It now shows only for a 203 or 206 passport. This is the forms lane's map fix.
+
+### New in this diff
+- **Minor 5:** API R6 (`check_qa165_readiness_paths_api.ts`, last check) passes for the wrong reason. On the configured checkpoint IMM 5257 is filed Online, so lock refuses it as "filed Online" before readiness is ever read. Removing `blocksLock` from lock would not turn R6 red. r1d's RT-16 covers the rule, so this is not a gap in proof. Either lock a PDF-upload form in R6 (IMM 5257 SCH1 has left-empty boxes), or say in R6 that r1d proves the lock.
+- **Note, not a finding:** `fillEverything` now returns true when only left-empty lines remain and no group needs a first row. That fits the new rule. A pack that needs "ready" must now pass the CRITICAL line explicitly.
+- I found no other new issue. Authorisation, migrations and contracts are unchanged since round 1. `blocksLock` is the only new export.
+
+Round 2 journey re-score (same journey, by reading the diff and running the API; no new browser walk):
+- Task completed: 1 (the copy locks and N is written)
+- Next step obvious: 1
+- Plain words: ½ (Minor 4)
+- Feedback and state: 1
+- Correct data: 1
+- Error recovery: 1 (no dead end)
+- Accessibility and screen sizes: 1 (round 1 measurement; the card change only splits a pill and a list)
+- Speed: ½ (r1c's budget is on the edge, unverified)
+- Visual quality: 1
+- Trust and sources: ½ (Minor 1)
+- **Total: 8.5/10. Pass.**
+
+**Verdict: Approve** (commit 8c80d94c6). Open Minors, to fix or list in the PR: Minor 1 (PR body and section B wording), Minor 4 (Taiwan and Israel caption, forms lane), Minor 5 (API R6 proves nothing about lock).
