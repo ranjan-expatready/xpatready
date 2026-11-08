@@ -434,10 +434,13 @@ jobs:
       - uses: actions/checkout@v4
         if: env.MODE != 'same' && (env.KIND == 'notes')
         with: { fetch-depth: 0, filter: "blob:none" }
-      - name: push guard (excluded paths, PDFs, secrets, personal names)
+      - name: the test merge on main, then the push guard (D6; the notes checks below read the rebuilt tree)
         if: env.MODE != 'same' && (env.KIND == 'notes')
+        env: { HEAD_SHA: "${{ github.event.pull_request.head.sha }}", QUEUE: "${{ needs.kind.outputs.queue }}", KBASE: "${{ needs.kind.outputs.base }}", KATTEMPT: "${{ needs.kind.outputs.battempt }}" }
         run: |
-          range=$(bash "$P/tools/pr-base.sh" range "${{ github.event.pull_request.head.sha }}") || exit 1   # D6: today's main
+          if [ "$QUEUE" = true ]; then range=$(bash "$P/tools/pr-base.sh" queue)
+          else pin=""; [ "$KATTEMPT" = "$GITHUB_RUN_ATTEMPT" ] && pin="$KBASE"; range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" $pin); fi || exit 1
+          echo "tested: $range"
           bash "$P/tools/push-guard.sh" "$range"
       - name: notes check 1 of 2, rules files (check-docs.sh)
         if: env.MODE != 'same' && (env.KIND == 'notes')
