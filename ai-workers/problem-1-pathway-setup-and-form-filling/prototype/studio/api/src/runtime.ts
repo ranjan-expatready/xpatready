@@ -636,6 +636,18 @@ export class Runtime {
     const bg = this.backgroundOf(c);
     let waiting = 0;
     const confirmed = await this.db.$transaction(async (tx) => {
+      // C6.5 (BR-6, BR-7; case-documents.ts): while a typed answer and a document differ on a fact of this section (an open
+      // check), or the document a check came from also gives a fact of this section (its review is not finished), the section
+      // is not confirmed: the officer resolves the check first, with a reason.
+      const openChecks = await tx.answerCheck.findMany({ where: { subjectId: storedId, state: "open", OR: [{ fact: { in: [...fields] } }, { readValue: { read: { values: { some: { fact: { in: [...fields] } } } } } }] }, select: { id: true, fact: true } });
+      if (openChecks.length) {
+        // Lead 35 on #1369: the refusal names each open check and the section it sits in, so the officer knows where to go.
+        const place = (f: string) => (s.placements as { fact: string; section_id: string; question_text?: string }[]).find((p) => p.fact === f);
+        const titleOf = (id: string | undefined) => (s.sections as { id: string; title: string }[]).find((x) => x.id === id)?.title ?? id ?? "another section";
+        const named = openChecks.map((k) => ({ ...k, label: place(k.fact)?.question_text || k.fact.split(".").pop()!.replace(/_/g, " "), section: place(k.fact)?.section_id ?? null, section_title: titleOf(place(k.fact)?.section_id) }));
+        throw new HttpException({ type: "https://expatready.local/problems/open-checks", title: "Not possible now", status: 409, code: "open_checks",
+          detail: `${named.map((k) => `"${k.label}" in ${k.section === section ? "this section" : `"${k.section_title}"`}`).join("; ")} differ${named.length === 1 ? "s" : ""} from a document (an open check${named.length === 1 ? "" : "s"}): resolve ${named.length === 1 ? "it" : "them"} first, with a reason. Nothing was confirmed.`, checks: named }, HttpStatus.CONFLICT);
+      }
       // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: storedId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
