@@ -169,9 +169,11 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
 
   await none(P, "education_history"); await none(P, "previous_countries_of_residence");
   await confirmAll();
-  const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { ready: boolean; missing: unknown[] } }[];
+  const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { ready: boolean; missing: { reason: string }[] } }[];
   const f = forms.find((x) => x.form === "IMM 5257" && x.subject_id === P);
-  ok("setup: the Sample family's IMM 5257 is ready to file", f?.readiness?.ready === true, f?.readiness?.missing);
+  // QA-165 (#1318, P-71): readiness also waits on the mandatory boxes a copy would leave empty (the 6 checked below), so every
+  // question answered and confirmed leaves only those: no question is missing.
+  ok("setup: the Sample family's IMM 5257 has every question it reads answered and confirmed; readiness waits only on mandatory boxes a copy leaves empty", (f?.readiness?.missing ?? []).length > 0 && (f?.readiness?.missing ?? []).every((m) => m.reason === "left empty on the form"), f?.readiness?.missing);
   const after = await generate(2);
   ok("C7.2: the copy is generated and passes the filler's own checks (read back, signatures, unchanged parts)", after.status === "GENERATED" && after.intact === true, { status: after.status, intact: after.intact });
 
@@ -222,8 +224,11 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const empty2 = mandatory.filter((p) => !gatedCopy.values[p]);
   ok("QA-165 pass: the app's copy now fills 43 of IMM 5257's 46 mandatory form fields; the 3 left are exactly the boxes published as \"not a fact\" (fill in Adobe)", empty2.length === 3 && empty2.every((p) => NOT_A_FACT.includes(p)), { filled: mandatory.length - empty2.length, empty: empty2 });
   {
-    const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string }[]; readiness: { ready: boolean } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
-    ok("QA-165 part 2: the list before the file is offered now names only those 3, and the form is still ready to file", (f?.fields_open ?? []).length === 3 && (f?.fields_open ?? []).every((o) => NOT_A_FACT.includes(o.box)) && f?.readiness?.ready === true, f?.fields_open);
+    const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string }[]; readiness: { ready: boolean; missing: { fact: string; reason: string }[] } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
+    ok("QA-165 part 2: the list before the file is offered now names only those 3", (f?.fields_open ?? []).length === 3 && (f?.fields_open ?? []).every((o) => NOT_A_FACT.includes(o.box)), f?.fields_open);
+    // QA-165 (#1318, P-71): "Ready" is never said over a mandatory box that will be empty: readiness lists exactly those 3.
+    const left = (f?.readiness?.missing ?? []).filter((m) => m.reason === "left empty on the form").map((m) => m.fact.replace(/^box:/, ""));
+    ok("QA-165 fail (#1318): with those 3 left empty the form is not ready to file, and readiness names exactly them", f?.readiness?.ready === false && left.length === 3 && left.every((b) => NOT_A_FACT.includes(b)) && (f?.readiness?.missing ?? []).length === 3, f?.readiness?.missing);
   }
   // Devin on #715 (1): the gate's answer is kept with the copy: changing it after the copy makes that copy out of date.
   const nCopy = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);
