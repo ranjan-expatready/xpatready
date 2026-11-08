@@ -90,3 +90,56 @@ Reviewer session (did not build it), 8 Nov 2026 (IST). Commit **c5415ebff6b6234e
 2. M2: add the six missing concept §6 test pairs to `C6.5-screen.test.ts`.
 
 Minors m1–m10 are fixed or listed as a follow-up row.
+
+## Re-review on 32cb9ed08 (diff only, 8 Nov IST)
+**Scope:** `git diff c5415ebff..32cb9ed087da9f8dd643ee826c82f164069a1f99` on `claude/runtime-c65-drawer`, with `break-report.md` read. The merged #1369 CI fix (`f4d65e12b`: `case-feed.ts`, `check_case_feed.ts`, the Gate B tools) is skipped: it was approved on #1369.
+
+**Setup:** web rebuilt (`web-fresh.sh build`), fresh `rv_c65d` copy on :4434, fixture as before, US$0.
+
+**Runs on my copy:**
+
+| Check | Result |
+|---|---|
+| Screen pack | 32/32 |
+| API check | 61/61 |
+| Pack | 30/32 (only C6.5-19b and -20, no saved letter read) |
+| Page errors | none |
+
+**Server diff:** additive and correct. Each review now carries `check_digits` (`passed` / `failed` / `incomplete` / null, from the stored values and unreadable reasons, so the browser no longer parses the reasons) and `evidence[]` (the reader's `supplies`, the same list the checked-against-document route accepts). Nothing that writes changed.
+
+**My Majors:**
+* **M1: closed.** A difference resolved with the answer kept now reads "… SAMPLEDE · Check resolved" with "Mark checked against the document" (`documents-drawer.tsx`, the confirmed-rows map, `markOnly`). Walked: shown on family name after "Keep the current answer" (screenshot `r1-resolved-mark-1440.png`). Pack C6.5-39 clicks it and checks VERIFIED with `checked_against` and the kept value. C6.5-38 checks that no mark shows while the check is open. Place of birth gets no mark because the passport is not evidence for it (`evidenceOf`), which agrees with the server's 422 `not_evidence`.
+* **M2: closed.** C6.5-36 to -41 add the concept §6 pairs: a stale Correct it 409; keyboard only with focus on the confirmed line; a corrected value's check opens with "Keep the current answer" chosen; no mark while a check is open; a second tab's confirm shown in IST; proof of funds never read by a person. Each is a real assertion against the database or the screen and would fail if its behaviour were removed. BR-13's pass (a national ID listed) cannot be shown because the release has no national ID line; C6.5-41 says so. Accepted.
+
+**Breaker fixes:**
+
+| Fix | Checked by |
+|---|---|
+| Refusal shown at the drawer's top (`[data-drawer-notice]`, focused, `role=alert`) | C6.5-28b and -40 |
+| Mark checked wherever `evidence[]` lists the fact, and on rows answered in "Not on these documents" | C6.5-30b |
+| Escape closes an open answer first | C6.5-30c; walked: forms 0, drawer 1 |
+| Tick names | walked: "Matches the document: Given name(s) as shown on passport or travel document" |
+| Resolve heading uses the question's label | walked |
+| "Open the passport", with tooltips on the reader and check-digits line, the button and the "n to resolve" pill | walked |
+| File tab has no opener and its object URL is released after 60 s | walked: `window.opener === null` |
+| Long words wrap at 400 px | walked: scrollWidth 399 = clientWidth 399; axe clean |
+
+**My Minors:**
+* Closed: m1 (labels in the drawer), m3 ("Open the passport"), m5 (tooltips), m8 (loading words).
+* m7 is closed within a block (C6.5-38). I did not re-check a value with an open check shown on a second document's block.
+* Still open and listed in the PR, which is acceptable for a Should:
+  * m1's server half: the 422 `not_checked` still uses `labelOf`;
+  * m2: `closed[]` only in the toast;
+  * m4: section shown only for the opened section;
+  * m6: two filled Save buttons;
+  * m9: the graph cannot see the raw `fetch`;
+  * m10: a brief tick after Correct it.
+* New, Minor: the resolved row's button reads "Mark checked against the document", not the board's "… the passport".
+
+**Scores after the fixes:**
+* D1 4, D10 4, D16 4.
+* BIC-14: Met.
+* Journey: plain words and feedback rise to 1 each, so **9.5 / 10**.
+* The rest as above.
+
+**Verdict: Approve 32cb9ed087da9f8dd643ee826c82f164069a1f99**

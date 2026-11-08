@@ -211,13 +211,13 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
         {unread.map((u) => (
           <div key={`u-${u.fact}`} className="px-4 py-2.5 text-[13px]" data-could-not-read>
             <p className="font-medium">{u.label}: could not read</p><p className="text-xs text-text-muted">{u.reason}</p>
-            <AnswerInPlace caseId={caseId} q={questionOf(u.fact)} refresh={refresh} document={evidence.has(u.fact) ? review.document : undefined} />
+            <AnswerInPlace caseId={caseId} q={questionOf(u.fact)} refresh={refresh} document={evidence.has(u.fact) ? review.document : undefined} docName={review.document_name} />
           </div>
         ))}
         {left.map((p) => (
           <Row key={p.id} p={p} value={value(p, p.value)} section={section}>
             <p className="text-xs text-text-muted" data-left-why>{questionOf(p.fact)?.answer ? "Left for you, and answered." : p.left_why}</p>
-            <AnswerInPlace caseId={caseId} q={questionOf(p.fact)} refresh={refresh} document={evidence.has(p.fact) ? review.document : undefined} />
+            <AnswerInPlace caseId={caseId} q={questionOf(p.fact)} refresh={refresh} document={evidence.has(p.fact) ? review.document : undefined} docName={review.document_name} />
           </Row>
         ))}
         {look.map((p) => (
@@ -242,7 +242,7 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
             <div key={`s-${p.id}`} className="px-4 py-1.5 text-xs" data-row-state={resolved ? "resolved" : p.state}>
               <span className="text-text-muted">{p.label}:</span> {resolved && q?.answer ? value(p, q.answer.value) : value(p, p.value)} · <b className="font-medium">{resolved ? "Check resolved" : STATE_WORDS[p.state]}</b>
               {/* BR-12: an answer kept by a resolved check can be marked checked against this document, where it gives the fact. */}
-              {resolved && evidence.has(p.fact) && q?.answer && q.answer.status !== "VERIFIED" ? <AnswerInPlace caseId={caseId} q={q} refresh={refresh} document={review.document} markOnly /> : null}
+              {resolved && evidence.has(p.fact) && q?.answer && q.answer.status !== "VERIFIED" ? <AnswerInPlace caseId={caseId} q={q} refresh={refresh} document={review.document} docName={review.document_name} markOnly /> : null}
             </div>
           );
         }) : null}
@@ -276,7 +276,7 @@ function Row({ p, value, section, children }: { p: Proposal; value: string; sect
 }
 
 /** BR-8, BR-11: answer or correct a value in place with the question's own field, saved as the Agent view saves it. */
-function AnswerInPlace({ caseId, q, refresh, label, document, markOnly, onSaved }: { caseId: string; q: ViewQuestion | undefined; refresh: () => Promise<void>; label?: string; document?: string; markOnly?: boolean; onSaved?: (fact: string) => void }) {
+function AnswerInPlace({ caseId, q, refresh, label, document, docName, markOnly, onSaved }: { caseId: string; q: ViewQuestion | undefined; refresh: () => Promise<void>; label?: string; document?: string; docName?: string; markOnly?: boolean; onSaved?: (fact: string) => void }) {
   const toast = useToast();
   const [editing, setEditing] = React.useState(false);
   const forms = React.useContext(OpenForms);
@@ -306,7 +306,7 @@ function AnswerInPlace({ caseId, q, refresh, label, document, markOnly, onSaved 
       {answered && !label && !markOnly ? <span className="text-xs [overflow-wrap:anywhere]">Answered: <b className="font-medium">{String(shown(q, q.answer!.value))}</b></span> : null}
       {markOnly ? null : <Button size="sm" variant="ghost" onClick={() => { setDraft(toDraft(kindOf(q), q.answer?.value)); setError(null); setEditing(true); }} data-answer-in-place={q.fact}>{label ?? (answered ? "Change it" : "Answer it")}</Button>}
       {/* BR-12: only where it adds evidence: a value the document could not give, once answered. */}
-      {document && answered && q.answer!.status !== "VERIFIED" ? <Button size="sm" variant="ghost" busy={busy} onClick={() => void markChecked()} data-mark-checked={q.fact}>Mark checked against the document</Button> : null}
+      {document && answered && q.answer!.status !== "VERIFIED" ? <Button size="sm" variant="ghost" busy={busy} onClick={() => void markChecked()} data-mark-checked={q.fact}>Mark checked against {/passport/i.test(docName ?? "") ? "the passport" : "the document"}</Button> : null}
     </span>
   );
   return (
@@ -363,7 +363,7 @@ function NotOnDocument({ caseId, section, fill, questionOf, refresh }: { caseId:
   return (
     <section aria-label="Not on these documents" className="rounded-xl border border-dashed border-border px-4 py-3 text-[13px]" data-not-on-document>
       <p className="font-medium">Not on these documents</p>
-      <ul className="mt-1 space-y-2">{rest.map((q) => <li key={q.fact}><span className="text-text-muted">{q.label}</span><AnswerInPlace caseId={caseId} q={questionOf(q.fact)} refresh={refresh} document={evidenceOf(q.fact)} onSaved={(f) => setHere((x) => new Set(x).add(f))} /></li>)}</ul>
+      <ul className="mt-1 space-y-2">{rest.map((q) => <li key={q.fact}><span className="text-text-muted">{q.label}</span><AnswerInPlace caseId={caseId} q={questionOf(q.fact)} refresh={refresh} document={evidenceOf(q.fact)} docName={fill.reviews.find((r) => r.document === evidenceOf(q.fact))?.document_name} onSaved={(f) => setHere((x) => new Set(x).add(f))} /></li>)}</ul>
     </section>
   );
 }
