@@ -110,7 +110,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
       const st = lineState.get(`${d.subject}|${d.document_type}`);
       return { item: d.item, label: d.label, subject: d.subject, person: d.person, required: d.required && st !== "not_applicable", received: !!st && RECEIVED.has(st), owes: "client" };
     });
-    const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.quote }));
+    const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.source === "ai" ? `the AI review (${g.agreement === "low" ? "Low: the two rounds disagree" : "High"}) flags what the form says, “${g.quote}”` : g.quote }));
     // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.
     const latest = reviews.find((r) => r.filingId === filing) ?? null;
     const sameFacts = !!latest && latest.reviewedBy === rep && latest.factsHash === factsHash;

@@ -84,6 +84,8 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   ok("C7.5 P-121 fail: the fact only one round raised is Low, with both rounds' reasons", fb?.agreement === "low" && fb.reasons.length === 2 && /^Round 1: MINOR/.test(fb.reasons[0]) && /^Round 2 \(blind checker\): raised nothing/.test(fb.reasons[1]), fb);
   ok("C7.5 AG-11-70 fail: the checker's finding whose quote is not on the form is dropped, with the reason, never added", (r.body?.forms?.[0]?.dropped ?? []).some((d: { why: string }) => /not in what the form says/.test(d.why)) && !fs.some((x) => x.quote.includes("not on this form")), r.body?.forms?.[0]?.dropped);
   ok("C7.5 AG-11-70: a box a round could not judge is listed with why and the round, never guessed", (r.body?.forms?.[0]?.unreadable ?? []).some((u: { box: string; round: string }) => u.box === "Made-up unreadable box" && /Round 2/.test(u.round)), r.body?.forms?.[0]?.unreadable);
+  const rd = m3.readinessOf((await m3.prepare(c.id)).p, fa?.filing ?? undefined) as { warns?: { code: string; words?: string }[]; blocks?: { code: string }[] } | undefined;
+  ok("C7.5 P-71, P-168: on Ready to file each open AI finding is a warning saying it is the AI review's, with its agreement and quote; never a block", (rd?.warns ?? []).filter((w) => w.code === "finding").some((w) => /the AI review \(High\) flags what the form says, “/.test(w.words ?? "")) && (rd?.warns ?? []).some((w) => /the AI review \(Low: the two rounds disagree\)/.test(w.words ?? "")) && !(rd?.blocks ?? []).some((x) => x.code === "finding"), rd?.warns?.filter((w) => w.code === "finding"));
   ok("C7.5 no ai_batch row and no model call (US$0)", sql("select count(*) from ai_batch") === spend0);
 
   // ── dismiss, again, at once ──
