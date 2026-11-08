@@ -46,7 +46,7 @@ Done in the browser pane, as the case officer, on a fresh checkpoint copy. The s
 | C6.12 | **Works** on the Visitor visa journey (P-380 Q1) | Run 42441156858 job 128610501475, 24/24 plus breadth 2/2 with -22 and -23 HELD. -25 on the Mac is covered by a screen read, which is not a re-run of the pack step |
 | C8.1 | **Works** (was Partial) | Run 42441156858 job 128610501445, 14/14. Mac 14/14. QA-300, its last hold, is closed |
 | C11.6 | **Works** on the Visitor visa journey (P-380 Q1) | Run 42441156858 job 128610501487, 14/14 (6/14 on 5 Nov). Mac 14/14. Only Minors are open (QA-151, QA-78) |
-| C9.2 | **Partial** | Pack green on GitHub (job 128610501493, 11/11) and on the Mac, and no open Bug or Gap. The tech lead ruled that its declared breadth counts. As worded, the breadth contradicts C1.3 BR-3: **QA-306**, Conflict, for the founder (see "C9.2 breadth probe" below) |
+| C9.2 | **Works** | Pack green on GitHub (job 128610501493, 11/11) and on the Mac. Its breadth was proved by the probe below (exit 0, 11/11). The tech lead ruled under P-294 that BR-3 wins over the header's words; QA-306 is closed |
 | C3.16 | **Partial** (was Not built) | The six part is green (run 42441163308, 37/37, Mac 37/37). The pack's own rule (tech lead Q3 on #1054) holds it until the case part runs on the six (B82). That part is scaffolding and was not run. The checkpoint red was ruled a pack fault by the tech lead; qa did not prove it |
 | C7.6 | Partial (stays) | -5 is green. -12 and -19 are red on missing_signature and missing_document warnings after IMM 5476 is signed and scanned; the cause is not traced and could be product or pack. QA-229 (Major) is open |
 | C7.7 | Partial (stays) | QA-296 and QA-299 are closed. QA-153, QA-246 and QA-229 (Majors) remain. Pack being moved; not re-scored |
@@ -88,11 +88,19 @@ The tech lead ruled that P-380 Q1 is not extended to C9.2: its declared breadth 
   * IMM 5707 and IMM 5476 keep their state;
   * Undo restores the value.
 
-**Verdict (fresh reader):** C9.2 stays **Partial**.
+**Verdict (fresh reader):** at first, C9.2 stayed **Partial**.
 * The probe proves a different property from the one worded. As worded, the breadth is impossible by design: **QA-306**, Conflict · Major, with a proposed rewording for the founder.
 * The probe is a scratch script with no GitHub run (P-339).
 * "Signed" was not tested: IMM 5710 has no signature step.
 * Other CRITICAL warnings also held Ready to file.
+
+The fresh reader added: "If the tech lead or founder … accepts the probe in place of the ruling's test, then Works."
+
+**Tech lead's ruling (Lead 33, 8 Nov, under P-294):**
+* BR-3 wins over the pack header, whose line is an author's phrasing, not a decision.
+* The probe is the right form of the breadth, so C9.2 is **Works**.
+* QA-306 is closed.
+* The header's words are fixed in the pack's next PR.
 
 ## Copies
 * qa_q300 (:4470, the check) and qa_p611 … qa_p116 (:4470, one per pack) each stopped in its own command.
