@@ -1,0 +1,20 @@
+sheet probe on c6f99a989 (product code = main 152759210/a228f5e25), copy qa_c102 :4470, start Sun Nov  8 10:25:03 IST 2026
+
+isolated qa_c102 on http://localhost:4470 (xr_studio_qa_c102), stops itself in 25 min
+reset 201
+load 201
+C10.2 / C7.3 sheet probe — Online IMM 5257: every section ticked, is the item done?
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+ITEM {"filled":true,"channel":"ONLINE","state":"to_do","reason":"Every fact it reads is confirmed."}
+PASS  setup: the principal's IMM 5257 is an Online item — {"id":"1076f4c7-3c29-4c33-8732-72b217c5162a","kind":"form","filing":"e26d6942-7b4c-49c3-b432-4f3db6f9d01c","subject":"a65c1f8a-b1c0-4089-943f-6e068d492813","person":"Sample Client A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+SECTIONS 9 ["Personal details","National identity document","US PR card","Contact information","Details of visit to Canada","Education","Employment","Background information","Signature"]
+PASS  every section is ticked entered (2xx each) — [201,201,201,201,201,201,201,201,201]
+AFTER {"state":"to_do","reason":"Every fact it reads is confirmed.","sheetKeys":["item","form","subject","order_basis","order_note","sections"]}
+OPEN-LINES 0 []
+SHEET-SAMPLE {"item":"1076f4c7-3c29-4c33-8732-72b217c5162a","form":"IMM 5257","subject":"a65c1f8a-b1c0-4089-943f-6e068d492813","order_basis":"form_parts","order_note":"In the order the form prints its parts, as this release's configuration names them, until the portal's own screens are recorded (W6).","sections":[{"key":"personal_details","title":"Personal details","version":"b81dafdf5573c4d46630a8ba29d777394e1c6be43b7b5fda32b5907c8a731b87","entered":{"at":"2026-11-08T04:56:46.917Z","by":"user-O"},"out_of_date":false,"answers":[{"label":"Current marital status","fact":"person.marital_status","subject":"a65c1f8a-b1c0-4089-943f-6e068d492813","person":"Sample Client A","row":null,"value":"annulled_marriage","copy_text":"annulled_marriage","source":"Client","mark":"confirmed","to_confirm":false,"why":"Confirmed by the officer"},{"label":"Family name the person has otherwise used (nickname, maiden name, alias)","fact":"person.other_family_name","subject":"a65c1f8a-b1c0-4089-943f-6e068d492813","person":"Sample Client A","row":null,"value":"SAMPLE","copy_text":"SAMPLE","source":"Client","mark":"confirmed","to_confirm":false,"why":"Confirmed by the officer"},{"label":"Given name(s) the person has otherwise used (nickname, alias)","fact":"person.other_given_names","subject":"a65c1f8a-b1c0-4089-943f-6e068d492813","person":"Sample Client A","row":null,"value":"SAMPLE","copy_text":"SAMPLE","source":"Client","mark":"confirmed","to_confirm":false,"why":"Confirmed by the officer"},{"label":"Country of c
+FAIL  the item is Done once every section is ticked — {"id":"1076f4c7-3c29-4c33-8732-72b217c5162a","kind":"form","filing":"e26d6942-7b4c-49c3-b432-4f3db6f9d01c","subject":"a65c1f8a-b1c0-4089-943f-6e068d492813","person":"Sample Client A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+
+2/3 passed
+probe exit 1  end Sun Nov  8 10:26:47 IST 2026
+stopped qa_c102 (database and files removed; log in var/isolated-logs/qa_c102-api.log)
