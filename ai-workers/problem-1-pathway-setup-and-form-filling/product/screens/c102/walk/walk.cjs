@@ -1,0 +1,34 @@
+// C10.2 walk like a person at 1440 px: Demo › Load the finished story, then the family case page.
+const { chromium } = require("playwright");
+const OUT = __dirname, BASE = `http://localhost:${process.argv[2] || 4431}`;
+(async () => {
+  const b = await chromium.launch();
+  const page = await b.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const errors = []; page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+  const shot = (n, o = {}) => page.screenshot({ path: `${OUT}/${n}.png`, ...o });
+  await page.goto(BASE + "/"); await page.evaluate(() => localStorage.setItem("xr-actor", "user-A")); await page.goto(BASE + "/");
+  await page.getByRole("button", { name: /^Demo/ }).click();
+  const item = page.locator("[data-demo-finished-story]");
+  await item.hover(); await page.waitForTimeout(800); await shot("01-demo-menu-tooltip");
+  await item.click();
+  await page.locator("[data-finished-story-brings]").waitFor(); await shot("02-dialog");
+  const confirm = page.locator("[data-finished-story-confirm]");
+  if (await confirm.count()) await confirm.fill("RESET");
+  const t0 = Date.now();
+  await page.locator("[data-finished-story-load]").click();
+  await page.locator("[data-finished-story-running]").waitFor({ timeout: 30000 }); await shot("03-running");
+  await page.locator("[data-finished-story-result]").waitFor({ timeout: 900000 });
+  console.log("loaded in", (Date.now() - t0) / 1000, "s");
+  await shot("04-result", { fullPage: true });
+  const dialog = page.getByRole("dialog");
+  await dialog.screenshot({ path: `${OUT}/04b-result-dialog.png` });
+  console.log((await page.locator("[data-story-stage]").evaluateAll((els) => els.map((e) => `${e.getAttribute("data-story-stage")}=${e.getAttribute("data-status")}`))).join(" "));
+  await page.locator("[data-story-open-case]").click();
+  await page.waitForLoadState("networkidle"); await page.waitForTimeout(1500);
+  await shot("05-family-case", { fullPage: true });
+  console.log("URL", page.url());
+  console.log("HEADINGS", (await page.locator("h1,h2,h3").allInnerTexts()).join(" | ").slice(0, 1500));
+  console.log("TABS/BUTTONS", (await page.locator("[role=tab],nav a,button").allInnerTexts()).filter(Boolean).join(" | ").slice(0, 1500));
+  console.log("CONSOLE ERRORS", errors.length, errors.slice(0, 5).join(" || "));
+  await b.close();
+})().catch((e) => { console.error("WALK FAILED", e.message); process.exit(1); });
