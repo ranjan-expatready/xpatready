@@ -2449,7 +2449,7 @@ model ReadValue {
   @@map("read_value")
 }
 
-/// C6.5 part 2 (BR-7, P-242): a typed answer and a document value that differ; one open per person and fact (partial
+/// C6.5 part 2 (BR-7, P-242): a typed answer and a document value that differ; one open per person, fact and document (partial
 /// unique index answer_check_one_open, in SQL); resolved only with a reason.
 model AnswerCheck {
   id                String    @id @default(uuid()) @db.Uuid

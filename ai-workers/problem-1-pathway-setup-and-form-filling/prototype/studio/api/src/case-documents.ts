@@ -19,7 +19,8 @@
 //     (readiness-inputs.ts, C7.6 BR-7).
 //   * Staff mark a current answer "checked against the document" (P-142 D3): a new VERIFIED version naming the document.
 // Audit lines name the case by its short id, the document type and the facts, never a value or a reason (STANDARDS §5).
-import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import type { Response } from "express";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -102,10 +103,12 @@ const CaseUpload = z.object({ subjectId: z.string({ message: "Name the person th
   documentType: z.string({ message: "Name the document type (documentType)." }).regex(/^[a-z0-9_]{1,120}$/, "Name the document type (documentType).") });
 const Resolve = z.object({
   keep: z.enum(["answer", "document"], { message: "Say which value to keep: answer or document." }),
-  reason: z.string({ message: "Give a reason for keeping this value." }).transform((x) => x.replace(INVISIBLE, "").trim())
+  reason: z.string({ message: "Give a reason for keeping this value." }).transform((x) => x.replace(INVISIBLE, "").replace(BLANK_LETTERS, "").trim())
     .pipe(z.string().min(1, "Give a reason for keeping this value.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`).regex(/[\p{L}\p{N}]/u, "Give a reason in words.")),
   answerId: z.string().regex(UUID).nullable().optional(),
 });
+/** Letters that print as nothing (break m3: Hangul fillers, the braille blank, a soft hyphen): no reason is made of them. */
+const BLANK_LETTERS = /[\u00ad\u115f\u1160\u2800\u3164\uffa0]/g;
 const Checked = z.object({ document: z.string({ message: "Name the document it was checked against." }).regex(UUID, "Name the document it was checked against.") });
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   const r = schema.safeParse(input ?? {});
@@ -124,6 +127,8 @@ export function sameValue(fact: string, a: unknown, b: unknown): boolean {
 }
 
 type Placement = { fact: string; section_id: string; repeats: string; scope?: string; question_text?: string };
+/** Whether a file's text holds a passport's coded zone (break m7), by the rules reader (no AI). */
+export const holdsPassportZone = (bytes: Buffer) => readPassport("check", bytes).zones > 0;
 const placementsOf = (s: Snapshot) => s.placements as Placement[];
 const labelOf = (s: Snapshot, fact: string) => placementsOf(s).find((p) => p.fact === fact)?.question_text || fact.split(".").pop()!.replace(/_/g, " ");
 
@@ -132,8 +137,14 @@ const labelOf = (s: Snapshot, fact: string) => placementsOf(s).find((p) => p.fac
 const SEX_WORDS: Record<string, string> = { F: "Female", M: "Male", X: "Unspecified" };
 export function inReleaseWords(s: Snapshot, fact: string, value: unknown): { value: unknown; note?: string } {
   if (fact !== "person.sex" || typeof value !== "string" || !SEX_WORDS[value]) return { value };
-  const word = (shapeOf(s, fact).choices ?? []).find((c) => c.toLowerCase() === SEX_WORDS[value].toLowerCase());
-  return word ? { value: word, note: `The coded line reads "${value}" (ICAO Doc 9303: ${SEX_WORDS[value].toLowerCase()}).` } : { value };
+  const want = SEX_WORDS[value].toLowerCase(), note = `The coded line reads "${value}" (ICAO Doc 9303: ${want}).`;
+  // The answer list's key whose label is that word (break m4: the list stores keys such as f_female), else the form's
+  // own choice; X is written only where the release offers "Unspecified" (never guessed as another word).
+  const listed = (s.canonical_fields as { id: string; answer_list?: { values: { key: string; label: string }[] } }[]).find((f) => f.id === fact)?.answer_list?.values ?? [];
+  // A label is the word, or the code then the word ("F Female", as the Visitor visa lists it).
+  if (listed.length) { const v = listed.find((x) => [want, `${value.toLowerCase()} ${want}`].includes(x.label.trim().toLowerCase().replace(/\s+/g, " "))); return v ? { value: v.key, note } : { value }; }
+  const word = (shapeOf(s, fact).choices ?? []).find((c) => c.toLowerCase() === want);
+  return word ? { value: word, note } : { value };
 }
 /** Why a read value is not written by Confirm & use (left for a person to answer), or null: a value its own question's
  *  checks refuse, or a country given only as a coded-line code (a code is not the country's name; no code table is
@@ -162,7 +173,9 @@ export class CaseDocuments {
     const c = await this.r.reach(actor, caseId, "answer");
     const b = parse(CaseUpload, body);
     const who = this.person(c, b.subjectId);
-    if (!CASE_KINDS[b.documentType] && !this.typesOf(c).some((t) => t.key === b.documentType)) fail(`This case's release has no document type "${b.documentType}". Nothing was stored.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // Break M5: a document the release lists goes on its checklist line (its own rules: Not applicable, requested, sets);
+    // only a kind with no line (a letter of invitation, Sample) is uploaded here.
+    if (!CASE_KINDS[b.documentType]) fail(this.typesOf(c).some((t) => t.key === b.documentType) ? `${this.typeName(c, b.documentType)} has its own line on the person's checklist: upload it there. Nothing was stored.` : `"${b.documentType}" is not a document that can be added without a checklist line. Nothing was stored.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const f = (files ?? []).filter((x) => x.buffer);
     if (f.length !== 1 || f[0].fieldname !== "file") fail(`Send one file, in the field "file". Nothing was stored.`);
     const bytes = f[0].buffer!;
@@ -198,7 +211,10 @@ export class CaseDocuments {
     const read = docs.map((d) => ({ d, by: readerOf({ key: d.documentType, name: this.typeName(c, d.documentType) }) }));
     const inScope = read.filter((x) => x.by && x.by.supplies.some((f) => facts.has(f)));
     // An identity document a person reads (P-134) is named, so the officer knows why nothing was proposed from it.
-    const byPerson = read.filter((x) => !x.by).map((x) => ({ document: x.d.id, document_name: this.typeName(c, x.d.documentType), why: "Read by a person: an identity document is never sent to AI, and this one has no coded lines the rules can read." }));
+    // Challenge M3: only an identity document about this person is named (proof of funds is no identity document; the
+    // absent parent's passport copy is about someone else, resolver rule R11, so it is never offered for this person).
+    const byPerson = read.filter((x) => !x.by && isIdentityName(this.typeName(c, x.d.documentType)) && !ABOUT_ANOTHER.test(identityWords(`${this.typeName(c, x.d.documentType)} ${x.d.documentType}`)))
+      .map((x) => ({ document: x.d.id, document_name: this.typeName(c, x.d.documentType), why: "Read by a person: an identity document is never sent to AI, and this one has no coded lines the rules can read." }));
     return { s, facts, who, docs: inScope.map((x) => ({ ...x.d, reader: x.by!.reader })), byPerson };
   }
 
@@ -212,7 +228,8 @@ export class CaseDocuments {
     const live = letterReadUsd(ai.length);
     return { section, subject: b.subjectId,
       documents: docs.map((d) => ({ document: d.id, document_name: this.typeName(c, d.documentType), reader: d.reader, cost_usd: 0 })),
-      estimate: { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: live.basis },
+      estimate: ai.length ? { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: live.basis }
+        : { live_usd: 0, usual_usd: 0, worst_usd: 0, replay_usd: 0, model: null, attempts: 0, basis: "No document here is read by AI: the rules read it at no cost." },
       // A live read needs live AI on and the founder's Go for this run (P-295); this copy never makes one (P-175).
       live_allowed: false,
       live_why: aiLive() ? "A live read needs the founder's go-ahead for this run, with its cost shown first, and is not built yet. A saved read replays at no cost." : "Live AI is off on this copy. Nothing is sent; a saved read replays at no cost.",
@@ -233,6 +250,9 @@ export class CaseDocuments {
         return { fact: p.fact, value: w.value, page: p.source.page, confidence: p.confidence, review: p.review, checked: p.checked, ...(note ? { note } : {}) }; });
       unreadable = r.unreadable;
     } else {
+      // Break m7 (P-134): the label never decides alone: a file whose text holds a passport's coded lines is an identity
+      // document and is never sent to AI, whatever it was uploaded as.
+      if (holdsPassportZone(await this.bytesOf(d.id))) problem(409, "identity_document", "Not possible now", "This file holds a passport's coded lines: an identity document is never sent to AI. Upload it on the person's passport line. Nothing was read.");
       if (mode === "live") problem(409, "live_refused", "Not possible now", aiLive() ? "A live read needs the founder's go-ahead for this run, with its cost shown first, and is not built yet. Nothing was read; no cost." : "Live AI is off on this copy. Nothing was read; no cost.");
       if (mode !== "replay") problem(409, "cost_first", "See the cost first", `${this.typeName(c, d.documentType)} is read by AI: see its cost first, then replay a saved read at no cost. Nothing was read.`);
       const saved = savedRead(d.sha256);
@@ -253,6 +273,20 @@ export class CaseDocuments {
       if ((e as { code?: string }).code === "P2002") { const again = await this.db.documentReview.findUnique({ where: { documentId: d.id } }); if (again) return again; }
       throw e;
     }
+  }
+
+  /** GET /runtime/documents/:id/file (challenge M1, rows.md "documents challenge M7"): the stored file, staff of the
+   *  case's firm only, so the officer can see the page while checking names and dates. Never a client's other case,
+   *  never another firm (404 in the same words as an unknown id). */
+  async file(actor: Actor, documentId: string) {
+    if (!UUID.test(documentId)) fail("No such document.", HttpStatus.NOT_FOUND);
+    const d = await this.db.caseDocument.findUnique({ where: { id: documentId.toLowerCase() } });
+    const p = d ? await this.db.caseParticipant.findFirst({ where: { subjectId: d.subjectId }, select: { caseId: true } }) : null;
+    if (!d || !p) fail("No such document.", HttpStatus.NOT_FOUND);
+    const c = await this.r.reach(actor, p!.caseId, "officer").catch((e: unknown) => { if (e instanceof HttpException && e.getStatus() === HttpStatus.NOT_FOUND) fail("No such document.", HttpStatus.NOT_FOUND); throw e; });
+    const bytes = await this.bytesOf(d!.id);
+    await this.audit.log(c.workspaceId, actor.id, "viewed", "case document", d!.id, `${actor.name} viewed ${this.typeName(c, d!.documentType)} on case ${short(c.id)}`);
+    return { bytes, media: d!.mediaType, name: d!.fileName };
   }
 
   /** A stored document's bytes, checked against its sha256. */
@@ -318,9 +352,10 @@ export class CaseDocuments {
   }
 
   /** GET /runtime/cases/:id/proposals?subject=: the person's (or every person's) read values and reviews. */
-  async proposals(actor: Actor, caseId: string, q: { subject?: string }) {
+  async proposals(actor: Actor, caseId: string, q: { subject?: unknown }) {
     const c = await this.r.reach(actor, caseId, "officer");
-    const subjects = q.subject ? [this.person(c, q.subject).subjectId] : c.participants.map((p) => p.subjectId);
+    oneValue(q, "subject");
+    const subjects = q.subject ? [this.person(c, q.subject as string).subjectId] : c.participants.map((p) => p.subjectId);
     const all = await Promise.all(subjects.map((s) => this.shown(c, s)));
     return { proposals: all.flatMap((x) => x.proposals), reviews: all.flatMap((x) => x.reviews), unreadable: all.flatMap((x) => x.unreadable) };
   }
@@ -341,11 +376,19 @@ export class CaseDocuments {
     const s = this.r.snapshotOf(c), caseRole = who.role === "case";
     const fields = s.canonical_fields as { id: string; item_version: number; value_type?: string }[];
     const at = new Date();
-    const out = { used: [] as string[], agreed: [] as string[], checks: [] as { id: string; fact: string }[], not_asked: [] as string[], left: [] as { fact: string; why: string }[] };
+    const out = { used: [] as string[], agreed: [] as string[], checks: [] as { id: string; fact: string }[], not_asked: [] as string[], left: [] as { fact: string; why: string }[], closed: [] as string[] };
     await this.db.$transaction(async (tx) => {
       // One Confirm & use per document: the review row is the lock (a second one at the same moment writes nothing).
       const n = await tx.documentReview.updateMany({ where: { id: review!.id, confirmedBy: null }, data: { confirmedBy: actor.id, confirmedAt: at } });
       if (n.count !== 1) problem(409, "already_confirmed", "Already confirmed", "This document was confirmed by someone else at the same moment: one Confirm & use per document (P-242). Nothing was written.");
+      // Break B1: a check from a file this person has since replaced is closed by this Confirm & use, keeping the answer,
+      // with the reason in words (never left open to overwrite what the newer file agrees with).
+      const replaced = await tx.answerCheck.findMany({ where: { subjectId: who.subjectId, state: "open", fact: { in: review!.values.map((v) => v.fact) }, documentId: { not: doc!.id } }, select: { id: true, documentId: true } });
+      const stillCurrent = new Set((replaced.length ? await tx.caseDocument.findMany({ where: { id: { in: replaced.map((x) => x.documentId) }, current: true }, select: { id: true } }) : []).map((x) => x.id));
+      for (const k of replaced.filter((x) => !stillCurrent.has(x.documentId))) {
+        await tx.answerCheck.updateMany({ where: { id: k.id, state: "open" }, data: { state: "resolved", kept: "answer", reason: `Its file was replaced by a newer ${this.typeName(c, doc!.documentType)}, confirmed and used on ${at.toISOString().slice(0, 10)}.`, resolvedBy: actor.id, resolvedAt: at } });
+        out.closed.push(k.id);
+      }
       for (const v of review!.values) {
         const place = placementsOf(s).find((p) => p.fact === v.fact), field = fields.find((f) => f.id === v.fact);
         const def = place && field && place.repeats !== "per_row" && field.value_type !== "declaration" && isFilingFact(v.fact, place) === caseRole
@@ -357,7 +400,8 @@ export class CaseDocuments {
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: v.fact, rowKey: null, supersededById: null } });
         if (current && !sameValue(v.fact, current.valueJson, v.valueJson)) {
           // BR-7 (P-242): never settled silently: one open check, the typed answer kept.
-          const open = await tx.answerCheck.findFirst({ where: { subjectId: who.subjectId, fact: v.fact, state: "open" } });
+          // Break M2: one open check per person, fact and document: a second document that also differs has its own.
+          const open = await tx.answerCheck.findFirst({ where: { subjectId: who.subjectId, fact: v.fact, documentId: doc!.id, state: "open" } });
           const id = open?.id ?? randomUUID();
           if (!open) await tx.answerCheck.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId: who.subjectId, fact: v.fact, readValueId: v.id, documentId: doc!.id, answerId: current.id, typedValueJson: current.valueJson as object, documentValueJson: v.valueJson as object, openedBy: actor.id, openedAt: at } });
           await tx.readValue.update({ where: { id: v.id }, data: { state: "conflict", answerId: current.id } });
@@ -387,9 +431,11 @@ export class CaseDocuments {
   }
 
   /** GET /runtime/cases/:id/checks?subject=&state=: typed-versus-document checks (staff). */
-  async checks(actor: Actor, caseId: string, q: { subject?: string; state?: string }) {
+  async checks(actor: Actor, caseId: string, q: { subject?: unknown; state?: unknown }) {
     const c = await this.r.reach(actor, caseId, "officer");
-    const subject = q.subject ? this.person(c, q.subject).subjectId : undefined;
+    oneValue(q, "subject"); oneValue(q, "state");
+    if (q.state !== undefined && q.state !== "open" && q.state !== "resolved") fail("state is open or resolved.");
+    const subject = q.subject ? this.person(c, q.subject as string).subjectId : undefined;
     const rows = await this.db.answerCheck.findMany({ where: { caseId: c.id, ...(subject ? { subjectId: subject } : {}), ...(q.state === "open" || q.state === "resolved" ? { state: q.state } : {}) }, orderBy: [{ openedAt: "asc" }, { id: "asc" }] });
     const answers = rows.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: [...new Set(rows.map((x) => x.subjectId))] }, canonicalFieldKey: { in: [...new Set(rows.map((x) => x.fact))] }, rowKey: null, supersededById: null }, select: { id: true, subjectId: true, canonicalFieldKey: true, valueJson: true } }) : [];
     const s = this.r.snapshotOf(c);
@@ -401,17 +447,21 @@ export class CaseDocuments {
     if (!UUID.test(checkId)) fail("No such check.", HttpStatus.NOT_FOUND);
     const row = await this.db.answerCheck.findUnique({ where: { id: checkId.toLowerCase() } });
     if (!row) fail("No such check.", HttpStatus.NOT_FOUND);
-    const c = await this.r.reach(actor, row!.caseId, "officer");
+    // Break m6: another firm learns nothing: a check on a case it cannot reach is "No such check", as an unknown id.
+    const c = await this.r.reach(actor, row!.caseId, "officer").catch((e: unknown) => { if (e instanceof HttpException && e.getStatus() === HttpStatus.NOT_FOUND) fail("No such check.", HttpStatus.NOT_FOUND); throw e; });
     const b = parse(Resolve, body);
     if (row!.state !== "open") problem(409, "already_resolved", "Already resolved", `This check was resolved by ${nameOf(row!.resolvedBy)}: it kept the ${row!.kept === "document" ? "document's value" : "typed answer"}. Nothing changed.`);
     const who = this.person(c, row!.subjectId), s = this.r.snapshotOf(c), at = new Date();
     const read = await this.db.readValue.findUnique({ where: { id: row!.readValueId } });
     await this.db.$transaction(async (tx) => {
       const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: row!.subjectId, canonicalFieldKey: row!.fact, rowKey: null, supersededById: null } });
-      // The answer the officer looked at, when sent, must still be the current one (never resolve over a newer answer).
-      if (b.answerId !== undefined && (current?.id ?? null) !== b.answerId) problem(409, "changed", "Changed by someone else", "The answer changed after you opened this check: read it again, then resolve. Nothing changed.", { current: current ? { answer_id: current.id, value: current.valueJson } : null });
+      // The answer the officer looked at (sent, else the one the check was opened on: break M1) must still be the current
+      // one: a check is never resolved over a newer answer nobody saw.
+      if ((current?.id ?? null) !== (b.answerId !== undefined ? b.answerId : row!.answerId)) problem(409, "changed", "Changed by someone else", "The answer changed after you opened this check: read it again, then resolve. Nothing changed.", { current: current ? { answer_id: current.id, value: current.valueJson } : null });
       const n = await tx.answerCheck.updateMany({ where: { id: row!.id, state: "open" }, data: { state: "resolved", kept: b.keep, reason: b.reason, resolvedBy: actor.id, resolvedAt: at } });
       if (n.count !== 1) problem(409, "already_resolved", "Already resolved", "Someone resolved this check at the same moment. Nothing changed.");
+      // Break B1: a document's value is kept only while that file is the person's current one.
+      if (b.keep === "document" && !(await tx.caseDocument.count({ where: { id: row!.documentId, current: true } }))) problem(409, "not_current", "Not possible now", "This check's file was replaced by a newer one: read and confirm the newer file, or keep the typed answer. Nothing changed.");
       if (b.keep === "answer" || (current && sameValue(row!.fact, current.valueJson, row!.documentValueJson))) return;
       const id = randomUUID();
       if (current) { const m = await tx.clientCanonicalAnswer.updateMany({ where: { id: current.id, supersededById: null }, data: { supersededById: id } }); if (m.count !== 1) problem(409, "changed", "Changed by someone else", "The answer changed while resolving; nothing changed. Read the check again."); }
@@ -435,9 +485,12 @@ export class CaseDocuments {
     const who = this.person(c, subjectId);
     const doc = await this.db.caseDocument.findFirst({ where: { id: b.document.toLowerCase(), subjectId: who.subjectId } });
     if (!doc) fail("No such document for this person.", HttpStatus.NOT_FOUND);
-    if (await this.db.answerCheck.count({ where: { subjectId: who.subjectId, fact, state: "open" } })) problem(409, "open_checks", "Not possible now", "This answer and a document differ (an open check): resolve the check first. Nothing changed.");
+    // Break M6 (P-142 D3): only the person's current file of a kind that gives this fact is evidence for it.
+    if (!doc!.current) problem(409, "not_current", "Not possible now", "A newer file of this document was uploaded: check the answer against that one. Nothing changed.");
+    if (!(readerOf({ key: doc!.documentType, name: this.typeName(c, doc!.documentType) })?.supplies ?? []).includes(fact)) problem(422, "not_evidence", "Not possible now", `${this.typeName(c, doc!.documentType)} does not give this fact: check it against a document that does. Nothing changed.`);
     const at = new Date(), id = randomUUID();
     await this.db.$transaction(async (tx) => {
+      if (await tx.answerCheck.count({ where: { subjectId: who.subjectId, fact, state: "open" } })) problem(409, "open_checks", "Not possible now", "This answer and a document differ (an open check): resolve the check first. Nothing changed.");
       const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: fact, rowKey: null, supersededById: null } });
       if (!current) problem(409, "no_answer", "Not possible now", "There is no answer to check against the document yet. Nothing changed.");
       const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: current!.id, supersededById: null }, data: { supersededById: id } });
@@ -450,6 +503,8 @@ export class CaseDocuments {
   }
 }
 
+/** Break m1: a query value given twice is refused in words, never read as a list. */
+const oneValue = (q: Record<string, unknown>, key: string) => { if (q[key] !== undefined && typeof q[key] !== "string") fail(`Give ${key} once.`); };
 const nameOf = (id: string | null) => { if (!id) return "someone"; try { return actorOf(id).name; } catch { return id; } };
 
 @CaseRead()
@@ -460,9 +515,15 @@ export class CaseDocumentsController {
   upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[], @Body() b: unknown) { return this.x.upload(actorOf(a), id, files, b); }
   @Post("cases/:id/sections/:s/fill-from-documents/plan") @HttpCode(200) plan(@Headers("x-actor") a: H, @Param("id") id: string, @Param("s") s: string, @Body() b: unknown) { return this.x.plan(actorOf(a), id, s, b); }
   @Post("cases/:id/sections/:s/fill-from-documents") @HttpCode(200) fill(@Headers("x-actor") a: H, @Param("id") id: string, @Param("s") s: string, @Body() b: unknown) { return this.x.fill(actorOf(a), id, s, b); }
-  @Get("cases/:id/proposals") proposals(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: { subject?: string }) { return this.x.proposals(actorOf(a), id, q); }
+  @Get("cases/:id/proposals") proposals(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: { subject?: unknown }) { return this.x.proposals(actorOf(a), id, q); }
   @Post("cases/:id/documents/:doc/confirm-and-use") @HttpCode(200) confirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("doc") d: string, @Body() b: unknown) { return this.x.confirmAndUse(actorOf(a), id, d, b); }
-  @Get("cases/:id/checks") checks(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: { subject?: string; state?: string }) { return this.x.checks(actorOf(a), id, q); }
+  @Get("documents/:id/file") async file(@Headers("x-actor") a: H, @Param("id") id: string, @Res() res: Response) {
+    const f = await this.x.file(actorOf(a), id);
+    // Served inline for the officer's eyes, never as a page that runs: its own media type, no sniffing, no scripts.
+    res.setHeader("content-type", f.media); res.setHeader("x-content-type-options", "nosniff"); res.setHeader("content-security-policy", "default-src 'none'; sandbox");
+    res.setHeader("cache-control", "private, no-store"); res.setHeader("content-disposition", `inline; filename*=UTF-8''${encodeURIComponent(f.name)}`); res.end(f.bytes);
+  }
+  @Get("cases/:id/checks") checks(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: { subject?: unknown; state?: unknown }) { return this.x.checks(actorOf(a), id, q); }
   @Post("checks/:id/resolve") @HttpCode(200) resolve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.resolve(actorOf(a), id, b); }
   @Post("cases/:id/answers/:subject/:fact/checked-against-document") @HttpCode(200) checked(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("fact") f: string, @Body() b: unknown) { return this.x.checkedAgainst(actorOf(a), id, s, f, b); }
 }

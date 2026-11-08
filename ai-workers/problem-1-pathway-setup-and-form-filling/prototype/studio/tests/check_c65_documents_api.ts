@@ -6,6 +6,7 @@
 // Synthetic Sample documents only (P-133). No model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_c65d 4436 start && tsx studio/tests/check_c65_documents_api.ts 4436 xr_studio_runtime_c65d
 import { execFileSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { AUTHOR, CLIENT, CLIENT_B, FAMILY, FIXED, OFFICER, PORT, DB, agent, answer, call, filingOf, main, ok, openCase, prepare, readinessOf, sql } from "../acceptance/lib/m3.ts";
 import { letterPdf, passportPdf, upload } from "../acceptance/lib/fixtures.ts";
@@ -106,7 +107,7 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   } else ok("C6.5 D8 pass: a section with no fact from the checked document is still confirmed while the check is open (no such section on this release: nothing to refuse)", true);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.passport_number/checked-against-document`, { document: newer.body?.document?.id ?? docId }, OFFICER);
   ok("C6.5 D7 fail: an answer with an open check cannot be marked checked against the document (409 open_checks)", r.status === 409 && r.body?.code === "open_checks", r.body);
-  r = await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.uci/checked-against-document`, { document: docId }, OFFICER);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.passport_country_of_issue/checked-against-document`, { document: newer.body?.document?.id }, OFFICER);
   ok("C6.5 D7 fail: a fact with no answer cannot be marked checked (409 no_answer)", r.status === 409 && r.body?.code === "no_answer", r.body);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${S}/person.date_of_birth/checked-against-document`, { document: docId }, OFFICER);
   ok("C6.5 D7 fail: a document that is not this person's is not found for them (404)", r.status === 404, r.status);
@@ -126,4 +127,76 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const p2 = (await prepare(c.id, OFFICER)).p;
   ok("C6.5 D9 fail: once resolved, the check no longer warns on the filing", warns(p2).every((w) => !/passport number/i.test(w.words)), readinessOf(p2, filing)?.warns?.filter((w) => w.code === "open_check"));
   ok("C6.5 D11 pass: the audit names the check's fact, never the reason typed (STANDARDS §5)", sql(`select count(*) from audit_event where entity_key='${check?.id}' and summary like '%passport_number%' and summary not like '%renewed passport%'`) === "1");
+
+  // ---- Review and break findings on ab717fdbd, each a fail test (screens/C6.5-documents-api/review.md, break-report.md)
+  const sLine = await lineOf(S);
+  const spouse = { ...doc, surname: "SAMPLES", given: "SPOUSE A", number: "SAMPLES34", dob: FAMILY[1].dob!, sex: "F" as const };
+  const sDoc = async (surname: string, file: string) => { const u2 = await upload(PORT, `/runtime/checklist-lines/${sLine}/documents`, passportPdf({ ...spouse, surname }), file, OFFICER); await fill(nameSec, S); return u2.body?.document?.id as string; };
+  const sName = () => sql(`select status || '|' || (value_json #>> '{}') || '|' || coalesce(source_json->>'document','') from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.family_name' and superseded_by_id is null`) ?? "";
+  const openOf = (who: string, fact: string) => (sql(`select string_agg(document_id::text, ',') from answer_check where subject_id='${who}' and fact='${fact}' and state='open'`) ?? "").split(",").filter(Boolean);
+  await answer(c.id, S, "person.family_name", "SAMPLEDX", OFFICER);
+  const sp1 = await sDoc("SAMPLES", "spouse-1.pdf");
+  const c1 = await call("POST", `/runtime/cases/${c.id}/documents/${sp1}/confirm-and-use`, { subjectId: S }, OFFICER);
+  const k1 = (c1.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name")?.id as string;
+  const sexOptions = (((await agent(c.id))?.sections ?? []) as (Sec & { questions: (Q & { options?: { key: string; label: string }[] | null })[] })[]).flatMap((x) => x.questions).find((q) => q.subjectId === S && q.fact === "person.sex")?.options ?? [];
+  const female = sexOptions.find((o) => ["female", "f female"].includes(o.label.trim().toLowerCase()))?.key;
+  ok("C6.5 B-m4 pass: a passport's F is written as the release's own answer key for Female (or left for a person when the release has no such answer)", female ? sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.sex' and superseded_by_id is null`) === female : (c1.body?.left ?? []).some((x: { fact: string }) => x.fact === "person.sex"), { female, used: c1.body?.used, left: c1.body?.left });
+  await answer(c.id, S, "person.family_name", "SAMPLEDY", OFFICER);
+  r = await call("POST", `/runtime/checks/${k1}/resolve`, { keep: "answer", reason: "Matches the typed name (Sample)" }, OFFICER);
+  ok("C6.5 B-M1 fail: resolving with no answer id over an answer changed since the check opened is refused (409 changed)", r.status === 409 && r.body?.code === "changed", r.body);
+  const sp2 = await sDoc("SAMPLEDZ", "spouse-2.pdf");
+  r = await call("POST", `/runtime/checks/${k1}/resolve`, { keep: "document", reason: "The passport is right (Sample)", answerId: sql(`select id from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.family_name' and superseded_by_id is null`) }, OFFICER);
+  ok("C6.5 B1 fail: a replaced file's value cannot be kept (409 not_current), and the answer is unchanged", r.status === 409 && r.body?.code === "not_current" && sName().startsWith("DECLARED|SAMPLEDY|"), r.body);
+  const c2 = await call("POST", `/runtime/cases/${c.id}/documents/${sp2}/confirm-and-use`, { subjectId: S }, OFFICER);
+  ok("C6.5 B1/B-M2 pass: the newer file closes the replaced file's check (kept the answer, a reason in words) and opens its own check for its own difference", c2.status === 200 && (c2.body?.closed ?? []).includes(k1) && /replaced by a newer/.test(sql(`select reason from answer_check where id='${k1}'`) ?? "") && JSON.stringify(openOf(S, "person.family_name")) === JSON.stringify([sp2]), { closed: c2.body?.closed, open: openOf(S, "person.family_name") });
+  const k2 = (c2.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name")?.id as string;
+  r = await call("POST", `/runtime/checks/${k2}/resolve`, { keep: "answer", reason: "\u3164\u115f" }, OFFICER);
+  ok("C6.5 B-m3 fail: a reason of letters that print as nothing is refused in words (400), never a 500", r.status === 400, r.status);
+  r = await call("POST", `/runtime/checks/${k2}/resolve`, { keep: "answer", reason: "Matches" }, "user-S");
+  const unknown = await call("POST", `/runtime/checks/00000000-0000-4000-8000-000000000000/resolve`, { keep: "answer", reason: "Matches" }, "user-S");
+  ok("C6.5 B-m6 fail: another firm cannot tell a real check from an unknown one (the same 404 words)", r.status === 404 && unknown.status === 404 && r.body?.detail === unknown.body?.detail, [r.body?.detail, unknown.body?.detail]);
+  const typedNow = sql(`select id from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.family_name' and superseded_by_id is null`);
+  const many = await Promise.all(Array.from({ length: 5 }, () => call("POST", `/runtime/checks/${k2}/resolve`, { keep: "answer", reason: "पासपोर्ट नवीनीकरण से पहले का नाम (Sample)", answerId: typedNow }, OFFICER)));
+  ok("C6.5 B-M3 pass and R-m2: a reason in any script is kept; five resolves at once resolve it once (one 200, the rest 409)", many.filter((x) => x.status === 200).length === 1 && many.filter((x) => x.status === 409).length === 4 && /पासपोर्ट/.test(sql(`select reason from answer_check where id='${k2}'`) ?? ""), many.map((x) => x.status));
+  const sp3 = await sDoc("SAMPLEDY", "spouse-3.pdf");
+  const all = await Promise.all(Array.from({ length: 5 }, () => call("POST", `/runtime/cases/${c.id}/documents/${sp3}/confirm-and-use`, { subjectId: S }, OFFICER)));
+  ok("C6.5 B1 pass and R-m2: a newer file that agrees confirms the typed name from itself (never overwritten by a replaced file); five clicks at once confirm once", all.filter((x) => x.status === 200).length === 1 && all.filter((x) => x.status === 409).length === 4 && sName() === `VERIFIED|SAMPLEDY|${sp3}` && openOf(S, "person.family_name").length === 0, { statuses: all.map((x) => x.status), name: sName() });
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${S}/person.date_of_birth/checked-against-document`, { document: sp1 }, OFFICER);
+  ok("C6.5 B-M6 fail: an answer is not checked against a replaced file (409 not_current)", r.status === 409 && r.body?.code === "not_current", r.body);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${c.caseSubject}/case.visit_purpose/checked-against-document`, { document: letter1 }, OFFICER);
+  ok("C6.5 B-M6 fail: a file of a kind that does not give the fact is no evidence for it (422 not_evidence)", r.status === 422 && r.body?.code === "not_evidence", r.body);
+  r = await upload(PORT, `/runtime/cases/${c.id}/documents`, passportPdf(doc), "passport.pdf", CLIENT, { subjectId: P, documentType: (sql(`select document_type from case_document where id='${docId}'`) ?? "") });
+  ok("C6.5 B-M5 fail: a document with its own checklist line is not uploaded around the line (422), and the line's file stays current", r.status === 422 && sql(`select count(*) from case_document where subject_id='${P}' and current and checklist_line_id is null`) === "0", r.body);
+  r = await call("GET", `/runtime/cases/${c.id}/checks?subject=${P}&subject=${S}`, undefined, OFFICER);
+  const r2 = await call("GET", `/runtime/cases/${c.id}/checks?state=bogus`, undefined, OFFICER);
+  const r3 = await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}&subject=${S}`, undefined, OFFICER);
+  ok("C6.5 B-m1/m2 fail: a query value given twice, or an unknown state, is refused in words (400), never a 500 or every check", r.status === 400 && r2.status === 400 && r3.status === 400, [r.status, r2.status, r3.status]);
+  // B-M4: a check on the application's own fact (a letter's dates of stay) warns on the filings. No letter read is
+  // saved yet (FQ-10), so the read and its check are written here as the server would write them.
+  const stay = await answer(c.id, c.caseSubject, "case.intended_stay_from", FIXED.stayFrom, OFFICER);
+  const rv = randomUUID(), ck = randomUUID(), rev = randomUUID();
+  const ws = sql(`select workspace_id from runtime_case where id='${c.id}'`), ans = sql(`select id from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.intended_stay_from' and superseded_by_id is null`);
+  sql(`insert into document_review (id, workspace_id, case_id, subject_id, document_id, reader, replayed, unreadable, read_by) values ('${rev}','${ws}','${c.id}','${c.caseSubject}','${letter1}','ai_vision',true,'[]','${OFFICER}')`);
+  sql(`insert into read_value (id, workspace_id, case_id, review_id, document_id, subject_id, fact, value_json, page, reader, confidence, review, state, answer_id) values ('${rv}','${ws}','${c.id}','${rev}','${letter1}','${c.caseSubject}','case.intended_stay_from','"2030-03-02"',1,'ai_vision',0.9,'expanded','conflict','${ans}')`);
+  sql(`insert into answer_check (id, workspace_id, case_id, subject_id, fact, read_value_id, document_id, answer_id, typed_value_json, document_value_json, opened_by) values ('${ck}','${ws}','${c.id}','${c.caseSubject}','case.intended_stay_from','${rv}','${letter1}','${ans}','"${FIXED.stayFrom}"','"2030-03-02"','${OFFICER}')`);
+  const p3v = (await prepare(c.id, OFFICER)).p;
+  ok("C6.5 B-M4 pass: an open check on the application's own fact is a CRITICAL warning on the person's filing, naming the application", warns(p3v).some((w) => /application/i.test(w.words) && /intended stay from/i.test(w.words)), { stay: [stay.status, stay.body?.detail], warns: readinessOf(p3v, filing)?.warns?.filter((w) => w.code === "open_check").map((w) => w.words) });
+  ok("C6.5 B-m8 fail: the database refuses to reopen a resolved check, to undo a Confirm & use, and a check that names another person's answer", sql(`update answer_check set state='open', kept=null, reason=null, resolved_by=null, resolved_at=null where id='${k2}' returning id`) === null
+    && sql(`update document_review set confirmed_by=null, confirmed_at=null where document_id='${sp3}' returning id`) === null
+    && sql(`insert into answer_check (id, workspace_id, case_id, subject_id, fact, read_value_id, document_id, answer_id, typed_value_json, document_value_json, opened_by) values ('${randomUUID()}','${ws}','${c.id}','${c.caseSubject}','case.intended_stay_from','${rv}','${letter1}','${typedNow}','"x"','"y"','${OFFICER}') returning id`) === null);
+  // Challenge M1: the stored file, for the officer's eyes only.
+  const getFile = async (id: string, actor: string) => { const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/documents/${id}/file`, { headers: { "x-actor": actor } }); return { status: res.status, type: res.headers.get("content-type") ?? "", nosniff: res.headers.get("x-content-type-options"), body: Buffer.from(await res.arrayBuffer()) }; };
+  const seen = await getFile(sp3, OFFICER);
+  ok("C6.5 C-M1 pass: the case officer opens the stored passport (its own bytes, PDF, not sniffed) to check names against it", seen.status === 200 && seen.type.startsWith("application/pdf") && seen.nosniff === "nosniff" && createHash("sha256").update(seen.body).digest("hex") === sql(`select sha256 from case_document where id='${sp3}'`), [seen.status, seen.type]);
+  const [byClient, byOther, byNone] = [await getFile(sp3, CLIENT), await getFile(sp3, "user-S"), await getFile("00000000-0000-4000-8000-000000000000", "user-S")];
+  ok("C6.5 C-M1 fail: a client cannot open it (403); another firm gets the same 404 words as an unknown id", byClient.status === 403 && byOther.status === 404 && byOther.body.toString() === byNone.body.toString(), [byClient.status, byOther.status, byNone.status]);
+  // Challenge M3: "read by a person" names only identity documents about this person.
+  const funds = ((((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people ?? []).find((x: { subject: string }) => x.subject === S)?.lines ?? []) as { id: string; label: string }[]).find((x) => /financial|funds/i.test(x.label))?.id;
+  if (funds) await upload(PORT, `/runtime/checklist-lines/${funds}/documents`, letterPdf(), "funds.pdf", OFFICER);
+  r = await fill(nameSec, S);
+  ok("C6.5 C-M3 fail: proof of funds is not listed as an identity document a person reads", !!funds && r.status === 200 && !(r.body?.not_read ?? []).some((x: { document_name: string }) => /financial|funds/i.test(x.document_name)), { funds, not_read: r.body?.not_read });
+  // m7 (P-134): a passport uploaded as a letter is never sent to AI.
+  await upload(PORT, `/runtime/cases/${c.id}/documents`, passportPdf(doc), "not-a-letter.pdf", OFFICER, { subjectId: c.caseSubject, documentType: "letter_of_invitation" });
+  r = await fill(visit, c.caseSubject, OFFICER, { mode: "replay" });
+  ok("C6.5 B-m7 fail (P-134): a file holding passport coded lines, uploaded as a letter, is never sent to AI (409 identity_document)", r.status === 409 && r.body?.code === "identity_document", r.body);
 });

@@ -586,11 +586,6 @@ export class Runtime {
     const s = this.snapshotOf(c);
     const fields = new Set((s.placements as { fact: string; section_id: string }[]).filter((p) => p.section_id === section).map((p) => p.fact));
     if (!fields.size) fail("No such section in this case's release.", HttpStatus.NOT_FOUND);
-    // C6.5 (BR-6, BR-7; case-documents.ts): while a typed answer and a document differ on a fact of this section (an open
-    // check), or the document a check came from also gives a fact of this section (its review is not finished), the section
-    // is not confirmed: the officer resolves the check first, with a reason.
-    const openChecks = await this.db.answerCheck.findMany({ where: { subjectId: storedId, state: "open", OR: [{ fact: { in: [...fields] } }, { readValue: { read: { values: { some: { fact: { in: [...fields] } } } } } }] }, select: { id: true, fact: true } });
-    if (openChecks.length) throw new HttpException({ type: "https://expatready.local/problems/open-checks", title: "Not possible now", status: 409, code: "open_checks", detail: `${openChecks.length === 1 ? "An answer in this section differs" : `${openChecks.length} answers in this section differ`} from a document (an open check): resolve ${openChecks.length === 1 ? "it" : "them"} first, with a reason. Nothing was confirmed.`, checks: openChecks }, HttpStatus.CONFLICT);
     const seen = new Set(b.seen);
     const at = new Date();
     // QA-164 (golden journey 1, step 4): a confirm covers the questions the officer's view lists for this person and
@@ -603,6 +598,11 @@ export class Runtime {
     const bg = this.backgroundOf(c);
     let waiting = 0;
     const confirmed = await this.db.$transaction(async (tx) => {
+      // C6.5 (BR-6, BR-7; case-documents.ts): while a typed answer and a document differ on a fact of this section (an open
+      // check), or the document a check came from also gives a fact of this section (its review is not finished), the section
+      // is not confirmed: the officer resolves the check first, with a reason.
+      const openChecks = await tx.answerCheck.findMany({ where: { subjectId: storedId, state: "open", OR: [{ fact: { in: [...fields] } }, { readValue: { read: { values: { some: { fact: { in: [...fields] } } } } } }] }, select: { id: true, fact: true } });
+      if (openChecks.length) throw new HttpException({ type: "https://expatready.local/problems/open-checks", title: "Not possible now", status: 409, code: "open_checks", detail: `${openChecks.length === 1 ? "An answer in this section differs" : `${openChecks.length} answers in this section differ`} from a document (an open check): resolve ${openChecks.length === 1 ? "it" : "them"} first, with a reason. Nothing was confirmed.`, checks: openChecks }, HttpStatus.CONFLICT);
       // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
       // row or in a live row are current; a seen id of a removed row's answer is not "changed".
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: storedId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });

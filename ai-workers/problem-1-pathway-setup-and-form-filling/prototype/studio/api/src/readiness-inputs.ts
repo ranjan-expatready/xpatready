@@ -73,6 +73,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
+  // Break M4: a check on the application's own facts (a letter's visit contact) warns on every filing of the case.
+  const caseSubject = openChecks.length ? (await db.caseParticipant.findFirst({ where: { caseId: x.caseId, role: "case" }, select: { subjectId: true } }))?.subjectId ?? null : null;
   const lines = x.documents.length ? await db.checklistLine.findMany({ where: { caseId: x.caseId }, select: { subjectId: true, documentType: true, state: true } }) : [];
   // P-151 (1): the newest accepted-until row of each edition the case's forms are filed on.
   const labels = [...new Set(x.forms.map((f) => x.editionOf(f.form, f.channel)).filter((l): l is string => !!l))];
@@ -122,6 +124,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const review = sameFacts && !withdrawn ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
     const personOf = new Map(mineForms.map((f) => [f.subject, f.person]));
+    if (caseSubject) personOf.set(caseSubject, "The application");
     const checks: OpenCheck[] = openChecks.filter((k) => personOf.has(k.subjectId)).map((k) => ({ fact: k.fact, label: k.fact.split(".").pop()!.replace(/_/g, " "), subject: k.subjectId, person: personOf.get(k.subjectId)! }));
     const r = filingReadiness({ filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });
     return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
