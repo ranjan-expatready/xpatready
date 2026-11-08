@@ -357,10 +357,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: the test merge on main (D6, tools/pr-base.sh; as the parts)
-        env: { HEAD_SHA: "${{ github.event.pull_request.head.sha }}", KBASE: "${{ needs.kind.outputs.base }}", KATTEMPT: "${{ needs.kind.outputs.battempt }}" }
+      - name: the test merge on kind's main (D6, tools/pr-base.sh; always pinned, so the plan, its data and holds match the tree)
+        # Devin on #1337: "Re-run failed jobs" keeps kind's plan, so this job keeps kind's base too; "Re-run all jobs"
+        # re-plans on today's main.
+        env: { HEAD_SHA: "${{ github.event.pull_request.head.sha }}", KBASE: "${{ needs.kind.outputs.base }}" }
         run: |
-          pin=""; [ "$KATTEMPT" = "$GITHUB_RUN_ATTEMPT" ] && pin="$KBASE"; range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" $pin) || exit 1
+          range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" "$KBASE") || exit 1
           echo "RANGE=$range" >> "$GITHUB_ENV"; echo "tested: $range"
       - uses: actions/setup-node@v4
         with:

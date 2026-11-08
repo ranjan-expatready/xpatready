@@ -413,7 +413,14 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   const via = new Map(), todo = [];
   // Files under prototype/ (pick()'s own scope) and official-sources/ (acceptance/lib/pack2.ts reads the IRCC manifest);
   // records, product/tools/ and workflows are read by no pack.
-  const seedable = (f) => (f.startsWith(`${PR}/`) || f.startsWith(`${P}/official-sources/`)) && !DOCS.test(f);
+  // Data files count too (Devin on #1337: C4.5 reads prototype/expected/source-text/*.txt); images and PDFs under
+  // prototype/ are seeded as well, and simply reach nothing when no file reads them.
+  const seedable = (f) => f.startsWith(`${PR}/`) || (f.startsWith(`${P}/official-sources/`) && !DOCS.test(f));
+  const testFile = (x) => x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`) || x.startsWith(`${PR}/tests/`);
+  // A data file's folder named in a pack's or test's code ("source-text" beside a built file name) is a read of it.
+  const folderReaders = (f) => { const c = basename(dirname(f)), re = new RegExp(`["'\`/]${esc(c)}["'\`/]`);
+    let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return []; }
+    return files.filter((x) => re.test(read(x))); };
   for (const f of changed) if (seedable(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
   const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
   const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
@@ -428,10 +435,12 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
     // --assume-deleted (its own check only): the seeds read as deleted, without touching the tree.
     const gone = !existsSync(join(ROOT, y)) || (process.argv.includes("--assume-deleted") && via.get(y) === null);
     const users = gone ? named(y) : usersOf(y);
+    if (via.get(y) === null && !CODE.test(y)) for (const x of folderReaders(y)) if (!users.has(x)) users.set(x, "folder");
     for (const [x, how] of users) {
       if (via.has(x) || (RUNNERS.has(x) && how === "folder")) continue;
       // Through API and web code only by imports: a file that names an endpoint's module or lists its folder is no read.
-      if (appCode(y) && how !== "import") continue;
+      // ... except a pack or test that reads the app file as text (Devin on #1337: C2.12 and C11.1 read App.tsx's routes).
+      if (appCode(y) && how !== "import" && !testFile(x)) continue;
       via.set(x, y);
       if (!stop(x)) todo.push(x);
     }
