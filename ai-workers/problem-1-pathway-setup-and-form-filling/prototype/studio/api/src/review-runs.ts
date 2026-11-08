@@ -25,11 +25,11 @@ import { join } from "node:path";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { costUsd } from "../../../p2/ledger.ts";
-import { editionContextKey, PRINTED_EDITION } from "../../engine/rounds.ts";
+import { editionContextKey, printedEditionParts } from "../../engine/rounds.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
 import { aiFingerprint, findingsFromRounds, reviewSheet, reviewShapeOk, sheetText, stillQuoted, type ReviewAnswer, type ReviewSheet, type ReviewedFinding } from "../../engine/runtime/form-review.ts";
-import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, VAR_ROOT, type Actor } from "./core.ts";
-import { MODEL, pairOf, roundBudgetUsd, RUNS, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
+import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, SOLUTION, VAR_ROOT, type Actor } from "./core.ts";
+import { MODEL, pairOf, roundJob, RUNS, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { aiLive, Sources } from "./sources.ts";
 
@@ -44,6 +44,9 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 export const FORM_REVIEW: AiStep = {
   kind: "form_review", jobBase: "studio-form-review", configurationVersion: "c75-form-review",
   template: "form-review.v1.md", check: "form-review-check.v1.md", schema: "form-review-output.v1.schema.json", effort: "medium", max_output_tokens: 8000,
+  // The run cap of one round, which the ledger enforces (P-232: the two rounds stay under the US$5 job cap). Measured on the
+  // stub pass of IMM 5257 (8 Nov): the request is about 239 KB, so one attempt reserves about US$1.13 and both fit.
+  budget_usd: 2.4,
   shapeOk: reviewShapeOk,
   words: {
     noSaved: "No saved review of this form edition with these values yet: it is recorded once, in a Live run the tech lead approves (P-295).",
@@ -51,11 +54,12 @@ export const FORM_REVIEW: AiStep = {
     nothingUsed: "Nothing of it is added to the findings.",
   },
 };
-/** The usual output of one round (US$ estimate only; the worst case is the launcher's own budget). Measured on the like job
- *  (the IMM 5257 two-round read of 3 Nov, about 2,500 output tokens a round); revisited after the paid run. */
-const USUAL_OUTPUT_TOKENS = 2_500;
-/** Tokens a byte of the request is taken for in the usual estimate (JSON and English, about 3.6 bytes a token). */
-const BYTES_PER_TOKEN = 3.6;
+/** The usual estimate of one round (the worst case is the round's own run cap, budget_usd). Measured on the like job, the
+ *  IMM 5257 two-round read of 3 Nov over the same inventory (p2/runs studio-masters-form-…-254739 and …-check-…-e5980f):
+ *  103,883 and 102,586 input tokens for 358,499 bytes of inventory (about 3.4 bytes a token), 10,504 and 3,788 output
+ *  tokens. A review lists findings, not a whole form, so about 4,000 output tokens a round. Revisited after the paid run. */
+const USUAL_OUTPUT_TOKENS = 4_000;
+const BYTES_PER_TOKEN = 3.4;
 export const STAND_IN = "SI-6";
 export const STAND_IN_WORDS = "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial, P-164 (2)); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.";
 export const LIVE_WAITING = "Live is off on this copy: a live review is not allowed without the founder's Go, approved by the tech lead with its cost stated first (P-295). Use Saved (US$0).";
@@ -128,12 +132,17 @@ export class ReviewRuns {
     for (const form of [...new Set(forms)]) {
       const cov = formCoverage(s, people, answers, rows, form, subject);
       if (!cov || cov.applies === false) fail(`${form} is not one of ${who!.label}'s forms on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
-      const printed = `${form} (${cov!.edition ?? ""})`;
-      if (!PRINTED_EDITION.test(printed)) fail(`${form} has no printed edition in this case's release, so it cannot be reviewed.`, HttpStatus.UNPROCESSABLE_ENTITY);
+      // The edition in use (P-32), as the release's field map prints it: "IMM 5257 (09-2023)".
+      const printed = cov!.edition ?? "", parts = printedEditionParts(printed);
+      if (!parts || parts.code !== form) fail(`${form} has no printed edition in this case's release, so it cannot be reviewed.`, HttpStatus.UNPROCESSABLE_ENTITY);
       const sheet = reviewSheet(printed, cov!.boxes);
       if (!sheet.fields.length) fail(`Nothing is filled on ${form} for ${who!.label} yet: answer and confirm its questions first.`, HttpStatus.UNPROCESSABLE_ENTITY);
-      const input = writeSheet(sheet);
-      prepared.push({ form, edition: printed, sheet, ctx: { trail: printed, contextKey: editionContextKey(form, cov!.edition!), inputs: [input], mode: "replay", wanted: async () => true } });
+      // The form's own text (its official inventory, as the release's field map names it) is read first: the rounds see the
+      // form's instructions and choices beside the answers, and the launcher's screen admits a value the form itself prints.
+      const map = (s.field_maps as { form_number: string; form_edition?: string | null; inventory_file?: string | null }[]).find((m) => m.form_number === form && m.form_edition === printed);
+      const inventory = map?.inventory_file && /^prototype\/p1\/inventory\/[a-z0-9._-]+\.inventory\.json$/.test(map.inventory_file) ? (() => { try { return { file: map.inventory_file!, sha256: sha(readFileSync(join(SOLUTION, map.inventory_file!))) }; } catch { return null; } })() : null;
+      if (!inventory) fail(`The official text of ${printed} is not on this computer, so it cannot be reviewed here.`, HttpStatus.UNPROCESSABLE_ENTITY);
+      prepared.push({ form, edition: printed, sheet, ctx: { trail: printed, contextKey: editionContextKey(parts!.code, parts!.edition), inputs: [inventory!, writeSheet(sheet)], mode: "replay", wanted: async () => true } });
     }
     return { person: who!.label, prepared };
   }
@@ -157,10 +166,12 @@ export class ReviewRuns {
     for (const p of prepared) {
       const { d, k } = await this.savedRounds(p.ctx);
       const ok = d.ok && !!k?.ok;
-      const chars = sheetText(p.sheet).length, bytes = Buffer.byteLength(sheetText(p.sheet)) + 8_000;
+      const sizes = p.ctx.inputs.map((i) => { try { return readFileSync(join(SOLUTION, i.file)).length; } catch { return 0; } });
+      const bytes = sizes.reduce((n, x) => n + x, 0) + 8_000;
       const usual = [FORM_REVIEW.template, FORM_REVIEW.check].reduce((n, t) => n + costUsd(MODEL, Math.ceil((bytes + promptBytes(t)) / BYTES_PER_TOKEN), USUAL_OUTPUT_TOKENS), 0);
-      const worst = roundBudgetUsd(FORM_REVIEW, false, p.ctx.inputs, chars) + roundBudgetUsd(FORM_REVIEW, true, p.ctx.inputs, chars);
-      forms.push({ form: p.form, edition: p.edition, boxes: p.sheet.fields.length, sheet: p.ctx.inputs[0].file, sheet_sha256: p.ctx.inputs[0].sha256,
+      // The most the two rounds can spend: each round's run cap as its job carries it (the ledger refuses any attempt past it).
+      const worst = [false, true].reduce((n, isCheck) => n + roundJob(FORM_REVIEW, isCheck, p.ctx).settings.budget_usd, 0);
+      forms.push({ form: p.form, edition: p.edition, boxes: p.sheet.fields.length, sheet: p.ctx.inputs[1].file, sheet_sha256: p.ctx.inputs[1].sha256,
         saved: { available: ok, why: ok ? null : (!d.ok ? d.reason : null) ?? FORM_REVIEW.words.noSaved, files: ok ? [d.ok ? this.runFile(d.runFile) : "", k?.ok ? this.runFile(k.runFile) : ""] : [], made_up: madeUpRuns() && ok },
         live_usd: round2(Math.max(0.01, usual)), live_worst_usd: round2(worst) });
     }

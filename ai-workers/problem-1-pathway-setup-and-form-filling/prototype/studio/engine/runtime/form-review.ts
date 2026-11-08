@@ -39,13 +39,17 @@ export function valueWords(v: unknown): string | null {
   return null;
 }
 
+/** Contact details are not on the sheet: the Checker cross-checks names, dates of birth, document numbers and dates
+ *  (AG-11-69), not how to reach the client, so no email address, telephone or fax number is sent to the AI (fewer
+ *  personal data sent; the launcher's screen also refuses the pack's sample email, a made-up family value). */
+export const CONTACT_FACT = /(^|[._])(e_?mail|phone|telephone|fax|mobile)([._]|$)/;
 /** The review sheet of one form for one person: every box that would be written with a value, never the representative's
- *  (the firm's own record, not the client's answers), sorted by box. `formEdition` is the printed edition,
+ *  (the firm's own record, not the client's answers) and never a contact detail (CONTACT_FACT), sorted by box. `formEdition` is the printed edition,
  *  "IMM 5257 (09-2023)". */
 export function reviewSheet(formEdition: string, boxes: readonly SheetBox[]): ReviewSheet {
   const rows = new Map<string, SheetRow>();
   for (const b of boxes) {
-    if (!b.box || b.about === "representative" || (b.fact ?? "").startsWith("representative.")) continue;
+    if (!b.box || b.about === "representative" || (b.fact ?? "").startsWith("representative.") || CONTACT_FACT.test(b.fact ?? "")) continue;
     const w = valueWords(b.value);
     if (w === null) continue;
     const value = plain(w, SHEET_LIMITS.value), box = plain(b.box, SHEET_LIMITS.box);
