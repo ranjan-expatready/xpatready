@@ -8,6 +8,7 @@ import type { Channel, Signature } from "../../contracts/forms.ts";
 import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
+import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -56,6 +57,16 @@ export type ReadinessView = { filing: string; ready: boolean; status_rule: strin
   reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null;
   /** The filing's facts fingerprint now (the review route stores it) and the representative of record now. */
   facts_hash: string; representative: string | null };
+
+/** B162: the state of a form's newest copy for filing, as the copy view judges it (fill-case.ts: changedFacts and
+ *  changedGroups). `copy` is that copy (its id, its facts fingerprint, the repeating groups it was made with; an older
+ *  copy without a group record compares facts only, as changedGroups does), `now` the form's facts fingerprint and groups
+ *  today. Current only when both are unchanged (Devin on #1344: a group-only change, an entry added or removed or "none
+ *  apply" changed, leaves the fingerprint equal). The key is the release for none and the copy for stale. */
+export function copyStateOf(copy: { id: string; hash: string; groups?: GroupFact[] | null } | undefined, now: { hash: string; groups: GroupFact[] }, releaseKey: string): { state: "none" | "stale" | "current"; key: string } {
+  if (!copy) return { state: "none", key: releaseKey };
+  return copy.hash === now.hash && !changedGroups(copy.groups ?? undefined, now.groups).length ? { state: "current", key: copy.id } : { state: "stale", key: copy.id };
+}
 
 /** Breaker N1 (#861 round 2) with C9.5's build discovery D1: the part of a form's facts fingerprint that holds every fact
  *  it still waits for, with each answer given to it now. The answers are sorted, so the order a read returns them in

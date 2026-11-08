@@ -198,6 +198,16 @@ ok("B162 fail (breaker M2): a pass for \"no copy\" on one release covers neither
 r = filingReadiness(done({ forms: [i5257(), i5476({ copy: STALE, outOfDate: { fact: "person.family_name", since: "2026-11-01" } }), ] }));
 const rNoneOut = filingReadiness(done({ forms: [i5257(), i5476({ copy: NONE, outOfDate: { fact: "person.family_name", since: "2026-11-01" } })] }));
 ok("B162 pass (review m8): an item already out of date (signed or uploaded before a fact changed) keeps its one CRITICAL out-of-date line, with no second line for its out-of-date copy; with no copy at all the \"no copy\" line stays", codes(r.warns).join() === "out_of_date" && codes(rNoneOut.warns).sort().join() === "no_copy,out_of_date", [codes(r.warns), codes(rNoneOut.warns)]);
+// Devin on #1344 (red): a copy is current only when its facts fingerprint is equal AND no repeating group it reads changed
+// (an entry added or removed, "none apply" changed), the copy view's own rule (fill-case.ts: changedFacts + changedGroups).
+{ const ri = await import("../api/src/readiness-inputs.ts") as Record<string, unknown>;
+  const copyStateOf = ri.copyStateOf as ((copy: { id: string; hash: string; groups?: unknown[] } | undefined, now: { hash: string; groups: unknown[] }, releaseKey: string) => { state: string; key: string }) | undefined;
+  const g = (rows: string[]) => [{ key: "s-P|travel", title: "Travel history", none: false, entries: rows.length > 0, rows }];
+  const st = (copy: Parameters<NonNullable<typeof copyStateOf>>[0], now: Parameters<NonNullable<typeof copyStateOf>>[1]) => copyStateOf ? copyStateOf(copy, now, "rel-2") : null;
+  const same = st({ id: "c1", hash: "h", groups: g([]) }, { hash: "h", groups: g([]) }), groupOnly = st({ id: "c1", hash: "h", groups: g([]) }, { hash: "h", groups: g(["r1"]) });
+  const facts = st({ id: "c1", hash: "h", groups: g([]) }, { hash: "h2", groups: g([]) }), none = st(undefined, { hash: "h", groups: [] }), older = st({ id: "c1", hash: "h" }, { hash: "h", groups: g(["r1"]) });
+  ok("B162 fail (Devin on #1344): a copy whose repeating group changed since it was made (an entry added, facts equal) is older than today's facts; equal facts and groups are current; no copy is none (keyed by the release); a copy made before groups were kept compares facts only",
+    same?.state === "current" && groupOnly?.state === "stale" && groupOnly?.key === "c1" && facts?.state === "stale" && none?.state === "none" && none?.key === "rel-2" && older?.state === "current", { same, groupOnly, facts, none, older }); }
 const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
 r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
 ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);

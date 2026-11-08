@@ -41,7 +41,7 @@ import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, 
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
-import { readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
+import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
@@ -549,18 +549,15 @@ export class CasePrepare {
     // an older one for filing. It counts only while it holds today's facts (its fingerprint equals the form's facts now,
     // as the copy view reads it): a copy made before the answers, or before a fact changed, is "older than today's facts".
     // One read of each copy's flag, channel and fingerprint; never the copies' whole results.
-    const copyRows = await this.db.$queryRaw<{ id: string; form_number: string; subject_id: string; not_for_filing: boolean | null; channel: string | null; input_hash: string }[]>`SELECT f.id, f.form_number, f.subject_id, (f.result_json->>'not_for_filing')::boolean AS not_for_filing, s.facts_json->>'channel' AS channel, s.input_hash FROM form_instance f JOIN answer_snapshot s ON s.id = f.snapshot_id WHERE f.case_id = ${c.id}::uuid AND f.status = 'GENERATED' ORDER BY f.created_at DESC, f.id ASC`;
-    const forFiling = new Map<string, { id: string; hash: string }>();
+    const copyRows = await this.db.$queryRaw<{ id: string; form_number: string; subject_id: string; not_for_filing: boolean | null; channel: string | null; input_hash: string; groups: GroupFact[] | null }[]>`SELECT f.id, f.form_number, f.subject_id, (f.result_json->>'not_for_filing')::boolean AS not_for_filing, s.facts_json->>'channel' AS channel, s.input_hash, s.facts_json->'groups' AS groups FROM form_instance f JOIN answer_snapshot s ON s.id = f.snapshot_id WHERE f.case_id = ${c.id}::uuid AND f.status = 'GENERATED' ORDER BY f.created_at DESC, f.id ASC`;
+    const forFiling = new Map<string, { id: string; hash: string; groups: GroupFact[] | null }>();
     for (const x of copyRows) {
       const k = `${x.form_number}|${x.subject_id}`;
       if (forFiling.has(k) || copyNotForFiling(s, { formNumber: x.form_number, resultJson: x.not_for_filing === null ? null : { not_for_filing: x.not_for_filing }, snapshot: { factsJson: x.channel ? { channel: x.channel } : null } })) continue;
-      forFiling.set(k, { id: x.id, hash: x.input_hash });
+      forFiling.set(k, { id: x.id, hash: x.input_hash, groups: x.groups });
     }
-    const copyOf = (form: string, subject: string): { state: "none" | "stale" | "current"; key: string } => {
-      const x = forFiling.get(`${form}|${subject}`);
-      if (!x) return { state: "none", key: pin.configReleaseId };
-      return x.hash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) ? { state: "current", key: x.id } : { state: "stale", key: x.id };
-    };
+    // Devin on #1344: current only when the facts and the repeating groups it reads are both unchanged (copyStateOf).
+    const copyOf = (form: string, subject: string) => copyStateOf(forFiling.get(`${form}|${subject}`), { hash: inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []), groups: groupFacts(view, form, subject) }, pin.configReleaseId);
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       copy: copyOf,
