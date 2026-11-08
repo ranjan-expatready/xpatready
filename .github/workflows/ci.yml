@@ -124,7 +124,7 @@ jobs:
           kind=$(bash "$P/tools/change-kind.sh" "$RANGE") || { echo "change-kind.sh failed"; exit 1; }
           # A batch only when Mergify opened it (gate B break M2): a builder's branch named mergify/* stays a pull request.
           queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
-          n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
+          n=1   # THROWAWAY: one part only
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
           { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
           case "$kind" in
@@ -278,7 +278,7 @@ jobs:
         env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
         run: node "$S/tools/gate-b.mjs"
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --retry --shard; US$0 model spend)
-        if: env.KIND == 'code'
+        if: false   # THROWAWAY: no suites
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
         run: |
           if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct)

@@ -118,3 +118,4 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   p = (await prepare(c.id)).p;
   ok("C7.3-13 pass: the Online form item reads Out of date; it warns only (an entered Online section, BR-9 and P-168; P-136 also said \"entered\": FQ-6)", itemsOf(p, P, FORM)[0]?.state === "out_of_date" && !(p?.readiness ?? []).some((x) => x.blocks.some((b) => b.words.includes(FORM) && b.code === "out_of_date")));
 });
+// THROWAWAY (D2 worked test for #1337): this comment only; the PR is closed unmerged.
