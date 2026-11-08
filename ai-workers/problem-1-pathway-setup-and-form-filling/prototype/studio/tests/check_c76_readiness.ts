@@ -147,6 +147,18 @@ ok("C7.6 warn fail: on an Online line a stale PDF copy and an entered section ou
 const online = (secs: string[]) => [i5257({ channel: "ONLINE", enteredOutOfDate: secs }), i5476()];
 r = filingReadiness(done({ forms: online(["Personal details", "Travel history"]), passes: [pass(done({ forms: online(["Personal details"]) }), "entered_out_of_date")] }));
 ok("C7.6 r2 m2 fail: a pass for one entered section does not cover another that went out of date later", !r.ready && r.warns.length === 1 && /Travel history/.test(r.warns[0].words) && r.passed.length === 1, r.warns);
+// C7.7 BR-9 (C7.7-18; the tech lead's ruling on #1317): each box still "To write by hand" on a form filed as a PDF (PDF
+// upload or Paper) is its own warning, in the box's own words, owed by staff; a pass covers that box only. An Online
+// line's copy is not for filing, so its by-hand boxes do not warn.
+const HAND = [{ box: "form1.Child1.AccompanyYes", label: "Whether this family member will accompany the subject to Canada", why: "The product cannot work this form field out from the case's answers yet: write it by hand." }, { box: "form1.AppType", label: "The type of temporary residence application", why: "Not in the case's answers." }];
+const handForms = (byHand: typeof HAND) => [i5257(), i5476({ byHand })];
+r = filingReadiness(done({ forms: handForms(HAND) }));
+ok("C7.7-18 BR-9 fail: two boxes still to write by hand on IMM 5476 (a PDF upload) are two warnings \"hand_write\", owed by staff, each naming the form and the box in its own words; not ready, nothing blocks", !r.ready && !r.blocks.length && codes(r.warns).join() === "hand_write,hand_write" && r.warns.every((w) => w.severity === "warning" && w.owes === "staff" && w.item === "i-5476" && w.words.includes("IMM 5476")) && r.warns[0].words.includes(HAND[0].label) && r.warns[1].words.includes(HAND[1].label) && new Set(r.warns.map((w) => w.key)).size === 2, r.warns);
+r = filingReadiness(done({ forms: handForms(HAND.slice(1)), passes: [pass(done({ forms: handForms(HAND.slice(1)) }), "hand_write")] }));
+const r2 = filingReadiness(done({ forms: handForms(HAND), passes: [pass(done({ forms: handForms(HAND.slice(1)) }), "hand_write")] }));
+ok("C7.7-18 BR-9 pass: passed with a reason, the box's warning moves to passed and the filing is ready; that pass never covers another box found later", r.ready && !r.warns.length && r.passed.length === 1 && !r2.ready && r2.warns.length === 1 && r2.warns[0].words.includes(HAND[0].label), r2.warns);
+r = filingReadiness(done({ forms: [i5257({ channel: "ONLINE", byHand: HAND }), i5476({ byHand: [] })] }));
+ok("C7.7-18 BR-9 pass: an Online line's PDF copy is not for filing, so its by-hand boxes raise nothing; no box, no warning", r.ready && !r.warns.length, r.warns);
 const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
 r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
 ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);

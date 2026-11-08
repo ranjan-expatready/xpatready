@@ -37,7 +37,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, copyNotForFiling, formPassed, inventoryOf } from "./fill-case.ts";
+import { CaseForms, copyNotForFiling, formPassed, inventoryOf, plainWhy } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -512,7 +512,19 @@ export class CasePrepare {
         if (note) Object.assign(i, { release_note: note, ...(entered.length && !old ? { release_out_of_date_entered: true } : {}) });
       }
     }
+    // C7.7 (BR-9, C7.7-18): the boxes the newest copy of each form on this release leaves "To write by hand", in the
+    // copy's own words (the question's label, else "A form field"; why, without engine words: fill-case.ts plainWhy).
+    // The newest copy, current or not, is the one that would be filed, so a stale copy never hides its by-hand boxes.
+    const askedAs = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+    const handOf = new Map<string, { box: string; label: string; why: string }[]>();
+    for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: pin.configReleaseId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { formNumber: true, subjectId: true, resultJson: true } })) {
+      const k = `${x.formNumber}|${x.subjectId}`;
+      if (handOf.has(k)) continue;
+      const boxes = ((x.resultJson as { boxes?: { box: string; fact: string | null; result: string; why: string | null }[] } | null)?.boxes ?? []);
+      handOf.set(k, boxes.filter((b) => b.result === "by hand").map((b) => ({ box: b.box, label: (b.fact && askedAs.get(b.fact)) || "A form field", why: plainWhy(b.why) })));
+    }
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
+      byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
       factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
