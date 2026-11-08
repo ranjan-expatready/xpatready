@@ -1,0 +1,43 @@
+probe 2 on 37c269eea (product code = main f18fb0e66), copy qa_q153b :4470, start Sun Nov  8 14:50:09 IST 2026
+NOTICE:  database "xr_studio_qa_q153b" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_q153b on http://localhost:4470 (xr_studio_qa_q153b), stops itself in 20 min
+reset 201
+load 201
+QA-153 / QA-246 probe 2 — raw shapes
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+UNNAMED-A {"id":"0d38d09b-c855-4b4b-9547-b46804e7797a","kind":"step","filing":"ee96673d-9f80-4614-b229-171051a608f8","subject":"96bd6083-5e04-4851-8f42-f78a4b44277b","person":"Sample Client A","version":1,"step":"Give biometrics","neededBefore":"after_filing","state":"cannot_start","reason":"IRCC's biometrics instruction letter comes after you apply (VV-R17): book and give them then."}
+UNNAMED-A {"id":"26034779-dd73-4749-9ae2-e247cff45327","kind":"document","filing":"ee96673d-9f80-4614-b229-171051a608f8","subject":"96bd6083-5e04-4851-8f42-f78a4b44277b","person":"Sample Client A","version":1,"document_type":"passport_information_page_copy","label":"Passport information page copy","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-A {"id":"9730a7ed-7f37-4212-9690-01a8c1b5ba70","kind":"document","filing":"ee96673d-9f80-4614-b229-171051a608f8","subject":"96bd6083-5e04-4851-8f42-f78a4b44277b","person":"Sample Client A","version":1,"document_type":"fee_payment_receipt","label":"Fee payment receipt","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-A {"id":"b7c1c465-7f56-4de6-ab65-8be9b4f834cd","kind":"document","filing":"ee96673d-9f80-4614-b229-171051a608f8","subject":"96bd6083-5e04-4851-8f42-f78a4b44277b","person":"Sample Client A","version":1,"document_type":"proof_of_financial_support","label":"Proof of financial support","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-child {"id":"39810437-7d4b-412f-89bb-3b8c1678c66d","kind":"document","filing":"ef9dca94-60a3-4ccc-83fa-04af3f7cd5d9","subject":"afe78b35-45e8-4e5d-8170-266fc672474f","person":"Sample Child A1","version":1,"document_type":"proof_of_financial_support","label":"Proof of financial support","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-child {"id":"61d7398e-88c0-4b5f-9069-d75914c8b845","kind":"document","filing":"ef9dca94-60a3-4ccc-83fa-04af3f7cd5d9","subject":"afe78b35-45e8-4e5d-8170-266fc672474f","person":"Sample Child A1","version":1,"document_type":"fee_payment_receipt","label":"Fee payment receipt","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-child {"id":"6c150c91-bcaa-4dda-a8be-7260263a8745","kind":"document","filing":"ef9dca94-60a3-4ccc-83fa-04af3f7cd5d9","subject":"afe78b35-45e8-4e5d-8170-266fc672474f","person":"Sample Child A1","version":1,"document_type":"passport_information_page_copy","label":"Passport information page copy","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+FORMS-BY-PERSON [["Sample Client A",["IMM 5257:77 missing","IMM 5257 SCH1:12 missing","IMM 5409:14 missing","IMM 5475:7 missing","IMM 5476:8 missing","IMM 5645:46 missing","IRM 0002:8 missing"]],["Sample Spouse A",["IMM 5257:77 missing","IMM 5257 SCH1:12 missing","IMM 5409:14 missing","IMM 5475:7 missing","IMM 5476:8 missing","IMM 5645:46 missing","IRM 0002:8 missing"]],["Sample Child A1",["IMM 5257:73 missing","IMM 5409:12 missing","IMM 5475:7 missing","IRM 0002:8 missing"]],["Sample Child A2",["IMM 5257:73 missing","IMM 5409:12 missing","IMM 5475:7 missing","IRM 0002:8 missing"]]]
+CASE-KEYS ["id","team","reference","status","combination_id","client","pin","release","people","can_add","employer_link"]
+RESULT-KEYS ["boxes","counts","intact","written","signatures","report_file","person_steps","not_for_filing","read_back_equal"] BOX0 {"box":"IMM_5645[0].page1[0].SectionA[0].Applicant[0].AppAddress[0]","why":null,"fact":"person.present_address","result":"written"}
+FAMILY-BOXES {"n":28,"tally":{"written":16,"not written":12}}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionB[0].Child[1].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionB[0].Child[1].ChildNo[0]","why":"Your parent 1 (mother or father)","fact":"relationship.accompanies_subject_to_canada","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionB[0].Child[1].ChildYes[0]","why":"Your parent 1 (mother or father)","fact":"relationship.accompanies_subject_to_canada","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[2].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[3].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[4].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[5].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildAddress[0]","why":"Your parent 1 (mother or father)","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildNo[0]","why":"Your parent 1 (mother or father)","fact":"relationship.accompanies_subject_to_canada","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[6].ChildYes[0]","why":"Your parent 1 (mother or father)","fact":"relationship.accompanies_subject_to_canada","result":"not written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].ChildMStatus[0]","why":null,"fact":"person.marital_status","result":"written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].FatherAddress[0]","why":null,"fact":"person.present_address","result":"written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].FatherCOB[0]","why":null,"fact":"person.birth_country","result":"written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].FatherDOB[0]","why":null,"fact":"person.date_of_birth","result":"written"}
+PASS  probe 2 ran
+
+1/1 passed
+probe exit 0  end Sun Nov  8 14:52:20 IST 2026
+stopped qa_q153b (database and files removed; log in var/isolated-logs/qa_q153b-api.log)
