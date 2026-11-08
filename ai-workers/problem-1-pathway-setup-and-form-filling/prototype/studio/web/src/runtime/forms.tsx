@@ -125,11 +125,14 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   const lockable = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date && latest.file_ok;
   // P-145: a copy of a form filed Online is never filed; C-9 (P-144): a barcode form is filed only after its validated copy is read back.
   // C11.6: a copy made while this person's form was filed Online carries "Copy, not for filing"; after a channel change it is replaced, never filed.
-  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : latest?.copy_not_for_filing ? `This copy was made while ${f.form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy to file it.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : !f.readiness.ready ? notReady(f.readiness.missing.length)
+  const missing = f.readiness.missing;
+  // QA-165 (#1318 review M2): a mandatory form field left empty is no fact to answer; it is listed once, under "Marked mandatory
+  // on IRCC's form, still empty", and holds no lock back (the server's blocksLock).
+  const facts = missing.filter((m) => m.reason !== "left empty on the form"), emptyFields = missing.length - facts.length;
+  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : latest?.copy_not_for_filing ? `This copy was made while ${f.form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy to file it.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : facts.length ? notReady(facts.length)
     : f.needs_validate && !latest?.validated?.current ? `Validate ${f.form} in Adobe, save it and read the validated copy back before it is filed.` : null;
   const canLock = lockable && !why;
   const lockBlocked = lockable && why ? why : null;
-  const missing = f.readiness.missing;
   return (
     <li className="space-y-2 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -140,9 +143,11 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
         {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. QA-229 (B2): nor is
             any form: "Ready to file" is the filing's, said by the readiness panel; a form says "Facts confirmed". */}
-        {f.readiness.ready && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
-          : f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks. Whether the filing is Ready to file is under Ready to file below."><Check className="size-3" aria-hidden />Facts confirmed</Pill>
-          : <Pill tone="warn">{missing.length} fact{missing.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
+        {!facts.length && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
+          : !facts.length ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks. Whether the filing is Ready to file is under Ready to file below."><Check className="size-3" aria-hidden />Facts confirmed</Pill>
+          : <Pill tone="warn">{facts.length} fact{facts.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
+        {/* QA-165 (#1318): never "ready" over a mandatory box a copy leaves empty: said apart from the facts, listed below. */}
+        {emptyFields ? <Pill tone="warn" title="IRCC's form marks these form fields mandatory and a copy made now leaves them empty (listed below); Ready to file waits on them until they are fixed or passed with a reason" data-fields-left-empty>{emptyFields} mandatory form field{emptyFields === 1 ? "" : "s"} left empty</Pill> : null}
         <span className="flex-1" />
         <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
           <RefreshCw aria-hidden />{latest ? "Generate a new copy" : "Generate a copy"}
@@ -150,10 +155,10 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       </div>
       {!f.applies ? <p className="text-[13px] text-text-muted">This form no longer applies to {f.person} (for example, not travelling); its copies are kept.</p> : null}
       <p className="text-[13px] text-text-muted" data-draft-words>Declared or confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.to_fix ? `; ${f.draft.to_fix} answered but needing a fix ${f.draft.to_fix === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
-      {missing.length ? (
+      {facts.length ? (
         <details className="text-[13px]">
-          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Facts to answer or confirm ({missing.length})</summary>
-          <ul className="mt-1 list-disc space-y-0.5 pl-6">{missing.map((m) => <li key={`${m.fact}|${m.about}`}>{m.label} <span className="text-text-muted">({inSentence(m.about)}): {m.reason}</span></li>)}</ul>
+          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Facts to answer or confirm ({facts.length})</summary>
+          <ul className="mt-1 list-disc space-y-0.5 pl-6">{facts.map((m) => <li key={`${m.fact}|${m.about}`} data-missing-reason={m.reason}><span className="[overflow-wrap:anywhere]">{m.label}</span> <span className="text-text-muted [overflow-wrap:anywhere]">({inSentence(m.about)}): {m.reason}{m.why ? ` — ${m.why}` : ""}</span></li>)}</ul>
         </details>
       ) : null}
       {/* QA-165 part 2 (P-237, P-238): each mandatory field of IRCC's form a copy leaves empty, with why, before the file is offered. */}

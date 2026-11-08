@@ -44,7 +44,12 @@ export type CaseWords = { labelOf?: (fact: string) => string | undefined; noneAp
   /** QA-165: the Yes/No question a fact is asked under (engine/runtime/forms.ts gateOf), in the case's words. */
   gateOf?: (fact: string) => string | undefined };
 
-export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxResult[], values: Record<string, string>, words: CaseWords = {}): OpenField[] {
+/** QA-165 (#1318 review M1): a field the field list marks required whose own form script makes it required only when another
+ *  field holds one of some codes (IMM 5257's Taiwan PIN and Israel passport boxes, by the passport's country of issue):
+ *  data, studio/samples/form-script-requirements.json, cited from the form's script. */
+export type RequiredWhen = Map<string, { box: string; equals: string[] }>;
+
+export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxResult[], values: Record<string, string>, words: CaseWords = {}, requiredWhen: RequiredWhen = new Map()): OpenField[] {
   const entryOf = new Map(entries.map((e) => [e.data_path, e]));
   const boxOf = new Map(boxes.map((b) => [b.box, b]));
   const out: OpenField[] = [];
@@ -52,6 +57,8 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     const path = f.data_path;
     if (!f.required || !path || f.ui === "button" || byAPerson(inv.fields, f)) continue;
     if ((values[path] ?? "") !== "") continue; // written from a fact
+    const when = requiredWhen.get(path);
+    if (when && !when.equals.includes(values[when.box] ?? "")) continue; // the form's own script does not require it for this answer
     const e = entryOf.get(path), b = boxOf.get(path);
     if (b?.coverage === "not needed") continue; // B86 BR-5: its own condition is not true, so the form leaves it empty
     // Review M-1 on #592: a line a question fills is named by that question, as the case asks it; only a field no

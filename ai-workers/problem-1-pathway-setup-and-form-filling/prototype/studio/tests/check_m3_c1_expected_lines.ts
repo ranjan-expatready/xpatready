@@ -164,9 +164,11 @@ if (expectedFor) {
   const byName = Object.fromEntries(stage1.map((x) => [nameOf.get(p?.filings.find((f) => f.id === x.filing)?.applicants[0]?.subject ?? "") ?? x.filing, x.to_confirm]));
   ok(`C1-9 checkpoint: filled the packs' way, stage 1 is 0 to confirm for every filing (since B107 the firm record or IMM 5476's own gates settle all 22 representative facts; the UCI was the one other fact left)`,
     REP_FACTS.length === 22 && FROM_FIRM.length + GATED_FOR_CICC.length === 22 && LEFT.length === 0 && Object.keys(STAGE1).every((n) => byName[n] === STAGE1[n]) && stage1.length === 4, byName);
-  const forms = ((await m3.call("GET", `/runtime/cases/${c.id}/forms`, undefined, m3.officerOf(c.id))).body?.forms ?? []) as { form?: string; code?: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { about: string; fact: string }[] } }[];
-  const notReady = forms.filter((f) => f.applies && !f.readiness.ready);
-  ok("C1-9b checkpoint: every form that applies is ready, the adults' IMM 5476 included (B107: nothing about the representative is left to answer)", notReady.length === 0, notReady.map((f) => `${f.form ?? f.code}/${f.person}: ${f.readiness.missing.map((m) => m.fact).join(", ")}`));
+  const forms = ((await m3.call("GET", `/runtime/cases/${c.id}/forms`, undefined, m3.officerOf(c.id))).body?.forms ?? []) as { form?: string; code?: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { about: string; fact: string; reason: string }[] } }[];
+  // QA-165 (#1318): readiness also names the mandatory form fields a copy leaves empty that no answer fills (IMM 5257 SCH1's
+  // by-hand boxes, "left empty on the form"); those are said on Ready to file and hold no lock back. No fact is left to answer.
+  const notReady = forms.filter((f) => f.applies && f.readiness.missing.some((m) => m.reason !== "left empty on the form"));
+  ok("C1-9b checkpoint: every form that applies waits on no fact, the adults' IMM 5476 included (B107: nothing about the representative is left to answer)", notReady.length === 0, notReady.map((f) => `${f.form ?? f.code}/${f.person}: ${f.readiness.missing.map((m) => m.fact).join(", ")}`));
   const uciWarns = ((await prepare(c.id)).p?.readiness ?? []).flatMap((r) => r.warns).filter((w) => w.code === "fact_problem" && /Unique Client Identifier/.test(w.words));
   ok("C1-10 no \"fact with a problem\" warning on the UCI: the helper's Sample UCI is one the release's own checks accept", uciWarns.length === 0, uciWarns.map((w) => w.words.slice(0, 120)));
 }

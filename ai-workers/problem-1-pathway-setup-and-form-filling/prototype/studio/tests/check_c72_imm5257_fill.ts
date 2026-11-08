@@ -169,9 +169,11 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
 
   await none(P, "education_history"); await none(P, "previous_countries_of_residence");
   await confirmAll();
-  const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { ready: boolean; missing: unknown[] } }[];
+  const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { ready: boolean; missing: { reason: string }[] } }[];
   const f = forms.find((x) => x.form === "IMM 5257" && x.subject_id === P);
-  ok("setup: the Sample family's IMM 5257 is ready to file", f?.readiness?.ready === true, f?.readiness?.missing);
+  // QA-165 (#1318, P-71): readiness also waits on the mandatory boxes a copy would leave empty (the 6 checked below), so every
+  // question answered and confirmed leaves only those: no question is missing.
+  ok("setup: the Sample family's IMM 5257 has every question it reads answered and confirmed; readiness waits only on mandatory boxes a copy leaves empty", (f?.readiness?.missing ?? []).length > 0 && (f?.readiness?.missing ?? []).every((m) => m.reason === "left empty on the form"), f?.readiness?.missing);
   const after = await generate(2);
   ok("C7.2: the copy is generated and passes the filler's own checks (read back, signatures, unchanged parts)", after.status === "GENERATED" && after.intact === true, { status: after.status, intact: after.intact });
 
@@ -185,12 +187,15 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   {
     const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; label: string; reason: string; why: string }[] }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
     const open = f?.fields_open ?? [];
-    ok("QA-165 part 2: IMM 5257 lists exactly the 6 mandatory form fields its copy leaves empty, before the file is offered", open.length === empty.length && open.every((o) => empty.includes(o.box)), { open: open.map((o) => o.box), empty });
+    // #1318 review M1: IMM 5257's own script requires the Taiwan PIN and Israel passport boxes only for a passport it codes 203
+    // or 206 (samples/form-script-requirements.json); this family's passport is Indian, so they are empty but not mandatory.
+    const scriptOnly = NOT_A_FACT.slice(0, 2), required = empty.filter((p) => !scriptOnly.includes(p));
+    ok("QA-165 part 2: IMM 5257 lists exactly the 4 mandatory form fields its copy leaves empty (the 6 empty ones less the 2 its script does not require for an Indian passport), before the file is offered", open.length === 4 && required.length === 4 && open.every((o) => required.includes(o.box)), { open: open.map((o) => o.box), empty });
     const reasonOf = new Map(open.map((o) => [o.box, o.reason]));
     // QA-165: each of the 3 Yes/No boxes now has its own question (IMM 5257's words), so it "needs an answer" and names it.
     const whyOf = new Map(open.map((o) => [o.box, o.why]));
-    ok("QA-165 part 2: the 3 boxes published as \"not a fact\" say \"fill it in Adobe\"; the 3 Yes/No boxes say \"needs an answer\", naming their own question",
-      NOT_A_FACT.every((p) => reasonOf.get(p) === "fill it in Adobe") && NOT_ASKED.every((p) => reasonOf.get(p) === "needs an answer" && /^answer "/.test(whyOf.get(p) ?? "")), open.map((o) => [o.box.split(".").slice(-2).join("."), o.reason, o.why]));
+    ok("QA-165 part 2: the consent box published as \"not a fact\" says \"fill it in Adobe\"; the 3 Yes/No boxes say \"needs an answer\", naming their own question",
+      reasonOf.get(NOT_A_FACT[2]) === "fill it in Adobe" && NOT_ASKED.every((p) => reasonOf.get(p) === "needs an answer" && /^answer "/.test(whyOf.get(p) ?? "")), open.map((o) => [o.box.split(".").slice(-2).join("."), o.reason, o.why]));
     ok("QA-165 part 2: the words are the form's, never a field path", open.every((o) => o.label.length > 3 && !/form1\[|\[0\]\./.test(o.label)), open.map((o) => o.label));
   }
   ok("C7.2: no form field of the copy is left by hand (was 20, #409)", after.boxes.filter((b) => b.result === "by hand").length === 0, after.boxes.filter((b) => b.result === "by hand").map((b) => `${b.box.split(".").slice(-2).join(".")}: ${b.why}`));
@@ -222,8 +227,15 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const empty2 = mandatory.filter((p) => !gatedCopy.values[p]);
   ok("QA-165 pass: the app's copy now fills 43 of IMM 5257's 46 mandatory form fields; the 3 left are exactly the boxes published as \"not a fact\" (fill in Adobe)", empty2.length === 3 && empty2.every((p) => NOT_A_FACT.includes(p)), { filled: mandatory.length - empty2.length, empty: empty2 });
   {
-    const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string }[]; readiness: { ready: boolean } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
-    ok("QA-165 part 2: the list before the file is offered now names only those 3, and the form is still ready to file", (f?.fields_open ?? []).length === 3 && (f?.fields_open ?? []).every((o) => NOT_A_FACT.includes(o.box)) && f?.readiness?.ready === true, f?.fields_open);
+    const f = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; fields_open: { box: string; reason: string }[]; readiness: { ready: boolean; missing: { fact: string; reason: string }[] } }[]).find((x) => x.form === "IMM 5257" && x.subject_id === P);
+    // QA-165 (#1318 review M1): of those 3, IMM 5257's own script requires the Taiwan PIN and Israel passport boxes only for a
+    // passport the form codes 203 or 206 (samples/form-script-requirements.json); this family's passport is Indian, so only the
+    // consent box is still mandatory and empty.
+    const CONSENT = NOT_A_FACT[2];
+    ok("QA-165 part 2 (#1318 M1): the list before the file is offered names only the consent box: the form does not require the Taiwan PIN or Israel box for an Indian passport", (f?.fields_open ?? []).length === 1 && f?.fields_open[0]?.box === CONSENT, f?.fields_open);
+    // QA-165 (#1318, P-71): "Ready" is never said over a mandatory box that will be empty: readiness lists exactly that one.
+    const left = (f?.readiness?.missing ?? []).filter((m) => m.reason === "left empty on the form").map((m) => m.fact.replace(/^box:/, ""));
+    ok("QA-165 fail (#1318): with the consent box left empty the form is not ready to file, and readiness names exactly it", f?.readiness?.ready === false && left.length === 1 && left[0] === CONSENT && (f?.readiness?.missing ?? []).length === 1, f?.readiness?.missing);
   }
   // Devin on #715 (1): the gate's answer is kept with the copy: changing it after the copy makes that copy out of date.
   const nCopy = sql(`select id from form_instance where case_id = '${caseId}' order by created_at desc limit 1`);

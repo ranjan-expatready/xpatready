@@ -168,9 +168,12 @@ async function main() {
   const sample = (q: { value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; fact: string }) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" }
     : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
     : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.d@example.com" : "SAMPLE";
+  // QA-165 (#1318): readiness also lists the mandatory boxes a copy would leave empty ("left empty on the form"); this fixture's
+  // Sample answers ("SAMPLE" where a box wants a code) leave some, and they hold no lock back (blocksLock). Facts done = none else.
+  const factsDone = (f: { readiness: { missing: { reason: string }[] } }) => f.readiness.missing.every((m) => m.reason === "left empty on the form");
   const makeReady = async (subject: string, form: string) => {
     for (let pass = 0; pass < 3; pass++) {
-      const f0 = await formOf(form, subject); if (f0.readiness.ready) return true;
+      const f0 = await formOf(form, subject); if (factsDone(f0)) return true;
       const v = await agent();
       const todo = v.sections.flatMap((x: { questions: Q[] }) => x.questions).filter((q: Q) => q.required && !q.hidden && !q.group && q.fills.some((x) => x.form === form && x.person === f0.person) && !q.answer?.confirmed);
       for (const q of todo) await answer(q.subjectId, q.fact, sample(q));
@@ -181,9 +184,9 @@ async function main() {
       for (const sec of secs) if (sec) await call("PUT", `/runtime/cases/${caseId}/groups/${sec.subjectId}/${sec.section}/none-apply`, { noneApply: true, expectedId: sec.group?.none_apply?.id ?? null }, OFFICER);
       for (const subj of [...new Set([...todo.map((q: Q) => q.subjectId), ...secs.filter(Boolean).map((x: { subjectId: string }) => x.subjectId)])] as string[]) await confirmAll(subj);
     }
-    return (await formOf(form, subject)).readiness.ready;
+    return factsDone(await formOf(form, subject));
   };
-  ok("P-71 pass: with every required fact confirmed, IMM 5257 for the principal is ready to file", await makeReady(P, "IMM 5257"));
+  ok("P-71 pass: with every required fact confirmed, IMM 5257 for the principal waits on no fact (QA-165, #1318: only on mandatory boxes this fixture's Sample answers leave empty, which hold no lock back)", await makeReady(P, "IMM 5257"));
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-ready` }, OFFICER);
   const locked1: string = r.body.id; await done(locked1);
   const row1 = JSON.parse(sql(`select json_build_object('path', path, 'sha', sha256) from form_instance where id='${locked1}'`));
@@ -428,7 +431,7 @@ async function main() {
   for (const q of ((await agent()).sections.flatMap((x: { questions: RQ[] }) => x.questions) as RQ[]).filter((q) => q.subjectId === P && q.section === prev && q.group && q.required && !q.hidden))
     await call("PUT", `/runtime/cases/${caseId}/answers/${P}/${q.fact}`, { value: sample(q), expectedId: null, row: firstRow }, OFFICER);
   await confirmAll(P);
-  const readyWithEntry = (await formOf("IMM 5257", P)).readiness.ready;
+  const readyWithEntry = factsDone(await formOf("IMM 5257", P)); // QA-165 (#1318): no fact waiting (boxes left empty aside)
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-pr13` }, OFFICER);
   const pr13: string = r.body.id; await done(pr13);
   await sendValidated(pr13, asValidated(readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`)))), "validated.pdf");

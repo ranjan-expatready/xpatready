@@ -34,7 +34,11 @@ type Prep = { people: Person[]; items: Item[]; version: string | number; portal?
   filings: { id: string; label: string; status: string; applicants: { subject: string }[] }[];
   readiness: { filing: string; facts_hash?: string; blocks: { words: string }[]; warns: { code: string }[] }[];
   groups: { id: string; filings: string[] }[] };
-type FormsView = { forms: { form: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { label: string }[] } }[] };
+type FormsView = { forms: { form: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { label: string; reason: string }[] } }[] };
+/** QA-165 (#1318): a form waits on no fact once every readiness line left is a mandatory form field a copy leaves empty
+ *  ("left empty on the form"): no answer fills those; Ready to file names them (fields_left_empty, passed with a reason at the
+ *  "ready" stage, or hand_write), as the copy's lock rule reads them (engine/runtime/forms.ts blocksLock). */
+const waitsOnFact = (f: FormsView["forms"][number]) => f.readiness.missing.some((m) => m.reason !== "left empty on the form");
 type SheetView = { sections: { key: string; version: string; entered: unknown; out_of_date: boolean }[] };
 type ChecklistView = { today: string; people: { label: string; lines: { id: string; document_type: string; state: string }[] }[] };
 export type Routes = { call: (actor: string, method: string, path: string, body?: unknown) => Promise<Reply>; upload: (actor: string, path: string, file: Buffer, name: string) => Promise<Reply> };
@@ -133,7 +137,7 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     };
     for (let pass = 0; pass < 4; pass++) {
       const forms = (await get<FormsView>(`/runtime/cases/${caseId}/forms`)).forms;
-      if (pass > 0 && forms.every((f) => !f.applies || f.readiness.ready)) break;
+      if (pass > 0 && forms.every((f) => !f.applies || !waitsOnFact(f))) break;
       const v = await get<{ sections: Section[] }>(`/runtime/cases/${caseId}/questionnaire?mode=agent`);
       for (const sec of v.sections) for (const q of sec.questions.filter((x) => x.required && !x.hidden)) {
         if (q.fact === "person.date_of_birth" && !q.subjectId.includes("/")) continue; // set when the person was added
@@ -153,13 +157,14 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
         must(await r.call(officer, "POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }), `Confirm the section ${sec.section}`); confirmed++;
       }
     }
-    const left = (await get<FormsView>(`/runtime/cases/${caseId}/forms`)).forms.filter((f) => f.applies && !f.readiness.ready);
+    const now = (await get<FormsView>(`/runtime/cases/${caseId}/forms`)).forms.filter((f) => f.applies);
+    const left = now.filter(waitsOnFact), empty = now.reduce((n, f) => n + f.readiness.missing.filter((m) => m.reason === "left empty on the form").length, 0);
     const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer for another adult`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
     const kinds = [...byKindLabels];
     const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmed ? `the ${reconfirmed} background answer${reconfirmed === 1 ? "" : "s"} among the officer's marked for the client to re-confirm, re-confirmed by the client (C6.18)` : "no answer marked for the client to re-confirm"}, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
-    if (left.length) throw new Stop(`Still not ready after ${said}: ${left.slice(0, 3).map((f) => `${f.form} for ${f.person} (${f.readiness.missing.slice(0, 2).map((m) => m.label).join(", ")})`).join("; ")}`);
+    if (left.length) throw new Stop(`Still not ready after ${said}: ${left.slice(0, 3).map((f) => `${f.form} for ${f.person} (${f.readiness.missing.filter((m) => m.reason !== "left empty on the form").slice(0, 2).map((m) => m.label).join(", ")})`).join("; ")}`);
     const followUps = byKind.some((f) => /national_id_|us_green_card_/.test(f));
-    return { status: "done", shows: `Every form of release 2 reads ready for every person: ${said}.${followUps ? ` ${HELD.followUps}.` : ""}`, why: null };
+    return { status: "done", shows: `Every form of release 2 waits on no fact for every person: ${said}.${empty ? ` ${empty} mandatory form field${empty === 1 ? "" : "s"} no answer fills ${empty === 1 ? "is" : "are"} named on Ready to file (QA-165).` : ""}${followUps ? ` ${HELD.followUps}.` : ""}`, why: null };
   });
 
   // C11.6 (P-380 Q3, the tech lead's ruling of 8 Nov 09:44 IST): one person's IMM 5257 on Paper with a written reason,
