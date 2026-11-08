@@ -5,11 +5,11 @@
 // "Every fact it reads is confirmed.". Pass and fail per rule. Runs on a copy with the configured checkpoint loaded,
 // which it loads itself (as check_c73_parts_checkpoint.ts). US$0, no live AI.
 //   zsh studio/tools/isolated.sh runtime_q309 4436 start && tsx studio/tests/check_qa309_online_done.ts 4436 xr_studio_runtime_q309
-import { AUTHOR, OFFICER, PORT, call, fillEverything, itemsOf, needVisitorVisa, ok, openCase, prepare, rec, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, OFFICER, PORT, answer, call, confirmAll, fillEverything, itemsOf, needVisitorVisa, ok, openCase, prepare, rec, yearsAgo } from "../acceptance/lib/m3.ts";
 
-type Section = { key: string; title: string; version: string; entered: { by: string } | null; out_of_date: boolean; waiting: { fact: string; subject: string }[] };
+type Section = { key: string; title: string; version: string; entered: { by: string } | null; out_of_date: boolean; answers: { fact: string; subject: string; value: unknown; label: string }[]; waiting: { fact: string; subject: string }[] };
 type Sheet = { sections: Section[] };
-type Group = { subjectId: string; section: string; title: string; group: { rows: number; none_apply: { id: string; value: boolean } | null } | null };
+type Group = { subjectId: string; about_label: string; section: string; title: string; group: { rows: number; none_apply: { id: string; value: boolean } | null } | null };
 
 if (PORT === 4400) { console.log("STOP  never the demo (:4400): this check resets its copy"); process.exit(2); }
 const reset = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
@@ -26,6 +26,9 @@ let it = await item();
 if (it?.channel !== "ONLINE") { console.log(`STOP  setup: the principal's IMM 5257 is not Online on this release (${it?.channel})`); process.exit(2); }
 // Before any answer: facts truly wait, and the reason names them (label and person), never "Every fact … confirmed".
 ok("QA-309 (fail): while facts wait, the item is To do and its reason names them, by label and person", it.state === "to_do" && /^Waiting for \d+ facts? to answer or confirm: .+ \(Sample Client A\)/.test(it.reason ?? "") && !CONFIRMED.test(it.reason ?? ""), it.reason);
+// Review M1 (b): a fact about the application ("case" on the form) that readiness names waits on the sheet too.
+const early = (await sheet(it.id)).sections.flatMap((x) => x.waiting);
+ok("QA-309 M1 (b) fail: an unanswered fact about the application waits on the sheet (\"case\" on the form, the case's own fact)", early.some((w) => w.subject === "case" && w.fact.startsWith("case.")), early.filter((w) => w.subject === "case").slice(0, 3));
 
 await fillEverything(c.id);
 it = await item();
@@ -59,5 +62,26 @@ const sec = ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent
 if (sec?.group?.none_apply?.id) await call("POST", `/runtime/cases/${c.id}/sections/${g.section}/confirm`, { subjectId: g.subjectId, seen: [sec.group.none_apply.id] }, OFFICER);
 it = await item();
 ok("QA-309 pass: \"none apply\" given and confirmed again, the item reads Done again (nothing to re-enter: the section's answers did not change)", it?.state === "done", { state: it?.state, reason: it?.reason });
+
+
+// Review M1 (a): Done also needs readiness to name nothing. After Done, the officer changes the end of the stay (an answer
+// that fills at once but is not confirmed yet, P-411) and ticks the changed section again: nothing waits on the sheet, yet the
+// item is not Done, its reason naming the fact; once the section is confirmed, Done again.
+const K = ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections as Group[]).find((x) => x.about_label === "The application")?.subjectId ?? "";
+s = await sheet(it!.id);
+const stay = s.sections.flatMap((x) => x.answers).find((a) => a.subject === "case" && /^case\..*_to$/.test(a.fact) && /^\d{4}-\d{2}-\d{2}$/.test(String(a.value)))
+  ?? s.sections.flatMap((x) => x.answers).find((a) => a.subject === "case" && /^\d{4}-\d{2}-\d{2}$/.test(String(a.value)));
+if (!stay || !K) { console.log(`STOP  setup: no dated fact about the application on the sheet (${stay?.fact}, ${K})`); process.exit(2); }
+const later = new Date(Date.parse(`${String(stay.value)}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+const changed = await answer(c.id, K, stay.fact, later, OFFICER);
+s = await sheet(it!.id);
+for (const x of s.sections.filter((y) => y.out_of_date)) await tick(it!.id, x);
+it = await item();
+s = await sheet(it!.id);
+ok(`QA-309 M1 (a) fail: after the officer changes ${stay.fact} and ticks its section again, nothing waits on the sheet, yet the item is To do and its reason names the fact not confirmed`,
+  changed.status < 300 && s.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length) && it?.state === "to_do" && /^Waiting for 1 fact to answer or confirm: .+ \(The application\)\.$/.test(it?.reason ?? ""), { changed: changed.status, state: it?.state, reason: it?.reason });
+await confirmAll(c.id, K);
+it = await item();
+ok("QA-309 M1 (a) pass: once the application's section is confirmed, the item reads Done again", it?.state === "done", { state: it?.state, reason: it?.reason });
 
 process.exitCode = rec.summary() ? 1 : 0;

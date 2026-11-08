@@ -28,7 +28,7 @@ const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
-import { partsInFormOrder, sectionHash, sheetOf as layOut, type FormPart, type Layout, type Sheet, type Waits } from "../../engine/runtime/answer-sheet.ts";
+import { partsInFormOrder, sectionHash, sheetOf as layOut, sheetWords, waitsOf, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
 import { formPartsOf } from "./form-parts.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { lineCondition, render, type Role } from "../../engine/render.ts";
@@ -343,7 +343,7 @@ export class CasePrepare {
         // FQ-6, P-168), Done when every section is entered and current.
         // QA-309: a section waits only for what this form's readiness names (never "none apply", answered rows or facts the
         // release never asks), so the sheet and the item read the same rule.
-        const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? [], parts, waitsOf(view, rd.missing, i.subjectId), covOf(i.itemKey, i.subjectId)) : null;
+        const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? [], parts, rd.missing, covOf(i.itemKey, i.subjectId)) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
         const fb = { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null };
         if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
@@ -655,7 +655,7 @@ export class CasePrepare {
     // QA-309: what the sheet waits for is what the form's readiness names, as on the item (the same coverage for both).
     const cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId);
     const missing = formReadinessOf(s, people, answers, rows, view, item.itemKey, item.subjectId, cov).missing.filter(blocksLock);
-    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered, parts, waitsOf(view, missing, item.subjectId), cov) };
+    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered, parts, missing, cov) };
   }
 
   /** C7.3: "Entered in the portal" for one section: freezes the answers the officer read (the section's `version`, review
@@ -743,7 +743,7 @@ export class CasePrepare {
 /** C7.3: one Online form item's answer sheet: the person's boxes for that form (every declared or confirmed answer, each
  *  with its mark and "to confirm", P-242, P-411), in the form's own parts (else the twin's sections), with each entered
  *  tick compared against the answers it froze. */
-function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[], parts: Map<string, FormPart[]>, waits: Waits, cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId)): Sheet {
+function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[], parts: Map<string, FormPart[]>, missing: Readiness["missing"], cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId)): Sheet {
   const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
   const origin = (subject: string, fact: string) => { const a = answers.find((x) => x.subjectId === subject && x.field === fact); return a?.origin?.channel ?? a?.channel; };
   const layout = layoutOf(item.itemKey, s, parts) ?? { basis: "pdf_twin" as const, sections: {} };
@@ -753,38 +753,8 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
     const q = qs.find((x) => x.subjectId === (about === "case" ? filing : about) && x.fact === fact), a = q ? (q.group ? q.rows[row ?? 0]?.answer : q.answer) : null;
     return a ? { mark: a.mark, confirmed: a.confirmed, why: a.why } : undefined;
   };
-  // QA-309: a box about the application is "case" on the form; readiness names it by the case's own subject.
-  return layOut(layout, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, (about, fact) => waits(about === "case" ? filing ?? about : about, fact));
-}
-
-/** QA-309 (C7.3, P-401): the facts an Online form's sheet still waits on, by subject: each fact the form's readiness names
- *  (a required answer missing or not confirmed, one that needs a fix, the fact a fired section check reads) and, for a
- *  repeating group whose "none apply" is not answered or confirmed, every fact of that group. A fact held as "none apply",
- *  a row fact answered on its rows, or a fact the release never asks is never among them. */
-export function waitsOf(view: ReturnType<typeof caseView>, missing: Readiness["missing"], subjectId: string): Waits {
-  const keys = new Set<string>();
-  for (const m of missing) {
-    if (m.fact.startsWith("group:")) {
-      for (const sec of view.sections.filter((x) => x.section === m.fact.slice(6) && x.about_label === m.about)) for (const q of sec.questions) keys.add(`${q.subjectId}|${q.fact}`);
-    } else if (m.fact.startsWith("check:")) {
-      const c = view.checks.find((x) => x.id === m.fact.slice(6) && x.about_label === m.about);
-      if (c?.fact) keys.add(`${c.subjectId}|${c.fact}`);
-    } else keys.add(`${m.subject ?? subjectId}|${m.fact}`);
-  }
-  return (about, fact) => keys.has(`${about}|${fact}`);
-}
-
-/** QA-309: an Online form item's reason while it is not Done: the facts its readiness still names (the first three by
- *  label and person), else the sections not yet ticked "Entered in the portal". Never "Every fact it reads is confirmed"
- *  over a sheet that is not finished. */
-export function sheetWords(sheet: Sheet, missing: Readiness["missing"]): string {
-  if (missing.length) {
-    const named = missing.slice(0, 3).map((m) => `${m.label} (${m.about})`), more = missing.length - named.length;
-    return `Waiting for ${missing.length} fact${missing.length === 1 ? "" : "s"} to answer or confirm: ${named.join("; ")}${more ? `; and ${more} more` : ""}.`;
-  }
-  const left = sheet.sections.filter((x) => !x.entered || x.out_of_date), n = sheet.sections.length;
-  if (!n) return "Its answer sheet has no section to enter yet.";
-  return `Every answer is ready to enter in the portal; ${left.length} of ${n} section${n === 1 ? "" : "s"} still to tick "Entered in the portal": ${left.map((x) => x.title).join(", ")}.`;
+  // QA-309: a box waits only for what the form's readiness names (`missing`: the item's own rule).
+  return layOut(layout, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing));
 }
 
 /** C7.3: the release's field map for a form (its edition and its form fields in the form's order). */

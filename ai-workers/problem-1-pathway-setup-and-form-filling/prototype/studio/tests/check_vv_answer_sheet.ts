@@ -4,7 +4,9 @@
 // listed as waited for; "Entered in the portal" ticks go out of date when an answer they
 // froze changes (P-65). Each rule has a passing and a failing case. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_vv_answer_sheet.ts
-import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sourceOf, type FormPart } from "../engine/runtime/answer-sheet.ts";
+import { answerSheet, copyText, OTHER_PART, partsInFormOrder, sectionHash, sheetOf, sheetWords, sourceOf, waitsOf, type FormPart, type Sheet } from "../engine/runtime/answer-sheet.ts";
+import { readiness } from "../engine/runtime/forms.ts";
+import type { QuestionnaireView, Readiness } from "../contracts/runtime.ts";
 import type { BoxRow } from "../engine/render.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -128,6 +130,46 @@ ok("C7.3: the source says Document for a document read, Client for the questionn
   const one = sheetOf({ basis: "form_parts", parts }, qbs, origin, labels, new Map(), undefined, (subject, fact) => subject === "p" && fact === "person.education_school_name");
   ok("QA-309 (fail): a fact readiness still names waits, and only it", waitsOf(one, "education") === 1 && one.sections.find((x) => x.key === "education")?.waiting[0]?.fact === "person.education_school_name" && waitsOf(one, "employment") === 0 && waitsOf(one, "visit") === 0);
   ok("QA-309: `waits` never changes a section's fingerprint (a tick is about the values shown)", JSON.stringify(after.sections.map((x) => x.version)) === JSON.stringify(before.sections.map((x) => x.version)));
+}
+
+// QA-309 review M1 (b, c), m2: what a sheet waits on comes from readiness's lines, each matched to its person by id.
+{
+  const q = (subjectId: string, fact: string, extra: Record<string, unknown> = {}) => ({ subjectId, about_label: "Client A", fact, label: fact, required: true, hidden: false, group: null, rows: [], answer: null, fills: [{ form: "IMM 5257", person: "p", subject: "p" }], ...extra });
+  // Two people with the same name shown ("Client A"), each with an education group: only the one readiness names waits.
+  const view = { sections: [
+    { subjectId: "p", about_label: "Client A", section: "education", title: "Education", questions: [q("p", "person.education_school_name")], group: { required: true, rows: 0, none_apply: null } },
+    { subjectId: "p2", about_label: "Client A", section: "education", title: "Education", questions: [q("p2", "person.education_school_name")], group: { required: true, rows: 0, none_apply: null } },
+    { subjectId: "k", about_label: "The application", section: "visit", title: "Visit", questions: [q("k", "case.visit_purpose")], group: null },
+  ], checks: [{ id: "dates", severity: "warn", group: "section_check", message: "The stay ends before it starts.", subjectId: "p", about_label: "Client A", fact: "person.stay_to", section: "visit", illustrative: false }] } as unknown as QuestionnaireView;
+  const line = (fact: string, subject: string | undefined, about = "Client A", reason: Readiness["missing"][number]["reason"] = "not answered") => ({ fact, label: fact, about, reason, ...(subject ? { subject } : {}) });
+  const w = waitsOf(view, [line("group:education", "p"), line("check:dates", "p", "Client A", "a check fired"), line("case.visit_purpose", "k", "The application"), line("person.family_name", "p")], "p", "k");
+  ok("QA-309 M1 (c) pass: a fired section check makes the fact it reads wait", w("p", "person.stay_to"));
+  ok("QA-309 M1 (c) fail: a check on the same fact of another person does not", !w("p2", "person.stay_to"));
+  ok("QA-309 pass: a group whose \"none apply\" is not answered makes each of its facts wait; a fact readiness names waits", w("p", "person.education_school_name") && w("p", "person.family_name"));
+  ok("QA-309 m2 (fail): the same group of another person shown by the same name does not wait (matched by id, never by name)", !w("p2", "person.education_school_name"));
+  ok("QA-309 M1 (b) pass: a box about the application (\"case\" on the form) waits when readiness names the case's own fact", w("case", "case.visit_purpose"));
+  ok("QA-309 M1 (b) fail: without the case's subject, a \"case\" box never matches; a fact readiness does not name never waits", !waitsOf(view, [line("case.visit_purpose", "k", "The application")], "p")("case", "case.visit_purpose") && !w("p", "person.given_names") && !w("case", "case.visit_contact_name"));
+  // The item's words while it is not Done.
+  const sh = (entered: boolean[]) => ({ order_basis: "form_parts", order_note: "", sections: entered.map((e, i) => ({ key: `s${i}`, title: `Part ${i + 1}`, version: "", entered: e ? { at: "2026-11-08T10:00:00Z", by: "user-O" } : null, out_of_date: false, answers: [], waiting: [] })) }) as Sheet;
+  const four = [1, 2, 3, 4].map((n) => line(`person.fact_${n}`, "p"));
+  ok("QA-309 (fail): while facts wait, the words name the first three by label and person and count the rest", sheetWords(sh([true]), four) === "Waiting for 4 facts to answer or confirm: person.fact_1 (Client A); person.fact_2 (Client A); person.fact_3 (Client A); and 1 more." && sheetWords(sh([true]), four.slice(0, 1)) === "Waiting for 1 fact to answer or confirm: person.fact_1 (Client A).");
+  ok("QA-309 (fail): nothing waits but a section is not ticked: the words name it, never \"Every fact it reads is confirmed\"", sheetWords(sh([true, false]), []) === "Every answer is ready to enter in the portal; 1 of 2 sections still to tick \"Entered in the portal\": Part 2." && !/Every fact it reads is confirmed/.test(sheetWords(sh([false]), [])));
+}
+// QA-309 review m1: a fact about the application that needs a fix is one readiness line, about the application, never a
+// second one "about" the person whose form it is ("case" on the form, the case's own subject on its question).
+{
+  const answered = { confirmed: true, problems: ["The date is not a real date."] };
+  const view = { sections: [{ subjectId: "k", about_label: "The application", section: "visit", title: "Visit", group: null, questions: [{ subjectId: "k", about_label: "The application", fact: "case.intended_stay_to", label: "Stay to", required: true, hidden: false, group: null, rows: [], answer: answered, fills: [{ form: "IMM 5257", person: "p", subject: "p" }] }] },
+    { subjectId: "p", about_label: "Sample Client A", section: "personal", title: "Personal", group: null, questions: [] }], checks: [] } as unknown as QuestionnaireView;
+  const boxes = [{ box: "IMM_5257[0].Stay[0].To[0]", caption: "To", fact: "case.intended_stay_to", meaning: null, about: "case", about_label: "The application", row: null, coverage: "answered on screen" as const, detail: "", fix: "answered with a problem, not written: The date is not a real date." }];
+  const r = readiness(view, "IMM 5257", "p", { boxes, open: [] });
+  ok("QA-309 m1 (fail): a case fact with a problem is named once, about the application (was twice, the second about the person)", r.missing.filter((m) => m.fact === "case.intended_stay_to").length === 1 && r.missing.every((m) => m.about === "The application"), r.missing);
+  const alone = readiness({ ...view, sections: [view.sections[1]] } as QuestionnaireView, "IMM 5257", "p", { boxes, open: [] });
+  ok("QA-309 m1 pass: with no question for it, the form's own fix is still named once", alone.missing.length === 1 && alone.missing[0].reason === "needs a fix", alone.missing);
+  // Review m2: readiness says whose group and whose fired check each line is, by id, so a sheet never matches by name.
+  const g = readiness({ sections: [{ subjectId: "p", about_label: "Sample Client A", section: "education", title: "Education", group: { required: true, rows: 0, none_apply: null }, questions: [{ subjectId: "p", about_label: "Sample Client A", fact: "person.education_school_name", label: "School", section: "education", required: true, hidden: false, group: "education", rows: [], answer: null, fills: [{ form: "IMM 5257", person: "p", subject: "p" }] }] }],
+    checks: [{ id: "dates", severity: "warn", group: "section_check", message: "The dates disagree.", subjectId: "p", about_label: "Sample Client A", fact: "person.education_school_name", section: "education", illustrative: false }] } as unknown as QuestionnaireView, "IMM 5257", "p");
+  ok("QA-309 m2: readiness's group line and fired-check line each carry their person's id", g.missing.find((m) => m.fact === "group:education")?.subject === "p" && g.missing.find((m) => m.fact === "check:dates")?.subject === "p", g.missing);
 }
 
 process.exitCode = summary() ? 1 : 0;
