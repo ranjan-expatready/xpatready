@@ -77,3 +77,24 @@
 To fix:
 1. Major 1
 2. Major 2
+
+## Round 2: 044683757 (diff from 07efe1897 only), 8 Nov 2026
+**Runs.** All on :4452 at 044683757, live AI off, US$0:
+- reset, then `check_qa165_taiwan_israel_api` 11/11, including T5's fail and pass
+- `check_qa165_gate_follow_ups` 38/38, on a scratch copy of this code
+
+**Major 1: fixed.** `engine/runtime/mandatory.ts:66` now skips a "not needed" field only when no script rule applies. Line 61 has already dropped the rule when the written code does not match, so the new line fires only when the question's condition and the written code disagree.
+- On :4452, "isr" leaves IMM 5257 not ready and names the Israel form field ("…check that answer"). Back on "TWN", the kept Yes shows and the form is ready.
+- **Mutations** on a scratch copy:
+  - Removing `&& !when` turns R7's "review M1" fail red (37/38).
+  - Ignoring the code check at line 61 turns R4 and both new R7 lines red (33/38).
+
+**Major 2: fixed.** The stored text now reads "Asked only when the passport's country or territory of issue is Israel, as IMM 5257 asks it only then" (the Taiwan text matches). There is no path or fact key. The ground stays in `askedWhenGround` and its test.
+
+**Minors.**
+- m1: fixed. `askedFacts` is limited to the application's own editions.
+- m3: fixed. T5 asserts the kept Taiwan answer.
+- m2: accepted as reasoned. Undo does not roll back another person's B86 decision (B116 review M1).
+- New, Minor (Should, not blocking): the officer's line says "its code 206". Naming the form's choice ("ISR (Israel)") would read better.
+
+**Verdict: Approve.** No open Blocker or Major.
