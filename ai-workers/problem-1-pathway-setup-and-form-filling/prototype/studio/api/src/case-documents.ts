@@ -342,7 +342,12 @@ export class CaseDocuments {
       reviews: reviews.map((r) => { const d = current.find((x) => x.id === r.documentId)!; return {
         id: r.id, document: r.documentId, document_name: this.typeName(c, d.documentType), file_name: d.fileName, reader: r.reader as Reader, replayed: r.replayed,
         confirm: "one_per_document" as const, collapsed: r.values.filter((v) => v.review === "collapsed").map((v) => v.fact), expanded: r.values.filter((v) => v.review === "expanded").map((v) => v.fact),
-        read: { by: r.readBy, at: r.readAt.toISOString() }, confirmed: r.confirmedBy ? { by: r.confirmedBy, at: r.confirmedAt!.toISOString() } : null }; }),
+        read: { by: r.readBy, at: r.readAt.toISOString() }, confirmed: r.confirmedBy ? { by: r.confirmedBy, at: r.confirmedAt!.toISOString() } : null,
+        // The coded lines' check digits in one word (passed: values are collapsed; failed: a value's own check digit did not
+        // match; null: not a coded-line read), and the facts this document can be evidence for (checked-against-document
+        // accepts only these): the server's own rules, so a screen never works them out (STANDARDS §7).
+        check_digits: r.reader !== "mrz" ? null : r.values.some((v) => v.review === "collapsed") ? "passed" : (r.unreadable as { reason: string }[]).some((u) => /check digit/i.test(u.reason)) ? "failed" : "incomplete",
+        evidence: [...(readerOf({ key: d.documentType, name: this.typeName(c, d.documentType) })?.supplies ?? [])] }; }),
       unreadable: reviews.flatMap((r) => (r.unreadable as { fact: string; reason: string }[]).map((u) => ({ ...u, label: labelOf(s, u.fact), document: r.documentId }))),
     };
   }
