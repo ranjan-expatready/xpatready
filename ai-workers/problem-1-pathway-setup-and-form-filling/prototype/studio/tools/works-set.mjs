@@ -23,10 +23,24 @@
 //   Data:    product/qa/REGRESSION-DATA.md (B77, P-322; qa's records, read at the base, optional) names the rows whose
 //            verdict counts on the configured checkpoint ("- C4.8 checkpoint <reason>"); --run runs those on Demo › Load
 //            the configured checkpoint (GATE_B_DATA=checkpoint), every other row on the six (Reset to the six).
-// Usage: node studio/tools/works-set.mjs --list [--json] [--milestone M2] [--file <CAPABILITIES.md>] [--held <REGRESSION-HELD.md>] [--data <REGRESSION-DATA.md>]
+//   --milestone all (D5, P-416, founder 8 Nov): every Works row, whatever its milestone (M2, M3, T, Parked, Team…).
+//   Scoring data (D5): --groups and --pool run each row on the data its verdict counts on: qa's REGRESSION-DATA.md line
+//            when there is one, else the newest data the row's own evidence names for its pack run (the first
+//            "data=six|checkpoint", "GATE_B_DATA: six|checkpoint" or "<pack>.test.ts on the six|checkpoint" in its
+//            Evidence cell, which is written newest first: C6.15 "nightly run … `data=checkpoint`"), else the six.
+//   --groups <n>  (with --list) prints the rows with a pack as at most n JSON groups for a job matrix, balanced by packs
+//            (a checkpoint pack counts double: its load is about 76 s, run 42422840997), each {caps, packs, weight}.
+//   --pool <C…,C…>  runs those rows' packs in ONE gate-b run on its job slots (GATE_B_JOBS, default 3), each row on its
+//            scoring data (gate-b GATE_B_DATA_OF), held packs skipped; a red row is run once more (pooled again); every
+//            pack the base names must report (GATE_B_RESULTS). A pack that ran on no demo data (fixture only, or no server)
+//            counts as run, as in --run (its row's Works rests on qa's gate A; 9 Works packs run so on the six, 8 Nov),
+//            and is listed as NOT TESTED on its data (B131's words) with a ::warning::, never silently green.
+// Usage: node studio/tools/works-set.mjs --list [--json] [--milestone M2|all] [--groups <n>] [--file <CAPABILITIES.md>] [--held <REGRESSION-HELD.md>] [--data <REGRESSION-DATA.md>]
 //        node studio/tools/works-set.mjs --run C11.13 [--held <file>] [--data <file>]
+//        node studio/tools/works-set.mjs --pool C1.3,C4.8,C11.13 [--file <CAPABILITIES.md>] [--held <file>] [--data <file>]
 // Exit: 0 listed / green (on the first run or the retry) · 1 red twice · 2 could not run.
-import { readFileSync, appendFileSync } from "node:fs";
+import { readFileSync, appendFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,23 +63,41 @@ const baseOf = () => (process.env.RANGE ?? "").match(/^([0-9a-f]{7,40})\.\./)?.[
  *  (protectedSet protects the id if any copy is a Works row). */
 export function rows(md) {
   const out = [];
-  let mi = 4, si = 5;
+  let mi = 4, si = 5, ei = 7;
   for (const raw of md.split(/\r?\n/)) {
     let line = raw.trim().replace(/`[^`]*`/g, (c) => c.replace(/\|/g, "¦"));
     if (!line.includes("|")) continue;
     if (!line.startsWith("|")) line = `| ${line}`;
     const col = line.split(/(?<!\\)\|/).map((c) => c.replace(/~~[^~]*~~/g, " ").replace(/[*_`]/g, "").trim());
-    const ms = col.indexOf("M"), ss = col.indexOf("Status");
-    if (col[0] === "" && ms > 0 && ss > 0) { mi = ms; si = ss; continue; }
+    const ms = col.indexOf("M"), ss = col.indexOf("Status"), es = col.findIndex((c) => /^Evidence\b/i.test(c));
+    if (col[0] === "" && ms > 0 && ss > 0) { mi = ms; si = ss; ei = es > 0 ? es : ei; continue; }
     const m = (col[1] ?? "").match(ID);
     if (col[0] !== "" || !m || !/^\[?[Cc]\d/.test(col[1])) continue;
     const id = `C${m[1]}.${m[2]}`;
-    out.push({ id, milestone: col[mi] ?? "", status: col[si] ?? "" });
+    out.push({ id, milestone: col[mi] ?? "", status: col[si] ?? "", note: col[ei] ?? "" });
   }
   return out;
 }
 const isWorks = (status) => /^[^\p{L}\p{N}]*works\b/iu.test(status.trim());   // "✅ Works" too (round 3 M2)
-const inMilestone = (m, want) => m.split(/[\s,;/]+/).some((t) => t.toUpperCase() === want.toUpperCase());
+const inMilestone = (m, want) => want.toLowerCase() === "all" || m.split(/[\s,;/]+/).some((t) => t.toUpperCase() === want.toUpperCase());
+/** The data a row's own evidence says its pack verdict ran on (D5): the first data named for a pack run in the Evidence
+ *  cell (newest first), as gate B and the re-test print it; null when it names none. */
+export function verdictData(note = "") {
+  const m = note.replace(/[*`]/g, "").match(/\.test\.ts\s+on the (six|checkpoint)\b|\bdata=(six|checkpoint)\b|GATE_?B_?DATA:?\s*(six|checkpoint)\b/i);
+  return m ? (m[1] ?? m[2] ?? m[3]).toLowerCase() : null;
+}
+/** Each row's scoring data (D5): qa's REGRESSION-DATA.md line, else its evidence's (verdictData), else the six. */
+export const scoringData = (id, md, dataFile = new Map()) =>
+  dataFile.get(id)?.data ?? rows(md).filter((r) => r.id === id).map((r) => verdictData(r.note)).find(Boolean) ?? "six";
+/** At most n groups of rows for a job matrix, balanced by weight (a checkpoint pack 2, a six pack 1; heaviest first). */
+export function groupsOf(items, n) {
+  const k = Math.max(1, Math.min(n, items.length)), out = Array.from({ length: k }, () => ({ caps: [], packs: 0, weight: 0 }));
+  for (const it of [...items].sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id, "en", { numeric: true }))) {
+    const g = out.reduce((a, b) => (b.weight < a.weight ? b : a));
+    g.caps.push(it.id); g.packs += it.packs; g.weight += it.weight;
+  }
+  return out.filter((g) => g.caps.length);
+}
 /** The protected set: rows of the milestone whose status is Works, with the packs each has (packs: id → files). */
 export const protectedSet = (md, milestone = "M2", packs = packsOf) =>
   [...new Set(rows(md).filter((r) => inMilestone(r.milestone, milestone) && isWorks(r.status)).map((r) => r.id))].map((id) => ({ id, packs: packs(id) }));
@@ -153,6 +185,32 @@ function once(id, skip, data) {
   const r = spawnSync(process.execPath, [gate, "--title", id, "--kind", "code"], { cwd: S, env, encoding: "utf8", maxBuffer: 64 << 20, timeout: 1_140_000, killSignal: "SIGKILL" });
   return { status: r.status ?? (r.error ? 124 : 1), out: (r.stdout ?? "") + (r.stderr ?? "") + (r.error ? `\n(stopped: ${r.error.message})` : "") };
 }
+/** One pooled gate-b run (D5): the rows' packs on its job slots, each row on its data, held packs skipped; the results
+ *  come back from GATE_B_RESULTS as { file → line }. */
+function pooledOnce(ids, dataOf, skip) {
+  const gate = process.env.WORKS_SET_GATE ?? join(HERE, "gate-b.mjs");
+  const T = mkdtempSync(join(tmpdir(), "works-pool-")), res = join(T, "results.jsonl");
+  const env = { ...process.env, QUEUE: "", PR_TITLE: "", PR_BODY: "", KIND: "code", GATE_B_JOBS: process.env.GATE_B_JOBS ?? "3", GATE_B_SKIP_PACKS: skip.join(","),
+    GATE_B_DATA: "six", GATE_B_DATA_OF: ids.map((id) => `${id}=${dataOf(id)}`).join(" "), GATE_B_RESULTS: res };
+  // 40 minutes a pooled attempt: a hang is red, never a pass.
+  const r = spawnSync(process.execPath, [gate, "--title", ids.join(" "), "--kind", "code"], { cwd: S, env, encoding: "utf8", maxBuffer: 64 << 20, timeout: 2_400_000, killSignal: "SIGKILL" });
+  const lines = new Map();
+  if (existsSync(res)) for (const l of readFileSync(res, "utf8").split("\n").filter(Boolean)) { try { const j = JSON.parse(l); lines.set(j.file, j); } catch { /* a torn line reports as not run */ } }
+  rmSync(T, { recursive: true, force: true });
+  return { status: r.status ?? (r.error ? 124 : 1), out: (r.stdout ?? "") + (r.stderr ?? "") + (r.error ? `\n(stopped: ${r.error.message})` : ""), lines };
+}
+/** Each row's verdict from one pooled run: "green", "untested" (every pack it ran loaded no demo data: fixture only or no
+ *  server), "red" (a pack red, or missing: renamed, deleted or not reported), or "infra" (the gate could not run it). */
+export function poolVerdicts(expected, lines) {
+  const out = new Map();
+  for (const [id, files] of expected) {
+    const got = files.map((f) => lines.get(f));
+    const why = files.map((f, i) => (!got[i] ? `${f} did not report (missing at the head, renamed, or the gate ran no pack)` : got[i].ok ? null : `${f}: ${got[i].why}`)).filter(Boolean);
+    const v = why.length ? (got.every((g) => !g || g.infra || g.ok) && got.some((g) => g?.infra) ? "infra" : "red") : got.some((g) => g.load === null) ? "untested" : "green";
+    out.set(id, { v, why, where: files.map((f, i) => `${f} ${got[i]?.where ?? "?"}`) });
+  }
+  return out;
+}
 const esc = (f) => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** The packs the base names that a run did not run on the data asked for (each pack gate B runs prints "<file> on the
  *  six", "<file> on the checkpoint" or "<file> fixture only" with its exit; a pack whose run line has setup steps runs
@@ -164,10 +222,11 @@ const ranWhere = (files, out) => files.map((f) => `${f} ${new RegExp(`^\\s*${esc
 function main(argv) {
   // In --json mode stdout is only the array (CI writes it to GITHUB_OUTPUT): every other line goes to stderr (round 3 M1).
   const say = (s) => { (opt.json ? console.error : console.log)(s); if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n"); };
-  const opt = { list: false, json: false, run: null, milestone: "M2", file: null, held: null, data: null };
+  const opt = { list: false, json: false, run: null, pool: null, groups: 0, milestone: "M2", file: null, held: null, data: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], v = () => { if (argv[i + 1] === undefined) throw new Error(`${a} wants a value`); return argv[++i]; };
     if (a === "--list") opt.list = true; else if (a === "--json") opt.json = opt.list = true; else if (a === "--run") opt.run = v();
+    else if (a === "--pool") opt.pool = v(); else if (a === "--groups") { opt.groups = Number(v()); opt.json = opt.list = true; if (!Number.isInteger(opt.groups) || opt.groups < 1 || opt.groups > 20) throw new Error("--groups wants 1 to 20"); }
     else if (a === "--milestone") opt.milestone = v(); else if (a === "--file") opt.file = v(); else if (a === "--held") opt.held = v(); else if (a === "--data") opt.data = v(); else throw new Error(`unknown option ${a}`);
   }
   // The hold file must exist (it may hold nothing): until qa's notes PR has put it on the base, the set cannot start (B1).
@@ -198,14 +257,53 @@ function main(argv) {
     say(`**${opt.run}**: red twice (${first.why}, then ${again.why}): this batch would take away a Works row.`);
     return again.status === 2 && first.status === 2 ? 2 : 1;
   }
-  if (!opt.list) throw new Error("say --list, --json or --run <C…>");
   const md = opt.file ? readFileSync(opt.file, "utf8") : atBase(CAPS);
+  const scoring = (id) => scoringData(id, md, dat.data);
+  if (opt.pool) {
+    const ids = [...new Set(opt.pool.split(/[\s,]+/).filter(Boolean))];
+    for (const id of ids) if (!/^C\d{1,2}\.\d{1,2}$/.test(id)) throw new Error(`not a capability id: "${id}" (want e.g. C11.13)`);
+    if (!ids.length) throw new Error("--pool names no capability");
+    const expected = new Map(), heldOut = [], noPack = [];
+    for (const id of ids) {
+      const all = packs(id), live = all.filter((f) => !hold.caps.has(id) && !hold.packs.has(f));
+      if (!all.length) noPack.push(id); else if (!live.length) heldOut.push(id); else expected.set(id, live);
+      for (const f of all.filter((f) => !live.includes(f))) heldOut.push(f);
+    }
+    const skip = ids.flatMap((id) => packs(id).filter((f) => !(expected.get(id) ?? []).includes(f)));
+    say(`**Pooled packs** (D5): ${[...expected.keys()].map((id) => `${id} on the ${scoring(id)}`).join(", ") || "none"}${heldOut.length ? `; held, not run: ${heldOut.join(", ")}` : ""}${noPack.length ? `; no pack on the base: ${noPack.join(", ")}` : ""}.`);
+    if (!expected.size) return noPack.length ? 2 : 0;
+    const first = pooledOnce([...expected.keys()], scoring, skip);
+    process.stdout.write(first.out);
+    const verdict = poolVerdicts(expected, first.lines);
+    const again = [...verdict].filter(([, x]) => x.v === "red" || x.v === "infra").map(([id]) => id);
+    if (again.length) {
+      say(`Red on the first run: ${again.map((id) => `${id} (${verdict.get(id).why.join("; ")})`).join(" · ")}; running them once more (a flaky pack is retried once).`);
+      const second = pooledOnce(again, scoring, skip);
+      process.stdout.write(second.out);
+      const v2 = poolVerdicts(new Map(again.map((id) => [id, expected.get(id)])), second.lines);
+      for (const id of again) { const x = v2.get(id); verdict.set(id, x.v === "green" || x.v === "untested" ? { ...x, flaky: true } : x); }
+    }
+    const by = (v) => [...verdict].filter(([, x]) => x.v === v);
+    for (const [id, x] of verdict) say(`  ${id} (${scoring(id)}): ${x.v === "green" ? (x.flaky ? "green on the retry — flaky" : "green") : x.v === "untested" ? "NOT TESTED on its data" : x.v === "infra" ? "could not run" : "red twice"} — ${x.v === "green" || x.v === "untested" ? x.where.join(", ") : x.why.join("; ")}`);
+    for (const [id, x] of by("untested")) console.log(`::warning title=NOT TESTED on its data::${id} ${x.where.join(", ")} (its Works rests on qa's gate A)`);
+    say(`Pooled packs: ${by("green").length} green, ${by("untested").length} green on their own fixture only (NOT TESTED on their data), ${by("red").length} red twice, ${by("infra").length} could not run.`);
+    if (by("red").length) return 1;
+    if (by("infra").length) return 2;
+    return 0;
+  }
+  if (!opt.list) throw new Error("say --list, --json, --groups <n>, --run <C…> or --pool <C…,C…>");
   if (!rows(md).length) throw new Error("qa/CAPABILITIES.md has no capability row the tool can read (never an empty set)");
   const set = protectedSet(md, opt.milestone, packs);
-  if (!set.length) throw new Error(`no ${opt.milestone} row reads as Works (the table's format changed?): could not run, never an empty set`);
+  if (!set.length) throw new Error(`no ${opt.milestone === "all" ? "" : `${opt.milestone} `}row reads as Works (the table's format changed?): could not run, never an empty set`);
   if (!set.some((r) => r.packs.length)) throw new Error("no protected row has an acceptance pack (the pack folder moved?): could not run, never an empty set");
   const live = (r) => r.packs.filter((f) => !hold.caps.has(r.id) && !hold.packs.has(f));
   const runs = set.filter((r) => live(r).length);
+  if (opt.groups) {
+    const items = runs.map((r) => { const n = live(r).length; return { id: r.id, packs: n, weight: n * (scoring(r.id) === "checkpoint" ? 2 : 1) }; });
+    console.log(JSON.stringify(groupsOf(items, opt.groups).map((g) => ({ caps: g.caps.join(","), packs: g.packs, weight: g.weight }))));
+    for (const r of runs) say(`  ${r.id} on the ${scoring(r.id)}: ${live(r).join(", ")}`);
+    return 0;
+  }
   if (opt.json) { console.log(JSON.stringify(runs.map((r) => r.id))); return 0; }
   say(`Protected regression set (${opt.milestone} · Works): ${set.length} capabilities, ${set.filter((r) => r.packs.length).length} with an acceptance pack, ${runs.length} re-run.`);
   for (const r of set) {

@@ -34,6 +34,9 @@
 //   (C4.4's setup_c44_types.ts, which the checkpoint lacks) still runs after the load, and the line names it. A pack whose
 //   run uses no server (C6.5 --engine) loads nothing. Unset or "six" is the six, where a pack with setup steps stays on
 //   its own fixture.
+//   GATE_B_DATA_OF="C4.8=checkpoint C1.1=six" (D5, P-416, 8 Nov): each named capability's packs run on that data and the
+//   rest on GATE_B_DATA, so one gate run pools packs on different data across its job slots (works-set.mjs --pool).
+//   GATE_B_RESULTS=<file>: one JSON line per pack run ({id, file, data, where, load, ok, why, infra}) for a caller.
 //   NOT TESTED (B131, founder 7 Nov ~15:20 IST, P-405; re-test 42357755876 went green on C3.16, C11.5 with no pack and on
 //   C6.5 with no server): a named capability with no acceptance pack to run, or a pack that runs "on no demo data (its run
 //   uses no server)" or "fixture only", ran no test on the data asked for. Each prints "NOT TESTED: <cap> has no
@@ -265,6 +268,20 @@ export function dataOf(env = process.env) {
   if (v !== "six" && v !== "checkpoint") throw new Error(`GATE_B_DATA must be "six" or "checkpoint", not "${v}"`);
   return v;
 }
+/** GATE_B_DATA_OF (D5): "C4.8=checkpoint C1.1=six" (spaces or commas), each capability's own data. Anything else in it
+ *  is refused, so a typo never quietly runs a row on the wrong data. */
+export function dataMap(env = process.env) {
+  const out = new Map();
+  for (const t of (env.GATE_B_DATA_OF ?? "").split(/[\s,]+/).filter(Boolean)) {
+    const m = t.match(/^(C\d{1,2}\.\d{1,2})=(six|checkpoint)$/);
+    if (!m) throw new Error(`GATE_B_DATA_OF wants "C<n.n>=six|checkpoint" items, not "${t}"`);
+    if (out.has(m[1]) && out.get(m[1]) !== m[2]) throw new Error(`GATE_B_DATA_OF names ${m[1]} twice with different data`);
+    out.set(m[1], m[2]);
+  }
+  return out;
+}
+/** The data one capability's packs run on: its GATE_B_DATA_OF item, else GATE_B_DATA. */
+export const dataFor = (id, env = process.env) => dataMap(env).get(id) ?? dataOf(env);
 /** The run's mode (B131): "retest" for nightly.yml's re-test (GITHUB_EVENT_NAME workflow_dispatch or schedule), where
  *  NOT TESTED is exit 3; "pr" anywhere else (pull_request, a merge-queue run, off CI), where it is a warning. */
 export const RETEST_EVENTS = new Set(["workflow_dispatch", "schedule"]);
@@ -293,13 +310,13 @@ export const whereOf = (plan, data = "six") => placeOf(plan, data).where;
  *  run, and a pack whose run loads no demo data (no server, or "fixture only") on `data`. A pack whose run line cannot
  *  be read is a refusal already (runPack), not counted here. `read` gives a pack file's text. */
 export function notTested(caps, runs, data, read = (f) => readFileSync(join(S, "acceptance", f), "utf8")) {
-  const out = [];
+  const out = [], dataOfId = typeof data === "function" ? data : () => data;   // one data, or each capability's own (D5)
   for (const id of caps) if (!runs.some((r) => r.id === id)) out.push(`NOT TESTED: ${id} has no acceptance pack`);
   for (const r of runs) {
     const plan = runPlan(r.f, read(r.f));
     if (plan.error) continue;
-    const place = placeOf(plan, data);
-    if (place.load === null) out.push(`NOT TESTED on the ${data}: ${r.id} ${r.f} runs ${place.where}`);
+    const d = dataOfId(r.id), place = placeOf(plan, d);
+    if (place.load === null) out.push(`NOT TESTED on the ${d}: ${r.id} ${r.f} runs ${place.where}`);
   }
   return out;
 }
@@ -351,7 +368,7 @@ const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(
 async function runPack(id, file, wanted, slot) {
   const plan = runPlan(file, readFileSync(join(S, "acceptance", file), "utf8"));
   if (plan.error) return { log: [], why: `${file}: ${plan.error}` };
-  const data = dataOf(), { steps, load, where } = placeOf(plan, data), log = [];
+  const data = dataFor(id), { steps, load, where } = placeOf(plan, data), log = [];
   // Only the steps that will run (a setup skipped on the checkpoint is not needed; review m2).
   const missing = steps.map((s) => join(s.cwd === "prototype" ? PROTO : S, s.script)).filter((f) => !existsSync(f));
   if (missing.length) return { log: [], why: `${file}: its run names a file that does not exist: ${missing.map((f) => relative(PROTO, f)).join(", ")}` };
@@ -392,6 +409,16 @@ async function runPack(id, file, wanted, slot) {
     spawnSync("dropdb", ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio", "--if-exists", db], { env, encoding: "utf8" });
     rmSync(join(S, "var", `isolated-${name}`), { recursive: true, force: true });
   }
+}
+/** runPack plus one GATE_B_RESULTS line (D5), so a caller pooling many packs reads each verdict without parsing words. */
+async function runPackRecorded(id, file, wanted, slot) {
+  const r = await runPack(id, file, wanted, slot);
+  if (process.env.GATE_B_RESULTS) {
+    let where = null, load = null, data = null;
+    try { data = dataFor(id); const plan = runPlan(file, readFileSync(join(S, "acceptance", file), "utf8")); if (!plan.error) ({ where, load } = placeOf(plan, data)); } catch { /* the why says it */ }
+    appendFileSync(process.env.GATE_B_RESULTS, JSON.stringify({ id, file, data, where, load, ok: !r.why, why: r.why ?? null, infra: Boolean(r.infra) }) + "\n");
+  }
+  return r;
 }
 /** BUGS.md as it is on the base branch (RANGE "<base>..<head>" from CI), so a PR's own edit to it counts for nothing. */
 function bugsText(opt) {
@@ -445,8 +472,9 @@ async function main(argv) {
   const skip = new Set((process.env.GATE_B_SKIP_PACKS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
   const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
   // B131: what ran no test on the data asked for comes first (a wrong GATE_B_DATA is left to the pack run to refuse).
-  let data = null; try { data = dataOf(); } catch { /* refused below when packs run */ }
-  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, data) : [];
+  let data = null; try { data = dataOf(); dataMap(); } catch { data = null; /* refused below when packs run */ }
+  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, (id) => dataFor(id)) : [];
+  if (process.env.GATE_B_DATA_OF) say(`  data: ${[...cl.caps.keys()].map((id) => `${id} on the ${dataFor(id)}`).join(", ")} (GATE_B_DATA_OF)`);
   for (const l of untested) say(l);
   if (untested.length) for (const l of untested) console.log(`::${mode === "retest" ? "error" : "warning"} title=Gate B NOT TESTED::${l.replace(/^NOT TESTED(?: on the \w+)?: /, "")}`);
   const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
@@ -455,26 +483,26 @@ async function main(argv) {
   if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) {   // what the gate will run, in this GATE_B_DATA (B125: on the checkpoint, the pack alone)
-    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")), x = p.error ? null : placeOf(p, dataOf()); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
+    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")), x = p.error ? null : placeOf(p, dataFor(r.id)); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
     return 0;
   }
   let infra = false;
   if (opt.packs && runs.length) {
     if (!process.env.GITHUB_ACTIONS && !process.env.GATE_B_PORT) throw new Error("off CI, set GATE_B_PORT (and GATE_B_NAME) to this copy's own ports before running packs, or pass --no-packs");
     const jobs = Number(process.env.GATE_B_JOBS ?? 3);
-    dataOf(); // a wrong GATE_B_DATA stops the gate before any copy starts
+    dataOf(); dataMap(); // a wrong GATE_B_DATA or GATE_B_DATA_OF stops the gate before any copy starts
     if (!Number.isInteger(jobs) || jobs < 1 || jobs > 9) throw new Error(`GATE_B_JOBS must be 1 to 9, not "${process.env.GATE_B_JOBS}"`);
     const results = new Array(runs.length), t0 = Date.now();
     let next = 0;   // one copy and port per slot: a slot runs its packs one after another
     await Promise.all(Array.from({ length: Math.min(jobs, runs.length) }, async (_, slot) => {
-      for (let k = next++; k < runs.length; k = next++) results[k] = await runPack(runs[k].id, runs[k].f, runs[k].st, slot);
+      for (let k = next++; k < runs.length; k = next++) results[k] = await runPackRecorded(runs[k].id, runs[k].f, runs[k].st, slot);
     }));
     for (const r of results) { for (const l of r.log) say(l); if (r.why) reasons.push(r.why); infra ||= Boolean(r.infra); }
     say(`  packs took ${Math.round((Date.now() - t0) / 1000)} s in all`);
   }
   if (reasons.length) { say(infra ? "Gate B could not run every pack, and refuses:" : "Gate B refuses:"); for (const r of reasons) say(`  * ${r}`); return infra ? 2 : 1; }
-  if (untested.length && mode === "retest") { say(`Gate B: NOT TESTED on the ${data} (exit 3): ${untested.length} named ${untested.length === 1 ? "part" : "parts"} ran no test on the data asked for; a re-test job is never green without one (B131).`); return 3; }
-  if (untested.length) { say(`Gate B: passed part 1 and the packs that ran, with ${untested.length} NOT TESTED on the ${data} (a warning on a pull request, never a refusal; B131).`); return 0; }
+  if (untested.length && mode === "retest") { say(`Gate B: NOT TESTED${process.env.GATE_B_DATA_OF ? "" : ` on the ${data}`} (exit 3): ${untested.length} named ${untested.length === 1 ? "part" : "parts"} ran no test on the data asked for; a re-test job is never green without one (B131).`); return 3; }
+  if (untested.length) { say(`Gate B: passed part 1 and the packs that ran, with ${untested.length} NOT TESTED${process.env.GATE_B_DATA_OF ? "" : ` on the ${data}`} (a warning on a pull request, never a refusal; B131).`); return 0; }
   say("Gate B: passed."); return 0;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
