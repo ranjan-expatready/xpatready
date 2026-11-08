@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -176,6 +176,17 @@ ok("a pack with setup steps is labelled \"fixture only\"; a pack alone runs on t
   let refused = ""; try { dataOf({ GATE_B_DATA: "checkpont" }); } catch (e) { refused = e.message; }
   ok("GATE_B_DATA with any other value is refused in words, never run on the six by mistake", /GATE_B_DATA must be "six" or "checkpoint", not "checkpont"/.test(refused), refused); }
 ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.test.ts", "// nothing here\nimport x from 'y';").error));
+// D5 (P-416, 8 Nov): GATE_B_DATA_OF gives each capability its own data, so one gate run pools rows on different data.
+{ const e = { GATE_B_DATA: "six", GATE_B_DATA_OF: "C4.8=checkpoint, C1.1=six C9.1=checkpoint" };
+  ok("D5: GATE_B_DATA_OF names a capability's data; the rest take GATE_B_DATA", dataFor("C4.8", e) === "checkpoint" && dataFor("C1.1", e) === "six" && dataFor("C7.3", e) === "six" && dataFor("C7.3", { ...e, GATE_B_DATA: "checkpoint" }) === "checkpoint" && dataMap(e).size === 3);
+  const bad = (v) => { try { dataMap({ GATE_B_DATA_OF: v }); return ""; } catch (x) { return x.message; } };
+  ok("D5: a GATE_B_DATA_OF item that is not C<n.n>=six|checkpoint is refused, never run on the wrong data", /wants "C<n.n>=six\|checkpoint" items, not "C4.8=checkpont"/.test(bad("C4.8=checkpont")) && /not "C4\.8"/.test(bad("C4.8")) && /not "c4.8=six"/.test(bad("c4.8=six")), [bad("C4.8=checkpont"), bad("C4.8")]);
+  ok("D5: one capability named twice with different data is refused", /twice/.test(bad("C4.8=six C4.8=checkpoint")) && bad("C4.8=six C4.8=six") === "");
+  const read = (f) => (f === "C9.8.test.ts" ? "// zsh studio/tools/isolated.sh c98 4601 start && tsx studio/acceptance/C9.8.test.ts 4601 xr_studio_c98\nimport { x } from \"./lib/m3.ts\";" : "// zsh studio/tools/isolated.sh c99 4602 start && tsx studio/acceptance/C9.9.test.ts 4602 xr_studio_c99");
+  const runs = [{ id: "C9.8", f: "C9.8.test.ts" }, { id: "C9.9", f: "C9.9.test.ts" }];
+  const per = notTested(["C9.8", "C9.9"], runs, (id) => (id === "C9.8" ? "checkpoint" : "six"), read), one = notTested(["C9.8", "C9.9"], runs, "six", read);
+  ok("D5 (review minor 5): GATE_B_NOT_TESTED=warn keeps a scheduled run's NOT TESTED a warning (works-set's pool); unset, a schedule is a re-test", modeOf({ GITHUB_EVENT_NAME: "schedule", GATE_B_NOT_TESTED: "warn" }) === "pr" && modeOf({ GITHUB_EVENT_NAME: "schedule" }) === "retest" && modeOf({ GITHUB_EVENT_NAME: "pull_request" }) === "pr");
+  ok("D5: NOT TESTED reads each capability's own data (an M3-helper pack is tested on the checkpoint, fixture only on the six)", per.length === 0 && one.length === 1 && /NOT TESTED on the six: C9\.8/.test(one[0]), { per, one }); }
 
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
