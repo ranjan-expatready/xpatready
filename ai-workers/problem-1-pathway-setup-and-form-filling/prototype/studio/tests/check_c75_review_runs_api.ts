@@ -1,0 +1,177 @@
+// C7.5 part 2 The independent AI review (runtime lane, M3-E; BR-19; P-110, P-121, P-227, P-71, P-168; AG-11-70): the
+// review-run routes on an isolated copy started with STUDIO_MADE_UP_REVIEW_RUNS=1, which reads saved reviews from the
+// copy's own folder (var/isolated-<name>/made-up-review-runs) instead of p2/runs. THE SAVED RUN HERE IS MADE UP FOR THIS
+// TEST: written by this file into that folder, labelled "test_fixture" in each record, named c75fixture, never a real
+// answer, never in p2/runs and never committed, so neither the product nor a pack can count it; the folder goes with the
+// copy at stop. The real saved run is the tech lead's one paid run on the Mac (P-295); until it is committed, pack steps
+// C7.5-6b onward stay red on every copy without this switch.
+// It proves the replay path end to end: pack 4's acceptance/C7.5.test.ts passes all 16 steps on this copy (its case's
+// values give the same review sheet the made-up run was written for); then each rule with a passing and a failing case:
+// who may plan and run (client 403, another firm 404), the body (400) and the person and form (422), Live refused while
+// live AI is off (409, nothing changed), the plan checksum (409), replay without a saved run of these values (409, US$0),
+// findings Replayed with High or Low and both reasons, a dismissed finding not raised again, two runs at once add each
+// finding once, a finding whose quoted words left the form resolved by the rules on the next run, no ai_batch row, audit
+// lines without a value, a quote or a reason, Stop. Then the job of a live run admitted by the guarded launcher in a stub
+// pass (US$0; its stub records removed after). No model call (US$0).
+//   zsh studio/tools/isolated.sh runtime_c75rr 4436 start STUDIO_MADE_UP_REVIEW_RUNS=1 && tsx studio/tests/check_c75_review_runs_api.ts 4436 xr_studio_runtime_c75rr
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+import { recorder } from "./runtime/api.ts";
+import * as m3 from "../acceptance/lib/m3.ts";
+import { FORM_REVIEW, madeUpRuns } from "../api/src/review-runs.ts";
+import { roundJob, RUNS } from "../api/src/rounds.ts";
+
+const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_c75rr";
+const { call, sql } = m3; // the pack's helpers on this same copy (officer by default)
+const { ok, summary } = recorder();
+const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, ".."), SOLUTION = join(PROTOTYPE, "..");
+const MADE_UP = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`, "made-up-review-runs");
+const tsx = (file: string) => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", join(STUDIO, "api", "tsconfig.json"), join(STUDIO, file), String(PORT), DB], { encoding: "utf8", timeout: 900_000 });
+const releases = () => Number(sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") ?? 0);
+const tSha = (t: string) => createHash("sha256").update(readFileSync(join(PROTOTYPE, "p2", "prompts", t))).digest("hex");
+type Input = { file: string; sha256: string };
+type F = { id: string; filing: string | null; subject: string; form: string | null; field: string | null; severity: string; source: string; state: string; quote: string; agreement: "high" | "low" | null; reasons: string[]; replayed: boolean };
+type Plan = { forms: { form: string; edition: string; sheet: string; sheet_sha256: string; saved: { available: boolean; why: string | null; files: string[]; made_up: boolean } }[]; estimate: { live_usd: number; live_worst_usd: number; replay_usd: number; job_cap_usd: number }; live_allowed: boolean; replay_available: boolean; made_up: boolean; made_up_words: string | null; plan_sha256: string; stand_in: string };
+const FIXTURE = "made up by tests/check_c75_review_runs_api.ts for its own isolated copy: never a real answer, never counted";
+
+/** A made-up saved run of one round, in the launcher's record shape (as tests/fixtures/c91-saved-run.ts), for these inputs. */
+const record = (isCheck: boolean, inputs: Input[], edition: { code: string; edition: string }, out: unknown) => ({ test_fixture: FIXTURE, caller: "live", contract_valid: true, raw_output: JSON.stringify(out),
+  drafting_run: { status: "completed", usage: { cost_usd: 0.5 }, attempts: [{ outcome: "completed" }], inputs: { official_files: inputs, combination: `edition:${edition.code}:${edition.edition}` } },
+  launch_evidence: { template_sha256: tSha(isCheck ? FORM_REVIEW.check : FORM_REVIEW.template) } });
+let stamp = 100;
+/** Writes the draft and checker rounds of one made-up run into the copy's own folder (never p2/runs). */
+function writeMadeUp(tag: string, inputs: Input[], draft: unknown, check: unknown) {
+  mkdirSync(MADE_UP, { recursive: true });
+  const t = `20261108t10${String(stamp++).padStart(4, "0")}000z`;
+  const ed = { code: "IMM 5257", edition: "09-2023" };
+  writeFileSync(join(MADE_UP, `${FORM_REVIEW.jobBase}-c75fixture${tag}-live-${t}-c75fix.json`), JSON.stringify(record(false, inputs, ed, draft)));
+  writeFileSync(join(MADE_UP, `${FORM_REVIEW.jobBase}-check-c75fixture${tag}-live-${t}-c75fix.json`), JSON.stringify(record(true, inputs, ed, check)));
+}
+const sheetOf = (plan: Plan) => JSON.parse(readFileSync(join(SOLUTION, plan.forms[0].sheet), "utf8")) as { fields: { box: string; caption: string; fact: string | null; value: string }[] };
+const inputsOf = (plan: Plan): Input[] => [{ file: "prototype/p1/inventory/imm5257e.inventory.json", sha256: createHash("sha256").update(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"))).digest("hex") }, { file: plan.forms[0].sheet, sha256: plan.forms[0].sheet_sha256 }];
+/** Two made-up findings on facts the sheet fills: one both rounds raise (High), one only the first round raises (Low), and
+ *  one in the checker round whose quote is not on the form (dropped by the rules). */
+function answersFor(plan: Plan) {
+  const rows = sheetOf(plan).fields.filter((r) => r.fact && r.value.length >= 2);
+  const pick = (fact: string) => rows.find((r) => r.fact === fact);
+  const a = pick("person.applying_from_country") ?? rows[0], b = pick("person.current_residence_country") ?? rows.find((r) => r !== a)!;
+  const d = rows.find((r) => r.fact !== a.fact && r.fact !== b.fact)!;
+  const fa = { field: a.fact!, box: a.box, severity: "MAJOR", quote: a.value.slice(0, 20), reason: `Made-up test finding on ${a.caption} (Sample).` };
+  const fb = { field: b.fact!, box: b.box, severity: "MINOR", quote: b.value.slice(0, 20), reason: `Made-up test finding on ${b.caption} (Sample).` };
+  const edition = plan.forms[0].edition;
+  return { a, b, draft: { form_edition: edition, findings: [fa, fb], unreadable: [] }, check: { form_edition: edition, findings: [{ ...fa, reason: "Made-up checker reason (Sample)." }, { field: d.fact!, box: d.box, severity: "INFO", quote: "words that are not on this form", reason: "Made up (Sample)." }], unreadable: [] } };
+}
+/** The pack's own case, made the same way (acceptance/C7.5.test.ts up to its plan), so its plan names the same sheet. */
+async function packLikeCase() {
+  const vv = m3.needVisitorVisa();
+  const c = await m3.openCase(vv, [{ role: "principal", name: "Sample Client A", dob: m3.FIXED.dob }]);
+  const P = c.subjects["Sample Client A"];
+  await m3.fillEverything(c.id);
+  await m3.prepare(c.id);
+  await m3.answer(c.id, c.caseSubject, "case.intended_stay_from", m3.FIXED.stayFrom); await m3.answer(c.id, c.caseSubject, "case.intended_stay_to", m3.FIXED.stayTo);
+  await m3.answer(c.id, P, "person.passport_expiry_date", m3.FIXED.expiry); await m3.confirmAll(c.id, P); await m3.confirmAll(c.id, c.caseSubject);
+  return { c, P };
+}
+
+(async () => {
+  if (releases() === 0) ok("setup: release 1 of the Visitor visa", tsx("tests/runtime/setup_visitor_visa.ts").status === 0 && releases() === 1);
+  if (releases() === 1) { tsx("acceptance/lib/setup_vv_m3.ts"); ok("setup: release 2 (pack 4 setup)", releases() === 2); }
+  const spend0 = sql("select count(*) from ai_batch");
+
+  // ── the made-up run for the pack's values, then the pack itself ──
+  const { c: c0, P: P0 } = await packLikeCase();
+  const plan0 = (await call("POST", `/runtime/cases/${c0.id}/review-runs/plan`, { forms: ["IMM 5257"], subject: P0 })).body as Plan;
+  ok("C7.5-5 here: the run card before any saved run: no Saved yet, with the reason; Live not allowed; cost first", plan0?.replay_available === false && /No saved review/.test(plan0.forms[0].saved.why ?? "") && plan0.live_allowed === false && plan0.estimate.live_usd > 0 && plan0.estimate.replay_usd === 0 && plan0.stand_in === "SI-6", plan0);
+  ok("C7.5 cost (P-110, P-232): the live estimate's usual is about US$1 and its worst within the US$5 job cap", plan0.estimate.live_usd >= 0.5 && plan0.estimate.live_usd <= 2 && plan0.estimate.live_worst_usd <= plan0.estimate.job_cap_usd && plan0.estimate.job_cap_usd === 5, plan0.estimate);
+  const { a, b, draft, check } = answersFor(plan0);
+  writeMadeUp("", inputsOf(plan0), draft, check);
+  ok("C7.5 the made-up run is in the copy's own folder, never in p2/runs", readdirSync(MADE_UP).length === 2 && !readdirSync(RUNS).some((f) => f.includes("c75fixture")));
+  const pack = tsx("acceptance/C7.5.test.ts");
+  const lines = pack.stdout.split("\n").filter((l) => /^(PASS|FAIL) +C7\.5-/.test(l));
+  ok("C7.5 pack on the made-up saved run: all 16 steps pass, exit 0 (the replay path end to end; the real run is the tech lead's)", pack.status === 0 && lines.length === 16 && lines.every((l) => l.startsWith("PASS")), lines.filter((l) => l.startsWith("FAIL")).join("\n") || pack.stdout.slice(-600));
+
+  // ── who, the body, the person and the form ──
+  const f = await m3.firms(), officer = f.officer ?? m3.OFFICER;
+  const { c, P } = await packLikeCase();
+  const planOf = async (body: unknown, actor = officer) => call("POST", `/runtime/cases/${c.id}/review-runs/plan`, body, actor);
+  ok("C7.5 fail: a client cannot see the run card (403)", (await planOf({ forms: ["IMM 5257"], subject: P }, m3.CLIENT)).status === 403);
+  ok("C7.5 fail: another firm's officer does not find the case (404)", (await planOf({ forms: ["IMM 5257"], subject: P }, m3.FIRM_READERS.solo)).status === 404);
+  ok("C7.5 fail: a client cannot run a review (403)", (await call("POST", `/runtime/cases/${c.id}/review-runs`, { forms: ["IMM 5257"], subject: P, mode: "replay" }, m3.CLIENT)).status === 403);
+  let r = await planOf({ forms: [], subject: P });
+  ok("C7.5 fail: no form named is refused on the field (400)", r.status === 400 && JSON.stringify(r.body).includes("Choose a form to review"), r.body);
+  r = await planOf({ forms: ["IMM 5257"], subject: "nope" });
+  ok("C7.5 fail: a person that is not an id is refused on the field (400)", r.status === 400, r.status);
+  r = await planOf({ forms: ["IMM 5257"], subject: c.caseSubject });
+  ok("C7.5 fail: the case itself is not a person whose form is reviewed (422)", r.status === 422 && /person on this case/.test(JSON.stringify(r.body)), r.body);
+  r = await planOf({ forms: ["IMM 9999"], subject: P });
+  ok("C7.5 fail: a form that is not this person's is refused in words (422)", r.status === 422 && /not one of Sample Client A's forms/.test(JSON.stringify(r.body)), r.body);
+  const plan = (await planOf({ forms: ["IMM 5257"], subject: P })).body as Plan;
+  ok("C7.5 pass: the same values on another case give the same sheet, so the saved run is found (keyed on edition and values, not the case or the PDF)", plan.replay_available === true && plan.forms[0].sheet_sha256 === plan0.forms[0].sheet_sha256 && plan.forms[0].saved.files.length === 2, plan.forms[0]);
+  ok("C7.5 made-up runs are said on the card (made_up, its words, the file names)", plan.made_up === true && /Made-up test runs/.test(plan.made_up_words ?? "") && plan.forms[0].saved.made_up && plan.forms[0].saved.files.every((x) => x.startsWith("made-up-review-runs/")), plan);
+  ok("C7.5 the made-up switch counts only on an isolated copy (STUDIO_VAR set)", (() => { const was = process.env.STUDIO_VAR, sw = process.env.STUDIO_MADE_UP_REVIEW_RUNS; process.env.STUDIO_MADE_UP_REVIEW_RUNS = "1"; delete process.env.STUDIO_VAR; const off = !madeUpRuns(); process.env.STUDIO_VAR = "/x"; const on = madeUpRuns(); if (was === undefined) delete process.env.STUDIO_VAR; else process.env.STUDIO_VAR = was; if (sw === undefined) delete process.env.STUDIO_MADE_UP_REVIEW_RUNS; else process.env.STUDIO_MADE_UP_REVIEW_RUNS = sw; return off && on; })());
+
+  // ── Live, the plan checksum, replay ──
+  const findings = async (q = "?source=ai") => ((await call("GET", `/runtime/cases/${c.id}/findings${q}`, undefined, officer)).body?.findings ?? []) as F[];
+  const runAs = (body: Record<string, unknown>, actor = officer) => call("POST", `/runtime/cases/${c.id}/review-runs`, { forms: ["IMM 5257"], subject: P, ...body }, actor);
+  r = await runAs({ mode: "live", planSha256: plan.plan_sha256 });
+  ok("C7.5 fail (P-227, P-295): Live is refused while live AI is off (409), in words, nothing added", r.status === 409 && /not allowed without the founder's Go/.test(JSON.stringify(r.body)) && (await findings()).length === 0, r.body);
+  r = await runAs({ mode: "replay", planSha256: "0".repeat(64) });
+  ok("C7.5 fail: a run on a run card that is not the one now (another checksum) is refused (409), nothing added", r.status === 409 && /Look at the run card again/.test(JSON.stringify(r.body)) && (await findings()).length === 0, r.body);
+  r = await runAs({ mode: "replay", planSha256: plan.plan_sha256 });
+  let fs = await findings();
+  const fa = fs.find((x) => x.field === a.fact), fb = fs.find((x) => x.field === b.fact);
+  ok("C7.5 pass: a Saved run adds the saved findings at US$0, each Replayed, on the person's filing, with its run id", r.status === 201 && r.body?.cost_usd === 0 && r.body?.added === 2 && fs.length === 2 && fs.every((x) => x.replayed && x.source === "ai" && x.form === "IMM 5257" && !!x.filing) && Number(sql(`select count(distinct run_id) from review_finding where case_id='${c.id}' and source='ai' and run_id is not null`)) === 1, { body: r.body, fs });
+  ok("C7.5 P-121 pass: the fact both rounds raised with one severity is High, with its reason", fa?.agreement === "high" && fa.severity === "MAJOR" && fa.reasons.length === 1, fa);
+  ok("C7.5 P-121 fail: the fact only one round raised is Low, with both rounds' reasons", fb?.agreement === "low" && fb.reasons.length === 2 && /^Round 1: MINOR/.test(fb.reasons[0]) && /^Round 2 \(blind checker\): raised nothing/.test(fb.reasons[1]), fb);
+  ok("C7.5 AG-11-70 fail: the checker's finding whose quote is not on the form is dropped, with the reason, never added", (r.body?.forms?.[0]?.dropped ?? []).some((d: { why: string }) => /not in what the form says/.test(d.why)) && !fs.some((x) => x.quote.includes("not on this form")), r.body?.forms?.[0]?.dropped);
+  ok("C7.5 no ai_batch row and no model call (US$0)", sql("select count(*) from ai_batch") === spend0);
+
+  // ── dismiss, again, at once ──
+  await call("POST", `/runtime/findings/${fb!.id}/dismiss`, { reason: "Not relevant (Sample)" }, officer);
+  r = await runAs({ mode: "replay" });
+  fs = await findings();
+  ok("C7.5 pass: a dismissed AI finding is not raised again on the next run (same person, form, fact and quote)", r.status === 201 && r.body?.added === 0 && r.body?.forms?.[0]?.kept === 2 && fs.length === 2 && fs.find((x) => x.id === fb!.id)?.state === "dismissed", { body: r.body, fs });
+  const both = await Promise.all([runAs({ mode: "replay" }), runAs({ mode: "replay" })]);
+  ok("C7.5 pass: two runs at once add each finding once (one lock per case)", both.every((x) => x.status === 201) && (await findings()).length === 2, both.map((x) => x.body?.added));
+
+  // ── the values change: no saved run of them; a made-up run of the new values resolves what left the form ──
+  const newValue = a.value === "Canada" ? "France" : "Canada";
+  await m3.answer(c.id, P, a.fact!, newValue); await m3.confirmAll(c.id, P);
+  const plan2 = (await planOf({ forms: ["IMM 5257"], subject: P })).body as Plan;
+  r = await runAs({ mode: "replay" });
+  ok("C7.5 fail: changed values have no saved run: Saved is refused (409) in words, US$0, nothing changed", plan2.replay_available === false && plan2.forms[0].sheet_sha256 !== plan.forms[0].sheet_sha256 && r.status === 409 && /No saved review/.test(JSON.stringify(r.body)) && (await findings()).filter((x) => x.state === "open").length === 1, r.body);
+  writeMadeUp("b", inputsOf(plan2), { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] }, { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] });
+  r = await runAs({ mode: "replay" });
+  fs = await findings();
+  ok("C7.5 pass: the next run resolves, by the rules, the finding whose quoted words left the form; the dismissed one stays dismissed", r.status === 201 && r.body?.forms?.[0]?.resolved === 1 && fs.find((x) => x.id === fa!.id)?.state === "resolved" && fs.find((x) => x.id === fb!.id)?.state === "dismissed", { body: r.body, fs: fs.map((x) => [x.field, x.state]) });
+
+  // ── audit, stop (readiness: pack step C7.5-9 above) ──
+  const audit = sql(`select string_agg(summary || ' ' || coalesce(detail::text, ''), ' | ') from audit_event where entity_key='${c.id}' and action='reviewed'`) ?? "";
+  ok("C7.5 audit: each run is one line naming the forms, the mode and the cost; never a value, a quote or a reason", /ran the independent review of IMM 5257/.test(audit) && /Saved \(made-up test run\), US\$0\.00/.test(audit) && !audit.includes(a.value) && !audit.includes("Made-up test finding") && !audit.includes("Round 1"), audit.slice(0, 600));
+  ok("C7.5 Stop fail: a run that is not going is not found (404); a client is refused", (await call("POST", `/runtime/review-runs/00000000-0000-4000-8000-000000000000/stop`, {}, officer)).status === 404 && (await call("POST", `/runtime/review-runs/nope/stop`, {}, m3.CLIENT)).status !== 200);
+
+  // ── the job of a live run, admitted by the guarded launcher (stub pass, US$0), as check_c91_impact_ai.ts does ──
+  const CANARY = join(PROTOTYPE, "p2", "screening", "canary-digest.json"), STUBS = join(RUNS, "stub-pass"), JOBS = join(PROTOTYPE, "p2", "jobs");
+  const canary = existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null;
+  const stubsBefore = new Map((existsSync(STUBS) ? readdirSync(STUBS) : []).map((x) => [x, readFileSync(join(STUBS, x))]));
+  try {
+    for (const isCheck of [false, true]) {
+      const job = roundJob(FORM_REVIEW, isCheck, { trail: plan0.forms[0].edition, contextKey: "edition:IMM 5257:09-2023", inputs: inputsOf(plan0), batchId: `c75check${process.pid}` });
+      writeFileSync(join(JOBS, `${job.job_id}.json`), JSON.stringify(job, null, 1) + "\n");
+      const before = new Set(readdirSync(RUNS));
+      const stub = spawnSync(process.execPath, [join(PROTOTYPE, "p2", "launch.ts"), "--job", job.job_id, "--stub"], { cwd: join(SOLUTION, "..", ".."), encoding: "utf8", timeout: 120_000 });
+      const made = readdirSync(RUNS).filter((x) => !before.has(x) && x.startsWith(job.job_id));
+      let rec: { caller?: string; contract_valid?: boolean; drafting_run?: { status?: string; usage?: { cost_usd?: number } } } = {};
+      try { rec = JSON.parse(readFileSync(join(RUNS, made[0]), "utf8")); } catch { /* reported below */ }
+      for (const x of made) rmSync(join(RUNS, x), { force: true });
+      rmSync(join(JOBS, `${job.job_id}.json`), { force: true });
+      ok(`C7.5 P-227: the guarded launcher admits the ${isCheck ? "checker" : "first"} round's job (the inventory and the review sheet, the edition known) in a stub pass, US$0, run cap US$${job.settings.budget_usd}`, stub.status === 0 && rec.caller === "stub" && rec.contract_valid === true && rec.drafting_run?.status === "completed" && (rec.drafting_run?.usage?.cost_usd ?? 0) === 0 && job.settings.budget_usd * 2 <= 5, { exit: stub.status, out: stub.stdout?.slice(-300), status: rec.drafting_run?.status });
+    }
+  } finally {
+    if (canary !== null) writeFileSync(CANARY, canary);
+    for (const x of existsSync(STUBS) ? readdirSync(STUBS) : []) { const was = stubsBefore.get(x); if (was === undefined) rmSync(join(STUBS, x), { force: true }); else writeFileSync(join(STUBS, x), was); }
+  }
+  process.exitCode = summary() ? 1 : 0;
+})();
