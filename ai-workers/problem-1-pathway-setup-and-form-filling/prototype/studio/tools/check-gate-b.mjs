@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -188,11 +188,21 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
   ok("D5 (review minor 5): GATE_B_NOT_TESTED=warn keeps a scheduled run's NOT TESTED a warning (works-set's pool); unset, a schedule is a re-test", modeOf({ GITHUB_EVENT_NAME: "schedule", GATE_B_NOT_TESTED: "warn" }) === "pr" && modeOf({ GITHUB_EVENT_NAME: "schedule" }) === "retest" && modeOf({ GITHUB_EVENT_NAME: "pull_request" }) === "pr");
   ok("D5: NOT TESTED reads each capability's own data (an M3-helper pack is tested on the checkpoint, fixture only on the six)", per.length === 0 && one.length === 1 && /NOT TESTED on the six: C9\.8/.test(one[0]), { per, one }); }
 
+// D2 (P-416, 8 Nov): the packs a change touches, from the reference graph's reach (select-suites.mjs --packs).
+{ const top = "x/prototype/studio", read = (f) => f === "C9.8.test.ts" ? "// zsh studio/tools/isolated.sh c98 4601 start && tsx studio/acceptance/C9.8.test.ts 4601 xr_studio_c98\nimport { x } from \"./lib/m3.ts\";"
+    : f === "C9.7-b.test.ts" ? "// zsh studio/tools/isolated.sh c97 4602 start && tsx studio/acceptance/C9.7-b.test.ts 4602 xr_studio_c97" : "// zsh studio/tools/isolated.sh c99 4603 start && tsx studio/acceptance/C9.9.test.ts 4603 xr_studio_c99";
+  const files = ["C9.8.test.ts", "C9.7-b.test.ts", "C9.9.test.ts", "README.md"];
+  const t1 = touchedPacks(new Map([[`${top}/acceptance/C9.7-b.test.ts`, "C9.7-b.test.ts"]]), files, read, top);
+  ok("D2: a changed pack file adds its capability (C9.7-b.test.ts → C9.7), and nothing else", [...t1.keys()].join() === "C9.7" && t1.get("C9.7").files.join() === "C9.7-b.test.ts", [...t1]);
+  const t2 = touchedPacks(new Map([[`${top}/acceptance/lib/setup_vv_m3.ts`, "x.ts ← setup_vv_m3.ts"]]), files, read, top);
+  ok("D2: a set-up script a pack's run line names (the M3 helpers' setup_vv_m3.ts) adds that pack's capability", [...t2.keys()].join() === "C9.8" && t2.get("C9.8").why === "x.ts ← setup_vv_m3.ts", [...t2]);
+  ok("D2: a reach that names no pack and no set-up adds nothing; README.md is never a pack", touchedPacks(new Map([[`${top}/tests/check_x.ts`, "y"]]), files, read, top).size === 0); }
+
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
 // Each command case starts from a clean CI environment: the job's own QUEUE, KIND, RANGE, PR_* and GITHUB_* values
 // (a merge-queue batch sets QUEUE=true, a records PR KIND=records) would otherwise change what the gate does (#826).
-const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "", GITHUB_EVENT_NAME: "", GATE_B_DATA: "six" };
+const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "", GITHUB_EVENT_NAME: "", GATE_B_DATA: "six", GATE_B_DATA_OF: "", GATE_B_RESULTS: "", GATE_B_NO_DIFF: "" };
 const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, ...CLEAN, ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13"]);
 const r3a = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13"]), r3b = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192"]);
@@ -251,6 +261,12 @@ ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the r
   ok("B131: naming no capability is still a skip, exit 0, in a re-test run too", r.code === 0 && /names no capability/.test(r.out), r); }
 r = run(["--title", "x", "--bogus"]);
 ok("command: an unknown option exits 2", r.code === 2, r);
+{ const b = run(["--title", "screens: x"], { RANGE: "0000000..1111111", GATE_B_NO_DIFF: "1" });
+  ok("D2: GATE_B_NO_DIFF (works-set's runs) never reads the diff: no capability named, skipped", b.code === 0 && /skipped \(the PR names no capability/.test(b.out), b);
+  const q = run(["--title", "Merge queue: embarking #1 together"], { RANGE: "0000000..1111111", QUEUE: "true" });
+  ok("D2: a merge-queue batch never reads the diff (its own part 1 for each PR only)", !/by diff/.test(q.out) && !/git diff/.test(q.out), q);
+  const n = run(["--title", "screens: x"], { RANGE: "0000000..1111111" });
+  ok("D2: on a pull request a diff it cannot read is \"could not run\" (exit 2), never a silent skip", n.code === 2 && /could not run: (git diff 0000000\.\.\.1111111 failed|cannot read .* at the base 0000000)/.test(n.out), n); }
 rmSync(T, { recursive: true, force: true });
 // The real file parses: every open row has a severity.
 const real = openBugs(readFileSync(join(P, "qa/BUGS.md"), "utf8"));

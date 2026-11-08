@@ -122,4 +122,10 @@ for f in "$Q/product/DECISIONS.md" "$Q/product/qa/CAPABILITIES.md"; do
   k=$(kind "$f"); ok "$(basename "$f") feeds graph.mjs --check: records, not notes (I1 review)" "$([ "$k" = records ] && echo 1)" "$k"
 done
 k=$(printf '' | bash "$T/change-kind.sh" --files); ok "no files changed: notes" "$([ "$k" = notes ] && echo 1)" "$k"
+# D2 (P-416, 8 Nov): --packs, the acceptance packs and test files that are, or read, a changed file (gate B's set by diff).
+psel() { printf '%s\n' "$@" | node "$T/select-suites.mjs" --packs | cut -f1 | sed -n "s|^$S/acceptance/||p"; }
+o=$(psel "$S/acceptance/C7.3.test.ts"); ok "--packs: a changed pack is itself, and no other pack" "$([ "$(grep '\.test\.ts$' <<< "$o")" = C7.3.test.ts ] && echo 1)" "$o"
+o=$(psel "$S/acceptance/lib/declared.ts"); ok "--packs: a pack helper reaches the packs that import it (C6.3, C6.6), not the others" "$(grep -qx C6.3.test.ts <<< "$o" && grep -qx C6.6.test.ts <<< "$o" && ! grep -qx C7.3.test.ts <<< "$o" && echo 1)" "$(tr '\n' ' ' <<< "$o")"
+o=$(psel "$S/acceptance/lib/m3.ts"); ok "--packs: the M3 helpers reach the M3 packs and their set-up (setup_vv_m3.ts), not an M2 pack" "$(grep -qx C7.3.test.ts <<< "$o" && grep -qx lib/setup_vv_m3.ts <<< "$o" && ! grep -qx C1.6.test.ts <<< "$o" && echo 1)" "$(tr '\n' ' ' <<< "$o" | cut -c1-200)"
+o=$(psel "$S/api/src/case-prepare.ts" "$Q/product/STATE.md" .github/workflows/ci.yml x); ok "--packs: an API module (packs call it over HTTP), a record, a workflow and a stray name reach no pack" "$([ -z "$o" ] && echo 1)" "$o"
 echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

@@ -36,6 +36,12 @@
 // suite"; a file that would choose everything chooses the suites that import it (through test helpers) or name it.
 // --why: each chosen suite's reason names the chain of files by which it uses the change; SELECT_DEBUG=1 prints every
 // use the graph follows (on stderr).
+// --packs (D2, P-416, founder 8 Nov; gate B's set by diff): prints "<file>\t<chain>" for each file under studio/acceptance/
+// or studio/tests/ that IS a changed file or reads one, through the same graph (imports, file names, folders), walked
+// from each changed file to the files that use it. It walks through test helpers, acceptance/lib, engine/, contracts/,
+// samples/ and fixtures, but not through an API module, a web file, main.ts, a suite or a script that runs every suite:
+// a pack calls the app over HTTP, which is no read of its code (the suites and the merge queue's set cover that).
+// gate-b.mjs reads the packs, and the set-up scripts their run lines name, from this list.
 // Reads files only: no server, no database, no model call (US$0). Checks: product/tools/check-select-suites.sh.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
@@ -400,6 +406,24 @@ function pick(f) {
 }
 
 const changed = readFileSync(0, "utf8").split("\n").map((l) => l.trim()).filter(Boolean);
+if (process.argv.includes("--packs")) {   // D2: the acceptance and test files that are, or read, a changed file
+  if (graph().failed) { console.error("select-suites --packs: the file list (git ls-files) could not be read"); process.exit(2); }
+  const via = new Map(), todo = [];
+  // Only files under prototype/ (pick()'s own scope): records, product/tools/ and workflows are read by no pack.
+  for (const f of changed) if (f.startsWith(`${PR}/`) && !DOCS.test(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
+  const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
+  const through = (x) => !(RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x || (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`));
+  while (todo.length) {
+    const y = todo.shift();
+    for (const [x, how] of usersOf(y)) {
+      if (via.has(x) || (RUNNERS.has(x) && how === "folder")) continue;
+      via.set(x, y);
+      if (through(x)) todo.push(x);
+    }
+  }
+  for (const x of via.keys()) if (x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`)) console.log(`${x}\t${chain(x)}`);
+  process.exit(0);
+}
 const why = new Map(), alls = [], browserWhy = [];
 const add = (n, r) => { if (!why.has(n)) why.set(n, []); if (!why.get(n).includes(r)) why.get(n).push(r); };
 for (const f of changed) {
