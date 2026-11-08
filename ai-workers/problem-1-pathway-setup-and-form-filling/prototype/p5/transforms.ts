@@ -144,6 +144,11 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     // B128 (QA-153): a drafted family-form map spells the Yes and No tick boxes "derived:checked_if_true:1/0" (check_code:1/0)
     // and "derived:checked_if_false:1/0" (the same, ticked on No). Only a yes/no value; anything else by hand.
     if ((m = /^derived:checked_if_(true|false):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v === (m[1] === "true") ? m[2] : m[3]; continue; }
+    // C7.7 (G25, the tech lead's ruling on #1317): release 2's drafted IMM 5645 map spells the Yes and No tick boxes of each
+    // child's "accompany to Canada" "check_if_yes:1/0" and "check_if_no:1/0": the first code when the answer is that one, the
+    // second otherwise. Only a yes/no value (yes/no words too, as derive_inverse); anything else by hand.
+    // Review m1 (#1328): a list or a record is never read as its one item: by hand.
+    if ((m = /^check_if_(yes|no):([^/]+)\/(.+)$/.exec(s))) { const yn = typeof v === "boolean" ? v : typeof v === "object" ? null : /^(y|yes|true)$/i.test(String(v)) ? true : /^(n|no|false)$/i.test(String(v)) ? false : null; if (yn === null) return hand(`not a yes/no value: ${v}`); v = yn === (m[1] === "yes") ? m[2] : m[3]; continue; }
     if ((m = /^derive:Y if any .+ (?:is|are) recorded, else N$/.exec(s))) { v = (Array.isArray(v) ? v.length > 0 : v !== false && v !== "") ? "Y" : "N"; continue; }
     // C7.7 (G25): an inverted yes/no box, "derive_inverse:1 when the subject has no child records (…), 0 when any child
     // exists": the first code when the fact is No, the second when it is Yes. Only a yes/no value; anything else by hand.
