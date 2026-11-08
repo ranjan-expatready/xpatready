@@ -1,0 +1,53 @@
+C3.16 on 22185c3b6 (product code = main 152759210), copy qa_p316 :4470, start Sun Nov  8 08:46:17 IST 2026
+NOTICE:  database "xr_studio_qa_p316" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p316 on http://localhost:4470 (xr_studio_qa_p316), stops itself in 30 min
+reset 201
+the six (Reset only)
+loaded Sun Nov  8 08:46:21 IST 2026
+SETUP questions through the people's steps: {"accepted":191,"applied":8,"ownYesNo":3,"byHand":58,"sections":28,"reused":0,"held":12,"approved":185,"placed":154,"refused":[],"retried":[]}
+SETUP questions through the people's steps: {"accepted":95,"applied":1,"ownYesNo":0,"byHand":14,"sections":5,"reused":0,"held":10,"approved":41,"placed":39,"refused":[],"retried":[]}
+PASS  setup (P-322): Visitor visa's "date of the union" and the LMIA work permit's employer name exist as draft fields after the people's steps — "relationship.union_start_date"
+PASS  C3.16-7 data: before any new scope, no release carries a placement scope mark
+PASS  C3.16-1: a field says whom it is about: "date of the union" is Person, with the four choices in words — {"key":"relationship.union_start_date","name":"Union Start Date","scope":"person","words":{"label":"Person","short":"about each person","example":"passport number"},"published":false,"merged_into":null,"choices":[{"scope":"person","label":"Person","short":"abo
+PASS  C3.16-1: a case. field reads as Filing (once for the application)
+PASS  Q6 (#1054): changing it warns that Visitor visa's saved AI results stop replaying — "Changing this moves the saved AI results of 1 combination (6 saved runs); they replay only after a new run."
+PASS  C3.16-1 pass: the author sets Household on "date of the union"; it reads back as once for the household — [200,""]
+PASS  C3.16-1 data: stored as HOUSEHOLD on the draft; the audit names the change
+PASS  C3.16-1 pass: the author sets Organisation on the LMIA work permit's employer name (IMM 5710; no representative box reads it) — [200,""]
+PASS  C3.16-7: the draft that asks the field changes with its scope (it goes out with the next release)
+PASS  C3.16-7 pass: back to Person, the draft is byte-identical to before (an unmarked snapshot carries no scope) — 200
+PASS  C3.16-2 fail: the approver may not change it (403)
+PASS  C3.16-2 fail: nobody may (401) — 401
+PASS  C3.16-2 fail: an unknown field is 404 in words — [404,"person.not_a_field_c316 is not in the shared library (it may have been deleted or reset)."]
+PASS  C3.16-2 fail: an unknown scope is 400, naming the four — [400,"Choose one of: Person, Filing, Household, Organisation, and send the scope you saw as \"expected\"."]
+PASS  C3.16-2 fail: a stale "expected" is 409, saying what it is now — [409,"Someone changed whom \"Union Start Date\" is about after you looked: it is now Household. Reload, then choose again."]
+PASS  C3.16-2 fail: Person on a case. field is 422 — ["case.application_number",422,"This is about the application: choose Filing, Household or Organisation."]
+PASS  C3.16-2 fail: Filing on a person's fact is 422 (Filing is the case. facts only) — ["person.address_apt_unit",422,"Not built: a person's fact asked once for the application. Ask it as an application fact instead."]
+PASS  C3.16-2 fail: date of birth stays about each person (422) — [422,"This fact is about one person and stays about each person."]
+PASS  C3.16-2 fail: Household on a field asked per row is 422 (a household list is not built) — ["person.education_city",422,"A list is asked per person today; a household or employer list is not built."]
+PASS  C3.16-2 fail (QA-152): Organisation on a field a representative's box reads is 422 — ["organisation.name",422,"A representative's part of the form reads this field, so it stays about each person."]
+NOTE  C3.16-2: no conditioned single person question on this copy; the condition refusal is proven by the pure check (tests/check_c316_field_scope.ts)
+PASS  C3.16-2 fail (#1054 M3): once Household, the field cannot be placed per row (422) — [422,"A list is asked per person today; a household or employer list is not built."]
+PASS  C3.16-2: two saves at once give one change; the other is told it changed (lock on the field) — [200,409,"","Someone changed whom \"Employer Address\" is about after you looked: it is now Organisation. Reload, then choose again."]
+PASS  C3.16-2 fail (break 1): merging a field asked about each person into one asked once for the employer is refused (409), in words — [409,"\"Name\" is asked about each person and \"Employer name\" once for the employer: fields are merged only when both are asked about the same people."]
+PASS  C3.16-2 fail (break 3): six races of a Household save against a per-row placement never leave both (the field's lock) — ["person.alternate_telephone_number",["200,422:HOUSEHOLD/per_person","200,422:HOUSEHOLD/per_person","200,422:HOUSEHOLD/per_person","200,422:HOUSEHOLD/per_person","200,422:HOUSEHOLD/per_person","200,422:HOUSEHOLD/per_person"]]
+PASS  C3.16-5 pass: Preview's simulated case asks the employer name once, for the application — [{"fact":"organisation.employer_name","label":"Name of the prospective employer","asked":false,"meaning":"Name of the prospective employer","value_type":"text","about":"case","about_label":"The application","section":"details_of_intended_work_in_canada","secti
+PASS  C3.16-5 pass: it fills the Worker's IMM 5710 box with the one value — [{"box":"form1[0].Page3[0].DetailsOfWork[0].Employer[0].Name[0]","caption":"a) Name of Employer (If you are employed by a foreign employer who has been awarded a contract to provide services to a Canadian entity, please identify the foreign employer here)","fa
+PASS  C3.16-5 fail: it never fills the spouse's form (one employer per case: the principal's) — [{"box":"form1[0].Page3[0].DetailsOfWork[0].Employer[0].Name[0]","caption":"a) Name of Employer (If you are employed by a foreign employer who has been awarded a contract to provide services to a Canadian entity, please identify the foreign employer here)","fa
+PASS  C3.16-5: the LMIA work permit's draft moved only by its marked field
+PASS  setup (P-322): Visitor visa's checklist and a Sample supply line for the date of the union, through people's steps — ["proof_of_financial_support",201,"",[]]
+PASS  C3.16-5 pass (break round 3, M1): Household, Preview does not ask the date of the union a needed document supplies — []
+PASS  C3.16-5 pass (break round 3, M1): it lists that document as where the household's answer comes from, once, on the case — ["Date the person married or began the common-law relationship with the current spouse or partner",[{"subjectId":"case","document":"Proof of financial support","facts":["Date the person married or began the common-law relationship with the current spouse or pa
+PASS  C3.16-5 fail (break round 3, M1): with that document missing from everyone who brings it, Preview asks the date once, on the case — [["missing:principal|proof_of_financial_support","missing:spouse|proof_of_financial_support","missing:child-1|proof_of_financial_support","missing:child-2|proof_of_financial_support","missing:representative|proof_of_financial_support"],[{"subjectId":"case","ab
+PASS  setup: Demo › Reset to the six — ""
+PASS  setup: Demo › Start With an LMIA loads the reviewed setup (its fields published) — ""
+PASS  C3.16-2 fail (SA-1B-130 rule 4): a published field's scope cannot change (409) — [409,"A published field's scope cannot change. Create a new field."]
+PASS  C3.16-2 fail (m1): a new draft version of a published field is refused too (409) — ["1",409,"A published field's scope cannot change. Create a new field."]
+PASS  C3.16-2: the library shows it read-only, every other choice refused in the same words — [{"scope":"person","label":"Person","short":"about each person","example":"passport number","current":true,"refused":null},{"scope":"filing","label":"Filing","short":"once for the application","example":"the date you sign this application","current":false,"ref
+
+37/37 passed
+pack exit 0  end Sun Nov  8 08:47:15 IST 2026
+stopped qa_p316 (database and files removed; log in var/isolated-logs/qa_p316-api.log)
