@@ -19,7 +19,15 @@ export type Severity = (typeof SEVERITIES)[number];
 export type SheetRow = { box: string; caption: string; fact: string | null; value: string };
 export type ReviewSheet = { contract: typeof REVIEW_SHEET; form_edition: string; fields: SheetRow[] };
 /** A box as the shared renderer gives it (engine/render.ts BoxRow), read loosely. */
-export type SheetBox = { box: string; caption?: string | null; fact?: string | null; about?: string | null; coverage?: string; value?: unknown };
+export type SheetBox = { box: string; caption?: string | null; fact?: string | null; about?: string | null; coverage?: string; value?: unknown; meaning?: string | null };
+/** A box's words: its printed caption without the required mark; when that has no words ("*", "DD"), the fact's meaning
+ *  first ("Date of birth (DD)"), so neither the AI nor the person reads a bare mark. */
+export function boxWords(b: Pick<SheetBox, "box" | "caption" | "meaning">): string {
+  const cap = plain(b.caption ?? "", SHEET_LIMITS.caption).replace(/^\*\s*/, "").trim();
+  const meaning = plain(b.meaning ?? "", 200);
+  if (/[A-Za-z]{3}/.test(cap.replace(/^(DD|MM|YYYY)$/, ""))) return cap;
+  return plain(meaning ? `${meaning}${cap ? ` (${cap})` : ""}` : cap || b.box, SHEET_LIMITS.caption);
+}
 
 /** The launcher's own rule for a line sent to the AI (p2/guard.ts LABEL_BAD): no control, format, line or paragraph
  *  separator, no angle bracket of any kind, so nothing in a value can forge a line or close the input it is sent in. */
@@ -56,7 +64,7 @@ export function reviewSheet(formEdition: string, boxes: readonly SheetBox[]): Re
     const value = plain(w, SHEET_LIMITS.value), box = plain(b.box, SHEET_LIMITS.box);
     if (!value || !box || rows.has(box)) continue;
     const fact = b.fact && FACT.test(b.fact) && b.fact.length <= SHEET_LIMITS.fact ? b.fact : null;
-    rows.set(box, { box, caption: plain(b.caption ?? "", SHEET_LIMITS.caption) || box, fact, value });
+    rows.set(box, { box, caption: boxWords(b) || box, fact, value });
   }
   const fields = [...rows.values()].sort((a, b) => (a.box < b.box ? -1 : a.box > b.box ? 1 : 0)).slice(0, SHEET_LIMITS.rows);
   return { contract: REVIEW_SHEET, form_edition: formEdition, fields };

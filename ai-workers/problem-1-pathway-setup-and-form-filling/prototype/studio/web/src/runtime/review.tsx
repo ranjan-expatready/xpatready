@@ -1,8 +1,10 @@
 // C7.5 part 2 The Review page (runtime lane, M3-E; r5c BR-19, board frame 13; screens/C7.5/concept-part2.md; P-110, P-121,
-// P-141, P-164 (2), P-227, P-71, P-168): /cases/:id/review. The run card first (cost first: Saved US$0.00 or why none
-// exists, Live with its usual and worst cost or why it is not allowed; the SI-6 stand-in; the steps), then the case's
-// findings per filing, then person, with each AI finding's agreement (High, or Low with both rounds' reasons) and the
-// words it quotes from the form. Findings warn; none blocks Ready to file. Staff only.
+// P-141, P-164 (2), P-227, P-71, P-168): /cases/:id/review, EXPERIENCE §3 "Source + proposals". The run card first (cost
+// first: Saved US$0.00 or why none exists, Live with its usual and worst cost or why it is not allowed; the SI-6 stand-in;
+// the steps), then the source (what the chosen form prints, box by box: what the AI rounds read) beside the proposals (the
+// case's findings per filing, then person, each AI finding with its agreement, both rounds' reasons and the words it
+// quotes). "Show on the form" highlights the quoted line in both. Findings are warnings: decided here, or passed with a
+// reason on Ready to file. Staff only.
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import { cn } from "@/lib/utils";
 import type { CaseForm } from "../../../contracts/runtime";
+import type { Finding } from "../../../contracts/findings";
 import type { ReviewRunPlan, ReviewRunResult } from "../../../api/src/review-run-shapes";
 import { FindingsPanel } from "./findings";
 import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
@@ -39,33 +42,71 @@ export function ReviewPage() {
   const view = useCaseView(id!, "agent");
   const forms = useApi<{ forms: CaseForm[] }>(["runtime", "view", id!, "forms", actor], isOfficer(actor) ? `/runtime/cases/${id}/forms` : null, { retry: noRetryOnRefusal });
   const prep = useApi<{ derived: boolean; filings?: Filing[] }>(["runtime", "view", id!, "prepare"], isOfficer(actor) ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal });
+  const [subject, setSubject] = React.useState<string | null>(null);
+  const [formPick, setForm] = React.useState<string | null>(null);
+  const [shown, setShown] = React.useState<Finding | null>(null);
+  const people = view.data?.case.people ?? [];
+  const persons = people.filter((p) => p.role !== "case");
+  const person = persons.find((p) => p.subject_id === subject) ?? persons[0];
+  // The person's PDF forms on the case, IMM 5257 first (the one with a live review today, SI-6).
+  const mine = (forms.data?.forms ?? []).filter((f) => f.subject_id === person?.subject_id).map((f) => f.form).sort((a, b) => Number(b === "IMM 5257") - Number(a === "IMM 5257") || a.localeCompare(b));
+  const form = formPick && mine.includes(formPick) ? formPick : mine[0] ?? null;
+  const plan = usePlan(id!, person?.subject_id ?? null, form);
   if (!isOfficer(actor)) return <Notice title="This page is for the case officer">The review of a case's forms is the firm's staff's work; a client never sees it.</Notice>;
   if (view.isLoading) return <div className="space-y-3" aria-busy="true"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-40 w-full" /></div>;
   if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
   const c = view.data!.case;
   const filings = prep.data?.derived ? (prep.data.filings ?? []).map((f) => ({ id: f.id, label: f.label })) : [];
+  // "Show on the form": an AI finding about another person or form first chooses that person and form.
+  const show = (f: Finding) => { setShown(f); if (f.subject !== person?.subject_id) setSubject(f.subject); if (f.form && f.form !== form) setForm(f.form); };
   return (
     <div className="mx-auto max-w-7xl space-y-5" data-review-page>
       <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">Review</span></nav>
       <div>
         <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">Review · {c.reference}</h1>
-        <p className="mt-1 text-sm text-text-muted">Before the forms go out: the rules' checks on every form, and an independent AI review of a filled form. Findings warn; none stops Ready to file. Staff only.</p>
+        <p className="mt-1 text-sm text-text-muted">Before the forms go out: the rules' checks on every form, and an independent AI review of a filled form. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Staff only.</p>
       </div>
-      <RunCard caseId={c.id} people={c.people} forms={forms.data?.forms ?? null} formsError={forms.isError ? (forms.error as Error).message : null} />
-      <FindingsPanel caseId={c.id} people={c.people} filings={filings} title="Findings" />
+      <RunCard caseId={c.id} persons={persons} person={person ?? null} forms={mine} formsLoaded={!!forms.data} formsError={forms.isError ? (forms.error as Error).message : null} form={form} plan={plan}
+        onPerson={(x) => { setSubject(x); setForm(null); setShown(null); }} onForm={(x) => { setForm(x); setShown(null); }} />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <SourcePanel person={person?.label ?? ""} form={form} plan={plan.data ?? null} loading={plan.isLoading} shown={shown && shown.subject === person?.subject_id && shown.form === form ? shown : null} />
+        <FindingsPanel caseId={c.id} people={people} filings={filings} title="Findings" onShow={show} shownId={shown?.id ?? null} />
+      </div>
     </div>
   );
 }
 
-function RunCard({ caseId, people, forms, formsError }: { caseId: string; people: CasePerson[]; forms: CaseForm[] | null; formsError: string | null }) {
-  const persons = people.filter((p) => p.role !== "case");
-  const [subject, setSubject] = React.useState<string | null>(null);
-  const [formPick, setForm] = React.useState<string | null>(null);
-  const person = persons.find((p) => p.subject_id === subject) ?? persons[0];
-  // The person's PDF forms on the case, IMM 5257 first (the one with a live review today, SI-6).
-  const mine = (forms ?? []).filter((f) => f.subject_id === person?.subject_id).map((f) => f.form).sort((a, b) => Number(b === "IMM 5257") - Number(a === "IMM 5257") || a.localeCompare(b));
-  const form = formPick && mine.includes(formPick) ? formPick : mine[0] ?? null;
-  const plan = usePlan(caseId, person?.subject_id ?? null, form);
+/** The source: what the chosen form prints for the chosen person, box by box (what the two AI rounds read), with the line an
+ *  AI finding quotes highlighted when the person asks "Show on the form". */
+function SourcePanel({ person, form, plan, loading, shown }: { person: string; form: string | null; plan: ReviewRunPlan | null; loading: boolean; shown: Finding | null }) {
+  const lines = plan?.forms[0]?.lines ?? [];
+  const norm = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+  const hit = (l: { fact: string | null; value: string }) => !!shown && l.fact === shown.field && norm(l.value).includes(norm(shown.quote));
+  const ref = React.useRef<HTMLLIElement | null>(null);
+  React.useEffect(() => { ref.current?.scrollIntoView({ block: "nearest" }); }, [shown?.id]);
+  let first = true;
+  return (
+    <section aria-labelledby="source-h" className="min-w-0 rounded-xl border border-border bg-surface-raised" data-source-panel>
+      <header className="border-b border-border px-4 py-3">
+        <h2 id="source-h" className="text-base font-semibold">What the form says</h2>
+        <p className="text-[12px] text-text-muted">{form ? `${plan?.forms[0]?.edition ?? form} for ${person}: each box as a copy prints it, which is what the AI rounds read. Contact details are not sent.` : "Choose a person and a form above."}</p>
+      </header>
+      {loading ? <div className="p-4"><Skeleton className="h-32 w-full" /></div>
+        : !lines.length ? <p className="px-4 py-3 text-sm text-text-muted">{form ? "Nothing to show for this form yet." : ""}</p>
+        : <ol tabIndex={0} className="max-h-[560px] overflow-y-auto py-1 text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" aria-label={`Boxes of ${form}`}>{lines.map((l) => {
+            const on = hit(l), mark = on && first; if (on) first = false;
+            return (
+              <li key={l.box} ref={mark ? ref : undefined} className={cn("grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border/60 px-4 py-1.5 last:border-b-0", on && "bg-warn/15 outline outline-2 -outline-offset-2 outline-warn")} data-source-line={l.fact ?? ""} data-source-shown={on ? "true" : undefined}>
+                <span className="text-text-muted [overflow-wrap:anywhere]">{l.caption}</span>
+                <span className="font-medium [overflow-wrap:anywhere]">{l.value}{on ? <span className="sr-only"> (quoted by the finding shown)</span> : null}</span>
+              </li>);
+          })}</ol>}
+    </section>
+  );
+}
+
+function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form, plan, onPerson, onForm }: { caseId: string; persons: CasePerson[]; person: CasePerson | null; forms: string[]; formsLoaded: boolean; formsError: string | null; form: string | null;
+  plan: ReturnType<typeof usePlan>; onPerson: (x: string) => void; onForm: (x: string) => void }) {
   const p = plan.data;
   const [mode, setMode] = React.useState<"replay" | "live">("replay");
   const can = { replay: !!p?.replay_available, live: !!p?.live_allowed };
@@ -81,20 +122,21 @@ function RunCard({ caseId, people, forms, formsError }: { caseId: string; people
     run.mutate(undefined, { onSuccess: (r) => { setResult(r); setPhase("done"); }, onError: (e) => { setError(e instanceof ApiError ? e.message : e.message); setPhase("idle"); } });
   };
   const stop = useAction(() => api(`/runtime/review-runs/${runId.current}/stop`, { method: "POST", json: {} }), { success: "Stopping the review" });
-  const reset = () => { setResult(null); setPhase("idle"); setError(null); };
+  React.useEffect(() => { setResult(null); setPhase("idle"); setError(null); }, [person?.subject_id, form]);
   const stepState = (n: number): "done" | "running" | "waiting" => phase === "done" ? "done" : phase !== "running" ? "waiting" : n === 1 ? "done" : n === 2 || (chosen === "replay" && n === 3) ? "running" : "waiting";
+  const dropped = result?.forms.flatMap((f) => f.dropped) ?? [], unreadable = result?.forms.flatMap((f) => f.unreadable) ?? [];
   return (
     <section aria-labelledby="run-h" className="rounded-xl border border-border bg-surface-raised" data-run-card>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id="run-h" className="text-base font-semibold">AI review of a filled form</h2>
         <StandIn id="SI-6" today="the AI review runs live on the Visitor visa forms only (one trial, P-164 (2)) and is replayed from its saved run at US$0; severities are Sample until the immigration expert confirms them." later="other form families one at a time, each with its own prompt and tests (team AG-11 AI Doers)." />
-        <p className="min-w-0 flex-1 text-[13px] text-text-muted">Two AI rounds read what the form would print; the rules keep only findings that quote it.</p>
+        <p className="min-w-0 flex-1 text-[13px] text-text-muted">Two AI rounds read what the form prints; the rules keep only findings that quote it.</p>
       </header>
       <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
         <div className="space-y-3">
-          <Field label="Person"><Select value={person?.subject_id ?? ""} onChange={(e) => { setSubject(e.target.value); setForm(null); reset(); }} disabled={phase === "running"}>{persons.map((x) => <option key={x.subject_id} value={x.subject_id}>{x.label}</option>)}</Select></Field>
-          <Field label="Form" hint={formsError ?? (forms && !mine.length ? `No form of ${person?.label ?? "this person"} is filled on this case yet.` : undefined)}>
-            <Select value={form ?? ""} onChange={(e) => { setForm(e.target.value); reset(); }} disabled={phase === "running" || !mine.length}>{mine.map((f) => <option key={f} value={f}>{f}</option>)}</Select>
+          <Field label="Person"><Select value={person?.subject_id ?? ""} onChange={(e) => onPerson(e.target.value)} disabled={phase === "running"}>{persons.map((x) => <option key={x.subject_id} value={x.subject_id}>{x.label}</option>)}</Select></Field>
+          <Field label="Form" hint={formsError ?? (formsLoaded && !forms.length ? `No form of ${person?.label ?? "this person"} is filled on this case yet.` : "Live reviews one form at a time.")}>
+            <Select value={form ?? ""} onChange={(e) => onForm(e.target.value)} disabled={phase === "running" || !forms.length}>{forms.map((f) => <option key={f} value={f}>{f}</option>)}</Select>
           </Field>
         </div>
         <div className="min-w-0 space-y-3" aria-busy={plan.isLoading}>
@@ -128,8 +170,10 @@ function RunCard({ caseId, people, forms, formsError }: { caseId: string; people
             {error ? <Notice tone="danger" title="The review did not run">{error}</Notice> : null}
             {result ? <Notice tone={result.forms.some((f) => f.from) ? "ok" : "warn"} title={result.forms.some((f) => f.from) ? "Review run" : "The review did not finish"}>
               <p>{result.note}</p>
-              {result.forms.flatMap((f) => f.dropped).length ? <details className="mt-1 text-[12px]"><summary className="cursor-pointer">{result.forms.flatMap((f) => f.dropped).length} AI finding(s) left out by the rules</summary>
-                <ul className="mt-1 list-disc pl-5">{result.forms.flatMap((f) => f.dropped).map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></details> : null}
+              {dropped.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{dropped.length} AI finding{dropped.length === 1 ? "" : "s"} left out by the rules</summary>
+                <ul className="mt-1 list-disc pl-5">{dropped.map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></details> : null}
+              {unreadable.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{unreadable.length} box{unreadable.length === 1 ? "" : "es"} the AI could not judge (for a person)</summary>
+                <ul className="mt-1 list-disc pl-5">{unreadable.map((u, i) => <li key={i} className="[overflow-wrap:anywhere]">{u.round}: {u.box}: {u.why}</li>)}</ul></details> : null}
             </Notice> : null}
           </div>
         </div>

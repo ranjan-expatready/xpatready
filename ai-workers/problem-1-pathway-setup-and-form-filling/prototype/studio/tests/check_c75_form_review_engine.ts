@@ -10,7 +10,7 @@ import { rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import fc from "fast-check";
-import { aiFingerprint, CONTACT_FACT, findingRule, findingsFromRounds, reviewSheet, reviewShapeOk, sheetSha256, sheetText, stillQuoted, valueWords, type ReviewAnswer, type SheetBox } from "../engine/runtime/form-review.ts";
+import { aiFingerprint, boxWords, CONTACT_FACT, findingRule, findingsFromRounds, reviewSheet, reviewShapeOk, sheetSha256, sheetText, stillQuoted, valueWords, type ReviewAnswer, type SheetBox } from "../engine/runtime/form-review.ts";
 import { admitInput, PolicyRefusal } from "../../p2/guard.ts";
 import { buildRequest } from "../../p2/prompt.ts";
 import { recorder } from "./runtime/api.ts";
@@ -54,6 +54,7 @@ fc.assert(fc.property(fc.array(fc.record({ box: fc.string({ minLength: 1, maxLen
   return s.fields.every((r) => !/[\p{C}<>]/u.test(r.box + r.caption + r.value) && r.value.length > 0 && r.box.length > 0) && new Set(s.fields.map((r) => r.box)).size === s.fields.length;
 }), { numRuns: 300 });
 ok("C7.5 sheet (property, 300 random forms): every line plain, never empty, each box once", true);
+ok("C7.5 sheet: a caption with no words (\"*\", \"DD\") reads as the fact's meaning with it; a worded caption stays, without its required mark", boxWords({ box: "b", caption: "*", meaning: "Country of residence" }) === "Country of residence" && boxWords({ box: "b", caption: "DD", meaning: "Date of birth" }) === "Date of birth (DD)" && boxWords({ box: "b", caption: "* Expiry date", meaning: "x" }) === "Expiry date" && boxWords({ box: "f.b", caption: "", meaning: null }) === "f.b");
 ok("C7.5 values: a list and an address read as the form shows them; nothing for empty", valueWords(["a", "", "b"]) === "a; b" && valueWords({ street: "Sample Road", city: "Sample City" }) === "Sample Road, Sample City" && valueWords("") === null && valueWords(null) === null && valueWords(true) === "Yes");
 
 // ── the rules on an AI finding (AG-11-70) ──
