@@ -1,0 +1,21 @@
+NOTICE:  database "xr_studio_qa_r309c" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r309c on http://localhost:4470 (xr_studio_qa_r309c), stops itself in 30 min
+PASS  QA-309 (fail): while facts wait, the item is To do and its reason names them, by label and person — "Waiting for 65 facts to answer or confirm: Whether the person holds a national identity document (Sample Client A); Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they
+PASS  QA-309 M1 (b) fail: an unanswered fact about the application waits on the sheet ("case" on the form, the case's own fact) — [{"fact":"case.service_language","subject":"case","person":"The application","label":"Official language in which the person wants to receive service for this application"},{"fact":"case.visa_type_requested","subject":"case","person":"The application","label":"
+PASS  QA-309 pass: once every fact is answered and confirmed, no section waits — []
+PASS  QA-309 pass: the facts the probe saw waiting do not: "none apply" (previous residence, education), answered employment rows, the visit contact release 2 never asks
+PASS  QA-309 setup: the case holds at least one group as "none apply" (education or previous residence) — ["Government positions","Membership or Association with Organizations","Education","Military service","Previous travel","Personal details"]
+PASS  QA-309 (fail): nothing waits but nothing is ticked: the item is To do, its reason names the sections still to tick, never "Every fact … confirmed" — "Every answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Si
+PASS  QA-309 (fail): with one section not ticked the item stays To do, its reason naming that section only — "Every answer is ready to enter in the portal; 1 of 9 sections still to tick \"Entered in the portal\": Signature."
+PASS  QA-309 pass: every section ticked, the principal's Online IMM 5257 reads Done — {"tick":201,"state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+PASS  QA-309 (fail): a "none apply" taken back waits again: the item is not Done and its reason names the group — {"back":200,"state":"to_do","reason":"Waiting for 1 fact to answer or confirm: Entries in \"Education\": add them, or say none apply (Sample Client A)."}
+PASS  QA-309 pass: "none apply" given and confirmed again, the item reads Done again (nothing to re-enter: the section's answers did not change) — {"state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+PASS  QA-309 M1 (a) fail: after the officer changes case.intended_stay_to and ticks its section again, nothing waits on the sheet, yet the item is To do and its reason names the fact not confirmed — {"changed":200,"state":"to_do","reason":"Waiting for 1 fact to answer or confirm: Planned last day of the stay in Canada (The application)."}
+PASS  QA-309 M1 (a) pass: once the application's section is confirmed, the item reads Done again — {"state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+
+12/12 passed
+check exit 0  end Sun Nov  8 23:06:38 IST 2026
+stopped qa_r309c (database and files removed; log in var/isolated-logs/qa_r309c-api.log)
