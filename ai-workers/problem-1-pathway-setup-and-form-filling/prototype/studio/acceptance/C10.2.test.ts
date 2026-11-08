@@ -14,7 +14,6 @@ import { validatedDir } from "../api/src/sample-validated.ts";
 import { AUTHOR, OFFICER, call, main, ok, prepare, sql, until } from "./lib/m3.ts";
 
 await main("C10.2", "Finished demo story: Visitor visa family case at application ready", async () => {
-  const spend0 = sql("select count(*) from ai_batch");
   let r = await call("POST", "/demo/checkpoints/finished-story", {}, "user-O");
   ok("C10.2-1 fail: only the founder's configuration people load a checkpoint (403 for a case officer)", r.status === 403, r.status);
   r = await call("POST", "/demo/checkpoints/finished-story", {}, AUTHOR);
@@ -48,7 +47,9 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   const pinned = (id?: string) => sql(`select max(r.version) from pack_work_pin w join config_release r on r.id=w.config_release_id where w.case_id='${id}'`);
   const thin = vvCases.find((x) => x.id !== fam?.id);
   ok("C10.2-8 pass (rows 14, 16): the family case is on release 2; the thin case stays on release 1 while release 2 is out", pinned(fam?.id) === "2" && pinned(thin?.id) === "1" && sql(`select max(version) from config_release r join combination c on c.id=r.combination_id where c.combination_key='vv.single'`) === "2");
-  ok("C10.2-9 pass: no model call (US$0); every AI result in the story is a replay", done && sql("select count(*) from ai_batch") === spend0);
+  // #C10.2 phase 1: the checkpoint's saved AI answers are replayed as ai_batch rows of mode REPLAY (DEMO.md), so the line
+  // counts the batches that are not replays, as C10.1 does.
+  ok("C10.2-9 pass: no model call (US$0); every AI result in the story is a replay", done && sql("select count(*) from ai_batch where mode <> 'REPLAY'") === "0" && sql("select count(*) from drafting_job where mode = 'LIVE'") === "0");
   r = await call("POST", "/demo/checkpoints/finished-story", {}, AUTHOR);
   if (r.status === 202) await until(async () => (await call("GET", "/demo/status", undefined, AUTHOR)).body?.checkpoint === "finished_story", 600_000);
   ok("C10.2-10 pass: loading again keeps one story (still the two Visitor visa cases)", sql(`select count(*) from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single'`) === "2");
