@@ -417,11 +417,14 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   // prototype/ are seeded as well, and simply reach nothing when no file reads them.
   const seedable = (f) => f.startsWith(`${PR}/`) || (f.startsWith(`${P}/official-sources/`) && !DOCS.test(f));
   const testFile = (x) => x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`) || x.startsWith(`${PR}/tests/`);
-  // A data file's folder named, as a quoted string of its own, in a pack's or test's code (join(…, "source-text", …)) is a
-  // read of it. A segment inside a longer path ("./lib/m3.ts") is not: that is an import, which the graph already has.
-  const folderReaders = (f) => { const c = basename(dirname(f)), re = new RegExp(`["'\`]${esc(c)}["'\`]`);
+  // A data file's folder is read by a pack or test whose code (comments stripped) names its last two folders, each as a
+  // quoted string of its own (join(…, "expected", "source-text", …)). Folder names inside longer paths, in run lines or
+  // import paths ("studio/tools/isolated.sh", "./lib/m3.ts", "tests/fixtures/x.json"), are no read (review round 4).
+  // Markdown never takes this rule: a note is read only by its file name, as before.
+  const folderReaders = (f) => { if (/\.md$/i.test(f)) return [];
+    const c = basename(dirname(f)), b = basename(dirname(dirname(f))), q = (w) => new RegExp(`["'\`]${esc(w)}["'\`]`);
     let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return []; }
-    return files.filter((x) => re.test(read(x))); };
+    return files.filter((x) => { const t = stripComments(read(x)); return q(c).test(t) && q(b).test(t); }); };
   for (const f of changed) if (seedable(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
   const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
   const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
