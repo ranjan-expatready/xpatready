@@ -8,6 +8,7 @@ updated: 2026-11-07 23:28 IST by **Lead 32, at the hand-over to Lead 33** · mil
 * 00:36 IST founder "Yes, clear it" → #1304 emptied the M2-hot list (P-415); #1270 requeued. Landed since: #1268 (C6.15), #1290 (C8.1), #1246 (C6.18), #1222 (C6.4), #1252 (C9.5), #1251 (B150), #1314 (QA-305 test fix).
 * qa re-scores #1312 → #1313 (stacked): C6.15, C6.18, C9.5, C6.4 Works (M3 8 of 28 once landed); C7.3 Partial (QA-165 Major, B4, W6); QA-302 Minor (Lead's ruling). **The permission check refused the Lead's label on both (a qa probe file outside product/): the founder names them.**
 * ~07:57 IST, founder "Yes, start all four": cloud `/next forms QA-165` (task_a147d76b; diagnosis on #1256), `/next screens #1242 B135 merge main` (task_38682977; 3 conflicts incl. schema), `/next runtime C7.7 pack` (task_84245770; diagnosis on #1285), standby Lead 35.
+* **Founder ask, 8 Nov 08:30 IST (spoken; answered in chat 08:40 IST):** (a) check every lane on claude.ai and finish the work in progress, ✓ read; (b) how much was done overnight, ✓; (c) workflow gaps that surfaced, ✓; (d) speed and opportunities, ✓; (e) the 48-hour plan and whether the next 24 h can finish it, ✓ forecast; (f) list the M3 capabilities and how many are built, not how many exist, ✓; (g) next 24 h: save and finish near-complete work, then **switch to a new account at 50-55% weekly**, ✓ plan given, switch trigger pending his answer.
 * Refused (do not retry): dropping idle test databases (prune-test-dbs.sh); disk 9 GB free.
 
 ## Hand-over to Lead 33 (23:28 IST): do first
