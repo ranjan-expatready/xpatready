@@ -143,10 +143,11 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
         {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. QA-229 (B2): nor is
             any form: "Ready to file" is the filing's, said by the readiness panel; a form says "Facts confirmed". */}
-        {f.readiness.ready && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
-          : f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks. Whether the filing is Ready to file is under Ready to file below."><Check className="size-3" aria-hidden />Facts confirmed</Pill>
-          : facts.length ? <Pill tone="warn">{facts.length} fact{facts.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>
-          : <Pill tone="warn" title="Every fact this form reads is confirmed; IRCC's form marks these form fields mandatory and a copy leaves them empty (listed below)">{emptyFields} mandatory form field{emptyFields === 1 ? "" : "s"} left empty</Pill>}
+        {!facts.length && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
+          : !facts.length ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks. Whether the filing is Ready to file is under Ready to file below."><Check className="size-3" aria-hidden />Facts confirmed</Pill>
+          : <Pill tone="warn">{facts.length} fact{facts.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
+        {/* QA-165 (#1318): never "ready" over a mandatory box a copy leaves empty: said apart from the facts, listed below. */}
+        {emptyFields ? <Pill tone="warn" title="IRCC's form marks these form fields mandatory and a copy made now leaves them empty (listed below); Ready to file waits on them until they are fixed or passed with a reason" data-fields-left-empty>{emptyFields} mandatory form field{emptyFields === 1 ? "" : "s"} left empty</Pill> : null}
         <span className="flex-1" />
         <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
           <RefreshCw aria-hidden />{latest ? "Generate a new copy" : "Generate a copy"}

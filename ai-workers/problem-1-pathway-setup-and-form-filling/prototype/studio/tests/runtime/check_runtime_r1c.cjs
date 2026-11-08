@@ -352,7 +352,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const openList = imm.locator("details[data-fields-open]");
   await openList.locator("summary").click();
   step("QA-165 part 2 pass: IMM 5257 lists the mandatory form fields still empty, each with why, in the form's words (never a field path)", await shows(openList.getByText(/^Marked mandatory on IRCC's form, still empty \(\d+\): .*may ask for more/)) && await shows(openList.getByRole("listitem").filter({ hasText: /— (needs an answer|no question asks it yet|fill it in Adobe|filled by hand): / }).first()) && await gone(openList.getByText(/form1\[|\[0\]\./)));
-  step("QA-165 part 2 fail (Devin on #592): two different fields that share words are two lines, each named (Taiwan PIN, Israel passport), never one line counting both", await shows(openList.getByText(/form field: Taiwan PIN\)/)) && await shows(openList.getByText(/form field: Israel Passport Indicator\)/)));
+  // QA-165 (#1318 review M1): IMM 5257's own script requires the Taiwan PIN and Israel passport boxes only for a passport it codes
+  // 203 or 206; this case's passport is neither, so they are not listed (two fields sharing words, each named: check_qa165_mandatory.ts).
+  step("QA-165 fail guard (#1318 M1): the Taiwan PIN and Israel passport boxes are not listed for a passport that is neither Taiwan's nor Israel's", await gone(openList.getByText(/form field: Taiwan PIN\)/)) && await gone(openList.getByText(/form field: Israel Passport Indicator\)/)));
   { // Its own screenshots (not state(): that would renumber this check's committed set), sideways scroll and axe.
     const own = o.viewportSize(), dir = path.join(SHOTS, "..", "..", "..", "QA-165", "screenshots"); fs.mkdirSync(dir, { recursive: true });
     for (const w of [1440, 390]) {

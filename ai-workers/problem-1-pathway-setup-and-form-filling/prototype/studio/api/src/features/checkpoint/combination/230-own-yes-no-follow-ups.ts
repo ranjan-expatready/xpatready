@@ -34,9 +34,11 @@ async function confirmReaders(ctx: Ctx, combinationId: string) {
     const q = await door.list(combinationId, fact).catch(() => null); // this combination's forms do not read it: nothing to hold
     for (const r of q?.rows ?? []) {
       if (r.state === "confirmed" || r.state === "asked") continue;
-      // Review m2 on #1318: the door's own warning (the field's words name another question) is a person's call, never the loader's.
-      if (r.warning) { out.refused.push(`${r.form} ${r.caption || r.data_path}: ${r.warning} Left for a person on To review › Form fields.`); continue; }
       const ask = !r.can_confirm && r.can_ask;
+      // Review m2 on #1318: a field to confirm whose words name another question (the door's warning) is a person's call, never
+      // the loader's. A worked-out Yes/No asked as its deciding question carries the door's advice ("its own words also say…")
+      // instead: that one is asked, as the 9 reviewed asks are.
+      if (r.warning && !ask) { out.refused.push(`${r.form} ${r.caption || r.data_path}: ${r.warning} Left for a person on To review › Form fields.`); continue; }
       if (!r.can_confirm && !ask) { out.refused.push(`${r.form} ${r.caption || r.data_path}: cannot hold "${q!.sentence}" (${r.why ?? r.state}), so it is left for a person on To review › Form fields`); continue; }
       try {
         const ch = await door.propose(author, { combinationId, fact, formEditionId: r.form_edition_id, dataPath: r.data_path, ...(ask ? { ask: true } : {}), reason: "QA-165: the form asks this only after a Yes; its own words say so (Sample, Unconfirmed: expert)" });

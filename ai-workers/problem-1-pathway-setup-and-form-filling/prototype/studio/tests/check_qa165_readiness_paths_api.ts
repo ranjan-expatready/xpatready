@@ -30,11 +30,14 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   const boxes = (f: FormRow) => f.readiness.missing.filter((m) => m.reason === "left empty on the form").map((m) => m.fact.replace(/^box:/, ""));
   const country = (await agent(c.id)).sections.flatMap((s: { questions: { subjectId: string; fact: string; answer: { value: unknown } | null }[] }) => s.questions).find((q: { subjectId: string; fact: string }) => q.subjectId === P && q.fact === "person.passport_country_of_issue")?.answer?.value;
   let f = await forms();
-  ok("C7.2 R4 pass (#1318 M1): an Indian passport: IMM 5257's script requires neither the Taiwan PIN nor the Israel passport box, so readiness lists neither", country === "India" && !boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && !f.fields_open.some((o) => o.box === TAIWAN || o.box === ISRAEL), { country, missing: f.readiness.missing });
+  ok("C7.2 R4 pass (#1318 M1): an Indian passport: IMM 5257's script requires neither the Taiwan PIN nor the Israel passport box, so readiness lists neither", country === "IND" && !boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && !f.fields_open.some((o) => o.box === TAIWAN || o.box === ISRAEL), { country, missing: f.readiness.missing });
   ok("C7.2 R4 pass: with every fact answered and confirmed, the principal's IMM 5257 is ready (no mandatory box left empty)", f.readiness.ready === true, f.readiness.missing);
+  const card = { facts: f.readiness.missing.filter((m) => m.reason !== "left empty on the form").length };
+  ok("C7.2 R4 pass: so no fact is waited for either", card.facts === 0, card);
 
-  // A Taiwanese passport: the form's code 203, so its script requires the Taiwan PIN box, which nothing fills yet.
-  const r = await answer(c.id, P, "person.passport_country_of_issue", "Taiwan", CLIENT);
+  // A Taiwanese passport (ISO "TWN", as the family's "IND"): the form's code 203, so its script requires the Taiwan PIN box,
+  // which nothing fills yet.
+  const r = await answer(c.id, P, "person.passport_country_of_issue", "TWN", CLIENT);
   await confirmAll(c.id, P);
   f = await forms();
   ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required and empty, so readiness lists it (not the Israel box), with why", r.status < 300 && !f.readiness.ready && boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && f.readiness.missing.some((m) => /Taiwan PIN/.test(m.label) && /^no question asks it yet: /.test(m.why ?? "")), { status: r.status, missing: f.readiness.missing });

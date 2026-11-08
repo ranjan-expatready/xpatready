@@ -332,7 +332,9 @@ export class CasePrepare {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
         const ch = channelOf(lines.get(i.itemKey), accepts.get(i.itemKey), own!.portalKey, i.channel);
-        const rd = formReady(i.itemKey, i.subjectId);
+        // QA-165 (#1318): the item's state waits on facts ("Waiting for N facts…"); a mandatory box left empty is not one: it is
+        // its own CRITICAL line on Ready to file (blocksLock, the copy's lock rule too).
+        const rd = { missing: formReady(i.itemKey, i.subjectId).missing.filter(blocksLock) };
         const waits = w?.applies === "cannot_tell";
         // C7.3: an Online form's answer sheet: Out of date when a section entered in the portal changed since (warns only,
         // FQ-6, P-168), Done when every section is entered and current.
