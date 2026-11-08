@@ -156,6 +156,12 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const nameSecSeen = (((await agent(c.id))?.sections ?? []) as Sec[]).find((x) => x.section === nameSec && x.subjectId === S)?.questions.map((q) => q.answer?.id).filter(Boolean) ?? [];
   const blocked = await call("POST", `/runtime/cases/${c.id}/sections/${nameSec}/confirm`, { subjectId: S, seen: nameSecSeen }, OFFICER);
   ok("C6.5 R-n1 fail (Lead 35's condition on BR-6): Confirm section's 409 names the open check's question and its section", blocked.status === 409 && blocked.body?.code === "open_checks" && (blocked.body?.checks ?? []).some((k: { fact: string; section: string | null; section_title: string }) => k.fact === "person.family_name" && k.section === nameSec && !!k.section_title) && /family name|name/i.test(blocked.body?.detail ?? ""), blocked.body);
+  if (passSec !== nameSec) {
+    const passSeen = (((await agent(c.id))?.sections ?? []) as Sec[]).find((x) => x.section === passSec && x.subjectId === S)?.questions.map((q) => q.answer?.id).filter(Boolean) ?? [];
+    const other = await call("POST", `/runtime/cases/${c.id}/sections/${passSec}/confirm`, { subjectId: S, seen: passSeen }, OFFICER);
+    const k = (other.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name") as { section: string; section_title: string } | undefined;
+    ok("C6.5 R-n1 fail (Lead 35's condition, the other half): a check in another section of the same passport blocks this one, and the 409 names that section by its title", other.status === 409 && k?.section === nameSec && !!k?.section_title && (other.body?.detail ?? "").includes(`"${k?.section_title}"`) && !/this section/.test(other.body?.detail ?? ""), other.body);
+  } else ok("C6.5 R-n1 fail (Lead 35's condition, the other half): on this release the name and the passport number share one section, so the same-section words above are the case", true);
   const k2 = (c2.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name")?.id as string;
   r = await call("POST", `/runtime/checks/${k2}/resolve`, { keep: "answer", reason: "\u3164\u115f" }, OFFICER);
   ok("C6.5 B-m3 fail: a reason of letters that print as nothing is refused in words (400), never a 500", r.status === 400, r.status);

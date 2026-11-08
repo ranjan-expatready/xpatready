@@ -85,3 +85,15 @@ New, all Minor (fix or list in the PR):
 Journey re-score on f7ce78bc9: correct data ½ → 1 and plain words ½ → 1. Next step stays ½, because the resolve screen comes with the drawer, PR 2b. **9.5/10.**
 
 **Verdict: Approve** on `f7ce78bc94dc8b48217adc681b5bdb23c2dc2923`. No Blocker or Major is open; n1 to n3 are fixed or listed in the PR.
+
+## Re-review on f346af947 (diff only: `git diff f7ce78bc9..f346af947b05f46720af9f70be0131bbb2ade8fa`)
+The diff changes the 409 of `runtime.ts` confirmSection, two lines of `case-documents.ts` (the officer's message and the audit line), two new tests (R-n1, R-n2) and these review files. I ran one probe on my copy `rv_c65` (:4434, fixture), then stopped the copy. I did not re-run the pack: nothing in the diff touches a step it tests.
+* **n1 fixed.** The 409 now names each blocking check and where it sits.
+  * Blocked from another section: confirming `personal_details` with the passport-number check open answers 409: `"passport number" in "Travel and identity documents" differs from a document (an open check): resolve it first…`. `checks[]` holds `{id, fact, label, section: travel_document, section_title}`.
+  * Blocked in its own section: confirming `travel_document` itself says `… in this section …`.
+  * Section titles come from the snapshot's `sections[{id, title}]` (`engine/snapshot.ts:221`).
+  * Gap: test R-n1 covers only the same-section case. The other-section words (the half the tech lead's condition is about) rest on my probe. **Should:** add that fail line. It is a Minor, so fix it or list it in the PR.
+* **n2 fixed.** After a newer file replaces an older one, the officer's message ends "1 check from the file this one replaced was closed, keeping the answer." The audit line ends "1 check of a replaced file closed", with no value and no reason.
+* **n3:** recorded in the PR as a decision, as agreed.
+
+**Verdict: Approve** on `f346af947b05f46720af9f70be0131bbb2ade8fa`. No Blocker or Major is open. The one Minor (the other-section test line) is to be fixed or listed in the PR.
