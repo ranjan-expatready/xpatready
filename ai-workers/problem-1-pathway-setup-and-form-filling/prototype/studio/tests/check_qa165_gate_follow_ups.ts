@@ -138,6 +138,11 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
   ok("C7.2 R4 pass: an Indian passport (the form's code 205): neither box is mandatory, so neither is open", open("205").length === 0, open("205"));
   ok("C7.2 R4 fail: a passport the form codes 203 makes the Taiwan PIN box mandatory (open while empty), not the Israel one", JSON.stringify(open("203")) === JSON.stringify([TAIWAN]), open("203"));
   ok("C7.2 R4 fail: code 206 makes the Israel passport box mandatory, not the Taiwan one", JSON.stringify(open("206")) === JSON.stringify([ISRAEL]), open("206"));
+  // Review M1 on the Taiwan/Israel PR: a form field whose question is hidden (B86 "not needed") is still open when the form's
+  // own script requires it for the code the copy writes ("isr" writes 206 while the question is asked only for "ISR").
+  const hiddenQ = (code: string) => mandatoryOpen(fields, [TAIWAN, ISRAEL].map((p) => ({ data_path: p, outcome: "mapped", fact: p === TAIWAN ? "person.taiwan_pin" : "person.israel_passport" })) as never, [TAIWAN, ISRAEL].map((p) => ({ box: p, coverage: "not needed", result: "not written", detail: "Not needed" })) as never, { [COUNTRY]: code }, {}, rw);
+  ok("C7.2 R7 fail (review M1): a hidden question's form field the script requires for the code written (206) stays open, saying to check that answer", JSON.stringify(hiddenQ("206").map((o) => o.box)) === JSON.stringify([ISRAEL]) && /check that answer/.test(hiddenQ("206")[0]?.why ?? ""), hiddenQ("206"));
+  ok("C7.2 R7 pass: a hidden question's form field the script does not require for the code written (205) is left empty, not open", hiddenQ("205").length === 0, hiddenQ("205"));
   ok("C7.2 R4 fail guard: without the data the field list's own `required` stands (both open, as before)", mandatoryOpen(fields, [TAIWAN, ISRAEL].map((p) => ({ data_path: p, outcome: "by_hand", fact: null })) as never, [], { [COUNTRY]: "205" }).length === 2);
 }
 // ---------------------------------------------------------------- R7 (QA-165's last two): asked only for the passport the form's script names

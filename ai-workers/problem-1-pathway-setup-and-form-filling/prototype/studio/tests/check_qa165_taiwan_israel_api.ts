@@ -7,6 +7,8 @@
 //      answer, no longer "no question asks it yet"); answered and confirmed, the form field is written and the form is ready.
 //   T3 an Israeli passport: the Israel question is shown, the Taiwan one hidden again (its answer kept and not used, so its
 //      form field is not written); answered, the form is ready.
+//   T5 (review M1, m3) a country typed in lower case ("isr") writes the form's code 206 while the Israel question (asked
+//      for "ISR") stays hidden: never Ready over the empty Israel form field; back on "TWN", the kept Taiwan answer shows.
 //   T4 the released map of each form field carries the form script's own words about when it is filled (so its question's
 //      condition was confirmed on it from the form, B86), and taking the ask back (Undo) returns it to nothing filling it,
 //      with the words it had before (none).
@@ -81,6 +83,16 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   f = await forms();
   v = await written();
   ok("C7.2 T3 pass: answered No and confirmed, the Israel form field is written N and IMM 5257 is ready; the hidden Taiwan answer is kept, not written or waited on", b.status < 300 && f.readiness.ready && !empty(f, ISRAEL) && !empty(f, TAIWAN) && v[ISRAEL] === "N" && !v[TAIWAN], { status: b.status, missing: f.readiness.missing, written: [v[TAIWAN] ?? null, v[ISRAEL] ?? null] });
+  // T5 (review M1, m3): an answer typed in lower case ("isr") writes the form's code 206, while the Israel question is asked
+  // only for "ISR": never Ready over the empty Israel form field; and back on "TWN" the hidden Taiwan answer was kept.
+  await answer(c.id, P, "person.passport_country_of_issue", "isr", CLIENT); await confirmAll(c.id, P);
+  all = await qs(); il = qOf(all, ISRAEL); f = await forms(); v = await written();
+  const line = f.readiness.missing.find((m) => m.fact === `box:${ISRAEL}`);
+  ok("C7.2 T5 fail (review M1): \"isr\" writes the form's code 206 but hides the Israel question: IMM 5257 is not ready, and names the Israel form field with the answer to check", hidden(il) && !f.readiness.ready && !!line && /check that answer/.test(line.why ?? "") && !v[ISRAEL], { hidden: hidden(il), missing: f.readiness.missing, written: v[ISRAEL] ?? null });
+  await answer(c.id, P, "person.passport_country_of_issue", "TWN", CLIENT); await confirmAll(c.id, P);
+  all = await qs(); tw = qOf(all, TAIWAN); f = await forms();
+  ok("C7.2 T5 pass (review m3): back on a Taiwanese passport, the Taiwan question shows again with its kept answer (Yes), and IMM 5257 is ready", !hidden(tw) && tw?.answer?.value === true && f.readiness.ready, { hidden: hidden(tw), answer: tw?.answer?.value, missing: f.readiness.missing });
+
   // T4: the map's words, and Undo (the last step: it changes the configuration).
   const ed = sql(`select id from form_edition where edition_label = 'IMM 5257 (09-2023)' and channel = 'PDF'`);
   const row = (box: string, status: string) => sql(`select outcome || '|' || coalesce(condition, '') || '|' || coalesce(condition_rule::text, '') from form_field_map where form_edition_id = '${ed}' and data_path = '${box}' and status = '${status}' order by version desc limit 1`) ?? "";

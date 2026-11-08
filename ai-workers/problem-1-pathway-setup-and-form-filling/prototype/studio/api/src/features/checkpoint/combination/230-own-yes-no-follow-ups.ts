@@ -33,10 +33,15 @@ const SIBLINGS = new Map(Object.values(OWN_YES_NO).flatMap((c) => c.boxes.flatMa
 /** The door's words for a fact (engine/sources.ts factWords: its meaning, capitalised, no full stop). */
 const wordsOf = (meaning: string | null | undefined, fact: string) => { const m = (meaning ?? fact).trim().replace(/\.$/, ""); return m.charAt(0).toUpperCase() + m.slice(1); };
 
-/** Every data's askedWhen form field, wherever it is. */
-const ASKED_WHEN = Object.values(OWN_YES_NO).flatMap((c) => c.boxes.filter((b) => b.askedWhen).map((b) => b.dataPath));
-/** The facts the askedWhen form fields ask (the library field step 140 pointed each at), in this workspace. */
-const askedFacts = async ({ db, workspaceId }: Ctx) => ASKED_WHEN.length ? [...new Set((await db.formFieldMap.findMany({ where: { workspaceId, dataPath: { in: ASKED_WHEN }, status: { in: ["DRAFT", "PUBLISHED"] }, canonicalFieldKey: { not: null } }, select: { canonicalFieldKey: true } })).map((r) => r.canonicalFieldKey!))] : [];
+/** Every data's askedWhen form field, with its own application form (review m1: IMM 1294 and 1295 use the same paths). */
+const ASKED_WHEN = Object.values(OWN_YES_NO).flatMap((c) => c.boxes.filter((b) => b.askedWhen).map((b) => ({ dataPath: b.dataPath, formKey: c.application })));
+/** The facts the askedWhen form fields ask (the library field step 140 pointed each at), on their own forms, in this workspace. */
+const askedFacts = async ({ db, workspaceId }: Ctx) => {
+  if (!ASKED_WHEN.length) return [];
+  const eds = await db.formEdition.findMany({ where: { workspaceId, form: { formKey: { in: [...new Set(ASKED_WHEN.map((a) => a.formKey))] } } }, select: { id: true, form: { select: { formKey: true } } } });
+  const OR = ASKED_WHEN.map((a) => ({ dataPath: a.dataPath, formEditionId: { in: eds.filter((e) => e.form.formKey === a.formKey).map((e) => e.id) } }));
+  return [...new Set((await db.formFieldMap.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, canonicalFieldKey: { not: null }, OR }, select: { canonicalFieldKey: true } })).map((r) => r.canonicalFieldKey!))];
+};
 
 /** Each form field of one combination that reads a conditioned detail holds the same condition (B86) or asks its deciding
  *  question (B88), proposed by the author and approved by the approver. A field already doing so is left as it is. */
@@ -106,10 +111,12 @@ export default {
         if (!p) { out.refused.push(`${y.label}: not asked in the library, so it takes no condition`); continue; }
         const condition = equalsGate(when);
         if (JSON.stringify(p.predicateJson) === JSON.stringify(condition) && p.conditionEffect === "SHOW") continue; // already so
+        // Review M2: plain words on the author's screen (the form's choice, never its paths or fact keys); the ground is the
+        // checkpoint's own, kept in askedWhenGround and its test.
         const label = (choices ?? []).find(([l]) => l.trim().split(/\s+/)[0] === when.equals)?.[0] ?? when.equals;
         try {
           await studio.placeField(author, fact, { sectionKey: p.sectionKey, collectedFrom: p.collectedFrom, repeats: p.repeats, tier: p.tier, questionText: p.questionText ?? undefined, helpText: p.helpText ?? undefined, ruleOnly: p.ruleOnly,
-            condition, conditionEffect: "SHOW", conditionPlain: `Asked only when the passport's country or territory of issue is ${label.replace(/^\w+\s+\((.*)\)$/, "$1")} (${setup.application}'s own script: ${ground})` });
+            condition, conditionEffect: "SHOW", conditionPlain: `Asked only when the passport's country or territory of issue is ${label.replace(/^\w+\s+\((.*)\)$/, "$1")}, as ${setup.application} asks it only then` });
         } catch (e) { out.refused.push(`${y.label}: ${said(e)}`); }
       }
       // The combinations set up before this one already ran this step, before any detail was conditioned.
