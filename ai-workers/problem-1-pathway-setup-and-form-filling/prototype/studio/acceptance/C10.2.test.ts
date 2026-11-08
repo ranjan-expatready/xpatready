@@ -7,7 +7,7 @@
 // Breadth, after Visitor visa: combination B (work permit) reusing A's family facts (row 18), row 13 (W6, parked).
 // Phase 1 (the C10.2 PR): checks 5 and 6 read release 2 as configured and the group record (see their notes); PENDING
 // lines name the open bug a step waits on (P-330 (7)) and are not counted as a pass or a fail.
-// Runs on a FRESH isolated copy (the checkpoint loads its own configuration):
+// Runs on a fresh isolated copy, or one with data (gate B's fixture): the story empties the demo and loads its own data.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C10.2.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
 import { AUTHOR, OFFICER, call, main, ok, prepare, sql, until } from "./lib/m3.ts";
@@ -15,7 +15,11 @@ import { AUTHOR, OFFICER, call, main, ok, prepare, sql, until } from "./lib/m3.t
 await main("C10.2", "Finished demo story: Visitor visa family case at application ready", async () => {
   let r = await call("POST", "/demo/checkpoints/finished-story", {}, "user-O");
   ok("C10.2-1 fail: only the founder's configuration people load a checkpoint (403 for a case officer)", r.status === 403, r.status);
-  r = await call("POST", "/demo/checkpoints/finished-story", {}, AUTHOR);
+  // #C10.2 phase 1 (gate B, #1330 shard 1 on b34a9ccc2): the story loads its own data, emptying the demo first, so it
+  // runs the same on a blank copy and on a copy that already holds data (gate B adds the Visitor visa setups to a pack on
+  // lib/m3.ts, "fixture only"). On a copy with content the route needs RESET typed (400 otherwise, proved in
+  // tests/check_c102_finished_story_refusals.ts); on an empty copy RESET changes nothing.
+  r = await call("POST", "/demo/checkpoints/finished-story", { confirm: "RESET" }, AUTHOR);
   ok("C10.2-2 pass: loading the finished story is a job (202)", r.status === 202, r.status);
   const done = r.status === 202 && await until(async () => (await call("GET", "/demo/status", undefined, AUTHOR)).body?.checkpoint === "finished_story", 600_000);
   ok("C10.2-3 pass: the demo status says Finished story", done);
