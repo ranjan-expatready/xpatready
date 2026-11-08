@@ -35,9 +35,6 @@ say "disk  ${free} GB free · test databases ${dbs:-?} · idle at two checks: ${
 [ "$free" -lt 4 ] && ACT "disk under 4 GB: tell Mac builders to pause suite runs, then free space"
 [ "$free" -lt 10 ] && [ "$both" -gt 0 ] && ACT "disk under 10 GB: drop the ${both} test databases idle at two checks (lead-watch skill, step 3)"
 
-# 1b. Local lanes (founder, 8 Nov, P-420): a Mac lane that stops, or whose messages are paused, makes no GitHub signal.
-ll=$(bash "$TOOLS/local-lanes.sh"); llrc=$?; [ -n "$ll" ] && echo "$ll"; act=$((act + llrc))
-
 # 2. Merges and the queue.
 since=$(date -u -v-"${SINCE}"M '+%Y-%m-%dT%H:%M:%SZ')
 merged=$(gh pr list --state merged --search "merged:>=$since" --json number,title -q '.[]|"#\(.number) \(.title[0:55])"')
@@ -67,6 +64,11 @@ done
 
 # 4. Lanes alive: branches pushed in the last 90 minutes (a lane is working only if it pushed, lead skill).
 git fetch -q origin 2>/dev/null
+# 1b. Local lanes (founder, 8 Nov, P-420): a Mac lane that stops, or whose messages are paused, makes no GitHub signal.
+# After the fetch, so "PRs merged since" reads today's main. Counted by its ACT lines (a crash adds none, and says so).
+ll=$(bash "$TOOLS/local-lanes.sh" 2>&1); llrc=$?; [ -n "$ll" ] && echo "$ll"; lln=$(grep -c '^ACT' <<<"$ll")
+[ "$llrc" != "$lln" ] && echo "warn  local-lanes.sh exit $llrc but $lln ACT line(s): read its output"
+act=$((act + lln))
 alive=$(git for-each-ref --sort=-committerdate --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin \
   | awk -v t="$(date -u -v-90M +%s)" '$1>=t {print $2}' | grep -v -e 'origin/main' -e 'mergify/' -e 'origin/HEAD' -e '^origin$' | sed 's#origin/##')
 say "lanes pushed in 90 min: $(echo "$alive" | grep -c .)"; [ -n "$alive" ] && echo "$alive" | head -12 | sed 's/^/      /'
