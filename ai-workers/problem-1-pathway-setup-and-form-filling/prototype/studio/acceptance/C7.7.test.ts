@@ -41,7 +41,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   const PDF = PL.find((l) => l.channel === "PDF_UPLOAD" && !l.handSigned)?.form ?? "";
   const one = (q: typeof p, who: string, form: string) => (form ? itemsOf(q, who, form)[0] : undefined);
   ok(`C7.7-1 pass: adults get their release's lines: ${want("Sample Client A").join(", ") || "(none read)"} (VV-R07, VV-R09, VV-R10)`, same(forms(P), want("Sample Client A")) && same(forms(S), want("Sample Spouse A")), [forms(P), forms(S)]);
-  ok(`C7.7-2 pass: children under 18 get only their own release lines (${want("Sample Child A1").join(", ") || "(none read)"}; the family form and ${HS || "the hand-signed form"} are 18 or older)`, same(forms(K10), want("Sample Child A1")) && same(forms(K15), want("Sample Child A2")) && !want("Sample Child A1").includes(FAM) && !want("Sample Child A2").includes(HS), [forms(K10), forms(K15)]);
+  ok(`C7.7-2 pass: children under 18 get only their own release lines (${want("Sample Child A1").join(", ") || "(none read)"}; the family form and ${HS || "the hand-signed form"} are 18 or older)`, same(forms(K10), want("Sample Child A1")) && same(forms(K15), want("Sample Child A2")) && !!FAM && !!HS && [want("Sample Child A1"), want("Sample Child A2")].every((w) => !w.includes(FAM) && !w.includes(HS)), [forms(K10), forms(K15)]);
   const bio = (s: string) => itemsOf(p, s).filter((i) => i.kind === "step" && /biometric/i.test(i.step ?? ""));
   ok("C7.7-3 pass: biometrics is an IRCC step for the principal, the spouse and the child of 15, none for the child of 10 (VV-R15)", bio(P).length === 1 && bio(S).length === 1 && bio(K15).length === 1 && bio(K10).length === 0);
   ok("C7.7-4 pass: the biometrics step is tagged \"needed after filing\" (IRCC's instruction letter comes after you apply, VV-R17)", [P, S, K15].every((s) => bio(s)[0]?.neededBefore === "after_filing"));
@@ -88,13 +88,14 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   const shown = (await call("GET", `/runtime/form-copies/${c5707}`, undefined, OFFICER)).body?.by_hand as { label: string; why: string }[] | undefined;
   ok("C7.7-17 pass (G24, QA-139): every \"To write by hand\" line is in plain words: no engine step names", Array.isArray(shown) && !shown.some((x) => /derived:|phone_part:|derive_inverse:|executable set|[a-z]+\.[a-z_]+\(/.test(`${x.label} ${x.why}`)), shown);
   const rd = readinessOf((await prepare(c.id)).p, filingOf((await prepare(c.id)).p, P)?.id);
-  ok("C7.7-18 pass: any line still to write by hand shows on the filing as a warning naming the form and the line (BR-9: everything else warns)", !!rd && ((shown ?? []).length === 0 || (rd.warns ?? []).some((w) => w.code === "hand_write" && !!FAM && w.words.includes(FAM))), rd?.warns);
+  ok("C7.7-18 pass: any line still to write by hand shows on the filing as a warning naming the form and the line (BR-9: everything else warns)", !!rd && !!c5707 && Array.isArray(shown) && (shown.length === 0 || (rd.warns ?? []).some((w) => w.code === "hand_write" && !!FAM && w.words.includes(FAM))), rd?.warns);
 
   // Part 2 (r5c BR-8, P-144): a Paper line with its barcode page. The principal's barcode form (IMM 5257 on both data
   // sets, read from the lines) moves to Paper (an accommodation, VV-R02; C11.6's built route); the spouse's keeps its own
   // line's channel (a PDF upload on the fixture, Online on release 2).
-  const toPaper = async (form: string) => { const q = (await prepare(c.id)).p; return call("PATCH", `/runtime/items/${itemsOf(q, P, form)[0]?.id}/channel`, { channel: "PAPER", reason: "Cannot apply online: accommodation (Sample)", version: q?.version }, OFFICER); };
-  const line = async (form: string, who = P) => itemsOf((await prepare(c.id)).p, who, form)[0];
+  // Review m1: both read through one(), so a form name that was not read picks no item.
+  const toPaper = async (form: string) => { const q = (await prepare(c.id)).p; return call("PATCH", `/runtime/items/${one(q, P, form)?.id}/channel`, { channel: "PAPER", reason: "Cannot apply online: accommodation (Sample)", version: q?.version }, OFFICER); };
+  const line = async (form: string, who = P) => one((await prepare(c.id)).p, who, form);
   r = await toPaper(BC);
   let pl = await line(BC);
   const keys = (x: typeof pl) => (x?.steps ?? []).map((s) => s.key).join(",");
@@ -112,7 +113,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   pl = await line(BC);
   ok("C7.7-23 pass: once its validated copy is read back for today's facts the line is In progress, its Validate step done, naming that copy", !!vid && pl?.state === "in_progress" && pl?.steps?.[0]?.done === true && pl?.validated?.copy === vid && pl?.validated?.current === true, pl);
   // B132: Printed and Signed in pen are recorded steps now (sign-steps.ts): not done until recorded (false); Mail is not recorded yet (null).
-  ok("C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (B132: Printed and Signed in pen not done yet; Mail not recorded)", pl?.state !== "ready" && (pl?.steps ?? []).filter((s) => s.key === "print" || s.key === "sign_in_pen").every((s) => s.done === false) && (pl?.steps ?? []).filter((s) => s.key === "mail").every((s) => s.done === null), pl?.steps);
+  ok("C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (B132: Printed and Signed in pen not done yet; Mail not recorded)", !!pl && pl.state !== "ready" && (pl?.steps ?? []).filter((s) => s.key === "print" || s.key === "sign_in_pen").every((s) => s.done === false) && (pl?.steps ?? []).filter((s) => s.key === "mail").every((s) => s.done === null), pl?.steps);
   r = await toPaper(HS);
   const p5476 = HS ? await line(HS) : undefined;
   // A form that makes no barcode page has no barcode page line (engine: tests/check_vv_prepare_store.ts "C7.7 Paper"); on the
@@ -188,6 +189,6 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
     sql(`update config_release r set snapshot = b.snapshot, sha256 = b.sha256 from ${KEPT} b where r.id = b.id; drop table ${KEPT}`);
     frozen(pinsBefore.split(",").map((x) => { const [id, h] = x.split("="); return `update pack_work_pin set content_hash='${h}' where id='${id}'`; }).join("; "));
     // Asserted here, so a crash in steps 27–31 still says whether the release was put back (review m3).
-    ok("C7.7-32 pass (scaffolding put back): the case's release is again exactly as released (its fingerprint matches) and each of its pins holds its own value again; the copies made stay on the case", sql(`select sha256 from config_release where id='${rel}'`) === wasHash && snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")) === wasHash && pinsOf() === pinsBefore, { pins: pinsOf() === pinsBefore });
+    ok("C7.7-32 pass (scaffolding put back): the case's release is again exactly as released (its fingerprint matches) and each of its pins holds its own value again, and the copy of it kept for the run is gone; the copies made stay on the case", sql(`select coalesce(to_regclass('${KEPT}')::text, '')`) === "" && sql(`select sha256 from config_release where id='${rel}'`) === wasHash && snapshotHash(JSON.parse(sql(`select snapshot::text from config_release where id='${rel}'`) ?? "null")) === wasHash && pinsOf() === pinsBefore, { pins: pinsOf() === pinsBefore });
   }
 });
