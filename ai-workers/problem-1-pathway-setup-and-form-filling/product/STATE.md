@@ -16,6 +16,11 @@ Weekly 53% at 14:52 IST (~3%/h). Context: Lead 34 at ~415k. **Disk 6 GB** (under
 
 Earlier blocks (hand-overs to Leads 32-34, the Lead 33 log): `history/STATE-2026-11-08-1455-lead34.md`.
 
+## Lead 35 (from 14:55 IST 8 Nov)
+* 14:55-15:05 IST: watchdog cron deleted; Lead 36 told "start the watchdog"; check cron 7990de27 (:13/:43). lead-watch from `$TMPDIR/lw-local`: exit 2 (disk; #1348's question was already answered by Lead 34). 25 stale test databases dropped (`prune-test-dbs.sh --yes`, exit 0, ~200 MB): disk stays 6 GB; only the founder-named removal of Lead 33's copies (~2.7 GB) frees enough.
+* **C7.7 (qa #1353, both product faults, no pack step covers either):** QA-153 siblings never asked (IMM 5645 Section C blank, sibling address boxes carry the parent-1 reason, 2nd child's Section B not written); QA-246 `GET …/forms` lists IMM 5409, IMM 5475, IRM 0002 with "N missing" before their rules are answered (adults 7, children 4; expected 4 and 1). Both go to the runtime lane after B162 (#1344) is labelled, in its prompt box; a new lane only when one ends (P-413) and at the founder's typed turn.
+* #1318 (QA-165): Approve 0b14131a3; CI shards 2, 4, 6 running at 15:05 IST; label on green. #1353 (qa records, stacked on #1352): label after #1352 merges.
+
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`). F9-F13 answered 18:25-18:36 IST, all as recommended (P-412; rows in `history/STATE-2026-11-07-1837-lead31.md`).
 
@@ -33,7 +38,7 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 **Hand-over (P-409):** no hand-over with an in-process subagent running; its result goes to a file named in the hand-over block; briefs say report to the current Lead. Skill edit at the founder's next typed turn.
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
 **To-do, in order:**
-1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`, cron f50193b6).
+1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`, cron 7990de27, Lead 35).
 2. **Lanes, counted only after a push:** the live list in the Lead 32 block (P-414). Read each lane's newest PR comment for "tech lead" every check, and reply in its claude.ai session.
 3. **qa:** re-scores after each merged batch; C6.9 and C8.2 Works on qa's #1238.
 4. **P-388 measurement:** 2 failed of the first 10 batches after 09:19 IST (23113b92e5 the C1 and A3 clash; 0f532b98fc not read yet): 20%, over the 10% bar. `flow-measure.py` hit a rate limit today: read `actions/workflows/ci.yml/runs` directly. Trip-wire: P-399.
