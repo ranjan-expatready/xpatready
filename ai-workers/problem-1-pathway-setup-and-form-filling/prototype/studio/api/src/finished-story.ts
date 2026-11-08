@@ -81,7 +81,7 @@ export const HELD = {
 } as const;
 
 type Q = { subjectId: string; fact: string; label?: string; group: string | null; value_type: string; collected_from: string; required: boolean; hidden: boolean; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean } | null }[] };
-type Section = { subjectId: string; section: string; questions: Q[]; group: { required: boolean; rows: number; none_apply: { id: string } | null } | null };
+type Section = { subjectId: string; section: string; questions: Q[]; group: { required: boolean; rows: number; none_apply: { id: string; confirmed?: boolean } | null } | null };
 type Person = { subject: string; label: string; role: string; age: number | null; applies: boolean };
 
 /** Takes the family case (opened on release 1 by the configured checkpoint) to a recorded submission on release 2. */
@@ -152,7 +152,8 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       // Each person's sections confirmed from a fresh read (the re-confirmations above change what the officer reviews).
       for (const subject of [...new Set(after.sections.map((x) => x.subjectId))]) for (const sec of (await get<{ sections: Section[] }>(`/runtime/cases/${caseId}/questionnaire?mode=agent`)).sections.filter((x) => x.subjectId === subject)) {
         const seen = [...sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((x) => x.answer?.id)]), sec.group?.none_apply?.id].filter(Boolean);
-        if (!seen.length || sec.questions.every((q) => (!q.answer || q.answer.confirmed) && q.rows.every((x) => !x.answer || x.answer.confirmed))) continue;
+        // B155: a section whose only answer is its group's "none apply" (a person's brothers and sisters) is confirmed too.
+        if (!seen.length || (sec.questions.every((q) => (!q.answer || q.answer.confirmed) && q.rows.every((x) => !x.answer || x.answer.confirmed)) && (!sec.group?.none_apply || sec.group.none_apply.confirmed))) continue;
         must(await r.call(officer, "POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }), `Confirm the section ${sec.section}`); confirmed++;
       }
     }
