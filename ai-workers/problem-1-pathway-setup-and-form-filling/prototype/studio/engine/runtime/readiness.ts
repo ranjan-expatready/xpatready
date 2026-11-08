@@ -137,12 +137,17 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     const at = { item: f.item, subject: f.subject, form: f.form };
     // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line. An unconfirmed answer
     // already fills the form (P-411, B150 review M1), so the words never say it is blank.
-    const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
+    // QA-165: a mandatory form field a copy would leave empty is its own line (no answer is missing; the form is).
+    const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix" && m.reason !== "left empty on the form")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
+    const empty = f.readiness.missing.filter((m) => m.reason === "left empty on the form");
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), missingLabel(m)]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.
     for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). An answer fills the form as soon as it is given (P-242, P-411); each is confirmed before filing.` });
-    for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
+    // QA-165: a box refused with a fix says the fix in its own words ("…is answered No, but … is recorded").
+    for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: m.why ? `${ofWho(f)}: "${m.label}" is not written: ${m.why.replace(/[.\s]+$/, "")}.` : `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
+    // P-71 (QA-165): "Ready" is never said over a mandatory form field that will be empty. The key names the fields (P-315).
+    if (empty.length) critical({ code: "missing_facts", ...at, part: `empty|${empty.map((m) => m.fact).sort().join(",")}`, owes: "staff", words: `${ofWho(f)}: ${empty.length} form field${empty.length === 1 ? "" : "s"} IRCC's form marks mandatory would be left empty (${list(empty.map((m) => m.why ? `${m.label}: ${m.why}` : m.label))}).` });
     // BR-9 1: out of date, or a required signature missing.
     if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: f.outOfDate.words ? `${ofWho(f)}: ${f.outOfDate.words}` : `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
     if (signatureNeeded(f) && !f.signed) {

@@ -12,6 +12,7 @@ import { checkValue, knownOf, type Answer, type Participant, type Row } from "./
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { openLines } from "./open-lines.ts";
 export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -163,7 +164,12 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
 /** Whether a fired check blocks "ready to file": only a section check at severity warn or block. */
 export const blocksFiling = (c: { group?: string; severity: string }) => c.group === "section_check" && (c.severity === "warn" || c.severity === "block");
 
-export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
+/** QA-165 (P-71; diagnosis on #1256, cause 2): what the form itself would write, for readiness: the copy's form fields
+ *  (formCoverage's, each refused one with its `fix`) and the fields IRCC's form marks mandatory that a copy made now
+ *  leaves empty (engine/runtime/mandatory.ts mandatoryOpen, as GET …/forms lists them). */
+export type OnForm = { boxes: (BoxRow & { fix?: string })[]; open: { box: string; label: string; reason: string; why: string }[] };
+
+export function readiness(view: QuestionnaireView, form: string, subjectId: string, onForm?: OnForm): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
   // C6.18 (P-244): a background answer staff recorded is named as waiting for the client, who re-confirms it.
   const reason = (a: { confirmed: boolean; problems: string[]; awaits_client?: boolean } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : a.awaits_client ? "waits for the client to re-confirm" as const : !a.confirmed ? "not confirmed" as const : null);
@@ -186,7 +192,38 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
   const readFacts = new Set(reads.map((q) => `${q.subjectId}|${q.fact}`));
   for (const c of view.checks) if (blocksFiling(c) && c.fact && readFacts.has(`${c.subjectId}|${c.fact}`) && !missing.some((m) => m.fact === `check:${c.id}` && m.about === c.about_label))
     missing.push({ fact: `check:${c.id}`, label: c.message, about: c.about_label, reason: "a check fired" });
+  if (onForm) missing.push(...formHoldsBack(view, subjectId, onForm, missing));
   return { ready: missing.length === 0, missing };
+}
+
+/** QA-165 (P-71: a fact that would be written wrong blocks; "Ready" is never said over a mandatory form field that will be
+ *  empty). Beside the questions: (1) each form field formCoverage refuses with a fix ("…is answered No, but … is recorded",
+ *  a confirmed answer with a problem), as "needs a fix" in the fix's own words; (2) each field IRCC's form marks mandatory
+ *  that a copy made now leaves empty and no question above already explains (filled by hand, a value the box's own list
+ *  cannot hold, "none apply" on a group whose first row the form requires, nothing fills it yet), as "left empty on the
+ *  form" with why. One line per fact for (1), per form field for (2). */
+function formHoldsBack(view: QuestionnaireView, subjectId: string, onForm: OnForm, already: Readiness["missing"]): Readiness["missing"] {
+  const qs = view.sections.flatMap((s) => s.questions);
+  const said = new Set(already.map((m) => `${m.subject ?? subjectId}|${m.fact}`));
+  const person = view.sections.find((s) => s.subjectId === subjectId)?.about_label ?? "";
+  const aboutOf = (about: string | null) => (about ? view.sections.find((s) => s.subjectId === about)?.about_label ?? person : person);
+  const out: Readiness["missing"] = [];
+  const boxOf = new Map(onForm.boxes.map((b) => [b.box, b]));
+  for (const b of onForm.boxes) {
+    if (!b.fix || !b.fact) continue;
+    const subject = b.about ?? subjectId, k = `${subject}|${b.fact}`;
+    if (said.has(k)) continue;
+    said.add(k);
+    out.push({ fact: b.fact, label: qs.find((q) => q.subjectId === subject && q.fact === b.fact)?.label ?? (b.meaning || b.caption || b.fact), about: aboutOf(b.about), reason: "needs a fix", why: b.fix, subject });
+  }
+  // Named as the forms card names them (openLines: a date's parts are one line; two fields with one caption, such as IMM
+  // 5257's Taiwan PIN and Israel passport boxes, are told apart by the field's own name).
+  const left = onForm.open.filter((o) => { const b = boxOf.get(o.box); return !b?.fix && !(b?.fact && said.has(`${b.about ?? subjectId}|${b.fact}`)); });
+  for (const o of openLines(left)) {
+    const b = boxOf.get(o.box);
+    out.push({ fact: `box:${o.box}`, label: o.label, about: aboutOf(b?.about ?? null), reason: "left empty on the form", why: `${o.reason}: ${o.why}`, subject: b?.about ?? subjectId });
+  }
+  return out;
 }
 
 /** The repeating groups a form reads for one person, as a copy saw them (break r1d-none-apply M1): whether "none apply"

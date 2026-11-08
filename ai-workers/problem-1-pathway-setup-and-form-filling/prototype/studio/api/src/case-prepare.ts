@@ -37,7 +37,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, copyNotForFiling, formPassed, inventoryOf } from "./fill-case.ts";
+import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -251,6 +251,10 @@ export class CasePrepare {
 
     // Items in the view: each with one state; a form with its channel, what IRCC accepts and the signature that follows.
     const view = caseView(s, people, answers, rows, "agent", today, groupAnswers);
+    // QA-165 (P-71; #1256 cause 2): each form's readiness also reads what a copy made now would write (a box refused with a
+    // fix, a mandatory box left empty), as GET …/forms does; worked out once per form and person in this view.
+    const readyOf = new Map<string, ReturnType<typeof formReadiness>>();
+    const formReady = (form: string, subject: string) => { const k = `${form}|${subject}`; if (!readyOf.has(k)) readyOf.set(k, formReadinessOf(s, people, answers, rows, view, form, subject)); return readyOf.get(k)!; };
     const accepts = await acceptsOf(this.db, c.workspaceId);
     const lines = new Map((s.forms as FormLine[]).map((l) => [l.form_number, l]));
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
@@ -328,7 +332,7 @@ export class CasePrepare {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
         const ch = channelOf(lines.get(i.itemKey), accepts.get(i.itemKey), own!.portalKey, i.channel);
-        const rd = formReadiness(view, i.itemKey, i.subjectId);
+        const rd = formReady(i.itemKey, i.subjectId);
         const waits = w?.applies === "cannot_tell";
         // C7.3: an Online form's answer sheet: Out of date when a section entered in the portal changed since (warns only,
         // FQ-6, P-168), Done when every section is entered and current.
@@ -439,7 +443,7 @@ export class CasePrepare {
     const waiting = items.filter(notYetKnown).map((i) => Object.assign(i, { waits_on: asksOf(wanted.find((x) => x.subject === i.subject && x.kind === "form" && x.key === ("form" in i ? i.form : null))?.missing ?? []) }));
     const notNeeded = notNeededForms(s, renderPeople, known, r.forms as RenderedForm[], lines, new Set(filers), ages, people.find((p) => p.role === "case")?.subjectId ?? null, clean, words.label, label);
     // Stage 1 (C7.7): the facts each filing's forms to fill still wait for, counted before any item.
-    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
+    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReady(i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
     // The edition a form is filled on: the release's PDF edition in use (pdfMapInUse, P-32: the newest, as the fill picks
     // it; review M2 on #861); on a line filed Online, its online version, else the PDF edition its answer sheet follows
@@ -514,14 +518,14 @@ export class CasePrepare {
     }
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
-      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
+      factsOf: (form, subject) => formReady(form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
         // answer as given now (an unconfirmed change is a change the representative did not review).
         // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
         // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
-        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${waitingFactsKey(formReadiness(view, form, subject).missing, answers)}`).digest("hex");
+        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${waitingFactsKey(formReady(form, subject).missing, answers)}`).digest("hex");
       }, today });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
