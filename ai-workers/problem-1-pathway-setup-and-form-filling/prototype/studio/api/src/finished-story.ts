@@ -123,7 +123,8 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
         must(await r.call(officer, "PUT", `/runtime/cases/${caseId}/groups/${sec.subjectId}/${sec.section}/none-apply`, { noneApply: true, expectedId: null }), `"None apply" on ${sec.section}`);
       const after = await get(`/runtime/cases/${caseId}/questionnaire?mode=agent`) as { sections: Section[] };
       for (const q of after.sections.flatMap((x) => x.questions)) for (const a of [q.answer, ...q.rows.map((x) => x.answer)]) if (a?.awaits_client) { must(await r.call(client, "POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}), "The client re-confirms an answer the officer entered"); reconfirmed++; }
-      for (const sec of after.sections) {
+      // Each person's sections confirmed from a fresh read (the re-confirmations above change what the officer reviews).
+      for (const subject of [...new Set(after.sections.map((x) => x.subjectId))]) for (const sec of ((await get(`/runtime/cases/${caseId}/questionnaire?mode=agent`)) as { sections: Section[] }).sections.filter((x) => x.subjectId === subject)) {
         const seen = [...sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((x) => x.answer?.id)]), sec.group?.none_apply?.id].filter(Boolean);
         if (!seen.length || sec.questions.every((q) => (!q.answer || q.answer.confirmed) && q.rows.every((x) => !x.answer || x.answer.confirmed))) continue;
         must(await r.call(officer, "POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }), `Confirm the section ${sec.section}`); confirmed++;

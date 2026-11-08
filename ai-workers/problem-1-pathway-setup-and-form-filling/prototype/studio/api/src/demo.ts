@@ -61,7 +61,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 const CHECKPOINT_OF: Record<string, "finished_story" | "configured"> = { "finished story": "finished_story", "configured checkpoint": "configured" };
 /** C10.2: the finished story's job, as GET /demo/status `story` shows it. */
 type StoryJob = { state: "idle" | "running" | "done" | "failed"; started_at?: string; finished_at?: string; by?: string; seconds?: number; error?: string;
-  stages?: { key: string; title: string; status: string; shows: string; why: string | null }[]; rows?: CheckpointRow[]; log?: string[] };
+  stages?: { key: string; title: string; status: string; shows: string; why: string | null }[]; rows?: CheckpointRow[]; log?: string[]; cases?: { family: string | null; thin: string | null } };
 
 @Injectable()
 export class Demo implements OnModuleInit {
@@ -114,7 +114,7 @@ export class Demo implements OnModuleInit {
       const stages = ((out as { story?: StoryJob["stages"] } | undefined)?.story ?? []);
       const seconds = (Date.now() - t0) / 1000, count = (st: string) => (stages ?? []).filter((x) => x.status === st).length;
       await this.audit.log(await this.ws.id(), actor.id, "loaded", "finished story", null, `${actor.name} loaded the finished story in ${seconds.toFixed(1)} s: ${count("done")} stages done, ${count("partial")} partly, ${count("waiting")} waiting`);
-      this.story = { state: "done", started_at, finished_at: new Date().toISOString(), by: actor.id, seconds, stages, rows: (out as { checkpoint?: CheckpointRow[] } | undefined)?.checkpoint ?? [], log: out?.log ?? [] };
+      this.story = { state: "done", started_at, finished_at: new Date().toISOString(), by: actor.id, seconds, stages, rows: (out as { checkpoint?: CheckpointRow[] } | undefined)?.checkpoint ?? [], log: out?.log ?? [], cases: (out as { story_cases?: StoryJob["cases"] } | undefined)?.story_cases };
     } catch (e) {
       const said = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string } | string) : null;
       const error = typeof said === "string" ? said : said?.detail ?? said?.message ?? "an unexpected error on the server (the details are in the server log)";

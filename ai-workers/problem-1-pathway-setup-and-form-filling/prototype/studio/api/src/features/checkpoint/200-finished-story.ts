@@ -15,6 +15,7 @@ export default {
     const out = fam?.caseId ? await ctx.timed("finished story (family case to a recorded submission)", () => finishFamilyCase(routesAt(), fam.caseId!)) : null;
     const stages: StoryStage[] = out?.stages ?? [];
     ctx.result.story = stages;
+    ctx.result.story_cases = { family: fam?.caseId ?? null, thin: thin.caseId };
     for (const s of stages) ctx.log.push(`  finished story · ${s.title}: ${s.status}${s.why ? ` (${s.why.slice(0, 200)})` : ""}`);
     const st = (k: string) => stages.find((x) => x.key === k);
     const pieces = ["forms", "signed", "ready", "record"].map(st);
