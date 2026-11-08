@@ -173,7 +173,7 @@ await main("B155", "IMM 5645's brothers and sisters are asked as a list, stored 
   const acc = "relationship.accompanies_subject_to_canada", accRows = rowsOf(acc);
   if (accRows.length === 1) {
     const onFirst = await say(acc, eight[0], true), onIts = await say(acc, eight[accRows[0]], true);
-    ok("B155-14 fail: \"accompanies\" on entry 1 is refused (422, in words: the form asks it in entry 7 only); on entry 7 it is saved", onFirst.status === 422 && new RegExp(`entry 1: it is asked in entry ${accRows[0] + 1} only`).test(onFirst.body?.detail ?? "") && onIts.status === 200, [onFirst.status, onFirst.body?.detail, onIts.status]);
+    ok("B155-14 fail: \"accompanies\" on entry 1 is refused (422, in words: the form asks it only in entry 7); on entry 7 it is saved", onFirst.status === 422 && new RegExp(`no room for this answer in entry 1: it is asked only in entry ${accRows[0] + 1}\\.`).test(onFirst.body?.detail ?? "") && onIts.status === 200, [onFirst.status, onFirst.body?.detail, onIts.status]);
     // Remove entry 1: entry 7's "accompanies" moves to the sixth entry, where the form has no box: hidden, so never confirmed.
     await call("DELETE", `/runtime/cases/${big.id}/groups/${PE}/sibling/rows/${eight[0]}`, undefined, officer);
     const sec2 = (await sectionsOf(big.id)).find((x) => x.subjectId === `${PE}/sibling`)!;

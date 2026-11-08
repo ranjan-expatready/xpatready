@@ -442,7 +442,7 @@ export class Runtime {
       const at = live.findIndex((x) => x.rowKey === b.row);
       const boxes = (s.field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null; row?: number | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.person === `subject_${listRel.relation}` && typeof e.row === "number"));
       const rowsOf = (f?: string) => new Set(boxes.filter((e) => !f || e.fact === f).map((e) => e.row!));
-      if (at >= 0 && rowsOf().has(at) && !rowsOf(fieldKey).has(at)) fail(`The form has no box for this in entry ${at + 1}: it is asked in entr${rowsOf(fieldKey).size === 1 ? "y" : "ies"} ${[...rowsOf(fieldKey)].sort((x, y) => x - y).map((r) => r + 1).join(", ")} only.`, HttpStatus.UNPROCESSABLE_ENTITY);
+      if (at >= 0 && rowsOf().has(at) && !rowsOf(fieldKey).has(at)) fail(`The form has no room for this answer in entry ${at + 1}: it is asked only in entry ${[...rowsOf(fieldKey)].sort((x, y) => x - y).map((r) => r + 1).join(", ")}.`, HttpStatus.UNPROCESSABLE_ENTITY);
     }
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });
     if (!def) fail(`The library has no version ${field!.item_version} of ${fieldKey}.`, HttpStatus.CONFLICT);
