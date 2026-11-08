@@ -172,3 +172,61 @@ The journey score after the fixes, in the same walk:
 That is a pass. The first-round report stays as the record.
 
 Verdict: Approve 37750f8ad4bd400c32db378830861e61d3fa5d53
+
+## Round 3: diff-only check of merge 763c2cbd4
+Scope (P-318 (1), P-293): only what merge `763c2cbd4` (origin/main `152759210`, 251 commits, into `665a339fc`) changed. Read: `git show --remerge-diff 763c2cbd4`, `git diff 665a339fc 763c2cbd4 -M` over the PR's 33 files, and main's side (`209b084ba..152759210`, the merge base) for code that reads people, roles or `mark`. The feature itself was not re-reviewed.
+
+**The seven conflicts: both sides kept.**
+* `engine/runtime/case.ts` `confirmation()` (`:76-99`): main's order is intact: `awaitsClient` first (C6.18), then VERIFIED, then the staff channel (CLIENT_RECONFIRM counts as the client's), then non-client fields, every return `fills: true` with a `mark` (P-411). B135's BR-3b sits where main had `role === "principal"`: `own = who.client ?? role === "principal"` (`:87`). `forAdult` picks `byClientFor(name)` or `byPrincipalFor(name)` (`:92`), and the adult-child branch goes through it too. Against main, the merged file differs only by these lines and the `client?` field on `Participant` (`:20-23`). The PR's older words ("confirmed once that person confirms on their own link") were correctly dropped for main's P-411 wording.
+* `contracts/runtime.ts`: main's `staff`, `by_principal` and `awaits_client` words are kept. `by_client` and `byClientFor` are reworded to main's model (declared, fills now, confirmed before filing). Main's `AnswerMark` is unchanged.
+* `api/src/runtime.ts:82-84`: main's `pins orderBy revision desc` (C9.5) plus B135's `filingChanges` include. `peopleOf` still applies `withClient`.
+* `prisma/schema.prisma`: both `filingChanges` (C6.13) and `feeReceipts` (B149).
+* `web/src/runtime/cases.tsx`: both imports. Main's `ReleaseNotice` stays above the people section, and B135's `PeopleAndFilings` replaces main's "People on this case" list, which main had not changed apart from that move. The `co_files` pill lives on in `filing-changes.tsx:68`.
+* `web/src/runtime/questionnaire.tsx:544`: main's "(a parent, not on this application)" plus B135's `client`-keyed "(you)". `:707`: main's pill shape ("Answered by the … for <name>", "Entered by staff · to confirm", "Declared", hidden when the value is "Declared") with B135's client or principal word.
+* `tests/runtime/check_runtime_r1c.cjs:96`: main's tab list (parents' tabs) with B135's "People and filings" heading. No other test on main looks for "People on this case".
+
+**`mark: "by_principal"` for an adult's answer typed by the client: sound, not a Major.**
+* Every reader of `mark` was checked: the pill (`questionnaire.tsx:707`), `case-prepare.ts:717` and `engine/runtime/answer-sheet.ts:102`. Each carries `why` alongside, and no screen labels from `mark` alone.
+* The mark's job (an adult's answer typed by whoever fills the questionnaire: fills now, to confirm) is the same on both sides; only the words name who. Adding a fifth `AnswerMark` would widen main's contract for no change in behaviour.
+* Probe on my copy, after Make principal, an answer PUT by the client for Sample Spouse A, now the principal: `{mark:"by_principal", confirmed:false, why:"Answered by the client for Sample Spouse A: declared, it fills Sample Spouse A's forms now…"}`. The client's own answer (now in the spouse role): `{mark:"declared", confirmed:true}`. So BR-3b holds.
+* In the browser, the officer's Sample Spouse A tab shows the pill "Answered by the client for Sample Spouse A" at 1440 and 1024 px, and the Sample Client A tab shows no such pill. The client's part 33 reads "Answering for Sample Spouse A (principal applicant)" with the client words below it.
+
+**Main's new code against B135:**
+* Every new reader on main that builds people goes through `Runtime.peopleOf`, so it gets `client`: release-update (`release-update.ts:39`), sign-steps, submission, fill-case, case-checklist and assessments.
+* C6.18's background answers and the client re-confirm go through `confirmation`, which is correct after a swap.
+* B152's frozen fees (`case-filings.ts` `frozenIn`, which B135's `deriveFor` now returns through) are written in the same transaction as the filing record. So BR-7's "any filing record refuses the change" also covers a group whose fees are recorded.
+* B135's `sameApplicants` role check (`case-prepare.ts:181`) and the PATCH door's reset (`runtime.ts:332-339`) survived the auto-merge.
+
+**Migration:**
+* The only change is the rename to `20261108020000_c613_filing_change`, plus the rollback header's name (`git diff -M`, 99 % similar, one line). It is later than main's newest, `20261108010000_b132_sign_in_pen`.
+* On a fresh copy, `_prisma_migrations` lists it last, after b132 and b152.
+* The names `filing_change` and `c613_*` collide with nothing: C8.2's `after_filing_change` is a CHECK value, not a table.
+
+**Re-run by me at `763c2cbd4`:**
+* Setup: a fresh isolated `rv135m` on :4447 (stopped after, database dropped), web stamped fresh by `isolated.sh`, live AI off, US$0. Setup ran `setup_visitor_visa` (15/15), then `setup_vv_m3`.
+* Results:
+  * typecheck: PASS (15 known, no new);
+  * check_filing_changes: 26/26;
+  * check_case_engine: 77/77;
+  * check_vv_answer_sheet: 28/28;
+  * check_c618_officer_background: 29/29;
+  * packs: C6.13 32/32, C6.18 20/20, C6.6 32/32;
+  * C6.13 browser walk: 13/13;
+  * count-any: 418;
+  * `graph --check`: exit 0.
+* `setup_vv_m3` itself gives 44/46 (S2w G8 signer warning; S7a "Cannot PUT /api/library/fees"). The file and the API are identical to main's, so this is not this PR's; it is noted for qa.
+* Not re-run: r1a, r1c and r1d (the builder reports 99, 140 and 97 passing). The r1c conflict was one assertion line, read above.
+
+**Journey score (reviewer role, scoped to what the merge touched):** **9/10**, unchanged from round 2.
+* Re-walked in the browser: the client-for-adult words and pill after a swap, People and filings under main's release notice, and the 13-step walk.
+* Plain words stays at ½ for the round-2 reasons. No criterion moved and none is 0.
+* No new journey report: round 2's `journey-test-reviewer-2026-11-07.md` stands.
+
+**Blockers / Majors:** none.
+
+**Minors (Should; none blocks):**
+1. `AnswerMark` `by_principal` now also covers "answered by the client for an adult" after a swap. Its docs still say the principal's: `contracts/runtime.ts:124` and `engine/runtime/answer-sheet.ts:17`, which says "answered by the principal for <name>". A future reader that labels from `mark` alone would say "principal". Fix: document the mark as "answered for an adult by the person who fills the questionnaire; `why` names who".
+2. The pill's client or principal word comes from a regex on `why` (`questionnaire.tsx:707`), and no test asserts the pill. C6.13-6e checks the API `why` only, so deleting the regex branch keeps every check green. Fix: one walk step in `check_c613_filing_changes_browser.cjs` that expects the pill "Answered by the client for Sample Spouse A" on the officer's tab after the swap.
+3. `build-notes.md:25` still quotes the pre-merge words ("Answered by the client for this adult…"). It also says only "a principal who is not the client" reads them, but after a swap every adult the client answers for does. Fix the line.
+
+Verdict: Approve 763c2cbd472a0d7702ccaf8efd4c16de033b7c66
