@@ -39,6 +39,8 @@ export type CheckpointContext = {
   row: (r: CheckpointRow) => void;
   /** Fields the result carries beside the rows (release 1's `released`). */
   result: Record<string, unknown>;
+  /** C10.2: "finished" when Demo › Load the finished story runs this checkpoint (its steps 125 and 200 run only then). */
+  story?: "finished";
 };
 export type CheckpointStep = {
   /** Before the six load; only actor, workspaceId, t0, log, db, audit, get and settled are set. */
