@@ -332,7 +332,8 @@ export class CaseDocuments {
       // What the person has now, whether this value differs from it (Confirm & use would open a check), and why Confirm &
       // use would leave it for a person: the server's own rules, so a screen never repeats them.
       current: answerOf.has(v.fact) ? { answer_id: answerOf.get(v.fact)!.id, value: answerOf.get(v.fact)!.valueJson } : null,
-      differs: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
+      // A value left for a person is never written and never opens a check, so it never "differs" (drawer walk, 8 Nov).
+      differs: !(v.state === "proposed" && notWritable(s, v.fact, v.valueJson)) && answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
       left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null,
       // L-SA9: whether Confirm & use waits for a tick on this value (the server's own rule, so the drawer never repeats it).
       needs_look: needsLook(s, subjectId === this.caseSubjectOf(c), v, answerOf.get(v.fact)?.valueJson) })));
