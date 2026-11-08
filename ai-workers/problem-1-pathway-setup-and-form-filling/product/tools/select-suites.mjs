@@ -38,10 +38,12 @@
 // use the graph follows (on stderr).
 // --packs (D2, P-416, founder 8 Nov; gate B's set by diff): prints "<file>\t<chain>" for each file under studio/acceptance/
 // or studio/tests/ that IS a changed file or reads one, through the same graph (imports, file names, folders), walked
-// from each changed file to the files that use it. It walks through test helpers, acceptance/lib, engine/, contracts/,
-// samples/ and fixtures, but not through an API module, a web file, main.ts, a suite or a script that runs every suite:
-// a pack calls the app over HTTP, which is no read of its code (the suites and the merge queue's set cover that).
-// gate-b.mjs reads the packs, and the set-up scripts their run lines name, from this list.
+// from each changed file (under prototype/ or official-sources/) to the files that use it. It walks through test helpers,
+// acceptance/lib, engine/, contracts/, samples/ and fixtures; through an API module or a web file only by import edges
+// (packs that import API code, e.g. C11.13's proposals.ts, read it; a pack that calls a route over HTTP does not), and
+// never through main.ts, a suite or a script that runs every suite. A deleted file is seeded by the files whose text
+// still names it (its graph edges are gone with it). gate-b.mjs reads the packs, and the set-up scripts their run lines
+// name, from this list.
 // Reads files only: no server, no database, no model call (US$0). Checks: product/tools/check-select-suites.sh.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
@@ -409,16 +411,26 @@ const changed = readFileSync(0, "utf8").split("\n").map((l) => l.trim()).filter(
 if (process.argv.includes("--packs")) {   // D2: the acceptance and test files that are, or read, a changed file
   if (graph().failed) { console.error("select-suites --packs: the file list (git ls-files) could not be read"); process.exit(2); }
   const via = new Map(), todo = [];
-  // Only files under prototype/ (pick()'s own scope): records, product/tools/ and workflows are read by no pack.
-  for (const f of changed) if (f.startsWith(`${PR}/`) && !DOCS.test(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
+  // Files under prototype/ (pick()'s own scope) and official-sources/ (acceptance/lib/pack2.ts reads the IRCC manifest);
+  // records, product/tools/ and workflows are read by no pack.
+  const seedable = (f) => (f.startsWith(`${PR}/`) || f.startsWith(`${P}/official-sources/`)) && !DOCS.test(f);
+  for (const f of changed) if (seedable(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
   const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
-  const through = (x) => !(RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x || (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`));
+  const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
+  const appCode = (x) => (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`);
+  // A deleted file: the files that still name it (by file name, or by its stem in an import path) use it.
+  const named = (f) => { const b = basename(f), stem = b.replace(/\.[^.]+$/, ""), re = new RegExp(`(?<![A-Za-z0-9_.-])${esc(b)}(?![A-Za-z0-9_-])|/${esc(stem)}(?:\\.js)?["']`);
+    let files = []; try { files = execSync(`git ls-files -c -- "${PR}"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 256 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return new Map(); }
+    return new Map(files.filter((x) => re.test(read(x))).map((x) => [x, "name"])); };
   while (todo.length) {
     const y = todo.shift();
-    for (const [x, how] of usersOf(y)) {
+    const users = existsSync(join(ROOT, y)) ? usersOf(y) : named(y);
+    for (const [x, how] of users) {
       if (via.has(x) || (RUNNERS.has(x) && how === "folder")) continue;
+      // Through API and web code only by imports: a file that names an endpoint's module or lists its folder is no read.
+      if (appCode(y) && how !== "import") continue;
       via.set(x, y);
-      if (through(x)) todo.push(x);
+      if (!stop(x)) todo.push(x);
     }
   }
   for (const x of via.keys()) if (x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`)) console.log(`${x}\t${chain(x)}`);

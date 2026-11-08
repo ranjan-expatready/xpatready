@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -196,6 +196,12 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
   ok("D2: a changed pack file adds its capability (C9.7-b.test.ts → C9.7), and nothing else", [...t1.keys()].join() === "C9.7" && t1.get("C9.7").files.join() === "C9.7-b.test.ts", [...t1]);
   const t2 = touchedPacks(new Map([[`${top}/acceptance/lib/setup_vv_m3.ts`, "x.ts ← setup_vv_m3.ts"]]), files, read, top);
   ok("D2: a set-up script a pack's run line names (the M3 helpers' setup_vv_m3.ts) adds that pack's capability", [...t2.keys()].join() === "C9.8" && t2.get("C9.8").why === "x.ts ← setup_vv_m3.ts", [...t2]);
+  const t3 = touchedPacks(new Map([[`${top}/acceptance/C9.7-b.test.ts`, "C9.7-b.test.ts"], [`${top}/acceptance/lib/setup_vv_m3.ts`, "y ← setup_vv_m3.ts"]]), files, read, top, new Set([`${top}/acceptance/C9.7-b.test.ts`]));
+  ok("D2: a pack the PR changes is direct; a pack reached by reading is not", t3.get("C9.7").direct === true && t3.get("C9.8").direct === false, [...t3]);
+  const st = { C1: "Partial", C2: "Works", C3: "Partial", C4: "Not built", C5: "Works (retest)", C6: "Not built" };
+  const ds = diffSet(new Map([["C1", { files: ["C1.test.ts"], why: "C1.test.ts", direct: true }], ["C2", { files: ["C2.test.ts"], why: "x ← C2.test.ts", direct: false }],
+    ["C3", { files: ["C3.test.ts"], why: "x ← C3.test.ts", direct: false }], ["C4", { files: ["C4.test.ts"], why: "C4.test.ts", direct: true }], ["C5", { files: ["C5.test.ts"], why: "x", direct: false }], ["C6", { files: ["C6.test.ts"], why: "x", direct: false }]]), (id) => st[id]);
+  ok("D2 (review of #1337, Blocker 1): a changed pack runs if built; a pack that only reads a changed file runs only for a Works row; a Partial or Not built row reached by reading is listed, not run", ds.run.map((r) => r.id).join() === "C1,C2,C5" && ds.listed.length === 3 && ds.listed.some((l) => /^C3 \(Partial; reads a changed file\)/.test(l)) && ds.listed.some((l) => /^C4 \(Not built/.test(l)), ds);
   ok("D2: a reach that names no pack and no set-up adds nothing; README.md is never a pack", touchedPacks(new Map([[`${top}/tests/check_x.ts`, "y"]]), files, read, top).size === 0); }
 
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).
@@ -263,6 +269,10 @@ r = run(["--title", "x", "--bogus"]);
 ok("command: an unknown option exits 2", r.code === 2, r);
 { const b = run(["--title", "screens: x"], { RANGE: "0000000..1111111", GATE_B_NO_DIFF: "1" });
   ok("D2: GATE_B_NO_DIFF (works-set's runs) never reads the diff: no capability named, skipped", b.code === 0 && /skipped \(the PR names no capability/.test(b.out), b);
+  const g0 = run(["--title", "x", "--diff-groups", "5"], { RANGE: "" }), gq = run(["--title", "x", "--diff-groups", "5"], { RANGE: "0000000..1111111", QUEUE: "true" }), gn = run(["--title", "x", "--diff-groups", "5", "--kind", "records"], { RANGE: "0000000..1111111" });
+  ok("D2: --diff-groups prints only [] with no pull-request range, for a batch and for a change that is not code", [g0, gq, gn].every((x) => x.code === 0 && x.out.trim() === "[]"), [g0, gq, gn]);
+  const gb = run(["--title", "x", "--diff-groups", "5"], { RANGE: "0000000..1111111" });
+  ok("D2: --diff-groups with a range it cannot read is could-not-run (exit 2), never []", gb.code === 2 && !/^\[/.test(gb.out.trim()), gb);
   const q = run(["--title", "Merge queue: embarking #1 together"], { RANGE: "0000000..1111111", QUEUE: "true" });
   ok("D2: a merge-queue batch never reads the diff (its own part 1 for each PR only)", !/by diff/.test(q.out) && !/git diff/.test(q.out), q);
   const n = run(["--title", "screens: x"], { RANGE: "0000000..1111111" });
