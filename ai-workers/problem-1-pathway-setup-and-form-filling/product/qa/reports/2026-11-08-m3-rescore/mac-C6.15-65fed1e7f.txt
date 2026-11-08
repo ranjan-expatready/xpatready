@@ -1,0 +1,39 @@
+pack C6.15.test.ts on b9ee39760, copy qa_r615 :4470, start Sun Nov  8 04:26:00 IST 2026
+NOTICE:  database "xr_studio_qa_r615" does not exist, skipping
+web bundle does not match web/, contracts/, engine/ (missing, unstamped or built from other code; QA-181): rebuilding
+isolated qa_r615 on http://localhost:4470 (xr_studio_qa_r615), stops itself in 50 min
+reset 201
+load 201
+loaded Sun Nov  8 04:27:22 IST 2026
+C6.15 — Document substitute sets: any one of / all of; the combination picks its set; any valid member meets the line
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+PASS  C6.15-0 setup: two new library document types through the product's own path (named, then accepted by a second person) — {"letter":"letter_of_support_from_a_host_in_canada_sample_mw707623","hostBank":"host_s_bank_statements_sample_mw707623"}
+PASS  C6.15-1 fail (SA-1B-19 r3, r6): an alternative with no client wording is refused, naming it — "Add the client wording for Letter of support from a host in Canada (Sample mw707623)."
+PASS  C6.15-2 fail (SA-1B-19 r1): the first set must be named Standard — "The first set is named \"Standard\" (it is the one a line uses when it picks none)."
+PASS  C6.15-3 fail (SA-1B-152 r2): an "All of" set has no alternatives, so no "when acceptable" words — "In an \"All of\" set every member is needed, so Letter of support from a host in Canada (Sample mw707623) has no \"when acceptable\" words: take them out, or make the set \"Any one of\"."
+PASS  C6.15-4 fail: someone without the author duty cannot propose sets — 403
+PASS  C6.15-5 pass (SA-1B-19 r1-r3): the author proposes "Standard" (any one of: the proof, or the host's letter when acceptable) and "Sponsor-funded" (all of: the letter and the host's statements); it waits — "Proof of financial support · 2 substitute sets, for every combination"
+PASS  C6.15-5b pass (break F2, F4): the second person reads staff's words too, and the change's heading says what it does in words — {"staff":"A host in Canada covers the stay (Sample).","action":"Change"}
+PASS  C6.15-6 fail: the proposer cannot approve their own change — 403
+PASS  C6.15-7 pass: at approval the type's draft carries both sets — {"status":201,"draft":"DRAFT|2"}
+PASS  C6.15-8 pass: the library shows the sets with members named, the standard first, the alternative's words — [{"name":"Standard","mode":"any_one","mode_words":"Any one of","members":[{"key":"proof_of_financial_support","name":"Proof of financial support","standard":true,"when_client":null,"when_staff":null},{"key":"letter_of_support_from_a_host_in_canada_sample_mw707
+PASS  C6.15-9 fail (SA-1B-20 r3): a line cannot pick a set its type does not have; the refusal lists its sets — "Proof of financial support has no set named \"Sponsor funded, typo\". Its sets: Standard, Sponsor-funded."
+PASS  C6.15-10 pass: the next release goes out with the sets — {"version":3,"why":""}
+PASS  C6.15-11 pass: the release carries the type's sets with members named, and the change is released — [{"mode":"any_one","name":"Standard","members":[{"key":"proof_of_financial_support","name":"Proof of financial support","when_staff":null,"when_client":null},{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of support from a host
+PASS  C6.15-12 pass (SA-1B-20 r1, SA-1B-19 r2): with no pick the line uses Standard: any one of, the proof first as the standard, then the letter with its words — {"name":"Standard","mode":"any_one","members":[{"key":"proof_of_financial_support","name":"Proof of financial support","when_staff":null,"when_client":null,"standard":true},{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of supp
+PASS  C6.15-13 fail: a file as a document outside the line's set is refused, naming the set's members; nothing is stored — {"status":400,"why":"That document is not in the set this line uses (Standard): send one of Proof of financial support, Letter of support from a host in Canada (Sample mw707623). Nothing was stored."}
+PASS  C6.15-14 pass: a file sent without saying which is the line's own type, the standard: the line is Received — {"status":201,"state":"received"}
+PASS  C6.15-15 pass (SA-1B-19 r1): any one of: the alternative alone (the host's letter) meets the line; the file is named as that member — {"state":"received","status":{"met":true,"got":[{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of support from a host in Canada (Sample mw707623)"}],"missing":[{"key":"proof_of_financial_support","name":"Proof of financial supp
+PASS  C6.15-16 fail: a case officer cannot change the set a line picks (the author's duty) — 403
+PASS  C6.15-17 pass (SA-1B-20 r1): the author makes Visitor visa's line pick "Sponsor-funded" on the draft — {"lineage":"proof_of_financial_support:each_applicant","set_name":"Sponsor-funded","version":2,"revision":"2026-11-07T22:57:24.207Z"}
+PASS  C6.15-18 pass: the next release goes out with the line's pick — {"version":4,"why":""}
+PASS  C6.15-19 pass (SA-1B-20 r4): a case pinned to the earlier release keeps its set (Standard) — "Standard"
+PASS  C6.15-20 pass (SA-1B-19 r1): a new case uses "Sponsor-funded": all of the letter and the host's statements — {"name":"Sponsor-funded","mode":"all_together","members":[{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of support from a host in Canada (Sample mw707623)","when_staff":null,"when_client":null,"standard":false},{"key":"host_s_
+PASS  C6.15-21 fail (SA-1B-19 r1): all of: one member alone does not meet the line; it stays Requested and says what is still to come — {"state":"requested","status":{"met":false,"got":[{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of support from a host in Canada (Sample mw707623)"}],"missing":[{"key":"host_s_bank_statements_sample_mw707623","name":"Host's ba
+PASS  C6.15-22 fail: Ready to file still names the line as not received — "[{\"filing\":\"b200e4a6-f561-4c0d-a9d6-95ac62f8e51d\",\"ready\":false,\"blocks\":[],\"warns\":[{\"code\":\"missing_facts\",\"item\":\"08329aa1-dbc2-4726-bb4c-c6903f1b5764\",\"subject\":\"7ca7a8ca-1e83-4094-95c8-255b41f144"
+PASS  C6.15-23 pass (SA-1B-19 r1): with every member's file the line is Received — {"state":"received","status":{"met":true,"got":[{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of support from a host in Canada (Sample mw707623)"},{"key":"host_s_bank_statements_sample_mw707623","name":"Host's bank statements 
+PASS  C6.15-25 pass (break F3): the member's uses name Visitor visa (it is used through the set) — "{\"key\":\"host_s_bank_statements_sample_mw707623\",\"label\":\"Host's bank statements (Sample mw707623)\",\"trail\":[\"Host's bank statements (Sample mw707623)\"],\"retired\":false,\"released\":true,\"uses\":[{\"kind\":"
+PASS  C6.15-26 pass (break F1): the passport sent on its own line also completes the all-of line: it says all received and is Received (never "all received" while Requested) — {"release":{"version":5,"why":""},"status":201,"state":"received","set":{"met":true,"got":[{"key":"letter_of_support_from_a_host_in_canada_sample_mw707623","name":"Letter of support from a host in Canada (Sample mw707623)"},{"key":"host_s_bank_statements_sampl
+PASS  C6.15-24 pass: the upload's history line names the member and the line it counts for — "Case officer uploaded Host's bank statements (Sample mw707623) (in the set for Proof of financial support) for the principal on case 29bfcaf9 (PDF, 62 bytes)"
+28/28 passed
+pack exit 0  end Sun Nov  8 04:27:25 IST 2026
