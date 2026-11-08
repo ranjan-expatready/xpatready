@@ -35,6 +35,8 @@ export type ReadinessInputs = {
   editionOf: (form: string, channel: string) => string | null;
   /** C7.7 (BR-9): the boxes the newest copy of a form leaves "To write by hand", in the copy's own words. Left out: none. */
   byHand?: (form: string, subject: string) => { copy: string; box: string; label: string; why: string; caption?: string | null }[];
+  /** B162: whether a copy for filing of the form is made for this person on the case's release. Left out: taken as made. */
+  hasCopy?: (form: string, subject: string) => boolean;
   /** Online sections entered before a fact changed (C7.3), per item. */
   enteredStale: Map<string, string[]>;
   barcode: (form: string) => boolean;
@@ -104,7 +106,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
         signerOwes: who.length && who.every((s) => s === "representative") ? "representative" : "client",
         // An accepted-until date is set only on an edition IRCC has replaced (P-151 (1)): it is superseded until then.
         edition: label ? { label, superseded: until !== null, acceptedUntil: until } : null,
-        enteredOutOfDate: x.enteredStale.get(f.id) ?? [], outOfDate: f.outOfDate ?? null, byHand: x.byHand?.(f.form, f.subject) ?? [] } satisfies FormItem;
+        enteredOutOfDate: x.enteredStale.get(f.id) ?? [], outOfDate: f.outOfDate ?? null, byHand: x.byHand?.(f.form, f.subject) ?? [], hasCopy: x.hasCopy?.(f.form, f.subject) ?? true } satisfies FormItem;
     });
     const documents: DocumentItem[] = x.documents.filter((d) => d.filing === filing).map((d) => {
       const st = lineState.get(`${d.subject}|${d.document_type}`);

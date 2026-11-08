@@ -171,6 +171,20 @@ r = filingReadiness(done({ forms: handForms([...types, { ...HAND[0], caption: HA
 ok("C7.7-18 BR-9 fail (breaker M3): two boxes of one question are two lines that read apart by the box's own caption; a caption equal to the label adds nothing", r.warns.length === 3 && r.warns[0].words.includes(`(the form's box "Visitor")`) && r.warns[1].words.includes(`(the form's box "Worker")`) && new Set(r.warns.map((w) => w.words)).size === 3 && !r.warns[2].words.includes("the form's box"), r.warns.map((w) => w.words));
 r = filingReadiness(done({ forms: [i5257({ channel: "ONLINE", byHand: HAND }), i5476({ byHand: [] })] }));
 ok("C7.7-18 BR-9 pass: an Online line's PDF copy is not for filing, so its by-hand boxes raise nothing; no box, no warning", r.ready && !r.warns.length, r.warns);
+// B162 (the tech lead's answer 3 on #1331): a form filed as a PDF (PDF upload or Paper) with no copy made for filing yet
+// keeps Ready to file refused in words: a CRITICAL warning (P-315: only the barcode form's own Validate is a hard stop),
+// owed by staff, naming the form and the person. A barcode form already waits for its validated copy (its block), an
+// Online line files no PDF, and a line not needed or waiting for an answer is not asked for a copy.
+r = filingReadiness(done({ forms: [i5257(), i5476({ hasCopy: false })] }));
+ok("B162 fail: IMM 5476 (a PDF upload) with no copy made: a CRITICAL \"no copy\" warning owed by staff, naming the form and the person; not ready, nothing blocks", !r.ready && !r.blocks.length && codes(r.warns).join() === "no_copy" && r.warns[0].severity === "critical" && r.warns[0].owes === "staff" && r.warns[0].item === "i-5476" && /IMM 5476 for Sample Client A/.test(r.warns[0].words) && /no copy/i.test(r.warns[0].words), r.warns);
+r = filingReadiness(done({ forms: [i5257(), i5476({ channel: "PAPER", signature: "PEN", signed: true, hasCopy: false })] }));
+ok("B162 fail: on Paper too, no copy made keeps Ready to file refused (CRITICAL \"no copy\")", !r.ready && codes(r.warns).join() === "no_copy", r.warns);
+r = filingReadiness(done({ forms: [i5257(), i5476({ hasCopy: true })] }));
+const rOnline = filingReadiness(done({ forms: [i5257(), i5476({ channel: "ONLINE", hasCopy: false })] }));
+const rBarcode = filingReadiness(done({ forms: [i5257({ hasCopy: false, validatedCurrent: false }), i5476()] }));
+ok("B162 pass: with its copy made the line is clear; an Online line without a copy raises nothing; a barcode form without a copy keeps only its own Validate block", r.ready && !r.warns.length && rOnline.ready && !rOnline.warns.length && codes(rBarcode.blocks).join() === "barcode_not_validated" && !codes(rBarcode.warns).includes("no_copy"), [r.warns, rOnline.warns, rBarcode.warns]);
+r = filingReadiness(done({ forms: [i5257(), i5476({ hasCopy: false })], passes: [pass(done({ forms: [i5257(), i5476({ hasCopy: false })] }), "no_copy", "The PDF was made and uploaded outside the product (Sample)")] }));
+ok("B162 pass: like every CRITICAL line, a permitted person passes it with a recorded reason (P-315), and the filing is ready", r.ready && !r.warns.length && r.passed.length === 1 && r.passed[0].code === "no_copy", r);
 const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
 r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
 ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);
