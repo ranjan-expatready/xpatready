@@ -15,9 +15,12 @@ import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { CLIENT_RECONFIRM } from "./background.ts";
 import { isAskedRelative, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
-import { Address, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { Address, byClientFor, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
-export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
+export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean;
+  /** C6.13 BR-3b: whether this person is the client who answers the questionnaire (set by the runtime; absent in pure
+   *  checks, where the principal is the client). After Make principal the client stays the same person. */
+  client?: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null /** C6.18 (P-244): a background answer (engine/runtime/background.ts), and one an officer recorded that the client has
  *  not re-confirmed yet; set by the case's reader (api/src/runtime.ts state). */
   background?: boolean; awaitsClient?: boolean;
@@ -80,8 +83,13 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
   // The client's re-confirmation of an officer's answer counts as the client's own answer (C6.18).
   if (a.channel !== "questionnaire" && a.channel !== CLIENT_RECONFIRM) return { confirmed: false, why: CONFIRM_WORDS.staff, fills, mark: "by_staff" };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (a fact the officer confirms from a document or record)`, fills, mark: "declared" };
-  if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own, fills, mark: "declared" };
-  const forAdult = (note?: string): Confirmation => ({ confirmed: false, why: `${who?.label ? byPrincipalFor(who.label) : CONFIRM_WORDS.by_principal}${note ? ` (${note})` : ""}`, fills, mark: "by_principal" });
+  // C6.13 BR-3b: the client's own answers, whatever role the client has now (the principal unless roles were swapped).
+  const own = who?.client ?? who?.role === "principal";
+  if (own || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own, fills, mark: "declared" };
+  // C6.13 (review, break M1): after a swap (`client` is set) the client answered for this adult, whoever the principal
+  // is; the mark stays "by_principal" (answered for the adult by the person who fills the questionnaire), the words say who.
+  const byClient = who?.client === false;
+  const forAdult = (note?: string): Confirmation => ({ confirmed: false, why: `${who?.label ? (byClient ? byClientFor : byPrincipalFor)(who.label) : byClient ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal}${note ? ` (${note})` : ""}`, fills, mark: "by_principal" });
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
     if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})`, fills, mark: "declared" };
