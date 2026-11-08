@@ -32,10 +32,12 @@
 //   already holds are skipped: setup_visitor_visa.ts and lib/setup_vv_m3.ts (also when the gate adds them for a pack on
 //   lib/m3.ts); nightly 42335507309 ran C6.9, C8.2 and C6.4 "fixture only" because of them. A pack's own other setup
 //   (C4.4's setup_c44_types.ts, which the checkpoint lacks) still runs after the load, and the line names it. A pack whose
-//   run uses no server (C6.5 --engine) loads nothing. Unset or "six" is the six, where a pack with setup steps stays on
+//   run uses no server (an engine-only run line; check-gate-b.mjs uses a fixture pack, C99.9) loads nothing. Unset or "six" is the six, where a pack with setup steps stays on
 //   its own fixture.
 //   GATE_B_DATA_OF="C4.8=checkpoint C1.1=six" (D5, P-416, 8 Nov): each named capability's packs run on that data and the
 //   rest on GATE_B_DATA, so one gate run pools packs on different data across its job slots (works-set.mjs --pool).
+//   GATE_B_ACCEPTANCE=<folder>: the packs' folder in place of studio/acceptance (check-gate-b.mjs only, for a fixture
+//   pack whose run truly uses no server; #1369 gave C6.5, the old example, its server run).
 //   GATE_B_RESULTS=<file>: one JSON line per pack run ({id, file, data, where, load, ok, why, infra}) for a caller.
 //   BY DIFF (D2, P-416, founder 8 Nov; #1251 merged a red C7.3 step because its title did not name C7.3): on a pull
 //   request (RANGE set, not a batch) the capabilities the change touches are tested too, from the suites' reference
@@ -193,7 +195,10 @@ export function blockers(cl, bugs) {
     if ((GATING.has(b.severity) || b.severity === "unknown") && b.caps.some((c) => covers(c, id)) && !cl.fixes.has(b.id)) out.push({ cap: id, bug: b.id, severity: b.severity });
   return out;
 }
-export const packsOf = (id, dir = join(S, "acceptance")) =>
+/** The packs' folder: studio/acceptance, or GATE_B_ACCEPTANCE (check-gate-b.mjs only: a folder holding a fixture pack
+ *  whose run truly uses no server, so the gate's no-server rules are proved without a real pack, #1369). */
+const ACC_DIR = () => (process.env.GATE_B_ACCEPTANCE ? resolve(process.env.GATE_B_ACCEPTANCE) : join(S, "acceptance"));
+export const packsOf = (id, dir = ACC_DIR()) =>
   existsSync(dir) ? readdirSync(dir).filter((f) => f === `${id}.test.ts` || (f.startsWith(`${id}-`) && f.endsWith(".test.ts"))).sort() : [];
 
 /** A pack's documented run, from its header: the isolated.sh line and the tsx lines that follow it (continuations
@@ -323,7 +328,7 @@ export const whereOf = (plan, data = "six") => placeOf(plan, data).where;
 /** The NOT TESTED lines (B131) for the named capabilities and the packs that will run: a capability with no pack to
  *  run, and a pack whose run loads no demo data (no server, or "fixture only") on `data`. A pack whose run line cannot
  *  be read is a refusal already (runPack), not counted here. `read` gives a pack file's text. */
-export function notTested(caps, runs, data, read = (f) => readFileSync(join(S, "acceptance", f), "utf8")) {
+export function notTested(caps, runs, data, read = (f) => readFileSync(join(ACC_DIR(), f), "utf8")) {
   const out = [], dataOfId = typeof data === "function" ? data : () => data;   // one data, or each capability's own (D5)
   for (const id of caps) if (!runs.some((r) => r.id === id)) out.push(`NOT TESTED: ${id} has no acceptance pack`);
   for (const r of runs) {
@@ -380,7 +385,7 @@ const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(
  *  the six (Demo › Reset to the six first); a pack whose run line builds its own data runs on its documented blank copy,
  *  "fixture only". With GATE_B_DATA=checkpoint every pack runs alone on the checkpoint (B125). Returns { log, why, infra }: why is null when it passed; infra when the gate could not run it. */
 async function runPack(id, file, wanted, slot) {
-  const plan = runPlan(file, readFileSync(join(S, "acceptance", file), "utf8"));
+  const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8"));
   if (plan.error) return { log: [], why: `${file}: ${plan.error}` };
   const data = dataFor(id), { steps, load, where } = placeOf(plan, data), log = [];
   // Only the steps that will run (a setup skipped on the checkpoint is not needed; review m2).
@@ -472,7 +477,7 @@ async function runPackRecorded(id, file, wanted, slot) {
   const r = await runPack(id, file, wanted, slot);
   if (process.env.GATE_B_RESULTS) {
     let where = null, load = null, data = null;
-    try { data = dataFor(id); const plan = runPlan(file, readFileSync(join(S, "acceptance", file), "utf8")); if (!plan.error) ({ where, load } = placeOf(plan, data)); } catch { /* the why says it */ }
+    try { data = dataFor(id); const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8")); if (!plan.error) ({ where, load } = placeOf(plan, data)); } catch { /* the why says it */ }
     appendFileSync(process.env.GATE_B_RESULTS, JSON.stringify({ id, file, data, where, load, ok: !r.why, why: r.why ?? null, infra: Boolean(r.infra) }) + "\n");
   }
   return r;
@@ -572,7 +577,7 @@ async function main(argv) {
   if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) {   // what the gate will run, in this GATE_B_DATA (B125: on the checkpoint, the pack alone)
-    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")), x = p.error ? null : placeOf(p, dataFor(r.id)); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
+    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(ACC_DIR(), r.f), "utf8")), x = p.error ? null : placeOf(p, dataFor(r.id)); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
     return 0;
   }
   let infra = false;

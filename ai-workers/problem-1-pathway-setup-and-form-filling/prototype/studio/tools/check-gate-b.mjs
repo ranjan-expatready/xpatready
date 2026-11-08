@@ -2,7 +2,7 @@
 // gate-b.mjs both ways (P-214): what a PR names and claims Works, the open bugs that stop it, the skips, the step
 // lists, and that every acceptance pack's documented run can be read. Runs no pack and no server, US$0.
 //   node studio/tools/check-gate-b.mjs
-import { readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
+/** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
+const NO_SERVER = { id: "C99.9", file: "C99.9.test.ts", text: "// Fixture pack (check-gate-b.mjs only): its documented run uses no server.\n//   tsx studio/acceptance/C99.9.test.ts --engine\nconsole.log(\"fixture\");\n" };
 let pass = 0, fail = 0;
 const ok = (name, c, detail) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail)}` : ""}`); };
 // Rows in BUGS.md's own shape (copied from the file on 4 Nov), so the cases stay true when the real rows close.
@@ -169,8 +171,12 @@ ok("a pack with setup steps is labelled \"fixture only\"; a pack alone runs on t
   }
   { const p = P_("C4.4.test.ts"), cp = placeOf(p, "checkpoint");   // review B125 Major: the checkpoint lacks C4.4's own setup
     ok("B125: C4.4 on the checkpoint keeps its own setup (setup_c44_types.ts, not in the checkpoint) after the load, and says so", cp.load === "checkpoint" && cp.steps.map((s) => s.script).join() === "studio/tests/runtime/setup_c44_types.ts,studio/acceptance/C4.4.test.ts" && cp.where === "on the checkpoint, after its own setup setup_c44_types.ts", cp); }
-  { const p = P_("C6.5.test.ts"), cp = placeOf(p, "checkpoint");   // review B125 m3: --engine uses no server
-    ok("B125: a pack whose run uses no server (C6.5 --engine) loads nothing on the checkpoint and says so", cp.load === null && cp.where === "on no demo data (its run uses no server)" && cp.steps.length === 1, cp); }
+  // review B125 m3: a pack whose run uses no server. C6.5 was the example until #1369 gave it a server run (its
+  // isolated.sh line, approved by the tech lead); a fixture pack (NO_SERVER below) keeps what this proves.
+  { const p = runPlan(NO_SERVER.file, NO_SERVER.text), cp = placeOf(p, "checkpoint");
+    ok("B125: a pack whose run uses no server (a fixture pack, --engine) loads nothing on the checkpoint and says so", cp.load === null && cp.where === "on no demo data (its run uses no server)" && cp.steps.length === 1, cp); }
+  { const p = P_("C6.5.test.ts"), cp = placeOf(p, "checkpoint");
+    ok("B125 (#1369): C6.5 now has a server run: on the checkpoint it loads the checkpoint and runs its pack there", cp.load === "checkpoint" && cp.where === "on the checkpoint", cp); }
   ok("B125: only the setups the checkpoint holds are skipped (setup_visitor_visa, setup_vv_m3)", [...IN_CHECKPOINT].sort().join() === "studio/acceptance/lib/setup_vv_m3.ts,studio/tests/runtime/setup_visitor_visa.ts");
   ok("B125: on the six, a pack alone still loads the six and runs alone", placeOf(alone, "six").load === "six" && whereOf(alone, "six") === "on the six" && placeOf(alone, "six").steps === alone.steps);
   let refused = ""; try { dataOf({ GATE_B_DATA: "checkpont" }); } catch (e) { refused = e.message; }
@@ -234,7 +240,7 @@ ok("command: off CI, packs need GATE_B_PORT (exit 2, nothing started)", r.status
 r = run(["--title", "runtime: C11.12"], { GATE_B_SKIP_PACKS: "C11.12-runtime.test.ts" });
 ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the regression set's held packs)", r.code === 0 && /packs: C11\.12\.test\.ts$/m.test(r.out) && /held, not run: C11\.12-runtime\.test\.ts/.test(r.out), r);
 // B131 (founder 7 Nov ~15:20 IST, P-405; re-test 42357755876 on main 9dc77d1ac, data=checkpoint): C3.16 and C11.5 printed
-// "packs: none for the named capabilities" then "Gate B: passed.", and C6.5 "on no demo data (its run uses no server):
+// "packs: none for the named capabilities" then "Gate B: passed.", and C6.5 (then engine-only; since #1369 the fixture pack C99.9) "on no demo data (its run uses no server):
 // exit 0", three green jobs that tested nothing on the checkpoint. A capability that ran no test on the data asked for is
 // "NOT TESTED": on a pull request a warning (exit 0, never blocked); in a re-test run (nightly.yml: workflow_dispatch or
 // schedule) exit 3 with "NOT TESTED: …" as the first line. A pack that runs on the asked data is unchanged.
@@ -251,12 +257,13 @@ ok("command: GATE_B_SKIP_PACKS leaves a held pack out by name and says so (the r
     r = run(["--title", "C11.5"], { ...CP, GITHUB_EVENT_NAME: ev });
     ok(`B131: no pack in a re-test run (${ev}): exit 3 (not 0, 1 or 2), first line "NOT TESTED: C11.5 has no acceptance pack"`, r.code === 3 && first(r) === "NOT TESTED: C11.5 has no acceptance pack" && !/^Gate B: passed\.$/m.test(r.out), r);
   }
-  r = run(["--title", "C6.5"], { ...RETEST, ...CP });
-  ok("B131: a no-server pack (C6.5 --engine) in a re-test on the checkpoint: exit 3, \"NOT TESTED on the checkpoint: C6.5 …no demo data…\" first", r.code === 3 && /^NOT TESTED on the checkpoint: C6\.5 C6\.5\.test\.ts runs on no demo data \(its run uses no server\)$/.test(first(r)), r);
+  const NS = { GATE_B_ACCEPTANCE: (() => { const d = join(T, "acc-no-server"); mkdirSync(d, { recursive: true }); writeFileSync(join(d, NO_SERVER.file), NO_SERVER.text); return d; })() };
+  r = run(["--title", NO_SERVER.id], { ...RETEST, ...CP, ...NS });
+  ok("B131: a no-server pack (a fixture pack, --engine) in a re-test on the checkpoint: exit 3, \"NOT TESTED on the checkpoint: C99.9 …no demo data…\" first", r.code === 3 && /^NOT TESTED on the checkpoint: C99\.9 C99\.9\.test\.ts runs on no demo data \(its run uses no server\)$/.test(first(r)), r);
   r = run(["--title", "C7.5"], { ...RETEST, GATE_B_DATA: "six" });
   ok("B131: a fixture-only pack (C7.5 on the six) in a re-test: exit 3, \"NOT TESTED on the six: C7.5 … fixture only\" first", r.code === 3 && /^NOT TESTED on the six: C7\.5 C7\.5\.test\.ts runs fixture only\b/.test(first(r)), r);
-  r = run(["--title", "C6.5"], { ...PR, ...CP });
-  ok("B131: the same no-server pack on a pull request: exit 0 with the NOT TESTED line and the warning", r.code === 0 && /^NOT TESTED on the checkpoint: C6\.5 /m.test(r.out) && /^::warning title=Gate B NOT TESTED::/m.test(r.out), r);
+  r = run(["--title", NO_SERVER.id], { ...PR, ...CP, ...NS });
+  ok("B131: the same no-server pack on a pull request: exit 0 with the NOT TESTED line and the warning", r.code === 0 && /^NOT TESTED on the checkpoint: C99\.9 /m.test(r.out) && /^::warning title=Gate B NOT TESTED::/m.test(r.out), r);
   const a = run(["--title", "C6.9"], { ...RETEST, ...CP }), b = run(["--title", "C6.9"], CP);
   ok("B131: a normal pack on the checkpoint in a re-test is unchanged: exit 0, \"Gate B: passed.\", no NOT TESTED line, the same output as before", a.code === 0 && /^Gate B: passed\.$/m.test(a.out) && !/NOT TESTED|::warning/.test(a.out) && a.out === b.out, [a, b]);
   r = run(["--title", "C6.9 C11.5"], { ...RETEST, ...CP });
