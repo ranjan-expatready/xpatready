@@ -30,7 +30,7 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   // #C10.2 phase 1 (Lead 34 ruling 2, Lead 33's 09:44 IST ruling): one person's IMM 5257 is on Paper with a reason
   // (P-380 Q3) and waits for its validated copy, which blocks Ready to file (P-315); it is split out of the family's
   // group and the others are recorded together in one action (C8.2, BR-11), each Ready to file before that recording.
-  const paperPerson: string = JSON.parse(readFileSync(new URL("../samples/finished-story.json", import.meta.url), "utf8")).paper_line.person;
+  const paperLine: { person: string; form: string } = JSON.parse(readFileSync(new URL("../samples/finished-story.json", import.meta.url), "utf8")).paper_line, paperPerson = paperLine.person;
   const paperSubject = ((p as unknown as { people?: { subject: string; label: string }[] } | null)?.people ?? []).find((x) => x.label === paperPerson)?.subject ?? "";
   const paperFiling = p?.filings.find((f) => f.applicants.some((a) => a.subject === paperSubject));
   const recordedFilings = (p?.filings ?? []).filter((f) => f !== paperFiling);
@@ -46,14 +46,18 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   const onl = (p?.items ?? []).filter((i) => i.subject === P && i.kind === "form" && i.channel === "ONLINE");
   const sheet = onl[0] ? (await call("GET", `/runtime/items/${onl[0].id}/answer-sheet`, undefined, OFFICER)).body : null;
   const hand = (p?.items ?? []).filter((i) => i.subject === P && i.kind === "form" && i.signature === "HAND_SCANNED");
-  ok("C10.2-6 pass (row 14): the principal's filing mixes Online (IMM 5257, every answer-sheet section entered) and PDF upload (IMM 5476 printed, signed and its scan uploaded; the other PDFs filled)",
-    onl[0]?.form === "IMM 5257" && (sheet?.sections ?? []).length > 0 && sheet.sections.every((x: { entered: unknown }) => !!x.entered) && hand.length === 1 && ["ready", "done"].includes(hand[0].state)
-    && Number(sql(`select count(*) from form_instance where case_id='${fam?.id}' and subject_id='${P}' and status='GENERATED' and form_number in ('IMM 5257 SCH1','IMM 5645')`) ?? 0) >= 2);
+  // Lead 33 (09:44 IST, P-319): the lines are read from the release's own lines (by channel and signature), never by
+  // form number: the principal's other PDF-upload lines each have a copy filled from the confirmed facts.
+  const pdfs = [...new Set((p?.items ?? []).filter((i) => i.subject === P && i.kind === "form" && i.channel === "PDF_UPLOAD" && i.signature !== "HAND_SCANNED").map((i) => i.form ?? ""))];
+  const filled = pdfs.filter((form) => Number(sql(`select count(*) from form_instance where case_id='${fam?.id}' and subject_id='${P}' and status='GENERATED' and form_number='${form.replace(/'/g, "''")}'`) ?? 0) > 0);
+  ok("C10.2-6 pass (row 14): the principal's filing mixes Online (every answer-sheet section entered) and PDF upload (the hand-signed form printed, signed and its scan uploaded; the other PDFs filled)",
+    onl.length === 1 && (sheet?.sections ?? []).length > 0 && sheet.sections.every((x: { entered: unknown }) => !!x.entered) && hand.length === 1 && ["ready", "done"].includes(hand[0].state)
+    && pdfs.length > 0 && filled.length === pdfs.length, { online: onl.map((i) => i.form), hand: hand.map((i) => i.form), pdfs, filled });
   if (onl[0]?.state !== "done") console.log(`PENDING  C10.2-6b pass: the Online IMM 5257 reads Done — waits on QA-165 (1): its sheet still waits on ${(sheet?.sections ?? []).reduce((n: number, x: { waiting: unknown[] }) => n + x.waiting.length, 0)} facts the case holds as No, rows or "none apply" (and the visit contact release 2 never asks)`);
   // #C10.2 phase 1 (Lead 34 on 6c): the line reads the copy this case files: the Paper IMM 5257's copy, not release 1's.
-  const paperCopy = sql(`select id from form_instance where case_id='${fam?.id}' and subject_id='${paperSubject}' and form_number='IMM 5257' and status='GENERATED' and config_release_id=(select config_release_id from pack_work_pin where case_id='${fam?.id}' order by revision desc limit 1) order by created_at desc limit 1`) || null;
+  const paperCopy = sql(`select id from form_instance where case_id='${fam?.id}' and subject_id='${paperSubject}' and form_number='${paperLine.form}' and status='GENERATED' and config_release_id=(select config_release_id from pack_work_pin where case_id='${fam?.id}' order by revision desc limit 1) order by created_at desc limit 1`) || null;
   ok("C10.2-6c pass (C11.6, P-380 Q3): the Paper IMM 5257 carries its written reason and its copy is made on release 2",
-    !!paperCopy && (sql(`select channel || '|' || coalesce(channel_reason, '') from filing_item where case_id='${fam?.id}' and subject_id='${paperSubject}' and item_key='IMM 5257' and active`) ?? "").startsWith("PAPER|Sample"), paperCopy);
+    !!paperCopy && (sql(`select channel || '|' || coalesce(channel_reason, '') from filing_item where case_id='${fam?.id}' and subject_id='${paperSubject}' and item_key='${paperLine.form}' and active`) ?? "").startsWith("PAPER|Sample"), paperCopy);
   const validatedPaper = paperCopy ? Number(sql(`select count(*) from validated_copy where form_instance_id='${paperCopy}'`) ?? 0) : 0;
   if (validatedPaper) ok("C10.2-6d pass (row 12): the Paper IMM 5257's copy validated in Adobe and read back", true);
   else console.log(`PENDING  C10.2-6d pass: the Paper IMM 5257's copy validated in Adobe and read back — 16 of its 46 mandatory boxes are empty today, so Validate would refuse it (QA-165, #1318); a person validates it on the Mac (QA-285), never simulated (P-46, P-171)`);
