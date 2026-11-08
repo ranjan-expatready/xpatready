@@ -5,7 +5,7 @@ import { closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFi
 import { randomBytes } from "node:crypto";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { EXPERIMENT_CAP_USD, OVERRIDE_TTL_MS, PRICE_PER_MTOK, WAVE1_CAP_USD, WAVE1_START } from "./policy.ts";
+import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MODELS, OVERRIDE_TTL_MS, PRICE_PER_MTOK, WAVE1_CAP_USD, WAVE1_START } from "./policy.ts";
 
 export class BudgetExceeded extends Error {}
 /** Break n1 (N6): the short ledger lock is held by another process past the wait; a moment later it is free again. */
@@ -29,6 +29,22 @@ export function costUsd(model: string, inputTokens: number, outputTokens: number
   if (!p) throw new BudgetExceeded(`no price recorded for ${model}`);
   return (inputTokens * p.input + outputTokens * p.output) / 1_000_000;
 }
+
+/** A run card (P-110, P-295): the usual and the worst cost of one kind of paid run, stated before it starts and before
+ *  the founder's Go. Token counts are the card's estimate until a finished run measures them; the price is this ledger's
+ *  own (costUsd). Worst = every attempt the policy allows (MAX_ATTEMPTS) at the worst token counts; rounded up to cents. */
+export type RunCard = { kind: string; model: string; attempts: number; usual: { input: number; output: number }; worst: { input: number; output: number }; basis: string };
+export function runCardUsd(card: RunCard, units = 1): { usual_usd: number; worst_usd: number } {
+  const up = (n: number) => Math.ceil(n * 100 - 1e-9) / 100;
+  return { usual_usd: up(units * costUsd(card.model, card.usual.input, card.usual.output)), worst_usd: up(units * card.attempts * costUsd(card.model, card.worst.input, card.worst.output)) };
+}
+/** C6.5 part 3 (FQ-10): one letter of invitation read by AI vision (studio api/src/case-documents.ts). Not measured yet. */
+export const LETTER_READ_CARD: RunCard = {
+  kind: "document_read_letter", model: MODELS[0], attempts: MAX_ATTEMPTS,
+  usual: { input: 3_400, output: 500 },
+  worst: { input: 5 * 2_500 + 2_000, output: 2_000 },
+  basis: "Estimate, not measured: usual = a one-page letter (about 1,600 image and 300 text tokens, 1,500 of instructions and the fact list) answered in about 500 tokens; worst = five pages (the reader's page cap) at 2,500 tokens each plus 2,000 of instructions, answered in up to 2,000 tokens, on every allowed attempt.",
+};
 
 type Entry =
   | { type: "reserve"; id: string; run_id: string; attempt: number; worst_usd: number; caller?: string; override_id?: string; at: string }
