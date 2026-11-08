@@ -66,7 +66,9 @@ export type FormItem = {
   copyStale?: boolean; enteredOutOfDate?: string[];
   /** C7.7 (BR-9): the boxes its newest copy leaves "To write by hand" (the copy's own list: the copy, the box, its label,
    *  why). The copy is part of each line's key (review M1), so a pass written for one copy never covers the next. */
-  byHand?: { copy: string; box: string; label: string; why: string }[];
+  byHand?: { copy: string; box: string; label: string; why: string;
+    /** Breaker M3: the box's own caption on the form ("Visitor", "Yes"), so two boxes of one question read apart. */
+    caption?: string | null }[];
 };
 export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
@@ -169,7 +171,7 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // copy is not for filing, so it raises none.
     // Review M1: the key holds the copy and the box, so a new copy's box needs its own pass. Review m2: the words say the
     // box is still to be written; the reason follows in brackets when there is one.
-    if (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") for (const b of f.byHand ?? []) { const why = (b.why ?? "").trim().replace(/[.\s]+$/, ""); warn({ code: "hand_write", ...at, part: `${b.copy}|${b.box}`, owes: "staff", words: `${ofWho(f)}: "${b.label}" is still to be written by hand on the form before filing${why ? ` (${why})` : ""}.` }); }
+    if (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") for (const b of f.byHand ?? []) { const why = (b.why ?? "").trim().replace(/[.\s]+$/, ""); warn({ code: "hand_write", ...at, part: `${b.copy}|${b.box}`, owes: "staff", words: `${ofWho(f)}: "${b.label}"${b.caption && b.caption.trim() && b.caption.trim() !== b.label ? ` (the form's box "${b.caption.trim()}")` : ""} is still to be written by hand on the form before filing${why ? ` (${why})` : ""}.` }); }
     if (f.channel === "ONLINE") for (const sec of f.enteredOutOfDate ?? []) warn({ code: "entered_out_of_date", ...at, part: sec, owes: "staff", words: `${ofWho(f)}: "${sec}" was entered in the portal before a fact changed. Enter it again.` });
   }
   for (const c of x.openChecks ?? []) critical({ code: "open_check", subject: c.subject, part: c.fact, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });

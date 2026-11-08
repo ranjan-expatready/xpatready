@@ -164,6 +164,11 @@ r = filingReadiness(done({ forms: handForms(copy2), passes: [pass(done({ forms: 
 ok("C7.7-18 BR-9 fail (review M1): a pass written for a box on one copy never covers the same box on the next copy", !r.ready && r.warns.length === 1 && r.warns[0].code === "hand_write" && r.passed.length === 0, r.warns);
 r = filingReadiness(done({ forms: [i5257(), i5476({ channel: "PAPER", signature: "PEN", signed: true, byHand: HAND.slice(1) })] }));
 ok("C7.7-18 BR-9 fail (review m6): on Paper a box still to write by hand warns too, with its reason in brackets", codes(r.warns).join() === "hand_write" && /\(Not in the case's answers\)\.$/.test(r.warns[0].words), r.warns);
+// Breaker M3: two boxes of one question (the application type's "Visitor" and "Worker") read apart by the form's own
+// caption; a caption equal to the label, or none, adds nothing.
+const types = ["Visitor", "Worker"].map((cap) => ({ copy: "copy-1", box: `form1.AppType.${cap}`, label: "The type of temporary residence application", why: "", caption: cap }));
+r = filingReadiness(done({ forms: handForms([...types, { ...HAND[0], caption: HAND[0].label }]) }));
+ok("C7.7-18 BR-9 fail (breaker M3): two boxes of one question are two lines that read apart by the box's own caption; a caption equal to the label adds nothing", r.warns.length === 3 && r.warns[0].words.includes(`(the form's box "Visitor")`) && r.warns[1].words.includes(`(the form's box "Worker")`) && new Set(r.warns.map((w) => w.words)).size === 3 && !r.warns[2].words.includes("the form's box"), r.warns.map((w) => w.words));
 r = filingReadiness(done({ forms: [i5257({ channel: "ONLINE", byHand: HAND }), i5476({ byHand: [] })] }));
 ok("C7.7-18 BR-9 pass: an Online line's PDF copy is not for filing, so its by-hand boxes raise nothing; no box, no warning", r.ready && !r.warns.length, r.warns);
 const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
