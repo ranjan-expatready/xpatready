@@ -53,9 +53,10 @@ try {
   const stages = ((done.body?.story as unknown as { stages?: Stage[] } | undefined)?.stages ?? []), st = (k: string) => stages.find((x) => x.key === k);
   const famId = execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", "select id from runtime_case where reference = 'SAMPLE-VV-FAMILY-1'"], { encoding: "utf8" }).trim();
   const view = (await (await fetch(`http://localhost:${PORT}/api/runtime/cases/${famId}/questionnaire?mode=agent`, { headers: { "x-actor": "user-O" } })).json()) as { sections: { questions: { answer: { awaits_client?: boolean } | null; rows: { answer: { awaits_client?: boolean } | null }[] }[] }[] };
-  // Review R2-M1: the number of answers the result says the client re-confirmed equals the re-confirmations recorded.
+  // Review R2-M1, R3-M1: the number the result says the client re-confirmed equals the re-confirmations recorded after the
+  // move to release 2 (the configured checkpoint's own, on release 1, came before it).
   const claimed = Number((st("facts")?.shows ?? "").match(/the (\d+) background answers? among the officer's/)?.[1] ?? 0);
-  const reconfirmedInData = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact'`);
+  const reconfirmedInData = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact' and at > (select max(at) from audit_event where action = 'moved_release')`);
   const awaiting = view.sections.flatMap((x) => x.questions).flatMap((q) => [q.answer, ...q.rows.map((r) => r.answer)]).filter((a) => a?.awaits_client).length;
   ok("C10.2 (break M1): the facts stage claims no reason the answer route never takes; staff answers for another adult are re-confirmed by the client", !/with a reason|each marked/.test(st("facts")?.shows ?? "x") && claimed > 0 && claimed === reconfirmedInData && awaiting === 0, { awaiting, claimed, reconfirmedInData, shows: st("facts")?.shows.slice(0, 160) });
   const unrecorded = n("select count(*) from filing f join runtime_case k on k.id = f.case_id where k.reference = 'SAMPLE-VV-FAMILY-1' and f.active and upper(f.status) <> 'SUBMITTED'");

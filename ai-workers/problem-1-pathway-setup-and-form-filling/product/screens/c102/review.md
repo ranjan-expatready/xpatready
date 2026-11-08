@@ -112,3 +112,22 @@ Fix list:
 1. **R2-M1:** `api/src/finished-story.ts:157` must claim only the re-confirmations that happened (the count of marked answers, not "each"), and `tests/check_c102_finished_story_refusals.ts:57` must assert that the claim matches the data.
 
 R2-m1, R2-m2 and m5 are Shoulds. Everything else in the diff is met.
+
+## Round 3: diff-only re-review of 6b8c6c484 (fixes `a1a3c575f..100934863`, then a merge of origin/main)
+**How it was run:** from a `git archive` extract of 6b8c6c484, on :4435, started only after `test-copies.sh` listed fewer than 4 copies, and started and stopped in one command. I ran `tests/check_c102_finished_story_refusals.ts` there: **19/20, exit 1** (details below).
+**The merge:** it touches none of the PR's files. It does change routes the story drives (B135: `case-filings.ts`, `case-prepare.ts`, `runtime.ts`, a migration). On the merged head the story still loads to done: 3 filings recorded, the Paper filing split out, record Partly. Every line of the check except the one below passed.
+
+**Round 2 findings**
+* **R2-M1, product half: closed.** At `api/src/finished-story.ts:159` the words are now true: "99 by the case officer for another adult), the 6 background answers among the officer's marked for the client to re-confirm, re-confirmed by the client (C6.18)". The 6 is the story's own count of answers that came back `awaits_client` and were re-confirmed.
+* **R2-M1, test half: not met. The new check line is red.** `tests/check_c102_finished_story_refusals.ts:57-60` compares the claimed count with **every** `re-confirmed` audit line in the workspace (`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact'`). That count also includes the configured checkpoint's own C6.18 re-confirmations of the same family case on release 1 (`api/src/sample-case.ts:139-144`).
+  * Measured: `{"claimed":6,"reconfirmedInData":42,"awaiting":0}`, then FAIL, then exit 1.
+  * Fix: count only the story's re-confirmations. For example, take only the lines after the family case's move to release 2 (its release-update audit line or pin revision 2), or the 42 minus the checkpoint's own (the load log gives that count). Then re-run the check to exit 0.
+* **R2-m1, closed.** `DEMO-section-proposal.md` and `build-notes.md` now match the story: the Paper line, the split, three filings recorded, and no on-behalf reason.
+* **R2-m2, closed.** At `finished-story.ts:176` the Paper stage reads Done once `validated.current` is true on its item.
+* **m5, closed (by code reading).** At `demo-finished-story.tsx:76` the pill sits in a focusable span with a Radix tooltip and an `aria-label`, so the tooltip opens on keyboard focus too. Not re-walked in a browser.
+
+**Verdict for 6b8c6c484: Block**
+Fix list:
+1. **R3-M1 (Major; the PR's own refusal check is red, STANDARDS §7):** `tests/check_c102_finished_story_refusals.ts:57-60` must count only the re-confirmations the story itself made, and the check must exit 0.
+
+The product code at this head is otherwise met. Once that line is fixed, a diff-only look at the check is enough.
