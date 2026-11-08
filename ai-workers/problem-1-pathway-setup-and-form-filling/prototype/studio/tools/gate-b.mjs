@@ -285,7 +285,8 @@ export const dataFor = (id, env = process.env) => dataMap(env).get(id) ?? dataOf
 /** The run's mode (B131): "retest" for nightly.yml's re-test (GITHUB_EVENT_NAME workflow_dispatch or schedule), where
  *  NOT TESTED is exit 3; "pr" anywhere else (pull_request, a merge-queue run, off CI), where it is a warning. */
 export const RETEST_EVENTS = new Set(["workflow_dispatch", "schedule"]);
-export const modeOf = (env = process.env) => (RETEST_EVENTS.has(env.GITHUB_EVENT_NAME ?? "") ? "retest" : "pr");
+// GATE_B_NOT_TESTED=warn (D5): works-set's pooled runs give their own verdict, so NOT TESTED stays a warning there.
+export const modeOf = (env = process.env) => (env.GATE_B_NOT_TESTED !== "warn" && RETEST_EVENTS.has(env.GITHUB_EVENT_NAME ?? "") ? "retest" : "pr");
 /** The setups Demo › Load the configured checkpoint already holds (it builds vv.single and its release 2, which they
  *  build on an empty workspace): skipped on the checkpoint (B125). Any other setup is the pack's own and still runs. */
 export const IN_CHECKPOINT = new Set(["studio/tests/runtime/setup_visitor_visa.ts", "studio/acceptance/lib/setup_vv_m3.ts"]);

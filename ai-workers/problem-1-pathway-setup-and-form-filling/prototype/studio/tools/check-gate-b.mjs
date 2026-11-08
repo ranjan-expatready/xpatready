@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, packVerdict, part1 } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, packVerdict, part1 } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 let pass = 0, fail = 0;
@@ -185,6 +185,7 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
   const read = (f) => (f === "C9.8.test.ts" ? "// zsh studio/tools/isolated.sh c98 4601 start && tsx studio/acceptance/C9.8.test.ts 4601 xr_studio_c98\nimport { x } from \"./lib/m3.ts\";" : "// zsh studio/tools/isolated.sh c99 4602 start && tsx studio/acceptance/C9.9.test.ts 4602 xr_studio_c99");
   const runs = [{ id: "C9.8", f: "C9.8.test.ts" }, { id: "C9.9", f: "C9.9.test.ts" }];
   const per = notTested(["C9.8", "C9.9"], runs, (id) => (id === "C9.8" ? "checkpoint" : "six"), read), one = notTested(["C9.8", "C9.9"], runs, "six", read);
+  ok("D5 (review minor 5): GATE_B_NOT_TESTED=warn keeps a scheduled run's NOT TESTED a warning (works-set's pool); unset, a schedule is a re-test", modeOf({ GITHUB_EVENT_NAME: "schedule", GATE_B_NOT_TESTED: "warn" }) === "pr" && modeOf({ GITHUB_EVENT_NAME: "schedule" }) === "retest" && modeOf({ GITHUB_EVENT_NAME: "pull_request" }) === "pr");
   ok("D5: NOT TESTED reads each capability's own data (an M3-helper pack is tested on the checkpoint, fixture only on the six)", per.length === 0 && one.length === 1 && /NOT TESTED on the six: C9\.8/.test(one[0]), { per, one }); }
 
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).

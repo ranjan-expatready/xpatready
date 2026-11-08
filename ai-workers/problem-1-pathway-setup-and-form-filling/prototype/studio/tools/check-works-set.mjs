@@ -188,6 +188,7 @@ ok("D5: --milestone all protects every Works row, whatever its milestone", prote
 ok("D5: a row's evidence names its pack data, newest first (data=, GATE_B_DATA:, \"<pack>.test.ts on the …\")", verdictData("qa: Works. nightly run 1 (`data=checkpoint`) \"C6.15.test.ts on the checkpoint\". Before: on the six") === "checkpoint" && verdictData("`C4.7.test.ts` on the six: exit 0; on the checkpoint 17/17 too") === "six" && verdictData("head x, `GATE_B_DATA: checkpoint`") === "checkpoint" && verdictData("walked on the configured checkpoint by screens") === null && verdictData("") === null);
 { const md = "| # | Step | Capability | M | Status | Tested on | Evidence / note |\n|---|---|---|---|---|---|---|\n| C6.15 | 6 R | x | M3 | Works | a | nightly run 9 (`data=checkpoint`). Before: data=six |\n| C4.7 | 4 Q | x | M2 | Works | a | `C4.7.test.ts` on the six: 17/17 |\n| C1.1 | 1 S | x | M2 | Works | a | walked |";
   const dat = dataRows("- C4.7 checkpoint: counts there (P-322)\n").data;
+  ok("D5 (review Major 1): C5.4's own words \"27/27 on the configured checkpoint\" are its data; an M3 row with no data named counts on the checkpoint (P-322)", verdictData("acceptance/C5.4.test.ts on GitHub: exit 0, 27/27 on the configured checkpoint (run 41805556293) and 27/27 on the six") === "checkpoint" && verdictData("`C1.6.test.ts` on the configured six") === "six" && scoringData("C7.3", md + "\n| C7.3 | 7 F | x | M3 | Partial | a | walked |") === "checkpoint" && scoringData("C7.9", md + "\n| C7.9 | 7 F | x | M3 | Partial | a | 9/9 on the six |") === "six");
   ok("D5: scoring data is qa's REGRESSION-DATA line, else the row's evidence, else the six", scoringData("C6.15", md) === "checkpoint" && scoringData("C4.7", md) === "six" && scoringData("C4.7", md, dat) === "checkpoint" && scoringData("C1.1", md) === "six" && scoringData("C9.9", md) === "six");
   ok("D5: the Evidence column is found by the header, also when a column moves", rows("| # | Evidence / note | Step | Capability | M | Status |\n|---|---|---|---|---|---|\n| C2.2 | data=checkpoint | x | y | M2 | Works |")[0].note === "data=checkpoint"); }
 { const items = Array.from({ length: 12 }, (_, i) => ({ id: `C1.${i + 1}`, packs: 1, weight: i < 4 ? 2 : 1 })), g = groupsOf(items, 5), w = g.map((x) => x.weight);
@@ -196,13 +197,15 @@ ok("D5: a row's evidence names its pack data, newest first (data=, GATE_B_DATA:,
 { const L = (file, ok_, load = "six", infra = false) => [file, { file, ok: ok_, load, where: load ? `on the ${load}` : "fixture only", why: ok_ ? null : "exit 1", infra }];
   const v = poolVerdicts(new Map([["C1.1", ["C1.1.test.ts"]], ["C2.2", ["C2.2.test.ts", "C2.2-b.test.ts"]], ["C3.3", ["C3.3.test.ts"]], ["C4.4", ["C4.4.test.ts"]], ["C5.5", ["C5.5.test.ts"]]]),
     new Map([L("C1.1.test.ts", true), L("C2.2.test.ts", true), L("C3.3.test.ts", false), L("C4.4.test.ts", true, null), L("C5.5.test.ts", false, "six", true)]));
+  const crash = poolVerdicts(new Map([["C1.1", ["C1.1.test.ts"]]]), new Map(), 2), quietRed = poolVerdicts(new Map([["C1.1", ["C1.1.test.ts"]]]), new Map(), 1);
+  ok("D5 (review minor 4): a gate that ran no pack and exited 2 is could-not-run, never red twice; exit 1 with no result is still red", crash.get("C1.1").v === "infra" && quietRed.get("C1.1").v === "red", [...crash, ...quietRed]);
   ok("D5: pooled verdicts: green; a pack that did not report is red; red; fixture only is NOT TESTED, not red; the gate's own failure is could-not-run", v.get("C1.1").v === "green" && v.get("C2.2").v === "red" && /C2\.2-b\.test\.ts did not report/.test(v.get("C2.2").why[0]) && v.get("C3.3").v === "red" && v.get("C4.4").v === "untested" && v.get("C5.5").v === "infra", [...v]); }
 const T2 = mkdtempSync(join(tmpdir(), "works-pool-check-")), PH = join(T2, "none.md"); writeFileSync(PH, "# no holds\n");
 // --pool with a stand-in gate that writes GATE_B_RESULTS: one pooled run, each row's data passed, a red row retried alone.
 const pfake = join(T2, "pool-gate.mjs"), pstate = join(T2, "pool-calls");
 writeFileSync(pfake, `import { appendFileSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 const n = existsSync(${JSON.stringify(pstate)}) ? readFileSync(${JSON.stringify(pstate)}, "utf8").split("\\n").filter(Boolean).length : 0;
-appendFileSync(${JSON.stringify(pstate)}, process.argv[3] + " | " + process.env.GATE_B_DATA_OF + " | jobs " + process.env.GATE_B_JOBS + " | skip " + process.env.GATE_B_SKIP_PACKS + "\\n");
+appendFileSync(${JSON.stringify(pstate)}, process.argv[3] + " | " + process.env.GATE_B_DATA_OF + " | jobs " + process.env.GATE_B_JOBS + " | " + process.env.GATE_B_NAME + ":" + process.env.GATE_B_PORT + " " + process.env.GATE_B_NOT_TESTED + " | skip " + process.env.GATE_B_SKIP_PACKS + "\\n");
 const red = (process.env.FAKE_RED ?? "").split(",")[n] ?? "", skip = (process.env.GATE_B_SKIP_PACKS ?? "").split(",");
 for (const id of process.argv[3].split(" ")) for (const f of (process.env["FAKE_" + id.replace(".", "_")] ?? id + ".test.ts").split(",")) if (!skip.includes(f))
   appendFileSync(process.env.GATE_B_RESULTS, JSON.stringify({ id, file: f, data: "six", where: "on the six", load: "six", ok: !red.split(" ").includes(id), why: red.split(" ").includes(id) ? "exit 1" : null, infra: false }) + "\\n");
@@ -215,6 +218,8 @@ let pr = pool("C11.13,C3.2,C6.9");
 ok("D5 --pool: one gate run for every row, each on its scoring data (REGRESSION-DATA, the evidence, the six), on 3 job slots", pr.code === 0 && pr.calls.length === 1 && pr.calls[0].startsWith("C11.13 C3.2 C6.9 | C11.13=six C3.2=checkpoint C6.9=checkpoint | jobs 3"), pr);
 pr = pool("C11.13,C3.2,C6.9", { FAKE_RED: "C3.2," });
 ok("D5 --pool: a red row is retried alone, pooled again; green on the retry says flaky, exit 0", pr.code === 0 && pr.calls.length === 2 && pr.calls[1].startsWith("C3.2 | C3.2=checkpoint") && /C3\.2 \(checkpoint\): green on the retry — flaky/.test(pr.out), pr);
+ok("D5 (review minors 3, 5): each attempt has its own copy names and ports, and NOT TESTED stays a warning in the pool", / \| pool0s:4590 warn \| /.test(pr.calls[0]) && / \| pool1s:4600 warn \| /.test(pr.calls[1]), pr.calls);
+ok("D5: --pool says where each row's data came from", /C11\.13 on the six \(the default\), C3\.2 on the checkpoint \(REGRESSION-DATA\.md\), C6\.9 on the checkpoint \(its evidence\)/.test(pr.out), pr.out.slice(0, 400));
 pr = pool("C11.13,C3.2", { FAKE_RED: "C11.13,C11.13" });
 ok("D5 --pool: red twice is exit 1 and names the row", pr.code === 1 && /C11\.13 \(six\): red twice/.test(pr.out), pr);
 pr = pool("C11.12", { FAKE_C11_12: "C11.12.test.ts" });

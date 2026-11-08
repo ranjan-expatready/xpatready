@@ -26,8 +26,11 @@
 //   --milestone all (D5, P-416, founder 8 Nov): every Works row, whatever its milestone (M2, M3, T, Parked, Team…).
 //   Scoring data (D5): --groups and --pool run each row on the data its verdict counts on: qa's REGRESSION-DATA.md line
 //            when there is one, else the newest data the row's own evidence names for its pack run (the first
-//            "data=six|checkpoint", "GATE_B_DATA: six|checkpoint" or "<pack>.test.ts on the six|checkpoint" in its
-//            Evidence cell, which is written newest first: C6.15 "nightly run … `data=checkpoint`"), else the six.
+//            "data=six|checkpoint", "GATE_B_DATA: six|checkpoint", "<pack>.test.ts on the [configured] six|checkpoint" or
+//            "<n>/<n> on the [configured] six|checkpoint" in its Evidence cell, which is written newest first: C6.15
+//            "nightly run … `data=checkpoint`", C5.4 "27/27 on the configured checkpoint"), else the checkpoint for an M3
+//            row (P-322: later steps count on the configured checkpoint; qa scores every M3 row there), else the six.
+//            --groups and --pool say where each row's data came from.
 //   --groups <n>  (with --list) prints the rows with a pack as at most n JSON groups for a job matrix, balanced by packs
 //            (a checkpoint pack counts double: its load is about 76 s, run 42422840997), each {caps, packs, weight}.
 //   --pool <C…,C…>  runs those rows' packs in ONE gate-b run on its job slots (GATE_B_JOBS, default 3), each row on its
@@ -41,7 +44,7 @@
 // Exit: 0 listed / green (on the first run or the retry) · 1 red twice · 2 could not run.
 import { readFileSync, appendFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { packsOf } from "./gate-b.mjs";
@@ -83,12 +86,18 @@ const inMilestone = (m, want) => want.toLowerCase() === "all" || m.split(/[\s,;/
 /** The data a row's own evidence says its pack verdict ran on (D5): the first data named for a pack run in the Evidence
  *  cell (newest first), as gate B and the re-test print it; null when it names none. */
 export function verdictData(note = "") {
-  const m = note.replace(/[*`]/g, "").match(/\.test\.ts\s+on the (six|checkpoint)\b|\bdata=(six|checkpoint)\b|GATE_?B_?DATA:?\s*(six|checkpoint)\b/i);
-  return m ? (m[1] ?? m[2] ?? m[3]).toLowerCase() : null;
+  const m = note.replace(/[*`]/g, "").match(/\.test\.ts\s+on the (?:configured )?(six|checkpoint)\b|\bdata=(six|checkpoint)\b|GATE_?B_?DATA:?\s*(six|checkpoint)\b|\b\d+\/\d+\s+on the (?:configured )?(six|checkpoint)\b/i);
+  return m ? (m[1] ?? m[2] ?? m[3] ?? m[4]).toLowerCase() : null;
 }
-/** Each row's scoring data (D5): qa's REGRESSION-DATA.md line, else its evidence's (verdictData), else the six. */
-export const scoringData = (id, md, dataFile = new Map()) =>
-  dataFile.get(id)?.data ?? rows(md).filter((r) => r.id === id).map((r) => verdictData(r.note)).find(Boolean) ?? "six";
+/** Each row's scoring data and where it came from (D5): qa's REGRESSION-DATA.md line, else its evidence's
+ *  (verdictData), else the checkpoint for an M3 row (P-322), else the six. */
+export function scoringOf(id, md, dataFile = new Map()) {
+  if (dataFile.get(id)) return { data: dataFile.get(id).data, from: "REGRESSION-DATA.md" };
+  const own = rows(md).filter((r) => r.id === id), ev = own.map((r) => verdictData(r.note)).find(Boolean);
+  if (ev) return { data: ev, from: "its evidence" };
+  return own.some((r) => inMilestone(r.milestone, "M3")) ? { data: "checkpoint", from: "an M3 row (P-322)" } : { data: "six", from: "the default" };
+}
+export const scoringData = (id, md, dataFile = new Map()) => scoringOf(id, md, dataFile).data;
 /** At most n groups of rows for a job matrix, balanced by weight (a checkpoint pack 2, a six pack 1; heaviest first). */
 export function groupsOf(items, n) {
   const k = Math.max(1, Math.min(n, items.length)), out = Array.from({ length: k }, () => ({ caps: [], packs: 0, weight: 0 }));
@@ -187,22 +196,34 @@ function once(id, skip, data) {
 }
 /** One pooled gate-b run (D5): the rows' packs on its job slots, each row on its data, held packs skipped; the results
  *  come back from GATE_B_RESULTS as { file → line }. */
-function pooledOnce(ids, dataOf, skip) {
+async function pooledOnce(ids, dataOf, skip, attempt) {
   const gate = process.env.WORKS_SET_GATE ?? join(HERE, "gate-b.mjs");
   const T = mkdtempSync(join(tmpdir(), "works-pool-")), res = join(T, "results.jsonl");
+  // Each attempt its own copy names and ports (a killed first attempt may leave its copies up until their ttl), and
+  // NOT TESTED as a warning: the pool gives the verdict (fixture only counts as run, as in --run).
   const env = { ...process.env, QUEUE: "", PR_TITLE: "", PR_BODY: "", KIND: "code", GATE_B_JOBS: process.env.GATE_B_JOBS ?? "3", GATE_B_SKIP_PACKS: skip.join(","),
-    GATE_B_DATA: "six", GATE_B_DATA_OF: ids.map((id) => `${id}=${dataOf(id)}`).join(" "), GATE_B_RESULTS: res };
-  // 40 minutes a pooled attempt: a hang is red, never a pass.
-  const r = spawnSync(process.execPath, [gate, "--title", ids.join(" "), "--kind", "code"], { cwd: S, env, encoding: "utf8", maxBuffer: 64 << 20, timeout: 2_400_000, killSignal: "SIGKILL" });
+    GATE_B_DATA: "six", GATE_B_DATA_OF: ids.map((id) => `${id}=${dataOf(id)}`).join(" "), GATE_B_RESULTS: res, GATE_B_NOT_TESTED: "warn",
+    GATE_B_NAME: `pool${attempt}s`, GATE_B_PORT: String(4590 + 10 * attempt) };
+  // 35 minutes a pooled attempt (two attempts and the set-up fit the job's 90): a hang is red, never a pass; the whole
+  // process group is stopped (gate B, its packs and their servers), not only gate B.
+  const r = await new Promise((done) => {
+    const c = spawn(process.execPath, [gate, "--title", ids.join(" "), "--kind", "code"], { cwd: S, env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    let out = "", stopped = false;
+    const t = setTimeout(() => { stopped = true; try { process.kill(-c.pid, "SIGKILL"); } catch { c.kill("SIGKILL"); } }, Number(process.env.WORKS_POOL_MS ?? 2_100_000));
+    c.stdout.on("data", (d) => (out += d)); c.stderr.on("data", (d) => (out += d));
+    c.on("error", (e) => { clearTimeout(t); done({ status: 127, out: out + e.message }); });
+    c.on("close", (code) => { clearTimeout(t); done({ status: stopped ? 124 : code ?? 1, out: out + (stopped ? "\n(stopped: the pooled attempt ran out of time)" : "") }); });
+  });
   const lines = new Map();
   if (existsSync(res)) for (const l of readFileSync(res, "utf8").split("\n").filter(Boolean)) { try { const j = JSON.parse(l); lines.set(j.file, j); } catch { /* a torn line reports as not run */ } }
   rmSync(T, { recursive: true, force: true });
-  return { status: r.status ?? (r.error ? 124 : 1), out: (r.stdout ?? "") + (r.stderr ?? "") + (r.error ? `\n(stopped: ${r.error.message})` : ""), lines };
+  return { ...r, lines };
 }
 /** Each row's verdict from one pooled run: "green", "untested" (every pack it ran loaded no demo data: fixture only or no
  *  server), "red" (a pack red, or missing: renamed, deleted or not reported), or "infra" (the gate could not run it). */
-export function poolVerdicts(expected, lines) {
-  const out = new Map();
+export function poolVerdicts(expected, lines, status = 1) {
+  const out = new Map(), crashed = lines.size === 0 && status !== 0 && status !== 1;   // the gate ran no pack at all
+  if (crashed) { for (const [id, files] of expected) out.set(id, { v: "infra", why: [`the gate ran no pack (exit ${status})`], where: files.map((f) => `${f} ?`) }); return out; }
   for (const [id, files] of expected) {
     const got = files.map((f) => lines.get(f));
     const why = files.map((f, i) => (!got[i] ? `${f} did not report (missing at the head, renamed, or the gate ran no pack)` : got[i].ok ? null : `${f}: ${got[i].why}`)).filter(Boolean);
@@ -219,7 +240,7 @@ export const notRun = (expected, out, data = "six") => expected.filter((f) => !n
 /** Where each pack ran, as gate B says it: "on the six", "on the checkpoint" or "fixture only". */
 const ranWhere = (files, out) => files.map((f) => `${f} ${new RegExp(`^\\s*${esc(f)} (on the six|on the checkpoint|fixture only)`, "m").exec(out)?.[1] ?? "?"}`);
 
-function main(argv) {
+async function main(argv) {
   // In --json mode stdout is only the array (CI writes it to GITHUB_OUTPUT): every other line goes to stderr (round 3 M1).
   const say = (s) => { (opt.json ? console.error : console.log)(s); if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n"); };
   const opt = { list: false, json: false, run: null, pool: null, groups: 0, milestone: "M2", file: null, held: null, data: null };
@@ -258,7 +279,7 @@ function main(argv) {
     return again.status === 2 && first.status === 2 ? 2 : 1;
   }
   const md = opt.file ? readFileSync(opt.file, "utf8") : atBase(CAPS);
-  const scoring = (id) => scoringData(id, md, dat.data);
+  const scoring = (id) => scoringData(id, md, dat.data), from = (id) => scoringOf(id, md, dat.data).from;
   if (opt.pool) {
     const ids = [...new Set(opt.pool.split(/[\s,]+/).filter(Boolean))];
     for (const id of ids) if (!/^C\d{1,2}\.\d{1,2}$/.test(id)) throw new Error(`not a capability id: "${id}" (want e.g. C11.13)`);
@@ -270,17 +291,17 @@ function main(argv) {
       for (const f of all.filter((f) => !live.includes(f))) heldOut.push(f);
     }
     const skip = ids.flatMap((id) => packs(id).filter((f) => !(expected.get(id) ?? []).includes(f)));
-    say(`**Pooled packs** (D5): ${[...expected.keys()].map((id) => `${id} on the ${scoring(id)}`).join(", ") || "none"}${heldOut.length ? `; held, not run: ${heldOut.join(", ")}` : ""}${noPack.length ? `; no pack on the base: ${noPack.join(", ")}` : ""}.`);
+    say(`**Pooled packs** (D5): ${[...expected.keys()].map((id) => `${id} on the ${scoring(id)} (${from(id)})`).join(", ") || "none"}${heldOut.length ? `; held, not run: ${heldOut.join(", ")}` : ""}${noPack.length ? `; no pack on the base: ${noPack.join(", ")}` : ""}.`);
     if (!expected.size) return noPack.length ? 2 : 0;
-    const first = pooledOnce([...expected.keys()], scoring, skip);
+    const first = await pooledOnce([...expected.keys()], scoring, skip, 0);
     process.stdout.write(first.out);
-    const verdict = poolVerdicts(expected, first.lines);
+    const verdict = poolVerdicts(expected, first.lines, first.status);
     const again = [...verdict].filter(([, x]) => x.v === "red" || x.v === "infra").map(([id]) => id);
     if (again.length) {
       say(`Red on the first run: ${again.map((id) => `${id} (${verdict.get(id).why.join("; ")})`).join(" · ")}; running them once more (a flaky pack is retried once).`);
-      const second = pooledOnce(again, scoring, skip);
+      const second = await pooledOnce(again, scoring, skip, 1);
       process.stdout.write(second.out);
-      const v2 = poolVerdicts(new Map(again.map((id) => [id, expected.get(id)])), second.lines);
+      const v2 = poolVerdicts(new Map(again.map((id) => [id, expected.get(id)])), second.lines, second.status);
       for (const id of again) { const x = v2.get(id); verdict.set(id, x.v === "green" || x.v === "untested" ? { ...x, flaky: true } : x); }
     }
     const by = (v) => [...verdict].filter(([, x]) => x.v === v);
@@ -301,7 +322,7 @@ function main(argv) {
   if (opt.groups) {
     const items = runs.map((r) => { const n = live(r).length; return { id: r.id, packs: n, weight: n * (scoring(r.id) === "checkpoint" ? 2 : 1) }; });
     console.log(JSON.stringify(groupsOf(items, opt.groups).map((g) => ({ caps: g.caps.join(","), packs: g.packs, weight: g.weight }))));
-    for (const r of runs) say(`  ${r.id} on the ${scoring(r.id)}: ${live(r).join(", ")}`);
+    for (const r of runs) say(`  ${r.id} on the ${scoring(r.id)} (${from(r.id)}): ${live(r).join(", ")}`);
     return 0;
   }
   if (opt.json) { console.log(JSON.stringify(runs.map((r) => r.id))); return 0; }
@@ -318,5 +339,5 @@ function main(argv) {
   return 0;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try { process.exit(main(process.argv.slice(2))); } catch (e) { console.error(`works-set could not run: ${e.message}`); process.exit(2); }
+  main(process.argv.slice(2)).then((c) => process.exit(c), (e) => { console.error(`works-set could not run: ${e.message}`); process.exit(2); });
 }

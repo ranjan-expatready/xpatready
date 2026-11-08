@@ -219,6 +219,9 @@ jobs:
         run: |
           if [ "$QUEUE" = true ]; then range=$(bash "$P/tools/pr-base.sh" queue)
           else pin=""; [ "$KATTEMPT" = "$GITHUB_RUN_ATTEMPT" ] && pin="$KBASE"; range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" $pin); fi || exit 1
+          # A re-run attempt (no pin) keeps kind's remembered suites (GREEN): run-suites.sh deals the parts after
+          # --skip-green, so dropping it would re-deal and the re-run part might not hold the suite that failed. Those
+          # suites were not run in attempt 1 either; the merge queue runs every suite on the batch's main.
           echo "RANGE=$range" >> "$GITHUB_ENV"; echo "tested: $range"
       - name: push guard (part 1 only; excluded paths, PDFs, secrets, personal names)
         if: matrix.shard == 1
@@ -461,14 +464,15 @@ jobs:
       # ---- P-371 (3): a green verdict, so a later run on the same head, base, title and body (ready again) reuses it.
       # Only green: a red head is always tested again.
       - name: remember the green verdict (pull requests only, never a batch)
-        if: success() && env.MODE != 'same' && needs.kind.outputs.queue != 'true' && needs.kind.outputs.mbase != ''
+        # Only when the parts tested kind's base (kind ran in this attempt): a re-run attempt tested today's main, not mbase.
+        if: success() && env.MODE != 'same' && needs.kind.outputs.queue != 'true' && needs.kind.outputs.mbase != '' && needs.kind.outputs.battempt == format('{0}', github.run_attempt)
         env: { MBASE: "${{ needs.kind.outputs.mbase }}", MHEAD: "${{ needs.kind.outputs.mhead }}", CTX: "${{ needs.kind.outputs.ctx }}" }
         run: |
           mkdir -p memory
           printf '#ci-memory 1\n#base %s\n#head %s\n#ctx %s\n#run %s %s\n#verdict success\n' "$MBASE" "$MHEAD" "$CTX" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "memory/verdict-a$GITHUB_RUN_ATTEMPT.tsv"
           echo "green verdict remembered for ${MHEAD:0:12} on ${MBASE:0:12}"
       - name: upload the verdict
-        if: success() && env.MODE != 'same' && needs.kind.outputs.queue != 'true' && needs.kind.outputs.mbase != ''
+        if: success() && env.MODE != 'same' && needs.kind.outputs.queue != 'true' && needs.kind.outputs.mbase != '' && needs.kind.outputs.battempt == format('{0}', github.run_attempt)
         uses: actions/upload-artifact@v4
         with:
           name: memory-verdict-a${{ github.run_attempt }}
