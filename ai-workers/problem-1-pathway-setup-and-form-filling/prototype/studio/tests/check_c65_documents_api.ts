@@ -191,9 +191,9 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const [byClient, byOther, byNone] = [await getFile(sp3, CLIENT), await getFile(sp3, "user-S"), await getFile("00000000-0000-4000-8000-000000000000", "user-S")];
   ok("C6.5 C-M1 fail: a client cannot open it (403); another firm gets the same 404 words as an unknown id", byClient.status === 403 && byOther.status === 404 && byOther.body.toString() === byNone.body.toString(), [byClient.status, byOther.status, byNone.status]);
   // Challenge M3: "read by a person" names only identity documents about this person.
-  const funds = ((((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people ?? []).find((x: { subject: string }) => x.subject === S)?.lines ?? []) as { id: string; label: string }[]).find((x) => /financial|funds/i.test(x.label))?.id;
+  const funds = ((((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people ?? []).find((x: { subject: string }) => x.subject === P)?.lines ?? []) as { id: string; label: string }[]).find((x) => /financial|funds/i.test(x.label))?.id;
   if (funds) await upload(PORT, `/runtime/checklist-lines/${funds}/documents`, letterPdf(), "funds.pdf", OFFICER);
-  r = await fill(nameSec, S);
+  r = await fill(nameSec, P);
   ok("C6.5 C-M3 fail: proof of funds is not listed as an identity document a person reads", !!funds && r.status === 200 && !(r.body?.not_read ?? []).some((x: { document_name: string }) => /financial|funds/i.test(x.document_name)), { funds, not_read: r.body?.not_read });
   // m7 (P-134): a passport uploaded as a letter is never sent to AI.
   await upload(PORT, `/runtime/cases/${c.id}/documents`, passportPdf(doc), "not-a-letter.pdf", OFFICER, { subjectId: c.caseSubject, documentType: "letter_of_invitation" });
