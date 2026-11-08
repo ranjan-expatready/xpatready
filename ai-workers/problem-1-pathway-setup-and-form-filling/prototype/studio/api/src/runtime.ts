@@ -25,7 +25,7 @@ import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "
 import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
 import { pinChain } from "../../engine/runtime/release-update.ts";
-import { ASKED_RELATIONS, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
+import { ASKED_RELATIONS, cellAsked, isListRelation, listWords, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -133,7 +133,7 @@ export class Runtime {
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     if (!rel) return { who: who!, stored: subjectId };
     const read = (this.snapshotOf(c).field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}` && (!fact || e.fact === fact)));
-    if (!read) fail(fact ? "No form of this case's release asks this about that parent." : "No form of this case's release describes that relative.", HttpStatus.NOT_FOUND);
+    if (!read) fail(fact ? `No form of this case's release asks this about ${isListRelation(rel.relation) ? listWords(rel.relation).one : "that parent"}.` : "No form of this case's release describes that relative.", HttpStatus.NOT_FOUND);
     const found = (await this.relativesOf(c)).find((x) => x.key === subjectId);
     if (found || !create) return { who: who!, stored: found?.id ?? null };
     const stored = await this.db.$transaction(async (tx) => {
@@ -430,8 +430,20 @@ export class Runtime {
     // R5 and C3.16 BR-4: a filing fact, or a household or employer fact (the release's mark), is saved once on the case.
     const caseLevel = isFilingFact(fieldKey, place);
     if (caseLevel !== (who!.role === "case")) fail(caseLevel ? ONCE_WORDS[place!.scope === "household" || place!.scope === "organisation" ? place!.scope : "filing"] : "This is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
-    if (place!.repeats !== "per_row" && b.row) fail("This question has one answer, not rows.", HttpStatus.UNPROCESSABLE_ENTITY);
-    if (place!.repeats === "per_row" && !b.row) fail("Name the row this answer belongs to (add a row first).", HttpStatus.UNPROCESSABLE_ENTITY);
+    // B155: a list relative's answers (a brother or sister) are always in an entry of its group, named by the relation.
+    const listRel = relativeOf(subjectId), groupKey = listRel && isListRelation(listRel.relation) ? listRel.relation : place!.repeats === "per_row" ? place!.section_id : null;
+    if (!groupKey && b.row) fail("This question has one answer, not rows.", HttpStatus.UNPROCESSABLE_ENTITY);
+    if (groupKey && !b.row) fail("Name the row this answer belongs to (add a row first).", HttpStatus.UNPROCESSABLE_ENTITY);
+    // B155 (break m2 on #1367): an entry of a list relative that has a row on the form takes only what that row has a box for
+    // (IMM 5645 maps "accompanies" on its seventh row only): an answer nobody is asked for there is refused, never kept hidden.
+    if (listRel && isListRelation(listRel.relation) && b.row) {
+      const held = (await this.subjectFor(c, subjectId, false, fieldKey)).stored;
+      const live = held ? (await this.db.clientFactRecord.findMany({ where: { subjectId: held, groupKey: listRel.relation, supersededById: null, tombstone: false }, select: { rowKey: true, order: true } })).sort((x, y) => x.order - y.order || x.rowKey.localeCompare(y.rowKey)) : [];
+      const at = live.findIndex((x) => x.rowKey === b.row);
+      const boxes = (s.field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null; row?: number | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.person === `subject_${listRel.relation}` && typeof e.row === "number"));
+      const rowsOf = (f?: string) => new Set(boxes.filter((e) => !f || e.fact === f).map((e) => e.row!));
+      if (at >= 0 && rowsOf().has(at) && !rowsOf(fieldKey).has(at)) fail(`The form has no room for this answer in entry ${at + 1}: it is asked only in entry ${[...rowsOf(fieldKey)].sort((x, y) => x - y).map((r) => r + 1).join(", ")}.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });
     if (!def) fail(`The library has no version ${field!.item_version} of ${fieldKey}.`, HttpStatus.CONFLICT);
     const rowKey = b.row ?? null;
@@ -447,7 +459,7 @@ export class Runtime {
     try {
       await this.db.$transaction(async (tx) => {
         // The row stays live until this answer is saved: a removal at the same moment waits, or wins and this one is refused.
-        if (rowKey) { const live = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM client_fact_record WHERE row_key = ${rowKey}::uuid AND subject_id = ${stored}::uuid AND group_key = ${place!.section_id} AND superseded_by_id IS NULL AND NOT tombstone FOR SHARE`; if (!live.length) fail("No such row for this person.", HttpStatus.NOT_FOUND); }
+        if (rowKey) { const live = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM client_fact_record WHERE row_key = ${rowKey}::uuid AND subject_id = ${stored}::uuid AND group_key = ${groupKey} AND superseded_by_id IS NULL AND NOT tombstone FOR SHARE`; if (!live.length) fail("No such row for this person.", HttpStatus.NOT_FOUND); }
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: stored, canonicalFieldKey: fieldKey, rowKey, supersededById: null } });
         if ((current?.id ?? null) !== b.expectedId) conflict("Someone changed this answer after you opened it; the newer answer is shown. Check it and save again.", { current: current ? { id: current.id, value: current.valueJson, by: (current.sourceJson as { actor: string }).actor } : null });
         if (current) { const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: current.id, supersededById: null }, data: { supersededById: newId } }); if (n.count !== 1) conflict("Someone changed this answer at the same moment; refresh and save again."); }
@@ -462,8 +474,10 @@ export class Runtime {
     const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
+    // B155 (break m3 on #1367): an entry of a list with no row on the form fills no form field: it goes on an extra sheet.
+    const offForm = !!listRel && isListRelation(listRel.relation) && !!rowKey && q?.rows.find((x) => x.row === rowKey)?.fits === false;
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
-      message: `${fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved."}${recordedForClient ? " Marked Officer: the client re-confirms it before signing." : ""}` };
+      message: `${offForm ? "Saved. This entry has no row on the form: write it on an extra sheet." : fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved."}${recordedForClient ? " Marked Officer: the client re-confirms it before signing." : ""}` };
   }
 
   /** C6.18 (P-244): the client re-confirms one background answer their case officer recorded (by phone or in person),
@@ -505,25 +519,37 @@ export class Runtime {
    *  numbered one at a time (a transaction lock), and the database refuses two live rows in one place. */
   /** Who may write a repeating group of a person on this case: the group exists, belongs to that kind of subject, and
    *  the client writes it only when it holds a client field. */
-  private groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string) {
+  private async groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string, create = false): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
     if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY); // QA-293 review m3
+    const s = this.snapshotOf(c);
+    // B155: a list relative's group (`<person>/sibling`, group "sibling"): the release's forms read that relation, the
+    // client writes it when one of its facts is a client field, and it is kept on the relative's own subject (made on the
+    // first entry or "none apply", as a parent's is on the first answer).
+    const rel = relativeOf(subjectId);
+    if (rel) {
+      if (!isListRelation(rel.relation) || groupKey !== rel.relation) fail("That section has no repeating group.", HttpStatus.NOT_FOUND);
+      const { who, stored } = await this.subjectFor(c, subjectId, create);
+      const facts = new Set((s.field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}` && e.fact).map((e) => e.fact!)));
+      if (!isOfficer(actor) && ![...facts].some((f) => isClientField(s, f))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
+      return { who, stored };
+    }
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
-    const s = this.snapshotOf(c);
     const group = (s.placements as { fact: string; section_id: string; repeats: string }[]).filter((p) => p.section_id === groupKey && p.repeats === "per_row");
     if (!group.length) fail("That section has no repeating group.", HttpStatus.NOT_FOUND);
     const caseLevel = group.every((p) => p.fact.startsWith("case."));
     if (caseLevel !== (who!.role === "case")) fail(caseLevel ? "This group is asked once for the application, not for a person." : "This group is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
     if (!isOfficer(actor) && !group.some((p) => isClientField(s, p.fact))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
-    return who!;
+    return { who: who!, stored: subjectId };
   }
 
   async addRow(actor: Actor, caseId: string, subjectId: string, body: unknown) {
     const c = await this.reach(actor, caseId, "answer");
     const b = parse(NewRow, body);
-    this.groupFor(actor, c, subjectId, b.group);
+    const subject = (await this.groupFor(actor, c, subjectId, b.group, true)).stored!;
     const id = randomUUID();
     await this.db.$transaction(async (tx) => {
+      const subjectId = subject; // B155: a list relative's entries are kept on its own subject
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${b.group}`}))`;
       // "None apply" stands until someone says entries apply: an entry is never added beside it (never contradict silently).
       if ((await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey: b.group, supersededById: null } }))?.noneApply) refused("\"None apply\" is recorded for this group; change it to \"entries apply\" first, then add the entries.");
@@ -540,9 +566,10 @@ export class Runtime {
   async noneApply(actor: Actor, caseId: string, subjectId: string, groupKey: string, body: unknown) {
     const c = await this.reach(actor, caseId, "answer");
     const b = parse(NoneApply, body);
-    const who = this.groupFor(actor, c, subjectId, groupKey);
+    const { who, stored } = await this.groupFor(actor, c, subjectId, groupKey, b.noneApply);
     const id = randomUUID();
-    const changed = await this.db.$transaction(async (tx) => {
+    const changed = !stored ? false : await this.db.$transaction(async (tx) => {
+      const subjectId = stored; // B155: a list relative's "none apply" is kept on its own subject
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${groupKey}`}))`;
       const cur = await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey, supersededById: null } });
       // The answer already stands (even from an older view: break m5), or "entries apply" with nothing said before
@@ -555,7 +582,7 @@ export class Runtime {
       await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
       return true;
     });
-    if (changed) await this.audit.log(c.workspaceId, actor.id, "answered", "group", groupKey, `${actor.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")} on case ${short(caseId)}`);
+    if (changed) await this.audit.log(c.workspaceId, actor.id, "answered", "group", groupKey, `${actor.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")}${subjectId === who.subjectId ? "" : `'s ${groupKey.replace(/_/g, " ")}`} on case ${short(caseId)}`);
     const v = await this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr");
     return { saved: changed, group: v.sections.find((x) => x.subjectId === subjectId && x.section === groupKey)?.group ?? null };
   }
@@ -563,13 +590,16 @@ export class Runtime {
   /** Removing a row inserts a tombstone version of it; its answers stay stored and are no longer read (team rule). */
   async removeRow(actor: Actor, caseId: string, subjectId: string, rowKey: string) {
     const c = await this.reach(actor, caseId, "answer");
-    const cur = await this.db.clientFactRecord.findFirst({ where: { rowKey, subjectId, supersededById: null, tombstone: false } });
-    if (!cur || !c.participants.some((p) => p.subjectId === subjectId)) fail("No such row for this person.", HttpStatus.NOT_FOUND);
+    // B155: a list relative's entry is removed from its own subject (none stored yet: no such row).
+    const rel = relativeOf(subjectId);
+    const stored = rel ? (isListRelation(rel.relation) ? (await this.subjectFor(c, subjectId, false)).stored : null) : c.participants.some((p) => p.subjectId === subjectId) ? subjectId : null;
+    const cur = stored ? await this.db.clientFactRecord.findFirst({ where: { rowKey, subjectId: stored, supersededById: null, tombstone: false } }) : null;
+    if (!cur) fail("No such row for this person.", HttpStatus.NOT_FOUND);
     const id = randomUUID();
     await this.db.$transaction(async (tx) => {
       const n = await tx.clientFactRecord.updateMany({ where: { id: cur!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) conflict("Someone changed this row at the same moment; refresh and try again.");
-      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: cur!.groupKey, rowKey, order: cur!.order, tombstone: true, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId: cur!.subjectId, groupKey: cur!.groupKey, rowKey, order: cur!.order, tombstone: true, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
     });
     await this.audit.log(c.workspaceId, actor.id, "removed", "row", cur!.groupKey, `${actor.name} removed a row from ${cur!.groupKey} on case ${short(caseId)}`);
     return { row: rowKey, removed: true };
@@ -584,7 +614,12 @@ export class Runtime {
     // B128: a relative's section is confirmed on the relative's own subject (none yet: nothing stored to confirm).
     const storedId = (await this.subjectFor(c, b.subjectId, false)).stored ?? NOTHING_STORED;
     const s = this.snapshotOf(c);
-    const fields = new Set((s.placements as { fact: string; section_id: string }[]).filter((p) => p.section_id === section).map((p) => p.fact));
+    // B155: a list relative's section is its group (named by the relation): the facts the release's forms read about it.
+    const rel = relativeOf(b.subjectId), listOf = rel && isListRelation(rel.relation) && section === rel.relation ? rel.relation : null;
+    if (rel && isListRelation(rel.relation) && !listOf) fail(`No such section for ${listWords(rel.relation).list}: their section is "${rel.relation}".`, HttpStatus.NOT_FOUND);
+    const fields = new Set(listOf
+      ? (s.field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.person === `subject_${listOf}` && e.fact).map((e) => e.fact!))
+      : (s.placements as { fact: string; section_id: string }[]).filter((p) => p.section_id === section).map((p) => p.fact));
     if (!fields.size) fail("No such section in this case's release.", HttpStatus.NOT_FOUND);
     const seen = new Set(b.seen);
     const at = new Date();
@@ -593,8 +628,11 @@ export class Runtime {
     // never be seen on screen, so its stored answer is neither asked as seen nor confirmed: it never blocks the section.
     const { answers: now, rows: nowRows, groups: nowGroups } = await this.state(c);
     const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
-    const listed = new Set(caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections
-      .filter((x) => x.subjectId === b.subjectId && x.section === section).flatMap((x) => x.questions.map((q) => q.fact)));
+    const shownSections = caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections.filter((x) => x.subjectId === b.subjectId && x.section === section);
+    const listed = new Set(shownSections.flatMap((x) => x.questions.map((q) => q.fact)));
+    // B155 (break m2 on #1367): a list's entry shows only the cells it asks (cellAsked); an answer in a cell it does not show
+    // (left there when an earlier entry was removed) is never seen, so it neither blocks nor is confirmed.
+    const shownCells = listOf ? new Set(shownSections.flatMap((x) => { const g = x.questions.filter((q) => q.group); return g.flatMap((q) => q.rows.filter((_, i) => cellAsked(g, q, i)).map((r) => `${q.fact}|${r.row}`)); })) : null;
     const bg = this.backgroundOf(c);
     let waiting = 0;
     const confirmed = await this.db.$transaction(async (tx) => {
@@ -604,7 +642,7 @@ export class Runtime {
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: storedId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
       // C6.11 (review M1): a fact the firm record gives (the representative's part, "Uses a representative") shows the
       // firm's answer, never a stored one, so a stored one can never be seen: it neither blocks nor is confirmed.
-      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey) && !firmGives.has(a.canonicalFieldKey));
+      const current = stored.filter((a) => (a.rowKey === null || live.has(a.rowKey)) && listed.has(a.canonicalFieldKey) && !firmGives.has(a.canonicalFieldKey) && (!shownCells || a.rowKey === null || shownCells.has(`${a.canonicalFieldKey}|${a.rowKey}`)));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
       // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
       const entries = await tx.clientFactRecord.count({ where: { subjectId: storedId, groupKey: section, supersededById: null, tombstone: false } });
@@ -673,6 +711,10 @@ export class RuntimeController {
   @Put("cases/:id/answers/:subject/:relation/:field") relativeAnswer(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Param("field") f: string, @Body() b: unknown) { return this.r.putAnswer(actorOf(a), id, `${s}/${r}`, f, b); }
   @Put("cases/:id/groups/:subject/:group/none-apply") noneApply(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("group") g: string, @Body() b: unknown) { return this.r.noneApply(actorOf(a), id, s, g, b); }
   @Post("cases/:id/groups/:subject/rows") addRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.addRow(actorOf(a), id, s, b); }
+  /** B155: a list relative's group (`<person>/sibling`), its key written as two path parts. */
+  @Post("cases/:id/groups/:subject/:relation/rows") relativeAddRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Body() b: unknown) { return this.r.addRow(actorOf(a), id, `${s}/${r}`, b); }
+  @Delete("cases/:id/groups/:subject/:relation/rows/:row") relativeRemoveRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Param("row") x: string) { return this.r.removeRow(actorOf(a), id, `${s}/${r}`, x); }
+  @Put("cases/:id/groups/:subject/:relation/:group/none-apply") relativeNoneApply(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Param("group") g: string, @Body() b: unknown) { return this.r.noneApply(actorOf(a), id, `${s}/${r}`, g, b); }
   @Delete("cases/:id/groups/:subject/rows/:row") removeRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("row") r: string) { return this.r.removeRow(actorOf(a), id, s, r); }
   @Post("cases/:id/answers/:answer/reconfirm") reconfirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("answer") x: string, @Body() b: unknown) { return this.r.reconfirm(actorOf(a), id, x, b); }
   @Post("cases/:id/sections/:section/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("section") s: string, @Body() b: unknown) { return this.r.confirmSection(actorOf(a), id, s, b); }
