@@ -8,7 +8,7 @@
 //      fix's own words (a No beside a recorded detail is not ready, and says why), and each field IRCC's form marks
 //      mandatory that a copy would leave empty, as "left empty on the form" with why; "Ready" never over an empty one.
 //   R3 (config grounding, AGENTS rule 4) a detail is tied to a Yes/No only when the box's own step names it or its form
-//      field sits inside the box's block.
+//      field sits inside the Yes/No form field's block.
 //   tsx studio/tests/check_qa165_gate_follow_ups.ts
 import { caseView, type Answer, type Participant } from "../engine/runtime/case.ts";
 import { blocksLock, formCoverage, markNothingRecorded, readiness, type OnForm } from "../engine/runtime/forms.ts";
@@ -102,7 +102,7 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
 {
   const entries = [{ data_path: YESNO, fact: GATE, transform: STEP }, { data_path: NUMBOX, fact: NUM }, { data_path: "form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]", fact: "person.national_id_issue_date" }, { data_path: "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0]", fact: "person.passport_number" }];
   ok("C7.2 R3 pass: a detail the box's own step names is tied to it", /step names it/.test(followUpGround(entries[0], entries, NUM) ?? ""));
-  ok("C7.2 R3 pass: a detail whose form field sits inside the box's block (natID[0]) is tied to it", /inside the box's block form1\[0\]\.Page2\[0\]\.natID\[0\]/.test(followUpGround(entries[0], entries, "person.national_id_issue_date") ?? ""));
+  ok("C7.2 R3 pass: a detail whose form field sits inside the Yes/No form field's block (natID[0]) is tied to it", /inside the Yes\/No form field's block form1\[0\]\.Page2\[0\]\.natID\[0\]/.test(followUpGround(entries[0], entries, "person.national_id_issue_date") ?? ""));
   ok("C7.2 R3 fail: a fact elsewhere on the form (the passport number) is never tied to it", followUpGround(entries[0], entries, "person.passport_number") === null && followUpGround(entries[0], entries, "person.not_on_form") === null);
   const alias = { data_path: "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]", fact: "person.has_used_other_name", transform: "derived:any(person.other_family_name, person.other_given_names) recorded -> yes_no_code:Y/N" };
   ok("C7.2 R3 pass: both names in IMM 5257's other-name step are tied to it, and the person's own name is not", !!followUpGround(alias, [alias], "person.other_given_names") && !!followUpGround(alias, [alias], "person.other_family_name") && followUpGround(alias, [alias], "person.family_name") === null);

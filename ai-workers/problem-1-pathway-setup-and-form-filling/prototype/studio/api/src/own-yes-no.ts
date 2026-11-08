@@ -61,10 +61,10 @@ export type OwnYesNo = { dataPath: string; label: string; meaning: string; quest
  *  "…natID[0].q1[0].natIDIndicator[0]" → "…natID[0]", which holds natIDdocs[0]'s country, number and dates). */
 export function followUpGround(gate: { data_path: string; transform?: string | null }, entries: { data_path: string; fact?: string | null }[], fact: string): string | null {
   const step = /^derived:(.*?)->/.exec(gate.transform ?? "")?.[1] ?? "";
-  if (step.split(/[^\w.]+/).includes(fact)) return `the box's own step names it ("${gate.transform}")`;
+  if (step.split(/[^\w.]+/).includes(fact)) return `the Yes/No form field's own step names it ("${gate.transform}")`;
   const block = gate.data_path.split(".").slice(0, -2).join(".");
   const inside = entries.find((e) => e.fact === fact && block && e.data_path.startsWith(`${block}.`) && e.data_path !== gate.data_path);
-  return inside ? `its form field ${inside.data_path} is inside the box's block ${block}` : null;
+  return inside ? `its form field ${inside.data_path} is inside the Yes/No form field's block ${block}` : null;
 }
 /** QA-165: the question condition "show only when <gate> is Yes", as Questionnaires › the question's condition saves it. */
 export const yesGate = (gate: string) => ({ subjectKind: "PERSON", op: "eq", field: gate, value: true });

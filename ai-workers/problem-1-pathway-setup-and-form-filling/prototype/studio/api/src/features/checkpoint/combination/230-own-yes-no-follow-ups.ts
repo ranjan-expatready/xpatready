@@ -73,7 +73,7 @@ export default {
         // The form's own question, as its map quotes it (P-170), for the condition's words.
         const words = (box.quote ?? "").replace(/\s+\?$/, "?").trim() || y.question || y.label;
         for (const fact of y.followUps ?? []) {
-          if (!followUpGround(box, entries, fact)) { out.refused.push(`${fact}: ${setup.application} does not ask it after "${words}" (not in the box's step or block)`); continue; }
+          if (!followUpGround(box, entries, fact)) { out.refused.push(`${fact}: ${setup.application} does not ask it after "${words}" (not in that Yes/No form field's step or block)`); continue; }
           const p = await placementOf(db, workspaceId, fact);
           if (!p) { out.refused.push(`${fact}: not asked in the library, so it takes no condition`); continue; }
           const condition = yesGate(gate);
