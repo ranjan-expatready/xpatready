@@ -161,3 +161,38 @@ An intended user's unaided walk (D17, D20) and a real screen reader. C7.7 on the
 * A real screen reader, and an intended user's unaided walk (D17, D20).
 
 **Verdict (round 2, on `d2d12d24`): Approve.** There is no open Blocker or Major. Fix Minors 4 (dialog and provenance), 9 and 10, or list them in the PR, beside 5–8 for the tech lead. Journey score: **8.5/10, pass** (`journey-test-reviewer-2026-11-08.md`, round 2).
+
+## Round 3 (diff only, `83a5fac..807d5e2`, P-293 (3); the tech lead allowed it at 22:00 IST)
+
+This round covers the two CI fixes for run 42491664598, shard 3: 3 files, +5/−4. Nothing else was re-reviewed. The round 2 findings and the journey score (8.5/10) stand.
+
+### What I checked
+* **The refusal's words** (`api/src/runtime.ts:445`). The message is now "The form has no room for this answer in entry N: it is asked only in entry M."
+  * It no longer says "box", so P-63 / QA-182 is met.
+  * It is plain, it names both entries, and it tells the person where the answer belongs.
+* **B155-14's assertion** (`tests/check_b155_siblings.ts:176`). It is not weakened: it is stricter.
+  * It still requires a 422 on entry 1 and a 200 on entry 7.
+  * The regexp now also requires the "no room for this answer" prefix and the closing full stop.
+  * QA-182 and check_c102 were not edited.
+* **The finished story's skip condition** (`api/src/finished-story.ts:157`).
+  * A section is now skipped only when all of these hold: every answer is confirmed, every row answer is confirmed, and the group has no "none apply" or its "none apply" is confirmed.
+  * The API does return `none_apply.confirmed`. `engine/runtime/case.ts:423-426` spreads `confirmation(...)` into it, and `ViewGroup.none_apply` in `contracts/runtime.ts:153` is a `ViewAnswer`, which carries `confirmed: boolean`. So the new optional field in the local `Section` type matches what the API sends; the condition does not always read as false.
+  * **Can it loop?** No. The confirm loop is one pass over the sections, inside the existing `for (let pass = 0; pass < 4; pass++)` (`:138`).
+    * At worst, a "none apply" the officer's Confirm cannot settle would be posted once per pass: 4 times at most.
+    * The section count in the result would then run high. That is the same behaviour unconfirmed answers already had, so it is nothing new.
+  * **Can it confirm something unseen?** No. `seen` (`:155`) already lists the "none apply" id beside every answer and row id shown in that fresh read. The fix changes only *whether* to post, not *what* is sent.
+    * A stale "none apply" on a group that has rows would also be confirmed. It is in `seen`, so the officer has seen it. That is harmless.
+
+### Run on my own copy (`rev155c`, :4475, fresh database, head `807d5e2`; stopped after; US$0)
+* `check_qa182_no_box_words`: **8/8**.
+* `check_c102_finished_story_refusals 4475`: **20/20**. M1 shows 161 answers typed and 6 re-confirmed (claimed equals the data). M2 reads `partial` with 1 filing not recorded.
+* `check_b155_siblings 4475` on a second fresh database: **33/33**. B155-14 detail: `[422, "The form has no room for this answer in entry 1: it is asked only in entry 7.", 200]`.
+* I did not repeat the 18/20 fail-first. I rely on the builder's reproduction (the facts stage named three "Brothers and sisters" lines).
+
+### Findings
+* **Minor 11 (words, `api/src/runtime.ts:445`).** The round-2 text pluralised: "entr${size === 1 ? "y" : "ies"}". The new text always says "entry", so a fact mapped to several rows would read "asked only in entry 3, 5".
+  * For IMM 5645 today, the only such fact is "accompanies", and it maps to one row (entry 7). The case is not reachable now.
+  * Fix: bring the plural back ("entries 3 and 5"), or list it in the PR.
+* **Nit.** P-63's own word is "form field". "The form has no form field for this answer in entry N" would match the vocabulary exactly. "No room" is plain and acceptable as it is.
+
+**Verdict (round 3, on `807d5e25e3cf9d959cc439f6d7c0fec8a637e57e`): Approve.** There is no open Blocker or Major. Minor 11 joins Minors 4, 9 and 10 (fix them or list them in the PR), beside 5–8 for the tech lead. Journey score unchanged: **8.5/10, pass** (round 2; this diff touches no screen journey beyond the refusal's words).
