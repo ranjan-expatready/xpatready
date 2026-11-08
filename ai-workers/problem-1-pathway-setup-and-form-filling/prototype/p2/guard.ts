@@ -165,7 +165,9 @@ function admitReviewSheet(rel: string, bytes: Buffer, h: string): AdmittedInput 
   if (typeof env.form_edition !== "string" || !/^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(env.form_edition)) no("its form edition is not a printed edition such as IMM 0000 (MM-YYYY)");
   if (!Array.isArray(env.fields) || !env.fields.length || env.fields.length > 2000) no("it holds no box, or more than 2,000");
   // "|" is the column mark of a sheet line in the prompt (p2/prompt.ts), so no text carries it (C7.5 challenge m1).
-  const line = (v: unknown, max: number) => typeof v === "string" && !!v.trim() && Array.from(v).length <= max && !LABEL_BAD.test(v) && !v.includes("|");
+  // Break m (8 Nov): look-alike brackets and column bars a model may read as "<", ">" or "|" are refused too.
+  const LOOKALIKE = /[|\uFF5C\u2502\u2223\u01C0\u05C0\u2016\u23D0\u2758\uFFE8\uFE64\uFE65\u02C2\u02C3\u1438\u1433\u276E\u276F\u29FC\u29FD]/;
+  const line = (v: unknown, max: number) => typeof v === "string" && !!v.trim() && Array.from(v).length <= max && !LABEL_BAD.test(v) && !LOOKALIKE.test(v);
   const seen = new Set<string>();
   for (const f of env.fields as unknown[]) {
     closed(f, ["box", "caption", "fact", "value"], [], "box", no);
@@ -177,6 +179,7 @@ function admitReviewSheet(rel: string, bytes: Buffer, h: string): AdmittedInput 
     // C7.5 challenge m1: no contact detail (email, telephone, fax) is sent, as the studio's sheet already leaves them out.
     if (typeof fact === "string" && /(^|[._])(e_?mail|phone|telephone|fax|mobile)([._]|$)/.test(fact)) no(`${String(box)} holds a contact detail (${fact}), which a review sheet never carries`);
     if (!line(value, 500)) no(`the value of ${String(box)} is not one plain line of at most 500 characters`);
+    if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(String(value))) no(`the value of ${String(box)} is an email address, a contact detail a review sheet never carries`);
     if (seen.has(box as string)) no(`${String(box)} appears twice`);
     seen.add(box as string);
   }

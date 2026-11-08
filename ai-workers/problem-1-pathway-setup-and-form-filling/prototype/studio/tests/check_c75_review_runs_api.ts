@@ -22,6 +22,7 @@ import * as m3 from "../acceptance/lib/m3.ts";
 import { FORM_REVIEW, madeUpRuns } from "../api/src/review-runs.ts";
 import { answersFor, inputsOf, MADE_UP, packLikeCase, writeMadeUp, type Plan } from "./fixtures/c75-made-up-run.ts";
 import { roundJob, RUNS } from "../api/src/rounds.ts";
+import { sheetText } from "../engine/runtime/form-review.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_c75rr";
 const { call, sql } = m3; // the pack's helpers on this same copy (officer by default)
@@ -88,6 +89,15 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   ok("C7.5 P-71, P-168: on Ready to file each open AI finding is a warning saying it is the AI review's, with its agreement and quote; never a block", (rd?.warns ?? []).filter((w) => w.code === "finding").some((w) => /the AI review \(High\) flags what the form says, “/.test(w.words ?? "")) && (rd?.warns ?? []).some((w) => /the AI review \(Low: the two rounds disagree\)/.test(w.words ?? "")) && !(rd?.blocks ?? []).some((x) => x.code === "finding"), rd?.warns?.filter((w) => w.code === "finding"));
   ok("C7.5 no ai_batch row and no model call (US$0)", sql("select count(*) from ai_batch") === spend0);
 
+  // ── break M1: a run id runs once, one after the other and at the same moment ──
+  const rid = "11111111-2222-4333-8444-555555555555";
+  const once1 = await runAs({ mode: "replay", runId: rid }), once2 = await runAs({ mode: "replay", runId: rid });
+  ok("C7.5 break M1 fail: the same run id sent again after it ran (even when it added nothing) is refused (409), nothing runs", once1.status === 201 && once2.status === 409 && /started already/.test(JSON.stringify(once2.body)) && Number(sql(`select count(*) from audit_event where entity_key='${c.id}' and action='reviewed' and detail->>'run'='${rid}'`)) === 1, [once1.status, once2.status]);
+  const rid2 = "11111111-2222-4333-8444-666666666666";
+  const twin = await Promise.all([runAs({ mode: "replay", runId: rid2 }), runAs({ mode: "replay", runId: rid2 })]);
+  ok("C7.5 break M1/M2 fail: the same run id sent twice at once runs once (claimed before the first wait); the other is refused (409)", twin.map((x) => x.status).sort().join() === "201,409" && Number(sql(`select count(*) from audit_event where entity_key='${c.id}' and action='reviewed' and detail->>'run'='${rid2}'`)) === 1, twin.map((x) => x.status));
+  ok("C7.5 break m: a plan or a Saved run leaves no copy of the answers on disk (the sheet file is written only for a live run)", !existsSync(join(SOLUTION, plan.forms[0].sheet)), plan.forms[0].sheet);
+
   // ── dismiss, again, at once ──
   await call("POST", `/runtime/findings/${fb!.id}/dismiss`, { reason: "Not relevant (Sample)" }, officer);
   r = await runAs({ mode: "replay" });
@@ -116,6 +126,13 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const after3 = ((await call("GET", `/runtime/cases/${c3.id}/findings?source=ai`)).body?.findings ?? []) as F[];
   ok("C7.5 pass (challenge M6): once the form no longer says what an AI finding quoted, reading the findings resolves it by the rules (US$0); the others stay", r.status === 201 && f3.length === 2 && after3.find((x) => x.field === a.fact)?.state === "resolved" && after3.find((x) => x.field === b.fact)?.state === "open", after3.map((x) => [x.field, x.state]));
 
+  // ── review M1: IMM 5707 reads in words, and a row about someone else says whose it is ──
+  const p5707 = await call("POST", `/runtime/cases/${c.id}/review-runs/plan`, { forms: ["IMM 5707"], subject: P });
+  const l5707 = (p5707.body?.forms?.[0]?.lines ?? []) as { box: string; caption: string; fact: string | null; value: string }[];
+  ok("C7.5 review M1 pass: IMM 5707's choices read as their words (marital status, Yes/No), never a bare code", p5707.status === 200 && l5707.some((x) => x.fact === "person.marital_status" && /[A-Za-z]{4}/.test(x.value)) && !l5707.some((x) => /^\d$/.test(x.value)), l5707.filter((x) => /^\d$/.test(x.value) || x.fact === "person.marital_status"));
+  ok("C7.5 review M1 pass: a row about a relative names whose it is; the person's own rows do not", l5707.some((x) => /parent 1: Date of birth/.test(x.caption)) && l5707.some((x) => x.caption === "Date of birth"), l5707.filter((x) => x.fact === "person.date_of_birth").map((x) => x.caption));
+  ok("C7.5 review M1: a tick box reads Ticked or Not ticked, and a box with no printed caption names itself", l5707.filter((x) => /form box "/.test(x.caption)).every((x) => /^(Not )?[Tt]icked$|^[^0-9]/.test(x.value)), l5707.filter((x) => /form box/.test(x.caption)));
+
   // ── audit, stop (readiness: pack step C7.5-9 above) ──
   const audit = sql(`select string_agg(summary || ' ' || coalesce(detail::text, ''), ' | ') from audit_event where entity_key='${c.id}' and action='reviewed'`) ?? "";
   ok("C7.5 audit: each run is one line naming the forms, the mode and the cost; never a value, a quote or a reason", /ran the independent review of IMM 5257/.test(audit) && /Saved \(made-up test run\), US\$0\.00/.test(audit) && !audit.includes(a.value) && !audit.includes("Made-up test finding") && !audit.includes("Round 1"), audit.slice(0, 600));
@@ -126,6 +143,8 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const canary = existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null;
   const stubsBefore = new Map((existsSync(STUBS) ? readdirSync(STUBS) : []).map((x) => [x, readFileSync(join(STUBS, x))]));
   try {
+    // A live run writes the sheet the launcher reads (review-runs.ts writeSheet); here the check writes the same text.
+    writeFileSync(join(SOLUTION, plan0.forms[0].sheet), sheetText({ contract: "review-sheet/v1", form_edition: plan0.forms[0].edition, fields: plan0.forms[0].lines }));
     for (const isCheck of [false, true]) {
       const job = roundJob(FORM_REVIEW, isCheck, { trail: plan0.forms[0].edition, contextKey: "edition:IMM 5257:09-2023", inputs: inputsOf(plan0), batchId: `c75check${process.pid}` });
       writeFileSync(join(JOBS, `${job.job_id}.json`), JSON.stringify(job, null, 1) + "\n");
@@ -139,6 +158,7 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
       ok(`C7.5 P-227: the guarded launcher admits the ${isCheck ? "checker" : "first"} round's job (the inventory and the review sheet, the edition known) in a stub pass, US$0, run cap US$${job.settings.budget_usd}`, stub.status === 0 && rec.caller === "stub" && rec.contract_valid === true && rec.drafting_run?.status === "completed" && (rec.drafting_run?.usage?.cost_usd ?? 0) === 0 && job.settings.budget_usd * 2 <= 5, { exit: stub.status, out: stub.stdout?.slice(-300), status: rec.drafting_run?.status });
     }
   } finally {
+    rmSync(join(SOLUTION, plan0.forms[0].sheet), { force: true });
     if (canary !== null) writeFileSync(CANARY, canary);
     for (const x of existsSync(STUBS) ? readdirSync(STUBS) : []) { const was = stubsBefore.get(x); if (was === undefined) rmSync(join(STUBS, x), { force: true }); else writeFileSync(join(STUBS, x), was); }
   }

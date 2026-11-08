@@ -17,7 +17,7 @@ const STUDIO = join(import.meta.dirname, "..", ".."), PROTOTYPE = join(STUDIO, "
 export const MADE_UP = join(STUDIO, "var", `isolated-${m3.DB.replace(/^xr_studio_/, "")}`, "made-up-review-runs");
 const tSha = (t: string) => createHash("sha256").update(readFileSync(join(PROTOTYPE, "p2", "prompts", t))).digest("hex");
 type Input = { file: string; sha256: string };
-export type Plan = { forms: { form: string; edition: string; sheet: string; sheet_sha256: string; saved: { available: boolean; why: string | null; files: string[]; made_up: boolean } }[]; estimate: { live_usd: number; live_worst_usd: number; replay_usd: number; job_cap_usd: number }; live_allowed: boolean; replay_available: boolean; made_up: boolean; made_up_words: string | null; plan_sha256: string; stand_in: string };
+export type Plan = { forms: { form: string; edition: string; sheet: string; sheet_sha256: string; lines: { box: string; caption: string; fact: string | null; value: string }[]; saved: { available: boolean; why: string | null; files: string[]; made_up: boolean } }[]; estimate: { live_usd: number; live_worst_usd: number; replay_usd: number; job_cap_usd: number }; live_allowed: boolean; replay_available: boolean; made_up: boolean; made_up_words: string | null; plan_sha256: string; stand_in: string };
 const FIXTURE = "made up by tests/check_c75_review_runs_api.ts for its own isolated copy: never a real answer, never counted";
 
 /** A made-up saved run of one round, in the launcher's record shape (as tests/fixtures/c91-saved-run.ts), for these inputs. */
@@ -33,7 +33,7 @@ export function writeMadeUp(tag: string, inputs: Input[], draft: unknown, check:
   writeFileSync(join(MADE_UP, `${FORM_REVIEW.jobBase}-c75fixture${tag}-live-${t}-c75fix.json`), JSON.stringify(record(false, inputs, ed, draft)));
   writeFileSync(join(MADE_UP, `${FORM_REVIEW.jobBase}-check-c75fixture${tag}-live-${t}-c75fix.json`), JSON.stringify(record(true, inputs, ed, check)));
 }
-export const sheetOf = (plan: Plan) => JSON.parse(readFileSync(join(SOLUTION, plan.forms[0].sheet), "utf8")) as { fields: { box: string; caption: string; fact: string | null; value: string }[] };
+export const sheetOf = (plan: Plan) => ({ fields: plan.forms[0].lines });
 export const inputsOf = (plan: Plan): Input[] => [{ file: "prototype/p1/inventory/imm5257e.inventory.json", sha256: createHash("sha256").update(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"))).digest("hex") }, { file: plan.forms[0].sheet, sha256: plan.forms[0].sheet_sha256 }];
 /** Two made-up findings on facts the sheet fills: one both rounds raise (High), one only the first round raises (Low), and
  *  one in the checker round whose quote is not on the form (dropped by the rules). */
@@ -66,4 +66,10 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href && process.argv[4] =
   const { draft, check } = answersFor(plan);
   writeMadeUp(`p${process.pid}`, inputsOf(plan), draft, check);
   console.log(JSON.stringify({ case: c.id, subject: P }));
+}
+//   … c75-made-up-run.ts <port> <db> answer <case> <person> <fact> <value>: the officer answers and confirms (the pack's helpers).
+if (import.meta.url === pathToFileURL(process.argv[1]).href && process.argv[4] === "answer") {
+  const [caseId, subject, fact, value] = process.argv.slice(5);
+  const r = await m3.answer(caseId, subject, fact, value); await m3.confirmAll(caseId, subject);
+  process.exitCode = r.status === 200 ? 0 : 1;
 }

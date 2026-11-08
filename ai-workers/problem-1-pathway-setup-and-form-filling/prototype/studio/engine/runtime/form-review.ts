@@ -31,11 +31,31 @@ export function boxWords(b: Pick<SheetBox, "box" | "caption" | "meaning">): stri
 
 /** The launcher's own rule for a line sent to the AI (p2/guard.ts LABEL_BAD): no control, format, line or paragraph
  *  separator, no angle bracket of any kind, so nothing in a value can forge a line or close the input it is sent in. */
-const BAD = /[\p{C}\p{Zl}\p{Zp}<>＜＞‹›«»〈〉〈〉⟨⟩]+/gu;
+const BAD = /[\p{C}\p{Zl}\p{Zp}<>＜＞‹›«»〈〉〈〉⟨⟩﹤﹥˂˃ᐸᐳ❮❯⧼⧽]+/gu;
+/** Break m (8 Nov): look-alike column bars, read as "|" by a model. */
+const BARS = /[|｜│∣ǀ׀‖⏐❘￨]/g;
+/** A value that is itself a contact detail (an email address, or a telephone number written with a space, bracket or +). */
+export const CONTACT_VALUE = /[^\s@]+@[^\s@]+\.[a-z]{2,}|^(?=.*[\s()+])\+?[\d\s().-]{7,}$/i;
 /** One plain line: no BAD character, and no "|" (the column mark of the sheet's lines in the prompt, challenge m1). */
-const plain = (t: string, max: number) => Array.from(t.replace(BAD, " ").replace(/\|/g, "/").replace(/\s+/g, " ").trim()).slice(0, max).join("").trim();
+const plain = (t: string, max: number) => Array.from(t.replace(BAD, " ").replace(BARS, "/").replace(/\s+/g, " ").trim()).slice(0, max).join("").trim();
 export const SHEET_LIMITS = { rows: 2000, box: 200, caption: 300, value: 500, fact: 120 } as const;
 const FACT = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
+
+/** Review M1 (8 Nov): the words of a coded choice. Inventories list choices in two shapes: pairs [[words, code], …]
+ *  (IMM 5257's resolved lists, IMM 5707's Yes/No) or two parallel lists [[words…], [codes…]] (IMM 5707's marital
+ *  status). A 2 × 2 list reads both ways, so each reading is tried and the one that names this code wins; null when none. */
+export function choiceWords(lists: unknown[], code: string): string | null {
+  for (const o of lists) {
+    if (!Array.isArray(o)) continue;
+    const pairs = o.every((x) => Array.isArray(x) && x.length === 2) ? (o as unknown[][]).find((x) => String(x[1]) === code) : undefined;
+    if (pairs && String(pairs[0]).trim()) return String(pairs[0]);
+    if (o.length === 2 && Array.isArray(o[0]) && Array.isArray(o[1]) && o[0].length === o[1].length) {
+      const i = (o[1] as unknown[]).findIndex((x) => String(x) === code);
+      if (i >= 0 && String(o[0][i]).trim()) return String(o[0][i]);
+    }
+  }
+  return null;
+}
 
 /** A value as the form shows it: text as typed, a list joined, Yes or No for a tick. Empty → null (not on the sheet). */
 export function valueWords(v: unknown): string | null {
@@ -62,6 +82,7 @@ export function reviewSheet(formEdition: string, boxes: readonly SheetBox[]): Re
     const w = valueWords(b.value);
     if (w === null) continue;
     const value = plain(w, SHEET_LIMITS.value), box = plain(b.box, SHEET_LIMITS.box);
+    if (CONTACT_VALUE.test(value) && !/date|_on$|_at$/.test(b.fact ?? "")) continue;
     if (!value || !box || rows.has(box)) continue;
     const fact = b.fact && FACT.test(b.fact) && b.fact.length <= SHEET_LIMITS.fact ? b.fact : null;
     rows.set(box, { box, caption: boxWords(b) || box, fact, value });

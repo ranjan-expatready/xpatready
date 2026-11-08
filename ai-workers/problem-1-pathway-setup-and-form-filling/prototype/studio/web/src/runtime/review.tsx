@@ -23,6 +23,8 @@ import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire"
 /** The firm's staff (the simulated people of cases.tsx); a client never sees the review. */
 const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
 const isOfficer = (id: string) => STAFF.has(id);
+/** "recorded on 8 Nov 2026", from a saved run's file name ("…-live-20261108t…"); nothing when it has none. */
+const recordedOn = (file: string | undefined) => { const m = /-live-(\d{4})(\d{2})(\d{2})t/.exec(file ?? ""); return m ? `, recorded on ${new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })},` : ""; };
 const usd = (n: number) => `US$${n.toFixed(2)}`;
 type Filing = { id: string; label: string };
 type Phase = "idle" | "running" | "done";
@@ -115,21 +117,27 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
   const [result, setResult] = React.useState<ReviewRunResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const runId = React.useRef<string | null>(null);
+  // Break m: after a run (or a refusal) focus goes to its result, never back to the page body.
+  const resultRef = React.useRef<HTMLDivElement | null>(null);
   const run = useAction(() => api<ReviewRunResult>(`/runtime/cases/${caseId}/review-runs`, { method: "POST", json: { forms: [form], subject: person!.subject_id, mode: chosen, planSha256: p!.plan_sha256, runId: runId.current } }),
     { invalidate: [["runtime", "view", caseId]], success: (r) => r.added ? `${r.added} new finding${r.added === 1 ? "" : "s"}` : "Review run: no new finding" });
   const start = () => {
     runId.current = crypto.randomUUID(); setPhase("running"); setResult(null); setError(null);
-    run.mutate(undefined, { onSuccess: (r) => { setResult(r); setPhase("done"); }, onError: (e) => { setError(e instanceof ApiError ? e.message : e.message); setPhase("idle"); } });
+    run.mutate(undefined, { onSuccess: (r) => { setResult(r); setPhase("done"); requestAnimationFrame(() => resultRef.current?.focus()); }, onError: (e) => { setError(e instanceof ApiError ? e.message : e.message); setPhase("idle"); void plan.refetch(); requestAnimationFrame(() => resultRef.current?.focus()); } });
   };
   const stop = useAction(() => api(`/runtime/review-runs/${runId.current}/stop`, { method: "POST", json: {} }), { success: "Stopping the review" });
   React.useEffect(() => { setResult(null); setPhase("idle"); setError(null); }, [person?.subject_id, form]);
-  const stepState = (n: number): "done" | "running" | "waiting" => phase === "done" ? "done" : phase !== "running" ? "waiting" : n === 1 ? "done" : n === 2 || (chosen === "replay" && n === 3) ? "running" : "waiting";
+  // Review M2 (c): the steps say what the run reported when it ended, never a tick the page made up. While it runs, one
+  // line says it is running (a Saved run ends in about a second; a Live one in a few minutes); when it ends, each step is
+  // done or not by the result: the sheet read (1), both rounds read or replayed (2, 3), the rules applied (4).
+  const ran = !!result?.forms.some((f) => f.from);
+  const stepState = (n: number): "done" | "not run" | "waiting" => phase !== "done" || !result ? "waiting" : n === 1 ? "done" : ran ? "done" : "not run";
   const dropped = result?.forms.flatMap((f) => f.dropped) ?? [], unreadable = result?.forms.flatMap((f) => f.unreadable) ?? [];
   return (
     <section aria-labelledby="run-h" className="rounded-xl border border-border bg-surface-raised" data-run-card>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id="run-h" className="text-base font-semibold">AI review of a filled form</h2>
-        <StandIn id="SI-6" today="the AI review runs live on the Visitor visa forms only (one trial, P-164 (2)) and is replayed from its saved run at US$0; severities are Sample until the immigration expert confirms them." later="other form families one at a time, each with its own prompt and tests (team AG-11 AI Doers)." />
+        <StandIn id="SI-6" today="the AI review runs live on the Visitor visa forms only (one trial) and is replayed from its saved run at US$0; severities are Sample until the immigration expert confirms them." later="other form families one at a time, each with its own prompt and tests (team AG-11 AI Doers)." />
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">Two AI rounds read what the form prints; the rules keep only findings that quote it.</p>
       </header>
       <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
@@ -141,20 +149,21 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
         </div>
         <div className="min-w-0 space-y-3" aria-busy={plan.isLoading}>
           {!form ? null : plan.isLoading ? <Skeleton className="h-28 w-full" />
-            : plan.isError ? <Notice tone="warn" title={`${form} cannot be reviewed now`} action={<Button size="sm" variant="secondary" onClick={() => void plan.refetch()}>Retry</Button>}>{plan.error.message}</Notice>
+            : plan.isError ? <Notice tone="warn" title={`${form} cannot be reviewed now`} action={/Nothing is filled/.test(plan.error.message) ? <Link to={`/cases/${caseId}#agent-view`} className="text-[13px] font-medium text-text-link hover:underline">Open the Agent view</Link> : <Button size="sm" variant="secondary" onClick={() => void plan.refetch()}>Retry</Button>}>{plan.error.message}</Notice>
             : p ? <>
               {p.made_up ? <Notice tone="warn" title="Made-up test runs">{p.made_up_words}</Notice> : null}
               <fieldset className="space-y-2" data-run-modes>
                 <legend className="mb-1 text-[13px] font-medium">How to run it · cost first</legend>
                 <ModeRow value="replay" chosen={chosen} on={setMode} disabled={!can.replay || phase === "running"} price="US$0.00" title="Saved"
-                  words={can.replay ? `Replays the checked saved review of ${p.forms[0].edition} for exactly these answers (${p.forms[0].boxes} boxes). Nothing is sent.` : p.replay_why ?? ""} />
+                  words={can.replay ? `Replays the checked saved review of ${p.forms[0].edition}${recordedOn(p.forms[0].saved.files[0])} for exactly these answers (${p.forms[0].boxes} boxes). Nothing is sent.` : p.replay_why ?? ""} />
                 <ModeRow value="live" chosen={chosen} on={setMode} disabled={!can.live || phase === "running"} price={`about ${usd(p.estimate.live_usd)}, at most ${usd(p.estimate.live_worst_usd)}`} title="Live"
                   words={can.live ? `Two AI rounds read the form now; the worst case stays under the job cap of ${usd(p.estimate.job_cap_usd)} and what is left of the AI budget (${usd(p.estimate.remaining_usd)}).` : p.live_why ?? ""} />
               </fieldset>
-              <ol className="space-y-1 text-[13px]" aria-label="Steps" data-run-steps>
+              {phase === "running" ? <p className="flex items-center gap-2 text-[13px]" role="status" data-run-running><Loader2 className="size-3.5 animate-spin" aria-hidden />{chosen === "live" ? "Running live: the two AI rounds take a few minutes. Stop ends the round running now." : "Replaying the saved review: about a second."}</p> : null}
+              <ol className="space-y-1 text-[13px]" aria-label="Steps" aria-live="polite" data-run-steps>
                 {p.steps.map((s) => { const st = stepState(s.n); return (
                   <li key={s.n} className={cn("flex items-start gap-2", st === "waiting" && "text-text-muted")} data-step-state={st}>
-                    {st === "done" ? <Check className="mt-0.5 size-3.5 text-text-ok" aria-hidden /> : st === "running" ? <Loader2 className="mt-0.5 size-3.5 animate-spin" aria-hidden /> : <Circle className="mt-0.5 size-3.5" aria-hidden />}
+                    {st === "done" ? <Check className="mt-0.5 size-3.5 text-text-ok" aria-hidden /> : <Circle className="mt-0.5 size-3.5" aria-hidden />}
                     <span>{s.label}{s.uses_ai ? <span className="text-text-muted"> · AI</span> : null}<span className="sr-only"> ({st})</span></span>
                   </li>); })}
               </ol>
@@ -166,7 +175,7 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
                 {!chosen ? <span className="text-[12px] text-text-muted">Nothing can run for these answers now: see the reasons above.</span> : null}
               </div>
             </> : null}
-          <div aria-live="polite" data-run-result>
+          <div aria-live="polite" data-run-result ref={resultRef} tabIndex={-1} className="outline-none">
             {error ? <Notice tone="danger" title="The review did not run">{error}</Notice> : null}
             {result ? <Notice tone={result.forms.some((f) => f.from) ? "ok" : "warn"} title={result.forms.some((f) => f.from) ? "Review run" : "The review did not finish"}>
               <p>{result.note}</p>

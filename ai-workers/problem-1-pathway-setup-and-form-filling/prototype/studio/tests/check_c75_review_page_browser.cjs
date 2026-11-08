@@ -89,6 +89,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("result: the AI finding the rules dropped and the box the AI could not judge are listed for a person", /1 AI finding left out by the rules/.test(res) && /1 box the AI could not judge/.test(res), res);
     await until(async () => (await p.locator('[data-findings] [data-finding]').count()) >= 2, "the findings");
     const list = await p.locator("[data-findings]").innerText();
+    step("steps (review M2 c): when the run ends each step says what the run reported (all four done for a Saved run)", (await p.locator('[data-run-steps] [data-step-state="done"]').count()) === 4 && (await p.locator("[data-run-running]").count()) === 0);
+    step("focus (break m): after the run, focus is on its result, not the page body", await p.evaluate(() => !!document.activeElement?.closest("[data-run-result]")));
     step("findings: per filing, then person", await p.locator("[data-findings-filing]").count() >= 1 && await p.locator("[data-findings-filing] [data-findings-person='Sample Client A']").count() >= 1, list.slice(0, 300));
     const low = p.locator("[data-finding]").filter({ hasText: "The two AI rounds disagree" });
     const high = p.locator("[data-finding]").filter({ hasText: "Both AI rounds raised it" });
@@ -114,6 +116,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const res2 = await p.locator("[data-run-result]").innerText();
     step("run again: a dismissed finding is not raised again (no new finding, 2 already on the case)", /no new finding, 2 already on the case/.test(res2), res2);
     step("run again: the dismissed finding stays dismissed", Number(sql(`select count(*) from review_finding where case_id='${caseId}' and source='ai' and state='dismissed'`)) === 1);
+
+    // ── review M3: the run card reloads after "Look at the run card again" (the answers changed under it) ──
+    const before = await p.locator('[data-mode="replay"]').getAttribute("data-mode-disabled");
+    const ans = tsx("tests/fixtures/c75-made-up-run.ts", "answer", caseId, made.subject, "person.applying_from_country", "Canada");
+    await p.locator("[data-run-review]").focus(); await p.keyboard.press("Enter");
+    await until(async () => /The review did not run/.test(await p.locator("[data-run-result]").innerText()), "the refusal");
+    await until(async () => (await p.locator('[data-mode="replay"]').getAttribute("data-mode-disabled")) === "true", "the run card to reload");
+    const card2 = await card();
+    step("review M3 fail→pass: after a refusal the run card reloads itself: Saved is now unavailable for the changed answers, with the reason", before === "false" && ans.status === 0 && /No saved review of this form edition with these values/.test(card2) && await p.locator("[data-run-review]").isDisabled(), card2.slice(0, 400));
+    await state("after-answers-changed");
 
     // ── a client sees no Review page; no model call ──
     await as("user-P"); await p.reload(); await settle();

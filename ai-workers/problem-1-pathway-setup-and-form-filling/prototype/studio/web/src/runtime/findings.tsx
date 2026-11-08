@@ -99,8 +99,8 @@ function FindingRow({ f, mayWaive, onMove, onShow, shown }: { f: Finding; mayWai
         <Pill tone={SEV_TONE[f.severity]}>{f.severity}</Pill>
         {f.rule ? <Tip focusable tip={<>Rule (Sample): {f.rule}<br /><span className="text-text-muted">The rule and its severity are Sample until the immigration expert confirms them</span></>}><span><Pill>{SOURCE_WORDS[f.source]}</Pill></span></Tip> : <Pill tone={f.source === "ai" ? "ai" : "neutral"}>{SOURCE_WORDS[f.source]}</Pill>}
         {f.replayed ? <Pill tone="ai">Replayed</Pill> : null}
-        {f.agreement === "high" ? <Pill tone="ok" title="Both AI rounds raised it with the same severity, and the rules found its quote on the form (P-121)">High</Pill>
-          : f.agreement === "low" ? <Pill tone="warn" title="The two AI rounds did not agree: a person decides, with both rounds' reasons (P-121)">Low</Pill> : null}
+        {f.agreement === "high" ? <Tip focusable tip="Both AI rounds raised it with the same severity, and the rules found its quote on the form"><span><Pill tone="ok">High</Pill></span></Tip>
+          : f.agreement === "low" ? <Tip focusable tip="The two AI rounds did not agree: a person decides, with both rounds' reasons"><span><Pill tone="warn">Low</Pill></span></Tip> : null}
       </div>
       <div className="min-w-0 flex-1 basis-80">
         {f.source === "ai" ? <>
