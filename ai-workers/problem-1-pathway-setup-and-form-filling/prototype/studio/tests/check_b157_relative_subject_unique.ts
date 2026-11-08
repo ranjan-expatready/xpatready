@@ -10,6 +10,7 @@
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { AUTHOR, PORT, DB, call, firms, main, needVisitorVisa, ok, openCase } from "../acceptance/lib/m3.ts";
+import { ASKED_RELATIONS } from "../engine/runtime/relatives.ts";
 
 const PSQL = "/opt/homebrew/opt/postgresql@18/bin/psql", URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
 const run = promisify(execFile);
@@ -32,7 +33,9 @@ await main("B157", "one answer subject per person and relation, held by the data
 
   // ---- The index, as the migration made it. ----
   const def = q(`select indexdef from pg_indexes where tablename = 'answer_subject' and indexname = '${INDEX}'`);
-  ok("B157-1 pass: answer_subject has the unique index on (party_id, subject_kind), only for parent_1, parent_2 and sibling", /UNIQUE INDEX/.test(def) && /\(party_id, subject_kind\)/.test(def) && /WHERE/.test(def) && ["parent_1", "parent_2", "sibling"].every((k) => def.includes(`'${k}'`)) && !/'case'|'principal'/.test(def), def);
+  // Review m2: the kinds are the engine's asked relations (engine/runtime/relatives.ts), never a second list typed here, so
+  // a relation added there without widening the index fails this check.
+  ok(`B157-1 pass: answer_subject has the unique index on (party_id, subject_kind), for every relation the engine asks (${ASKED_RELATIONS.join(", ")}) and no other kind`, /UNIQUE INDEX/.test(def) && /\(party_id, subject_kind\)/.test(def) && /WHERE/.test(def) && ASKED_RELATIONS.every((k) => def.includes(`'${k}'`)) && (def.match(/'[a-z_0-9]+'/g) ?? []).length === ASKED_RELATIONS.length, def);
 
   // ---- Fail first: without the index (dropped in a transaction rolled back), two subjects of one relation go in. ----
   const P0 = party();
@@ -61,6 +64,15 @@ await main("B157", "one answer subject per person and relation, held by the data
   const answers = await Promise.all(Array.from({ length: 8 }, (_, i) => call("PUT", `/runtime/cases/${c.id}/answers/${P}/parent_1/person.full_name`, { value: `Sample Mother K${i}`, expectedId: null }, officer)));
   const st = answers.map((r) => r.status);
   ok("B157-7 pass: 8 first answers about the mother at once: 1 saved, the rest told someone answered at the same moment (409), none a 500; one parent_1 subject", st.filter((x) => x === 200).length === 1 && st.every((x) => x === 200 || x === 409) && q(`select count(*) from answer_subject where party_id = '${partyOf}' and subject_kind = 'parent_1'`) === "1", st);
+  // Review m1: the API's fallback for the index itself. A session that takes no lock holds an uncommitted parent_2 subject
+  // for this person; the officer's first answer about that parent waits on the index, is refused (P2002) once the session
+  // commits, reads the subject that won and saves there (200), never a 500 and never a second subject.
+  const hold = run(PSQL, [URL, "-v", "ON_ERROR_STOP=1", "-Atc", `begin; insert into answer_subject (id, workspace_id, party_id, subject_kind, label) select gen_random_uuid(), workspace_id, id, 'parent_2', 'B157 held' from party where id = '${partyOf}'; select pg_sleep(3); commit;`]);
+  await new Promise((r) => setTimeout(r, 700));
+  const late = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/parent_2/person.full_name`, { value: "Sample Father K", expectedId: null }, officer);
+  await hold;
+  const won = q(`select id from answer_subject where party_id = '${partyOf}' and subject_kind = 'parent_2'`);
+  ok("B157-9 pass (review m1): a first answer racing a subject made past the lock waits, then saves on the subject the database holds (200, one subject, the answer there)", late.status === 200 && won.split("\n").length === 1 && q(`select count(*) from client_canonical_answer where subject_id = '${won}' and value_json::text = '"Sample Father K"' and superseded_by_id is null`) === "1", { status: late.status, detail: late.body?.detail, subjects: won.split("\n").length });
   const rows = await Promise.all(Array.from({ length: 8 }, () => call("POST", `/runtime/cases/${c.id}/groups/${P}/sibling/rows`, { group: "sibling" }, officer)));
   ok("B157-8 pass: 8 first entries for the brothers and sisters at once: all 8 saved (201) on one sibling subject", rows.every((r) => r.status === 201) && q(`select count(*) from answer_subject where party_id = '${partyOf}' and subject_kind = 'sibling'`) === "1" && q(`select count(*) from client_fact_record r join answer_subject s on s.id = r.subject_id where s.party_id = '${partyOf}' and s.subject_kind = 'sibling' and r.superseded_by_id is null and not r.tombstone`) === "8", rows.map((r) => r.status));
 });

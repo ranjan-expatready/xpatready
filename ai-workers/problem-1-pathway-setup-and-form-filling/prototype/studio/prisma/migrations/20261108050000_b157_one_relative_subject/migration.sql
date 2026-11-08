@@ -3,8 +3,15 @@
 -- the list of brothers and sisters: 'sibling'). The API makes them on their first answer under an advisory lock
 -- (api/src/runtime.ts subjectFor); this index is the database's own check, so two can never exist even past the lock.
 -- Partial: a party holds one 'case' and one 'principal' subject per case it is on (api/src/runtime.ts createCase), which
--- stays allowed. Expand only: no row changes. The lock has kept one per party and relation since B128, so no row breaks
--- it; should one ever, the index is refused ("could not create unique index") and nothing changes: keep the lowest id
--- (the one every read takes, relativesOf), move its twins' answers to it, then apply again.
--- Rollback: DROP INDEX "answer_subject_one_relative_per_party";
+-- stays allowed. Expand only: no row changes.
+-- The kinds are engine/runtime/relatives.ts ASKED_RELATIONS: a relation added there needs a migration that widens this
+-- index (tests/check_b157_relative_subject_unique.ts B157-1 reads them from there, so it fails until one does).
+-- If the index is refused ("could not create unique index … is duplicated"): nothing changed, but Prisma records this
+-- migration as failed and later deploys stop (P3009). The lock has kept one subject per party and relation since B128,
+-- so a twin can only come from a write past the API. Every read already takes the lowest id (relativesOf), so a twin's
+-- answers were never shown; the answer tables are append-only (their triggers refuse moving them). So: re-enter on the
+-- lowest-id subject anything only its twin holds; delete the twin (its answers, rows and group answers go with it);
+-- `prisma migrate resolve --rolled-back 20261108050000_b157_one_relative_subject`; deploy again.
+-- Rollback: DROP INDEX "answer_subject_one_relative_per_party"; and, so that a later deploy applies it again,
+-- DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261108050000_b157_one_relative_subject';
 CREATE UNIQUE INDEX "answer_subject_one_relative_per_party" ON "answer_subject" ("party_id", "subject_kind") WHERE "subject_kind" IN ('parent_1', 'parent_2', 'sibling');
