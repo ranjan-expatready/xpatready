@@ -1,3 +1,4 @@
+# UNUSED since 8 Nov (D1, P-416, founder "Approve all stands" ~09:05 IST): CI no longer runs tools/m3-guard.sh; the file stays for a later milestone.
 # M2-hot files (founder 4 Nov ~11:30 IST: M3 runs in parallel only on files M2 is not changing; P-301, P-313).
 # An M3-only pull request (every capability it names is M3 in qa/CAPABILITIES.md) may not change these; tools/m3-guard.sh
 # refuses it in CI. One path or prefix per line, relative to ai-workers/problem-1-pathway-setup-and-form-filling/prototype/.
