@@ -6,8 +6,8 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CASE_KINDS, inReleaseWords, LETTER_READ_CARD, letterReadUsd, notWritable, readerOf, sameValue, savedRead } from "../api/src/case-documents.ts";
-import { costUsd } from "../../p2/ledger.ts";
+import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, sameValue, savedRead } from "../api/src/case-documents.ts";
+import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
 import { MRZ_FACTS } from "../engine/runtime/mrz.ts";
 import type { Snapshot } from "../engine/snapshot.ts";

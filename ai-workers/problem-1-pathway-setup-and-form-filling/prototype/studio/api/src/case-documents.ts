@@ -25,8 +25,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
-import { costUsd } from "../../../p2/ledger.ts";
-import { MAX_ATTEMPTS, MODELS } from "../../../p2/policy.ts";
+import { LETTER_READ_CARD, runCardUsd } from "../../../p2/ledger.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { cleanName, INVISIBLE, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MAX_REASON, MEDIA, mediaOf } from "../../contracts/documents.ts";
 import { CODED_IDENTITY, identityWords, isIdentityName, isPassportPhoto } from "../../engine/identity-documents.ts";
@@ -74,18 +73,10 @@ export function readerOf(type: { key: string; name: string }): { reader: Reader;
 }
 
 // ── The cost card for an AI read (P-110, P-295) ───────────────────────────────────────────────────────────────────────
-/** One letter read by AI vision, priced by the spend ledger (p2/ledger.ts costUsd) on the project's one model. Token
- *  counts are estimates until the first saved read measures them (FQ-10): usual = a one-page letter (about 1,600 image
- *  tokens and 300 of text, 1,500 of instructions and the fact list) answered in about 500 tokens; worst = five pages
- *  (the reader's page cap) at 2,500 tokens each plus 2,000 of instructions, answered in up to 2,000 tokens, on every
- *  attempt the policy allows (MAX_ATTEMPTS). */
-export const LETTER_READ_CARD = { model: MODELS[0], pages: { usual: 1, worst: 5 }, usual: { input: 3_400, output: 500 }, worst: { input: 5 * 2_500 + 2_000, output: 2_000 } } as const;
-const cents = (n: number) => Math.ceil(n * 100) / 100;
-export function letterReadUsd(documents = 1): { usual_usd: number; worst_usd: number; model: string; attempts: number } {
-  const c = LETTER_READ_CARD;
-  return { model: c.model, attempts: MAX_ATTEMPTS,
-    usual_usd: cents(documents * costUsd(c.model, c.usual.input, c.usual.output)),
-    worst_usd: cents(documents * MAX_ATTEMPTS * costUsd(c.model, c.worst.input, c.worst.output)) };
+/** One letter read by AI vision: the run card is the spend ledger's (p2/ledger.ts LETTER_READ_CARD), priced by its own
+ *  price table, for `documents` letters. */
+export function letterReadUsd(documents = 1): { usual_usd: number; worst_usd: number; model: string; attempts: number; basis: string } {
+  return { model: LETTER_READ_CARD.model, attempts: LETTER_READ_CARD.attempts, basis: LETTER_READ_CARD.basis, ...runCardUsd(LETTER_READ_CARD, documents) };
 }
 
 /** A saved AI read (FQ-10: one live read with the founder's Go, saved, then replayed by the document's checksum at US$0). */
@@ -221,7 +212,7 @@ export class CaseDocuments {
     const live = letterReadUsd(ai.length);
     return { section, subject: b.subjectId,
       documents: docs.map((d) => ({ document: d.id, document_name: this.typeName(c, d.documentType), reader: d.reader, cost_usd: 0 })),
-      estimate: { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: "Estimate until the first saved read is measured (FQ-10); priced by the spend ledger (p2/ledger.ts)." },
+      estimate: { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: live.basis },
       // A live read needs live AI on and the founder's Go for this run (P-295); this copy never makes one (P-175).
       live_allowed: false,
       live_why: aiLive() ? "A live document read needs the founder's Go for this run, with this cost stated first (P-295); the live reader is not built here (C6.5 part 3)." : "Live AI is off on this copy (the founder's switch). Nothing is sent; a saved read replays at US$0.",
