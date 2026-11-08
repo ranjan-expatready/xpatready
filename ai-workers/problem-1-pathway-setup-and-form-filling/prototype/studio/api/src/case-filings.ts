@@ -35,13 +35,29 @@ export class CaseFilings {
     const { answers } = await this.r.state(c);
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
     const modes = releaseModes(s.combination.participants ?? []); // C11.12: the same reading as GET …/prepare
-    const rows = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { group: { select: { kind: true } } } });
+    const rows = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { group: { select: { kind: true, recordedFees: true } } } });
     // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
     const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));
     const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
     const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" }) };
+    const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" });
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...frozenIn(d, rows) };
   }
+}
+
+type Recorded = { at: string; totals: unknown[]; total_cents: number | null; fees: { filing: string; subject: string; payer: string; key: string; line: string; amount_cents: number; exempt: boolean; reason: string; waiting?: string; source_detail?: unknown }[] };
+/** B152 (break M1, review m2): a recorded group reads its fees as recorded here too, so GET …/filings and GET …/prepare
+ *  never price a case differently. The snapshot holds the prepare view's lines (stored filing ids); this route names a
+ *  filing "filing-<owner>" and a line in the engine's words, so each line is mapped back. */
+function frozenIn<D extends ReturnType<typeof deriveFilings>>(d: D, rows: { id: string; subjectId: string; submissionGroupId: string; group: { recordedFees: unknown } }[]): D {
+  if (!d.derived) return d;
+  const snap = new Map(rows.filter((r) => r.group.recordedFees).map((r) => [r.submissionGroupId, r.group.recordedFees as Recorded]));
+  if (!snap.size) return d;
+  const derivedId = new Map(rows.map((r) => [r.id, `filing-${r.subjectId}`]));
+  const frozenGroups = d.groups.filter((g) => snap.has(g.id)), frozenFilings = new Set(frozenGroups.flatMap((g) => g.filings));
+  const lines = frozenGroups.flatMap((g) => snap.get(g.id)!.fees.map((l) => ({ filing: derivedId.get(l.filing) ?? l.filing, person: l.subject, payer: l.payer, line: l.key, label: l.line, amount_cents: l.amount_cents, exempt: l.exempt, why: l.reason,
+    ...(l.waiting ? { waiting: l.waiting } : {}), ...((l.exempt || l.waiting) && l.source_detail ? { source: l.source_detail } : {}) })));
+  return { ...d, groups: d.groups.map((g) => { const f = snap.get(g.id); return f ? { ...g, totals: f.totals, total_cents: f.total_cents, fees_recorded: { at: f.at } } : g; }), fees: [...d.fees.filter((l) => !frozenFilings.has(l.filing)), ...lines] } as D;
 }
 
 @CaseRead()

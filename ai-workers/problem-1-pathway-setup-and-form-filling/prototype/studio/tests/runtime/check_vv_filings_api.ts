@@ -48,7 +48,7 @@ const run = Date.now().toString(36);
   ok("C6.12 fail: a person not applying has no filing and no fee, and the reason says so", r.body.filings.length === 5 && r.body.not_filing.length === 1 && r.body.not_filing[0].subject === spouse && /no filing and no fee/.test(r.body.not_filing[0].why) && vvFee(r.body).total_cents === 500_00 && !vvFee(r.body).cap_applied && !r.body.fees.some((f: { filing: string }) => f.filing === `filing-${spouse}`), r.body.not_filing);
 
   // A release whose snapshot names another combination is refused, never priced as that one (break report M2).
-  const rel = sql(`select r.id from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id = '${caseId}'`);
+  const rel = sql(`select r.id from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id = '${caseId}' and p.revision = (select max(z.revision) from pack_work_pin z where z.case_id = p.case_id)`);
   sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"wp.family"') where id = '${rel}'`);
   try {
     r = await filings();

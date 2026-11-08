@@ -7,12 +7,13 @@ import { createHash } from "node:crypto";
 import type { FormFact } from "./forms.ts";
 
 /** One fact that reads differently now from when the item was made: whose, which, the value then and now, and when. */
-/** `confirmed`: false when the new value is saved but not confirmed yet (so the form does not read it). */
+/** `confirmed`: false when the new value is saved but not confirmed yet (since P-411 the form reads it at once; it still
+ *  waits for the officer's Confirm section before filing). */
 /** `about`: the person (subject) the answer is stored on; `relation`: the relative on that person's form it is about
  *  (for example "parent_1"), or null for the person's own fact. */
 export type FactChange = { fact: string; about: string; relation: string | null; label: string; person: string; was: unknown; now: unknown; confirmed: boolean; at: string | null };
 /** What the API knows to word a change: the question's words, a person's label, when the current answer was saved, and
- *  (optional) the newest value saved for a fact the form no longer reads because it is not confirmed. */
+ *  (optional) the newest value saved for a fact the form does not read (since P-411: one that needs a fix). */
 export type ChangeWords = { label: (fact: string) => string; person: (about: string) => string; at: (about: string, fact: string) => string | null; saved?: (about: string, fact: string) => unknown };
 
 const subjectOf = (about: string) => about.split("/")[0];
@@ -32,11 +33,13 @@ export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "val
     if (x && y && same(x.value, y.value)) continue;
     const about = subjectOf(f.about), relation = f.about.includes("/") ? f.about.split("/").slice(1).join("/") : null, id = `${f.about}|${f.fact}`;
     if (out.has(id)) continue;
-    const pending = !y && !relation ? words.saved?.(about, f.fact) ?? null : null;
+    // B128 (Devin on #1256): a parent's answers are kept under the parent's own key (`<id>/parent_1`), so their newest saved
+    // value and its time are read by that whole key; a person's, by the person (the same key).
+    const pending = !y ? words.saved?.(f.about, f.fact) ?? null : null;
     // C8.2 break M4: the same value typed again (left unconfirmed) is no change.
     if (x && !y && pending !== null && same(pending, x.value)) continue;
     const person = relation ? `${words.person(about)}'s ${relation.replace(/_/g, " ")}` : words.person(about);
-    out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: relation ? null : words.at(about, f.fact) });
+    out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));
 }

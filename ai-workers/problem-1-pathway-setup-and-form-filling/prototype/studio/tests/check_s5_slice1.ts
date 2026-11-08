@@ -128,7 +128,7 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
 
   // ---------------------------------------------------------------- D-2, D-1, QA-47, QA-40, runtime roles
   // QA-38 and QA-40 before release 2: a case on release 1, where IMM 1295 is still filed as a PDF.
-  const pinOf = (k: string) => Number(sql(`select r.version from pack_work_pin p join config_release r on r.id=p.config_release_id where p.case_id='${k}'`));
+  const pinOf = (k: string) => Number(sql(`select r.version from pack_work_pin p join config_release r on r.id=p.config_release_id where p.case_id='${k}' and p.revision = (select max(z.revision) from pack_work_pin z where z.case_id = p.case_id)`));
   const listed = async () => newestReleases((await call("GET", "/releases", undefined, "user-O")).body as { combination_id: string; version: number }[]).find((x) => x.combination_id === C)?.version;
   const k1 = (await call("POST", "/runtime/cases", { combinationId: C, reference: "S5-QA38-R1", clientActor: "user-P", principal: { displayName: "Client B" }, idempotencyKey: `s5-r1-${Date.now()}` }, "user-O")).body?.id;
   ok("C6.1 QA-38 pass: with one release, the New case list and the opened case both name release 1", (await listed()) === 1 && pinOf(k1) === 1, { listed: await listed(), pinned: pinOf(k1) });

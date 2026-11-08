@@ -41,9 +41,12 @@ enum FieldDataType {
   COMPOSITE
 }
 
+/// C3.16 (SA-1B-130): CLIENT_LEVEL is the team's PERSON and CASE_LEVEL its FILING (one reader, engine/field-scope.ts).
 enum FieldScope {
   CLIENT_LEVEL
   CASE_LEVEL
+  HOUSEHOLD
+  ORGANISATION
 }
 
 enum ConditionEffect {
@@ -867,6 +870,9 @@ model DocumentType {
   /// A fact not listed is about the holder (the person the checklist line names).
   suppliesAbout   Json?            @map("supplies_about")
   readerProfile   Json?            @map("reader_profile")
+  /// C6.15 (SA-1B-19): named substitute sets, [{ name, mode: "any_one" | "all_together", members: [{ key, when? }] }];
+  /// null = the type is its own only member. Set only through a second person's approval (api/src/document-sets.ts).
+  sets            Json?
   version         Int
   status          DefinitionStatus
   supersedesId    String?          @map("supersedes_id") @db.Uuid
@@ -894,6 +900,8 @@ model DocumentRequirement {
   position        Int?
   /// W1-15 slice 3: library document type keys that count instead of this one ("any one counts")
   alternatives    Json?
+  /// C6.15 (SA-1B-20): the named set of this document type the line picks; null = the set named "Standard".
+  setName         String?          @map("set_name")
   sourceQuote     String?          @map("source_quote")
   sourceFile      String?          @map("source_file")
   note            String?
@@ -1280,6 +1288,7 @@ model Case {
   filingRecords FilingRecord[] // C8.2
   tasks         CaseTask[]     // C8.2
   filingChanges FilingChange[] // C6.13
+  feeReceipts   FeeReceiptFile[] // C8.2 B149
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1353,13 +1362,16 @@ model PackWorkPin {
   revision        Int      @default(1)
   actorId         String   @map("actor_id")
   pinnedAt        DateTime @default(now()) @map("pinned_at") @db.Timestamptz
+  /// C9.5: why the case moved to this release (revision 2 on; the first pin has none). Written once (insert only).
+  reason          String?
 
   case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
   /// A pinned release cannot be deleted (released means frozen; STANDARDS §3.7).
   release ConfigRelease @relation(fields: [configReleaseId], references: [id], onDelete: Restrict)
 
-  /// One pin per case and combination until moving a case to a newer release (ADOPT) is built.
-  @@unique([caseId, combinationId])
+  /// C9.5: a move to a newer release is a new revision (insert only; trigger runtime_pin_chain: previous + 1, a higher
+  /// release version of the same combination, a reason). The case reads its newest revision.
+  @@unique([caseId, combinationId, revision])
   @@map("pack_work_pin")
 }
 
@@ -1728,6 +1740,10 @@ model SubmissionGroup {
   /// Who made the group (the read that first derived it, or the officer who split).
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// B152 (FQ-7, C6.12, C8.2): the group's fee lines and totals as GET …/prepare showed them when the submission was
+  /// recorded, written once by "Record the submission"; a recorded group is read from it, so a birthday, a corrected date
+  /// of birth or a fee-table change later never changes what was filed. Null until recorded.
+  recordedFees Json?   @map("recorded_fees")
 
   case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filings Filing[]
@@ -2156,9 +2172,34 @@ model FilingRecord {
   case   Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filing Filing          @relation(fields: [filingId], references: [id], onDelete: Cascade)
   group  SubmissionGroup @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
+  feeReceipts FeeReceiptFile[] // B149
 
   @@index([caseId])
   @@map("filing_record")
+}
+
+/// C8.2 B149 (P-408; board agent-view frame 7): the fee receipt's evidence, IRCC's "Transaction Approved" page, uploaded
+/// on a recorded filing (the FK to filing_record.filing_id: never before it is recorded). Append-only (a trigger refuses
+/// any UPDATE): a wrong file is followed by a new upload, the newest is the receipt, earlier ones stay in the history. The
+/// file is in the working files (var/), named by the row id, checked by its sha256, as C8.1's signed_scan.
+model FeeReceiptFile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  fileName    String   @map("file_name")
+  mediaType   String   @map("media_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String   @db.VarChar(64)
+  path        String
+  uploadedBy  String   @map("uploaded_by")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  case   Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  record FilingRecord @relation(fields: [filingId], references: [filingId], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("fee_receipt_file")
 }
 
 /// C8.2: the UCI IRCC gave one person on a recorded filing; only `uci` changes, through a correction (trigger).

@@ -84,7 +84,8 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   const vid = await validateRoundTrip(c.id, "IMM 5257", P);
   pl = await line("IMM 5257");
   ok("C7.7-23 pass: once its validated copy is read back for today's facts the line is In progress, its Validate step done, naming that copy", !!vid && pl?.state === "in_progress" && pl?.steps?.[0]?.done === true && pl?.validated?.copy === vid && pl?.validated?.current === true, pl);
-  ok("C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (those steps are not recorded yet: C8.1)", pl?.state !== "ready" && (pl?.steps ?? []).slice(1).every((s) => s.done === null));
+  // B132: Printed and Signed in pen are recorded steps now (sign-steps.ts): not done until recorded (false); Mail is not recorded yet (null).
+  ok("C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (B132: Printed and Signed in pen not done yet; Mail not recorded)", pl?.state !== "ready" && (pl?.steps ?? []).filter((s) => s.key === "print" || s.key === "sign_in_pen").every((s) => s.done === false) && (pl?.steps ?? []).filter((s) => s.key === "mail").every((s) => s.done === null), pl?.steps);
   r = await toPaper("IMM 5476");
   const p5476 = await line("IMM 5476");
   // A form that makes no barcode page has no barcode page line (engine: tests/check_vv_prepare_store.ts "C7.7 Paper"); on the
@@ -102,7 +103,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   // for one statement as tests/check_vv_prepare_store_api.ts does), and all is put back in `finally`. Who and minimum
   // age are Sample (SCH1's are the checkpoint's, api/src/form-setup.ts VV_FORM_RULES; DEP's "each dependent child").
   // The copies the steps make stay on the case (a copy is never deleted); only the release and its pins are put back.
-  const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}'`);
+  const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}' order by revision desc limit 1`);
   // The scaffolding is put back by removing exactly the lines it added (a whole snapshot is too long for one psql
   // argument), so none of them may be in the release before.
   const ADDED = ["IMM 5257 SCH1", "IMM 0008 DEP", "IMM 5409"], inList = ADDED.map((f) => `'${f}'`).join(",");

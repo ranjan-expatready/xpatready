@@ -11,7 +11,7 @@ Built 7 Nov 2026 (screens lane) on the concept approved by the tech lead (#1242;
 | BR-3 swap with the spouse or partner only | `applyChange` | unit BR-3; pack C6.13-6, -7, -8; walk 3, 8, 9 |
 | BR-3b the client stays the same person | `clientPersonOf`, `withClient`; `engine/runtime/case.ts` `confirmation` reads `client`; `Runtime.peopleOf` | unit BR-3b; pack C6.13-6b |
 | BR-4 what changes, named by person | `diffFilings` over `CaseFilings.deriveFor` (the filings view's own derivation, M7); items, Ready to file, a minor's signer in the API | pack C6.13-1, -1a, -6c, -6d; walk 4, 8 |
-| BR-6 reason on a row; Ready to file back to Not started | table `filing_change` (migration `20261107190000_c613_filing_change`, append-only trigger) | pack C6.13-2, -3, -3b, -12b; walk 5, 6 |
+| BR-6 reason on a row; Ready to file back to Not started | table `filing_change` (migration `20261108020000_c613_filing_change`, append-only trigger) | pack C6.13-2, -3, -3b, -12b; walk 5, 6 |
 | BR-7 nothing changes once recorded | `applyChange` + re-check under the lock | unit BR-7; pack C6.13-10 |
 | BR-8 stale preview refused | `basisOf` (the preview's own result) + participants re-read under `FOR NO KEY UPDATE` | unit BR-8; pack C6.13-9 |
 | BR-9 who | `Runtime.reach(…, "officer")` | pack C6.13-11, -11a, -11b |

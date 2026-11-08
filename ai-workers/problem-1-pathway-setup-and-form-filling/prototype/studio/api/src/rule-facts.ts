@@ -194,9 +194,13 @@ export class RuleFacts {
     // M2 (review c36): parallel adds of one fact make one proposal. The waiting check and the write run under one lock
     // per combination and fact, so a second add waits, then sees the first and is refused (409).
     const { proposalId } = await this.db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${b.fact}`}))`;
+    // B102 (A6, review R3-M1 (b)): per workspace, as the library's fields and worked-out values are (it was per combination).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.workspaceId}:${b.fact}`}))`;
     if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", work: { path: ["ruleFact"], equals: b.fact } }, select: { id: true } }))
       fail(`A proposal to add ${b.fact} is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
+    // B102 (A6, break MA2): "Work it out instead" takes the same lock (api/src/worked-out.ts), so a fact is never both.
+    if (await tx.derivedField.findFirst({ where: { workspaceId: c.workspaceId, derivedKey: b.fact }, select: { id: true } }))
+      fail(`${b.fact} is worked out (Work it out instead), so it is not asked.`, HttpStatus.CONFLICT);
     const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
       message: `${actor.name} named ${rule!.sentence.split(":")[0]} as needing ${b.fact}: one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: b.fact } } });
     const [proposalId] = await insertProposals(tx, c.workspaceId, [{
@@ -244,6 +248,10 @@ export class RuleFacts {
     // it again from the item as decided (name and subject may be edited at accept), so it never freezes.
     const all = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId }, select: { canonicalFieldKey: true } });
     const key = keyFor(b.subject, b.label, new Set(all.map((f) => f.canonicalFieldKey)));
+    // B102 (A6, break MA3): a name whose key is a worked-out value is refused, since the lander builds the key from the
+    // name again (it would land as the worked-out key: asked and worked out at once).
+    if (await this.db.derivedField.findFirst({ where: { workspaceId: c.workspaceId, derivedKey: key }, select: { id: true } }))
+      fail(`"${b.label}" would be added as ${key}, which is worked out (Work it out instead): the rule reads it as it is, or choose another name.`, HttpStatus.CONFLICT);
     const ruleValues = ruleValuesKnown(namedRules(snapshot).filter((r) => factsRead(r.tree).includes(key)), key, values); // break R2-M2: rules that already read the built key
     const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as Json)).digest("hex");
     const name = rule!.sentence.split(":")[0];
