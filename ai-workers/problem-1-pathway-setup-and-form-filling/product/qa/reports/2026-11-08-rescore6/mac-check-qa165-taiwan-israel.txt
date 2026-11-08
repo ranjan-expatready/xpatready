@@ -1,0 +1,23 @@
+check_qa165_taiwan_israel_api on a934f2583 (= main d4897ce1b + qa records), copy qa_cq165 :4470, start Sun Nov  8 23:39:24 IST 2026
+NOTICE:  database "xr_studio_qa_cq165" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_cq165 on http://localhost:4470 (xr_studio_qa_cq165), stops itself in 30 min
+reset 201
+load 201
+PASS  C7.2 T1 pass: an Indian passport shows neither question, and IMM 5257 is ready with neither form field written or waited on — {"country":"IND","hidden":[true,true],"missing":[],"written":[null,null]}
+PASS  C7.2 T2 setup: the Taiwan question is its own Yes/No library field, read by IMM 5257's Taiwan PIN form field — {"fact":"person.taiwan_passport_with_personal_id_number","type":"yes_no","fills":[{"form":"IMM 5257","person":"Sample Client P","subject":"586440e7-4833-4840-978b-78060b6ac7de","boxes":1}]}
+PASS  C7.2 T2 fail: a Taiwanese passport shows the Taiwan question (not the Israel one), and readiness waits on its answer (its form field "needs an answer"), not on an empty form field — {"hidden":[false,true],"missing":[{"fact":"person.taiwan_passport_with_personal_id_number","label":"Whether, for this trip, the person will use a passport issued by the Ministry of Foreign Affairs in Taiwan that includes their personal identification number (I
+PASS  C7.2 T2 pass: answered Yes and confirmed, the Taiwan form field is written Y (the form's own Yes code) and IMM 5257 is ready — {"status":200,"missing":[],"written":["Y",null]}
+PASS  C7.2 T3 setup: the Israel question is its own Yes/No library field, read by IMM 5257's Israel passport form field — {"fact":"person.national_israeli_passport","type":"yes_no"}
+PASS  C7.2 T3 fail: an Israeli passport shows the Israel question, hides the Taiwan one again, and waits on the Israel answer — {"hidden":[true,false],"missing":[{"fact":"person.national_israeli_passport","label":"Whether, for this trip, the person will use a National Israeli passport (IMM 5257 p. 2, Passport, Question 6; asked only for a passport Israel issued).","about":"Sample Clien
+PASS  C7.2 T3 pass: answered No and confirmed, the Israel form field is written N and IMM 5257 is ready; the hidden Taiwan answer is kept, not written or waited on — {"status":200,"missing":[],"written":[null,"N"]}
+PASS  C7.2 T5 fail (review M1): "isr" writes the form's code 206 but hides the Israel question: IMM 5257 is not ready, and names the Israel form field with the answer to check — {"hidden":true,"missing":[{"fact":"box:form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]","label":"Whether, for this trip, the person will use a National Israeli passport (IMM 5257 p. 2, Passport, Question 6; asked only for 
+PASS  C7.2 T5 pass (review m3): back on a Taiwanese passport, the Taiwan question shows again with its kept answer (Yes), and IMM 5257 is ready — {"hidden":false,"answer":true,"missing":[]}
+PASS  C7.2 T4 pass: each released map carries the script's words (the country form field and the form's own choice) and holds its question's condition — {"taiwan":"mapped|Only when CountryofIssue[0] holds 203 (\"TWN (Taiwan)\"): the form's own script requires it only then.|{\"op\": \"eq\", \"field\": \"person.passport_country_of_issue\", \"value\": \"TWN\", \"subjectKind\": \"PERSON\"}","israel":"mapped|Only w
+PASS  C7.2 T4 fail: taken back (Undo), the Taiwan form field returns to nothing filling it, with no words about when it is filled, as before the ask — {"status":201,"draft":"unresolved||{\"op\": \"eq\", \"field\": \"person.passport_country_of_issue\", \"value\": \"TWN\", \"subjectKind\": \"PERSON\"}"}
+
+11/11 passed
+check exit 0  end Sun Nov  8 23:42:09 IST 2026
+stopped qa_cq165 (database and files removed; log in var/isolated-logs/qa_cq165-api.log)
