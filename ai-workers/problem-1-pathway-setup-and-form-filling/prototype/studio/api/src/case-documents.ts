@@ -32,6 +32,7 @@ import { cleanName, INVISIBLE, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MAX_REASON, 
 import { CODED_IDENTITY, identityWords, isIdentityName, isPassportPhoto } from "../../engine/identity-documents.ts";
 import { MRZ_FACTS, readPassport } from "../../engine/runtime/mrz.ts";
 import { isFilingFact } from "../../engine/resolver.ts";
+import { checkValue, shapeOf } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
@@ -135,6 +136,24 @@ type Placement = { fact: string; section_id: string; repeats: string; scope?: st
 const placementsOf = (s: Snapshot) => s.placements as Placement[];
 const labelOf = (s: Snapshot, fact: string) => placementsOf(s).find((p) => p.fact === fact)?.question_text || fact.split(".").pop()!.replace(/_/g, " ");
 
+/** The coded line's sex (ICAO Doc 9303 Part 4: F female, M male, X or < unspecified) in the words the release's question
+ *  offers, when it offers them; otherwise the code stays as read and is left for a person (below). */
+const SEX_WORDS: Record<string, string> = { F: "Female", M: "Male", X: "Unspecified" };
+export function inReleaseWords(s: Snapshot, fact: string, value: unknown): { value: unknown; note?: string } {
+  if (fact !== "person.sex" || typeof value !== "string" || !SEX_WORDS[value]) return { value };
+  const word = (shapeOf(s, fact).choices ?? []).find((c) => c.toLowerCase() === SEX_WORDS[value].toLowerCase());
+  return word ? { value: word, note: `The coded line reads "${value}" (ICAO Doc 9303: ${SEX_WORDS[value].toLowerCase()}).` } : { value };
+}
+/** Why a read value is not written by Confirm & use (left for a person to answer), or null: a value its own question's
+ *  checks refuse, or a country given only as a coded-line code (a code is not the country's name; no code table is
+ *  sourced yet), is never written and never opens a check. */
+export function notWritable(s: Snapshot, fact: string, value: unknown): string | null {
+  const type = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === fact)?.value_type;
+  if (type === "country" && typeof value === "string" && /^[A-Z<]{3}$/.test(value)) return `The coded line gives only the country code "${value}": choose the country by hand.`;
+  const problems = checkValue(s, fact, value);
+  return problems.length ? `${problems.join(" ")} Answer it by hand.` : null;
+}
+
 @Injectable()
 export class CaseDocuments {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
@@ -218,7 +237,9 @@ export class CaseDocuments {
     if (d.reader === "mrz") {
       const pdf = await this.bytesOf(d.id);
       const r = readPassport(d.id, pdf);
-      proposals = r.proposals.map((p) => ({ fact: p.fact, value: p.value, page: p.source.page, confidence: p.confidence, review: p.review, checked: p.checked, ...(p.note ? { note: p.note } : {}) }));
+      const snap = this.r.snapshotOf(c);
+      proposals = r.proposals.map((p) => { const w = inReleaseWords(snap, p.fact, p.value), note = [p.note, w.note].filter(Boolean).join(" ");
+        return { fact: p.fact, value: w.value, page: p.source.page, confidence: p.confidence, review: p.review, checked: p.checked, ...(note ? { note } : {}) }; });
       unreadable = r.unreadable;
     } else {
       if (mode === "live") problem(409, "live_refused", "Not possible now", aiLive() ? "A live document read needs the founder's Go for this run, with its cost stated first (P-295); it is not built here (C6.5 part 3). Nothing was read: US$0." : "Live AI is off on this copy (the founder's switch). Nothing was read: US$0.");
@@ -311,7 +332,7 @@ export class CaseDocuments {
     const s = this.r.snapshotOf(c), caseRole = who.role === "case";
     const fields = s.canonical_fields as { id: string; item_version: number; value_type?: string }[];
     const at = new Date();
-    const out = { used: [] as string[], agreed: [] as string[], checks: [] as { id: string; fact: string }[], not_asked: [] as string[] };
+    const out = { used: [] as string[], agreed: [] as string[], checks: [] as { id: string; fact: string }[], not_asked: [] as string[], left: [] as { fact: string; why: string }[] };
     await this.db.$transaction(async (tx) => {
       // One Confirm & use per document: the review row is the lock (a second one at the same moment writes nothing).
       const n = await tx.documentReview.updateMany({ where: { id: review!.id, confirmedBy: null }, data: { confirmedBy: actor.id, confirmedAt: at } });
@@ -321,6 +342,8 @@ export class CaseDocuments {
         const def = place && field && place.repeats !== "per_row" && field.value_type !== "declaration" && isFilingFact(v.fact, place) === caseRole
           ? await tx.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: v.fact, version: field.item_version } }) : null;
         if (!def) { await tx.readValue.update({ where: { id: v.id }, data: { state: "not_asked" } }); out.not_asked.push(v.fact); continue; }
+        const why = notWritable(s, v.fact, v.valueJson);
+        if (why) { out.left.push({ fact: v.fact, why }); continue; } // stays a proposal: a person answers it
         const source = { channel: "document_read", actor: actor.id, at: at.toISOString(), document: doc!.id, page: v.page, reader: v.reader, read_value: v.id };
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: v.fact, rowKey: null, supersededById: null } });
         if (current && !sameValue(v.fact, current.valueJson, v.valueJson)) {
@@ -343,9 +366,9 @@ export class CaseDocuments {
         (current ? out.agreed : out.used).push(v.fact);
       }
     });
-    await this.audit.log(c.workspaceId, actor.id, "confirmed and used", "case document", doc!.id, `${actor.name} confirmed and used ${this.typeName(c, doc!.documentType)} for the ${who.role.replace(/_/g, " ")} on case ${short(c.id)}: ${out.used.length} written, ${out.agreed.length} agreed, ${out.checks.length} check${out.checks.length === 1 ? "" : "s"} opened (${out.checks.map((x) => x.fact).join(", ") || "none"})`);
+    await this.audit.log(c.workspaceId, actor.id, "confirmed and used", "case document", doc!.id, `${actor.name} confirmed and used ${this.typeName(c, doc!.documentType)} for the ${who.role.replace(/_/g, " ")} on case ${short(c.id)}: ${out.used.length} written, ${out.agreed.length} agreed, ${out.checks.length} check${out.checks.length === 1 ? "" : "s"} opened (${out.checks.map((x) => x.fact).join(", ") || "none"}), ${out.left.length} left for a person (${out.left.map((x) => x.fact).join(", ") || "none"})`);
     return { document: doc!.id, confirmed: { by: actor.id, at: at.toISOString() }, ...out,
-      message: `Confirmed and used: ${out.used.length + out.agreed.length} value${out.used.length + out.agreed.length === 1 ? "" : "s"} now fill the forms.${out.checks.length ? ` ${out.checks.length} differ${out.checks.length === 1 ? "s" : ""} from a typed answer: resolve ${out.checks.length === 1 ? "that check" : "those checks"} (the typed answer is kept until then).` : ""}` };
+      message: `Confirmed and used: ${out.used.length + out.agreed.length} value${out.used.length + out.agreed.length === 1 ? "" : "s"} now fill the forms.${out.checks.length ? ` ${out.checks.length} differ${out.checks.length === 1 ? "s" : ""} from a typed answer: resolve ${out.checks.length === 1 ? "that check" : "those checks"} (the typed answer is kept until then).` : ""}${out.left.length ? ` ${out.left.length} value${out.left.length === 1 ? " is" : "s are"} left for you to answer by hand (${out.left.map((x) => x.fact).join(", ")}).` : ""}` };
   }
 
   private checkOut(s: Snapshot, x: Awaited<ReturnType<Db["answerCheck"]["findMany"]>>[number], current?: { id: string; valueJson: unknown } | null) {
