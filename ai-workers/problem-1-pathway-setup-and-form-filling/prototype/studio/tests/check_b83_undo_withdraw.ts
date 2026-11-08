@@ -77,6 +77,11 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   const release = async () => { const s = await submit(); if (s.status >= 300) return s; return call("POST", `/combinations/${vv}/approve`, {}, APPROVER); };
 
   // ------------------------------------------------------------ the row's first state: a released row under a draft
+  // QA-165 (#1318): the checkpoint now asks the green card's details only after a Yes (230-own-yes-no-follow-ups.ts), so a
+  // worked-out US card row reading the number would rightly be refused at release ("Hiding a value a form reads"). This check
+  // needs that worked-out row released to attack undo and withdraw over it, so on its own copy the details' question condition
+  // is taken off first, as it held the questions before #1318 (the attack itself still goes through the routes).
+  sql(`update section_question set predicate_json = null, condition_effect = null, condition_plain = null where canonical_field_key in ('person.us_green_card_number', 'person.us_green_card_expiry_date')`);
   let u = await undo(USCARD);
   ok("setup: undo over a released row makes a new draft, the released row untouched", u.status < 300 && newest(USCARD).includes(":DRAFT:person.us_green_card_number") && rowsOf(USCARD)[0].startsWith("1:PUBLISHED:"), rowsOf(USCARD));
   u = await release();
