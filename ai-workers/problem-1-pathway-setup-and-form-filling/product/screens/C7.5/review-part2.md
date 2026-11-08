@@ -135,3 +135,14 @@ I restored the committed screenshots after each test run. Head has since moved t
 **Journey re-score:** 9.5/10. Feedback, recovery and accessibility are now 1 each; plain words stays ½ because of n1.
 
 **Verdict: Approve** (commit `4d5ce4405773566022fa648486fda1e77878e547`). There are no open Blockers or Majors. List n1, n2, n3 and q1 in the PR, and fix n1 before the paid run.
+
+## Diff check on 541dbfb (`git diff 4d5ce4405 541dbfbe7`, 8 Nov IST)
+I re-ran on fresh copies (:4436 and :4437, US$0): engine 67/67, API 44/44, browser 37/37. I restored the screenshots the tests overwrite.
+
+- **n1 closed.** `choiceWords` drops a leading "*". The engine test reads "* No" as "No" and "*Yes" as "Yes" and keeps "F Female". The API test finds no IMM 5257 value that starts with "*". This lands before the paid run, so the replay key is final.
+- **n2 closed.** `run()` lower-cases the case id and the run id before the claim and before the audit check. The API test sends a used run id in upper case and gets 409; it would have got 201 without the fix.
+- **n3 closed.** `RunForm.rounds` (0, 1 or 2) is set before the early exit for a failed round (`review-runs.ts:252`). From it, step 2 shows done after 1 round, step 3 after 2, and step 4 when the rules ran. The API test checks that `rounds` is 2 on a Saved run.
+- **q1** (Live tested end to end with the fake launcher) stays with the tech lead as question 6 on the PR. Not blocking.
+- The rest of the diff is records and regenerated screenshots.
+
+**Verdict: Approve** (commit `541dbfbe771c6206eb04958ada51503346bfe122`).
