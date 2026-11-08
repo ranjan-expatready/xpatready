@@ -40,3 +40,11 @@ I note these and do not ask for them here:
 * **The BIC scorecard and D1–D20.** They do not apply: this change adds no screen, only an acceptance-pack step.
 
 **Verdict: Approve.** QA-315 is fixed: the 409 from the data is gone, no step is dropped, and gate B's matching holds. The two Minors may be fixed in the same PR or later.
+
+## Round 2 (569deecbf783fc9ef69851290f5946f2ccd97cef, diff from bb1ec40c0)
+* **Minor 1 is fixed.** `C7.2.test.ts:36-39` now says the product offers IMM 5257 as a PDF upload. It says that, with no IRCC record on this data, Online, PDF upload and Paper are offered as Sample, and it names `engine/channels.ts` `allowedChannels`. This matches what the data shows (`accepts_quote: null`).
+* **The nit is fixed.** Line 44 now reads `const g = await`.
+* **No other code changed.** Both review files were committed byte-identical to what I wrote.
+* **Re-run:** on the checkpoint (4452) the pack gives the same 3/11, and the step labels and gate B matching are unchanged.
+
+**Verdict: Approve** (569deecbf).
