@@ -21,6 +21,12 @@ Weekly 45% at 09:53 IST (about 3%/h with 8 lanes; 50% about 11:30, 55% about 13:
 6. **Refused, so don't retry:** dropping test databases (disk 9 GB). Own CI or test-file PR labels and PR closes need the founder to name them.
 7. **Lesson:** run `TZ=Asia/Kolkata date` before typing any time; Lead 33 and qa typed times 5-30 min ahead several times.
 
+## Lead 34 log, 8 Nov (from 09:55 IST)
+* 09:55 took over; check cron a4076eb3 (:13/:43); Lead 35 told "start the watchdog"; Lead 36 standby started ~10:05 IST on the founder's typed "you can start next one" (local_0ed74ec4-…). Founder named #1140, #417, #858, #1069 to close (P-416 D8): all four were already closed; a note added to each.
+* Merged: #1317 (C7.7 pack 4 of 4), #1242 (C6.13). Labelled #1327 (C3.16 + C9.2 packs; Q2 kept as built, NOT RUN on the fixture is never green, P-405).
+* Rulings: #1330 C10.2 (five changes accepted; pack lines approved incl. the Paper filing split out of the group with a reason; 5b/6b/6d PENDING); #1331 BR-9 (migration approved but its stamp 20261108020000 collides with #1242's c613: rename to 20261108030000, P-348 (8); C7.6-19 approved; breaker M2 → new row **B162**); #1334 C7.6 pen pack (pack only; no screen for PEN steps → new row **B161**, gate A). QA-165 lane nudged (idle 34 min). QA-300 lane redirected: B132 had merged, so the pack now records Printed and Signed in pen (#1334).
+* qa told: QA-300 check on #1231; Online sheet not Done (rows / none apply / visit_contact); "Release 6" label; two date zones (#1327 Q3); re-score C3.16, C9.2 after #1327.
+
 ## Lead 33 log, 8 Nov (rewritten at the hand-over)
 * 00:36 IST founder "Yes, clear it" → #1304 emptied the M2-hot list (P-415); #1270 requeued. Landed since: #1268 (C6.15), #1290 (C8.1), #1246 (C6.18), #1222 (C6.4), #1252 (C9.5), #1251 (B150), #1314 (QA-305 test fix).
 * qa re-scores #1312 → #1313 (stacked): C6.15, C6.18, C9.5, C6.4 Works (M3 8 of 28 once landed); C7.3 Partial (QA-165 Major, B4, W6); QA-302 Minor (Lead's ruling). **The permission check refused the Lead's label on both (a qa probe file outside product/): the founder names them.**
