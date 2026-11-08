@@ -18,7 +18,7 @@ export default {
     ctx.result.story_cases = { family: fam?.caseId ?? null, thin: thin.caseId };
     for (const s of stages) ctx.log.push(`  finished story · ${s.title}: ${s.status}${s.why ? ` (${s.why.slice(0, 200)})` : ""}`);
     const st = (k: string) => stages.find((x) => x.key === k);
-    const pieces = ["forms", "signed", "ready", "record"].map(st);
+    const pieces = ["paper", "forms", "signed", "ready", "record"].map(st);
     const done = pieces.every((x) => x?.status === "done"), reached = pieces.some((x) => x && x.status !== "waiting");
     ctx.row({ row: "13", title: "Online auto-fill with the browser extension", status: "out", shows: "Parked (P-102, W6): the Online form is entered by a person from its answer sheet (row 14)", why: null });
     ctx.row({ row: "14", title: "Online plus PDF in one filing: portal sheet, filled PDFs, signed scans (finished story)", status: !out ? "waiting" : done ? "done" : reached ? "partial" : "waiting",

@@ -49,5 +49,12 @@
   "reference": "SAMPLE-VV-THIN-1",
   "principal": "Client B (Sample)",
   "client": "user-Q"
+ },
+ "paper_line": {
+  "basis": "Tech lead's ruling (8 Nov 09:44 IST) and P-380 Q3: one person's IMM 5257 is filed on Paper, with a written reason, so the story keeps a barcode PDF that a person validates in Adobe. Its filing waits for that validated copy (P-315: a barcode form without one blocks Ready to file), so it is split out of the family's group with a reason and the other filings are recorded together (BR-11). Sample.",
+  "person": "Child 18 or over (Sample)",
+  "form": "IMM 5257",
+  "reason": "Sample: the person asked to apply on paper (an accommodation, P-380 Q3)",
+  "split_reason": "Sample: filed on paper, so it goes on its own once its barcode copy is validated in Adobe"
  }
 }

@@ -18,6 +18,7 @@ export type StorySample = {
   on_behalf_reason: string; passport: { document_type: string; words: string }; signed_scan_words: string; review_note: string; pass_reason: string;
   record: { our_reference_prefix: string; application_number_prefix: string; uci_prefix: string; fee_receipt: string };
   thin_case: { reference: string; principal: string; client: string };
+  paper_line: { person: string; form: string; reason: string; split_reason: string };
 };
 export const storySample = (): StorySample => JSON.parse(readFileSync(join(STUDIO, "samples", "finished-story.json"), "utf8"));
 
@@ -68,6 +69,7 @@ export const HELD = {
   sheet: "QA-165 (1): the answer sheet keeps waiting on IMM 5257's Yes/No gates (other names, national identity document, US PR card) and on facts the case holds as rows or as \"none apply\", and release 2 never asks the visit contact (case.visit_contact_*), so the Online item cannot read Done",
   family: "QA-153: IMM 5645's parents and brothers and sisters are not asked, so their boxes stay empty on the copy",
   followUps: "QA-165 (1): the follow-up questions of a No (national identity document, US PR card) stay required, so they carry Sample values by kind of answer",
+  paper: "IMM 5257's copy leaves 16 of its 46 mandatory boxes empty today, so Adobe's Validate would refuse it (QA-165, #1318); and Validate is a person's step, never simulated (P-46, P-171)",
   validate: "Validate is a person's step in Adobe Reader (P-46, P-171): never simulated, so a barcode PDF waits for a person",
 } as const;
 
@@ -154,6 +156,19 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     return { status: "done", shows: `Every form of release 2 reads ready for every person: ${said}.${followUps ? ` ${HELD.followUps}.` : ""}`, why: null };
   });
 
+  // C11.6 (P-380 Q3, the tech lead's ruling of 8 Nov 09:44 IST): one person's IMM 5257 on Paper with a written reason,
+  // its copy made for a person to validate in Adobe; Validate is never simulated, so this filing waits for it.
+  await stage("paper", "One person's IMM 5257 on Paper with a reason; its copy made to validate in Adobe (C11.6, C7.7)", async () => {
+    const pl = s.paper_line, p = await prepare();
+    const who = p.people.find((x) => x.label === pl.person);
+    const item = who ? p.items.find((i) => i.kind === "form" && i.form === pl.form && i.subject === who.subject) : undefined;
+    if (!who || !item) throw new Stop(`${pl.form} for ${pl.person} is not on this case's release 2`);
+    if (item.channel !== "PAPER") must(await r.call(officer, "PATCH", `/runtime/items/${item.id}/channel`, { channel: "PAPER", reason: pl.reason, version: p.version }), `File ${pl.form} for ${pl.person} on Paper`);
+    const copy = await copyOf(r, officer, caseId, { form: pl.form, subject: who.subject });
+    const after = (await prepare()).items.find((i) => i.id === item.id);
+    return { status: "partial", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy made (${copy ? "generated" : "not made"}); ${after?.state === "to_do" ? "it waits for its validated copy" : `it reads ${after?.state}`}`, why: `The validated copy is not read back: ${HELD.paper}. Until then this person's filing cannot be Ready to file (P-315).` };
+  });
+
   // C7.3, C7.1, C7.7: the Online form's answer sheet, section by section "Entered in the portal"; a copy of each PDF form.
   await stage("forms", "Forms filled and the IMM 5257 Online answer sheet entered (C7.1, C7.3, C7.7)", async () => {
     let p = await prepare();
@@ -208,11 +223,13 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
   // reason and presses Ready to file.
   await stage("ready", "Every filing reaches Ready to file (C7.6, C7.7)", async () => {
     if (!rep) throw new Stop("The case has no representative of record to review its filings");
+    const held: string[] = [];
     const pin = (await get<CaseView>(`/runtime/cases/${caseId}`)).pin?.revision;
     for (const f of (await prepare()).filings) {
       if (f.status === "ready_to_file") continue;
       const rd = (await prepare()).readiness.find((x) => x.filing === f.id);
-      if (rd?.blocks.length) throw new Stop(`${f.label}: ${rd.blocks.map((b) => b.words).join(" ")}`);
+      // A block is never passed (P-315): the filing waits, said in its own words, and the others go on.
+      if (rd?.blocks.length) { held.push(`${f.label}: ${rd.blocks.map((b) => b.words).join(" ")}`); continue; }
       must(await r.call(rep, "POST", `/runtime/filings/${f.id}/review`, { note: s.review_note, facts_hash: rd?.facts_hash, pin_revision: pin }), `The representative reviews ${f.label}`);
       const warns = ((await prepare()).readiness.find((x) => x.filing === f.id)?.warns ?? []).map((w) => w.code);
       for (const code of [...new Set(warns)]) must(await r.call(officer, "POST", `/runtime/filings/${f.id}/warnings/${code}/pass`, { reason: s.pass_reason }), `Pass the warning ${code} on ${f.label}`);
@@ -221,20 +238,31 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     const filings = (await prepare()).filings, ready = filings.filter((f) => f.status === "ready_to_file").length;
     // C7.5: the rules checks' findings warn and never stop Ready to file; any still open is said, never hidden.
     const open = (await get<{ findings: { state: string; quote: string }[] }>(`/runtime/cases/${caseId}/findings`)).findings.filter((x) => x.state === "open");
-    return { status: ready === filings.length ? "done" : "partial", shows: `${ready} of ${filings.length} filings Ready to file: each reviewed by the representative of record, its open warnings (documents not collected) passed by the case officer with a reason; ${open.length ? `${open.length} open Review finding${open.length === 1 ? "" : "s"}` : "no open Review finding"}`, why: open.length ? open.slice(0, 2).map((x) => x.quote).join(" ") : null };
+    return { status: ready === filings.length ? "done" : "partial", shows: `${ready} of ${filings.length} filings Ready to file: each reviewed by the representative of record, its open warnings (documents not collected) passed by the case officer with a reason; ${open.length ? `${open.length} open Review finding${open.length === 1 ? "" : "s"}` : "no open Review finding"}`, why: [...held, ...open.slice(0, 2).map((x) => x.quote)].join(" ") || null };
   });
 
   // C8.2 (BR-11): one "Record the submission" records the whole submission group: the family's filings go together.
   await stage("record", "The submission is recorded: portal, our reference, a Sample application number and a Sample UCI (C8.2)", async () => {
-    const p = await prepare(), today = (await get<ChecklistView>(`/runtime/cases/${caseId}/checklist`)).today;
-    const group = p.groups[0];
+    const today = (await get<ChecklistView>(`/runtime/cases/${caseId}/checklist`)).today;
+    let p = await prepare();
+    // BR-11 records a whole group, and only when every filing in it is Ready to file (C8.2-1): a filing still waiting
+    // (the Paper IMM 5257 above) is split out of the family's group first, with a reason, by the product's own step.
+    const split: string[] = [];
+    for (const f of p.filings.filter((x) => x.status !== "ready_to_file")) {
+      const g = p.groups.find((x) => x.filings.includes(f.id) && x.filings.length > 1);
+      if (!g) continue;
+      must(await r.call(officer, "POST", `/runtime/groups/${g.id}/split`, { filing: f.id, reason: s.paper_line.split_reason, version: p.version }), `Split ${f.label} out of the family's submission`);
+      split.push(f.label); p = await prepare();
+    }
+    const group = p.groups.find((g) => g.filings.every((id) => p.filings.find((f) => f.id === id)?.status === "ready_to_file"));
+    if (!group) throw new Stop("No submission group has every filing Ready to file");
     const subjectOf = (id: string) => p.filings.find((f) => f.id === id)!.applicants[0].subject;
     const k = s.record;
     const done = must<{ recorded?: string[] }>(await r.call(officer, "PATCH", `/runtime/groups/${group.id}/record`, {
       filings: group.filings.map((id, n) => ({ filing: id, our_reference: `${k.our_reference_prefix}-${n + 1}`, submitted_on: today, application_number: `${k.application_number_prefix}${n + 1}`, fee_receipt: k.fee_receipt })),
       ucis: group.filings.map((id, n) => ({ subject: subjectOf(id), uci: `${k.uci_prefix}${n + 1}` })), version: p.version }), "Record the submission");
     recorded = (done.recorded ?? []).length;
-    return { status: "done", shows: `${recorded} filings recorded as submitted on ${today} (${p.portal_words ?? p.portal}), one action for the family's submission group (BR-11): each with our reference, its own Sample application number and each person's Sample UCI; the filings are read-only now`, why: null };
+    return { status: split.length ? "partial" : "done", shows: `${recorded} filings recorded as submitted on ${today} (${p.portal_words ?? p.portal}), one action for the family's submission group (BR-11): each Ready to file first, each with our reference, its own Sample application number and each person's Sample UCI; the filings are read-only now${split.length ? `; split out with a reason, to file on its own later: ${split.join(", ")}` : ""}`, why: split.length ? `Split out and not recorded yet: ${split.join(", ")} waits for its validated copy (${HELD.paper}).` : null };
   });
   return { stages, release, recorded };
 }
