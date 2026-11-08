@@ -229,5 +229,11 @@ ok("D5 --pool: a pack the base names that does not report is red (renamed or dro
 pr = pool("C11.13; rm -rf /");
 ok("D5 --pool: a value that is not capability ids is refused (exit 2) before any run", pr.code === 2 && pr.calls.length === 0, pr);
 rmSync(T2, { recursive: true, force: true });
+{ const prev = process.env.RANGE; process.env.RANGE = "";
+  const { baseScoring } = await import("./works-set.mjs"), sc = baseScoring();
+  const real = rows(readFileSync(join(P, "qa/CAPABILITIES.md"), "utf8"));
+  const anyWorks = real.find((r) => /works/i.test(r.status));
+  ok("D2: baseScoring reads statuses, scoring data and holds off CI (the working tree)", anyWorks && /works/i.test(sc.statusOf(anyWorks.id)) && ["six", "checkpoint"].includes(sc.dataOf(anyWorks.id)) && Array.isArray(sc.heldOf("C11.12", ["C11.12.test.ts", "C11.12-runtime.test.ts"])), anyWorks);
+  if (prev !== undefined) process.env.RANGE = prev; }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

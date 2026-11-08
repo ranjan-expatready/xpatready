@@ -4,7 +4,8 @@
 // so a merge can no longer take away a Works row unseen (reports/bottleneck-audit-2026-11-03.md: 18 demotions in 3 days).
 // Everything that decides WHAT is protected is read on the batch's base (CI's RANGE "<base>..<head>"), so the batch's
 // own PRs cannot shrink the set: qa/CAPABILITIES.md, the hold file, and the list of pack files.
-//   --list   the capabilities with milestone M2 (or --milestone) and a status that starts with "Works" (any case, marks
+//   --list   the capabilities with milestone M2 (or --milestone; the merge queue and the nightly pass "all" since D3/D5)
+//            and a status that starts with "Works" (any case, marks
 //            and struck-out text ignored, so "Works (retest)" counts) that have an acceptance pack on the base;
 //            --json prints them as a JSON array for a job matrix. A Works row without a pack is listed as such.
 //   Held:    product/qa/REGRESSION-HELD.md (qa's records; tech lead, 4 Nov) names, on a list or table line, a capability
@@ -98,6 +99,14 @@ export function scoringOf(id, md, dataFile = new Map()) {
   return own.some((r) => inMilestone(r.milestone, "M3")) ? { data: "checkpoint", from: "an M3 row (P-322)" } : { data: "six", from: "the default" };
 }
 export const scoringData = (id, md, dataFile = new Map()) => scoringOf(id, md, dataFile).data;
+/** The rows' status and scoring data as on the base (CI's RANGE), for gate B's set by diff (D2): { statusOf, dataOf }. */
+export function baseScoring() {
+  const md = atBase(CAPS), dat = dataRows(atBase(DATA, true)).data, all = rows(md);
+  // A duplicate id reads as Works when any copy is (as protectedSet), else its first status.
+  const statusOf = (id) => { const own = all.filter((r) => r.id === id); return (own.find((r) => isWorks(r.status)) ?? own[0])?.status ?? null; };
+  const hold = held(atBase(HELD, true));   // qa's holds (a missing file holds nothing here; the queue's set refuses it)
+  return { statusOf, dataOf: (id) => scoringData(id, md, dat), heldOf: (id, files) => files.filter((f) => hold.caps.has(id) || hold.packs.has(f)) };
+}
 /** At most n groups of rows for a job matrix, balanced by weight (a checkpoint pack 2, a six pack 1; heaviest first). */
 export function groupsOf(items, n) {
   const k = Math.max(1, Math.min(n, items.length)), out = Array.from({ length: k }, () => ({ caps: [], packs: 0, weight: 0 }));
@@ -189,7 +198,7 @@ function basePacks() {
 /** One run of the capability's packs through gate B with no claim, held packs skipped, CI's PR values cleared. */
 function once(id, skip, data) {
   const gate = process.env.WORKS_SET_GATE ?? join(HERE, "gate-b.mjs");   // the self-check points this at a stand-in
-  const env = { ...process.env, QUEUE: "", PR_TITLE: "", PR_BODY: "", KIND: "code", GATE_B_JOBS: "1", GATE_B_SKIP_PACKS: skip.join(","), GATE_B_DATA: data };
+  const env = { ...process.env, QUEUE: "", PR_TITLE: "", PR_BODY: "", KIND: "code", GATE_B_JOBS: "1", GATE_B_SKIP_PACKS: skip.join(","), GATE_B_DATA: data, GATE_B_NO_DIFF: "1" };
   // 19 minutes an attempt, so a run and its retry fit the job's limit; a hang is red, never a pass.
   const r = spawnSync(process.execPath, [gate, "--title", id, "--kind", "code"], { cwd: S, env, encoding: "utf8", maxBuffer: 64 << 20, timeout: 1_140_000, killSignal: "SIGKILL" });
   return { status: r.status ?? (r.error ? 124 : 1), out: (r.stdout ?? "") + (r.stderr ?? "") + (r.error ? `\n(stopped: ${r.error.message})` : "") };
@@ -202,7 +211,7 @@ async function pooledOnce(ids, dataOf, skip, attempt) {
   // Each attempt its own copy names and ports (a killed first attempt may leave its copies up until their ttl), and
   // NOT TESTED as a warning: the pool gives the verdict (fixture only counts as run, as in --run).
   const env = { ...process.env, QUEUE: "", PR_TITLE: "", PR_BODY: "", KIND: "code", GATE_B_JOBS: process.env.GATE_B_JOBS ?? "3", GATE_B_SKIP_PACKS: skip.join(","),
-    GATE_B_DATA: "six", GATE_B_DATA_OF: ids.map((id) => `${id}=${dataOf(id)}`).join(" "), GATE_B_RESULTS: res, GATE_B_NOT_TESTED: "warn",
+    GATE_B_DATA: "six", GATE_B_DATA_OF: ids.map((id) => `${id}=${dataOf(id)}`).join(" "), GATE_B_RESULTS: res, GATE_B_NOT_TESTED: "warn", GATE_B_NO_DIFF: "1",
     GATE_B_NAME: `pool${attempt}s`, GATE_B_PORT: String(4590 + 10 * attempt) };
   // 35 minutes a pooled attempt (two attempts and the set-up fit the job's 90): a hang is red, never a pass; the whole
   // process group is stopped (gate B, its packs and their servers), not only gate B.
