@@ -32,3 +32,14 @@ Everything is real (routes, words, data). The data is Sample (synthetic case; Pa
 * The item's state pill stays "In progress" after Signed in pen. That is the server's state for the Paper line (`paperLine`), unchanged here.
 * Self-score: not given (D17 and D20 need an intended user; the reviewer scores).
 * AI cost US$0.
+
+## Review round 1 (Opus, Block on f3278cd4c: one Major, five Minors) and the fixes
+* **M1, fixed.** After a fact changed post-Printed, the block still ticked Printed and offered Signed in pen, which the server refuses.
+  * PenBlock now counts the steps as the server does (`case-prepare.ts:396`): on a barcode form, only those done on its current validated copy.
+  * A step recorded on an earlier copy says "Recorded on an earlier copy … it no longer counts" and is not ticked.
+  * The new fail check -10i goes red with the old PenBlock (7/8, exit 1) and green with the fix (8/8, exit 0).
+* **m1, fixed.** One date for one copy: the button and the done row both name the copy's own date. The Validated row gives both the copy's date and the read-back time.
+* **m2, fixed.** On a form with no barcode page, printing keeps SignBlock's copy reasons: being generated, "Copy, not for filing", out of date, file missing, and the fill-trial warning.
+* **m3, fixed.** On a form with no barcode page, the copies are read again before Signed in pen. A printed copy whose facts changed is refused in words and nothing is sent (SignBlock's `printedCopyStale`).
+* **m4, fixed.** -10i (fail, a fact changed after signing) and -10j (pass, a new validated copy printed again, then signed in pen by screens).
+* **m5, for the tech lead.** The server's 409 at `sign-steps.ts:128` names "a newer validated copy" when the cause is a changed fact. That is an API wording point, not this PR.

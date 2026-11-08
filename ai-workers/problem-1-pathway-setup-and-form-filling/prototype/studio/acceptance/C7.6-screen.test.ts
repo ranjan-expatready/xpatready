@@ -7,12 +7,13 @@
 // the same step. Each rule has a pass and a fail. Synthetic data only; no model call (US$0).
 //   zsh studio/tools/isolated.sh accept 4440 start
 //   tsx studio/acceptance/C7.6-screen.test.ts 4440 xr_studio_accept
-import { call, expectedFor, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, filingOf, sql, validateRoundTrip, yearsAgo } from "./lib/m3.ts";
+import { agent, answer, call, CLIENT, confirmAll, expectedFor, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, filingOf, sql, validateRoundTrip, yearsAgo } from "./lib/m3.ts";
 import { walker } from "./lib/browser.ts";
 
 const PORT = process.argv[2] ?? "4440", BASE = `http://127.0.0.1:${PORT}`;
 type PenItem = { id: string; channel?: string; signature?: string; record?: string };
 type ItemRead = { sign_steps?: { key: string; done: { at: string; by: string; copy?: string | null } | null }[] };
+type DateQ = { subjectId: string; fact: string; hidden: boolean; group: string | null; value_type: string; collected_from: string; fills: { form: string }[]; answer: { value?: unknown } | null };
 
 await main("C7.6", "Ready to file: Printed and Signed in pen by screens (Paper, 1440 px)", async () => {
   const vv = needVisitorVisa();
@@ -83,6 +84,35 @@ await main("C7.6", "Ready to file: Printed and Signed in pen by screens (Paper, 
     const sr = await block().locator('[data-step="sign_in_pen"] .sr-only').innerText();
     ok("C7.6-10h pass (B161): the Paper steps block has no axe violation, and a done step reads \"done\" to a screen reader",
       axe.violations.length === 0 && /done/.test(sr), axe.violations.map((v) => `${v.id}: ${v.help}`));
+
+    // 10i. Review Major 1 on #1340: a fact the barcode form reads changes after it was signed. Its validated copy is no
+    // longer current, so (as the server counts it, case-prepare.ts) Printed and Signed in pen no longer count: neither is
+    // ticked, no Signed in pen is offered, the screen says they were recorded on an earlier copy, and readiness warns again.
+    const dates = ((((await agent(c.id))?.sections ?? []) as { questions: DateQ[] }[]).flatMap((x) => x.questions))
+      .filter((x) => x.subjectId === P && !x.hidden && !x.group && x.value_type === "date" && x.fills.some((y) => y.form === BC) && x.fact !== "person.date_of_birth" && !/expiry/.test(x.fact));
+    const dq = dates[0], by = dq?.collected_from === "client_questionnaire" ? CLIENT : officer;
+    const moved = dq ? await answer(c.id, P, dq.fact, dq.answer?.value === "2019-06-14" ? "2019-06-15" : "2019-06-14", by) : null;
+    if (dq && by !== CLIENT) await confirmAll(c.id, P);
+    await open();
+    const lineSteps = async () => (((await item()) as unknown as { steps?: { key: string; done: boolean | null }[] })?.steps ?? []);
+    const srv = await lineSteps(), tick = async (k: string) => block().locator(`[data-step="${k}"][data-done="yes"]`).count();
+    ok(`C7.6-10i fail (review M1 on #1340): after a fact on ${BC} changes, Printed and Signed in pen no longer count, as the server counts them: not ticked, no Signed in pen button, "recorded on an earlier copy", and readiness warns "signed in pen" again`,
+      !!dq && (moved?.status ?? 500) < 300 && srv.find((x) => x.key === "print")?.done === false && srv.find((x) => x.key === "sign_in_pen")?.done === false
+        && (await tick("print")) === 0 && (await tick("sign_in_pen")) === 0 && (await block().locator('[data-step-action="sign_in_pen"]').count()) === 0
+        && (await block().locator("[data-step-old]").count()) === 2 && (await penWarn()),
+      { fact: dq?.fact, status: moved?.status, server: srv, state: await block().getAttribute("data-state") });
+
+    // 10j. A new validated copy is read back: Printed is offered again on it, then Signed in pen; both count again.
+    const v2 = BC ? await validateRoundTrip(c.id, BC, P) : null;
+    await open();
+    await block().locator('[data-step-action="print"]').click();
+    await block().locator('[data-step="print"][data-done="yes"]').waitFor({ timeout: 15_000 });
+    await block().locator('[data-step-action="sign_in_pen"]').click();
+    await block().locator('[data-step="sign_in_pen"][data-done="yes"]').waitFor({ timeout: 15_000 });
+    const p2 = (await steps()).find((x) => x.key === "print")?.done;
+    ok(`C7.6-10j pass (B161): with a new validated copy of ${BC} read back, it is printed again and signed in pen by screens; both count, on the new copy, and the warning is gone`,
+      !!v2 && v2 !== vcopy && p2?.copy === v2 && (await lineSteps()).filter((x) => x.key === "print" || x.key === "sign_in_pen").every((x) => x.done === true) && !(await penWarn()),
+      { v2, printed: p2, server: await lineSteps() });
     ok("C7.6-10h fail: no page error while the steps were recorded", w.errors.length === 0, w.errors);
   } finally { await w.close(); }
 });

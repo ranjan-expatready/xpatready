@@ -266,45 +266,72 @@ function PenBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
   async function run(key: PenStepKey, body: unknown, ok: string) {
     setBusy(true); setRefusal(null);
-    try { await api(`/runtime/items/${item.id}/sign-steps/${key}`, { method: "POST", json: body }); toast.push({ tone: "ok", text: ok }); await refresh(); setFocusTo("next"); }
+    try {
+      if (key === "sign_in_pen" && !barcode && (await printedCopyStale())) return;
+      await api(`/runtime/items/${item.id}/sign-steps/${key}`, { method: "POST", json: body }); toast.push({ tone: "ok", text: ok }); await refresh(); setFocusTo("next"); }
     catch (e) { await refresh(); setRefusal((e as Error).message); setFocusTo("heading"); } // the server's own words (a 409 means the page was out of date)
     finally { setBusy(false); }
   }
 
   const st = STATE[item.state] ?? { words: item.state.replace(/_/g, " "), tone: "neutral" };
   const recordedSteps = q.data?.sign_steps ?? [];
-  const done: StepsDone = Object.fromEntries(recordedSteps.filter((s) => s.done).map((s) => [s.key, s.done!]));
-  const rec = (k: PenStepKey) => recordedSteps.find((s) => s.key === k)?.done ?? null;
+  const raw: StepsDone = Object.fromEntries(recordedSteps.filter((s) => s.done).map((s) => [s.key, s.done!]));
   const barcode = !!item.barcode_page, v = item.validated ?? null;
+  // Review Major 1: the steps that count are the server's (case-prepare.ts, B132): on a barcode form only those done on its
+  // current validated copy. A fact changed after Printed makes the validated copy not current, so nothing counts and no
+  // Signed in pen is offered until a new validated copy is read back and printed.
+  const counts = !barcode || (!!v?.current && raw.print?.copy === v.copy);
+  const done: StepsDone = counts ? raw : {};
+  const rec = (k: PenStepKey) => (counts ? done[k] ?? null : null);
   const copyOf = (id: string | null | undefined) => f.copies.find((c) => c.id === id);
   // The copy to print: a barcode form's current validated copy (it holds the barcode page; the server prints no other),
-  // else the newest generated copy that is still current, as SignBlock's.
-  const latest = f.copies.find((c) => c.status === "GENERATED");
-  const toPrint = barcode ? (v?.current ? { id: v.copy, at: v.at } : null) : latest && !latest.out_of_date && latest.file_ok ? { id: latest.id, at: latest.created_at } : null;
+  // else, as SignBlock's (review m2), the newest generated copy that is current, for filing and with its file.
+  const latest = f.copies.find((c) => c.status === "GENERATED"), pending = f.copies[0] && (f.copies[0].status === "QUEUED" || f.copies[0].status === "RUNNING");
+  const notFiled = !f.for_filing ? `${form} is filed Online: a PDF copy is not for filing, so it is not printed to sign.` : latest?.copy_not_for_filing ? `This copy was made while ${form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy above and print that one.` : null;
+  const unproven = f.trial_passed ? null : `${f.trial_why ?? `${form}: this form's filling is not proven yet.`} Check the copy against the case before it is signed.`;
+  const vAt = v ? copyOf(v.copy)?.created_at ?? v.at : null; // review m1: the copy's own date, as the done row names it
+  const toPrint = barcode ? (v?.current ? { id: v.copy, at: vAt! } : null) : latest && !latest.out_of_date && latest.file_ok && !notFiled ? { id: latest.id, at: latest.created_at } : null;
+  const notYet = barcode ? penRefusal("print", {}, form, { barcode, validated: false })
+    : pending ? "the copy is being generated…" : notFiled ? notFiled : latest?.out_of_date ? `this copy is out of date: generate a new copy of ${form} above and print that one.` : latest && !latest.file_ok ? `the file of the newest copy of ${form} is missing: generate a new copy above.` : `generate a copy of ${form} above first: the copy printed is named here.`;
   // The server prints again (its `restart`) when the printed copy is no longer the current validated one, or its facts changed.
-  const again = !!done.print && (barcode ? !!v?.current && done.print.copy !== v.copy : !!copyOf(done.print.copy)?.out_of_date);
+  const again = !!raw.print && (barcode ? !!v?.current && raw.print.copy !== v.copy : !!copyOf(raw.print.copy)?.out_of_date);
+  /** Review m3 (SignBlock's printedCopyStale): before Signed in pen on a form with no barcode page, the copies are read
+   *  again; a printed copy whose facts changed since is refused here in words, nothing sent. True when refused. */
+  async function printedCopyStale(): Promise<boolean> {
+    const key = ["runtime", "view", caseId, "forms"];
+    await qc.refetchQueries({ queryKey: key });
+    const fresh = qc.getQueriesData<{ forms: CaseForm[] }>({ queryKey: key }).flatMap(([, d]) => d?.forms ?? []).find((x) => x.form === f.form && x.subject_id === f.subject_id);
+    if (!fresh?.copies.find((c) => c.id === raw.print?.copy)?.out_of_date) return false;
+    await refresh();
+    setRefusal(`The printed copy of ${form} is out of date: a fact on it changed since it was printed. Nothing was recorded. Print a new copy and have that one signed in pen.`);
+    setFocusTo("heading");
+    return true;
+  }
   const recorded = !!filing?.read_only || filing?.status.toLowerCase() === "submitted";
   const nextKey = PEN_STEPS.find((k) => !done[k]) ?? null;
   const blockId = `pen-${item.id}`;
   const printLabel = barcode ? "Printed: the validated copy of" : "Printed: the copy of";
   const printAction = (label: string) => toPrint
     ? <Button size="sm" busy={busy} onClick={() => void run("print", { copy: toPrint.id }, `${form}: Printed (copy of ${when(toPrint.at)})`)} data-step-action="print">{label} {when(toPrint.at)}</Button>
-    : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {barcode ? penRefusal("print", {}, form, { barcode, validated: false }) : `generate a copy of ${form} above first: the copy printed is named here.`}</p>;
+    : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {notYet}</p>;
   function action(key: PenStepKey) {
-    if (key === "print") return <div className="space-y-1">{toPrint ? <p className="text-[13px] text-text-muted">Download the copy above, print it{barcode ? " with the barcode page on top" : ""}, then record it here.</p> : null}{printAction(printLabel)}</div>;
+    if (key === "print") return <div className="space-y-1">{toPrint && !barcode && unproven ? <p className="text-[13px] text-text-warn" data-unproven>{unproven}</p> : null}{toPrint ? <p className="text-[13px] text-text-muted">Download the copy above, print it{barcode ? " with the barcode page on top" : ""}, then record it here.</p> : null}{printAction(printLabel)}</div>;
     return <Button size="sm" busy={busy} onClick={() => void run("sign_in_pen", { copy: done.print?.copy ?? undefined }, `${form}: Signed in pen`)} data-step-action="sign_in_pen">Signed in pen</Button>;
   }
   function row(s: PaperStep, i: number) {
     const pen = s.key === "print" || s.key === "sign_in_pen" ? (s.key as PenStepKey) : null;
     const r = pen ? rec(pen) : null, isDone = pen ? !!r : s.done === true;
+    // A step recorded on a copy that no longer counts (a fact changed, or a newer validated copy) says so; it is not ticked.
+    const old = pen && !r && raw[pen] ? raw[pen]! : null;
     const isNext = !!pen && pen === nextKey && !again && !recorded;
     const why = pen && !isDone && !isNext && !again && !recorded ? penRefusal(pen, done, form, { barcode, validated: !!v?.current }) : null;
     const by = r ? <span className="text-text-muted">recorded by {nameOf(r.by)}, {when(r.at)}</span> : null;
-    const detail = s.key === "validate" ? (isDone && v ? <span className="text-text-muted">validated copy of {when(v.at)} read back</span> : <span className="text-text-muted">{s.words}. It is read back in the copy block above.</span>)
+    const earlier = old ? <span className="block text-text-muted" data-step-old>Recorded on an earlier copy by {nameOf(old.by)}, {when(old.at)}: it no longer counts.</span> : null;
+    const detail = s.key === "validate" ? (isDone && v ? <span className="text-text-muted">validated copy of {when(vAt ?? v.at)}, read back {when(v.at)}</span> : <span className="text-text-muted">{s.words}. It is read back in the copy block above.</span>)
       : s.key === "mail" ? <span className="text-text-muted" data-step-why>{s.words}. It is not recorded in the product yet.</span>
       : isDone ? <>{s.key === "print" && r?.copy ? <>Copy of {when(copyOf(r.copy)?.created_at ?? (v?.copy === r.copy ? v.at : r.at))} · </> : null}{by}</>
-      : isNext ? <div ref={next} className="space-y-1"><p className="text-[13px] text-text-muted">{s.words}.</p>{action(pen!)}</div>
-      : why ? <span className="text-text-muted" data-step-why>Cannot start yet: {why}</span> : <span className="text-text-muted">{s.words}.</span>;
+      : isNext ? <div ref={next} className="space-y-1">{earlier}<p className="text-[13px] text-text-muted">{s.words}.</p>{action(pen!)}</div>
+      : <>{earlier}{why ? <span className="text-text-muted" data-step-why>Cannot start yet: {why}</span> : <span className="text-text-muted">{s.words}.</span>}</>;
     return (
       <li key={s.key} className="flex flex-wrap items-start gap-x-3 gap-y-1 text-[13px]" data-step={s.key} data-done={isDone ? "yes" : "no"}>
         <span className="flex items-center gap-1.5 font-medium sm:min-w-48">
