@@ -71,9 +71,9 @@ const specimen = (text: string) => Buffer.from(`%PDF-1.4\n% ${text}\n%%EOF\n`, "
 /** The open bugs and rules a stage of this story waits on, named in its words (never faked around). */
 export const HELD = {
   sheet: "QA-165 (1): the answer sheet keeps waiting on IMM 5257's Yes/No gates (other names, national identity document, US PR card) and on facts the case holds as rows or as \"none apply\", and on the contact in Canada (name, relationship, address), which release 2 never asks (qa logs that part as its own row), so the Online item cannot read Done",
-  family: "QA-153: IMM 5645's parents and brothers and sisters are not asked, so their boxes stay empty on the copy",
+  family: "QA-153: IMM 5645's parents and brothers and sisters are not asked, so their form fields stay empty on the copy",
   followUps: "QA-165 (1): the follow-up questions of a No (national identity document, US PR card) stay required, so they carry Sample values by kind of answer",
-  paper: "IMM 5257's copy leaves 16 of its 46 mandatory boxes empty today, so Adobe's Validate would refuse it (QA-165, #1318); and Validate is a person's step, never simulated (P-46, P-171)",
+  paper: "IMM 5257's copy leaves 16 of its 46 mandatory form fields empty today, so Adobe's Validate would refuse it (QA-165, #1318); and Validate is a person's step, never simulated (P-46, P-171)",
   validate: "Validate is a person's step in Adobe Reader (P-46, P-171): never simulated, so a barcode PDF waits for a person",
 } as const;
 

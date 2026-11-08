@@ -4,7 +4,7 @@
 // (2) One load at a time: while the story runs, a second start, Reset, Load sample and Reset to the six are 409 with
 // words, and the story still finishes. Also: anyone without the author duty 403. Loads the six first (about 40 s),
 // then one story (about 4 minutes). Replays only, no live AI call (US$0).
-//   zsh studio/tools/isolated.sh rt_c102r 4431 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c102_finished_story_refusals.ts 4431 xr_studio_rt_c102r
+//   zsh studio/tools/isolated.sh rt_c102r 4431 start && tsx studio/tests/check_c102_finished_story_refusals.ts 4431 xr_studio_rt_c102r
 import { execFileSync } from "node:child_process";
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_rt_c102r";

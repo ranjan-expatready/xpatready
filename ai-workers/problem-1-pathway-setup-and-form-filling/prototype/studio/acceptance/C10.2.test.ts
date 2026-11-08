@@ -43,7 +43,7 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
     p?.filings.length === 4 && !!paperFiling && paperFiling.status !== "submitted" && (p.readiness.find((r) => r.filing === paperFiling.id)?.blocks ?? []).some((b) => b.code === "barcode_not_validated")
     && recordedFilings.every((f) => f.status === "submitted") && new Set(recordedFilings.map((f) => f.group)).size === 1 && !recordedFilings.some((f) => f.group === paperFiling.group)
     && readyFirst === "3", { paper: paperFiling?.status, readyFirst });
-  console.log(`PENDING  C10.2-5b pass: ${paperPerson}'s filing (IMM 5257 on Paper) Ready to file and recorded — waits for its copy validated in Adobe: 16 of IMM 5257's 46 mandatory boxes are empty today, so Validate would refuse it (QA-165, #1318); never simulated (P-46, P-171)`);
+  console.log(`PENDING  C10.2-5b pass: ${paperPerson}'s filing (IMM 5257 on Paper) Ready to file and recorded — waits for its copy validated in Adobe: 16 of IMM 5257's 46 mandatory form fields are empty today, so Validate would refuse it (QA-165, #1318); never simulated (P-46, P-171)`);
   const P = p?.filings.find((f) => f.applicants[0]?.role === "principal")?.applicants[0]?.subject ?? "";
   // #C10.2 phase 1 (Row C1's rule: what a pack expects comes from the release as configured): release 2 files IMM 5257
   // Online (DEMO.md row 9; 130-release-two.ts) and IMM 5645 replaces IMM 5707, so the Online line is read by its channel.
@@ -64,7 +64,7 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
     !!paperCopy && (sql(`select channel || '|' || coalesce(channel_reason, '') from filing_item where case_id='${fam?.id}' and subject_id='${paperSubject}' and item_key='${paperLine.form}' and active`) ?? "").startsWith("PAPER|Sample"), paperCopy);
   const validatedPaper = paperCopy ? Number(sql(`select count(*) from validated_copy where form_instance_id='${paperCopy}'`) ?? 0) : 0;
   if (validatedPaper) ok("C10.2-6d pass (row 12): the Paper IMM 5257's copy validated in Adobe and read back", true);
-  else console.log(`PENDING  C10.2-6d pass: the Paper IMM 5257's copy validated in Adobe and read back — 16 of its 46 mandatory boxes are empty today, so Validate would refuse it (QA-165, #1318); a person validates it on the Mac (QA-285), never simulated (P-46, P-171)`);
+  else console.log(`PENDING  C10.2-6d pass: the Paper IMM 5257's copy validated in Adobe and read back — 16 of its 46 mandatory form fields are empty today, so Validate would refuse it (QA-165, #1318); a person validates it on the Mac (QA-285), never simulated (P-46, P-171)`);
   const cl = (await call("GET", `/runtime/cases/${fam?.id}/checklist`, undefined, OFFICER)).body?.people ?? [];
   ok("C10.2-7 pass (row 15): the document checklist lists every person's lines, some received", cl.length === 4 && cl.every((x: { lines: unknown[] }) => x.lines.length > 0) && cl.some((x: { lines: { state: string }[] }) => x.lines.some((l) => l.state === "received")));
   const pinned = (id?: string) => sql(`select max(r.version) from pack_work_pin w join config_release r on r.id=w.config_release_id where w.case_id='${id}'`);
