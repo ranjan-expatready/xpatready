@@ -20,7 +20,7 @@ for (const [entity, words] of [["sign step", `Case officer marked IMM 5476 "Sign
   ok(`pass (QA-225): the firm's own "${entity}" line is read`, firmMayRead(line(entity, words.replace(THEIRS, OURS)), own));
 }
 // The sweep's other case entities that were missing (C6.4 documents, the checklist, eligibility checks).
-for (const entity of ["case document", "checklist line", "assessment", "assessment_override"]) {
+for (const entity of ["case document", "answer check", "checklist line", "assessment", "assessment_override"]) {
   ok(`fail (sweep): another firm's "${entity}" line is never read`, !firmMayRead(line(entity, `x on case ${THEIRS}`), own));
   ok(`pass (sweep): "${entity}" is a case entity`, CASE_ENTITIES.has(entity) && !isConfigEntity(entity));
 }
