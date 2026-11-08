@@ -59,3 +59,33 @@
 ## Could not test
 * A real screen reader, and an intended user's unaided walk (D17, D20 stay with the founder).
 * Signing and filing after Prepare.
+
+## Round 2 (diff only, on `d2d12d24`), 8 Nov 2026
+**Copy:** isolated `rev155b` on :4473, configured checkpoint (Reset, then Load as user-A), Visitor visa release 2, stopped after. Headless Chromium plus axe-core. US$0, Sample people only. Screenshots are in my scratch folder, not committed: `/tmp/claude-0/-home-user-xpatready/5076e1b1-d806-5c26-b06f-95de502862b4/scratchpad/probe/shots/`.
+**Re-walked:** only the journeys the diff touches. The other journeys (main, keyboard, client on a phone, none apply, wrong role and wrong keys, race) were not re-walked; the API refusals were re-run by B155-5c, -7 and -14 (33/33).
+
+5. **Edge, 8 and 9 entries (officer 1440; forms card also at 400).** The case has entries 1–8 filled and confirmed, plus a blank entry 9.
+   * Entry 9 shows "Does not fit on the form" and asks all 8 questions. Entry 6 shows no "accompany".
+   * Saving entry 9's occupation shows the toast "Saved. This entry has no row on the form: write it on an extra sheet." The dialog still says "(7 form fields)" (review Minor 4).
+   * IMM 5645's card shows "8 facts to answer or confirm before filing" (entry 9's facts) and "2 mandatory form fields left empty". The card never names entries 8 and 9 (review Minor 9).
+   * Ready to file names them, with "Pass with a reason". A pass via the API is accepted, and it covers only entries 8 and 9. The facts still hold the filing.
+   * Result: the 8th entry is no longer filed silently (round 1 Major fixed).
+6b. **Hidden cell after a remove (API).** An unconfirmed "accompanies" on entry 7 slides to entry 6 when entry 1 is removed.
+   * It is not confirmed by Confirm section, and it is not filled.
+   * The section pill stays "1 answered · 1 to confirm" (review Minor 10).
+* **Automated:** forms card axe clean at 1440 and 400; no sideways scroll; no page errors.
+
+| Criterion | Round 1 | Round 2 | Evidence |
+|---|---|---|---|
+| task completed | 1 | 1 | 33/33; walk 5 done on screen |
+| next step obvious | ½ | ½ | intro still lists "accompany" for every entry (#6, a question for the tech lead) |
+| plain words | ½ | ½ | entry dialog "(7 form fields)" on entry 9 (#4); the extra sheet called "mandatory form fields" (#9) |
+| feedback and state | 1 | ½ | the forms card counts 2 lines it does not list (#9); "1 to confirm" that cannot be cleared (#10) |
+| correct data | ½ | 1 | 8th and 9th entries waited for; a box-less answer refused; a hidden answer never confirmed |
+| error recovery | 1 | 1 | 422 in words for a box-less answer; pass with a reason works |
+| accessibility and screen sizes | 1 | 1 | axe clean at 1440 and 400, no sideways scroll |
+| speed | 1 | 1 | unchanged |
+| visual quality | 1 | 1 | unchanged |
+| trust and sources | 1 | 1 | the toast says "write it on an extra sheet"; Ready to file names the entries |
+
+**Score, round 2: 8.5/10, pass (no 0).** Correct data went up and feedback went down. The fixes worth most: #9 (list the extra-sheet entries on the card, in entry words), then #10 and #4.

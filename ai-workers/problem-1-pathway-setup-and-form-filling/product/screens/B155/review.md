@@ -78,3 +78,86 @@ The three Partlys are Should. The BIC-12 one is the same defect as Major #1.
 An intended user's unaided walk (D17, D20) and a real screen reader. C7.7 on the fixture and the full local suites were not re-run by me (builder: green). Signing and filing past Prepare.
 
 **Verdict: Block.** Fix Major #1 with a failing test. Fix Minors #2–#7, or list them in the PR. Journey score: **8.5/10, pass** (`journey-test-reviewer-2026-11-08.md`).
+
+## Round 2 (diff only, P-293 (3)): `0dd8397e..d2d12d24`
+**Reviewed commit:** `d2d12d24c622d82971362facc5a31e2301660caf`, 8 Nov 2026, same reviewer. I read only `git diff 0dd8397e..d2d12d24` (11 files; code in `api/src/runtime.ts`, `engine/render.ts`, `engine/runtime/{case,forms,relatives}.ts`, `web/src/runtime/questionnaire.tsx`, two tests). Line numbers below are at `d2d12d24`. The working tree was clean at `d2d12d24`.
+**Copy:** isolated `rev155b` on :4473 (fresh database, Demo › Reset, then Load configured as user-A, 135 s; the web build was newer than the source), stopped after. Live AI off, US$0, Sample people only.
+
+### What I ran
+* `tests/check_b155_siblings.ts 4473 xr_studio_rev155b`: **33/33**, including the new B155-13, -13a/b/c, -14 and -14a.
+* `tests/runtime/check_b128_relatives.ts`: **20/20**.
+* `tests/runtime/check_b128_parents.ts` on my copy: **23/23**.
+* `tests/runtime/check_case_engine.ts`: **77/77**. `tests/check_engine.ts`: **44/44**.
+* `acceptance/C7.7.test.ts` on the checkpoint copy: **33/33**.
+* `graph.mjs --check`: exit 0 (G1 0, G2 0).
+* **Fail-first, Minor 2:** I used a `git archive` of `d2d12d24` in my scratch folder, with only `render.ts:141` put back to round 1's `e.person === "subject_child" ? null : e.row`. `check_b128_relatives` then gives **19/20**: "a child's repeating fact keeps the map's row" fails with `capacity: null`. So the new test fails on round 1's code and passes on this head.
+* **API probes** (new cases on release 2, principal only):
+  * *8 entries, everything filled and confirmed* (`fillEverything`). IMM 5645 readiness is `ready: false` with exactly one line: `entry:sibling:8`, "Entry 8 of Sample Client F's brothers and sisters", reason "left empty on the form", why "the form has room for 7 entries: write this one on an extra sheet". The section's `missing` is `[]`.
+    * Ready to file shows it as CRITICAL `fields_left_empty`, with key `<filing>|empty|entry:sibling:8`.
+    * After removing entry 1, the old 8th entry is the 7th: the line goes away and readiness is clean.
+  * *An entry 9 added blank:* IMM 5645 waits on 8 facts, all "not answered" (CRITICAL `missing_facts`). Entry 9 is asked in full.
+    * Passing `fields_left_empty` with a reason works (201). The key names `entry:sibling:8,entry:sibling:9`, so a pass never covers a later 10th entry. `missing_facts` still holds the filing.
+  * *Minor 3:*
+    * "accompanies" on entry 1 gives 422 "The form has no box for this in entry 1: it is asked in entry 7 only."
+    * On entry 7 it gives 200 "(2 form fields)". An unknown row key gives 400.
+    * When an unconfirmed "accompanies" slides from entry 7 to entry 6, Confirm section confirms 0 of it, even when its id is sent as seen. It stays `DECLARED` and is not read by the fill (row 6 has no box).
+* **Browser** (Chromium, my copy, case with 9 entries):
+  * Officer, Brothers and sisters tab: entry 9 shows "Does not fit on the form" and all 8 questions. Entry 6 shows no "accompany".
+  * Saving entry 9's occupation shows the toast "Saved. This entry has no row on the form: write it on an extra sheet."
+  * Ready to file lists "Pass with a reason: CRITICAL: IMM 5645 … 2 form fields IRCC's form marks mandatory would be left empty (Entry 8 of …: the form has room for 7 entries: write this one on an extra sheet, Entry 9 …)".
+  * IMM 5645's forms card at 1440 and 400 px: axe WCAG 2.2 A/AA clean, no sideways scroll, no page errors.
+
+### Round 1 findings
+* **Major 1, fixed.**
+  * The fix: `cellAsked` (`engine/runtime/relatives.ts:38`) asks every question of an entry that has no row on the form. It is used for the section's `missing` (`case.ts:436`) and for readiness (`forms.ts:198-199`). One readiness line per entry off the form (`forms.ts:208-215`).
+  * The rule is now the same as for any group's entry past the form's room (the `employment` contrast from round 1). B155-13a/c test it with a passing case and a failing case (B155-13b).
+  * **The reason and code choice is right.**
+    * `"needs a fix"` counts in `blocksLock` (`forms.ts:229`), so the copy's lock would be held back. IMM 5645 has no 8th row, so nothing on any screen could ever clear it: a dead end.
+    * "left empty on the form" never holds the lock back. It stops Ready to file as CRITICAL until a person passes it with a reason (P-237, P-315), keyed by the entries.
+    * That is the existing pattern for a box written by hand (QA-165, the tech lead's option 1 on #1318). The entry's own facts still block as `missing_facts` until they are answered and confirmed, which I measured.
+    * The remaining issues are its words and where it shows (new Minor 9). They are not the gate.
+* **Minor 2, fixed.** `render.ts:141` keeps the map's row for a `per_row` child fact. The test was proven fail-first (above).
+* **Minor 3, fixed for refusal and Confirm.**
+  * PUT refuses in words (`api/src/runtime.ts:437-446`).
+  * Confirm section skips cells an entry does not show (`:635`, `:645`).
+  * The web sends only shown cells (`questionnaire.tsx:808-812`). `inEntry` now matches `cellAsked`.
+  * One leftover is counted as new Minor 10.
+* **Minor 4, half fixed.**
+  * The save toast is right (measured).
+  * The entry dialog still says "Sample Client H's brothers and sisters · entry 9 · fills IMM 5645 for Sample Client H (7 form fields)" (`questionnaire.tsx:922`).
+  * The answer's provenance line still says "fills IMM 5645 for Sample Client H" for entry 9 (`questionnaire.tsx:841`).
+* **Minors 5–8:** not changed. The builder raised them as questions for the tech lead, which this round allows (listed in the PR).
+
+### New findings (Minor; fix or list in the PR)
+9. **The extra-sheet line is counted on the forms card but listed nowhere there, and its words call it a mandatory form field.**
+   * The forms card counts it in `emptyFields` (`web/src/runtime/forms.tsx:131`). The pill reads "2 mandatory form fields left empty", and its title says "(listed below)" (`:150`).
+   * But the list below shows only `f.fields_open` (`forms.tsx:165-169`), which is empty here. So nothing on the card names entries 8 and 9 (measured at 1440 and 400 px).
+   * Ready to file names them, but under "N form field(s) IRCC's form marks mandatory would be left empty" (`engine/runtime/readiness.ts:168`). IMM 5645 marks no 8th row mandatory: it has none.
+   * Fix: list these lines on the card ("Entries to write on an extra sheet"), and word them as entries. The gate itself stays as it is.
+10. **An unconfirmed answer that slides into a cell its entry does not show keeps "1 to confirm" forever.**
+    * `case.ts:431` and `:442` count every row's answer in `answered` and `confirmed`, including cells that `cellAsked` hides.
+    * Measured on a case where "accompanies" was answered on entry 7 and entry 1 was then removed:
+      * the section pill (`questionnaire.tsx:860`) reads "1 answered · 1 to confirm";
+      * Confirm section, even sent the hidden id, confirms 0.
+    * Readiness, the fill and the Confirm button are unaffected (the web's `open` uses shown cells). Only the count is stuck, and the stored answer stays (BIC-03).
+    * Fix: count only the cells `cellAsked` keeps, as `missing` already does.
+
+### BIC changes since round 1
+* BIC-12 *Check before it leaves*: Partly → **Met**. The 8th entry holds Ready to file until its facts are confirmed and the extra sheet is passed with a reason.
+* BIC-03 stays **Partly** (new #10).
+* BIC-02 stays **Partly** (#6, a question for the tech lead).
+
+### D1–D20 changes
+* D1 4 → 5: Section C now waits for every entry.
+* D2 3 → 4: #3 fixed, #10 is count-only.
+* D4 3 → 5: the overflow rule is the same as other groups.
+* D10 stays 3: #4 dialog, #6, #8, #9 words.
+* D16 4 → 5: overflow and refusal tests, fail-first for #2.
+* The rest are unchanged.
+
+### Could not check
+* The full local suite set (the builder says it is re-running).
+* C7.7 on the fixture.
+* A real screen reader, and an intended user's unaided walk (D17, D20).
+
+**Verdict (round 2, on `d2d12d24`): Approve.** There is no open Blocker or Major. Fix Minors 4 (dialog and provenance), 9 and 10, or list them in the PR, beside 5–8 for the tech lead. Journey score: **8.5/10, pass** (`journey-test-reviewer-2026-11-08.md`, round 2).
