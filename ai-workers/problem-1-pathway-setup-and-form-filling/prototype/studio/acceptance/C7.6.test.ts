@@ -127,8 +127,12 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   r = await call("POST", `/runtime/filings/${fid}/warnings/missing_document/pass`, { reason: "Passport uploaded in the portal directly (Sample)" }, officer);
   ok("C7.6-17 pass: a permitted person passes the warning with a written reason, recorded", r.status === 200 && Number(sql(`select count(*) from readiness_pass where filing_id='${fid}'`) ?? 0) === 1);
   ok("C7.6-18 fail: a client cannot pass warnings or mark ready (403)", (await call("POST", `/runtime/filings/${fid}/ready`, {}, CLIENT)).status === 403);
+  // C7.7 BR-9 (the tech lead's ruling on #1317): each box a copy leaves "To write by hand" is a warning of its own
+  // (hand_write), passed with a reason like the missing document above (here: written in Adobe). Each pass must be taken.
+  const hand = codes(readinessOf((await prepare(c.id, officer)).p, fid)?.warns).filter((x) => x === "hand_write").length;
+  const handPass = hand ? (await call("POST", `/runtime/filings/${fid}/warnings/hand_write/pass`, { reason: "Written by hand in Adobe before filing (Sample)" }, officer)).status : 200;
   r = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
-  ok("C7.6-19 pass: Ready to file succeeds; the filing's status is ready_to_file", r.status === 200 && filingOf((await prepare(c.id, officer)).p, P)?.status === "ready_to_file", r.body);
+  ok(`C7.6-19 pass: Ready to file succeeds; the filing's status is ready_to_file (with ${hand} line${hand === 1 ? "" : "s"} to write by hand passed with a reason, BR-9)`, handPass === 200 && r.status === 200 && filingOf((await prepare(c.id, officer)).p, P)?.status === "ready_to_file", r.body);
 
   // P-151, BR-9 block 3 (needs W1-16 edition attributes): before IRCC's accepted-until date an older edition warns with
   // "Adopt update"; after it, it blocks. Every PDF edition of the family form (row C4: from expectedLines) is set, then
