@@ -4,15 +4,16 @@
 // date), the block on "Ready to file", Undo, the scope (only items that use the fact, the spouse's facts on the
 // principal's IMM 5707), and the representative change on a signed IMM 5476 (BR-20).
 // Breadth (BR-3, "Copies, not live links", #1051; QA-306, founder 8 Nov): a change to a copied employer fact on the worker's
-// case marks the worker's items that read it out of date, and never changes them (C1.3). Steps C9.2-12 to -18, on the
-// configured checkpoint's With an LMIA – inside Canada release (qa's probe, 11/11, #1322).
+// case marks the worker's items that read it out of date, and never changes them (C1.3). Steps C9.2-12 to -19, on the
+// configured checkpoint's With an LMIA – inside Canada release (qa's probe, 11/11, #1322). On a copy with no With an LMIA
+// combination at all (the fixture run) they print NOT RUN, never PASS; under GATE_B_DATA=checkpoint they always run.
 //   tsx studio/acceptance/C9.2.test.ts 4440 xr_studio_accept
 import { createHash } from "node:crypto";
 import { OFFICER, call, confirmAll, copyBytes, firms, fillEverything, filingOf, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, validateRoundTrip, yearsAgo, answer, signByHand, expectedFor } from "./lib/m3.ts";
 
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 
-await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)", async () => {
+await main("C9.2", "Changed facts mark finished items out of date (Visitor visa; BR-3 breadth on With an LMIA)", async () => {
   const vv = needVisitorVisa();
   const f = await firms();
   const officer = f.officer ?? OFFICER;
@@ -100,7 +101,12 @@ await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)
   // for the fact and the case's items, row C4), never a form number written here.
   const NAME = "organisation.employer_name", NEW_NAME = "Sample Employer Limited (Sample)";
   const wp = sql("select c.id from combination c where c.combination_key='wp.lmia_inside' and exists (select 1 from config_release r where r.combination_id=c.id)");
-  ok("C9.2-12 setup: With an LMIA – inside Canada is released (the configured checkpoint)", !!wp, wp);
+  // Review B1 on #1327: the fixture run (setup_visitor_visa.ts, setup_vv_m3.ts) has no With an LMIA combination at all, so
+  // the steps are not run there and say so. Where the combination exists unreleased, or the run is on the checkpoint, a
+  // missing release fails.
+  const hasLmia = sql("select count(*) from combination where combination_key='wp.lmia_inside'") !== "0";
+  if (!wp && !hasLmia && process.env.GATE_B_DATA !== "checkpoint") { console.log("NOT RUN  C9.2-12 to -19 (BR-3 breadth): this copy has no With an LMIA – inside Canada combination; they run on the configured checkpoint (GATE_B_DATA=checkpoint)"); return; }
+  ok("C9.2-12 setup: With an LMIA – inside Canada is released (the configured checkpoint)", !!wp, { wp, hasLmia, data: process.env.GATE_B_DATA ?? null });
   if (!wp) return;
   const w = await openCase(wp, [{ role: "principal", name: "Sample Worker W", dob: yearsAgo(35) }]);
   const W = w.subjects["Sample Worker W"], wOfficer = w.officer || officer;
@@ -115,26 +121,26 @@ await main("C9.2", "Changed facts mark finished items out of date (Visitor visa)
   let wp0 = (await prepare(w.id, wOfficer)).p;
   const others = itemsOf(wp0, W).filter((i) => i.kind === "form" && !readers.includes(i.form ?? "")).map((i) => ({ form: i.form, state: i.state }));
   const EF = readers.find((f) => itemsOf(wp0, W, f).length > 0) ?? "";
-  ok(`C9.2-12 setup (C1.3): the worker's case relies on the Sample employer case; the employer name is copied in and printed by ${EF || "a form"}; other forms (${others.map((o) => o.form).join(", ")}) do not print it`,
+  ok(`C9.2-13 setup (C1.3): the worker's case relies on the Sample employer case; the employer name is copied in and printed by ${EF || "a form"}; other forms (${others.map((o) => o.form).join(", ")}) do not print it`,
     [200, 201].includes(link.status) && (link.body?.copied ?? []).includes(NAME) && (q0?.answer?.channel === "linked_file" || q0?.answer?.answered?.channel === "linked_file") && !!EF && others.length > 0, { link: link.status, copied: link.body?.copied, value: copied, readers, others });
   const ecopy = EF ? await validateRoundTrip(w.id, EF, W) : null;
   const ebefore = ecopy ? sql(`select sha256 from validated_copy where form_instance_id='${ecopy}' order by read_at desc limit 1`) : null;
-  ok(`C9.2-13 setup: the worker's ${EF} is validated and read back`, !!ecopy && !!ebefore, ecopy);
+  ok(`C9.2-14 setup: the worker's ${EF} is validated and read back`, !!ecopy && !!ebefore, ecopy);
   wp0 = (await prepare(w.id, wOfficer)).p;
   const othersBefore = itemsOf(wp0, W).filter((i) => i.kind === "form" && !readers.includes(i.form ?? "")).map((i) => ({ form: i.form, state: i.state }));
   const fix = await answer(w.id, W, NAME, NEW_NAME, wOfficer); await confirmAll(w.id, W);
   let wq = (await prepare(w.id, wOfficer)).p;
   const eit = itemsOf(wq, W, EF)[0];
-  ok(`C9.2-14 pass (BR-3): the officer corrects the copied employer name on the worker's case; the validated ${EF} is Out of date, naming the fact, the old and new value and the date`,
-    fix.status < 300 && eit?.state === "out_of_date" && /employer/i.test(eit?.reason ?? "") && (eit?.reason ?? "").includes(String(copied)) && (eit?.reason ?? "").includes(NEW_NAME) && /\d{1,2} \w{3} \d{4}|\d{4}-\d{2}-\d{2}/.test(eit?.reason ?? ""), { fix: fix.status, state: eit?.state, reason: eit?.reason });
+  ok(`C9.2-15 pass (BR-3): the officer corrects the copied employer name on the worker's case; the validated ${EF} is Out of date, naming the fact, the old and new value and the date`,
+    !!EF && fix.status < 300 && eit?.state === "out_of_date" && /employer/i.test(eit?.reason ?? "") && (eit?.reason ?? "").includes(String(copied)) && (eit?.reason ?? "").includes(NEW_NAME) && /\d{1,2} \w{3} \d{4}|\d{4}-\d{2}-\d{2}/.test(eit?.reason ?? ""), { fix: fix.status, state: eit?.state, reason: eit?.reason });
   const eafter = ecopy ? sql(`select sha256 from validated_copy where form_instance_id='${ecopy}' order by read_at desc limit 1`) : null;
-  ok(`C9.2-15 pass (BR-3: never changes them): ${EF}'s validated copy keeps its checksum (one append-only row)`, !!ebefore && eafter === ebefore && sql(`select count(*) from validated_copy where form_instance_id='${ecopy}'`) === "1", { before: ebefore?.slice(0, 12), now: eafter?.slice(0, 12) });
+  ok(`C9.2-16 pass (BR-3: never changes them): ${EF}'s validated copy keeps its checksum (one append-only row)`, !!ebefore && eafter === ebefore && sql(`select count(*) from validated_copy where form_instance_id='${ecopy}'`) === "1", { before: ebefore?.slice(0, 12), now: eafter?.slice(0, 12) });
   const wr = readinessOf(wq, filingOf(wq, W)?.id) as { ready?: boolean; blocks?: { code: string; words: string }[]; warns?: { code: string; words: string; severity?: string }[] } | null;
-  ok(`C9.2-16 fail (P-136, P-237): the out-of-date ${EF} is a CRITICAL warning that holds Ready to file`, wr?.ready === false && [...(wr?.blocks ?? []), ...(wr?.warns ?? []).filter((x) => x.severity === "critical")].some((b) => b.code === "out_of_date" && b.words.includes(EF)), (wr?.warns ?? []).filter((x) => x.code === "out_of_date").map((x) => `${x.severity}: ${x.words}`));
+  ok(`C9.2-17 fail (P-136, P-237): the out-of-date ${EF} is a CRITICAL warning that holds Ready to file`, !!EF && wr?.ready === false && [...(wr?.blocks ?? []), ...(wr?.warns ?? []).filter((x) => x.severity === "critical")].some((b) => b.code === "out_of_date" && b.words.includes(EF)), (wr?.warns ?? []).filter((x) => x.code === "out_of_date").map((x) => `${x.severity}: ${x.words}`));
   const othersAfter = itemsOf(wq, W).filter((i) => i.kind === "form" && !readers.includes(i.form ?? "")).map((i) => ({ form: i.form, state: i.state }));
-  ok(`C9.2-17 pass (scope): the worker's ${othersBefore.map((o) => o.form).join(" and ")}, which do not print the employer name, are untouched`, othersBefore.length > 0 && JSON.stringify(othersAfter) === JSON.stringify(othersBefore) && !othersAfter.some((i) => i.state === "out_of_date"), { before: othersBefore, after: othersAfter });
+  ok(`C9.2-18 pass (scope): the worker's ${othersBefore.map((o) => o.form).join(" and ")}, which do not print the employer name, are untouched`, othersBefore.length > 0 && JSON.stringify(othersAfter) === JSON.stringify(othersBefore) && !othersAfter.some((i) => i.state === "out_of_date"), { before: othersBefore, after: othersAfter });
   const wu = await call("POST", `/runtime/cases/${w.id}/changes/undo`, { subjectId: W, fact: NAME }, wOfficer);
   wq = (await prepare(w.id, wOfficer)).p;
   const back = (await nameQ())?.answer?.value;
-  ok(`C9.2-18 pass: Undo restores the copied employer name; ${EF} is no longer out of date`, wu.status === 200 && JSON.stringify(back) === JSON.stringify(copied) && itemsOf(wq, W, EF)[0]?.state !== "out_of_date", { undo: wu.status, back, state: itemsOf(wq, W, EF)[0]?.state });
+  ok(`C9.2-19 pass: Undo restores the copied employer name; ${EF} is no longer out of date`, !!EF && copied !== undefined && wu.status === 200 && JSON.stringify(back) === JSON.stringify(copied) && itemsOf(wq, W, EF)[0]?.state !== "out_of_date", { undo: wu.status, back, state: itemsOf(wq, W, EF)[0]?.state });
 });

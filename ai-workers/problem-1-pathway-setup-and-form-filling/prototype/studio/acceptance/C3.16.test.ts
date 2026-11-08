@@ -196,15 +196,15 @@ async function casePart() {
   const before = Number(sql(`select coalesce(max(version),0) from config_release where combination_id='${vv}'`));
   r = await call("POST", `/combinations/${vv}/submit`, { note: "C3.16 case part: release 1 with the household scope (B82)" }, AUTHOR);
   const refusedBy = r.status >= 300 ? ((r.body?.errors ?? []) as { message?: string }[]).map((e) => String(e.message ?? "").slice(0, 160)) : [];
-  let ap = r;
+  let ap = r, signed = r;
   if (r.status < 300) {
     const sub = (await call("GET", `/combinations/${vv}/review`, undefined, REVIEWER)).body?.submission;
-    await call("POST", `/combinations/${vv}/signoff`, { items: ((sub?.changeSummary ?? sub?.change_summary ?? []) as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`), action: "signed", note: "C3.16 case part: signed as the SME (test)" }, REVIEWER);
+    signed = await call("POST", `/combinations/${vv}/signoff`, { items: ((sub?.changeSummary ?? sub?.change_summary ?? []) as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`), action: "signed", note: "C3.16 case part: signed as the SME (test)" }, REVIEWER);
     ap = await call("POST", `/combinations/${vv}/approve`, {}, APPROVER);
   }
   const rel = Number(sql(`select coalesce(max(version),0) from config_release where combination_id='${vv}'`));
   const who = sql(`select submitter_id||' '||approver_id from config_release where combination_id='${vv}' and version=${rel}`);
-  ok("setup (P-322, B82): Visitor visa released through people's steps: submitted by the author, signed by the SME, approved by a different person", rel === before + 1 && who === `${AUTHOR} ${APPROVER}` && docs.refused.length === 0, [r.status, refusedBy.length ? refusedBy : words(r).slice(0, 200), ap.status, words(ap).slice(0, 200), who, docs.refused]);
+  ok("setup (P-322, B82): Visitor visa released through people's steps: submitted by the author, signed by the SME, approved by a different person", rel === before + 1 && signed.status < 300 && who === `${AUTHOR} ${APPROVER}` && docs.refused.length === 0, [r.status, signed.status, refusedBy.length ? refusedBy : words(r).slice(0, 200), ap.status, words(ap).slice(0, 200), who, docs.refused]);
   ok("C3.16-3 data: the new release marks the union date's placement Household", Number(sql(`select count(*) from config_release where combination_id='${vv}' and version=${rel} and snapshot->'placements' @> '[{"fact":"${UNION_KEY}","scope":"household"}]'`)) === 1);
   if (rel !== before + 1) return;
 
