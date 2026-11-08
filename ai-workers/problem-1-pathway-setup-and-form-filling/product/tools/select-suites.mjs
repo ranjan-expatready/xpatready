@@ -419,12 +419,15 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
   const appCode = (x) => (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`);
   // A deleted file: the files that still name it (by file name, or by its stem in an import path) use it.
-  const named = (f) => { const b = basename(f), stem = b.replace(/\.[^.]+$/, ""), re = new RegExp(`(?<![A-Za-z0-9_.-])${esc(b)}(?![A-Za-z0-9_-])|/${esc(stem)}(?:\\.js)?["']`);
+  // An import path that ends in its stem is an import edge (so a deleted API or web module is still followed; review m1).
+  const named = (f) => { const b = basename(f), stem = b.replace(/\.[^.]+$/, ""), imp = new RegExp(`/${esc(stem)}(?:\\.(?:js|ts|tsx|cjs|mjs))?["']`), nm = new RegExp(`(?<![A-Za-z0-9_.-])${esc(b)}(?![A-Za-z0-9_-])`);
     let files = []; try { files = execSync(`git ls-files -c -- "${PR}"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 256 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return new Map(); }
-    return new Map(files.filter((x) => re.test(read(x))).map((x) => [x, "name"])); };
+    return new Map(files.map((x) => [x, imp.test(read(x)) ? "import" : nm.test(read(x)) ? "name" : null]).filter(([, how]) => how)); };
   while (todo.length) {
     const y = todo.shift();
-    const users = existsSync(join(ROOT, y)) ? usersOf(y) : named(y);
+    // --assume-deleted (its own check only): the seeds read as deleted, without touching the tree.
+    const gone = !existsSync(join(ROOT, y)) || (process.argv.includes("--assume-deleted") && via.get(y) === null);
+    const users = gone ? named(y) : usersOf(y);
     for (const [x, how] of users) {
       if (via.has(x) || (RUNNERS.has(x) && how === "folder")) continue;
       // Through API and web code only by imports: a file that names an endpoint's module or lists its folder is no read.

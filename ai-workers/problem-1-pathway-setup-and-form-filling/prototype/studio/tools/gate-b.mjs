@@ -45,7 +45,7 @@
 //     * a pack that only reads a changed file: its row only if it is Works (protected: it must stay green);
 //     * the rest are listed, not run ("name it with its green steps to run it": a named capability runs here, in part 1).
 //   An added capability's whole pack must pass. --diff-groups <n> prints that set, minus the named capabilities, as at
-//   most n JSON groups ({caps, data, packs}) for CI's job "packs", which runs each group pooled on 3 slots (GATE_B_NO_DIFF
+//   most n JSON groups ({caps, data, skip, packs}; about 6 pack weights a machine) for CI's job "packs", which runs each group pooled on 3 slots (GATE_B_NO_DIFF
 //   there, and in part 1). Off CI, without GATE_B_NO_DIFF, the gate adds the set itself. On a pull request every
 //   capability runs on its scoring data (works-set.mjs: qa's REGRESSION-DATA.md, else the row's evidence, else the
 //   checkpoint for an M3 row, else the six) unless GATE_B_DATA or GATE_B_DATA_OF is set. A deleted pack is named. A
@@ -547,7 +547,9 @@ async function main(argv) {
         const live = fresh.filter((r) => packsOf(r.id).length > skipOf(r).length);
         for (const r of fresh.filter((x) => !live.includes(x))) note(`  by diff, every pack held (REGRESSION-HELD.md), not run: ${r.id}`);
         const items = live.map((r) => { const n = packsOf(r.id).length - skipOf(r).length; return { id: r.id, packs: n, weight: n * (sc.dataOf(r.id) === "checkpoint" ? 2 : 1) }; });
-        console.log(JSON.stringify(groupsOf(items, opt.diffGroups).map((g) => ({ caps: g.caps.join(" "), data: g.caps.map((id) => `${id}=${sc.dataOf(id)}`).join(" "), skip: g.caps.flatMap((id) => skipOf(live.find((r) => r.id === id))).join(","), packs: g.packs }))));
+        // As many machines as the work needs (about 6 pack weights each, review m2), at most --diff-groups.
+        const n = Math.max(1, Math.min(opt.diffGroups, Math.ceil(items.reduce((t, x) => t + x.weight, 0) / 6)));
+        console.log(JSON.stringify(groupsOf(items, n).map((g) => ({ caps: g.caps.join(" "), data: g.caps.map((id) => `${id}=${sc.dataOf(id)}`).join(" "), skip: g.caps.flatMap((id) => skipOf(live.find((r) => r.id === id))).join(","), packs: g.packs }))));
         return 0;
       }
       for (const r of fresh) cl.caps.set(r.id, null);
