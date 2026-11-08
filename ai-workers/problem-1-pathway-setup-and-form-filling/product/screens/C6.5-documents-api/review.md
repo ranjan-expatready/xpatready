@@ -97,3 +97,5 @@ The diff changes the 409 of `runtime.ts` confirmSection, two lines of `case-docu
 * **n3:** recorded in the PR as a decision, as agreed.
 
 **Verdict: Approve** on `f346af947b05f46720af9f70be0131bbb2ade8fa`. No Blocker or Major is open. The one Minor (the other-section test line) is to be fixed or listed in the PR.
+
+Re-review on 0597896cc (diff: one test line only, no app code; the other-section R-n1 line asserts the 409 names the other section by its title and not "this section"): Verdict: Approve 0597896ccf44a98eca497133982f2ecfa0d5b3c2
