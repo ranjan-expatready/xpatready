@@ -146,3 +146,24 @@ I re-ran on fresh copies (:4436 and :4437, US$0): engine 67/67, API 44/44, brows
 - The rest of the diff is records and regenerated screenshots.
 
 **Verdict: Approve** (commit `541dbfbe771c6206eb04958ada51503346bfe122`).
+
+## Diff check on a0cc7ef (`git diff 91494b35c a0cc7ef28`, 8 Nov IST)
+I re-ran on fresh copies (:4436 and :4437, US$0). Results: `check_qa182_no_box_words` 8/8, engine 67/67, API 44/44, browser 37/37. I restored the screenshots the tests overwrite.
+
+- **A firm's words.**
+  - The no-saved text is now "No saved review of this form edition with these values yet."
+  - The Live-off text is now "Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0)."
+  - No on-screen string of the Review page names "tech lead" or "founder" now. The words remain only in code comments.
+  - The browser step now checks for their absence, and the engine and API tests read the new words.
+- **"form field" in place of "box"** (P-63, QA-182). This covers:
+  - step 1;
+  - the source panel's text and its `aria-label`;
+  - the Saved row;
+  - the list of fields the AI could not judge;
+  - a line with no caption.
+
+  `check_qa182` passes.
+- **One note.** The caption-less line's wording is part of the review sheet, so its checksum moves for forms that have such a line. No paid run is recorded yet, so nothing is lost.
+- Nothing else in the code changed.
+
+**Verdict: Approve** (commit `a0cc7ef28bd8a6350956e6499aa9fcbf6935437a`).
