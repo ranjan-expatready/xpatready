@@ -1,0 +1,24 @@
+qa probe c102_sheet.mts on 1cf6e1d1f (= main 0b4ede86b + qa records), copy qa_r309 :4470, start Sun Nov  8 23:01:18 IST 2026
+NOTICE:  database "xr_studio_qa_r309" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r309 on http://localhost:4470 (xr_studio_qa_r309), stops itself in 40 min
+reset 201
+load 201
+loaded Sun Nov  8 23:02:31 IST 2026
+C10.2 / C7.3 sheet probe — Online IMM 5257: every section ticked, is the item done?
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+ITEM {"filled":true,"channel":"ONLINE","state":"to_do","reason":"Every answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature."}
+PASS  setup: the principal's IMM 5257 is an Online item — {"id":"43155760-8408-4930-918b-29786590565a","kind":"form","filing":"2038a9d4-2f8b-4cc4-beaf-d77800c3977c","subject":"719bdaa5-4306-45ee-bce9-a8fd1efda7c8","person":"Sample Client A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+SECTIONS 9 ["Personal details","National identity document","US PR card","Contact information","Details of visit to Canada","Education","Employment","Background information","Signature"]
+PASS  every section is ticked entered (2xx each) — [201,201,201,201,201,201,201,201,201]
+AFTER {"state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current.","sheetKeys":["item","form","subject","order_basis","order_note","sections"]}
+OPEN-LINES 0 []
+WAITING [{"section":"Personal details","entered":true,"out_of_date":false,"waiting":[]},{"section":"National identity document","entered":true,"out_of_date":false,"waiting":[]},{"section":"US PR card","entered":true,"out_of_date":false,"waiting":[]},{"section":"Contact information","entered":true,"out_of_date":false,"waiting":[]},{"section":"Details of visit to Canada","entered":true,"out_of_date":false,"waiting":[]},{"section":"Education","entered":true,"out_of_date":false,"waiting":[]},{"section":"Employment","entered":true,"out_of_date":false,"waiting":[]},{"section":"Background information","entered":true,"out_of_date":false,"waiting":[]},{"section":"Signature","entered":true,"out_of_date":false,"waiting":[]}]
+PASS  the item is Done once every section is ticked — {"id":"43155760-8408-4930-918b-29786590565a","kind":"form","filing":"2038a9d4-2f8b-4cc4-beaf-d77800c3977c","subject":"719bdaa5-4306-45ee-bce9-a8fd1efda7c8","person":"Sample Client A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+
+3/3 passed
+fill exit 0
+read exit 1  end Sun Nov  8 23:02:46 IST 2026

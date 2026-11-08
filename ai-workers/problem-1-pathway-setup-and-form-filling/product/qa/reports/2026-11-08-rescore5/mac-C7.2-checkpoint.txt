@@ -1,0 +1,24 @@
+C7.2 on 1cf6e1d1f (= main 0b4ede86b + qa records), copy qa_p72 :4470, start Sun Nov  8 23:07:42 IST 2026
+NOTICE:  database "xr_studio_qa_p72" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p72 on http://localhost:4470 (xr_studio_qa_p72), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 23:08:57 IST 2026
+PASS  C7.2 setup (QA-315): the principal's IMM 5257 is filed as a PDF upload on this case (the officer's choice where the release files it Online), so its copy is one to validate — {"release":"ONLINE","was":"ONLINE","change":{"status":200,"words":""},"now":"PDF_UPLOAD"}
+PASS  C7.2 setup (C7.1, on main): the case's IMM 5257 copy is generated from the release and downloads — {"status":202,"words":""}
+FAIL  C7.2 P-46: the upload reports the barcode check: barcodes expected for IMM 5257 (5, as the evidence lane decoded on 23 Oct), decoded, matched — {"status":201,"words":""}
+FAIL  C7.2 fail: a copy whose barcodes cannot be read (Validate not pressed, or a page missing) is never ready for filing; the words say to press Validate in Adobe Reader — {"status":201,"validated":{"at":"2026-11-08T17:38:59.051Z","by":"user-O","current":true,"words":"Validated copy read back","read_back":{"written":0,"equal":0}}}
+PASS  C7.2 P-171 (1): changing a fact on the form after the upload marks the validated copy out of date and asks for Validate again — {"upload":201,"put":200,"validated":false,"out_of_date":true}
+FAIL  C7.2 evidence: a result of the Mac's Adobe run is recorded at studio/evidence/c7-2-adobe-validate/result.json
+FAIL  C7.2 evidence: it is a Studio-generated IMM 5257 of a Visitor visa case (not E1's values file), named by its checksum — null
+FAIL  C7.2 evidence (P-171): Adobe Reader's Validate succeeded on the first press, with the reader's version (10 or higher, IRCC Help Centre 660) and the message as shown — null
+FAIL  C7.2 evidence (P-46): every barcode decoded and every slot agrees with the facts written (0 unexplained) — null
+FAIL  C7.2 evidence: the saved file kept IRCC's certification (no "changed" warning) and the written values read back unchanged
+FAIL  C7.2 evidence: the result names the validated file's checksum and the screenshots of the Validate message and the barcode page — null
+
+3/11 passed
+pack exit 1  end Sun Nov  8 23:08:59 IST 2026
+stopped qa_p72 (database and files removed; log in var/isolated-logs/qa_p72-api.log)
