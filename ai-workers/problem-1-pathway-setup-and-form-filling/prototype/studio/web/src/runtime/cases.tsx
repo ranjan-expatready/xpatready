@@ -12,6 +12,7 @@ import { noRetryOnRefusal, Questionnaire, useCaseView, type CanAdd, type CaseInf
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
+import { ReviewPage } from "./review";
 import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
@@ -72,6 +73,7 @@ export function RuntimeApp() {
           <Route path=":id" element={<CasePage />} />
           <Route path=":id/questionnaire" element={<ClientPage />} />
           <Route path=":id/eligibility" element={<EligibilityPage />} />
+          <Route path=":id/review" element={<ReviewPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
       </main>
@@ -202,7 +204,7 @@ function CasePage() {
       <EligibilityCard caseId={c.id} people={c.people} />
       <ItemChannels caseId={c.id} />
       <FormsPanel caseId={c.id} />
-      <FindingsPanel caseId={c.id} people={c.people} />
+      <FindingsPanel caseId={c.id} people={c.people} openLink={`/cases/${c.id}/review`} />
       <SubmissionPanel caseId={c.id} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>
