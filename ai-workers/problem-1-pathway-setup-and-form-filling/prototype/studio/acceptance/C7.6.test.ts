@@ -27,8 +27,9 @@ async function linesOf(caseId: string, name: string) {
  *  to wait for. Under the founder's ruling Q3 (P-380; Sample until the immigration expert confirms; Unconfirmed: no
  *  counsel), the case officer switches this one person's barcode form to Paper with a written accommodation reason, so
  *  its copy is for filing and the steps below read its own Validate, as on the fixture, where the release line is
- *  already a PDF upload and nothing is changed. Paper is signed in pen: until its "signed in pen" step can be recorded
- *  (row B132), that CRITICAL signature stays on the checkpoint and C7.6-12 and -19 stay red; it is never passed here. */
+ *  already a PDF upload and nothing is changed. Paper is signed in pen: a CRITICAL "missing signature" owed by the
+ *  client until the case officer records Printed (from the validated copy read back) then Signed in pen, through the
+ *  product's own steps (B132, #1278; C7.6-10b, -10c); Client A's is never passed with a reason (the solo case's is, at -22). */
 async function asPaper(caseId: string, subject: string, form: string | undefined, channel: string | undefined, actor: string) {
   if (!form || channel !== "ONLINE") return;
   const q = (await prepare(caseId, actor)).p, it = itemsOf(q, subject, form)[0];
@@ -83,7 +84,31 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   ok("C7.6-9 pass: a missing document (passport not received) only warns", codes(rd?.warns).includes("missing_document") && !codes(rd?.blocks).includes("missing_document"));
 
   // Clear each block the way the item's channel requires.
-  ok(`C7.6-10 pass: ${BC} validated copy read back (the built C-9 route)`, !!BC && !!(await validateRoundTrip(c.id, BC, P)));
+  const vcopy = BC ? await validateRoundTrip(c.id, BC, P) : null;
+  ok(`C7.6-10 pass: ${BC} validated copy read back (the built C-9 route)`, !!BC && !!vcopy);
+  // B132 (#1278): a barcode form on Paper (asPaper above) is signed in pen. The case officer records Printed, naming the
+  // validated copy just read back, then Signed in pen, through the product's own route; a client cannot record either.
+  // On the fixture the line stays a PDF upload, has no pen steps, and nothing is recorded.
+  type PenItem = { id: string; channel?: string; signature?: string; record?: string; steps?: { key: string; done: boolean | null }[] };
+  const penItem = async () => (BC ? itemsOf((await prepare(c.id, officer)).p, P, BC) : []).find((x) => !(x as unknown as PenItem).record) as unknown as PenItem | undefined;
+  const pen0 = await penItem();
+  if (BCC === "PAPER") {
+    rd = readinessOf((await prepare(c.id, officer)).p, fid);
+    const byClient = await call("POST", `/runtime/items/${pen0?.id}/sign-steps/print`, { copy: vcopy }, CLIENT);
+    ok(`C7.6-10b fail (P-136, P-237): ${BC} on Paper not yet signed in pen is a CRITICAL "missing signature" owed by the client; a client cannot record its steps (403)`,
+      pen0?.signature === "PEN" && (rd?.warns ?? []).some((w) => w.code === "missing_signature" && w.severity === "critical" && (w as { owes?: string }).owes === "client" && !!BC && w.words.includes(BC) && /in pen/.test(w.words)) && byClient.status === 403,
+      { signature: pen0?.signature, warns: (rd?.warns ?? []).filter((w) => w.code === "missing_signature").map((w) => w.words), client: byClient.status });
+    const printed = await call("POST", `/runtime/items/${pen0?.id}/sign-steps/print`, { copy: vcopy }, officer);
+    const inPen = await call("POST", `/runtime/items/${pen0?.id}/sign-steps/sign_in_pen`, {}, officer);
+    const pen1 = await penItem();
+    const done = (k: string) => (pen1?.steps ?? []).find((x) => x.key === k)?.done;
+    // Review m2: the item read names the copy printed; it must be the validated copy read back at -10.
+    const read = await call("GET", `/runtime/items/${pen0?.id}`, undefined, officer);
+    const printedCopy = ((read.body?.sign_steps ?? []) as { key: string; done: { copy?: string | null } | null }[]).find((x) => x.key === "print")?.done?.copy;
+    ok(`C7.6-10c pass (B132): the case officer records ${BC} Printed from its validated copy, then Signed in pen; its Paper line reads both done`,
+      printed.status === 200 && inPen.status === 200 && done("print") === true && done("sign_in_pen") === true && !!vcopy && printedCopy === vcopy,
+      { print: [printed.status, printed.body?.detail], sign_in_pen: [inPen.status, inPen.body?.detail], steps: pen1?.steps, printedCopy, vcopy });
+  } else ok(`C7.6-10b pass: ${BC} is a PDF upload on this release (no Paper line), so it takes no pen steps`, !!pen0 && pen0.channel === "PDF_UPLOAD" && pen0.signature !== "PEN", { channel: pen0?.channel, signature: pen0?.signature });
   const iHS = HS ? itemsOf(p, P, HS)[0] : undefined;
   const signed = HS ? await signByHand(c.id, iHS?.id, HS, P) : 0; // print → signed by hand → scan, in order (C8.1-3)
 
