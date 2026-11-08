@@ -168,7 +168,9 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // validated copy in the block below instead, so it is not asked twice.
     // Breaker M1 on #1344: a copy older than today's facts (made before the answers, or before a fact changed) would file
     // old or empty answers, so it keeps the line too, asking for a new copy.
-    if ((f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.needsValidate && f.copy && f.copy.state !== "current") {
+    // Review m8: an item already "out of date" (signed or uploaded before a fact changed) asks for a new copy itself, so
+    // its out-of-date copy raises no second line.
+    if ((f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.needsValidate && f.copy && f.copy.state !== "current" && !(f.copy.state === "stale" && f.outOfDate)) {
       const how = f.channel === "PAPER" ? "on Paper" : "a PDF upload";
       critical({ code: "no_copy", ...at, part: `${f.copy.state}|${f.copy.key}`, owes: "staff", words: f.copy.state === "none"
         ? `${ofWho(f)} has no copy made for filing yet (${how}). Generate a copy under Prepare application before Ready to file.`

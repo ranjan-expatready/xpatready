@@ -195,6 +195,9 @@ const passNone = pass(done({ forms: [i5257(), i5476({ copy: NONE })] }), "no_cop
 const onR3 = filingReadiness(done({ forms: [i5257(), i5476({ copy: { state: "none", key: "rel-3" } })], passes: [passNone] }));
 const nowStale = filingReadiness(done({ forms: [i5257(), i5476({ copy: STALE })], passes: [passNone] }));
 ok("B162 fail (breaker M2): a pass for \"no copy\" on one release covers neither the same line after a move nor a copy that is now out of date", !onR3.ready && onR3.warns.length === 1 && !nowStale.ready && nowStale.warns.length === 1, [onR3.warns.map((w) => w.key), nowStale.warns.map((w) => w.key)]);
+r = filingReadiness(done({ forms: [i5257(), i5476({ copy: STALE, outOfDate: { fact: "person.family_name", since: "2026-11-01" } }), ] }));
+const rNoneOut = filingReadiness(done({ forms: [i5257(), i5476({ copy: NONE, outOfDate: { fact: "person.family_name", since: "2026-11-01" } })] }));
+ok("B162 pass (review m8): an item already out of date (signed or uploaded before a fact changed) keeps its one CRITICAL out-of-date line, with no second line for its out-of-date copy; with no copy at all the \"no copy\" line stays", codes(r.warns).join() === "out_of_date" && codes(rNoneOut.warns).sort().join() === "no_copy,out_of_date", [codes(r.warns), codes(rNoneOut.warns)]);
 const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
 r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
 ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);
