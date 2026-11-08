@@ -155,7 +155,7 @@ await main("C6.5", "The Fill this from documents drawer (screen, 1440 px; US$0)"
     for (const f of await k1.locator("[data-tick]").evaluateAll((e) => e.map((x) => x.getAttribute("data-tick")))) { await k1.locator(`[data-tick="${f}"]`).focus(); await page.keyboard.press("Space"); }
     await k1.locator("[data-confirm-and-use]").focus(); await page.keyboard.press("Enter");
     await k1.locator("[data-confirmed]").waitFor({ timeout: 20_000 });
-    ok("C6.5-37 pass (EXPERIENCE §6 BIC-20): the drawer opens, ticks and uses a document by keyboard alone, and focus lands on the confirmed line", sql(`select confirmed_by from document_review where document_id='${k1Doc}'`) === OFFICER && await page.evaluate(() => document.activeElement?.hasAttribute("data-confirmed") ?? false));
+    ok("C6.5-37 pass (EXPERIENCE §6 BIC-20): the drawer opens, ticks and uses a document by keyboard alone, and focus lands on the confirmed line", sql(`select confirmed_by from document_review where document_id='${k1Doc}'`) === OFFICER && await page.evaluate(() => document.activeElement?.hasAttribute("data-confirmed") ?? false), { confirmedBy: sql(`select confirmed_by from document_review where document_id='${k1Doc}'`), focus: await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)) });
     // The corrected value opened its check with "Keep the current answer" chosen; no mark while it is open.
     const kResolve = drawer.locator(`[data-resolve-check="person.given_names"]`);
     await kResolve.waitFor({ timeout: 20_000 });
@@ -170,6 +170,7 @@ await main("C6.5", "The Fill this from documents drawer (screen, 1440 px; US$0)"
     await page.keyboard.press("Escape");
     const sDoc = (await upload(PORT, `/runtime/checklist-lines/${await lineOf(S)}/documents`, passportPdf({ ...pass, surname: "SAMPLES", given: "SPOUSE A", number: "SAMPLES35", dob: FAMILY[1].dob! }), "spouse-good.pdf", OFFICER)).body?.document?.id as string;
     await openDrawer(S, passSec, "person.passport_number");
+    await drawer.locator(`[data-document-block="${sDoc}"] [data-confirm-and-use]`).waitFor({ timeout: 20_000 });
     const sLook = (await proposals(S)).filter((p) => p.source.document === sDoc && p.needs_look).map((p) => p.id);
     for (const f of await drawer.locator(`[data-document-block="${sDoc}"] [data-tick]`).evaluateAll((e) => e.map((x) => x.getAttribute("data-tick")))) await drawer.locator(`[data-document-block="${sDoc}"] [data-tick="${f}"]`).check();
     await call("POST", `/runtime/cases/${c.id}/documents/${sDoc}/confirm-and-use`, { subjectId: S, checked: sLook }, OFFICER);

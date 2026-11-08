@@ -170,6 +170,9 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
   const [busy, setBusy] = React.useState(false);
   const confirmed = review.confirmed;
   const evidence = new Set(review.evidence);
+  // Break m3: after a successful Confirm & use, focus moves to the confirmed line once the reloaded block draws it.
+  const focusConfirmed = React.useRef(false);
+  React.useEffect(() => { if (confirmed && focusConfirmed.current) { focusConfirmed.current = false; document.getElementById(`confirmed-${review.document}`)?.focus(); } }, [confirmed, review.document]);
   const value = (p: { fact: string }, v: unknown) => { const q = questionOf(p.fact); return q ? String(shown(q, v)) : String(v ?? ""); };
   const differs = mine.filter((p) => p.state === "proposed" && p.differs);
   const left = mine.filter((p) => p.state === "proposed" && p.left_why);
@@ -179,18 +182,15 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
   const open = look.filter((p) => !ticked.has(p.id));
   async function use() {
     setBusy(true); onNotice(null);
-    let done = false;
     try {
       const r = await api<{ message: string }>(`/runtime/cases/${caseId}/documents/${review.document}/confirm-and-use`, { method: "POST", json: { subjectId, checked: [...ticked] } });
-      toast.push({ tone: "ok", text: r.message }); done = true;
+      toast.push({ tone: "ok", text: r.message }); focusConfirmed.current = true;
     } catch (e) {
       const c = e instanceof ApiError ? (e.problem as { confirmed?: { by: string; at: string } }).confirmed : undefined;
       onNotice(problemCode(e) === "already_confirmed" && c ? `${review.document_name}: already confirmed and used by ${who(c.by)} on ${ist(c.at)}.` : `${review.document_name}: ${refusal(e)}`);
     }
     await refresh();
     setBusy(false);
-    // Break m3: after the click, focus lands on what changed (the confirmed line), never on the drawer's body.
-    if (done) requestAnimationFrame(() => document.getElementById(`confirmed-${review.document}`)?.focus());
   }
   return (
     <section aria-labelledby={`doc-${review.document}`} className="overflow-hidden rounded-xl border border-border" data-document-block={review.document}>
