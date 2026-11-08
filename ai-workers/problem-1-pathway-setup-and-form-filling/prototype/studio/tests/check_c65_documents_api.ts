@@ -144,11 +144,14 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   await answer(c.id, S, "person.family_name", "SAMPLEDY", OFFICER);
   r = await call("POST", `/runtime/checks/${k1}/resolve`, { keep: "answer", reason: "Matches the typed name (Sample)" }, OFFICER);
   ok("C6.5 B-M1 fail: resolving with no answer id over an answer changed since the check opened is refused (409 changed)", r.status === 409 && r.body?.code === "changed", r.body);
+  ok("C6.5 D13 pass: a value its question cannot take (the country code) is listed left for a person while unanswered", (c1.body?.left ?? []).some((x: { fact: string }) => x.fact === "person.citizenship"), c1.body?.left);
+  await answer(c.id, S, "person.citizenship", "India", OFFICER);
   const sp2 = await sDoc("SAMPLEDZ", "spouse-2.pdf");
   r = await call("POST", `/runtime/checks/${k1}/resolve`, { keep: "document", reason: "The passport is right (Sample)", answerId: sql(`select id from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.family_name' and superseded_by_id is null`) }, OFFICER);
   ok("C6.5 B1 fail: a replaced file's value cannot be kept (409 not_current), and the answer is unchanged", r.status === 409 && r.body?.code === "not_current" && sName().startsWith("DECLARED|SAMPLEDY|"), r.body);
   const c2 = await call("POST", `/runtime/cases/${c.id}/documents/${sp2}/confirm-and-use`, { subjectId: S }, OFFICER);
   ok("C6.5 B1/B-M2 pass: the newer file closes the replaced file's check (kept the answer, a reason in words) and opens its own check for its own difference", c2.status === 200 && (c2.body?.closed ?? []).includes(k1) && /replaced by a newer/.test(sql(`select reason from answer_check where id='${k1}'`) ?? "") && JSON.stringify(openOf(S, "person.family_name")) === JSON.stringify([sp2]), { closed: c2.body?.closed, open: openOf(S, "person.family_name") });
+  ok("C6.5 D13 fail: once the officer answered it in place, it is no longer listed left for a person (and opens no check)", !(c2.body?.left ?? []).some((x: { fact: string }) => x.fact === "person.citizenship") && !(c2.body?.checks ?? []).some((x: { fact: string }) => x.fact === "person.citizenship"), { left: c2.body?.left, checks: c2.body?.checks });
   const k2 = (c2.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name")?.id as string;
   r = await call("POST", `/runtime/checks/${k2}/resolve`, { keep: "answer", reason: "\u3164\u115f" }, OFFICER);
   ok("C6.5 B-m3 fail: a reason of letters that print as nothing is refused in words (400), never a 500", r.status === 400, r.status);

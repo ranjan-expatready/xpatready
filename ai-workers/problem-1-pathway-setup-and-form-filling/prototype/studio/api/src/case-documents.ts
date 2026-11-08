@@ -395,7 +395,11 @@ export class CaseDocuments {
           ? await tx.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: v.fact, version: field.item_version } }) : null;
         if (!def) { await tx.readValue.update({ where: { id: v.id }, data: { state: "not_asked" } }); out.not_asked.push(v.fact); continue; }
         const why = notWritable(s, v.fact, v.valueJson);
-        if (why) { out.left.push({ fact: v.fact, why }); continue; } // stays a proposal: a person answers it
+        if (why) {
+          // Stays a proposal; listed "left for you" only while nobody has answered it (the drawer's in-place answer).
+          if (!(await tx.clientCanonicalAnswer.count({ where: { subjectId: who.subjectId, canonicalFieldKey: v.fact, rowKey: null, supersededById: null } }))) out.left.push({ fact: v.fact, why });
+          continue;
+        }
         const source = { channel: "document_read", actor: actor.id, at: at.toISOString(), document: doc!.id, page: v.page, reader: v.reader, read_value: v.id };
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: v.fact, rowKey: null, supersededById: null } });
         if (current && !sameValue(v.fact, current.valueJson, v.valueJson)) {
