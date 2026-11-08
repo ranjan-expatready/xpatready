@@ -522,10 +522,12 @@ export class CasePrepare {
     for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: pin.configReleaseId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true } }))
       if (!newestCopy.has(`${x.formNumber}|${x.subjectId}`)) newestCopy.set(`${x.formNumber}|${x.subjectId}`, x.id);
     const handOf = new Map<string, { copy: string; box: string; label: string; why: string; caption?: string | null }[]>();
-    // Breaker M3: each box's own caption from the form's field list (the release's field map names it), read once a form.
+    // Breaker M3: each box's own caption from the form's field list, read once a form. Devin on #1331: the field list of the
+    // PDF edition the copy was filled on: the copies here are this release's, and the fill takes pdfMapInUse (P-32), so
+    // the same map is read here, never simply the first edition listed.
     const captionsOf = new Map<string, Map<string, string>>();
     const captionOf = (form: string, box: string) => {
-      if (!captionsOf.has(form)) { const file = fieldMapOf(s, form)?.inventory_file; captionsOf.set(form, new Map((file ? inventoryOf(file)?.fields ?? [] : []).flatMap((x) => (x.data_path && x.caption ? [[x.data_path, x.caption] as [string, string]] : [])))); }
+      if (!captionsOf.has(form)) { const file = pdfMapInUse(s.field_maps as FieldMap[], form)?.inventory_file; captionsOf.set(form, new Map((file ? inventoryOf(file)?.fields ?? [] : []).flatMap((x) => (x.data_path && x.caption ? [[x.data_path, x.caption] as [string, string]] : [])))); }
       return captionsOf.get(form)!.get(box) ?? null;
     };
     for (const x of newestCopy.size ? await this.db.formInstance.findMany({ where: { id: { in: [...newestCopy.values()] } }, select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } }) : []) {
