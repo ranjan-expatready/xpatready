@@ -1,4 +1,4 @@
-# qa re-score batch 2: C3.16, C6.11, C6.12, C8.1, C9.2, C11.6 (with C7.6, C7.7 notes); QA-296, QA-299, QA-300. 8 Nov 2026, 08:31–09:10 IST
+# qa re-score batch 2: C3.16, C6.11, C6.12, C8.1, C9.2, C11.6 (with C7.6, C7.7 notes); QA-296, QA-299, QA-300. 8 Nov 2026, 08:31–09:05 IST
 
 **Commit tested: main `152759210`** (product code). The later merges #1312 and #1313 are records only. Asked for by the tech lead, Lead 33, at 08:35 and 08:58 IST.
 * Live AI off, US$0.
@@ -46,7 +46,7 @@ Done in the browser pane, as the case officer, on a fresh checkpoint copy. The s
 | C6.12 | **Works** on the Visitor visa journey (P-380 Q1) | Run 42441156858 job 128610501475, 24/24 plus breadth 2/2 with -22 and -23 HELD. -25 on the Mac is covered by a screen read, which is not a re-run of the pack step |
 | C8.1 | **Works** (was Partial) | Run 42441156858 job 128610501445, 14/14. Mac 14/14. QA-300, its last hold, is closed |
 | C11.6 | **Works** on the Visitor visa journey (P-380 Q1) | Run 42441156858 job 128610501487, 14/14 (6/14 on 5 Nov). Mac 14/14. Only Minors are open (QA-151, QA-78) |
-| C9.2 | **Partial, waiting on the tech lead's ruling** | Pack green on GitHub (job 128610501493, 11/11) and on the Mac, and no open bug. Its breadth (an employer-case change reaching the worker's items) is not in P-380 Q1's list. Asked of Lead 33 at 09:05 IST; Works if C9.2 is ruled to count on Visitor visa alone |
+| C9.2 | **Partial** | Pack green on GitHub (job 128610501493, 11/11) and on the Mac. The founder reworded its breadth to BR-3's copy rule (P-417, QA-306 answered). The probe below proves it (exit 0, 11/11) on a Mac copy only. Works when the pack carries the step (lane task_004c3d99) and GitHub runs it (P-339) |
 | C3.16 | **Partial** (was Not built) | The six part is green (run 42441163308, 37/37, Mac 37/37). The pack's own rule (tech lead Q3 on #1054) holds it until the case part runs on the six (B82). That part is scaffolding and was not run. The checkpoint red was ruled a pack fault by the tech lead; qa did not prove it |
 | C7.6 | Partial (stays) | -5 is green. -12 and -19 are red on missing_signature and missing_document warnings after IMM 5476 is signed and scanned; the cause is not traced and could be product or pack. QA-229 (Major) is open |
 | C7.7 | Partial (stays) | QA-296 and QA-299 are closed. QA-153, QA-246 and QA-229 (Majors) remain. Pack being moved; not re-scored |
@@ -64,10 +64,46 @@ Done in the browser pane, as the case officer, on a fresh checkpoint copy. The s
 * Gate A for C9.2, C11.6 and C3.16 was not walked to the next capability's first step. C11.6 was read on screen only.
 
 ## Questions for the Lead
-1. C9.2: does it count on Visitor visa alone, which would make it Works (P-380 Q1 by analogy)? Asked at 09:05 IST.
-2. C7.6-12 and -19: does the cloud lane checking them want qa's trace (which form and person each warning names) on one copy?
+1. C9.2: answered (tech lead, 8 Nov: P-380 Q1 is not extended; prove the breadth). Result below: QA-306.
+2. C7.6-12 and -19: answered (tech lead: no trace; the QA-300 cloud lane owns them).
+3. C3.16's B82 case part needs a build, not just a run (told to the tech lead): the pack's case part sets scope in SQL on a scripted release 1. Moving it to the six means rewriting the pack to set scope while the field is a draft and release Visitor visa there by people's steps.
+
+## C9.2 breadth probe, 8 Nov 2026, 08:58–09:03 IST
+The tech lead ruled that P-380 Q1 is not extended to C9.2: its declared breadth counts (P-303). He asked for one probe: change an employer fact that the worker's signed or uploaded item reads, and see the item go out of date, never changed.
+
+**Why the probe could not be run as worded:**
+* C1.3's BR-3 ("Copies, not live links", SA-1B-283 r4, approved on #1051) says a later change on the employer case never reaches the worker's case.
+* The Sample employer case is a static stand-in file (SI-10), and nothing in the product edits it.
+
+**What qa ran instead** is what BR-3 allows: the officer corrects the copied value on the worker's case. Script `scripts/c92_employer.mts`, on fresh checkpoint copies, one at a time.
+* **Run 1:** stopped at its own setup query.
+* **Run 2:** 10/11. The failure was the probe's own source check: a confirmed copy keeps `linked_file` under `answered`.
+* **Run 3:** **11/11, exit 0** (`mac-C9.2-breadth-probe-152759210.txt`):
+  * a With an LMIA – inside Canada worker case links the Sample employer case, which copies 3 facts;
+  * IMM 5710, the only form that reads the employer name, is validated and read back;
+  * the officer corrects the name;
+  * IMM 5710 is Out of date: "name of the prospective employer of Sample Worker W changed from "Sample Employer Ltd (Sample)" to "Sample Employer Limited (Sample)" on 7 Nov 2026" (Toronto time, by design);
+  * its validated checksum is the same;
+  * the out_of_date warning is CRITICAL;
+  * IMM 5707 and IMM 5476 keep their state;
+  * Undo restores the value.
+
+**Verdict (fresh reader):** at first, C9.2 stayed **Partial**.
+* The probe proves a different property from the one worded. As worded, the breadth is impossible by design: **QA-306**, Conflict · Major, with a proposed rewording for the founder.
+* The probe is a scratch script with no GitHub run (P-339).
+* "Signed" was not tested: IMM 5710 has no signature step.
+* Other CRITICAL warnings also held Ready to file.
+
+The fresh reader added: "If the tech lead or founder … accepts the probe in place of the ruling's test, then Works."
+
+**The founder's answer to QA-306 (P-417, 8 Nov, through the tech lead):**
+* "Use the BR-3 wording": the breadth now reads "a change to a copied employer fact on the worker's case marks the worker's items that read it out of date, and never changes them".
+* C9.2 counts Works "once the step is in its test". It stays **Partial** until the pack carries the step (lane task_004c3d99) and GitHub runs it on main's head (P-339).
+* QA-306 is closed as answered.
+* The tech lead's P-294 ruling, sent at the same time, gave way to this answer.
 
 ## Copies
 * qa_q300 (:4470, the check) and qa_p611 … qa_p116 (:4470, one per pack) each stopped in its own command.
 * qa_p316 (:4470, the six) stopped in its own command.
 * qa_c612w (:4472, the screen read) refused its stop from a later call. It stops itself at about 09:13 IST.
+* qa_c92e, qa_c92f and qa_c92g (:4470, the C9.2 probe) each stopped in its own command.

@@ -1,0 +1,47 @@
+C6.13 on 37c269eea (product code = main 7e94da44f), checkpoint, copy qa_r613 :4470, start Sun Nov  8 14:32:05 IST 2026
+NOTICE:  database "xr_studio_qa_r613" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r613 on http://localhost:4470 (xr_studio_qa_r613), stops itself in 25 min
+reset 201
+load 201
+C6.13 — Filing changes while preparing (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.13-0 pass (setup): four filings, CAD 570 payable (visa 400, biometrics 170 capped) — {"filings":4,"payable":57000}
+PASS  C6.13-1 pass (BR-4): the preview names Sample Client A's and Sample Child A2's filings with the biometrics change; total CAD 570 → CAD 470 — {"kind":"remove_filing","subject":"0f3d6b6e-bea4-42d6-aa54-eaed0d0c8f6e","title":"Remove Sample Spouse A's filing?","stays":"Sample Spouse A stays on the case, not travelling: asked only what the others' forms need about them. Their answers and uploads are kep
+PASS  C6.13-1a pass (BR-4): a filing that does not change is not named (Sample Child A1, 10: no biometrics)
+PASS  C6.13-1b pass: the preview changes nothing
+PASS  C6.13-2 fail (BR-6): applying without a reason is refused on the field (400) — {"type":"https://expatready.local/problems/filing-change","title":"Some details need fixing","status":400,"detail":"Write a reason: it is kept with the change.","message":"Write a reason: it is kept with the change.","errors":[{"field":"reason","message":"Writ
+PASS  C6.13-2a fail (break m): a reason of invisible characters only is refused (400) — {"type":"https://expatready.local/problems/filing-change","title":"Some details need fixing","status":400,"detail":"Write a reason: it is kept with the change.","message":"Write a reason: it is kept with the change.","errors":[{"field":"reason","message":"Writ
+PASS  C6.13-3 pass (BR-1): removed: three filings, visa CAD 300, biometrics 2 × CAD 85 with no cap; the spouse's items inactive; the reason on a filing_change row — {"status":200,"body":{"done":true,"words":"Sample Spouse A's filing removed. Fees worked out again.","undo":{"kind":"add_back","subject":"0f3d6b6e-bea4-42d6-aa54-eaed0d0c8f6e"}},"visa3":300,"bio3":[{"filing":"5f24dc29-b175-4975-9912-c882fc8c0dca","subject":"a6
+PASS  C6.13-6c pass (M7): the preview's "after" total equals Prepare application's after the change — {"prepare":47000,"preview":47000}
+PASS  C6.13-3a pass (BR-11): the answer offers the inverse change as Undo — {"done":true,"words":"Sample Spouse A's filing removed. Fees worked out again.","undo":{"kind":"add_back","subject":"0f3d6b6e-bea4-42d6-aa54-eaed0d0c8f6e"}}
+PASS  C6.13-3b pass (BR-6): the reason is read back for the person's row — {"changes":[{"kind":"remove_filing","subject":"0f3d6b6e-bea4-42d6-aa54-eaed0d0c8f6e","other":null,"reason":"Added by mistake (Sample)","by":"user-O","at":"2026-11-08T09:03:26.474Z"}]}
+PASS  C6.13-4 pass (BR-1): Add filing back returns the same filing id and the same items, active — {"status":200,"body":{"done":true,"words":"Sample Spouse A's filing added back. Fees worked out again.","undo":{"kind":"remove_filing","subject":"0f3d6b6e-bea4-42d6-aa54-eaed0d0c8f6e"}}}
+PASS  C6.13-5 fail (BR-2): removing the principal's filing → 422 "Make someone else principal first" — {"type":"https://expatready.local/problems/filing-change","title":"Not possible","status":422,"detail":"Make someone else principal first: the principal applicant's filing is never removed.","message":"Make someone else principal first: the principal applicant
+PASS  C6.13-6d pass (BR-4, M6): the preview names who signs for the minor children (the new principal instead of the former) — {"kind":"make_principal","subject":"0f3d6b6e-bea4-42d6-aa54-eaed0d0c8f6e","title":"Make Sample Spouse A the principal applicant?","stays":"Sample Spouse A becomes principal applicant; Sample Client A becomes spouse or partner. Each person keeps their own answe
+PASS  C6.13-6 pass (BR-3): Make principal swaps the roles and the capped biometrics move to the new principal's filing — {"status":200,"body":{"done":true,"words":"Sample Spouse A is now the principal applicant. Filings and fees worked out again.","undo":{"kind":"make_principal","subject":"a6076e75-53a2-4bd6-a5e7-294740182bf2"}},"capped":[{"filing":"afba0703-629d-4cf5-9f1d-0cb7d
+PASS  C6.13-6e pass (break M1): after the swap the case says who the client is (Sample Client A), and the new principal's answers read "Answered by the client", not by the principal — {"a":true,"s":false,"factS":"person.national_id_number","whyS":"Answered by the client for Sample Spouse A: declared, it fills Sample Spouse A's forms now and is confirmed before filing (the officer's \"Confirm section\")"}
+PASS  C6.13-6b pass (BR-3b, the Blocker): no answer's confirmation changes with the swap (the client stays the same person) — {"before":17,"after":17,"size":22}
+PASS  C6.13-7 fail (BR-3): a child is not made principal (422, "a child of the principal") — {"type":"https://expatready.local/problems/filing-change","title":"Not possible","status":422,"detail":"Sample Child A2 is a child of the principal: only the spouse or partner can swap with the principal. To make Sample Child A2 the principal applicant, open a
+PASS  C6.13-8 fail (BR-3): a person not travelling is not made principal (422, add their filing back first) — {"q":{"done":true,"words":"Sample Client A's filing removed. Fees worked out again.","undo":{"kind":"add_back","subject":"a6076e75-53a2-4bd6-a5e7-294740182bf2"}},"r":{"type":"https://expatready.local/problems/filing-change","title":"Not possible","status":422,
+PASS  C6.13-9 fail (BR-8): applying over a preview the case has moved on from → 409, nothing changed — {"type":"https://expatready.local/problems/filing-change","title":"Changed since you looked","status":409,"detail":"This case changed since you opened this. Look again before changing it; nothing was changed.","message":"This case changed since you opened this
+PASS  C6.13-11 fail (BR-9): a client cannot change filings (403) — 403
+PASS  C6.13-11c fail (break m): a client's malformed body is still a 403, not a 400 — 403
+PASS  C6.13-11a fail (BR-9): a configuration person cannot (403) — 403
+PASS  C6.13-11b fail (BR-9): staff of another firm do not find the case (404) — 404
+PASS  C6.13-12 pass (BR-10): the travelling flag door writes a filing_change row (no reason) — {"subject_id":"16afd73c-a22d-4e93-8acd-fdf7f72fb07e","applies":false}
+PASS  C6.13-12a fail (BR-10): the travelling flag door still refuses the principal — 404
+PASS  C6.13-12b pass (append-only): a filing_change row cannot be updated
+PASS  C6.13-13 pass (BR-6): with every filing Ready to file, the preview says "Marked Ready to file → Not started" for the principal's filing, whose fee changes, and names nothing for the child of 10, whose filing does not change — {"ready3":["7bcacd30-b171-4d1d-adef-9ea0f8de2dd7","417a34e8-486e-4c85-9be6-378e02b79ebd","10d7cf12-4140-4c9b-8b1e-292e87a97d29","6cf81d99-346f-42db-8e06-adb191d7563c"],"a":"Biometrics fee: CAD 170 → CAD 85 | Marked Ready to file → Not started","k":""}
+PASS  C6.13-13a pass (BR-6): the apply takes back exactly the filings the preview named: the principal's is Not started — {"status":200,"a":"NOT_STARTED"}
+PASS  C6.13-13b fail (BR-6): a filing the preview did not name keeps its Ready to file mark (the child of 10's) — "READY_TO_FILE"
+PASS  C6.13-13c pass (BR-10, break M2): the travelling flag door, which has no preview, takes back every Ready to file mark of the case — {"status":200,"k":"NOT_STARTED"}
+PASS  C6.13-13d fail (break m): a filing_change row is not deleted while its case exists
+PASS  C6.13-10 fail (BR-7): once the group is recorded as submitted, Remove filing, Make principal and Add filing back are refused (409) with the date, the number and "case's lifecycle" — {"ready":["2e0f5c66-95db-44fb-a1d4-1431c12e9bb5","f9800cd8-1bc2-4d4e-9d16-189176caa483"],"rec":200,"tries":[[409,"Sample Client A's application was recorded as submitted to IRCC on 2026-11-08 (V300000101), so the people and filings of this case are not changed
+
+32/32 passed
+pack exit 0  end Sun Nov  8 14:35:04 IST 2026
+stopped qa_r613 (database and files removed; log in var/isolated-logs/qa_r613-api.log)
