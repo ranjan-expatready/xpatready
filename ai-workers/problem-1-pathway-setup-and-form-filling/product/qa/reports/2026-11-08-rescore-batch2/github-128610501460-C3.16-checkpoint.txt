@@ -1,0 +1,4 @@
+Gate B: the PR names C3.16; claims Works for none (no bug check).
+    C3.16.test.ts on the checkpoint: exit 1, 14/37 passed (93 s: copy 4, Load the configured checkpoint 72, run 17)
+Gate B refuses:
+  * C3.16.test.ts on the checkpoint: exit 1; first FAIL lines: FAIL  setup (P-322): Visitor visa's "date of the union" and the LMIA work permit's employer name exist as draft fields after the people's steps — "relationship. | FAIL  Q6 (#1054): changing it warns that Visitor visa's saved AI results stop replaying — null | FAIL  C3.16-1 pass: the author sets Household on "date of the union"; it reads back as once for the household — [409,"A published field's scope cannot change. C | FAIL  C3.16-1 data: stored as HOUSEHOLD on the draft; the audit names the change | FAIL  C3.16-1 pass: the author sets Organisation on the LMIA work permit's employer name (IMM 5710; no representative box reads it)
