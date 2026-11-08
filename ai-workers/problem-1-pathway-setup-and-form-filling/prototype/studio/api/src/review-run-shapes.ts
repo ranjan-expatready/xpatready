@@ -14,7 +14,9 @@ export type ReviewRunPlan = {
   steps: { n: number; label: string; uses_ai: boolean }[]; plan_sha256: string;
 };
 /** One form's outcome in a run. */
-export type RunForm = { form: string; edition: string; from: "live" | "replay" | null; run_files: string[]; cost_usd: number; added: number; kept: number; resolved: number; dropped: { field: string; why: string }[];
+export type RunForm = { form: string; edition: string; from: "live" | "replay" | null;
+  /** Review n3: how many AI rounds gave a usable answer (0, 1 or 2), so the steps say what ran. */
+  rounds: 0 | 1 | 2; run_files: string[]; cost_usd: number; added: number; kept: number; resolved: number; dropped: { field: string; why: string }[];
   /** AG-11-70: boxes a round could not judge, with why (never guessed). */
   unreadable: { box: string; why: string; round: string }[]; note: string | null };
 /** POST …/review-runs → what the run did. */

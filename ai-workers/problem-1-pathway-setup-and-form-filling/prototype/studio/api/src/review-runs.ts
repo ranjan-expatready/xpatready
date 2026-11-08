@@ -206,11 +206,13 @@ export class ReviewRuns {
     return { ...plan, plan_sha256: sha(JSON.stringify({ c: c.id, s: b.subject, f: forms.map((f) => [f.form, f.edition, f.sheet_sha256, f.saved.files, f.live_worst_usd]) })) };
   }
 
-  async run(actor: Actor, caseId: string, body: unknown): Promise<ReviewRunResult> {
+  async run(actor: Actor, caseIdIn: string, body: unknown): Promise<ReviewRunResult> {
     const b = parse(ReviewRunBody, body);
+    // Review n2: ids are compared in one spelling, so an upper-case id never gets a slot of its own.
+    const caseId = caseIdIn.toLowerCase();
     // Break M1, M2 (8 Nov): the run is claimed before the first wait, so two requests at once (a retry, a second tab)
     // never both pass: a run id is used once, and one live run per case runs at a time. Released when this run ends.
-    const runId = b.runId ?? randomUUID();
+    const runId = (b.runId ?? randomUUID()).toLowerCase();
     const refused = claimRefusal(this.going, runId, caseId, b.mode === "live");
     if (refused) problem(409, refused.title, refused.detail);
     this.going.set(runId, { caseId, stopped: false, live: b.mode === "live" });
@@ -236,7 +238,7 @@ export class ReviewRuns {
     let cancelled = false;
     try {
       for (const p of prepared) {
-        const f: RunForm = { form: p.form, edition: p.edition, from: null, run_files: [], cost_usd: 0, added: 0, kept: 0, resolved: 0, dropped: [], unreadable: [], note: null };
+        const f: RunForm = { form: p.form, edition: p.edition, from: null, rounds: 0, run_files: [], cost_usd: 0, added: 0, kept: 0, resolved: 0, dropped: [], unreadable: [], note: null };
         out.push(f);
         if (cancelled) { f.note = "Not run: the run was stopped."; continue; }
         const safe = async (isCheck: boolean): Promise<RoundOut<ReviewAnswer>> => {
@@ -247,6 +249,7 @@ export class ReviewRuns {
         if (b.mode === "replay") ({ d, k } = await this.savedRounds(p.ctx));
         else { d = await safe(false); k = d.ok ? await safe(true) : null; }
         f.cost_usd = round2(d.costUsd + (k?.costUsd ?? 0));
+        f.rounds = d.ok ? (k?.ok ? 2 : 1) : 0;
         f.run_files = [d.ok ? d.runFile : null, k?.ok ? k.runFile : null].filter((x): x is string => !!x).map((x) => this.runFile(x));
         if (!d.ok || !k?.ok) {
           cancelled = cancelled || (!d.ok && !!d.cancelled) || (!!k && !k.ok && !!k.cancelled);

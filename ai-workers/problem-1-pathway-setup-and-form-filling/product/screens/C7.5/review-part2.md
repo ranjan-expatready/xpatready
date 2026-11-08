@@ -94,3 +94,44 @@ BIC-01 N/A · BIC-02 N/A · BIC-03 N/A: changing a quoted fact resolves the find
 - Whether the PR's first line names the shared contract change (`contracts/drafting-run.v0.schema.json`, kind `form_review`).
 
 **Verdict: Block** (commit `8346005d7`). Fix M1, M2 and M3, each with a test that fails without the fix. Fix m1–m6 or list them in the PR.
+
+## Re-review: the changes only (P-293), `git diff 8346005d7 4d5ce4405` (8 Nov IST)
+**What I ran myself, on fresh copies (:4436 and :4437, US$0):**
+
+| Check | Result |
+|---|---|
+| Engine | 66/66 |
+| API, on the made-up run (the pack: every step but -6b green; -6b red) | 41/41 |
+| Review page browser | 37/37 |
+| Part 1 findings browser | 28/28 |
+
+I restored the committed screenshots after each test run. Head has since moved to `0ea7adf0d`, which adds only the breaker's notes.
+
+| Was | Now | Status |
+|---|---|---|
+| **M1** (IMM 5707 codes, whose row) | `choiceWords` reads both option shapes, a 2 × 2 list included. Tick boxes read Ticked or Not ticked. A relative's row names whose it is. On IMM 5707's plan I see "Marital status: Annulled marriage", "Sample Client A: parent 1: Date of birth: 1956-11-08", "…accompany…: NO", "has children: Ticked". There are engine choice tests (pass and fail) and API "review M1" lines. | **Closed** |
+| **M2 (a)** (one live run per case races; the breaker's M2) | `run()` checks `claimRefusal` and claims `going` before any wait, and releases it in `finally`. Two calls with one run id at once give one 201 and one 409. | **Closed** |
+| **M2 (b)** (the guards have no failing test) | `liveRefusal`, `claimRefusal` and `madeUpRecord` are pure, each with pass and fail tests. The route calls them, so removing that call fails the API's "Live is off" 409 and the "break M1" steps. | **Closed**, with one gap (q1) |
+| **M2 (c)** (invented steps) | Steps no longer tick while running. One `role=status` line is shown, and at the end each step reads done or not from the result. The list is `aria-live`. In my browser walk all 4 steps were done after Saved. | **Closed** |
+| **M3** (stale card after a 409) | `onError` refetches the plan. The browser step changes an answer under the open card, and the card reloads (Saved unavailable with the reason; Run disabled). | **Closed** |
+| m1 reused run id (the breaker's M1) | Refused from its audit line (`detail.run`). The same id sent again gives 409 even when the first run added nothing. | Closed |
+| m2 High/Low tip | `Tip focusable`; by Tab I saw "Low [tip: The two AI rounds did not agree…]". | Closed |
+| m3 decision numbers | None on the page (I checked by walking it). | Closed |
+| m4 Agent view link · m5 date · m6 focus | The link shows on "Nothing is filled". The Saved row says "recorded on Nov 8, 2026". After Run, focus is on the result. | Closed |
+
+**Also checked:**
+- A plan, a Saved run or a findings read no longer writes a sheet file; no new file appeared in `p2/review-sheets` during my runs.
+- Look-alike brackets and bars are stripped by the engine and refused by the guard.
+- Contact-like values are left out.
+- Stop on a Saved run gives 409.
+
+**New or remaining (Should; none blocks):**
+- **n1. IMM 5257 choices now carry the form's mark.** The choice words now come from `options` and keep the label's own mark: "* No", "*No", "* Yes", "F Female", "AFG (Afghanistan)". These were "No" and "Yes" at `8346005d7`. The sheet's checksum is the replay key, so **strip the leading "\*" (as `boxWords` does for captions) before the paid run is recorded**; a later change would retire that run (challenge M2).
+- **n2. The claim uses the case id string from the URL** (`review-runs.ts` `run()`). The same case in upper-case letters could hold a second live slot. Lower-case the id first (the breaker reports this too).
+- **q1. For the tech lead:** no test runs the Live route end to end. That would need `STUDIO_AI_LIVE=approved` plus `STUDIO_FAKE_LAUNCHER`, as other suites do: Stop during round 1 sends no round 2; two Live POSTs at once give 201 and 409. The builder's brief forbids setting the switch. I recommend adding it under a usage line, paired with the fake launcher, before the paid run.
+- **n3.** When round 1 succeeds and the checker round fails, steps 2–4 all read "not run". Step 2 could read done.
+- The breaker's m1 (an AI finding gone stale shows on Ready to file until the findings are read) behaves as part 1 does for rules findings. I am not raising it again.
+
+**Journey re-score:** 9.5/10. Feedback, recovery and accessibility are now 1 each; plain words stays ½ because of n1.
+
+**Verdict: Approve** (commit `4d5ce4405773566022fa648486fda1e77878e547`). There are no open Blockers or Majors. List n1, n2, n3 and q1 in the PR, and fix n1 before the paid run.

@@ -130,8 +130,10 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
   // Review M2 (c): the steps say what the run reported when it ended, never a tick the page made up. While it runs, one
   // line says it is running (a Saved run ends in about a second; a Live one in a few minutes); when it ends, each step is
   // done or not by the result: the sheet read (1), both rounds read or replayed (2, 3), the rules applied (4).
+  // Review n3: step 2 is done when the first round answered, step 3 when the checker did too, step 4 when the rules ran.
+  const rounds = Math.max(0, ...(result?.forms ?? []).map((f) => f.rounds));
   const ran = !!result?.forms.some((f) => f.from);
-  const stepState = (n: number): "done" | "not run" | "waiting" => phase !== "done" || !result ? "waiting" : n === 1 ? "done" : ran ? "done" : "not run";
+  const stepState = (n: number): "done" | "not run" | "waiting" => phase !== "done" || !result ? "waiting" : n === 1 || (n === 2 && rounds >= 1) || (n === 3 && rounds >= 2) || (n === 4 && ran) ? "done" : "not run";
   const dropped = result?.forms.flatMap((f) => f.dropped) ?? [], unreadable = result?.forms.flatMap((f) => f.unreadable) ?? [];
   return (
     <section aria-labelledby="run-h" className="rounded-xl border border-border bg-surface-raised" data-run-card>

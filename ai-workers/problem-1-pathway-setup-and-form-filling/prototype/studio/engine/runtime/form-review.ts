@@ -45,13 +45,14 @@ const FACT = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
  *  (IMM 5257's resolved lists, IMM 5707's Yes/No) or two parallel lists [[words…], [codes…]] (IMM 5707's marital
  *  status). A 2 × 2 list reads both ways, so each reading is tried and the one that names this code wins; null when none. */
 export function choiceWords(lists: unknown[], code: string): string | null {
+  const words = (x: unknown) => String(x).replace(/^\*\s*/, "").trim();
   for (const o of lists) {
     if (!Array.isArray(o)) continue;
     const pairs = o.every((x) => Array.isArray(x) && x.length === 2) ? (o as unknown[][]).find((x) => String(x[1]) === code) : undefined;
-    if (pairs && String(pairs[0]).trim()) return String(pairs[0]);
+    if (pairs && words(pairs[0])) return words(pairs[0]);
     if (o.length === 2 && Array.isArray(o[0]) && Array.isArray(o[1]) && o[0].length === o[1].length) {
       const i = (o[1] as unknown[]).findIndex((x) => String(x) === code);
-      if (i >= 0 && String(o[0][i]).trim()) return String(o[0][i]);
+      if (i >= 0 && words(o[0][i])) return words(o[0][i]);
     }
   }
   return null;

@@ -132,6 +132,7 @@ ok("C7.5 prompt: the sheet is sent inside its own input element, marked as data,
 ok("C7.5 choice pass (review M1): pairs [[words, code]] read by code (IMM 5257, IMM 5707 Yes/No)", choiceWords([[["Afghanistan", "252"], ["Albania", "081"]]], "081") === "Albania" && choiceWords([[["YES", "1"], ["NO", "2"]]], "2") === "NO");
 ok("C7.5 choice pass (review M1): two parallel lists [[words…], [codes…]] read by code (IMM 5707 marital status)", choiceWords([null, [["Common-law", "Single", "Divorced", "Annulled marriage"], ["1", "2", "3", "4"]]], "4") === "Annulled marriage");
 ok("C7.5 choice (review M1): a 2 × 2 list is read the way that names the code", choiceWords([[["Yes", "No"], ["1", "2"]]], "1") === "Yes" && choiceWords([[["YES", "1"], ["NO", "2"]]], "1") === "YES");
+ok("C7.5 choice (review n1): a choice's words drop the form's required mark (\"* No\" reads No; the sheet's checksum is fixed before the paid run)", choiceWords([[["* No", "N"], ["*Yes", "Y"]]], "N") === "No" && choiceWords([[["* No", "N"], ["*Yes", "Y"]]], "Y") === "Yes" && choiceWords([[["F Female", "F"]]], "F") === "F Female");
 ok("C7.5 choice fail: a code no list names gives nothing (the value is shown as it is, never guessed)", choiceWords([[["YES", "1"]], undefined, "x"], "7") === null);
 
 // ── review M2 (b): every money guard before a live run, each with a passing and a failing case (US$0, no live call) ──

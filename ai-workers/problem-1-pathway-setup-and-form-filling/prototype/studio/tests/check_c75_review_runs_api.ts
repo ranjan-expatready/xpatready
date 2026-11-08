@@ -96,6 +96,11 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const rid2 = "11111111-2222-4333-8444-666666666666";
   const twin = await Promise.all([runAs({ mode: "replay", runId: rid2 }), runAs({ mode: "replay", runId: rid2 })]);
   ok("C7.5 break M1/M2 fail: the same run id sent twice at once runs once (claimed before the first wait); the other is refused (409)", twin.map((x) => x.status).sort().join() === "201,409" && Number(sql(`select count(*) from audit_event where entity_key='${c.id}' and action='reviewed' and detail->>'run'='${rid2}'`)) === 1, twin.map((x) => x.status));
+  const rUp = await runAs({ mode: "replay", runId: rid.toUpperCase() });
+  ok("C7.5 review n2 fail: the same run id in upper case is the same run (409), never a slot of its own", rUp.status === 409, rUp.status);
+  ok("C7.5 review n3: a Saved run reports both rounds read (the steps show what ran)", once1.body?.forms?.[0]?.rounds === 2, once1.body?.forms?.[0]);
+  const l5257 = (plan.forms[0] as unknown as { lines: { value: string }[] }).lines;
+  ok("C7.5 review n1: no IMM 5257 value keeps the form's required mark (\"* No\")", !l5257.some((x) => /^\*/.test(x.value)), l5257.filter((x) => /^\*/.test(x.value)));
   ok("C7.5 break m: a plan or a Saved run leaves no copy of the answers on disk (the sheet file is written only for a live run)", !existsSync(join(SOLUTION, plan.forms[0].sheet)), plan.forms[0].sheet);
 
   // ── dismiss, again, at once ──
