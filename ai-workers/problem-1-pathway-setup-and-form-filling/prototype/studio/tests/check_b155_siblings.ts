@@ -8,17 +8,18 @@
 // the child its row picks, with no row of its own (render.ts). Each rule with a passing and a failing case; the copy is
 // read back from its own PDF. Nothing names a form number in a rule (P-319): the form is chosen here only as the test's
 // subject. Sample data, US$0, no model call.
-//   zsh studio/tools/isolated.sh b155 4461 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
-//   tsx studio/tests/runtime/check_b155_siblings.ts 4461 xr_studio_b155
+//   zsh studio/tools/isolated.sh forms_b155 4461 start && tsx studio/tests/check_b155_siblings.ts 4461 xr_studio_forms_b155
+// It resets its copy and loads the configured checkpoint itself (as check_c73_parts_checkpoint.ts does), so the suite
+// runner (run-suites.sh) runs it on its own copy.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isListRelative, listBoxWords, relativeLabel, relativeOf } from "../../engine/runtime/relatives.ts";
-import { groupLabel } from "../../contracts/runtime.ts";
-import { CLIENT, FAMILY, agent, answer, call, confirmAll, copyBytes, fillEverything, firms, generateCopy, main, needVisitorVisa, ok, openCase, sql } from "../../acceptance/lib/m3.ts";
+import { isListRelative, listBoxWords, relativeLabel, relativeOf } from "../engine/runtime/relatives.ts";
+import { groupLabel } from "../contracts/runtime.ts";
+import { AUTHOR, CLIENT, FAMILY, PORT, agent, call, confirmAll, copyBytes, fillEverything, firms, generateCopy, main, needVisitorVisa, ok, openCase, sql } from "../acceptance/lib/m3.ts";
 
-const STUDIO = join(import.meta.dirname, "..", ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
+const STUDIO = join(import.meta.dirname, ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
 /** Every value a filled PDF holds, by its form field's data path (the proven E5 reader, as check_b128_parents.ts). */
 function pdfValues(pdf: Buffer): Record<string, string> {
@@ -47,6 +48,9 @@ await main("B155", "IMM 5645's brothers and sisters are asked as a list, stored 
   ok("B155-2 fail: a parent, a person, a third part or another relation is no list relative (box names saying Child never name a sibling a child)", !["p1/parent_1", "p1/parent_2", "p1", "case", "p1/sibling/x", "/sibling", "p1/cousin"].some(isListRelative) && relativeLabel("Sample Client A", "sibling", ["x.Child[0].ChildName[0]"]) !== "Sample Client A's child");
 
   // ---- The checkpoint's Visitor visa, release 2: the pack's family (an adult principal and spouse, children of 10 and 15). ----
+  if (PORT === 4400) { console.log("STOP  never the demo (:4400): this check resets its copy"); process.exit(2); }
+  const reset = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR), load = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
+  if (reset.status >= 300 || load.status >= 300) { console.log(`STOP  the configured checkpoint did not load: reset ${reset.status}, load ${load.status} ${JSON.stringify(load.body?.detail ?? "").slice(0, 300)}`); process.exit(2); }
   const vv = needVisitorVisa(), f = await firms(), officer = f.officer!;
   const c = await openCase(vv, FAMILY, { representative: f.rep, caseOfficers: [officer] });
   const P = c.subjects["Sample Client A"], SP = c.subjects["Sample Spouse A"], K1 = c.subjects["Sample Child A1"], K2 = c.subjects["Sample Child A2"], SIB = `${P}/sibling`;
