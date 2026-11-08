@@ -33,15 +33,16 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const caseId = c.body?.id ?? c.body?.case?.id;
   const P = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body?.people?.find((p: { role: string }) => p.role === "principal")?.subject_id;
   // QA-315: on the configured checkpoint, release 2 files IMM 5257 Online (C10.1 row 9), and an Online form's PDF is a copy
-  // not for filing, which is never validated. IRCC accepts IMM 5257 as a PDF upload too, so the officer files it that way
-  // for this person (Ready to file › how it is filed, C11.6) before the copy is made: the copy is then one to validate. On
-  // the fixture the release already files it as a PDF upload, and nothing changes.
+  // not for filing, which is never validated. The product offers IMM 5257 as a PDF upload too (no IRCC record of what it
+  // accepts on this data, so Online, PDF upload and Paper are offered as Sample, engine/channels.ts allowedChannels), so the
+  // officer files it that way for this person (Ready to file › how it is filed, C11.6) before the copy is made: the copy is
+  // then one to validate. On the fixture the release already files it as a PDF upload, and nothing changes.
   const prep = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
   const item = (prep?.items ?? []).find((i: { kind: string; form?: string; subject: string }) => i.kind === "form" && i.form === "IMM 5257" && i.subject === P);
   const ch = item && item.channel !== "PDF_UPLOAD" ? await call("PATCH", `/runtime/items/${item.id}/channel`, { channel: "PDF_UPLOAD", reason: "Filed as a PDF upload for this person (C7.2's pack, Sample).", version: prep.version }, OFFICER) : null;
   const filedAs = ch ? ch.body?.item?.channel : item?.channel;
   ok("C7.2 setup (QA-315): the principal's IMM 5257 is filed as a PDF upload on this case (the officer's choice where the release files it Online), so its copy is one to validate", filedAs === "PDF_UPLOAD", { release: item?.line_channel, was: item?.channel, change: ch && { status: ch.status, words: words(ch) }, now: filedAs });
-  const g =await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `c72-${Date.now()}` }, OFFICER);
+  const g = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `c72-${Date.now()}` }, OFFICER);
   const copy = String(g.body?.copy?.id ?? g.body?.id ?? "");
   await until(async () => ["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${copy}`, undefined, OFFICER)).body?.status), 90_000);
   const dl = copy ? await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${copy}/file?original=1`, { headers: { "x-actor": OFFICER } }) : null;
