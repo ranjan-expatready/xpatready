@@ -213,8 +213,13 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
     const put = async (fact: string, value: unknown) => { const q = (await view()).flatMap((x) => x.questions.map((y) => ({ ...y, subjectId: x.subjectId }))).find((x) => x.subjectId === P && x.fact === fact); return call("PUT", `/runtime/cases/${id}/answers/${P}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, OFFICER); };
     const confirmAll = async () => { for (const x of await view()) { const seen = [...x.questions.flatMap((y) => [y.answer?.id, ...y.rows.map((r) => r.answer?.id)]), x.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${id}/sections/${x.section}/confirm`, { subjectId: x.subjectId, seen }, OFFICER); } };
     const w1 = await put("person.has_national_id", false), w2 = await put("person.national_id_number", "SAMPLEID1"); await confirmAll();
+    // QA-165 (#1318): on the checkpoint the number is asked only after a Yes (230-own-yes-no-follow-ups.ts), so after a No it is
+    // kept and not used: the box writes N, nothing clashes, and readiness says nothing about it. A No beside a detail that is
+    // still asked (no condition) is never written and holds readiness back: tests/check_qa165_gate_follow_ups.ts R2.
     const clash = (await open5257()).find((o) => o.box === NATID);
-    ok("B52 fail (QA-165 kept): a confirmed No to \"Has national ID\" while a number is recorded is never written; the list says to correct one", w1.status === 200 && w2.status === 200 && clash?.reason === "needs an answer" && /answered No, but .* is recorded: correct one/.test(clash?.why ?? ""), { w1: w1.status, w2: w2.status, clash });
+    const f5257 = ((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { missing: { fact: string; reason: string }[] } }[]).find((f) => f.form === "IMM 5257" && f.subject_id === P);
+    const hidden = (await view()).flatMap((x) => x.questions.map((y) => ({ ...y, subjectId: x.subjectId }))).find((x) => x.subjectId === P && x.fact === "person.national_id_number") as { hidden?: boolean } | undefined;
+    ok("B52 pass (QA-165, #1318): a confirmed No to \"Has national ID\" hides the number asked before it, so it is kept and not used: the box is written N, not listed as open, and readiness has no fix for it", w1.status === 200 && w2.status === 200 && hidden?.hidden === true && !clash && !f5257?.readiness.missing.some((m) => m.fact === "person.has_national_id"), { w1: w1.status, w2: w2.status, hidden: hidden?.hidden, clash, missing: f5257?.readiness.missing });
   }
 
   ok("B52/QA-227: no paid call (the spend ledger is unchanged)", ledger() === before);

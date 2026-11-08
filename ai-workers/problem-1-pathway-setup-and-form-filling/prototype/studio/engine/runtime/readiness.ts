@@ -13,6 +13,8 @@
 // CRITICAL warnings (passed with a reason, or fixed):
 //   P-238  missing_facts   a required fact the form reads is not answered or not confirmed
 //          fact_problem    a fact the form reads is answered with a problem (an optional one too, QA-122)
+//          fields_left_empty  a field IRCC's form marks mandatory that a copy would leave empty and no copy lists by hand
+//                          (QA-165, #1318; not on a line filed Online)
 //          open_check      a typed value and a document disagree, unresolved (BR-7)
 //   P-237  out_of_date     a signed or uploaded item whose facts changed after it (P-136)
 //          missing_signature  a required signature not in (P-136; "signed by hand and scanned" needs its scan)
@@ -37,10 +39,10 @@ export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 
 export type BlockCode = "barcode_not_validated";
 /** P-315: the former blocks, now CRITICAL warnings passed with a recorded reason (P-237, P-238). */
-export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "no_copy";
+export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "fields_left_empty" | "no_copy";
 export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "hand_write" | "release_update";
 export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated"];
-export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "no_copy"];
+export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "fields_left_empty", "no_copy"];
 export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "hand_write", "release_update"];
 export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODES as readonly string[]).includes(code);
 
@@ -149,12 +151,27 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     const at = { item: f.item, subject: f.subject, form: f.form };
     // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line. An unconfirmed answer
     // already fills the form (P-411, B150 review M1), so the words never say it is blank.
-    const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
+    // QA-165: a mandatory form field a copy would leave empty is its own line (no answer is missing; the form is).
+    const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix" && m.reason !== "left empty on the form")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
+    // Devin on #1318: an Online form is typed into IRCC's portal; its PDF is a "Copy, not for filing" (P-145), so the PDF's
+    // empty mandatory boxes never stand before Ready to file (its card still names them). Facts and fixes still do.
+    // Tech lead on #1318 (P-294): one line per box. A mandatory box the newest copy already lists "To write by hand" is
+    // written in Adobe before filing and has its own passable hand_write line (C7.7, BR-9, below), so it is not counted here;
+    // a box with no copy yet, or with no writer at all, still is.
+    // Review on #1318 (the date Minor): a line covering several form fields (a date's parts) leaves the count only when every
+    // one of them is by hand.
+    const byHandBox = new Set((f.byHand ?? []).map((b) => b.box));
+    const empty = f.channel === "ONLINE" ? [] : f.readiness.missing.filter((m) => m.reason === "left empty on the form" && !(m.boxes ?? [m.fact.replace(/^box:/, "")]).every((b) => byHandBox.has(b)));
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), missingLabel(m)]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.
     for (const [owes, labels] of byOwner) critical({ code: "missing_facts", ...at, part: `${owes}|${[...new Set(factsOf.get(owes))].sort().join(",")}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). An answer fills the form as soon as it is given (P-242, P-411); each is confirmed before filing.` });
-    for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
+    // QA-165: a box refused with a fix says the fix in its own words ("…is answered No, but … is recorded").
+    for (const m of problems) critical({ code: "fact_problem", ...at, part: m.fact, owes: f.owesFact?.[m.fact] ?? "staff", words: m.why ? `${ofWho(f)}: "${m.label}" is not written: ${m.why.replace(/[.\s]+$/, "")}.` : `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
+    // P-71 (QA-165): "Ready" is never said over a mandatory form field that will be empty. The key names the fields (P-315).
+    // Tech lead on #1318 (option 1): its own CRITICAL code, so "missing facts" means facts only; passed with a reason like any
+    // readiness line (P-237, P-238), e.g. "written by hand in Adobe before filing".
+    if (empty.length) critical({ code: "fields_left_empty", ...at, part: `empty|${empty.map((m) => m.fact).sort().join(",")}`, owes: "staff", words: `${ofWho(f)}: ${empty.length} form field${empty.length === 1 ? "" : "s"} IRCC's form marks mandatory would be left empty (${list(empty.map((m) => m.why ? `${m.label}: ${m.why}` : m.label))}).` });
     // BR-9 1: out of date, or a required signature missing.
     if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: f.outOfDate.words ? `${ofWho(f)}: ${f.outOfDate.words}` : `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
     if (signatureNeeded(f) && !f.signed) {
@@ -266,7 +283,7 @@ export function signatureNeeded(f: Pick<FormItem, "channel" | "signature" | "sig
 
 /** People's words for each code (never the key itself). */
 export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
-  missing_facts: "Missing facts", fact_problem: "A fact with a problem", open_check: "An open check", out_of_date: "Out of date",
+  missing_facts: "Missing facts", fields_left_empty: "Mandatory form fields left empty", fact_problem: "A fact with a problem", open_check: "An open check", out_of_date: "Out of date",
   missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
   representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",

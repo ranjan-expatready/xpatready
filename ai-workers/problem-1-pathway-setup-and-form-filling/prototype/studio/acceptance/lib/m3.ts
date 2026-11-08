@@ -6,6 +6,8 @@
 // The contract these tests assume is the M3 case view r5c §6 (screens/M3-agent-view/concept-draft.md), written out in
 // acceptance/M3-CONTRACT.md. A builder who needs another name changes the test in the same PR and says so in its first
 // line (acceptance/README.md); a rule changes only with the tech lead.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { client, recorder, type Res } from "../../tests/runtime/api.ts";
 
 export const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
@@ -108,7 +110,7 @@ export async function openCase(vv: string, people: Person[] = FAMILY, team?: { r
 }
 
 export const agent = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, officerOf(caseId))).body;
-type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { answer: { id: string; awaits_client?: boolean } | null }[] };
+type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; countries?: string[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string; subject?: string }[]; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean } | null }[] };
 const questions = (v: { sections?: { questions: Q[] }[] }) => (v?.sections ?? []).flatMap((s) => s.questions);
 export async function answer(caseId: string, subject: string, fact: string, value: unknown, actor = officerOf(caseId), extra: Record<string, unknown> = {}): Promise<Res> {
   const q = questions(await agent(caseId)).find((x) => x.subjectId === subject && x.fact === fact);
@@ -130,19 +132,41 @@ export async function confirmAll(caseId: string, subject: string) {
  *  complete. Once A2 is in, the question is no longer asked: the case team answers it, as the ruling says. */
 const sample = (q: Q) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" }
   : q.value_type === "yes_no" ? false : /expiry/.test(q.fact) ? FIXED.expiry : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "2015-01" : "2015-01-01") : q.value_type === "number" ? "5000"
-  : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.a@example.com" : "SAMPLE";
+  : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.a@example.com"
+  : q.value_type === "country" || q.value_type === "code" ? listed(q) : "SAMPLE";
+/** QA-165 (#1256 section C): a country or code with no answer list is answered with a value the form's own list can hold,
+ *  never "SAMPLE" (its box would stay empty, "not in the box's option list"): one of the release's country names the view
+ *  sends with the question (the Sample family's, India, when listed), else the Sample family's own answer for that fact
+ *  (samples/sample-family-imm5257.json, made up; "Hindi" for the native language), else for a country the family's country
+ *  of residence. The configured checkpoint's library has no country list, so its view sends none (measured 8 Nov). */
+const FAMILY_ANSWERS = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "sample-family-imm5257.json"), "utf8")) as { everyone?: Record<string, unknown> }).everyone ?? {};
+const listed = (q: Q) => q.countries?.length ? (q.countries.includes("India") ? "India" : q.countries[0]) : typeof FAMILY_ANSWERS[q.fact] === "string" ? FAMILY_ANSWERS[q.fact] as string
+  : q.value_type === "country" && typeof FAMILY_ANSWERS["person.current_residence_country"] === "string" ? FAMILY_ANSWERS["person.current_residence_country"] as string : "SAMPLE";
+/** QA-165 (#1256 section D): the repeating groups whose first row IRCC's form marks mandatory, named by readiness's own
+ *  words for a field left empty after "none apply" (engine/runtime/mandatory.ts): `${subject}|${title}`. */
+const rowNeeded = (forms: { subject_id: string; readiness: { missing: { reason: string; why?: string; subject?: string }[] } }[]) => new Set(forms.flatMap((f) => f.readiness.missing.filter((m) => m.reason === "left empty on the form")
+  .flatMap((m) => [...String(m.why ?? "").matchAll(/"none apply" is answered for "([^"]+)"/g)].map((x) => `${m.subject ?? f.subject_id}|${x[1]}`))));
 /** Row C1: a text Sample the release's own checks refuse (a UCI is digits only, IMM 5257's box script) is given again as
  *  digits, once; the release's answer decides, no fact name is assumed. Sample, not a real UCI. */
 const SAMPLE_DIGITS = "0000000001";
 /** Answers and confirms every required fact the case's forms read, with Sample values; "none apply" on required
- *  repeating groups. BR-6, P-97, P-155 (3): a client's own facts are answered by the client (`user-P`) for the principal
+ *  repeating groups (a first row where the form requires one, QA-165). BR-6, P-97, P-155 (3): a client's own facts are answered by the client (`user-P`) for the principal
  *  and minors (P-78: they count as confirmed); for another adult the officer enters them on the person's behalf with a
- *  reason (FQ-12). Returns true when GET …/forms says every form is ready (the built P-71 readiness). */
+ *  reason (FQ-12). Returns true when GET …/forms says no form waits on a fact (the built P-71 readiness, less the mandatory
+ *  boxes a copy leaves empty that no answer fills: QA-165, #1318). */
 export async function fillEverything(caseId: string): Promise<boolean> {
   const who = PEOPLE.get(caseId) ?? new Map<string, Person>(), officer = officerOf(caseId);
   for (let pass = 0; pass < 4; pass++) {
     const forms = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, officer)).body?.forms ?? [];
-    if (forms.length && forms.every((f: { applies: boolean; readiness: { ready: boolean } }) => !f.applies || f.readiness.ready)) return true;
+    // QA-165 (#1318): done when no form waits on a fact. A mandatory box a copy leaves empty that no answer can fill (IMM 5257
+    // SCH1's by-hand boxes) is said on Ready to file and holds no lock back (blocksLock); one a first row would fill is not done.
+    if (forms.length && !rowNeeded(forms).size && forms.every((f: { applies: boolean; readiness: { missing: { reason: string }[] } }) => !f.applies || f.readiness.missing.every((m) => m.reason === "left empty on the form"))) return true;
+    // QA-165 (#1256 D): a group the form needs a first row of (IMM 5257's current activity) takes back "none apply" and gets one row.
+    const needRow = rowNeeded(forms);
+    for (const s of ((await agent(caseId))?.sections ?? []).filter((x: { subjectId: string; title: string; group: { rows: number } | null }) => x.group && x.group.rows === 0 && needRow.has(`${x.subjectId}|${x.title}`))) {
+      if (s.group.none_apply?.value) await call("PUT", `/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { noneApply: false, expectedId: s.group.none_apply.id }, officer);
+      await call("POST", `/runtime/cases/${caseId}/groups/${s.subjectId}/rows`, { group: s.section }, officer);
+    }
     const v = await agent(caseId);
     // A person's date of birth is set when the case opens (it decides ages); a parent's (B128, `<person>/parent_1`) is a
     // fact like any other here, a Sample date some 70 years ago.
@@ -153,6 +177,14 @@ export async function fillEverything(caseId: string): Promise<boolean> {
         : answer(caseId, q.subjectId, q.fact, value, officer);
       const value = q.fact === "person.date_of_birth" ? yearsAgo(70) : sample(q), r = await put(value);
       if (value === "SAMPLE" && r.status < 300 && (r.body?.answer?.problems ?? []).length) await put(SAMPLE_DIGITS);
+    }
+    // QA-165 (#1256 D): the rows added above (or by a pack) are answered like the rest, by the officer, row by row.
+    for (const q of questions(v).filter((q) => q.required && !q.hidden && q.group)) for (const r of q.rows.filter((x) => !x.answer?.confirmed)) {
+      const p = who.get(q.subjectId), clientFact = q.collected_from === "client_questionnaire", body = (value: unknown) => ({ value, expectedId: r.answer?.id ?? null, row: r.row });
+      const put = (value: unknown) => clientFact && (!p || p.role === "principal" || isMinor(p.dob)) ? call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, body(value), CLIENT)
+        : call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { ...body(value), ...(clientFact ? { onBehalfOf: q.subjectId, reason: "Entered from the person's signed form (Sample)" } : {}) }, officer);
+      const res = await put(sample(q));
+      if (sample(q) === "SAMPLE" && res.status < 300 && (res.body?.answer?.problems ?? []).length) await put(SAMPLE_DIGITS);
     }
     for (const s of (v?.sections ?? []).filter((x: { group: { required: boolean; rows: number; none_apply: unknown } | null }) => x.group?.required && x.group.rows === 0 && !x.group.none_apply))
       await call("PUT", `/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { noneApply: true, expectedId: null }, officer);

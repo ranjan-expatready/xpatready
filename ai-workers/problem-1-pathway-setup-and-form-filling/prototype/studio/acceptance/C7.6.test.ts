@@ -120,7 +120,9 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   const noCopy = (rd?.warns ?? []).filter((w) => w.code === "no_copy").map((w) => (p?.items ?? []).find((i) => i.id === w.item)).filter((i): i is NonNullable<typeof i> => !!i?.form);
   const made = await Promise.all(noCopy.map((i) => generateCopy(c.id, i.form!, i.subject)));
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
-  ok(`C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains (after ${noCopy.length} cop${noCopy.length === 1 ? "y" : "ies"} made for filing, B162: ${noCopy.map((i) => i.form).join(", ") || "none needed"})`, made.every(Boolean) && !codes(rd?.blocks).length && !codes(rd?.warns).includes("missing_signature") && critical(rd?.warns).join() === "representative_review", { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
+  // QA-165 (#1318, the tech lead's option 1): a mandatory form field a copy leaves empty with no writer is its own CRITICAL
+  // line (fields_left_empty, passed at -19); no other CRITICAL line but the review may remain.
+  ok(`C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains (besides any mandatory form fields left empty, passed at -19; after ${noCopy.length} cop${noCopy.length === 1 ? "y" : "ies"} made for filing, B162: ${noCopy.map((i) => i.form).join(", ") || "none needed"})`, made.every(Boolean) && !codes(rd?.blocks).length && !codes(rd?.warns).includes("missing_signature") && critical(rd?.warns).filter((x) => x !== "fields_left_empty").join() === "representative_review", { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
   r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, officer);
   ok("C7.6-13 fail (P-155): a case officer cannot do the representative's review (403)", !!f.rep && officer !== f.rep && r.status === 403, r.status);
   r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, f.rep ?? ""); // #861 N1: the facts it read
@@ -137,8 +139,11 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   // (hand_write), passed with a reason like the missing document above (here: written in Adobe). Each pass must be taken.
   const hand = codes(readinessOf((await prepare(c.id, officer)).p, fid)?.warns).filter((x) => x === "hand_write").length;
   const handPass = hand ? (await call("POST", `/runtime/filings/${fid}/warnings/hand_write/pass`, { reason: "Written by hand in Adobe before filing (Sample)" }, officer)).status : 200;
+  // QA-165 (#1318): the CRITICAL "mandatory form fields left empty" line (fields no question fills yet) is passed the same way.
+  const empty = codes(readinessOf((await prepare(c.id, officer)).p, fid)?.warns).filter((x) => x === "fields_left_empty").length;
+  const emptyPass = empty ? (await call("POST", `/runtime/filings/${fid}/warnings/fields_left_empty/pass`, { reason: "Written by hand in Adobe before filing (Sample)" }, officer)).status : 200;
   r = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
-  ok(`C7.6-19 pass: Ready to file succeeds; the filing's status is ready_to_file (with ${hand} line${hand === 1 ? "" : "s"} to write by hand passed with a reason, BR-9)`, handPass === 200 && r.status === 200 && filingOf((await prepare(c.id, officer)).p, P)?.status === "ready_to_file", r.body);
+  ok(`C7.6-19 pass: Ready to file succeeds; the filing's status is ready_to_file (with ${hand} line${hand === 1 ? "" : "s"} to write by hand and ${empty} CRITICAL line${empty === 1 ? "" : "s"} of mandatory form fields left empty passed with a reason, BR-9)`, handPass === 200 && emptyPass === 200 && r.status === 200 && filingOf((await prepare(c.id, officer)).p, P)?.status === "ready_to_file", r.body);
 
   // P-151, BR-9 block 3 (needs W1-16 edition attributes): before IRCC's accepted-until date an older edition warns with
   // "Adopt update"; after it, it blocks. Every PDF edition of the family form (row C4: from expectedLines) is set, then
