@@ -398,6 +398,8 @@ export async function signByHand(caseId: string, itemId: string | undefined, for
 
 /** Takes every filing of a case to "Ready to file" the way C7.6 does (facts, each barcode form filed as a PDF validated
  *  and read back, each hand-signed item signed in order, the representative's review, warnings passed with a reason);
+ *  B162 (review m4): unlike C7.6, which makes each missing copy for filing, a CRITICAL "no copy" line here is passed with
+ *  a reason like every other warning;
  *  items already Ready or Done are left alone. Returns the filing ids that got there. Row C1: which form is the barcode
  *  form comes from expectedLines (the case's own release and people), not a form number written here; the item's own
  *  channel must still be PDF upload, as before, since only a PDF copy is validated. */

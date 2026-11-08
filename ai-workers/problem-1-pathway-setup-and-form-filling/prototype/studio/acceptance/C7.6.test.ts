@@ -10,7 +10,7 @@
 // (13, 14, 21) also sends the filing's facts_hash it read (breaker N1 on #861: a review is of the facts it saw).
 // Breadth, after Visitor visa: the Express Entry police and medical block (P-172, the one named exception), Paper lines.
 //   tsx studio/acceptance/C7.6.test.ts 4440 xr_studio_accept
-import { CLIENT, call, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, validateRoundTrip, yearsAgo, agent, answer, confirmAll, filingOf, inDays, signByHand, expectedFor } from "./lib/m3.ts";
+import { CLIENT, call, fillEverything, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, validateRoundTrip, yearsAgo, agent, answer, confirmAll, filingOf, inDays, signByHand, expectedFor } from "./lib/m3.ts";
 
 const codes = (x: { code: string }[] | undefined) => (x ?? []).map((b) => b.code);
 /** P-315 (P-237, P-238): the CRITICAL warnings, the former blocks now passed with a reason. */
@@ -113,10 +113,16 @@ await main("C7.6", "Ready to file: the blocks and the warnings (Visitor visa)", 
   const signed = HS ? await signByHand(c.id, iHS?.id, HS, P) : 0; // print → signed by hand → scan, in order (C8.1-3)
 
   ok(`C7.6-11 pass: ${HS} printed, signed by hand, and its scan uploaded`, signed === 201, signed);
+  // B162 (the tech lead's answer 3 on #1331): a form filed as a PDF with no copy made for filing is a CRITICAL "no copy"
+  // line, so the case officer makes each such copy first (release 2: Schedule 1 and IMM 5645; the fixture: none), as a
+  // person would before filing. Each copy must be made.
+  p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
+  const noCopy = (rd?.warns ?? []).filter((w) => w.code === "no_copy").map((w) => (p?.items ?? []).find((i) => i.id === w.item)).filter((i): i is NonNullable<typeof i> => !!i?.form);
+  const made = await Promise.all(noCopy.map((i) => generateCopy(c.id, i.form!, i.subject)));
   p = (await prepare(c.id, officer)).p; rd = readinessOf(p, fid);
   // QA-165 (#1318, the tech lead's option 1): a mandatory form field a copy leaves empty with no writer is its own CRITICAL
   // line (fields_left_empty, passed at -19); no other CRITICAL line but the review may remain.
-  ok("C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains (besides any mandatory form fields left empty, passed at -19)", !codes(rd?.blocks).length && !codes(rd?.warns).includes("missing_signature") && critical(rd?.warns).filter((x) => x !== "fields_left_empty").join() === "representative_review", { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
+  ok(`C7.6-12 pass: the barcode block and the signature warning are gone; of the CRITICAL warnings only the review remains (besides any mandatory form fields left empty, passed at -19; after ${noCopy.length} cop${noCopy.length === 1 ? "y" : "ies"} made for filing, B162: ${noCopy.map((i) => i.form).join(", ") || "none needed"})`, made.every(Boolean) && !codes(rd?.blocks).length && !codes(rd?.warns).includes("missing_signature") && critical(rd?.warns).filter((x) => x !== "fields_left_empty").join() === "representative_review", { blocks: codes(rd?.blocks), warns: codes(rd?.warns) });
   r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, officer);
   ok("C7.6-13 fail (P-155): a case officer cannot do the representative's review (403)", !!f.rep && officer !== f.rep && r.status === 403, r.status);
   r = await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: rd?.facts_hash }, f.rep ?? ""); // #861 N1: the facts it read

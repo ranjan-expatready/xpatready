@@ -41,7 +41,7 @@ import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, 
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
-import { readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
+import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
 import { releaseLabel, type Readiness } from "../../contracts/runtime.ts";
@@ -288,7 +288,7 @@ export class CasePrepare {
     for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
-      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) && !releaseWords(v.copy, form, "validated copy") } : null;
+      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(covOf(form, subject)?.facts ?? []) && !releaseWords(v.copy, form, "validated copy") } : null;
     };
     // C9.2 (BR-12): what each finished item read when it was finished (its copy's stored facts, or its entered section's
     // answers), to name each fact that changed since, with its old and new value and the date of the change.
@@ -312,7 +312,7 @@ export class CasePrepare {
       at: (about, fact) => answerOf(about, fact)?.at ?? null,
       saved: (about, fact) => answerOf(about, fact)?.value ?? null,
     };
-    const nowFacts = (form: string, subject: string) => formCoverage(s, people, answers, rows, form, subject)?.facts ?? [];
+    const nowFacts = (form: string, subject: string) => covOf(form, subject)?.facts ?? [];
     const changesSince = (copy: string | null | undefined, form: string, subject: string) => {
       const then = copy ? copyFacts.get(copy) : undefined;
       if (!then) return { changes: [] as FactChange[], groups: [] as string[] };
@@ -547,8 +547,23 @@ export class CasePrepare {
       const boxes = ((x.resultJson as { boxes?: { box: string; fact: string | null; result: string; why: string | null }[] } | null)?.boxes ?? []);
       handOf.set(`${x.formNumber}|${x.subjectId}`, boxes.filter((b) => b.result === "by hand").map((b) => ({ copy: x.id, box: b.box, label: (b.fact && askedAs.get(b.fact)) || "A form field", why: plainWhy(b.why), caption: captionOf(x.formNumber, b.box) })));
     }
+    // B162 (review M1, m2; breaker M1, M2 on #1344): the newest copy for filing of each form for each person, made on any
+    // release of the case (a move never takes a made copy away; C9.5 BR-4), a newer "Copy, not for filing" never hiding
+    // an older one for filing. It counts only while it holds today's facts (its fingerprint equals the form's facts now,
+    // as the copy view reads it): a copy made before the answers, or before a fact changed, is "older than today's facts".
+    // One read of each copy's flag, channel and fingerprint; never the copies' whole results.
+    const copyRows = await this.db.$queryRaw<{ id: string; form_number: string; subject_id: string; not_for_filing: boolean | null; channel: string | null; input_hash: string; groups: GroupFact[] | null }[]>`SELECT f.id, f.form_number, f.subject_id, (f.result_json->>'not_for_filing')::boolean AS not_for_filing, s.facts_json->>'channel' AS channel, s.input_hash, s.facts_json->'groups' AS groups FROM form_instance f JOIN answer_snapshot s ON s.id = f.snapshot_id WHERE f.case_id = ${c.id}::uuid AND f.status = 'GENERATED' ORDER BY f.created_at DESC, f.id ASC`;
+    const forFiling = new Map<string, { id: string; hash: string; groups: GroupFact[] | null }>();
+    for (const x of copyRows) {
+      const k = `${x.form_number}|${x.subject_id}`;
+      if (forFiling.has(k) || copyNotForFiling(s, { formNumber: x.form_number, resultJson: x.not_for_filing === null ? null : { not_for_filing: x.not_for_filing }, snapshot: { factsJson: x.channel ? { channel: x.channel } : null } })) continue;
+      forFiling.set(k, { id: x.id, hash: x.input_hash, groups: x.groups });
+    }
+    // Devin on #1344: current only when the facts and the repeating groups it reads are both unchanged (copyStateOf).
+    const copyOf = (form: string, subject: string) => copyStateOf(forFiling.get(`${form}|${subject}`), { hash: inputHash(covOf(form, subject)?.facts ?? []), groups: groupFacts(view, form, subject) }, pin.configReleaseId);
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
+      copy: copyOf,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
       factsOf: (form, subject) => formReady(form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
@@ -581,7 +596,7 @@ export class CasePrepare {
     // "Filed with an earlier value" and opens its task (api/src/submission-record.ts).
     const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const tasks = noWrite ? [] : await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
-      nowOf: (form, subject) => currentValues(formCoverage(s, people, answers, rows, form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
+      nowOf: (form, subject) => currentValues(covOf(form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
