@@ -29,7 +29,7 @@ type Reply = { status: number; body: unknown };
 type CaseView = { team?: { officers?: { id: string }[]; representative?: { id: string } | null }; client?: string; pin?: { revision: number; release_version: number } };
 type ReleaseView = { combination: string; current: { version: number; label: string; revision: number }; target: { version: number } | null };
 type Moved = { version: number; label: string; words: string; from: { label: string } };
-type Item = { id: string; kind: string; form?: string; subject: string; channel?: string; signature?: string; state: string; reason?: string; document_type?: string };
+type Item = { id: string; kind: string; form?: string; subject: string; channel?: string; signature?: string; state: string; reason?: string; document_type?: string; validated?: { current: boolean } | null };
 type Prep = { people: Person[]; items: Item[]; version: string | number; portal?: string | null; portal_words?: string;
   filings: { id: string; label: string; status: string; applicants: { subject: string }[] }[];
   readiness: { filing: string; facts_hash?: string; blocks: { words: string }[]; warns: { code: string }[] }[];
@@ -154,9 +154,9 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       }
     }
     const left = (await get<FormsView>(`/runtime/cases/${caseId}/forms`)).forms.filter((f) => f.applies && !f.readiness.ready);
-    const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer for another adult, each marked for the client to re-confirm (C6.18)`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
+    const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer for another adult`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
     const kinds = [...byKindLabels];
-    const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmed} re-confirmed by the client, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
+    const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmed ? `the ${reconfirmed} background answer${reconfirmed === 1 ? "" : "s"} among the officer's marked for the client to re-confirm, re-confirmed by the client (C6.18)` : "no answer marked for the client to re-confirm"}, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
     if (left.length) throw new Stop(`Still not ready after ${said}: ${left.slice(0, 3).map((f) => `${f.form} for ${f.person} (${f.readiness.missing.slice(0, 2).map((m) => m.label).join(", ")})`).join("; ")}`);
     const followUps = byKind.some((f) => /national_id_|us_green_card_/.test(f));
     return { status: "done", shows: `Every form of release 2 reads ready for every person: ${said}.${followUps ? ` ${HELD.followUps}.` : ""}`, why: null };
@@ -172,6 +172,8 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     if (item.channel !== "PAPER") must(await r.call(officer, "PATCH", `/runtime/items/${item.id}/channel`, { channel: "PAPER", reason: pl.reason, version: p.version }), `File ${pl.form} for ${pl.person} on Paper`);
     const copy = await copyOf(r, officer, caseId, { form: pl.form, subject: who.subject });
     const after = (await prepare()).items.find((i) => i.id === item.id);
+    // Review R2-m2: Done once a person's validated copy is read back for today's facts (the item says so itself).
+    if (after?.validated?.current) return { status: "done", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy validated in Adobe and read back`, why: null };
     return { status: "partial", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy made (${copy ? "generated" : "not made"}); ${after?.state === "to_do" ? "it waits for its validated copy" : `it reads ${after?.state}`}`, why: `The validated copy is not read back: ${HELD.paper}. Until then this person's filing cannot be Ready to file (P-315).` };
   });
 

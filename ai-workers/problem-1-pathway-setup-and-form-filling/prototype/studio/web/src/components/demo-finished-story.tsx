@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Stage = { key: string; title: string; status: "done" | "partial" | "waiting"; shows: string; why: string | null };
 type Story = { state: "idle" | "running" | "done" | "failed"; started_at?: string; seconds?: number; error?: string; stages?: Stage[]; cases?: { family: string | null; thin: string | null } };
@@ -66,17 +67,17 @@ export function FinishedStoryDialog({ open, onOpenChange }: { open: boolean; onO
 function StoryResult({ story, onOpen }: { story: Story; onOpen: () => void }) {
   if (story.state === "failed") return <Notice tone="danger" title="Loading stopped">{story.error}</Notice>;
   return (
-    <div className="space-y-3 text-sm" data-finished-story-result>
+    <TooltipProvider delayDuration={200}><div className="space-y-3 text-sm" data-finished-story-result>
       <table className="w-full table-fixed border-collapse text-left">
         <thead><tr className="border-b border-border text-text-muted"><th className="py-1 pr-2 font-medium">Step</th><th className="w-28 py-1 font-medium">Status</th></tr></thead>
         <tbody>{(story.stages ?? []).map((s) => (
           <tr key={s.key} className="border-b border-border align-top" data-story-stage={s.key} data-status={s.status}>
             <td className="break-words py-1.5 pr-3"><div className="font-medium">{s.title}</div><div className="text-text-muted">{s.shows}</div>{s.why ? <div className="mt-0.5 text-text-muted" data-story-why>Still waits: {s.why}</div> : null}</td>
-            <td className="py-1.5"><Pill tone={TONE[s.status]} title={TIP[s.status]}>{WORD[s.status]}</Pill></td>
+            <td className="py-1.5"><Tooltip><TooltipTrigger asChild><span tabIndex={0} className="rounded-md focus-visible:outline focus-visible:outline-2" aria-label={`${WORD[s.status]}: ${TIP[s.status]}`}><Pill tone={TONE[s.status]}>{WORD[s.status]}</Pill></span></TooltipTrigger><TooltipContent>{TIP[s.status]}</TooltipContent></Tooltip></td>
           </tr>))}</tbody>
       </table>
       <p>{story.cases?.family ? <Link className="text-text-link underline" to={`/cases/${story.cases.family}`} onClick={onOpen} data-story-open-case>Open the family case</Link> : null}{story.cases?.thin ? <> · <Link className="text-text-link underline" to={`/cases/${story.cases.thin}`} onClick={onOpen}>Open the case left on release 1</Link></> : null}</p>
       <p className="text-text-muted">Loaded in {story.seconds?.toFixed(0)} s.</p>
-    </div>
+    </div></TooltipProvider>
   );
 }

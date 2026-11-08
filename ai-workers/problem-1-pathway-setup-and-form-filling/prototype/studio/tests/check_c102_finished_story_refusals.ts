@@ -53,8 +53,11 @@ try {
   const stages = ((done.body?.story as unknown as { stages?: Stage[] } | undefined)?.stages ?? []), st = (k: string) => stages.find((x) => x.key === k);
   const famId = execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", "select id from runtime_case where reference = 'SAMPLE-VV-FAMILY-1'"], { encoding: "utf8" }).trim();
   const view = (await (await fetch(`http://localhost:${PORT}/api/runtime/cases/${famId}/questionnaire?mode=agent`, { headers: { "x-actor": "user-O" } })).json()) as { sections: { questions: { answer: { awaits_client?: boolean } | null; rows: { answer: { awaits_client?: boolean } | null }[] }[] }[] };
+  // Review R2-M1: the number of answers the result says the client re-confirmed equals the re-confirmations recorded.
+  const claimed = Number((st("facts")?.shows ?? "").match(/the (\d+) background answers? among the officer's/)?.[1] ?? 0);
+  const reconfirmedInData = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact'`);
   const awaiting = view.sections.flatMap((x) => x.questions).flatMap((q) => [q.answer, ...q.rows.map((r) => r.answer)]).filter((a) => a?.awaits_client).length;
-  ok("C10.2 (break M1): the facts stage claims no reason the answer route never takes; staff answers for another adult are re-confirmed by the client", !/with a reason/.test(st("facts")?.shows ?? "x") && /re-confirm/.test(st("facts")?.shows ?? "") && awaiting === 0, { awaiting, shows: st("facts")?.shows.slice(0, 200) });
+  ok("C10.2 (break M1): the facts stage claims no reason the answer route never takes; staff answers for another adult are re-confirmed by the client", !/with a reason|each marked/.test(st("facts")?.shows ?? "x") && claimed > 0 && claimed === reconfirmedInData && awaiting === 0, { awaiting, claimed, reconfirmedInData, shows: st("facts")?.shows.slice(0, 160) });
   const unrecorded = n("select count(*) from filing f join runtime_case k on k.id = f.case_id where k.reference = 'SAMPLE-VV-FAMILY-1' and f.active and upper(f.status) <> 'SUBMITTED'");
   ok("C10.2 (break M2): the record stage reads Done only when every filing is recorded, else Partly naming what is not", unrecorded ? st("record")?.status === "partial" && /Not recorded yet/.test(st("record")?.why ?? "") : st("record")?.status === "done", { unrecorded, record: st("record")?.status });
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
