@@ -57,7 +57,10 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   ok("C10.2-6 pass (row 14): the principal's filing mixes Online (every answer-sheet section entered) and PDF upload (the hand-signed form printed, signed and its scan uploaded; the other PDFs filled)",
     onl.length === 1 && (sheet?.sections ?? []).length > 0 && sheet.sections.every((x: { entered: unknown }) => !!x.entered) && hand.length === 1 && ["ready", "done"].includes(hand[0].state)
     && pdfs.length > 0 && filled.length === pdfs.length, { online: onl.map((i) => i.form), hand: hand.map((i) => i.form), pdfs, filled });
-  if (onl[0]?.state !== "done") console.log(`PENDING  C10.2-6b pass: the Online IMM 5257 reads Done — waits on QA-165 (1): its sheet still waits on ${(sheet?.sections ?? []).reduce((n: number, x: { waiting: unknown[] }) => n + x.waiting.length, 0)} facts the case holds as No, rows or "none apply" (QA-165, #1318), and on the contact in Canada, which release 2 never asks (qa's own row, Lead 34)`);
+  // QA-309 (was PENDING on QA-165 (1)): a section waits only for what the form's readiness names, so the sheet, every
+  // section entered, reads Done; a "none apply" fact, an answered row fact or the contact release 2 never asks never waits.
+  ok("C10.2-6b pass (QA-309): the Online IMM 5257 reads Done, its sheet waiting for nothing", onl[0]?.state === "done" && (sheet?.sections ?? []).every((x: { waiting: unknown[] }) => !x.waiting.length),
+    { state: onl[0]?.state, reason: onl[0]?.reason, waiting: (sheet?.sections ?? []).reduce((n: number, x: { waiting: unknown[] }) => n + x.waiting.length, 0) });
   // #C10.2 phase 1 (Lead 34 on 6c): the line reads the copy this case files: the Paper IMM 5257's copy, not release 1's.
   const paperCopy = sql(`select id from form_instance where case_id='${fam?.id}' and subject_id='${paperSubject}' and form_number='${paperLine.form}' and status='GENERATED' and config_release_id=(select config_release_id from pack_work_pin where case_id='${fam?.id}' order by revision desc limit 1) order by created_at desc limit 1`) || null;
   ok("C10.2-6c pass (C11.6, P-380 Q3): the Paper IMM 5257 carries its written reason and its copy is made on release 2",

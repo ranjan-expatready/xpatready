@@ -1,0 +1,46 @@
+C7.7 on 48dc02fd5 (= main bc8e33d53 + qa records), copy qa_p77 :4470, start Sun Nov  8 18:06:21 IST 2026
+
+isolated qa_p77 on http://localhost:4470 (xr_studio_qa_p77), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 18:07:35 IST 2026
+C7.7 — Deliverables list per filing (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C7.7-1 pass: adults get their release's lines: IMM 5257, IMM 5257 SCH1, IMM 5476, IMM 5645 (VV-R07, VV-R09, VV-R10) — [["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"]]
+PASS  C7.7-2 pass: children under 18 get only their own release lines (IMM 5257; the family form and IMM 5476 are 18 or older) — [["IMM 5257"],["IMM 5257"]]
+PASS  C7.7-3 pass: biometrics is an IRCC step for the principal, the spouse and the child of 15, none for the child of 10 (VV-R15)
+PASS  C7.7-4 pass: the biometrics step is tagged "needed after filing" (IRCC's instruction letter comes after you apply, VV-R17)
+PASS  C7.7-5 pass: document items come from the checklist (each person's passport; the principal's proof of financial support)
+PASS  C7.7-6 pass: every item has exactly one state from the row words, and every item belongs to a filing of this case
+PASS  C7.7-7 pass: stage 1 counts the facts to confirm per filing, before any item — [{"filing":"a7619eca-f717-4ab2-a4ff-12192d15ed50","to_confirm":120,"confirmed":0},{"filing":"e13e8466-cf3c-4f57-8c77-029ea151fc28","to_confirm":120,"confirmed":0},{"filing":"956844fd-36d4-4ec4-a633-49bd372e4bfd","to_confirm":65,"confirmed":0},{"filing":"f45572
+PASS  C7.7-8 pass: before facts are confirmed, PDF form items say what they wait for ("Waiting for N facts") and are To do, never Ready (IMM 5257 SCH1)
+PASS  C7.7-9 pass: with every fact confirmed, stage 1 shows nothing left to confirm — [{"filing":"a7619eca-f717-4ab2-a4ff-12192d15ed50","to_confirm":0,"confirmed":1},{"filing":"e13e8466-cf3c-4f57-8c77-029ea151fc28","to_confirm":0,"confirmed":1},{"filing":"956844fd-36d4-4ec4-a633-49bd372e4bfd","to_confirm":0,"confirmed":1},{"filing":"f4557233-13
+PASS  C7.7-10 pass: "Download PDF copy" on the Online IMM 5257 is a job (202) — 202
+PASS  C7.7-11 pass: the copy is IRCC's own IMM 5257 PDF filled from the same confirmed facts, marked "Copy, not for filing" — {"id":"7a93b609-9b01-4781-a474-07cdb3f4da80","status":"GENERATED","created_at":"2026-11-08T12:38:39.736Z","created_by":"user-O","finished_at":"2026-11-08T12:38:40.188Z","error":null,"locked":null,"out_of_date":false,"stale":false,"changed":[],"counts":{"blank"
+PASS  C7.7-12 pass: the copy is never counted: no new item, readiness unchanged
+PASS  C7.7-13 fail: a "Copy, not for filing" cannot be locked as filed or uploaded (409, in words) — "IMM 5257 is filed Online: this PDF is a copy, not for filing. Type the answers into the IRCC account from the answer sheet."
+PASS  C7.7-14 fail: a PDF upload line has no separate "PDF copy" (its own PDF is the deliverable): 409 or 422 (IMM 5257 SCH1) — 409
+PASS  C7.7-15 pass (data): one filing per person, items keyed by filing × person × form (22 form items: every release line that reaches each person) — {"inDb":22,"formCount":22}
+PASS  C7.7-16 pass (G25): the principal's IMM 5645 copy leaves nothing by hand that the case holds (a fact about children is written from the children on the case) — []
+PASS  C7.7-17 pass (G24, QA-139): every "To write by hand" line is in plain words: no engine step names — [{"label":"The type of temporary residence application the case is for (visitor, worker, student or other)","why":"The product cannot work this form field out from the case's answers yet: write it by hand."},{"label":"The type of temporary residence applicatio
+PASS  C7.7-18 pass: any line still to write by hand shows on the filing as a warning naming the form and the line (BR-9: everything else warns) — [{"code":"fields_left_empty","item":"5524eda0-a8c3-4541-8868-d491ede608bb","subject":"aec8fa33-cc8b-43d6-9b1e-dac298735674","owes":"staff","words":"CRITICAL: IMM 5257 SCH1 for Sample Client A: 5 form fields IRCC's form marks mandatory would be left empty (Whet
+PASS  C7.7-19 pass: the principal's IMM 5257 on Paper lists its barcode page and its steps in order: Validate in Adobe (adds the barcode page), print with the barcode page on top, signed in pen, mailed after Ready to file — {"status":200,"line":{"id":"8fdc94a1-e78d-48c8-87ff-5e592ea696fc","kind":"form","filing":"a7619eca-f717-4ab2-a4ff-12192d15ed50","subject":"aec8fa33-cc8b-43d6-9b1e-dac298735674","person":"Sample Client A","version":2,"form":"IMM 5257","channel":"PAPER","line_ch
+PASS  C7.7-20 pass: before its validated copy is read back the Paper line is To do and says to Validate in Adobe and read it back — "Every fact it reads is confirmed. Make the copy, press Validate in Adobe (this adds the barcode page), save it and read the validated copy back here: IRCC returns a barcode form unprocessed without it."
+PASS  C7.7-21 fail: the spouse's IMM 5257, still on its own line's channel (ONLINE), carries no Paper steps or barcode page line — {"id":"7f65c243-1caf-4cba-a249-d7348264afcf","kind":"form","filing":"e13e8466-cf3c-4f57-8c77-029ea151fc28","subject":"fb27c11f-af03-46b0-aa21-6ad3f94941b1","person":"Sample Spouse A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+PASS  C7.7-22 fail: the copy sent back unchanged (Validate never pressed, so no barcode page) is refused (422) and the line stays To do with no validated copy — {"status":422,"state":"to_do"}
+PASS  C7.7-23 pass: once its validated copy is read back for today's facts the line is In progress, its Validate step done, naming that copy — {"id":"8fdc94a1-e78d-48c8-87ff-5e592ea696fc","kind":"form","filing":"a7619eca-f717-4ab2-a4ff-12192d15ed50","subject":"aec8fa33-cc8b-43d6-9b1e-dac298735674","person":"Sample Client A","version":2,"form":"IMM 5257","channel":"PAPER","line_channel":"ONLINE","acce
+PASS  C7.7-24 fail: a Paper line is never Ready before it is printed and signed in pen (B132: Printed and Signed in pen not done yet; Mail not recorded) — [{"key":"validate","words":"Make the copy, press Validate in Adobe (this adds IMM 5257's barcode page), save it and read the validated copy back here","done":true,"neededBefore":"filing"},{"key":"print","words":"Print the validated copy with its barcode page, 
+PASS  C7.7-25 fail: IMM 5476 cannot go on Paper here (IRCC accepts it only as a PDF upload): refused (422) with IRCC's line, and its line carries no Paper steps — {"status":422,"detail":"IMM 5476 is filed as Paper, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts. IRCC's line: \"Upload this form along with your online application\" (https://www.canada.ca/en/immigration-re
+PASS  C7.7-26 pass (P-171 (1)): a fact on IMM 5257 changed after the read-back makes the Paper line Out of date, asking for Validate again — {"put":200,"line":"out_of_date","reason":"The validated copy of IMM 5257 read back 8 Nov 2026 is out of date: family name (surname) as shown on the person's passport or travel document of Sample Client A changed from \"SAMPLE\" to \"SAMPLE-CHANGED\" on 8 Nov 2
+PASS  C7.7-27a (setup): the case's release, its fingerprint and its pins are read, and an exact copy of the release is kept to put back (it already writes: IMM 5257 SCH1, IMM 5409) — {"rel":"42b89c8d-20dc-4751-b8f5-e4fef8c5ee6c","lines":["IMM 5257 SCH1","IMM 5409"],"maps":["IMM 5257 SCH1","IMM 5409"]}
+PASS  C7.7-27 pass (QA-235): IMM 5257 SCH1, a schedule the case's release writes, is generated for the principal (202, then a copy of IRCC's own PDF, intact) — {"listed":true,"status":202,"copy":{"status":"GENERATED","source":"ircc_pdf","intact":true,"error":null}}
+PASS  C7.7-28 pass (QA-235): IMM 0008 DEP, a dependant's form the case's release writes, is generated for the child (202, then a copy of IRCC's own PDF, intact) — {"listed":true,"status":202,"copy":{"status":"GENERATED","source":"ircc_pdf","intact":true,"error":null}}
+PASS  C7.7-29 fail: each form only for the people its line names: SCH1 for the child of 15 (dependent children from 18) and DEP for the principal are refused (422, in words) — {"sch1":[422,"IMM 5257 SCH1 does not apply to that person on this case."],"dep":[422,"IMM 0008 DEP does not apply to that person on this case."]}
+PASS  C7.7-30 fail (QA-235, break m6): a form number the release does not write (well-shaped or not, other case or spacing, markup) answers 404 "No such form.", never echoes it, and makes no copy — []
+PASS  C7.7-31 fail: a form line the release lists with no PDF field map keeps its own words (404, "has no PDF to fill") — {"status":404,"detail":"IMM 5409 has no PDF to fill in this case's release."}
+PASS  C7.7-32 pass (scaffolding put back): the case's release is again exactly as released (its fingerprint matches) and each of its pins holds its own value again, and the copy of it kept for the run is gone; the copies made stay on the case — {"pins":true}
+
+33/33 passed
+pack exit 0  end Sun Nov  8 18:08:50 IST 2026
+stopped qa_p77 (database and files removed; log in var/isolated-logs/qa_p77-api.log)
