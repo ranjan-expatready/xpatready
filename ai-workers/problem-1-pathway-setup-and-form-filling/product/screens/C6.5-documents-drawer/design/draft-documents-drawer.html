@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Documents drawer board</title>
+<style>
+/* Tokens copied from prototype/studio/web/src/styles/tokens.css (the team's ERv2 tokens), light sheet. */
+:root{--primary:#0862c5;--primary-hover:#054e9c;--surface:#f7f7f7;--raised:#ffffff;--text:#2d2d2d;--muted:#737373;--link:#054e9c;
+--border:#d9d9d9;--border-strong:#bfbfbf;--danger:#dc2626;--text-danger:#991b1b;--warn:#ff8500;--text-warn:#663200;--ok:#16a34a;--text-ok:#0f5c2e;
+--ai:#6d28d9;--note:#fff3e0;--frame:#2d2d2d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--surface:#14202c;--raised:#182634;--text:#eeeeee;--muted:#a9b7c4;--link:#2aa1ff;--border:#2c3a48;--border-strong:#46586c;--text-danger:#f87171;--text-warn:#ffb454;--text-ok:#4ade80;--ai:#c4b5fd;--note:#2a2216}}
+:root[data-theme="dark"]{--surface:#14202c;--raised:#182634;--text:#eeeeee;--muted:#a9b7c4;--link:#2aa1ff;--border:#2c3a48;--border-strong:#46586c;--text-danger:#f87171;--text-warn:#ffb454;--text-ok:#4ade80;--ai:#c4b5fd;--note:#2a2216}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:14px/1.45 "Inter Variable",Inter,ui-sans-serif,system-ui,sans-serif}
+h1,h2,h3{font-family:"Proxima Nova",Inter,sans-serif;margin:0}
+h1{font-size:24px}h2{font-size:18px}h3{font-size:16px}
+.board{max-width:1440px;margin:0 auto;padding:16px}
+.lead{font-size:14px;color:var(--muted);margin:4px 0 12px}
+.note{background:var(--note);border:1px solid #ffc773;border-radius:6px;padding:8px 12px;font-size:12px;margin:8px 0}
+.frame{background:var(--raised);border:1px solid var(--border);border-radius:12px;margin:24px 0;overflow:hidden}
+.ft{background:var(--frame);color:#fff;padding:8px 16px;font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.canvas{display:flex;min-height:520px;background:var(--surface)}
+.page{flex:1;min-width:0;padding:16px;position:relative}
+.page.dim::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.25)}
+.notes{flex:1;min-width:0;padding:16px 20px;font-size:12px;color:var(--text)}
+.notes h4{font-size:12px;margin:12px 0 4px;text-transform:none}.notes ul{margin:0;padding-left:18px}.notes li{margin:2px 0}
+.drawer{width:560px;flex:none;background:var(--raised);border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,.08);display:flex;flex-direction:column}
+.dh{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px}
+.dh .t{font-size:18px;font-weight:600}.dh .d{font-size:12px;color:var(--muted);margin-top:4px}
+.db{padding:16px 24px;flex:1}
+.df{padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.x{color:var(--muted);font-size:16px}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--raised)}
+.sect{border:1px solid var(--border);border-radius:12px;background:var(--raised);overflow:hidden;margin-bottom:12px}
+.sh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border)}
+.sh .grow{flex:1}
+.q{display:grid;grid-template-columns:200px 1fr;gap:16px;padding:8px 16px;border-top:1px solid var(--border);font-size:14px}.q:first-child{border-top:0}
+.q .l{color:var(--muted);font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);border-radius:8px;padding:6px 12px;background:var(--raised);color:var(--text);font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link)}
+.btn[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:1px 6px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--muted);white-space:nowrap}
+.p-ok{background:rgba(22,163,74,.12);border-color:transparent;color:var(--text-ok)}
+.p-warn{background:rgba(255,133,0,.15);border-color:transparent;color:var(--text-warn)}
+.p-danger{background:rgba(220,38,38,.12);border-color:transparent;color:var(--text-danger)}
+.p-info{background:rgba(8,98,197,.10);border-color:transparent;color:var(--link)}
+.p-ai{background:rgba(124,58,237,.12);border-color:transparent;color:var(--ai)}
+.p-sample{background:#fff3e0;border-color:#ffc773;color:#663200}
+.doc{border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.doch{padding:12px 16px;border-bottom:1px solid var(--border)}
+.doch .n{font-size:16px;font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.meta{font-size:12px;color:var(--muted);margin-top:4px}
+a{color:var(--link)}a.off{color:var(--muted);text-decoration:none;cursor:not-allowed;border-bottom:1px dashed var(--muted)}
+.grp{padding:6px 16px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--border)}
+.row{padding:8px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
+.row:last-child{border-bottom:0}
+.row .lab{font-size:12px;color:var(--muted)}.row .val{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.row .src{font-size:12px;color:var(--muted)}
+.row .side{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.diff{background:rgba(255,133,0,.08)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0}
+.two div{border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:var(--raised)}
+.two .k{font-size:12px;color:var(--muted)}
+.tick{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.tick input{width:16px;height:16px;accent-color:var(--primary)}
+.coll{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;font-size:14px}
+.chev{display:inline-block;width:16px;color:var(--muted)}
+.foot{padding:12px 16px;background:var(--surface);display:flex;gap:12px;align-items:center;justify-content:space-between}
+.foot .hint{font-size:12px;color:var(--muted);max-width:320px}
+.notice{border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:8px;padding:8px 12px;margin:0 0 12px;font-size:14px;background:var(--raised)}
+.notice.warn{border-left-color:var(--warn)}.notice.danger{border-left-color:var(--danger)}.notice.ok{border-left-color:var(--ok)}.notice.ai{border-left-color:#7c3aed}
+.notice b{display:block}.notice .m{color:var(--muted);font-size:12px;margin-top:2px}
+.field{margin:8px 0}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.field input[type=text],.field textarea{width:100%;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:8px;background:var(--raised);color:var(--text)}
+.field textarea{min-height:56px}.field .err{color:var(--text-danger);font-size:12px;margin-top:2px}
+.field.bad textarea{border-color:var(--danger)}
+.radio{display:flex;gap:16px;font-size:14px;margin:4px 0}
+.cost{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}
+.cost div{border:1px solid var(--border);border-radius:8px;padding:6px 8px}.cost .k{font-size:12px;color:var(--muted)}.cost .v{font-weight:600}
+.skel{height:14px;border-radius:4px;background:linear-gradient(90deg,var(--border),var(--surface),var(--border));margin:8px 0}
+.states{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tip{display:inline-block;background:var(--text);color:var(--raised);font-size:12px;border-radius:6px;padding:4px 8px;max-width:260px}
+.menu{border:1px solid var(--border);border-radius:8px;background:var(--raised);box-shadow:0 8px 24px rgba(0,0,0,.12);padding:4px;width:240px;font-size:14px}
+.menu div{padding:6px 8px;border-radius:4px}.menu .hl{background:var(--surface)}
+code{font-size:12px}
+.small{font-size:12px;color:var(--muted)}
+@media (max-width:1100px){.canvas{flex-direction:column}.drawer{width:auto}.states{grid-template-columns:1fr}}
+</style></head>
+<body><div class="board">
+<h1>Documents drawer board</h1>
+<p class="lead">C6.5 part 2b · "Fill this from documents" on the case officer's Agent view · draft for a fresh challenge · concept <code>../concept-draft.md</code> · drawn at 1440 px</p>
+<div class="note"><b>Sample.</b> Every person, document, value, section name and amount here is Sample; documents are synthetic. "UTO" is the specimen country code of ICAO Doc 9303, used because it is no real country. Times are IST. Unconfirmed: no counsel. The drawer is the app's own right panel (<code>Panel</code>, 560 px): pinned header, scrolling body, pinned footer, no second overlay on top.</div>
+
+<!-- Frame 0 -->
+<div class="frame"><div class="ft"><span>Frame 0 · Where the drawer opens (BR-1)</span><span>Agent view section header (one hook in questionnaire.tsx) · checklist line ⋯ menu (checklist.tsx)</span></div>
+<div class="canvas"><div class="page">
+<div class="sect"><div class="sh"><h3>Personal details</h3><span class="small">for Client A</span><span class="pill">5 answered · 5 to confirm</span><span class="pill p-warn" title="1 value differs from a document: resolve it before Confirm section">1 to resolve</span><span class="grow"></span>
+<button class="btn sm" title="Reads this person's uploaded documents and proposes values. Nothing changes until you Confirm &amp; use. Typing always works.">▤ Fill this from documents</button>
+<button class="btn sm pri">✓ Confirm section</button></div>
+<div class="q"><div class="l">Family name</div><div>SAMPLEDE <span class="pill p-warn">Declared · to confirm</span><div class="small">questionnaire · Client A · 7 Nov, 18:20 IST</div></div></div>
+<div class="q"><div class="l">Given names</div><div class="small">Not answered</div></div>
+<div class="q"><div class="l">Date of birth</div><div class="small">Not answered</div></div>
+</div>
+<div class="sect"><div class="sh"><h3>Documents</h3><span class="pill">SI-14</span><span class="small">What each person must provide</span></div>
+<div class="q" style="grid-template-columns:200px 120px 1fr auto"><div><b>Passport</b><div class="small">Client A</div></div><div><span class="pill p-ok">Received</span></div><div class="small">Every applicant · File: sample-passport.pdf · Last change 8 Nov, 13:58 IST</div>
+<div style="position:relative"><button class="btn sm ghost">⋯</button>
+<div class="menu" style="position:absolute;right:0;top:32px;z-index:2"><div>Request again</div><div>Upload a file…</div><div class="hl"><b>Fill answers from this file…</b></div><div>Not applicable…</div><div>History</div></div></div></div>
+<div style="height:150px"></div></div>
+</div>
+<div class="notes"><h4>What the officer sees</h4><ul>
+<li>A small secondary button in every section header, staff mode only. The client's questionnaire never shows it.</li>
+<li>"1 to resolve" appears when this person has an open check. It comes from one <code>GET …/checks?state=open</code> per case view, shared by all sections.</li>
+<li>Confirm section stays the section's one primary button. While a check is open it answers 409 <code>open_checks</code>, and the toast shows the server's sentence.</li>
+<li>The line menu item appears only on a line with a current file that a reader reads. It opens the drawer on the person's first section that asks a fact the file gives. It needs <code>reads</code> on the checklist line (Q2); until then it is <b>Not built</b>.</li></ul>
+<h4>Never</h4><ul><li>Nothing is read on upload (C6.5-2).</li><li>The button is never a primary button.</li></ul></div>
+</div></div>
+
+<!-- Frame 1 -->
+<div class="frame"><div class="ft"><span>Frame 1 · Reading (BR-2)</span><span>plan → fill, rules only, US$0</span></div>
+<div class="canvas"><div class="notes"><h4>Flow</h4><ul>
+<li>On open the drawer calls <code>…/fill-from-documents/plan</code> (US$0). If every document is read by rules, it calls <code>…/fill-from-documents</code> at once.</li>
+<li>Skeletons while it reads. The words say what is happening and that it costs nothing.</li>
+<li>The read is stored once. Opening the drawer again shows the stored read (<code>GET …/proposals</code>).</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Client A · Personal details</div></div><span class="x">✕</span></div>
+<div class="db" role="status"><p>Reading the passport's coded lines: rules, no AI, US$0…</p><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:80%"></div><div class="skel"></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 2 -->
+<div class="frame"><div class="ft"><span>Frame 2 · Review before Confirm &amp; use (BR-3 to BR-8, BR-11)</span><span>one block per document · differences first · ticks on expanded values · one primary</span></div>
+<div class="canvas"><div class="notes"><h4>Order (BR-7)</h4><ul>
+<li>Difference with a current answer: shown beside it, even if the rule would collapse it. Comes from the server's <code>differs</code> (Q2), never worked out in the browser.</li>
+<li>Left for you: a country given only as a code. The server's reason before the click (<code>left_why</code>, Q2). No tick.</li>
+<li>To check: names, sex. Each has a tick "Matches the document" or "Correct it".</li>
+<li>Collapsed: one line for the three values backed by check digits.</li>
+<li>Not on this document: place of birth, type it.</li></ul>
+<h4>Confirm &amp; use</h4><ul>
+<li>Disabled only until each expanded value is ticked or corrected. The tooltip says how many are left.</li>
+<li>Never disabled by a difference. The line above the button says a check will open.</li></ul>
+<h4>Each value shows</h4><ul><li>Label, its section (from the Agent view), value, page, reader in words, confidence in words. The confidence tooltip says it is a Sample figure.</li></ul>
+<div style="margin-top:12px"><span class="tip">Tick or correct each value first: 2 left.</span></div></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Client A · Personal details · values are proposals until you Confirm &amp; use</div></div><span class="x">✕</span></div>
+<div class="db">
+<div class="doc"><div class="doch"><div class="n">Passport <span class="pill p-sample">Sample</span></div>
+<div class="meta">sample-passport.pdf · page 1 · read by rules from the coded lines · Check digits: <b style="color:var(--text-ok)">passed</b></div>
+<div class="meta"><a class="off" title="Opening the file is not built yet">Open the passport ↗</a></div></div>
+<div class="grp">Differs from an answer (1)</div>
+<div class="row diff"><div><div class="lab">Family name · Personal details</div>
+<div class="two"><div><div class="k">The passport reads</div><b>SAMPLED</b></div><div><div class="k">Client A typed, 7 Nov</div><b>SAMPLEDE</b></div></div>
+<div class="src">Confirm &amp; use opens a check for it and keeps SAMPLEDE until you choose.</div></div><div class="side"><span class="pill p-warn">Differs</span></div></div>
+<div class="grp">Left for you (2)</div>
+<div class="row"><div><div class="lab">Citizenship · Personal details</div><div class="val">UTO</div><div class="src">The coded line gives only the country code "UTO": choose the country by hand.</div></div><div class="side"><a href="#">Answer it</a></div></div>
+<div class="row"><div><div class="lab">Country of issue · Passport</div><div class="val">UTO</div><div class="src">The coded line gives only the country code "UTO": choose the country by hand.</div></div><div class="side"><a href="#">Answer it</a></div></div>
+<div class="grp">Check each against the document (2 of 2 left)</div>
+<div class="row"><div><div class="lab">Given names · Personal details</div><div class="val">CLIENT A</div><div class="src">Page 1 · rules · <span title="A Sample figure until staff corrections are counted.">read from the coded line, no check digit of its own</span></div><div class="src">The name may be cut short: check it against the printed name.</div></div>
+<div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="row"><div><div class="lab">Sex · Personal details</div><div class="val">Female</div><div class="src">Page 1 · rules · the coded line reads "F"</div></div>
+<div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="coll"><span class="chev">▸</span><button class="btn sm ghost" aria-expanded="false">3 values checked by the passport's check digits</button><span class="small">passport number, date of birth, expiry</span></div>
+<div class="grp">Not on this document</div>
+<div class="row"><div><div class="lab">Place of birth · Personal details</div><div class="src">Not on the coded lines: type it from the printed page.</div></div><div class="side"><a href="#">Answer it</a></div></div>
+<div class="foot"><div class="hint">Writes the values you checked as confirmed by you, now. 1 value differs from an answer: it opens a check and keeps that answer until you choose.</div>
+<button class="btn pri" aria-disabled="true" title="Tick or correct each value first: 2 left.">Confirm &amp; use</button></div></div>
+</div>
+<div class="df"><button class="btn">Close</button><span class="small">Nothing is written until Confirm &amp; use</span></div></div></div></div>
+
+<!-- Frame 3 -->
+<div class="frame"><div class="ft"><span>Frame 3 · Collapsed line opened, ticks done, one value corrected (BR-4, BR-5, BR-11)</span><span>Confirm &amp; use enabled</span></div>
+<div class="canvas"><div class="notes"><h4>Collapsed (P-243)</h4><ul>
+<li>Opens in place to the three values, each with page, reader and "check digit passed". No tick is needed for them.</li>
+<li>Only when the zone's check digits passed. One failed digit: nothing is collapsed (frame 4).</li></ul>
+<h4>Correct it (BR-11, Q1)</h4><ul>
+<li>An input in place, beside the value, one click. Save goes through the Agent view's own answer save. It fills at once as "Entered by staff · to confirm" (P-411 (2)).</li>
+<li>The row now differs. Confirm &amp; use will open a check for it, and the resolve form opens with "Keep the typed answer" chosen. The reason is still asked.</li>
+<li>Edits inside Confirm &amp; use and the correction count are part 2c (Q1).</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Client A · Personal details</div></div><span class="x">✕</span></div>
+<div class="db"><div class="doc"><div class="doch"><div class="n">Passport <span class="pill p-sample">Sample</span></div><div class="meta">sample-passport.pdf · page 1 · read by rules · Check digits: passed</div></div>
+<div class="grp">Differs from an answer (2)</div>
+<div class="row diff"><div><div class="lab">Family name · Personal details</div><div class="two"><div><div class="k">The passport reads</div><b>SAMPLED</b></div><div><div class="k">Client A typed</div><b>SAMPLEDE</b></div></div></div><div class="side"><span class="pill p-warn">Differs</span></div></div>
+<div class="row diff"><div><div class="lab">Given names · Personal details</div><div class="two"><div><div class="k">The passport reads</div><b>CLIENT A</b></div><div><div class="k">You corrected it, 14:03 IST</div><b>CLIENT ALEXA</b></div></div><div class="src">The coded line cut the name short; the printed name is longer.</div></div><div class="side"><span class="pill p-warn">Differs</span><span class="pill">Entered by staff</span></div></div>
+<div class="grp">Check each against the document (done)</div>
+<div class="row"><div><div class="lab">Sex · Personal details</div><div class="val">Female</div></div><div class="side"><label class="tick"><input type="checkbox" checked> Matches the document</label></div></div>
+<div class="coll"><span class="chev">▾</span><button class="btn sm ghost" aria-expanded="true">3 values checked by the passport's check digits</button></div>
+<div class="row"><div><div class="lab">Passport number · Passport</div><div class="val">SAMPLEP12</div><div class="src">Page 1 · rules · check digit passed</div></div><div class="side"><span class="pill p-ok">✓ Check digit</span></div></div>
+<div class="row"><div><div class="lab">Date of birth · Personal details</div><div class="val">12 Apr 1990</div><div class="src">Page 1 · rules · check digit passed</div></div><div class="side"><span class="pill p-ok">✓ Check digit</span></div></div>
+<div class="row"><div><div class="lab">Expiry date · Passport</div><div class="val">30 Jun 2031</div><div class="src">Page 1 · rules · check digit passed</div></div><div class="side"><span class="pill p-ok">✓ Check digit</span></div></div>
+<div class="foot"><div class="hint">2 values differ from an answer: each opens a check and keeps that answer until you choose. 2 are left for you.</div><button class="btn pri">Confirm &amp; use</button></div></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 4 -->
+<div class="frame"><div class="ft"><span>Frame 4 · A check digit failed (BR-4, BR-7; C6.5-18, -18b)</span><span>nothing collapsed · the number is not proposed</span></div>
+<div class="canvas"><div class="notes"><ul>
+<li>"Could not read" sorts first, in words, with where to find the value. It is never guessed.</li>
+<li>With a failed digit, date of birth and expiry are expanded and need a tick like the names.</li>
+<li>Check digits: failed, shown in the block header in words, not by colour alone.</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Spouse A · Personal details</div></div><span class="x">✕</span></div>
+<div class="db"><div class="doc"><div class="doch"><div class="n">Passport <span class="pill p-sample">Sample</span></div><div class="meta">sample-passport-bad.pdf · page 1 · read by rules · Check digits: <b style="color:var(--text-danger)">one failed</b></div></div>
+<div class="grp">Could not read (1)</div>
+<div class="row"><div><div class="lab">Passport number · Passport</div><div class="src">Could not read the passport number: its check digit does not match. Type it from the passport page.</div></div><div class="side"><a href="#">Answer it</a></div></div>
+<div class="grp">Check each against the document (5 left)</div>
+<div class="row"><div><div class="lab">Date of birth · Personal details</div><div class="val">3 Feb 1991</div><div class="src">Page 1 · rules · not backed by a passed check digit</div></div><div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="row"><div><div class="lab">Expiry date · Passport</div><div class="val">30 Jun 2031</div><div class="src">Page 1 · rules · not backed by a passed check digit</div></div><div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="row"><div><div class="lab">Family name · Personal details</div><div class="val">SAMPLES</div><div class="src">The name may be cut short: check it against the printed name.</div></div><div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="row"><div class="small">…given names, sex</div><div></div></div>
+<div class="foot"><div class="hint">No values are collapsed: one check digit failed.</div><button class="btn pri" aria-disabled="true" title="Tick or correct each value first: 5 left.">Confirm &amp; use</button></div></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 5 -->
+<div class="frame"><div class="ft"><span>Frame 5 · After Confirm &amp; use, with a check open (BR-9, BR-10, BR-12)</span><span>confirm-and-use → {used, agreed, checks, left}</span></div>
+<div class="canvas"><div class="notes"><h4>Summary</h4><ul>
+<li>Built from <code>used</code>, <code>agreed</code>, <code>checks</code>, <code>left</code> with each value's label. The server's <code>message</code> names fact keys ("person.citizenship"), so the drawer does not show it.</li>
+<li>Who and when on the block, in IST. No button any more: one Confirm &amp; use per document.</li>
+<li>Each check is resolved here, in place (frame 6). The section's "1 to resolve" badge counts it.</li>
+<li>The row ⋯ offers "Mark checked against the passport" on a current answer for a fact the document shows (J7 3.6). It is refused while that fact has an open check.</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Client A · Personal details</div></div><span class="x">✕</span></div>
+<div class="db">
+<div class="notice ok"><b>Passport used: 5 values now fill the forms.</b><div class="m">1 differs from what Client A typed: resolve it below (Client A's answer is kept until then). 2 are left for you: Citizenship, Country of issue.</div></div>
+<div class="doc"><div class="doch"><div class="n">Passport <span class="pill p-ok">✓ Confirmed and used</span></div><div class="meta">by Case officer · 8 Nov, 14:05 IST · sample-passport.pdf · page 1 · rules</div></div>
+<div class="grp">To resolve (1)</div>
+<div class="row diff"><div><div class="lab">Family name · Personal details</div><div class="val">The client typed SAMPLEDE; the passport reads SAMPLED. Which is right?</div></div><div class="side"><button class="btn sm">Resolve…</button></div></div>
+<div class="grp">Left for you (2)</div>
+<div class="row"><div><div class="lab">Citizenship</div><div class="src">The coded line gives only the country code "UTO": choose the country by hand.</div></div><div class="side"><a href="#">Answer it</a></div></div>
+<div class="row"><div><div class="lab">Country of issue</div><div class="src">The coded line gives only the country code "UTO": choose the country by hand.</div></div><div class="side"><a href="#">Answer it</a></div></div>
+<div class="grp">Used (5)</div>
+<div class="row"><div><div class="lab">Given names</div><div class="val">CLIENT A</div></div><div class="side"><span class="pill p-ok">✓ Used</span><button class="btn sm ghost" title="Mark checked against the passport">⋯</button></div></div>
+<div class="row"><div><div class="lab">Passport number · Date of birth · Expiry date · Sex</div><div class="val">SAMPLEP12 · 12 Apr 1990 · 30 Jun 2031 · Female</div></div><div class="side"><span class="pill p-ok">✓ Used</span></div></div>
+</div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 6 -->
+<div class="frame"><div class="ft"><span>Frame 6 · Resolve a check in place, reason missing (BR-10; C6.5-14, -15)</span><span>POST /runtime/checks/:id/resolve {keep, reason, answerId}</span></div>
+<div class="canvas"><div class="notes"><ul>
+<li>The reason form from the findings panel, opened inside the row. No second overlay.</li>
+<li>Two choices, as the API takes them: the document's value, or the typed answer. To use a third value, keep the typed answer and edit it in the Agent view (<code>keep: other</code> is <b>Not built</b>).</li>
+<li>The server's words appear on the field. What was typed is kept.</li>
+<li>Sends <code>answerId</code> (the answer shown). If someone changed it since: "The answer changed after you opened this check: read it again, then resolve." The drawer reloads.</li>
+<li>After a correction (frame 3), "Keep the typed answer" is chosen already.</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Client A · Personal details</div></div><span class="x">✕</span></div>
+<div class="db"><div class="doc"><div class="doch"><div class="n">Passport <span class="pill p-ok">✓ Confirmed and used</span></div></div>
+<div class="row diff" style="display:block"><div class="lab">Family name · Personal details</div>
+<p style="margin:4px 0">The client typed <b>SAMPLEDE</b>; the passport reads <b>SAMPLED</b>. Which is right?</p>
+<div class="radio"><label><input type="radio" name="k" checked> Keep the passport's value</label><label><input type="radio" name="k"> Keep the typed answer</label></div>
+<div class="field bad"><label for="r">Reason</label><textarea id="r" aria-describedby="re"></textarea><div class="err" id="re">Give a reason for keeping this value.</div></div>
+<div class="small">Both values stay on record. Confirm section is refused while this check is open.</div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn ghost">Cancel</button><button class="btn pri">Save</button></div></div></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 7 -->
+<div class="frame"><div class="ft"><span>Frame 7 · Opened again later, or confirmed by someone else (BR-9)</span><span>GET …/proposals · 409 already_confirmed</span></div>
+<div class="canvas"><div class="notes"><ul>
+<li>Reopening reads <code>GET …/proposals?subject=</code>: the same block, with its state, without reading again.</li>
+<li>If a colleague confirmed it at the same moment: the server's who and when, then a reload. Nothing was written twice.</li>
+<li>A newer file on the line (409 <code>not_current</code>): "A newer file of this document was uploaded: read and confirm that one."</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">Client A · Personal details</div></div><span class="x">✕</span></div>
+<div class="db"><div class="notice warn"><b>Already confirmed</b><div class="m">This passport was confirmed and used by Representative on 8 Nov, 14:04 IST. One Confirm &amp; use per document. Nothing was written. Showing it now.</div></div>
+<div class="doc"><div class="doch"><div class="n">Passport <span class="pill p-ok">✓ Confirmed and used</span></div><div class="meta">by Representative · 8 Nov, 14:04 IST</div></div>
+<div class="grp">Used (5) · Check opened (1) · Left for you (2)</div><div class="row"><div class="small">rows as in frame 5</div><div></div></div></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 8 -->
+<div class="frame"><div class="ft"><span>Frame 8 · A letter read by AI: the cost card first (BR-2; C6.5-19)</span><span>…/plan → estimate, live_allowed false, replay_available true</span></div>
+<div class="canvas"><div class="notes"><ul>
+<li>The application's own section ("Your visit", for the whole application). The letter of invitation was uploaded to the case, with no checklist line.</li>
+<li>The cost comes before any read: usual, worst, replay. The figures are the server's; the ones drawn are Sample.</li>
+<li>Live is never offered on this copy. The card says so in plain words. The server's <code>live_why</code> and <code>basis</code> carry decision numbers and a file path, so they sit under Details.</li>
+<li>The one primary is "Replay the saved read (US$0)".</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">The application · Your visit</div></div><span class="x">✕</span></div>
+<div class="db"><div class="notice ai"><b>Letter of invitation <span class="pill p-sample">Sample</span> is read by AI</b><div class="m">sample-letter-of-invitation.pdf · added to the case, no checklist line</div>
+<div class="cost"><div><div class="k">Live, usual</div><div class="v">US$0.02</div></div><div><div class="k">Live, at most</div><div class="v">US$0.31</div></div><div><div class="k">Saved read</div><div class="v">US$0</div></div></div>
+<div class="m">Live reading is off on this copy: nothing is sent. A saved read of this same file replays at no cost.</div>
+<details class="m"><summary>Details</summary>Estimate until the first saved read is measured. Priced by the spend ledger's price table.</details>
+<div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri">Replay the saved read · US$0</button></div></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 9 -->
+<div class="frame"><div class="ft"><span>Frame 9 · A letter with no saved read yet (BR-2; FQ-10)</span><span>replay_available false · no read button</span></div>
+<div class="canvas"><div class="notes"><ul>
+<li>No read button at all. A disabled one would invite clicks that cannot work.</li>
+<li>Typing always works: "Answer it" links to each question the letter would give.</li>
+<li>Comes back by itself once the paid read is saved (the same file's checksum).</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">The application · Your visit</div></div><span class="x">✕</span></div>
+<div class="db"><div class="notice"><b>No saved read yet</b><div class="m">The first read of this letter is a paid run that needs approval first. Nothing was sent; nothing was spent. Type the values for now.</div></div>
+<div class="cost"><div><div class="k">Live, usual</div><div class="v">US$0.02</div></div><div><div class="k">Live, at most</div><div class="v">US$0.31</div></div><div><div class="k">Saved read</div><div class="v">none yet</div></div></div>
+<p class="small">This letter can give: contact's name, relationship, address in Canada, stay from, stay to. <a href="#">Answer them</a></p></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 10 -->
+<div class="frame"><div class="ft"><span>Frame 10 · A letter replayed (C6.5-20)</span><span>all expanded · "Replayed" · cost US$0</span></div>
+<div class="canvas"><div class="notes"><ul>
+<li>AI-read values are always expanded: each needs a tick or a correction (BR-5).</li>
+<li>"Replayed" says this is a saved read, with its cost of US$0. The tooltip on "AI" says the reader read the page image; it never reads identity documents.</li>
+<li>Confidence in words: high, medium, low, with the figure in the tooltip (Sample).</li></ul></div>
+<div class="drawer"><div class="dh"><div><div class="t">Fill from documents</div><div class="d">The application · Your visit</div></div><span class="x">✕</span></div>
+<div class="db"><div class="doc"><div class="doch"><div class="n">Letter of invitation <span class="pill p-ai">AI</span><span class="pill p-ai">Replayed · US$0</span><span class="pill p-sample">Sample</span></div><div class="meta">sample-letter-of-invitation.pdf · read by AI from the page image</div></div>
+<div class="grp">Check each against the document (5 left)</div>
+<div class="row"><div><div class="lab">Contact's name · Your visit</div><div class="val">Sample Host B</div><div class="src">Page 1 · AI · confidence high</div></div><div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="row"><div><div class="lab">Relationship · Your visit</div><div class="val">Friend</div><div class="src">Page 1 · AI · confidence medium</div></div><div class="side"><label class="tick"><input type="checkbox"> Matches the document</label><button class="btn sm ghost">Correct it</button></div></div>
+<div class="row"><div class="small">…address in Canada, stay from, stay to</div><div></div></div>
+<div class="foot"><div class="hint">Writes the values you checked as confirmed by you, now.</div><button class="btn pri" aria-disabled="true" title="Tick or correct each value first: 5 left.">Confirm &amp; use</button></div></div></div>
+<div class="df"><button class="btn">Close</button><span></span></div></div></div></div>
+
+<!-- Frame 11 -->
+<div class="frame"><div class="ft"><span>Frame 11 · Other states (EXPERIENCE §4)</span><span>empty · read by a person · two passports · file changed · no access · failed to load</span></div>
+<div style="padding:16px"><div class="states">
+<div class="card" style="padding:12px"><div class="small">Nothing to read (server message, in the drawer's words)</div><div class="notice" style="margin-top:6px"><b>No document can give a value here yet</b><div class="m">No document of Client A can give a value in this section yet. Upload it on Client A's passport line. <a href="#">Go to Documents</a></div></div></div>
+<div class="card" style="padding:12px"><div class="small">Read by a person (<code>not_read[]</code>)</div><div class="notice" style="margin-top:6px"><b>National identity card (Sample)</b><div class="m">An identity document is read by a person, never by AI. Type its values. <a href="#">Answer them</a></div></div></div>
+<div class="card" style="padding:12px"><div class="small">Two people's coded lines in one file (every fact unreadable)</div><div class="notice warn" style="margin-top:6px"><b>Two passports in one file</b><div class="m">This file holds two people's coded lines, so nothing was proposed. Upload each passport on its own person's line.</div></div></div>
+<div class="card" style="padding:12px"><div class="small">No text layer (a scan or photo)</div><div class="notice warn" style="margin-top:6px"><b>Could not read this file</b><div class="m">It is a scan or photo with no text to read. Type the values from the passport page.</div></div></div>
+<div class="card" style="padding:12px"><div class="small">The stored file changed on disk (409)</div><div class="notice danger" style="margin-top:6px"><b>Not possible now</b><div class="m">This document's file changed on disk since it was uploaded; upload it again.</div></div></div>
+<div class="card" style="padding:12px"><div class="small">Failed to load, with a real Retry</div><div class="notice danger" style="margin-top:6px"><b>The documents could not be read</b><div class="m">The server did not answer. Nothing was written. <button class="btn sm">Retry</button></div></div></div>
+<div class="card" style="padding:12px"><div class="small">The client (signed in as Client A)</div><p class="small" style="margin-top:6px">No button and no drawer: the routes answer 403 to a client (C6.5-8, -9c). The client's own "Fill this from my documents" belongs to the client screens after M3.</p></div>
+<div class="card" style="padding:12px"><div class="small">Long names and 400 px</div><p class="small" style="margin-top:6px">Long values wrap (<code>overflow-wrap:anywhere</code>). At 400 px the panel takes the full width; the two values of a difference stack.</p></div>
+</div></div></div>
+
+<p class="small">Board source for the builder (P-42). Tokens: <code>prototype/studio/web/src/styles/tokens.css</code>. Panel: <code>web/src/components/ui/controls.tsx</code> <code>Panel</code>. Reason form: <code>web/src/runtime/findings.tsx</code> <code>MoveDialog</code>, opened in place here.</p>
+</div></body></html>
