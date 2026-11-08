@@ -9,6 +9,10 @@
 //      mandatory that a copy would leave empty, as "left empty on the form" with why; "Ready" never over an empty one.
 //   R3 (config grounding, AGENTS rule 4) a detail is tied to a Yes/No only when the box's own step names it or its form
 //      field sits inside the Yes/No form field's block.
+//   R7 (QA-165's last two, tech lead on #1363) the Taiwan PIN and Israel passport form fields are each asked as their own
+//      question only for the passport the form's own script names (203 "TWN (Taiwan)", 206 "ISR (Israel)"): the condition
+//      is taken only when the script's rule, the map's country form field and the form's own choice all agree, and the map
+//      carries the script's words (so the question's condition is confirmed on the form field from the form itself).
 //   tsx studio/tests/check_qa165_gate_follow_ups.ts
 import { caseView, type Answer, type Participant } from "../engine/runtime/case.ts";
 import { blocksLock, formCoverage, markNothingRecorded, readiness, type OnForm } from "../engine/runtime/forms.ts";
@@ -17,7 +21,7 @@ import { join } from "node:path";
 import { formValues } from "../engine/form-values.ts";
 import { mandatoryOpen } from "../engine/runtime/mandatory.ts";
 import { CODE_WORDS, filingReadiness, isCritical, type FormItem } from "../engine/runtime/readiness.ts";
-import { followUpGround, yesGate } from "../api/src/own-yes-no.ts";
+import { OWN_YES_NO, askedWhenGround, equalsGate, followUpGround, scriptRulesOf, scriptWords, yesGate } from "../api/src/own-yes-no.ts";
 import type { BoxRow } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
@@ -134,7 +138,32 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
   ok("C7.2 R4 pass: an Indian passport (the form's code 205): neither box is mandatory, so neither is open", open("205").length === 0, open("205"));
   ok("C7.2 R4 fail: a passport the form codes 203 makes the Taiwan PIN box mandatory (open while empty), not the Israel one", JSON.stringify(open("203")) === JSON.stringify([TAIWAN]), open("203"));
   ok("C7.2 R4 fail: code 206 makes the Israel passport box mandatory, not the Taiwan one", JSON.stringify(open("206")) === JSON.stringify([ISRAEL]), open("206"));
+  // Review M1 on the Taiwan/Israel PR: a form field whose question is hidden (B86 "not needed") is still open when the form's
+  // own script requires it for the code the copy writes ("isr" writes 206 while the question is asked only for "ISR").
+  const hiddenQ = (code: string) => mandatoryOpen(fields, [TAIWAN, ISRAEL].map((p) => ({ data_path: p, outcome: "mapped", fact: p === TAIWAN ? "person.taiwan_pin" : "person.israel_passport" })) as never, [TAIWAN, ISRAEL].map((p) => ({ box: p, coverage: "not needed", result: "not written", detail: "Not needed" })) as never, { [COUNTRY]: code }, {}, rw);
+  ok("C7.2 R7 fail (review M1): a hidden question's form field the script requires for the code written (206) stays open, saying to check that answer", JSON.stringify(hiddenQ("206").map((o) => o.box)) === JSON.stringify([ISRAEL]) && /check that answer/.test(hiddenQ("206")[0]?.why ?? ""), hiddenQ("206"));
+  ok("C7.2 R7 pass: a hidden question's form field the script does not require for the code written (205) is left empty, not open", hiddenQ("205").length === 0, hiddenQ("205"));
   ok("C7.2 R4 fail guard: without the data the field list's own `required` stands (both open, as before)", mandatoryOpen(fields, [TAIWAN, ISRAEL].map((p) => ({ data_path: p, outcome: "by_hand", fact: null })) as never, [], { [COUNTRY]: "205" }).length === 2);
+}
+// ---------------------------------------------------------------- R7 (QA-165's last two): asked only for the passport the form's script names
+{
+  const COUNTRY = "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]";
+  const inv = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "p1", "inventory", "imm5257e.inventory.json"), "utf8")) as { fields: { data_path?: string; options_resolved?: [string, string][] }[] };
+  const choices = inv.fields.find((f) => f.data_path === COUNTRY)!.options_resolved!;
+  const rules = scriptRulesOf("inventory/imm5257e.inventory.json");
+  const entries = [{ data_path: COUNTRY, fact: "person.passport_country_of_issue" }, { data_path: TAIWAN, fact: "person.taiwan_pin" }, { data_path: ISRAEL, fact: "person.israel_passport" }];
+  const boxes = OWN_YES_NO["vv.single"].boxes.filter((b) => b.askedWhen);
+  ok("C7.2 R7 setup: the data asks IMM 5257's Taiwan PIN only for TWN and its Israel passport only for ISR, both on the checkpoint only (B116), in the form's own words", JSON.stringify(boxes.map((b) => [b.dataPath, b.askedWhen!.equals, b.checkpointOnly])) === JSON.stringify([[TAIWAN, "TWN", true], [ISRAEL, "ISR", true]]) && boxes.every((b) => /\?$/.test(b.question ?? "")), boxes.map((b) => b.question));
+  ok("C7.2 R7 pass: the form's own script grounds each (203 is \"TWN (Taiwan)\", 206 is \"ISR (Israel)\" in its country list, read from the map's country form field)",
+    /holds 203, the form's choice "TWN \(Taiwan\)"/.test(askedWhenGround(TAIWAN, { fact: "person.passport_country_of_issue", equals: "TWN" }, rules, entries, choices) ?? "") && /holds 206, the form's choice "ISR \(Israel\)"/.test(askedWhenGround(ISRAEL, { fact: "person.passport_country_of_issue", equals: "ISR" }, rules, entries, choices) ?? ""));
+  ok("C7.2 R7 fail: a country the script does not name for that form field (Taiwan PIN for ISR, Israel for IND) takes no condition", askedWhenGround(TAIWAN, { fact: "person.passport_country_of_issue", equals: "ISR" }, rules, entries, choices) === null && askedWhenGround(ISRAEL, { fact: "person.passport_country_of_issue", equals: "IND" }, rules, entries, choices) === null);
+  ok("C7.2 R7 fail: another fact (the map fills the country form field from it, not from the one named), or a form field with no script rule, takes no condition",
+    askedWhenGround(TAIWAN, { fact: "person.citizenship", equals: "TWN" }, rules, entries, choices) === null && askedWhenGround(TAIWAN, { fact: "person.passport_country_of_issue", equals: "TWN" }, rules, entries.map((e) => (e.data_path === COUNTRY ? { ...e, fact: "person.citizenship" } : e)), choices) === null && askedWhenGround(YESNO, { fact: "person.passport_country_of_issue", equals: "TWN" }, rules, entries, choices) === null);
+  ok("C7.2 R7 pass: the condition is the screen's own shape, \"show only when the passport's country of issue is TWN\"", JSON.stringify(equalsGate({ fact: "person.passport_country_of_issue", equals: "TWN" })) === JSON.stringify({ subjectKind: "PERSON", op: "eq", field: "person.passport_country_of_issue", value: "TWN" }));
+  const reading = new Map(inv.fields.filter((f) => f.data_path).map((f) => [f.data_path!, f]));
+  const words = scriptWords(rules.find((r) => r.box === TAIWAN), reading);
+  ok("C7.2 R7 pass: the map carries the script's words, naming the country form field by its own name and the form's choice", words === 'Only when CountryofIssue[0] holds 203 ("TWN (Taiwan)"): the form\'s own script requires it only then.', words);
+  ok("C7.2 R7 fail: a form field with no script rule gets no words (its map says nothing about when it is filled)", scriptWords(rules.find((r) => r.box === YESNO), reading) === null);
 }
 // ---------------------------------------------------------------- R6 (#1318 review M2): a box left empty never holds a lock back
 ok("C7.2 R6 pass: a mandatory box left empty does not hold a copy's lock back (it is said on the card and on Ready to file)", !blocksLock({ reason: "left empty on the form" }));
