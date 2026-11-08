@@ -145,3 +145,27 @@ Round 2 journey re-score (same journey, by reading the diff and running the API;
 - **Total: 8.5/10. Pass.**
 
 **Verdict: Approve** (commit 8c80d94c6). Open Minors, to fix or list in the PR: Minor 1 (PR body and section B wording), Minor 4 (Taiwan and Israel caption, forms lane), Minor 5 (API R6 proves nothing about lock).
+
+## Round 3: diff-only check (`git diff 496e877c5..a957dafdc`, head a957dafdc, allowed by Lead 34 under P-293)
+- **What changed.**
+  - `engine/runtime/readiness.ts:144`: a form filed Online no longer gets a "would be left empty" CRITICAL line on Ready to file (Devin's finding).
+  - Its "needs a fix" lines and its fact lines still count. The new pass check and fail guard in `check_qa165_gate_follow_ups` show both.
+  - `check_qa165_readiness_paths_api`: R5 and R6 rewritten.
+- **The rule is sound.**
+  - An Online form is typed into IRCC's portal. Its PDF is a "Copy, not for filing" (P-145), so the PDF's empty boxes are never filed.
+  - This matches the existing NOT_NEEDED rule at line 136 ("the portal asks it itself").
+  - The card still names the boxes: GET …/forms keeps them, and the card's own pill shows them.
+- **Minor 5, closed.**
+  - R6 now locks IMM 5257 SCH1, a PDF upload with empty mandatory boxes. It asserts the refusal is not about facts and not about Online.
+  - In `lock`, the readiness check runs before the fill-trial check (`fill-case.ts:369-371`). So removing `blocksLock` would make R6 fail with "N facts to answer…", even though this copy is later refused on its trial. R6 now proves the rule.
+  - R5 now checks both sides: no line for the Online IMM 5257's PDF box, and SCH1's CRITICAL line in GET …/forms' own words.
+- **Ran.**
+  - `check_qa165_gate_follow_ups` 24/24.
+  - `check_c76_readiness` 77/77.
+  - I could not re-run the API check: the shared database cluster on 127.0.0.1:54329 is down ("start the demo database first"). I did not start it, because starting it is the demo owner's step. The builder reports 8/8 on a fresh checkpoint.
+- **New Minor 6.** The "N mandatory form fields left empty" pill's tooltip still says "Ready to file waits on them until they are fixed or passed with a reason" (`web/src/runtime/forms.tsx:150`). On a form filed Online that is now untrue. Fix: say it only when `f.for_filing`; otherwise say the portal asks them.
+- **Still open from round 2:**
+  - Minor 4: the Taiwan and Israel caption. This is the forms lane's map fix.
+  - Minor 1: the PR body. The coordinator reports it now has a "Changed after review round 2" section; I did not re-read the body.
+
+**Verdict: Approve** (commit a957dafdc). The Minors are listed above.
