@@ -71,6 +71,9 @@ await main("B155", "IMM 5645's brothers and sisters are asked as a list, stored 
   let mine = (await formsOf(c.id, officer)).find((x) => x.form === FORM && x.subject_id === P);
   ok("B155-4 pass: IMM 5645 waits for the brothers and sisters: a readiness line \"Brothers and sisters\" for Sample Client A's brothers and sisters, not answered", !!mine?.readiness.missing.some((m) => m.fact === "group:sibling" && m.label === groupLabel("Brothers and sisters") && m.about === "Sample Client A's brothers and sisters" && m.reason === "not answered"), mine?.readiness.missing.filter((m) => /sibling|brother/i.test(`${m.fact} ${m.about}`)));
 
+  const early = boxesOf(await generateCopy(c.id, FORM, P)).filter((b) => b.box.includes("SectionC[0].Child[0]") && b.fact);
+  ok("B155-4a pass: before anything is answered, a copy's Section C boxes say whose entry they wait for (\"Sample Client A's brothers and sisters, entry 1\"), never \"Your parent 1\"", early.length > 0 && early.every((b) => b.result === "not written" && b.why === "Sample Client A's brothers and sisters, entry 1"), early.slice(0, 3).map((b) => [b.box.split(".").pop(), b.result, b.why]));
+
   // ---- Two entries, answered on the sibling's key by the client (their own facts' questions). ----
   const add = await call("POST", `/runtime/cases/${c.id}/groups/${P}/sibling/rows`, { group: "sibling" }, CLIENT);
   const add2 = await call("POST", `/runtime/cases/${c.id}/groups/${P}/sibling/rows`, { group: "sibling" }, officer);
@@ -118,7 +121,7 @@ await main("B155", "IMM 5645's brothers and sisters are asked as a list, stored 
   const at = (row: number, leaf: string) => Object.entries(pdf).find(([k]) => k.includes(`SectionC[0].Child[${row}].${leaf}`))?.[1];
   ok("B155-9 pass: the copy's own PDF holds entry 1 in Section C's first row and entry 2 in its second (names and the date of birth typed)", at(0, "ChildName") === "Sample Brother A" && at(1, "ChildName") === "Sample Sister A" && /1988/.test(at(0, "ChildDOB") ?? ""), { row0: at(0, "ChildName"), row1: at(1, "ChildName"), dob0: at(0, "ChildDOB"), copy });
   const third = boxes.filter((b) => b.box.includes("SectionC[0].Child[2]") && b.fact);
-  ok("B155-9a pass: an empty row's boxes say whose entry they wait for (\"Sample Client A's brothers and sisters, entry 3\"), never \"Your parent 1\"", third.length > 0 && third.every((b) => b.result !== "written" && /Sample Client A's brothers and sisters, entry 3/.test(b.why ?? "")), third.slice(0, 3).map((b) => [b.box.split(".").pop(), b.result, b.why]));
+  ok("B155-9a pass: a row past the entries says so (\"nothing to write: Sample Client A's brothers and sisters have 2 entries, none for row 3\"), never \"Your parent 1\"", third.length > 0 && third.every((b) => b.result === "not written" && b.why === "nothing to write: Sample Client A's brothers and sisters have 2 entries, none for row 3"), third.slice(0, 3).map((b) => [b.box.split(".").pop(), b.result, b.why]));
   const anyParent = boxes.filter((b) => b.box.includes("SectionC") && /Your parent 1/.test(b.why ?? ""));
   ok("B155-9b fail: no Section C box gives \"Your parent 1\" as its reason", anyParent.length === 0, anyParent.slice(0, 3).map((b) => [b.box, b.why]));
 
@@ -134,6 +137,8 @@ await main("B155", "IMM 5645's brothers and sisters are asked as a list, stored 
   const spouse = secs.find((s) => s.subjectId === `${SP}/sibling`);
   ok("B155-11 pass: the spouse's \"none apply\" (the pack's helper) is recorded and confirmed on the spouse's brothers and sisters", !!spouse?.group?.none_apply?.value && spouse.group.none_apply.confirmed && spouse.group.rows === 0, spouse?.group);
   const spForm = (await formsOf(c.id, officer)).find((x) => x.form === FORM && x.subject_id === SP);
+  const spBoxes = boxesOf(await generateCopy(c.id, FORM, SP)).filter((b) => b.box.includes("SectionC") && b.fact);
+  ok("B155-11b pass: the spouse's copy leaves Section C empty and says why: \"none apply\" answered for Sample Spouse A's brothers and sisters", spBoxes.length > 0 && spBoxes.every((b) => b.result === "not written" && b.why === "nothing to write: \"none apply\" answered for Sample Spouse A's brothers and sisters"), spBoxes.slice(0, 2).map((b) => [b.box.split(".").pop(), b.result, b.why]));
   ok("B155-11a fail: with \"none apply\" confirmed, IMM 5645 has no brothers-and-sisters line left for the spouse", !!spForm && !spForm.readiness.missing.some((m) => /brothers and sisters/.test(`${m.label} ${m.about}`)), spForm?.readiness.missing.map((m) => `${m.fact}:${m.reason}`));
 
   // ---- P-411 (B150's rule, unchanged): a declared answer fills at once, before the officer confirms it. ----

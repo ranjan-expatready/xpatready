@@ -83,6 +83,10 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
  *  the copy out of date through its group facts (changedGroups). */
 export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, placements: GatePlacement[] = []): BoxRow[] {
   return boxes.map((b) => {
+    // B155: an empty box of a list relative (a brother or sister's row) says why it stays empty: "none apply" answered,
+    // or no such entry; else (no entries and no "none apply" yet) the entry it waits for, as render words it.
+    const list = b.about && b.coverage !== "confirmed fact" && isListRelative(b.about) ? listRowWhy(b, view) : null;
+    if (list) return { ...b, detail: list };
     const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
     if (!d) return b;
     const subject = b.about!.split("/")[0], facts = new Set([b.fact!, ...d.facts]);
@@ -101,6 +105,17 @@ export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, pl
     if (gates.every((g): g is string => !!g)) return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "${[...new Set(gates)].join('", "')}" answered No` };
     return b;
   });
+}
+
+/** B155: why a list relative's form field (row `b.row`) holds nothing although its group is answered: "none apply" (declared
+ *  or confirmed: it counts at once, P-411), or fewer entries than the form has rows. Null when the group is not answered. */
+function listRowWhy(b: BoxRow, view: QuestionnaireView): string | null {
+  const sec = view.sections.find((x) => x.subjectId === b.about && x.group);
+  if (!sec?.group) return null;
+  const n = sec.group.rows;
+  if (n === 0 && sec.group.none_apply?.value) return `nothing to write: "none apply" answered for ${sec.about_label}`;
+  if (n > 0 && typeof b.row === "number" && b.row >= n) return `nothing to write: ${sec.about_label} ${n === 1 ? "has 1 entry" : `have ${n} entries`}, none for row ${b.row + 1}`;
+  return null;
 }
 
 /** QA-165: the gate's question label when this person answered it No (declared or confirmed: it fills, P-411); else null. */
