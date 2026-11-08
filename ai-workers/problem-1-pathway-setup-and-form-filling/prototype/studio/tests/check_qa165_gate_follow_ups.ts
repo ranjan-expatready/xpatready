@@ -91,6 +91,10 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
   // Ready to file's words (engine/runtime/readiness.ts): the fix in its own words; an empty mandatory box on its own line.
   const item0 = (rd: ReturnType<typeof readiness>): FormItem => ({ item: "i1", form: FORM, subject: "p1", person: "Client A", channel: "PDF_UPLOAD", readiness: rd, needsValidate: false, validatedCurrent: true, signature: "NONE", signed: true, signedBy: "none" });
   const fr = filingReadiness({ filing: "f1", forms: [item0(r.ready), item0(h.ready)], reviewed: true, today: "2026-11-08" });
+  const online = filingReadiness({ filing: "f2", forms: [{ ...item0(h.ready), channel: "ONLINE" }], reviewed: true, today: "2026-11-08" });
+  ok("C7.6 R2 pass (Devin on #1318): a form filed Online (its PDF a copy, not for filing) has no \"left empty\" line on Ready to file for its PDF's boxes", !online.warns.some((w) => /would be left empty/.test(w.words)), online.warns.map((w) => w.words));
+  const onlineFix = filingReadiness({ filing: "f3", forms: [{ ...item0(r.ready), channel: "ONLINE" }], reviewed: true, today: "2026-11-08" });
+  ok("C7.6 R2 fail guard (Devin on #1318): filed Online, a fact that would be written wrong still stands before Ready to file", onlineFix.warns.some((w) => w.code === "fact_problem" && /is answered No, but/.test(w.words)), onlineFix.warns.map((w) => w.words));
   ok("C7.6 R2 pass: Ready to file says the fix in its own words, and names the mandatory boxes a copy would leave empty", !fr.ready && fr.warns.some((w) => w.code === "fact_problem" && /is not written: .*is answered No, but/.test(w.words)) && fr.warns.some((w) => w.code === "missing_facts" && /2 form fields IRCC's form marks mandatory would be left empty/.test(w.words)), fr.warns.map((w) => w.words));
 }
 

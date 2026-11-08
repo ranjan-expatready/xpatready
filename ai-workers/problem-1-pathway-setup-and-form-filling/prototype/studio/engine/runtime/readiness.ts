@@ -139,7 +139,9 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // already fills the form (P-411, B150 review M1), so the words never say it is blank.
     // QA-165: a mandatory form field a copy would leave empty is its own line (no answer is missing; the form is).
     const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix" && m.reason !== "left empty on the form")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
-    const empty = f.readiness.missing.filter((m) => m.reason === "left empty on the form");
+    // Devin on #1318: an Online form is typed into IRCC's portal; its PDF is a "Copy, not for filing" (P-145), so the PDF's
+    // empty mandatory boxes never stand before Ready to file (its card still names them). Facts and fixes still do.
+    const empty = f.channel === "ONLINE" ? [] : f.readiness.missing.filter((m) => m.reason === "left empty on the form");
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), missingLabel(m)]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.
