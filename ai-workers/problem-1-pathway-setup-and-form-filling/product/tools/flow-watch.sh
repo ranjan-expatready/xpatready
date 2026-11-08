@@ -55,7 +55,7 @@ waste = [r for r in runs if r["status"] != "completed" and r["headBranch"] != "m
 
 # 2b. Records PRs (qa:, lead:) must never sit in the Mergify queue: a push to them throws out the batch (2 Nov 07:35).
 # P-371 (4), B119: a records-only PR carries "records" (set by CI from tools/records-only.sh); Mergify's "records" queue
-# takes it and m2 and m3 skip it. Never merge it by hand while a batch is checking (P-306 (3)).
+# takes it and the product queue skips it. Never merge it by hand while a batch is checking (P-306 (3)).
 for p in approved:
     names = [l["name"] for l in p["labels"]]
     if p["title"].startswith(("qa:", "lead:")) and "records" not in names:
