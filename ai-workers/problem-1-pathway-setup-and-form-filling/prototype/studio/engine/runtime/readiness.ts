@@ -19,7 +19,7 @@
 //          edition_expired a form edition or a fee past IRCC's accepted-until date (P-151 (1); before it: "Adopt update")
 //          representative_review  the representative's review not done (P-155)
 //   B162   no_copy         a form filed as a PDF (PDF upload or Paper, not a barcode form, which waits for its validated
-//                          copy instead) with no copy made for filing yet
+//                          copy instead) with no copy made for filing yet, or only one older than today's facts
 // Warnings (passed with a reason, or fixed): missing_document · finding · edition_superseded · copy_stale ·
 // entered_out_of_date · hand_write (C7.7, BR-9: a box of a form filed as a PDF that its copy leaves "To write by hand", one
 // line per box) · release_update (C9.5 BR-8: a newer release of the combination touches this filing; only filings it
@@ -68,8 +68,10 @@ export type FormItem = {
   copyStale?: boolean; enteredOutOfDate?: string[];
   /** C7.7 (BR-9): the boxes its newest copy leaves "To write by hand" (the copy's own list: the copy, the box, its label,
    *  why). The copy is part of each line's key (review M1), so a pass written for one copy never covers the next. */
-  /** B162: a copy for filing of this form is made on the case's release. Left out: taken as made (no line). */
-  hasCopy?: boolean;
+  /** B162: its newest copy for filing (any release of the case): none, older than today's facts, or current; `key` is
+   *  part of the line's key (the release for none, the copy for stale), so a pass never outlives what it was given for
+   *  (breaker M2 on #1344). Left out: no line. */
+  copy?: { state: "none" | "stale" | "current"; key: string } | null;
   byHand?: { copy: string; box: string; label: string; why: string;
     /** Breaker M3: the box's own caption on the form ("Visitor", "Yes"), so two boxes of one question read apart. */
     caption?: string | null }[];
@@ -164,8 +166,14 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // B162 (the tech lead's answer 3 on #1331): a form filed as a PDF with no copy made for filing has nothing to upload or
     // print yet. A CRITICAL line (P-315: only the barcode form's Validate is a hard stop); a barcode form waits for its
     // validated copy in the block below instead, so it is not asked twice.
-    if ((f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && f.hasCopy === false && !f.needsValidate)
-      critical({ code: "no_copy", ...at, owes: "staff", words: `${ofWho(f)} has no copy made for filing yet (${f.channel === "PAPER" ? "on Paper" : "a PDF upload"}). Make its copy under Prepare application before Ready to file.` });
+    // Breaker M1 on #1344: a copy older than today's facts (made before the answers, or before a fact changed) would file
+    // old or empty answers, so it keeps the line too, asking for a new copy.
+    if ((f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.needsValidate && f.copy && f.copy.state !== "current") {
+      const how = f.channel === "PAPER" ? "on Paper" : "a PDF upload";
+      critical({ code: "no_copy", ...at, part: `${f.copy.state}|${f.copy.key}`, owes: "staff", words: f.copy.state === "none"
+        ? `${ofWho(f)} has no copy made for filing yet (${how}). Generate a copy under Prepare application before Ready to file.`
+        : `${ofWho(f)}: its copy for filing is older than today's facts (${how}), so it would be filed with old or missing answers. Generate a new copy under Prepare application before Ready to file.` });
+    }
     // BR-9 2 (P-144): IRCC returns a barcode form unprocessed without its Validate.
     if (f.needsValidate && (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.validatedCurrent)
       block({ code: "barcode_not_validated", ...at, owes: "staff", words: `${ofWho(f)}: no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unprocessed otherwise.` });
@@ -260,7 +268,7 @@ export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
   missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
   representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
-  hand_write: "A line to write by hand", no_copy: "No copy made for filing", release_update: "A newer release",
+  hand_write: "A line to write by hand", no_copy: "No current copy made for filing", release_update: "A newer release",
 };
 
 /** Why a code cannot be passed (null: it can): blocks are never passed, only fixed; an unknown code is named. */

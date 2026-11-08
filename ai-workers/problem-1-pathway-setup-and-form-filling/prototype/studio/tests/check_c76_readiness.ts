@@ -175,16 +175,26 @@ ok("C7.7-18 BR-9 pass: an Online line's PDF copy is not for filing, so its by-ha
 // keeps Ready to file refused in words: a CRITICAL warning (P-315: only the barcode form's own Validate is a hard stop),
 // owed by staff, naming the form and the person. A barcode form already waits for its validated copy (its block), an
 // Online line files no PDF, and a line not needed or waiting for an answer is not asked for a copy.
-r = filingReadiness(done({ forms: [i5257(), i5476({ hasCopy: false })] }));
-ok("B162 fail: IMM 5476 (a PDF upload) with no copy made: a CRITICAL \"no copy\" warning owed by staff, naming the form and the person; not ready, nothing blocks", !r.ready && !r.blocks.length && codes(r.warns).join() === "no_copy" && r.warns[0].severity === "critical" && r.warns[0].owes === "staff" && r.warns[0].item === "i-5476" && /IMM 5476 for Sample Client A/.test(r.warns[0].words) && /no copy/i.test(r.warns[0].words), r.warns);
-r = filingReadiness(done({ forms: [i5257(), i5476({ channel: "PAPER", signature: "PEN", signed: true, hasCopy: false })] }));
+const NONE = { state: "none" as const, key: "rel-2" }, CUR = { state: "current" as const, key: "copy-1" }, STALE = { state: "stale" as const, key: "copy-1" };
+r = filingReadiness(done({ forms: [i5257(), i5476({ copy: NONE })] }));
+ok("B162 fail: IMM 5476 (a PDF upload) with no copy made: a CRITICAL \"no copy\" warning owed by staff, naming the form, the person and the button (Generate a copy); not ready, nothing blocks", !r.ready && !r.blocks.length && codes(r.warns).join() === "no_copy" && r.warns[0].severity === "critical" && r.warns[0].owes === "staff" && r.warns[0].item === "i-5476" && /^CRITICAL: IMM 5476 for Sample Client A has no copy made for filing yet/.test(r.warns[0].words) && /Generate a copy/.test(r.warns[0].words), r.warns);
+r = filingReadiness(done({ forms: [i5257(), i5476({ channel: "PAPER", signature: "PEN", signed: true, copy: NONE })] }));
 ok("B162 fail: on Paper too, no copy made keeps Ready to file refused (CRITICAL \"no copy\")", !r.ready && codes(r.warns).join() === "no_copy", r.warns);
-r = filingReadiness(done({ forms: [i5257(), i5476({ hasCopy: true })] }));
-const rOnline = filingReadiness(done({ forms: [i5257(), i5476({ channel: "ONLINE", hasCopy: false })] }));
-const rBarcode = filingReadiness(done({ forms: [i5257({ hasCopy: false, validatedCurrent: false }), i5476()] }));
+r = filingReadiness(done({ forms: [i5257(), i5476({ copy: CUR })] }));
+const rOnline = filingReadiness(done({ forms: [i5257(), i5476({ channel: "ONLINE", copy: NONE })] }));
+const rBarcode = filingReadiness(done({ forms: [i5257({ copy: NONE, validatedCurrent: false }), i5476()] }));
 ok("B162 pass: with its copy made the line is clear; an Online line without a copy raises nothing; a barcode form without a copy keeps only its own Validate block", r.ready && !r.warns.length && rOnline.ready && !rOnline.warns.length && codes(rBarcode.blocks).join() === "barcode_not_validated" && !codes(rBarcode.warns).includes("no_copy"), [r.warns, rOnline.warns, rBarcode.warns]);
-r = filingReadiness(done({ forms: [i5257(), i5476({ hasCopy: false })], passes: [pass(done({ forms: [i5257(), i5476({ hasCopy: false })] }), "no_copy", "The PDF was made and uploaded outside the product (Sample)")] }));
+r = filingReadiness(done({ forms: [i5257(), i5476({ copy: NONE })], passes: [pass(done({ forms: [i5257(), i5476({ copy: NONE })] }), "no_copy", "The PDF was made and uploaded outside the product (Sample)")] }));
 ok("B162 pass: like every CRITICAL line, a permitted person passes it with a recorded reason (P-315), and the filing is ready", r.ready && !r.warns.length && r.passed.length === 1 && r.passed[0].code === "no_copy", r);
+// Breaker M1 on #1344: a copy older than today's facts (made before the answers, or before a fact changed) keeps the line,
+// asking for a new copy. Breaker M2: the key holds the state and the release (none) or the copy (stale), so a pass never
+// outlives what it was given for: a pass for "none" on release 2 covers neither the same line on release 3 nor a stale copy.
+r = filingReadiness(done({ forms: [i5257(), i5476({ copy: STALE })] }));
+ok("B162 fail (breaker M1): a copy older than today's facts keeps a CRITICAL line that asks for a new copy (Generate a new copy)", !r.ready && codes(r.warns).join() === "no_copy" && /^CRITICAL: IMM 5476 for Sample Client A: its copy for filing is older than today's facts/.test(r.warns[0].words) && /Generate a new copy/.test(r.warns[0].words), r.warns);
+const passNone = pass(done({ forms: [i5257(), i5476({ copy: NONE })] }), "no_copy", "Made and uploaded outside the product (Sample)");
+const onR3 = filingReadiness(done({ forms: [i5257(), i5476({ copy: { state: "none", key: "rel-3" } })], passes: [passNone] }));
+const nowStale = filingReadiness(done({ forms: [i5257(), i5476({ copy: STALE })], passes: [passNone] }));
+ok("B162 fail (breaker M2): a pass for \"no copy\" on one release covers neither the same line after a move nor a copy that is now out of date", !onR3.ready && onR3.warns.length === 1 && !nowStale.ready && nowStale.warns.length === 1, [onR3.warns.map((w) => w.key), nowStale.warns.map((w) => w.key)]);
 const noItem = (labels: string[]) => ({ documents: labels.map((label) => ({ label, subject: "s-P", person: "Sample Client A", required: true, received: false })) });
 r = filingReadiness(done({ ...noItem(["Passport", "Photo"]), passes: [pass(done(noItem(["Passport"])), "missing_document")] }));
 ok("C7.6 r2 m1 fail: documents without an item id are keyed by their label, so passing the passport leaves the photo open", !r.ready && r.warns.length === 1 && /Photo/.test(r.warns[0].words), r.warns);
