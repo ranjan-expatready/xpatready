@@ -417,8 +417,9 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   // prototype/ are seeded as well, and simply reach nothing when no file reads them.
   const seedable = (f) => f.startsWith(`${PR}/`) || (f.startsWith(`${P}/official-sources/`) && !DOCS.test(f));
   const testFile = (x) => x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`) || x.startsWith(`${PR}/tests/`);
-  // A data file's folder named in a pack's or test's code ("source-text" beside a built file name) is a read of it.
-  const folderReaders = (f) => { const c = basename(dirname(f)), re = new RegExp(`["'\`/]${esc(c)}["'\`/]`);
+  // A data file's folder named, as a quoted string of its own, in a pack's or test's code (join(…, "source-text", …)) is a
+  // read of it. A segment inside a longer path ("./lib/m3.ts") is not: that is an import, which the graph already has.
+  const folderReaders = (f) => { const c = basename(dirname(f)), re = new RegExp(`["'\`]${esc(c)}["'\`]`);
     let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return []; }
     return files.filter((x) => re.test(read(x))); };
   for (const f of changed) if (seedable(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
