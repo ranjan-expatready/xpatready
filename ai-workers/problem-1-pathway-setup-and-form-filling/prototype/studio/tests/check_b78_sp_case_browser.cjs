@@ -47,7 +47,9 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   const preview = ((await api("GET", `/combinations/${sp}/preview`)).body?.questions ?? []).filter(person).map((q) => q.fact);
   const student = ((await api("GET", `/runtime/cases/${id}`, undefined, "user-O")).body?.people ?? []).find((x) => x.role === "principal")?.subject_id;
   const sections = (await api("GET", `/runtime/cases/${id}/questionnaire?mode=agent`, undefined, "user-O")).body?.sections ?? [];
-  const inCase = new Set(sections.filter((x) => x.subjectId === student).flatMap((x) => x.questions.map((q) => q.fact)));
+  // QA-165 (#1318): as on Preview's side, a question its condition hides now (a Yes/No question's details before a Yes) is not
+  // one the case asks; the view still lists it, marked hidden.
+  const inCase = new Set(sections.filter((x) => x.subjectId === student).flatMap((x) => x.questions.filter((q) => !q.hidden).map((q) => q.fact)));
   const onlyPreview = preview.filter((f) => !inCase.has(f)), onlyCase = [...inCase].filter((f) => !preview.includes(f));
   console.log(`      B78 measured: Preview asks the Student ${preview.length} questions, the case ${inCase.size}; only on Preview: ${onlyPreview.join(", ") || "none"}; only on the case: ${onlyCase.join(", ") || "none"}`);
   step("B78 pass (one list): the case asks the Student what Preview shows", preview.length > 0 && onlyPreview.length === 0 && onlyCase.length === 0, { onlyPreview, onlyCase });
