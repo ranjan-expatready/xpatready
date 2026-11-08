@@ -147,7 +147,11 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     const missing = missingFirst(f.readiness.missing.filter((m) => m.reason !== "needs a fix" && m.reason !== "left empty on the form")), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
     // Devin on #1318: an Online form is typed into IRCC's portal; its PDF is a "Copy, not for filing" (P-145), so the PDF's
     // empty mandatory boxes never stand before Ready to file (its card still names them). Facts and fixes still do.
-    const empty = f.channel === "ONLINE" ? [] : f.readiness.missing.filter((m) => m.reason === "left empty on the form");
+    // Tech lead on #1318 (P-294): one line per box. A mandatory box the newest copy already lists "To write by hand" is
+    // written in Adobe before filing and has its own passable hand_write line (C7.7, BR-9, below), so it is not counted here;
+    // a box with no copy yet, or with no writer at all, still is.
+    const byHandBox = new Set((f.byHand ?? []).map((b) => `box:${b.box}`));
+    const empty = f.channel === "ONLINE" ? [] : f.readiness.missing.filter((m) => m.reason === "left empty on the form" && !byHandBox.has(m.fact));
     const byOwner = new Map<Owes, string[]>(), factsOf = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), missingLabel(m)]); factsOf.set(o, [...(factsOf.get(o) ?? []), m.fact]); }
     // The key names the facts (P-315): a pass written for these facts never covers another that goes missing later.

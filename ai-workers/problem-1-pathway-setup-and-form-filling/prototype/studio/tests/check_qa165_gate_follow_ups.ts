@@ -92,6 +92,13 @@ const forms = (s: Snapshot, answers: Answer[], byHand = false) => {
   const item0 = (rd: ReturnType<typeof readiness>): FormItem => ({ item: "i1", form: FORM, subject: "p1", person: "Client A", channel: "PDF_UPLOAD", readiness: rd, needsValidate: false, validatedCurrent: true, signature: "NONE", signed: true, signedBy: "none" });
   const fr = filingReadiness({ filing: "f1", forms: [item0(r.ready), item0(h.ready)], reviewed: true, today: "2026-11-08" });
   const online = filingReadiness({ filing: "f2", forms: [{ ...item0(h.ready), channel: "ONLINE" }], reviewed: true, today: "2026-11-08" });
+  // Tech lead on #1318 (P-294): one line per box. A mandatory box the newest copy lists "To write by hand" makes #1331's
+  // hand_write line only; a mandatory box with no writer still makes the CRITICAL "would be left empty" line.
+  const hand = (boxes: string[]) => filingReadiness({ filing: "f4", forms: [{ ...item0(h.ready), byHand: boxes.map((b) => ({ copy: "copy-1", box: b, label: "A form field", why: "the form's own code list" })) }], reviewed: true, today: "2026-11-08" });
+  const both = hand([TAIWAN, ISRAEL]), one = hand([TAIWAN]);
+  const lineOf = (x: ReturnType<typeof hand>) => x.warns.filter((w) => w.code === "missing_facts" && /would be left empty/.test(w.words));
+  ok("C7.6 R2 pass (#1318, P-294): mandatory boxes the copy lists by hand make the hand_write lines only, never also the CRITICAL \"left empty\" line", lineOf(both).length === 0 && both.warns.filter((w) => w.code === "hand_write").length === 2, both.warns.map((w) => `${w.code}: ${w.words}`));
+  ok("C7.6 R2 fail (#1318, P-294): a mandatory box with no writer (not in the copy's by-hand list) still makes the CRITICAL line, for that box alone", lineOf(one).length === 1 && /: 1 form field IRCC's form marks mandatory would be left empty/.test(lineOf(one)[0].words) && /Israel Passport Indicator/.test(lineOf(one)[0].words) && one.warns.filter((w) => w.code === "hand_write").length === 1, one.warns.map((w) => `${w.code}: ${w.words}`));
   ok("C7.6 R2 pass (Devin on #1318): a form filed Online (its PDF a copy, not for filing) has no \"left empty\" line on Ready to file for its PDF's boxes", !online.warns.some((w) => /would be left empty/.test(w.words)), online.warns.map((w) => w.words));
   const onlineFix = filingReadiness({ filing: "f3", forms: [{ ...item0(r.ready), channel: "ONLINE" }], reviewed: true, today: "2026-11-08" });
   ok("C7.6 R2 fail guard (Devin on #1318): filed Online, a fact that would be written wrong still stands before Ready to file", onlineFix.warns.some((w) => w.code === "fact_problem" && /is answered No, but/.test(w.words)), onlineFix.warns.map((w) => w.words));
