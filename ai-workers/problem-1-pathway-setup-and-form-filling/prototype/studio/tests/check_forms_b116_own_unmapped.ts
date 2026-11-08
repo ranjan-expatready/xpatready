@@ -31,7 +31,10 @@ const BOXES = {
   "form1[0].Page3[0].PageWrapper[0].GovPosition[0].Choice[0]": { fact: "person.ill_treatment_of_prisoners_or_civilians", words: "Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?" },
   "form1[0].Page3[0].Signature[0].Consent0[0].Choice[0]": { fact: "person.consents_to_research_contact", words: "Do you consent to be contacted by CIC, or an organization at CIC’s request, in the future?" },
 } as const;
-const TAIWAN = "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]";
+// QA-165's last two (#1363): the configured checkpoint now asks IMM 5257's Taiwan PIN and Israel passport boxes itself, so
+// this door's own pass and undo use IMM 5257 SCH1's Question 5, a released Yes/No box nothing fills yet (its form's text is
+// saved too, expected/source-text/imm5257_1e.xfa-template.txt), written in its own codes true and false.
+const SCH1_Q5 = "Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]";
 const RELATIONSHIP = "form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]";
 const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]";
 
@@ -41,6 +44,7 @@ ok("B116: the checkpoint loads at US$0", l.body?.cost_usd === 0, l.body?.cost_us
 const row7 = (l.body?.checkpoint ?? []).find((r: { row: string }) => r.row === "7");
 ok("B116: no refusal for the three asks in the checkpoint's row 7", !/Tuberculosis in past two years|Ill treatment of prisoners|Consents to research contact/.test(row7?.why ?? ""), row7?.why);
 const ed = sql(`select id from form_edition where edition_label = 'IMM 5257 (09-2023)' and channel = 'PDF'`);
+const ed1 = sql(`select id from form_edition where edition_label = 'IMM 5257 SCH1 (09-2023)' and channel = 'PDF'`);
 
 // Pass: the release maps each box to its question, in the form's own Yes and No codes and the form's own words.
 for (const [path, b] of Object.entries(BOXES)) {
@@ -57,33 +61,34 @@ const copies = readdirSync(dir).filter((f) => /^IMM5257-.*\.request\.json$/.test
 ok("B116 pass: four IMM 5257 copies, each writing N in the three boxes", copies.length === 4 && copies.every((v) => Object.keys(BOXES).every((p) => v[p] === "N")), copies.map((v) => Object.keys(BOXES).map((p) => v[p])));
 
 // Fail: words the form does not print are never taken as its question.
-const own = (body: Record<string, unknown>) => call("POST", `/editions/${ed}/form-fields/own-question`, { reason: "B116 check: asked as its own question", ...body });
-const made = await own({ dataPath: TAIWAN, label: "Taiwan passport with ID number", meaning: "Whether the person's passport is a Taiwan passport that includes their personal identification number (IMM 5257, passport).", question: "Is your passport a Taiwan passport with a personal ID number?" });
-ok("B116 fail: a question the form's saved text does not hold is refused (409) in words", made.status === 409 && /not in IMM 5257 \(09-2023\)'s own saved text/.test(made.body?.detail ?? made.body?.message ?? ""), made);
-const code = await own({ dataPath: TAIWAN, label: "Taiwan passport with ID number", meaning: "Whether, for this trip, the person uses a passport issued by Taiwan with their personal identification number.", question: "this.rawValue = xfa.layout.page(this);" });
+const ownOn = (edition: string, body: Record<string, unknown>) => call("POST", `/editions/${edition}/form-fields/own-question`, { reason: "B116 check: asked as its own question", ...body });
+const own = (body: Record<string, unknown>) => ownOn(ed, body), own1 = (body: Record<string, unknown>) => ownOn(ed1, body);
+const made = await own1({ dataPath: SCH1_Q5, label: "Witnessed ill treatment", meaning: "Whether the person has seen prisoners or civilians treated badly (IMM 5257 SCH1, a check of the B116 door, Sample).", question: "Have you ever seen prisoners treated badly?" });
+ok("B116 fail: a question the form's saved text does not hold is refused (409) in words", made.status === 409 && /not in IMM 5257 SCH1 \(09-2023\)'s own saved text/.test(made.body?.detail ?? made.body?.message ?? ""), made);
+const code = await own1({ dataPath: SCH1_Q5, label: "Witnessed ill treatment", meaning: "Whether the person has witnessed the ill treatment of prisoners or civilians (IMM 5257 SCH1, a check of the B116 door, Sample).", question: "this.rawValue = xfa.layout.page(this);" });
 ok("B116 fail (review M2): a piece of the form's script, though in its saved text, is never taken as its question (409)", code.status === 409 && /own saved text/.test(code.body?.detail ?? code.body?.message ?? ""), code);
 const notYesNo = await own({ dataPath: RELATIONSHIP, label: "Type of earlier relationship", meaning: "The kind of relationship the person had with an earlier spouse or partner (IMM 5257)." });
 ok("B116 fail: a form field the form prints no Yes and No for is refused (409)", notYesNo.status === 409 && /does not print one Yes and one No/.test(notYesNo.body?.detail ?? notYesNo.body?.message ?? ""), notYesNo);
 const quoted = await own({ dataPath: NATID, field: "person.has_national_id", question: BOXES["form1[0].Page3[0].Signature[0].Consent0[0].Choice[0]"].words });
 ok("B116 fail: quoted words are refused on a form field worked out from other answers (400)", quoted.status === 400 && /quote the form's words only for a form field nothing fills yet/.test(quoted.body?.detail ?? quoted.body?.message ?? ""), quoted);
-ok("B116 fail: nothing changed on the Taiwan box after the refusals", sql(`select count(*) from form_field_map where form_edition_id = '${ed}' and data_path = '${TAIWAN}' and status = 'DRAFT'`) === "0");
+ok("B116 fail: nothing changed on SCH1's Question 5 box after the refusals", sql(`select count(*) from form_field_map where form_edition_id = '${ed1}' and data_path = '${SCH1_Q5}' and status = 'DRAFT'`) === "0");
 
-// Pass, then undo: a released "filled by hand" Yes/No box (its reading prints the language-test caption, a neighbour's), asked
-// with the form's own question quoted (Passport section, Question 5), then taken back to "filled by hand".
-const words = "For this trip, will you use a passport issued by the Ministry of Foreign Affairs in Taiwan that includes your personal identification number?";
-const draft = () => sql(`select outcome || '|' || coalesce(transform, '') from form_field_map where form_edition_id = '${ed}' and data_path = '${TAIWAN}' and status = 'DRAFT'`);
-const t = await own({ dataPath: TAIWAN, label: "Taiwan passport with ID number", meaning: "Whether, for this trip, the person uses a passport issued by the Ministry of Foreign Affairs in Taiwan that includes their personal identification number (IMM 5257, Passport, Question 5; a check of the B116 door, Sample).", nearReason: "A check of the door, not a field the release asks.", question: words });
-ok("B116 pass: a released \"filled by hand\" Yes/No box is asked with words the form prints, as a draft mapped yes_no_code:Y/N", t.status < 300 && t.body?.question === words && draft() === "mapped|yes_no_code:Y/N", { t, draft: draft() });
+// Pass, then undo: a released "filled by hand" Yes/No box, asked with the form's own question quoted (SCH1 Question 5), then
+// taken back to "filled by hand".
+const words = "Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?";
+const draft = () => sql(`select outcome || '|' || coalesce(transform, '') from form_field_map where form_edition_id = '${ed1}' and data_path = '${SCH1_Q5}' and status = 'DRAFT'`);
+const t = await own1({ dataPath: SCH1_Q5, label: "Witnessed ill treatment", meaning: "Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257 SCH1, Question 5; a check of the B116 door, Sample).", nearReason: "SCH1's own Question 5, asked here only to check the door (Sample).", question: words });
+ok("B116 pass: a released \"filled by hand\" Yes/No box is asked with words the form prints, as a draft mapped in its own codes (yes_no_code:true/false)", t.status < 300 && t.body?.question === words && draft() === "mapped|yes_no_code:true/false", { t, draft: draft() });
 // Review M1: a later change to the form field (here its draft's transform, as another door would write it) is never rolled
 // back by Undo: it refuses, and the form field keeps that change.
-const rowId = sql(`select id from form_field_map where form_edition_id = '${ed}' and data_path = '${TAIWAN}' and status = 'DRAFT'`);
-sql(`update form_field_map set transform = 'yes_no_code:N/Y' where id = '${rowId}'`);
-const later = await call("POST", `/editions/${ed}/form-fields/own-question/undo`, { dataPath: TAIWAN });
-ok("B116 fail (review M1): Undo refuses (409) once the form field no longer holds what the ask wrote, and changes nothing", later.status === 409 && draft() === "mapped|yes_no_code:N/Y", { later, draft: draft() });
-sql(`update form_field_map set transform = 'yes_no_code:Y/N' where id = '${rowId}'`);
-const u = await call("POST", `/editions/${ed}/form-fields/own-question/undo`, { dataPath: TAIWAN });
+const rowId = sql(`select id from form_field_map where form_edition_id = '${ed1}' and data_path = '${SCH1_Q5}' and status = 'DRAFT'`);
+sql(`update form_field_map set transform = 'yes_no_code:false/true' where id = '${rowId}'`);
+const later = await call("POST", `/editions/${ed1}/form-fields/own-question/undo`, { dataPath: SCH1_Q5 });
+ok("B116 fail (review M1): Undo refuses (409) once the form field no longer holds what the ask wrote, and changes nothing", later.status === 409 && draft() === "mapped|yes_no_code:false/true", { later, draft: draft() });
+sql(`update form_field_map set transform = 'yes_no_code:true/false' where id = '${rowId}'`);
+const u = await call("POST", `/editions/${ed1}/form-fields/own-question/undo`, { dataPath: SCH1_Q5 });
 ok("B116 pass: undo takes it back to \"filled by hand\": its draft goes, the release sees no change", u.status < 300 && u.body?.field === null && draft() === "", { u, draft: draft() });
-const again = await call("POST", `/editions/${ed}/form-fields/own-question/undo`, { dataPath: TAIWAN });
+const again = await call("POST", `/editions/${ed1}/form-fields/own-question/undo`, { dataPath: SCH1_Q5 });
 ok("B116 fail: a second undo is refused (409): nothing is asked any more", again.status === 409, again);
 
 console.log(`\n${pass}/${pass + fail} passed`);

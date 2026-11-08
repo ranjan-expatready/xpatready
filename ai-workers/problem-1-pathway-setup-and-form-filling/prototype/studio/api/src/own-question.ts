@@ -24,7 +24,7 @@ import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { nearLabels } from "./rule-facts.ts";
 import { landField } from "./proposals.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
-import { inFormText, printedQuestion, yesNoCodes, type Box } from "./own-yes-no.ts";
+import { inFormText, printedQuestion, scriptRulesOf, scriptWords, yesNoCodes, type Box } from "./own-yes-no.ts";
 export { printedQuestion } from "./own-yes-no.ts";
 export { isWorkedOutYesNo } from "./library-changes.ts";
 
@@ -183,9 +183,13 @@ export class OwnQuestions {
       // The form field keeps its "worked out" transformation: it now reads its own question, and the facts it names
       // stay the cross-check (QA-165). Its evidence is the printed question only (review m1: it is the box's label on the
       // list before the file); the full citation is the new field's source and the history line.
-      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason, ...(unmapped ? { outcome: now2.outcome, person: now2.person, transform: now2.transform, canonicalFieldKey: now2.canonicalFieldKey, asked: { key, transform: `yes_no_code:${codes!.yes}/${codes!.no}` } } : {}) };
+      const was = { origin: now2.origin, confidence: now2.confidence, evidenceQuote: now2.evidenceQuote, reason: now2.reason, ...(unmapped ? { outcome: now2.outcome, person: now2.person, transform: now2.transform, canonicalFieldKey: now2.canonicalFieldKey, condition: now2.condition, asked: { key, transform: `yes_no_code:${codes!.yes}/${codes!.no}` } } : {}) };
       // B116: a form field nothing filled is now mapped to the question, written in the form's own Yes and No codes.
-      const mapping = unmapped ? { outcome: "mapped", person: "form_subject", transform: was.asked!.transform } : {};
+      // QA-165's last two (P-170): when the form's own script requires it only for some answers (IMM 5257's Taiwan PIN and
+      // Israel passport, CR 330212), its map says so in the script's words, so its question's condition can be confirmed
+      // on it (B86) from the form itself, never typed.
+      const said = unmapped ? scriptWords(scriptRulesOf(ed.inventoryFile).find((r) => r.box === b.dataPath), reading!) : null;
+      const mapping = unmapped ? { outcome: "mapped", person: "form_subject", transform: was.asked!.transform, ...(said ? { condition: said } : {}) } : {};
       await reviseUnreleased(tx, fresh, { ...mapping, canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
       return { key, created, name, was };
     }, { timeout: 30_000, maxWait: 10_000 });
@@ -217,14 +221,14 @@ export class OwnQuestions {
       const key = cur!.canonicalFieldKey;
       const field = key ? await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { valueType: true, label: true, meaning: true } }) : null;
       // B116: a form field nothing filled before its ask goes back to the decision it had (no decision, or by hand).
-      const before = !facts.length && key && field && YES_NO.has(field.valueType) && cur!.outcome === "mapped" ? (await whatAskReplaced(tx, ws, ed.id, b.dataPath)) as (Awaited<ReturnType<typeof whatAskReplaced>> & { outcome?: string; person?: string | null; transform?: string | null; canonicalFieldKey?: string | null; asked?: { key: string; transform: string } }) | null : null;
+      const before = !facts.length && key && field && YES_NO.has(field.valueType) && cur!.outcome === "mapped" ? (await whatAskReplaced(tx, ws, ed.id, b.dataPath)) as (Awaited<ReturnType<typeof whatAskReplaced>> & { outcome?: string; person?: string | null; transform?: string | null; canonicalFieldKey?: string | null; condition?: string | null; asked?: { key: string; transform: string } }) | null : null;
       // Review M1: only while the form field still holds exactly what this ask wrote; a later change is never rolled back.
       if ((before?.outcome === "unresolved" || before?.outcome === "by_hand") && before.asked?.key === key && before.asked?.transform === cur!.transform) {
         await lockItem(tx, ws, "field", [key!]);
         // A draft that only held this ask over a released row goes, so the release sees no change (as for a worked-out ask).
         const under = cur!.supersedesId ? rows.find((r) => r.id === cur!.supersedesId) : undefined;
         if (cur!.status === "DRAFT" && under && under.outcome === before.outcome && (under.canonicalFieldKey ?? null) === (before.canonicalFieldKey ?? null)) { if (!(await tx.formFieldMap.deleteMany({ where: { id: cur!.id, status: "DRAFT" } })).count) fail(`"${words(cur!.caption)}" was released just now: look at it again.`, HttpStatus.CONFLICT); }
-        else await reviseUnreleased(tx, rows, { outcome: before.outcome, canonicalFieldKey: before.canonicalFieldKey ?? null, person: before.person ?? null, transform: before.transform ?? null, origin: before.origin, confidence: before.confidence, evidenceQuote: before.evidenceQuote, reason: before.reason }, actor.id, `"${words(cur!.caption)}" was released just now: look at it again.`);
+        else await reviseUnreleased(tx, rows, { outcome: before.outcome, canonicalFieldKey: before.canonicalFieldKey ?? null, person: before.person ?? null, transform: before.transform ?? null, ...("condition" in before ? { condition: before.condition ?? null } : {}), origin: before.origin, confidence: before.confidence, evidenceQuote: before.evidenceQuote, reason: before.reason }, actor.id, `"${words(cur!.caption)}" was released just now: look at it again.`);
         return { key: key!, from: [] as string[], name: field!.label?.trim() || field!.meaning?.trim() || factName(key!), unmapped: true };
       }
       if (!key || !field || !YES_NO.has(field.valueType) || !facts.length || facts.includes(key)) fail(`"${words(cur!.caption)}" is not asked as its own question, so there is nothing to take back.`, HttpStatus.CONFLICT);
