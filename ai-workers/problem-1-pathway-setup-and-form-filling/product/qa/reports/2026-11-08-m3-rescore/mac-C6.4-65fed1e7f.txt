@@ -1,0 +1,40 @@
+pack C6.4.test.ts on b9ee39760, copy qa_r64 :4472, start Sun Nov  8 04:26:09 IST 2026
+NOTICE:  database "xr_studio_qa_r64" does not exist, skipping
+isolated qa_r64 on http://localhost:4472 (xr_studio_qa_r64), stops itself in 50 min
+reset 201
+load 201
+loaded Sun Nov  8 04:27:29 IST 2026
+C6.4 — Document checklist per person (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+PASS  C6.4-1 pass: GET /runtime/cases/:id/checklist answers per person for the case officer; storage marked Stand-in SI-14 — 200
+PASS  C6.4-2 fail: another client cannot read the checklist (403 or 404) while the officer can
+PASS  C6.4-3 pass: every person has a passport line (VV-R05)
+PASS  C6.4-4 pass and fail (IMM 5484 p. 1, Sample): proof of financial support is on every holder the case's release line names, by name, and on nobody else (a spouse not travelling does not get it) — {"who":"each_applicant","holders":["00aad2d7-4a1d-4e97-9e47-012c805848cf","07768162-9555-4887-8d65-ab3ee578226e","101094a0-e992-4071-b3df-0916369067b7","77039d49-d7cb-4a79-bf1f-52b351ec5277"],"have":["00aad2d7-4a1d-4e97-9e47-012c805848cf","07768162-9555-4887-8
+PASS  C6.4-5 pass: each line says why it is there (requirement, role, condition)
+PASS  C6.4-6 pass: every line starts in one of the team's states, Not requested
+PASS  C6.4-7 fail (R3): with "travels with" and custody unanswered, the child has a passport line and none of the five minor lines — ["Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8 pass (R3): travelling alone, the child gets the letter of authorization and a copy of the birth certificate, each saying why, the birth certificate quoting canada.ca — ["Copy of the minor's birth certificate","Fee payment receipt","Letter of authorization for a minor","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8a pass and fail (R3, Devin on #521: canada.ca's own words): with another adult, the letter (naming the adult responsible in Canada) and the parents' ID copies, no birth certificate — ["Copy of the absent parent's signed passport or national ID","Fee payment receipt","Letter of authorization for a minor","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8b pass (R3; canada.ca "travelling with one parent only"): with one parent, the letter from the absent parent, a copy of that parent's signed passport or ID and a copy of the birth certificate — ["Copy of the absent parent's signed passport or national ID","Copy of the minor's birth certificate","Fee payment receipt","Letter of authorization for a minor","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8c fail (R3): with both parents, none of the three travel lines — ["Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8d pass (R3): sole custody adds the custody documents; shared custody too — ["Custody documents","Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8e pass (R3): adopted, the adoption or guardianship papers, not the custody documents — ["Adoption or guardianship papers","Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8e2 pass (R3): under guardianship, the adoption or guardianship papers, not the custody documents — ["Adoption or guardianship papers","Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8h pass (R3, Devin on #521): with one parent and sole custody (held by either parent), the letter, the custody documents, and the absent parent's ID still asked — ["Copy of the absent parent's signed passport or national ID","Copy of the minor's birth certificate","Custody documents","Fee payment receipt","Letter of authorization for a minor","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8i pass (R3): with one parent and shared custody, the absent parent's letter and ID are asked again, beside the custody documents — ["Copy of the absent parent's signed passport or national ID","Copy of the minor's birth certificate","Custody documents","Fee payment receipt","Letter of authorization for a minor","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8f fail (R3): custody not applicable: neither custody line — ["Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-8g fail (R3): a dependent child of 19 travelling alone, sole custody, gets none of the five minor lines (they are for under 18) — ["Fee payment receipt","Passport information page copy","Proof of financial support"]
+PASS  C6.4-9 pass (R3, QA-149): changing "alone" back to "both parents" takes the letter and birth certificate away again (nothing requested yet, so nothing kept)
+PASS  C6.4-9a pass (R3, qa Minor 1): each minor line's reason is short and plain (no URL, no quote), its source beside it — [[217,"Needed: a child under 18 travelling alone, with another adult (signed by both parents, naming the adult responsible in Canada) or with one parent (from the other parent; with sole custody, from the parent who has it)."],[165,"Needed: a child under 18 tr
+PASS  C6.4-9b pass (R3, qa Minor 2 and Devin on #521, P-170): each line quotes the instruction that calls for its document: the letter and the absent parent's ID IMM 5881 page 2, the custody documents IMM 5484 page 1, the birth certificate canada.ca; "does not need to be certified" is on the letter only; no line says "no quote held" — ["IMM 5881 E (05-2026), New Delhi visa office checklist, page 2 (downloaded 2026-10-19; a visa office instruction, may change): \"Minors travelling alone or with a person other than their parents or legal guardians must have a letter of authorization signed by
+PASS  C6.4-19 pass (R3, qa Major): a principal of 15 travelling alone is asked who they travel with and gets the letter of authorization and the birth certificate — {"asked":true,"put":200,"lines":["Copy of the minor's birth certificate","Fee payment receipt","Letter of authorization for a minor","Passport information page copy","Proof of financial support"]}
+PASS  C6.4-20 fail (R3, qa Major): a principal of 40 is not asked the two questions once the application date is in and, even with "alone" and sole custody stored, gets none of the five minor lines — {"adultAsked":0,"lines":[["Fee payment receipt","not_requested"],["Passport information page copy","not_requested"],["Proof of financial support","not_requested"]]}
+PASS  C6.4-12 pass: the officer requests the principal's passport: state Requested — {"id":"02d99523-9573-49aa-95d5-b0f292e673d2","document_type":"passport_information_page_copy","label":"Passport information page copy","state":"requested","reason":"Always needed for this application.","required":true,"documents":[],"need":"needed","lineage":"
+PASS  C6.4-13 fail: a client cannot request documents (403)
+PASS  C6.4-14 pass: uploading a file moves the line to Received; the document is stored against the person, not the case — {"id":"02d99523-9573-49aa-95d5-b0f292e673d2","document_type":"passport_information_page_copy","label":"Passport information page copy","state":"received","reason":"Always needed for this application.","required":true,"documents":[{"id":"a3a88398-a378-405a-9112
+PASS  C6.4-15 pass: a new passport keeps the old one as history (two documents, one current)
+PASS  C6.4-16 fail: Not applicable without a reason is refused on the field (400) — 400
+PASS  C6.4-17 pass: Not applicable with a reason; the line stays on the list with its reason (file kept)
+PASS  C6.4-18 pass (data): checklist lines are rows per filing person × requirement
+30/30 passed
+pack exit 0  end Sun Nov  8 04:27:34 IST 2026
